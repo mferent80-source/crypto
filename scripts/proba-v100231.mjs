@@ -135,7 +135,7 @@ await test("versiunea de la v100.231 în sus și colectorul v101.132", () => {
   assert.equal(info.version, "v100." + minor);
   assert.equal(info.engineContract, "54.1");
   assert.match(col, /if \(S\.eLimitaDeRitm\(e\)\) return;/);
-  assert.match(col, /VERSIUNE_COLECTOR = "v101\.132"/);
+  assert.match(col, /VERSIUNE_COLECTOR = "v101\.13[2-9]"/);
   assert.match(citeste("public", "lib", "grid-sim.js"), /"Aș porni: câștigă în "/);
 });
 

@@ -307,6 +307,25 @@ var Acasa = (function () {
   function ziFranaCompleta(z) {
     return !!(z && typeof z.z === "string" && /^\d{4}-\d{2}-\d{2}$/.test(z.z) && typeof z.pauza === "boolean" && (z.raportStare === "ok" || z.raportStare === "vechi" || z.raportStare === "lipsa") && typeof z.eveniment === "string");
   }
+  function ziAfis(z) { var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(z || "")); return m ? m[3] + "." + m[2] + "." + m[1] : ""; }
+  function pozaText(lista) {
+    var zs = (lista || []).slice().sort(function (a, b) { return String(a && a.z) < String(b && b.z) ? -1 : 1; }).map(function (z) { return ziAfis(z && z.z); }).filter(Boolean);
+    if (!zs.length) return "";
+    if (zs.length === 1) return " Poza înghețată pe " + zs[0] + ".";
+    if (zs.length <= 3) return " Poza înghețată pe " + zs.join(", ") + ".";
+    return " Poza înghețată pe " + zs[0] + " până la " + zs[zs.length - 1] + ".";
+  }
+  function unesteZileFrana(locale, kv) {
+    var pe = {};
+    function pune(z) {
+      if (!z || typeof z.z !== "string") return;
+      var vechi = pe[z.z], a = ziFranaCompleta(vechi), b = ziFranaCompleta(z);
+      if (!vechi || (b && !a)) pe[z.z] = z;
+    }
+    (Array.isArray(locale) ? locale : []).forEach(pune);
+    (Array.isArray(kv) ? kv : []).forEach(pune);
+    return Object.keys(pe).sort().map(function (k) { return pe[k]; });
+  }
   function banFrana(x) {
     var n = Number(x), neg = n < 0, p = Math.abs(n).toFixed(2).split(".");
     return (neg ? "−" : "") + p[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "," + p[1];
@@ -336,7 +355,7 @@ var Acasa = (function () {
       var rz = b.rezultat == null || b.rezultat === "" ? null : Number(b.rezultat);
       if (rz != null && isFinite(rz)) { rez += rz; nRez++; }
     });
-    var text = "Pe " + cate(nSch, "zi salvată", "zile salvate") + " din " + complete.length + ", gura de azi ar fi schimbat un „Aș porni”.";
+    var text = "Pe " + cate(nSch, "zi salvată", "zile salvate") + " din " + complete.length + ", gura de azi ar fi schimbat un „Aș porni”." + pozaText(complete);
     if (!carte) text += " Cartea închisă n-a fost dată: n-am aflat suma pusă.";
     else if (nBot && lipsaBaza) text += " N-am aflat suma pusă: baza lipsește la " + cate(lipsaBaza, "bot", "boți") + ".";
     else if (nBot && nBaza) text += " Suma pusă în boții porniți în zilele acelea e " + banFrana(baza) + ".";
@@ -360,6 +379,6 @@ var Acasa = (function () {
     return o;
   }
 
-  return { SECTOR: SECTOR, sectoare: sectoare, ziuaTa: ziuaTa, raportSaptamana: raportSaptamana, socotealaAlerte: socotealaAlerte, miscareTipica: miscareTipica, fundingPiata: fundingPiata, schimbari: schimbari, vreme: vreme, miscari: miscari, fg: fg, largime: largime, ro: ro, rezumatActiune: rezumatActiune, largimeNdx: largimeNdx, vremeBursa: vremeBursa, corelatie: corelatie, calendar: calendar, MAG7: MAG7, franaVerb: franaVerb, frazaPauza: frazaPauza, masuraFranei: masuraFranei };
+  return { SECTOR: SECTOR, sectoare: sectoare, ziuaTa: ziuaTa, raportSaptamana: raportSaptamana, socotealaAlerte: socotealaAlerte, miscareTipica: miscareTipica, fundingPiata: fundingPiata, schimbari: schimbari, vreme: vreme, miscari: miscari, fg: fg, largime: largime, ro: ro, rezumatActiune: rezumatActiune, largimeNdx: largimeNdx, vremeBursa: vremeBursa, corelatie: corelatie, calendar: calendar, MAG7: MAG7, franaVerb: franaVerb, frazaPauza: frazaPauza, masuraFranei: masuraFranei, unesteZileFrana: unesteZileFrana };
 })();
 if (typeof globalThis !== "undefined") globalThis.Acasa = Acasa;

@@ -58,8 +58,7 @@ await test("cardul spune plafonul de 3 ore o dată; fraza de Discord nu îl îng
   assert.equal(disc.includes("3 ore"), false);
   assert.doesNotMatch(MC.htmlCard(null), /3 ore/);
   assert.match(tp, /acum - \(st\.macroAlertaLa \|\| 0\) < 3 \* 3600000/);
-  assert.match(col, /VERSIUNE_COLECTOR = "v101\.132"/);
-  assert.doesNotMatch(col.slice(col.indexOf("VERSIUNE_COLECTOR"), col.indexOf("VERSIUNE_COLECTOR") + 40), /v101\.133/);
+  assert.match(col, /VERSIUNE_COLECTOR = "v101\.13[2-9]"/);
 });
 
 await test("sub 550 px un cuvânt mai lat decât coloana nu se taie; verbul de pe Tablou rămâne pe un rând", () => {

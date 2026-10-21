@@ -13,6 +13,39 @@ const bareDinRanduri = (G, randuri) => G.bareBursa(randuri || [], Date.now()).ma
 // prețurile zilnice prin cache-ul de pe disc (d.bareZi) când există, altfel direct
 const zilnic = (d, cale) => (d.bareZi ? d.bareZi(cale) : d.cere(cale));
 
+// v100.234: o dată pe zi, același rând cont:zile primește și pauza, VaR-ul și evenimentul, când citirile au reușit.
+// O citire picată nu inventează pauză și nu marchează ziua completă.
+export async function campuriZiFrana(d, acum, raport) {
+  const o = {};
+  const tot = raport && raport.valoare ? Number(raport.valoare.total) : NaN;
+  const va = raport && raport.risc ? Number(raport.risc.var95) : NaN;
+  if (Number.isFinite(tot) || Number.isFinite(va)) o.raport = { valoare: Number.isFinite(tot) ? { total: tot } : null, risc: Number.isFinite(va) ? { var95: va } : null };
+  if (!d || !d.cere || !d.Acasa || !d.ScorSezon || !d.StatisticaTrade || !d.JurnalTrade) return o;
+  let pauza, eveniment;
+  const ar = await incearca(d, "boți zi", () => d.cere("/api/istoric-bot?action=botiInchisi"));
+  const cfg = await incearca(d, "sezon zi", () => d.cere("/api/scor-sezon?piata=pionex"));
+  const boti = ar && Array.isArray(ar.boti) ? ar.boti : null;
+  if (boti) {
+    try {
+      const tr = d.StatisticaTrade.dinPionex(d.JurnalTrade.din(boti)).concat(d.StatisticaTrade.dinPionexAlte ? d.StatisticaTrade.dinPionexAlte(d.JurnalTrade.alte(boti)) : []);
+      const s = d.ScorSezon.calc(tr, cfg && cfg.sezon, acum, "pionex");
+      if (s) pauza = !!s.pauza;
+      if (pauza && s.serie && s.serie.n > 0) o.pauzaN = s.serie.n;
+    } catch (e) { if (d.jurnal) d.jurnal("cont frana zi", e.message); }
+  }
+  const cal = await incearca(d, "calendar zi", () => d.cere("/api/stiri?action=calendar"));
+  if (cal && d.Acasa.calendar) {
+    try {
+      const urm = d.Acasa.calendar(cal.evenimente, acum).urmatoare || [];
+      const azi = ziRo(acum);
+      const ev = urm.filter((x) => x && x.mare && x.t && ziRo(x.t) === azi)[0];
+      eveniment = ev ? String(ev.titlu).slice(0, 160) : "";
+    } catch (e) { if (d.jurnal) d.jurnal("cont frana zi", e.message); }
+  }
+  if (typeof pauza === "boolean" && typeof eveniment === "string") { o.pauza = pauza; o.eveniment = eveniment; o.raportStare = "ok"; }
+  else delete o.pauzaN;
+  return o;
+}
 export async function turaCont(d, st) {
   const acum = d.acum || Date.now();
   if (st.inLucru || acum - (st.la || 0) < PAS || acum - (st.esecLa || 0) < ORA) return null;   // (revizia, M4): după un eșec, o oră pauză
@@ -212,7 +245,7 @@ async function faRaport(d, st, acum) {
   await d.trimite("/api/istoric-bot?action=cont", { cont: raport });
   st.la = acum;
   const z = ziRo(acum);
-  if (st.ziValoare !== z && val.total > 0) { const okZ = await incearca(d, "valoarea zilei", () => d.trimite("/api/istoric-bot?action=contZi", { z, valoare: rot(val.total), complet: val.complet, pionex: rot(val.pionex), t212: rot(val.t212), salt: rot(val.salt) })); if (okZ) st.ziValoare = z; }   // (revizia, M5): doar dacă a ajuns
+  if (st.ziValoare !== z && val.total > 0) { const fr = await campuriZiFrana(d, acum, raport); const okZ = await incearca(d, "valoarea zilei", () => d.trimite("/api/istoric-bot?action=contZi", Object.assign({ z, valoare: rot(val.total), complet: val.complet, pionex: rot(val.pionex), t212: rot(val.t212), salt: rot(val.salt) }, fr))); if (okZ) st.ziValoare = z; }   // (revizia, M5): doar dacă a ajuns
   // 10. reconcilierea pe Discord: o dată pe zi pentru fiecare abatere
   const abateri = [];
   if (recT212 && !recT212.ok) for (const a of recT212.abateri) abateri.push({ cheie: "rec-t212-" + a.ticker, m: d.MesajeColector.reconciliereT212(a) });

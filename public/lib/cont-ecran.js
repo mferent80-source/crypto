@@ -87,10 +87,15 @@ function ciExportHtml(st) {
   else fraza = "A doua citire se potrivește cu cantitatea din cont.";
   var h = '<section class="ciSec"><h3>A doua citire, din exportul tău</h3><p class="ciRasp">' + ciEsc(fraza) + '</p><p><button type="button" class="actionGhost" id="ciExportBtn">Aduc exportul din T212</button><input type="file" id="ciExportFisier" accept=".csv,text/csv" hidden></p>';
   if (e && e.ok && !e.lipsaApi && Array.isArray(e.randuri) && e.randuri.length) {
-    var cel = function (x) { return x == null ? "n-am aflat" : ciNr(x, 4).replace(/,?0+$/, ""); };
-    h += '<div class="t212TabWrap"><table class="t212Tab ciTab"><thead><tr><th>Simbol</th><th>API</th><th>Jurnal</th><th>Export</th></tr></thead><tbody>'
-      + e.randuri.map(function (r) { return "<tr><td>" + ciEsc(r.ticker) + '</td><td class="num">' + ciEsc(cel(r.api)) + '</td><td class="num">' + ciEsc(cel(r.jurnal)) + '</td><td class="num">' + ciEsc(cel(r.export)) + "</td></tr>"; }).join("")
-      + "</tbody></table></div>";
+    var rupte = e.randuri.filter(function (r) { return r && r.potrivit !== true; });
+    var nPotrivite = e.randuri.length - rupte.length;
+    h += '<p class="tbSub">' + ciEsc(ciCate(nPotrivite, "simbol se potrivește", "simboluri se potrivesc")) + ".</p>";
+    if (rupte.length) {
+      var cel = function (x) { return x == null ? "n-am aflat" : ciNr(x, 4).replace(/,?0+$/, ""); };
+      h += '<div class="t212TabWrap"><table class="t212Tab ciTab"><thead><tr><th>Simbol</th><th>API</th><th>Jurnal</th><th>Export</th></tr></thead><tbody>'
+        + rupte.map(function (r) { return "<tr><td>" + ciEsc(r.ticker) + '</td><td class="num">' + ciEsc(cel(r.api)) + '</td><td class="num">' + ciEsc(cel(r.jurnal)) + '</td><td class="num">' + ciEsc(cel(r.export)) + "</td></tr>"; }).join("")
+        + "</tbody></table></div>";
+    }
     if (e.lipsaJurnal) h += '<p class="tbSub">Jurnalul n-a venit: coloana lui rămâne n-am aflat. Comparația care poate schimba gura e exportul față de API.</p>';
   }
   h += '<p class="tbSub">Fișierul rămâne la tine. Radar citește cantitățile și le compară cu API-ul, la aceeași margine ca jurnalul. Un export cu alt antet nu inventează abateri.</p></section>';
@@ -315,7 +320,9 @@ function ciDeseneaza() {
   var box = document.getElementById("ciPagina"); if (!box) return;
   if (typeof acFranaSalveaza === "function") acFranaSalveaza();
   var r = ciStare.raport, st = { export: ciExportCitit(), masura: null, nepotriviri: r && r.randament && Array.isArray(r.randament.t212Nepotrivite) ? r.randament.t212Nepotrivite : null, acum: Date.now() };
-  var zile = typeof acFranaZileCitite === "function" ? acFranaZileCitite() : [];
+  var loc = typeof acFranaZileCitite === "function" ? acFranaZileCitite() : [];
+  var kv = Array.isArray(ciStare.zile) ? ciStare.zile : [];
+  var zile = typeof Acasa !== "undefined" && Acasa.unesteZileFrana ? Acasa.unesteZileFrana(loc, kv) : loc;
   if (typeof Acasa !== "undefined" && Acasa.masuraFranei) st.masura = Acasa.masuraFranei(ciStare.botiMasura, zile);
   var corp = !r && ciStare.eroare ? '<p class="bad">Nu pot citi raportul: ' + ciEsc(ciStare.eroare) + "</p>" + ciHtml(null, st) : ciHtml(r, st);
   box.innerHTML = ciZileHtml(ciStare.zile) + corp + ciDisciplinaHtml(r, ciStare.banda, ciStare.lectii) + ciVerdicteHtml(ciStare.verdicte, {});

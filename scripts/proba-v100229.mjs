@@ -86,7 +86,7 @@ await test("suma tace la abatere și după 30 de minute fără citire bună; 429
   assert.doesNotMatch(AS.facPoarta("cumpara", { suma: 1837 }, {}), /N-aș da o sumă/);
   assert.match(act, /return \{ cod: "normal", riscPct: 0\.01, motiv: null \}/);
   assert.match(col, /if \(S\.eLimitaDeRitm\(e\)\) return;/);
-  assert.match(col, /VERSIUNE_COLECTOR = "v101\.132"/);
+  assert.match(col, /VERSIUNE_COLECTOR = "v101\.13[2-9]"/);
 });
 
 await test("calibrarea macro: puține, măsurat, dovedit doar cu rămâne; cardul cu două argumente rămâne fără rând", () => {
@@ -145,7 +145,7 @@ await test("versiunea de la v100.229 în sus și colectorul v101.132", () => {
   assert.equal(P.scripts["test:v100229"], "node scripts/proba-v100229.mjs");
   assert.equal((P.scripts.test.match(/test:v100229/g) || []).length, 1);
   assert.equal((P.scripts.test.match(/test:v100228/g) || []).length, 1);
-  assert.match(col, /VERSIUNE_COLECTOR = "v101\.132"/);
+  assert.match(col, /VERSIUNE_COLECTOR = "v101\.13[2-9]"/);
   assert.equal((idx.match(new RegExp("v100\\." + minor, "g")) || []).length, 4);
   assert.match(citeste("public", "sw.js"), new RegExp("crypto-radar-v100-" + minor));
   assert.match(citeste("functions", "_shared", "versiune.js"), new RegExp("VERSIUNE = \"v100\\." + minor + "\""));

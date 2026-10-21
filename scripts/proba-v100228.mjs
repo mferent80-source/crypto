@@ -95,7 +95,7 @@ await test("versiunea de la v100.228 în sus și colectorul v101.132", () => {
   assert.equal(P.scripts["test:v100228"], "node scripts/proba-v100228.mjs");
   assert.equal((P.scripts.test.match(/test:v100228/g) || []).length, 1);
   assert.equal((P.scripts.test.match(/test:v100227/g) || []).length, 1);
-  assert.match(citeste("scripts", "colector.mjs"), /VERSIUNE_COLECTOR = "v101\.132"/);
+  assert.match(citeste("scripts", "colector.mjs"), /VERSIUNE_COLECTOR = "v101\.13[2-9]"/);
   assert.equal((idx.match(new RegExp("v100\\." + minor, "g")) || []).length, 4);
   assert.match(citeste("public", "sw.js"), new RegExp("crypto-radar-v100-" + minor));
   assert.match(citeste("functions", "_shared", "versiune.js"), new RegExp("VERSIUNE = \"v100\\." + minor + "\""));

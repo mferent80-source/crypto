@@ -25,6 +25,7 @@ async function acasaPorneste(fortat) {
       pas("cont", async function () { if (typeof contTotAsigura === "function") await contTotAsigura(); return true; }),
       pas("scor", function () { return typeof scPorneste === "function" ? scPorneste() : null; }),   // v100.217: scorul sezonului (boții din Jurnal + configurația de acasă)
       pas("contRaport", function () { return getJSON("/api/istoric-bot?action=cont"); }),   // v100.231: raportul pe tot contul (cheia „cont” e deja contTotAsigura)
+      pas("contZile", function () { return getJSON("/api/istoric-bot?action=contZile"); }),   // v100.234: zilele din KV, ca măsura să aibă poza și într-un browser nou
       // v93: Nasdaq 100 (colectorul, la 8 dimineata), calendarul saptamanii, stirile
       pas("ndx", function () { return getJSON("/api/t212?action=ndx"); }),
       pas("calendar", function () { return getJSON("/api/stiri?action=calendar"); }),
@@ -319,7 +320,7 @@ function acFranaZileCitite() {
   try { var l = JSON.parse(localStorage.getItem("radar-frana-zile-v1") || "[]"); return Array.isArray(l) ? l : []; }
   catch (e) { return []; }
 }
-// Prima poză a zilei de București, doar când pauza, raportul și evenimentul sunt știute. Nu scrie în KV.
+// Prima poză a zilei de București, doar când pauza, raportul și evenimentul sunt știute. Pagina nu scrie în KV.
 function acFranaSalveaza() {
   try {
     var pz = acPauzaSezon(); if (pz === null) return;
@@ -347,6 +348,16 @@ function acFraneaza(v, fel) {
   if (rs.stare && rs.stare !== "necunoscut") { o.raportStare = rs.stare; if (rs.ore) o.raportOre = rs.ore; if (rs.raport) o.raport = rs.raport; }
   if (ev !== undefined) o.eveniment = ev;
   return Acasa.franaVerb(v, o);
+}
+function acMasuraLin() {
+  if (typeof Acasa === "undefined" || !Acasa.masuraFranei) return "";
+  var boti = null;
+  try { if (typeof scTrades === "function") boti = scTrades("pionex"); } catch (e) { boti = null; }
+  var loc = typeof acFranaZileCitite === "function" ? acFranaZileCitite() : [];
+  var kv = acasa.d && acasa.d.contZile && Array.isArray(acasa.d.contZile.zile) ? acasa.d.contZile.zile : [];
+  var zile = Acasa.unesteZileFrana ? Acasa.unesteZileFrana(loc, kv) : loc;
+  var m = Acasa.masuraFranei(boti, zile);
+  return m && m.text ? '<p class="acMut">' + escapeHtml(m.text) + "</p>" : "";
 }
 function acasaDeseneaza() {
   if (!$("acasa") || typeof Acasa === "undefined") return;
@@ -376,8 +387,8 @@ function acasaDeseneaza() {
   if (faraParola) v = AC_FARA_PAROLA;
   else if (faraServer && !cl) v = acFaraServerVerd(d);
   else v = acFraneaza(v, "crypto");
-  acasaVerd($("acVremeCrypto"), "Crypto", v, faraParola ? AC_BUTON_PAROLA : cl ? acBare(0, [[cl.candidati, "var(--good)", "liniștite"], [cl.evita, "var(--bad)", "în mișcare"]])
-    + '<div class="acLeg"><span><b class="good">' + cl.candidati + '</b> liniștite</span><span><b class="bad">' + cl.evita + '</b> în mișcare' + acIeri(sc, "inMiscare", 0, true) + '</span><span class="acMut">top 100 futures</span></div>' : "");
+  acasaVerd($("acVremeCrypto"), "Crypto", v, (faraParola ? AC_BUTON_PAROLA : cl ? acBare(0, [[cl.candidati, "var(--good)", "liniștite"], [cl.evita, "var(--bad)", "în mișcare"]])
+    + '<div class="acLeg"><span><b class="good">' + cl.candidati + '</b> liniștite</span><span><b class="bad">' + cl.evita + '</b> în mișcare' + acIeri(sc, "inMiscare", 0, true) + '</span><span class="acMut">top 100 futures</span></div>' : "") + acMasuraLin());
   var vb = faraParola ? AC_FARA_PAROLA : faraServer && !ndxL && !qqq ? acFaraServerVerd(d) : acFraneaza(Acasa.vremeBursa({ qqq: qqq, vix: vixU, ndx: ndxL }), "bursa");
   acasaVerd($("acVremeBursa"), "Nasdaq", vb, faraParola ? "" : ndxL ? acBare(0, [[ndxL.e50, "var(--good)", "peste media de 50"], [ndxL.n - ndxL.e50, "var(--bad)", "sub"]])
     + '<div class="acLeg"><span><b class="good">' + ndxL.e50 + '</b> peste media de 50' + acIeri(sc, "ndxE50") + '</span><span><b class="bad">' + (ndxL.n - ndxL.e50) + '</b> sub</span><span class="acMut">Nasdaq 100</span></div>' : "");

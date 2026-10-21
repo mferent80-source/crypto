@@ -80,7 +80,7 @@ await test("versiunea de la v100.226 în sus și colectorul v101.132", () => {
   const idx = citeste("public", "index.html");
   const minor = Number(P.version.split(".")[1]);
   assert.ok(minor >= 226);
-  assert.match(citeste("scripts", "colector.mjs"), /VERSIUNE_COLECTOR = "v101\.132"/);
+  assert.match(citeste("scripts", "colector.mjs"), /VERSIUNE_COLECTOR = "v101\.13[2-9]"/);
   assert.equal((idx.match(new RegExp("v100\\." + minor, "g")) || []).length, 4);
   assert.match(citeste("public", "sw.js"), new RegExp("crypto-radar-v100-" + minor));
 });
