@@ -1,11 +1,12 @@
 {
-  "version": "v100.246",
-  "badge": "v100.246 · FEL",
+  "version": "v100.247",
+  "badge": "v100.247 · RÂND",
   "engineContract": "54.1",
   "dataSchema": 54,
   "baseRelease": "v77.4 · TABLOUL BOTULUI",
   "releaseType": "valul de reparatii din revizia finala pe ansamblu: marginStatus/riskStatus citite, telefon, scurgere WS/ceas la iesire prin tab-uri, ATR adevarat, pret viu, istoric fara pret inghetat, sortare dupa timp, comision nemasurabil, durata la margine",
   "features": {
+    "rand247": "Pagini (22.10.2026, el: „fa tot”): la Monte Carlo titlul și obiceiurile urcă deasupra casetei de simbol; simulatorul își spune numele; futures pune interpretarea întâi; motorul vechi din Setări se pliază; macro și sectoarele de pe Piața azi stau una sub alta până la 1920px și pe un rând de acolo în sus, pentru că sub 1920 rândul lungea pagina. Parola rămâne prima. Pragurile neschimbate. Colectorul rămâne v101.136.",
     "fel246": "Sugestii (22.10.2026, el: „refă designul paginii fără să se piardă nimic”): cartelele au același fond și chenar ca Tabloul, titlurile au aceeași măsură, trendul și sectoarele stau pe aceeași față. Listele, filtrele, istoricul, 🧭 și „arată toate” rămân. Pragurile neschimbate. Colectorul rămâne v101.136.",
     "tine245": "Sugestii (22.10.2026, el: „fa idei”): coloanele se măsoară din nou când lățimea se mută cu cel puțin 48 px; fraza de istoric tăiată stă și în title; pânda ține 14em cât se desface cardul; filtrul „monedele boților mei” rămâne pe acțiunea lui. Listele, 🧭 și „arată toate” rămân. Pragurile neschimbate. Colectorul rămâne v101.136.",
     "plin244": "Sugestii (22.10.2026, el: „fa idei și refă pagina de sugestii”): cele 8 blocuri sunt deja în pagină; un rând nou se adaugă, unul dispărut se scoate, cifra se schimbă în același nod; istoricul stă pe un rând; grila nu pierde o coloană la o bară de derulare; verdictul stă lângă titlu, ca la Tablou. Listele, filtrele, 🧭 și „arată toate” rămân. Pragurile neschimbate. Colectorul rămâne v101.136.",
