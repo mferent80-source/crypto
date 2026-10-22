@@ -122,6 +122,14 @@
     if (s) add(s.p, s.n, "var(--pzJos)", "", s.tit);
     return L;
   }
+  // v100.242: lățimea se cuantifică și nu se mută cât ține o bară de derulare (~15 px). 0 nu mai cade pe 280 (multe rânduri, card înalt).
+  function latimeDrum(px, tinut) {
+    var w = Number(px), t = Number(tinut);
+    if (!(w >= 160)) return t >= 160 ? t : 1100;
+    if (t >= 160 && Math.abs(w - t) < 48) return t;
+    var q = Math.round(w / 48) * 48;
+    return q >= 160 ? q : 160;
+  }
   function drumHtml(b, mic, latime) {
     var L = nivele(b), p = nr(botLive(b).pretCurent); if (!L.length || p == null) return "";
     var lo = Math.min.apply(null, L.map(function (x) { return x.p; }).concat(p)), hi = Math.max.apply(null, L.map(function (x) { return x.p; }).concat(p)), pad = (hi - lo) * 0.04 || 1e-9;
@@ -219,7 +227,7 @@
     var sus = k.parentNode, cadru = sus && sus.parentNode && sus.parentNode.classList.contains("tbCadru") ? sus.parentNode : null;
     var parinte = cadru || sus, inainte = cadru ? sus : k;
     if (parinte && el.parentNode !== parinte) parinte.insertBefore(el, inainte);   /* v100.240: frate cu .tbSus, ca ordinea din CSS să-l pună pe rândul lui */
-    var corp = drumHtml(b, false, el.clientWidth - 28);
+    el._pzW = latimeDrum(el.clientWidth, el._pzW); var corp = drumHtml(b, false, el._pzW - 28);   /* v100.242: aceeași lățime până se schimbă cu un rând întreg */
     if (!corp) { el.hidden = true; document.body.classList.remove("pzAreDrum"); return; }   // fără drum, barele vechi rămân la vedere
     var h = '<div class="pzCap"><b>Drumul botului</b><span>nivelurile de pe grafic, într-o linie · atinge o liniuță pentru preț</span></div>' + corp;
     el.hidden = false; if (el._h !== h) { el.innerHTML = h; el._h = h; }
@@ -529,7 +537,7 @@
     if (b) { var t = (des ? "▾ " : "▸ ") + "Prețul monedei alese și filele de analiză" + (des ? " (pliază)" : ""); if (b.textContent !== t) b.textContent = t; b.setAttribute("aria-expanded", des ? "true" : "false"); }
   }
 
-  window.AsezarePaznic = { valJurnal: valJurnal, valBani: valBani, verdictPozitii: verdictPozitii, verdictAlerte: verdictAlerte, nivelPastila: nivelPastila, tonVarsta: tonVarsta, randuriKv: randuriKv, ancora: ancora, GLOSAR: GLOSAR, t212Din: t212Din, colectorDin: colectorDin, colectorSursa: colectorSursa, alerteNrDin: alerteNrDin, lichDin: lichDin, nivele: nivele, drumHtml: drumHtml, verdictValid: verdictValid, tonLich: tonLich, pliaza: pliaza };
+  window.AsezarePaznic = { valJurnal: valJurnal, valBani: valBani, verdictPozitii: verdictPozitii, verdictAlerte: verdictAlerte, nivelPastila: nivelPastila, tonVarsta: tonVarsta, randuriKv: randuriKv, ancora: ancora, GLOSAR: GLOSAR, t212Din: t212Din, colectorDin: colectorDin, colectorSursa: colectorSursa, alerteNrDin: alerteNrDin, lichDin: lichDin, nivele: nivele, drumHtml: drumHtml, latimeDrum: latimeDrum, verdictValid: verdictValid, tonLich: tonLich, pliaza: pliaza };
   document.documentElement.classList.add("pzDemo");
   var rz = null; addEventListener("resize", function () { clearTimeout(rz); rz = setTimeout(tura, 200); });   // revizia I10: fără tură la fiecare pixel
   document.addEventListener("click", function (e) { if (e.target && e.target.closest && e.target.closest("#jurnaltrade .jtFiltru")) setTimeout(function () { try { pagJurnal(); } catch (x) {} }, 30); });   /* M1: antetul urmează fila pe loc */

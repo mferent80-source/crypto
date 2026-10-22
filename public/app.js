@@ -6937,12 +6937,35 @@ function tbTrendIstoric(b){var d=tbStare.directie,p=TB_PERIOADE[tbTf()];if(!d||!
 // v100.138 (el, 08.10: „acolo mă interesează doar direcție, trend, indicatori diverși, ce zice Busola … și foarte important să fie LIVE”):
 // citirea e despre PIAȚĂ (GraficBot.citire cu doarPiata) + Indicatorii pe intervalul graficului, Estimarea pe 16 ore și Busola pe 4h;
 // fără banii botului și fără „Stop de probă” (el: „îl scot de tot”). tbStare.citireO ține intrarea pentru recitirea la fiecare tic (tbCitireLive).
+function tbCitireSchelet(h){return String(h||"").replace(/<span class="tbCitTx">[^<]*<\/span>/g,"<span class=\"tbCitTx\"></span>").replace(/<p class="tbCitScurt">[^<]*<\/p>/g,"<p class=\"tbCitScurt\"></p>")}
+function tbCitirePeLoc(el,h){
+  if(!el)return false;
+  var tmp=document.createElement("div");tmp.innerHTML=h;
+  var ra=el.querySelectorAll(".tbCitR"),rb=tmp.querySelectorAll(".tbCitR");
+  if(ra.length!==rb.length)return false;
+  for(var i=0;i<ra.length;i++){
+    var tine=(ra[i].classList.contains("pzFoldOk")?" pzFoldOk":"")+(ra[i].classList.contains("pzFold")?" pzFold":"");
+    var cur=ra[i].className.replace(/\s*pzFoldOk/g,"").replace(/\s*pzFold/g,"").replace(/\s+/g," ").trim();
+    var vrea=String(rb[i].className||"").replace(/\s+/g," ").trim();
+    if(cur!==vrea)ra[i].className=vrea+tine;
+    var ia=ra[i].querySelector(".tbCitIc"),ib=rb[i].querySelector(".tbCitIc");
+    if((ia?1:0)!==(ib?1:0))return false;
+    if(ia&&ia.textContent!==ib.textContent)ia.textContent=ib.textContent;
+    var ta=ra[i].querySelector(".tbCitTx"),tn=rb[i].querySelector(".tbCitTx");
+    if((ta?1:0)!==(tn?1:0))return false;
+    if(ta&&ta.textContent!==tn.textContent)ta.textContent=tn.textContent;
+  }
+  var ps=el.querySelector(".tbCitScurt"),pn=tmp.querySelector(".tbCitScurt");
+  if((ps?1:0)!==(pn?1:0))return false;
+  if(ps&&ps.textContent!==pn.textContent)ps.textContent=pn.textContent;
+  return true;
+}
 function tbDeseneazaCitire(o,b){var loc=[$("tbCitire"),$("tbCitireMobil")].filter(Boolean);if(!loc.length)return;
   // revizia (1): intrarea e a botului și intervalului de ACUM - tbCitireLive recitește doar cu cheia asta (altfel, după schimbarea botului, citirea
   // monedei vechi lua prețul celei noi); revizia (3): copia de pe telefon primește antetul cu ceasul (cardul cu #tbCitireLive e ascuns sub 1180 px)
   tbStare.citireO=o;tbStare.citireCheie=TabloBot.simboluri(b.baza,b.quote,b.simbolPionex).pionex+"|"+tbTf()+"|"+b.id;
   var cap='<p class="tbCitCap"><b>Ce spune piața acum</b> <span class="tbSub tbCitLive'+(tbStare.citireStamp?" "+tbStare.citireStamp.cls:"")+'" data-cit-live>'+escapeHtml(tbStare.citireStamp?tbStare.citireStamp.text:"live")+'</span></p>';
-  var scrie=function(h){if(tbStare.citireH===h)return;tbStare.citireH=h;loc.forEach(function(el){el.innerHTML=(el.id==="tbCitireMobil"?cap:"")+h});var sus=$("tbMcSus");if(sus){var i=h.indexOf(" tbCitMc");if(i<0){sus.innerHTML="";sus.hidden=true}else{var a=h.lastIndexOf("<div",i),b=h.indexOf("</div></div>",i),frag=a>=0&&b>a?h.slice(a,b+12):"";sus.innerHTML=frag;sus.hidden=!frag}}if(window.AsezarePaznic&&typeof AsezarePaznic.pliaza==="function")AsezarePaznic.pliaza()};   /* revizia: DOM-ul se rescrie doar când textul s-a schimbat; v100.240: același rând Monte Carlo, copiat sus; v100.241: plierea în aceeași clipă, nu peste 1,5 s */
+  var scrie=function(h){if(tbStare.citireH===h)return;if(tbStare.citireH&&tbCitireSchelet(tbStare.citireH)===tbCitireSchelet(h)){var ok=true;loc.forEach(function(el){if(!tbCitirePeLoc(el,h))ok=false});var sus0=$("tbMcSus");if(ok&&sus0&&!sus0.hidden){var j=h.indexOf(" tbCitMc");if(j>=0){var a0=h.lastIndexOf("<div",j),b0=h.indexOf("</div></div>",j),frag0=a0>=0&&b0>a0?h.slice(a0,b0+12):"";if(frag0)tbCitirePeLoc(sus0,frag0)}}if(ok){tbStare.citireH=h;return}}tbStare.citireH=h;loc.forEach(function(el){el.innerHTML=(el.id==="tbCitireMobil"?cap:"")+h});var sus=$("tbMcSus");if(sus){var i=h.indexOf(" tbCitMc");if(i<0){sus.innerHTML="";sus.hidden=true}else{var a=h.lastIndexOf("<div",i),b=h.indexOf("</div></div>",i),frag=a>=0&&b>a?h.slice(a,b+12):"";sus.innerHTML=frag;sus.hidden=!frag}}if(typeof window!=="undefined"&&window.AsezarePaznic&&typeof AsezarePaznic.pliaza==="function")AsezarePaznic.pliaza()};   /* revizia: DOM-ul se rescrie doar când textul s-a schimbat; v100.240: Monte Carlo copiat sus; v100.241: plierea în aceeași clipă; v100.242: la același schelet se schimbă cifrele, nu nodurile (și pe telefon) */
   var c=GraficBot.citire(Object.assign({},o,{doarPiata:true}),b,botiNr(b.pretCurent));
   if(!c){scrie('<p class="tbSub">Prea puține prețuri pentru citire.</p>');return}
   var IC={bine:"✓",atentie:"!",rau:"✕",info:"·"};

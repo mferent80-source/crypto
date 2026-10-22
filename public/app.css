@@ -2438,9 +2438,10 @@ body.pePaginaNoua .toolbar,body.pePaginaNoua .heroStrip,body.pePaginaNoua .tabs{
 #tabloubot #tbGraficCard .tbTf .tbIntBtn{padding:6px 12px;font-size:13.5px;font-weight:600;min-width:44px;text-align:center}
 @media (max-width:640px){#tabloubot #tbGraficCard .tbTf{width:100%}#tabloubot #tbGraficCard .tbTf .tbIntBtn{flex:1 1 0;min-width:0;min-height:44px}}
 /* v100.138: ceasul live din antetul citirii (verde cât vine prețul, galben când nu) */
-#tabloubot .tbCitLive{font-variant-numeric:tabular-nums}#tabloubot .tbCitLive.viu{color:var(--good)}#tabloubot .tbCitLive.vechi{color:var(--warn)}
+#tabloubot .tbCitLive{font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}#tabloubot .tbCitLive.viu{color:var(--good)}#tabloubot .tbCitLive.vechi{color:var(--warn)}
 /* v100.138 (revizia 3): antetul copiei de pe telefon - titlul și ceasul live, ca pe cardul ascuns sub 1180 px */
-#tabloubot .tbCitCap{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;margin:0 0 6px}#tabloubot .tbCitCap b{font-size:13.5px}
+/* v100.242: ceasul rămâne pe un rând; „acum 9 s” / „acum 10 s” nu mai înalță antetul */
+#tabloubot .tbCitCap{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:nowrap;margin:0 0 6px}#tabloubot .tbCitCap b{font-size:13.5px;flex:0 0 auto}#tabloubot .tbCitCap .tbCitLive{flex:1 1 auto;min-width:0;text-align:right}
 /* v100.139: rândul Monte Carlo din citire - primul, pe fond, cu butonul spre Simulator */
 #tabloubot .tbCitR.tbCitMc{background:var(--panel-2);border-radius:5px;padding:8px 10px;border-top:0;margin:4px 0 2px}#tabloubot .tbCitR.tbCitMc .tbCitIc{background:transparent;font-size:15px}
 #tabloubot .tbCitMc .tbMcBtn{margin:4px 0 0;padding:2px 8px;font-size:12px;width:auto}
