@@ -2289,6 +2289,17 @@ body:not(.peLaborator) main>.note{display:none}
 #sugPagina .sugPandaCap{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:nowrap;margin:0 0 6px}#sugPagina .sugPandaCap h4{margin:0;flex:0 0 auto}#sugPagina .sugPandaCap>.tbSub{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;text-align:right;white-space:nowrap}
 /* v100.245: pânda ține locul cât se desface cardul; tabelul de 150 de rânduri rămâne mai înalt */
 #sugPagina>.sugPanda{min-height:14em}
+/* v100.246: aceleași cartele ca Tabloul. Listele, filtrele, istoricul și butoanele rămân. */
+#sugestii{--tb-r:5px;--tb-linie:rgba(159,179,196,.16);--tb-fond:#141C24;--tb-fond2:#1A242E;font-variant-numeric:tabular-nums}
+#sugPagina .tbBloc{padding:10px 12px;background:var(--tb-fond);border:1px solid var(--tb-linie);border-radius:var(--tb-r);min-width:0}
+#sugPagina .sugCap,#sugPagina .rlSec>h3{margin:16px 0 8px;font-size:14px;font-weight:600;line-height:1.3}
+#sugPagina .sugCartela>h4{font-size:14px;font-weight:600;line-height:1.3}
+#sugPagina>.rlRasp,#sugPagina>[data-sug="nota"]{margin:0;max-width:90ch;line-height:1.45}
+#sugPagina>.sugTrend{padding:10px 12px;background:var(--tb-fond);border:1px solid var(--tb-linie);border-radius:var(--tb-r)}
+#sugPagina>.sugTrend>h3{margin-top:0}
+#sugPagina .sugSect{background:var(--tb-fond);border-color:var(--tb-linie);border-radius:var(--tb-r)}
+#sugPagina .sugIstoric,#sugPagina .sugUrm{color:var(--muted);font-size:12px;margin-top:4px;padding-top:6px;border-top:1px solid var(--tb-linie)}
+@media (max-width:640px){#sugPagina .t212BtnLinie{min-height:44px}}
 /* v100.120: pagina Salt - pozițiile, formularul, tabelul tuturor instrumentelor */
 .saltPoz{display:grid;gap:6px;align-content:start;min-width:0}.saltPoz h5{margin:0}.saltPoz p{margin:0}.saltForm{display:grid;gap:8px;margin-top:10px}
 .saltCampuri{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px}.saltCampuri label,.saltCautaEt{display:grid;gap:4px;font-size:13px;color:var(--muted)}
