@@ -176,24 +176,18 @@ await test("desenarea nu golește pagina la primul desen și aliniază rânduril
   assert.match(ap, /gridTemplateColumns/);
 });
 
-await test("versiunea v100.244, insigna PLIN, colectorul rămâne v101.136", () => {
+await test("versiunea de la v100.244 în sus, colectorul rămâne v101.136", () => {
   const P = JSON.parse(citeste("package.json"));
-  assert.equal(P.version, "100.244.0");
+  const parti = P.version.split(".").map(Number);
+  assert.ok(parti[0] === 100 && parti[1] >= 244, P.version);   /* v100.245: insigna live nu mai e PLIN */
   assert.equal(P.scripts["test:v100244"], "node scripts/proba-v100244.mjs");
   assert.equal((P.scripts.test.match(/test:v100244/g) || []).length, 1);
   assert.equal((P.scripts.test.match(/test:v100243/g) || []).length, 1);
   assert.doesNotMatch(P.scripts["test:v100244"], /npm run test:v100244/);
-  const idx = citeste("public", "index.html");
-  assert.equal((idx.match(/v100\.244/g) || []).length, 4);
-  assert.match(idx, /id="sideVersiune"[^>]*>v100\.244 · PLIN</);
-  assert.match(idx, /id="topVersiune">v100\.38 · doar citire</);
-  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-244/);
-  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.244"/);
-  const info = JSON.parse(citeste("BUILD_INFO.json"));
-  assert.equal(info.version, "v100.244");
-  assert.equal(info.badge, "v100.244 · PLIN");
-  assert.equal(info.engineContract, "54.1");
+  assert.match(citeste("public", "index.html"), /id="topVersiune">v100\.38 · doar citire</);
+  assert.equal(JSON.parse(citeste("BUILD_INFO.json")).engineContract, "54.1");
   assert.match(citeste("scripts", "colector.mjs"), /VERSIUNE_COLECTOR = "v101\.136"/);
+  assert.match(citeste("public", "app.css").trim().split("\n").pop(), /#topLive\{display:none!important\}/);
 });
 
 console.log(picate ? `\n${picate} PICA din ${teste}\n` : `\ntoate ${teste} ok\n`);

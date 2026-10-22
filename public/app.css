@@ -2287,6 +2287,8 @@ body:not(.peLaborator) main>.note{display:none}
 #sugPagina .sugIstoric,#sugPagina .sugUrm{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:1.35em;line-height:1.35}
 /* v100.243: vârsta lățimii rămâne pe un rând; „acum 9 min” / „acum 10 min” nu înalță antetul pândei */
 #sugPagina .sugPandaCap{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:nowrap;margin:0 0 6px}#sugPagina .sugPandaCap h4{margin:0;flex:0 0 auto}#sugPagina .sugPandaCap>.tbSub{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;text-align:right;white-space:nowrap}
+/* v100.245: pânda ține locul cât se desface cardul; tabelul de 150 de rânduri rămâne mai înalt */
+#sugPagina>.sugPanda{min-height:14em}
 /* v100.120: pagina Salt - pozițiile, formularul, tabelul tuturor instrumentelor */
 .saltPoz{display:grid;gap:6px;align-content:start;min-width:0}.saltPoz h5{margin:0}.saltPoz p{margin:0}.saltForm{display:grid;gap:8px;margin-top:10px}
 .saltCampuri{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px}.saltCampuri label,.saltCautaEt{display:grid;gap:4px;font-size:13px;color:var(--muted)}

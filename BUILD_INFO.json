@@ -1,11 +1,12 @@
 {
-  "version": "v100.244",
-  "badge": "v100.244 · PLIN",
+  "version": "v100.245",
+  "badge": "v100.245 · ȚINE",
   "engineContract": "54.1",
   "dataSchema": 54,
   "baseRelease": "v77.4 · TABLOUL BOTULUI",
   "releaseType": "valul de reparatii din revizia finala pe ansamblu: marginStatus/riskStatus citite, telefon, scurgere WS/ceas la iesire prin tab-uri, ATR adevarat, pret viu, istoric fara pret inghetat, sortare dupa timp, comision nemasurabil, durata la margine",
   "features": {
+    "tine245": "Sugestii (22.10.2026, el: „fa idei”): coloanele se măsoară din nou când lățimea se mută cu cel puțin 48 px; fraza de istoric tăiată stă și în title; pânda ține 14em cât se desface cardul; filtrul „monedele boților mei” rămâne pe acțiunea lui. Listele, 🧭 și „arată toate” rămân. Pragurile neschimbate. Colectorul rămâne v101.136.",
     "plin244": "Sugestii (22.10.2026, el: „fa idei și refă pagina de sugestii”): cele 8 blocuri sunt deja în pagină; un rând nou se adaugă, unul dispărut se scoate, cifra se schimbă în același nod; istoricul stă pe un rând; grila nu pierde o coloană la o bară de derulare; verdictul stă lângă titlu, ca la Tablou. Listele, filtrele, 🧭 și „arată toate” rămân. Pragurile neschimbate. Colectorul rămâne v101.136.",
     "loc243": "Sugestii (22.10.2026, el: „lucrează și la pagina de sugestii în aceleași condiții”): vârsta lățimii stă pe un rând; la o cifră nouă se schimbă textul, nu toată pagina; un bloc nou își înlocuiește doar secțiunea; „arată toate” rămâne deschis. Pragurile neschimbate. Colectorul rămâne v101.136.",
     "lin242": "Tabloul (22.10.2026, el: „fa idei”): ceasul citirii stă pe un rând; la prețul viu se schimbă cifrele, nu tot HTML-ul, și pe telefon; drumul nu își mută rândurile cât o bară de derulare. Pragurile neschimbate. Colectorul rămâne v101.136.",

@@ -14,7 +14,7 @@ function sugCartela(titlu, sub, randuri, gol, istoric, urm) {
   return '<div class="tbBloc sugCartela"><h4>' + sugEsc(titlu) + '</h4>' + (sub ? '<p class="tbSub">' + sugEsc(sub) + '</p>' : '')
     + (r.length ? '<ul class="sugLista">' + r.map(function (x) { return '<li><b>' + sugEsc(x.s) + '</b> <span class="tbSub">' + sugEsc(x.d) + '</span>'
       + (x.b ? '<a class="sugBusola" href="' + sugEsc(x.b) + '" target="_blank" rel="noopener" aria-label="deschide ' + sugEsc(x.s) + ' în Busola" title="deschide în Busola">🧭</a>' : '') + '</li>'; }).join("")   /* v100.181: 🧭 spre Busola, doar unde rândul o are */ + '</ul>' : '<p class="sugGol">' + sugEsc(gol) + '</p>')
-    + (istoric ? '<p class="tbSub sugIstoric">' + sugEsc(istoric) + '</p>' : '') + (urm ? '<p class="tbSub sugUrm">' + sugEsc(urm) + '</p>' : '') + '</div>';
+    + (istoric ? '<p class="tbSub sugIstoric" title="' + sugEsc(istoric) + '">' + sugEsc(istoric) + '</p>' : '') + (urm ? '<p class="tbSub sugUrm" title="' + sugEsc(urm) + '">' + sugEsc(urm) + '</p>' : '') + '</div>';
 }
 // revizia (M1): se judecă semnalele de cel puțin 14 zile, la prețul de ACUM (nu „atunci”)
 function sugUrm(u) { return !u || !u.n ? "Urmărirea înainte începe: semnalele de cel puțin 14 zile, la prețul de acum." : "Urmărit înainte (semnalele de cel puțin 14 zile, la prețul de acum): " + u.n + " - " + sugPc(u.pePlus) + " pe plus, " + sugP1(u.medie) + " în medie, după comision."; }
@@ -194,7 +194,17 @@ function sugPeLoc(el, h) {
   var a = [], b = []; sugTexte(el, a); sugTexte(nou, b);
   if (a.length !== b.length) return false;
   for (var i = 0; i < a.length; i++) if (a[i].nodeValue !== b[i].nodeValue) a[i].nodeValue = b[i].nodeValue;
+  sugPuneTitle(el, nou);
   return true;
+  function sugPuneTitle(x, y) {
+    if (!x || x.nodeType !== 1 || !y || y.nodeType !== 1 || !x.getAttribute || !y.getAttribute) return;
+    var t = y.getAttribute("title"), i, xe = [], ye = [];
+    if (t) { if (x.getAttribute("title") !== t) x.setAttribute("title", t); }
+    else if (x.getAttribute("title") != null && typeof x.removeAttribute === "function") x.removeAttribute("title");
+    for (i = 0; i < x.childNodes.length; i++) if (x.childNodes[i].nodeType === 1) xe.push(x.childNodes[i]);
+    for (i = 0; i < y.childNodes.length; i++) if (y.childNodes[i].nodeType === 1) ye.push(y.childNodes[i]);
+    for (i = 0; i < xe.length && i < ye.length; i++) sugPuneTitle(xe[i], ye[i]);
+  }
 }
 function sugTineTrend(el) {
   if (!sugStare.trendTot || !el) return;
@@ -220,6 +230,18 @@ function sugAplicLatime(el) {
   var g = el.querySelectorAll(".sugGrila, .sugSectGrid"), i;
   for (i = 0; i < g.length; i++) if (g[i].style) g[i].style.gridTemplateColumns = stil;
 }
+function sugLaFereastra() {
+  var el = typeof document !== "undefined" && document.getElementById && document.getElementById("sugPagina");
+  if (!el || typeof el.getBoundingClientRect !== "function") return;
+  var r = el.getBoundingClientRect();
+  var mas = r && isFinite(r.width) ? r.width : 0;
+  var tinut = sugStare.latimeGrila || 0;
+  if (sugLatime(mas, tinut) === tinut) return;
+  sugAplicLatime(el);
+}
+function sugAscultaFereastra() {
+  if (typeof addEventListener === "function") addEventListener("resize", sugLaFereastra);
+}
 function sugAlinia(vechi, nou) {
   function elemente(n) {
     var L = [], i;
@@ -227,8 +249,10 @@ function sugAlinia(vechi, nou) {
     return L;
   }
   function cheieRand(n) {
-    var i, c, tag, t, j;
+    var i, c, tag, t, j, act;
     if (!n || n.nodeType !== 1) return "";
+    act = n.getAttribute ? n.getAttribute("data-action-click") : null;
+    if (act) return "act:" + act;
     for (i = 0; i < n.childNodes.length; i++) {
       c = n.childNodes[i];
       if (!c || c.nodeType !== 1) continue;
@@ -269,9 +293,9 @@ function sugAlinia(vechi, nou) {
     if (a.setAttribute) a.setAttribute("class", cls);
   }
   function puneLegatura(a, b) {
-    var i, k, v;
-    for (i = 0; i < 2; i++) {
-      k = i ? "data-action-click" : "href";
+    var i, k, v, nume = ["href", "data-action-click", "title"];
+    for (i = 0; i < nume.length; i++) {
+      k = nume[i];
       v = b.getAttribute ? b.getAttribute(k) : null;
       if (v) a.setAttribute(k, v);
       else if (a.getAttribute && a.getAttribute(k) != null && a.removeAttribute) a.removeAttribute(k);
@@ -341,3 +365,4 @@ async function sugPorneste(fortat) {
   } finally { sugStare.inLucru = false; }
   sugDeseneaza();
 }
+sugAscultaFereastra();
