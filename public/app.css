@@ -3024,6 +3024,7 @@ html.pzDemo #tabloubot .tbPretViu{display:none!important}
    Cardurile de jos iau rândul întreg: span 2 rămâne în fișier, regula asta îl acoperă. */
 @media (min-width:1181px){
   #tabloubot .tbGraficRand{align-items:stretch}
+  #tabloubot .tbGraficRand{grid-template-columns:minmax(0,1fr) 280px}
   #tabloubot .tbGrCol{display:flex;flex-direction:column;gap:8px;grid-column:2;grid-row:1;align-self:stretch;min-width:0}
   #tabloubot .tbGrStanga{grid-column:1;grid-row:1;align-self:stretch}
   #tabloubot #tbCitireCard{grid-column:auto;grid-row:auto;align-self:auto;flex:0 0 auto}

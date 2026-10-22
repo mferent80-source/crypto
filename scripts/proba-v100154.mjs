@@ -98,7 +98,7 @@ await test("(9) v100.161: auditul celor 18 pagini - fâșia „Selected market�
   assert.ok(CSS.includes("@media (min-width:981px) and (max-width:1359px){.heroStrip{grid-template-columns:minmax(0,1fr)}#tabloubot .tbConsCip{white-space:normal;max-width:100%}}"));
   assert.ok(CSS.includes(".pzAcumGrila .pzCel{white-space:normal}.pzAcumGrila .pzCel>b small{white-space:nowrap}"));
   assert.match(CSS, /\.gbValori\{max-width:620px;/);
-  assert.equal(G.desen(Object.assign({}, baza, { W: 1400 })).harta.plotW, 1400); assert.match(citeste("public", "lib", "grafic-bot.js"), /var cmp = true;/);
+  assert.equal(G.desen(Object.assign({}, baza, { W: 1400 })).harta.plotW, 1348); /* v100.250: 1400 − scara de 52; jgheabul de nume nu se întoarce */ assert.match(citeste("public", "lib", "grafic-bot.js"), /var cmp = true;/);
   assert.ok(CSS.trim().split("\n").pop().startsWith("@media (max-width:640px){.sugPandaTab thead"), "regula pandei rămâne ultima");
 });
 

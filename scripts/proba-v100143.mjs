@@ -79,9 +79,9 @@ await test("(4) șansele măsurate: nu mai stau peste lumânări (niciun text gb
 });
 await test("(5) marginea din dreapta crește cu cea mai lungă etichetă (nume + preț + șansă), cel mult un sfert din lățime; fără șanse rămâne 176", () => {
   const d0 = G.desen({ bare: B5, W: 1000, st: {}, niv: [niv(0.55, "gridSus", "grid sus", "grid↑", "#0af", "fine")], alerte: [], per: "24h" });
-  assert.equal(d0.harta.plotW, 1000, "v100.161: și pe ecranul mare fără coloana din dreapta - valorile în fâșia de sub grafic");
+  assert.equal(d0.harta.plotW, 948, "v100.161: fără jgheabul de nume; v100.250: scara de 52 px, valorile tot în fâșie");
   const d1 = G.desen({ bare: B5, W: 1000, st: {}, niv: [niv(0.55, "gridSus", "grid sus", "grid↑", "#0af", "fine", { sansa: "24 h: 67%", sansaScurt: "67%", sansaLung: "x" })], alerte: [], per: "24h" });
-  assert.equal(d1.harta.plotW, 1000, "cu șansă la fel"); assert.match(d1.valori, /<span class="gbVS">24 h: 67%<\/span>/, "șansa în fâșie");
+  assert.equal(d1.harta.plotW, 948, "cu șansă la fel: scara rămâne 52, nu crește cu numele"); assert.match(d1.valori, /<span class="gbVS">24 h: 67%<\/span>/, "șansa în fâșie");
   const dT = G.desen({ bare: B5, W: 390, ingust: true, st: {}, niv: [niv(0.55, "gridSus", "grid sus", "grid↑", "#0af", "fine", { sansa: "24 h: 67%", sansaScurt: "67%", sansaLung: "x" })], alerte: [], per: "24h" });
   assert.equal(dT.harta.plotW, 390, "pe telefon fără coloana din dreapta (v100.160: valorile în fâșia de sub grafic, prețul pe grafic, numele benzilor în benzi)");
 });

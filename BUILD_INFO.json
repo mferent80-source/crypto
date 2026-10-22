@@ -1,11 +1,12 @@
 {
-  "version": "v100.249",
-  "badge": "v100.249 · STRÂNS",
+  "version": "v100.250",
+  "badge": "v100.250 · LAT",
   "engineContract": "54.1",
   "dataSchema": 54,
   "baseRelease": "v77.4 · TABLOUL BOTULUI",
   "releaseType": "valul de reparatii din revizia finala pe ansamblu: marginStatus/riskStatus citite, telefon, scurgere WS/ceas la iesire prin tab-uri, ATR adevarat, pret viu, istoric fara pret inghetat, sortare dupa timp, comision nemasurabil, durata la margine",
   "features": {
+    "lat250": "Tabloul (22.10.2026, el: graficul ca în TradingView, un pic mai mare și mai lat): panoul botului urcă la 420–540, lumânarea e un pic mai lată, volumul de pe lat are 54 px, iar scara de 52 px stă în dreapta și ține doar prețuri. Coloana de citire și trend coboară la 280 px de la 1181 px; șirul de 340 px rămâne. Telefonul rămâne 270, fără scară. Numele lungi, culorile, pragurile și calculul rămân. Proba desenează și numără straturile. Colectorul rămâne v101.136.",
     "strans249": "Tabloul (22.10.2026, el: spațiile goale și graficul mai explicit): citirea și trendul stau în coloana din dreapta, lipite de grafic, la 8 px. Cardurile de jos iau rândul întreg. Lumânările botului sunt mai înalte, scara are trei prețuri, iar lista de sub grafic se cheamă „Ce e pe grafic”. Numele lungi nu revin peste lumânări. Telefonul, culorile lumânărilor, pragurile și calculul rămân. Colectorul rămâne v101.136.",
     "langa248": "Pagini (22.10.2026, el: „fa idei”): macro și sectoarele de pe Piața azi stau pe un rând de la 1700px, pentru că acolo pagina e mai scurtă și cifrele nu se taie. Sub 1700 rămân una sub alta. Motorul vechi închis din Setări stă într-o celulă, lângă cartela dinainte, și ia rândul întreg doar deschis. Pe telefon două coloane lungesc pagina, deci stiva de la 900px rămâne. Coloana interioară una sub alta, pe rândul lat, tot lungește pagina, deci rămân două. Pragurile neschimbate. Colectorul rămâne v101.136.",
     "rand247": "Pagini (22.10.2026, el: „fa tot”): la Monte Carlo titlul și obiceiurile urcă deasupra casetei de simbol; simulatorul își spune numele; futures pune interpretarea întâi; motorul vechi din Setări se pliază; macro și sectoarele de pe Piața azi stau una sub alta până la 1920px și pe un rând de acolo în sus, pentru că sub 1920 rândul lungea pagina. Parola rămâne prima. Pragurile neschimbate. Colectorul rămâne v101.136.",
