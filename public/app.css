@@ -3030,6 +3030,13 @@ html.pzDemo #tabloubot .tbPretViu{display:none!important}
   #tabloubot #tbCitireCard{grid-column:auto;grid-row:auto;align-self:auto;flex:0 0 auto}
   #tabloubot #tbTrendCard{grid-column:auto;grid-row:auto;flex:1 1 auto;min-height:0}
 }
+/* v100.251: trendul rămâne cât textul; coloana coboară la 240. Șirurile de 340, 280 și flex:1 1 auto rămân mai sus. */
+@media (min-width:1181px){
+  #tabloubot .tbGraficRand{grid-template-columns:minmax(0,1fr) 240px}
+  #tabloubot .tbGrCol{align-self:start}
+  #tabloubot #tbTrendCard{flex:0 0 auto}
+}
+#tabloubot .gbValori li.gbAproape .gbVN{color:#E9B949}#tabloubot .gbValori li.gbAproape .gbVN::after{content:" · aproape";font-weight:600}
 .pzDemo #tabloubot.on .tbCadru>.contTot,
 .pzDemo #tabloubot.on .tbCadru>.piataAzi,
 .pzDemo #tabloubot.on .tbCadru>#tbSemaforCard,

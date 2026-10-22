@@ -6902,8 +6902,8 @@ function tbPretScurt(v){if(v==null||!isFinite(v))return "—";var a=Math.abs(v);
 // v100 (demo-ul aprobat 28.09): graficul desenat de GraficBot (public/lib/grafic-bot.js, pur): lumanari + volum, planul, zero-ul,
 // gridul, stopul, lichidarea, alertele DOAR ale botului (TabloExtra.alerteleBotului), Bollinger / EMA 20·50 / RSI / profil de volum.
 var TB_IND_KEY="tbGraficInd",tbGrafRz=null;
-function tbIndStare(){var d={bb:true,ema:true,rsi:true,vp:true,zi:true,val:true,adx:true};try{var v=JSON.parse(localStorage.getItem(TB_IND_KEY)||"null");if(v&&typeof v==="object")for(var k in d)if(typeof v[k]==="boolean")d[k]=v[k]}catch(_){}return d}
-function tbSincInd(){var s=tbIndStare();["bb","ema","rsi","vp","zi","val","adx"].forEach(function(k){var e=$("tbInd-"+k);if(e)e.setAttribute("aria-pressed",String(!!s[k]))});tbSincMod()}
+function tbIndStare(){var d={bb:true,ema:true,rsi:true,vp:true,zi:true,val:true,adx:true};d.scara=true;try{var v=JSON.parse(localStorage.getItem(TB_IND_KEY)||"null");if(v&&typeof v==="object")for(var k in d)if(typeof v[k]==="boolean")d[k]=v[k]}catch(_){}return d}
+function tbSincInd(){var s=tbIndStare();["bb","ema","rsi","vp","zi","val","adx","scara"].forEach(function(k){var e=$("tbInd-"+k);if(!e)return;e.setAttribute("aria-pressed",String(!!s[k]));if(k==="scara")e.textContent=s.scara?"Scara pornită":"Scara oprită"});tbSincMod()}
 // v100.98 (05.10, demo aprobat): „Simplu” (implicit) = lumânările, marginile gridului, zero, planul, stopul, acum, EMA, RSI/ADX; „Complet” = tot, cu comutatoarele
 var TB_MOD_KEY="tbGraficMod";
 function tbModSimplu(){try{return localStorage.getItem(TB_MOD_KEY)!=="complet"}catch(_){return true}}
@@ -7308,7 +7308,7 @@ function renderTabloGrafic(){
   var W=Math.round(el.getBoundingClientRect().width||el.clientWidth||800),ingust=W<560;tbGrafRz.w=W;
   // v100.99 (I-532): intrarea graficului e PURĂ (GraficBot.intrareBot) - planul cu gridul, lumânarea live, șansele (I-528), stopul vs planul (I-527), stopul de probă (I-529)
   tbAdu1m(b);   /* v100.146: lumânările de 1 min ale ferestrei botului, din spate; când vin, se redesenează o dată */
-  var oG=GraficBot.intrareBot({bot:b,brut:brut,bare:bare,plan:tbPlan.botId===b.id?tbPlan.plan:null,alerteServer:tbStare.alerteServer,valoare:tbValoarePt(b),profil:tbProfilPt(b),consLinii:tbStare.consLinii,funding:tbFundingPt(),sanse:tbSansePt(b),adxPeBoti:(tbCazuriAdu(),tbCazuri.adx||null),pretViu:pvPretViuAcum(b),acum:Date.now(),W:W,st:tbIndStare(),simplu:tbModSimplu(),per:TB_PERIOADE[tbTf()].per,fereastraToata:tbFereastraToataE(),fereastraCat:TB_PERIOADE[tbTf()].cat,bare1m:tbBare1m(b),semafor:tbSemaforTf(b),tfGrafic:TB_PERIOADE[tbTf()].i,trendIstoric:tbTrendIstoric(b),semClic:{"5M":"tbAlegeInterval('5M')","15M":"tbAlegeInterval('15M')","60M":"tbAlegeInterval('60M')","4H":"tbAlegeInterval('4H')","1D":"tbAlegeInterval('1D')"},semPeBoti:tbCazuri.sem||null});
+  var oG=GraficBot.intrareBot({bot:b,brut:brut,bare:bare,plan:tbPlan.botId===b.id?tbPlan.plan:null,alerteServer:tbStare.alerteServer,valoare:tbValoarePt(b),profil:tbProfilPt(b),consLinii:tbStare.consLinii,funding:tbFundingPt(),sanse:tbSansePt(b),adxPeBoti:(tbCazuriAdu(),tbCazuri.adx||null),pretViu:pvPretViuAcum(b),acum:Date.now(),W:W,st:tbIndStare(),scara:tbIndStare().scara,simplu:tbModSimplu(),per:TB_PERIOADE[tbTf()].per,fereastraToata:tbFereastraToataE(),fereastraCat:TB_PERIOADE[tbTf()].cat,bare1m:tbBare1m(b),semafor:tbSemaforTf(b),tfGrafic:TB_PERIOADE[tbTf()].i,trendIstoric:tbTrendIstoric(b),semClic:{"5M":"tbAlegeInterval('5M')","15M":"tbAlegeInterval('15M')","60M":"tbAlegeInterval('60M')","4H":"tbAlegeInterval('4H')","1D":"tbAlegeInterval('1D')"},semPeBoti:tbCazuri.sem||null});
   var d=GraficBot.desen(oG);tbFereastraButon(oG);tbDeseneazaCitire(oG,b);
   window.tbGraficUltim={botId:b.id,niv:Array.isArray(oG.niv)?oG.niv:[],stopPlan:oG.consLinii&&oG.consLinii.stopPlan,la:Date.now()};   /* v100.151: drumul botului (lib/asezare-paznic.js) citește ACELEAȘI niveluri ca graficul, din date */
   var pAcum=pvPretViuAcum(b)||bare[bare.length-1].c;
@@ -7320,7 +7320,7 @@ function renderTabloGrafic(){
   var bl=GraficBot.bilantUmpleri(oG.umpleri,b,{eticheta:oG.umpleriEticheta||TB_PERIOADE[tbTf()].eticheta,pornitInFereastra:oG.pornitInFereastra,lo:d.harta.lo,hi:d.harta.hi,pas:oG.umpleriPas||(bare.length>1?bare[1].t-bare[0].t:0),acum:Date.now()});   // v100.145: bilanțul umplerilor - primul rând sub grafic (intervalul, de unde numără, ce e în afara cadrului)
   el.innerHTML='<div class="gbZona">'+d.svg+'<div class="gbTip" hidden></div></div>'+(d.valori||'')+(bl?'<p class="tbSub gbBilant"><b>▲▼ umpleri:</b> '+escapeHtml(bl.text)+'</p>':'')+ultHtml+(fg?'<p class="tbSub gbValGrid">📊 Gridul vs zona de valoare: '+escapeHtml(fg.text)+'</p>':'')+'<div class="gbLeg">'+d.legenda+'</div>';
   var zona=el.querySelector(".gbZona"),svg=zona.querySelector("svg"),tip=zona.querySelector(".gbTip"),cr=svg.querySelector(".gbCruce");
-  var crY=svg.querySelector(".gbCruceY"),ascunde=function(){tip.hidden=true;if(cr)cr.style.display="none";if(crY)crY.style.display="none"};
+  var crY=svg.querySelector(".gbCruceY"),crP=svg.querySelector(".gbCrucePret"),ascunde=function(){tip.hidden=true;if(cr)cr.style.display="none";if(crY)crY.style.display="none";if(crP)crP.style.display="none"};
   var arata=function(cx,cy){
     var r=svg.getBoundingClientRect(),k=d.harta.W/(r.width||d.harta.W),sx=(cx-r.left)*k,sy=(cy-r.top)*k;
     if(sy<(d.harta.sus||0)){ascunde();return}   /* v100.144 (revizia Opus): în banda semaforului nu e nicio lumânare */
@@ -7333,6 +7333,7 @@ function renderTabloGrafic(){
     tip.innerHTML=h;tip.hidden=false;
     var zr=zona.getBoundingClientRect(),tw=tip.offsetWidth,px=cx-zr.left+14;if(px+tw>zr.width)px=cx-zr.left-tw-14;
     tip.style.left=Math.max(0,px)+"px";tip.style.top=Math.max(0,Math.min(cy-zr.top-20,zr.height-tip.offsetHeight))+"px";
+    if(crP){var pY=GraficBot.pretLaY(d.harta,sy),lat=d.harta.W-d.harta.plotW;if(pY!==null&&lat>8){var et=tbPretScurt(pY),tx=crP.querySelector("text"),rc=crP.querySelector("rect"),w=Math.min(lat-4,Math.max(28,Math.round(et.length*6.6+8))),xR=d.harta.W-2,yR=Math.max(10,Math.min(d.harta.mainH-8,syG));tx.textContent=et;tx.setAttribute("x",(xR-4).toFixed(1));tx.setAttribute("y",(yR+4).toFixed(1));rc.setAttribute("x",Math.max(d.harta.plotW+2,xR-w).toFixed(1));rc.setAttribute("width",String(Math.min(w,lat-4)));rc.setAttribute("y",(yR-8).toFixed(1));crP.style.display=""}else crP.style.display="none"}
   };
   // pe ecran tactil, eticheta ramane dupa ce ridici degetul (se muta la urmatoarea atingere)
   var fixat=false;
