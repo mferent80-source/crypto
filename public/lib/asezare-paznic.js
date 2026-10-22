@@ -215,7 +215,10 @@
   function drum() {
     var b = D.bot, k = $("tbKpi"), el = $("pzDrumCard");
     if (!b || !k) { if (el) { el.hidden = true; el._h = ""; } document.body.classList.remove("pzAreDrum"); return; }
-    if (!el) { el = document.createElement("section"); el.id = "pzDrumCard"; k.parentNode.insertBefore(el, k); }
+    if (!el) { el = document.createElement("section"); el.id = "pzDrumCard"; }
+    var sus = k.parentNode, cadru = sus && sus.parentNode && sus.parentNode.classList.contains("tbCadru") ? sus.parentNode : null;
+    var parinte = cadru || sus, inainte = cadru ? sus : k;
+    if (parinte && el.parentNode !== parinte) parinte.insertBefore(el, inainte);   /* v100.240: frate cu .tbSus, ca ordinea din CSS să-l pună pe rândul lui */
     var corp = drumHtml(b, false, el.clientWidth - 28);
     if (!corp) { el.hidden = true; document.body.classList.remove("pzAreDrum"); return; }   // fără drum, barele vechi rămân la vedere
     var h = '<div class="pzCap"><b>Drumul botului</b><span>nivelurile de pe grafic, într-o linie · atinge o liniuță pentru preț</span></div>' + corp;

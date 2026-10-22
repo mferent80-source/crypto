@@ -2913,6 +2913,56 @@ html.pzDemo body:not(.pzFasiaDeschisa):has(main>#cloud.on,main>#settings.on,main
 .pzPret{margin-left:auto;align-self:center;font-family:var(--pzMono);font-size:22px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--pzT1);white-space:nowrap}
 .pzPret.sus{color:var(--pzSus)}.pzPret.jos{color:var(--pzJos)}.pzPret:empty{display:none}
 @media (max-width:550px){.pzPret{font-size:18px;margin-left:0}}
+/* v100.240: așezarea aprobată. DOM-ul rămâne. Ordinea veche de mai sus rămâne în fișier.
+   Fâșia de boți e orizontală: șirul #tabloubot.pzCuColoana.on{display:grid!important stă mai sus (proba v100.151). */
+html.pzDemo #tabloubot.pzCuColoana.on{display:flex!important;flex-direction:column;gap:8px}
+html.pzDemo #tabloubot.pzCuColoana.on>#pzBotiCol{position:static;grid-column:auto;grid-row:auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px;width:100%;max-width:var(--latime-pagina);margin-inline:auto;box-sizing:border-box;padding:6px 8px;top:auto}
+html.pzDemo #tabloubot.pzCuColoana.on>.tbCadru{width:100%;min-width:0}
+html.pzDemo #pzBotiCol>.pzCap{flex:1 0 100%;padding:2px 8px}
+html.pzDemo #pzBotiCol>.pzCap:first-child{flex:0 0 auto}
+html.pzDemo #pzBotiCol .pzColRand{width:auto;grid-template-columns:auto auto auto;border:1px solid var(--pzLi);border-radius:4px;padding:4px 8px}
+.pzDemo #tabloubot.on .tbCadru{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;align-items:start}
+.pzDemo #tabloubot.on .tbCadru>*{grid-column:1 / -1;min-width:0}
+.pzDemo #tabloubot .tbCadru>.sectionHead{order:8}
+.pzDemo #tabloubot .tbCadru>#pzVerdict{order:10;grid-column:1 / 4;grid-row:1 / span 2;align-self:stretch}
+.pzDemo #tabloubot .tbCadru>.tbSus{order:14}
+.pzDemo #tabloubot .tbCadru:has(>#pzVerdict:not([hidden]))>.sectionHead{grid-column:4 / -1;grid-row:1}
+.pzDemo #tabloubot .tbCadru:has(>#pzVerdict:not([hidden]))>.tbSus{grid-column:4 / -1;grid-row:2;align-self:start}
+.pzDemo #tabloubot .tbCadru:has(>#pzVerdict:not([hidden]))>.tbSus>#tbKpi{grid-template-columns:repeat(2,minmax(0,1fr))}
+.pzDemo #tabloubot .tbCadru>#tbGridLarg{order:16}
+.pzDemo #tabloubot .tbCadru>#tbMcSus{order:18}
+.pzDemo #tabloubot .tbCadru>#pzDrumCard{order:22}
+.pzDemo #tabloubot .tbCadru>.tbGraficRand{order:28}
+.pzDemo #tabloubot .tbCadru>#tbConcret{order:40}
+.pzDemo #tabloubot .tbCadru>.tbGrilaNoua{order:44}
+.pzDemo #tabloubot .tbCadru>#tbGridNou{order:48}
+.pzDemo #tabloubot .tbCadru>#tbIdei{order:52}
+.pzDemo #tabloubot .tbCadru>.contTot{order:60;grid-column:span 2}
+.pzDemo #tabloubot .tbCadru>.piataAzi{order:62;grid-column:span 2}
+.pzDemo #tabloubot .tbCadru>#tbSemaforCard{order:64;grid-column:span 2}
+.pzDemo #tabloubot .tbCadru>#tbMotive{order:66;grid-column:span 2}
+.pzDemo #tabloubot .tbCadru>#tbAcumCard{order:68;grid-column:span 2}
+.pzDemo #tabloubot .tbCadru>#tbPl-plan{order:70;grid-column:span 2}
+.pzDemo #tabloubot .tbCadru>#tbPl-sfaturi{order:72;grid-column:span 2}
+.pzDemo #tabloubot .tbCadru>#tbPl-avert{order:74;grid-column:span 2}
+.pzDemo #tabloubot .tbCadru>#tbPl-alerte{order:76;grid-column:span 2}
+.pzDemo #tabloubot .tbCadru>#tbPl-prob{order:78;grid-column:span 2}
+.pzDemo #tabloubot .tbCadru>#tbPl-risc{order:80;grid-column:span 2}
+.pzDemo #tabloubot .tbCadru>#tbPl-fisa{order:82;grid-column:span 2}
+.pzDemo #tabloubot .tbCadru>#tbPl-sapt{order:84;grid-column:span 2}
+.pzDemo #tabloubot .tbCadru>#tbPl-socoteala{order:86;grid-column:span 2}
+.pzDemo #tabloubot .tbCadru>#tbPl-port{order:88;grid-column:span 2}
+#tbMcSus{border:1px solid var(--tb-linie);background:var(--tb-fond);border-radius:var(--tb-r);padding:8px 12px}
+#tbMcSus .tbCitR{border-top:0}
+#tbMcSus:empty,#tbMcSus[hidden]{display:none!important}
+@media (max-width:1000px){
+  .pzDemo #tabloubot.on .tbCadru{grid-template-columns:minmax(0,1fr)}
+  .pzDemo #tabloubot.on .tbCadru>*{grid-column:1 / -1!important;grid-row:auto!important}
+  .pzDemo #tabloubot.on .tbCadru:has(>#pzVerdict)>.tbSus>#tbKpi{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+@media (max-width:640px){
+  .pzDemo #tabloubot.on .tbCadru:has(>#pzVerdict)>.tbSus>#tbKpi{grid-template-columns:1fr 1fr}
+}
 html.pzDemo #tabloubot .tbPretViu{display:none!important}
 /* v100.224: pe paginile de zi rămân alertele, banda botului și versiunea. Cipurile de cercetare revin la analiza monedei și în laborator. */
 body.peAcasa:not(.acMonedaDeschisa) .topLeft,body.peTablou .topLeft,body.peT212 .topLeft,body.peJurnal .topLeft,body.peGrid .topLeft,body.pePaginaNoua .topLeft,

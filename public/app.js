@@ -6942,7 +6942,7 @@ function tbDeseneazaCitire(o,b){var loc=[$("tbCitire"),$("tbCitireMobil")].filte
   // monedei vechi lua prețul celei noi); revizia (3): copia de pe telefon primește antetul cu ceasul (cardul cu #tbCitireLive e ascuns sub 1180 px)
   tbStare.citireO=o;tbStare.citireCheie=TabloBot.simboluri(b.baza,b.quote,b.simbolPionex).pionex+"|"+tbTf()+"|"+b.id;
   var cap='<p class="tbCitCap"><b>Ce spune piața acum</b> <span class="tbSub tbCitLive'+(tbStare.citireStamp?" "+tbStare.citireStamp.cls:"")+'" data-cit-live>'+escapeHtml(tbStare.citireStamp?tbStare.citireStamp.text:"live")+'</span></p>';
-  var scrie=function(h){if(tbStare.citireH===h)return;tbStare.citireH=h;loc.forEach(function(el){el.innerHTML=(el.id==="tbCitireMobil"?cap:"")+h})};   /* revizia: DOM-ul se rescrie doar când textul s-a schimbat */
+  var scrie=function(h){if(tbStare.citireH===h)return;tbStare.citireH=h;loc.forEach(function(el){el.innerHTML=(el.id==="tbCitireMobil"?cap:"")+h});var sus=$("tbMcSus");if(sus){var i=h.indexOf(" tbCitMc");if(i<0){sus.innerHTML="";sus.hidden=true}else{var a=h.lastIndexOf("<div",i),b=h.indexOf("</div></div>",i),frag=a>=0&&b>a?h.slice(a,b+12):"";sus.innerHTML=frag;sus.hidden=!frag}}};   /* revizia: DOM-ul se rescrie doar când textul s-a schimbat; v100.240: același rând Monte Carlo, copiat sus */
   var c=GraficBot.citire(Object.assign({},o,{doarPiata:true}),b,botiNr(b.pretCurent));
   if(!c){scrie('<p class="tbSub">Prea puține prețuri pentru citire.</p>');return}
   var IC={bine:"✓",atentie:"!",rau:"✕",info:"·"};
@@ -7066,7 +7066,7 @@ function macroAduce(dupa){
 function macroCitire(){var p=macroStare.p;return p?Macro.textCitire(Macro.scor({vix:p.vix,tnx:p.tnx,dxy:p.dxy,spy:p.spy,btc:macroStare.btc,fg:p.fg},Date.now()),macroStare.tinut):Macro.textCitire(null)}
 function latimeUsDeschide(){if(typeof setAssetClass==="function")setAssetClass("STOCKS");navTo("stocks",true)}
 // revizia (1): fără lumânări (alt bot / interval) citirea se golește, nu rămâne pe moneda veche
-function tbCitireGol(text){var cl=document.querySelectorAll("[data-cit-live]");for(var i=0;i<cl.length;i++){cl[i].textContent="—";cl[i].className="tbSub tbCitLive"}/* v100.196: fără date nu scrie „live” */tbStare.citireO=null;tbStare.citireCheie=null;tbStare.citireH=null;[$("tbCitire"),$("tbCitireMobil")].forEach(function(el){if(el)el.innerHTML='<p class="tbSub">'+escapeHtml(text||"Aștept prețurile…")+'</p>'})}
+function tbCitireGol(text){var cl=document.querySelectorAll("[data-cit-live]");for(var i=0;i<cl.length;i++){cl[i].textContent="—";cl[i].className="tbSub tbCitLive"}/* v100.196: fără date nu scrie „live” */tbStare.citireO=null;tbStare.citireCheie=null;tbStare.citireH=null;[$("tbCitire"),$("tbCitireMobil")].forEach(function(el){if(el)el.innerHTML='<p class="tbSub">'+escapeHtml(text||"Aștept prețurile…")+'</p>'});var sus=$("tbMcSus");if(sus){sus.innerHTML="";sus.hidden=true}}
 // v100.138: rândurile de piață care nu vin din lumânările graficului - Indicatorii (IndicatoriBot, pe intervalul graficului sau pe 15 min
 // când graficul e pe 5m), Estimarea pe 16 ore (barele de 4 ore) și Busola pe 4h (rezumatul ei, adus o dată la 30 de minute)
 function tbCitireExtra(b,o){
