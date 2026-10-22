@@ -3011,11 +3011,13 @@ html.pzDemo #tabloubot .tbPretViu{display:none!important}
 #deriv .grid>.card:has(#ftext){order:-1;grid-column:1/-1}
 #dash .acPereche{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;align-items:start}
 #dash .acPereche .acBloc{overflow-x:auto}
+/* v100.248: de la 1700 rândul e mai scurt (sub 1700 pagina crește); linia de la 1920 rămâne */
+@media (min-width:1700px){#dash .acPereche{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
 @media (min-width:1920px){#dash .acPereche{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
 .pzDemo #acasa>.acPereche{order:50}
-#settings .settingsVechi{grid-column:1/-1}
+#settings .settingsVechi{align-self:start}
 #settings .settingsVechi>summary{cursor:pointer;color:var(--accent);font-size:13px;min-height:44px;display:flex;align-items:center;grid-column:1/-1}
-#settings .settingsVechi[open]{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+#settings .settingsVechi[open]{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
 @media (max-width:980px){#settings .settingsVechi[open]{grid-template-columns:1fr}}
 /* v100.224: pe paginile de zi rămân alertele, banda botului și versiunea. Cipurile de cercetare revin la analiza monedei și în laborator. */
 body.peAcasa:not(.acMonedaDeschisa) .topLeft,body.peTablou .topLeft,body.peT212 .topLeft,body.peJurnal .topLeft,body.peGrid .topLeft,body.pePaginaNoua .topLeft,

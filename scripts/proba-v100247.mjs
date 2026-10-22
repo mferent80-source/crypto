@@ -53,24 +53,18 @@ await test("simulatorul își spune numele, futures pune interpretarea întâi, 
   assert.match(css.trim().split("\n").pop(), /#topLive\{display:none!important\}/);
 });
 
-await test("versiunea v100.247, insigna RÂND, colectorul rămâne v101.136", () => {
+await test("versiunea de la v100.247 în sus, colectorul rămâne v101.136", () => {
   const P = JSON.parse(citeste("package.json"));
-  assert.equal(P.version, "100.247.0");
+  const parti = P.version.split(".").map(Number);
+  assert.ok(parti[0] === 100 && parti[1] >= 247, P.version);   /* v100.248: insigna live nu mai e RÂND */
   assert.equal(P.scripts["test:v100247"], "node scripts/proba-v100247.mjs");
   assert.equal((P.scripts.test.match(/test:v100247/g) || []).length, 1);
   assert.equal((P.scripts.test.match(/test:v100246/g) || []).length, 1);
   assert.doesNotMatch(P.scripts["test:v100247"], /npm run test:v100247/);
-  const idx = citeste("public", "index.html");
-  assert.equal((idx.match(/v100\.247/g) || []).length, 4);
-  assert.match(idx, /id="sideVersiune"[^>]*>v100\.247 · RÂND</);
-  assert.match(idx, /id="topVersiune">v100\.38 · doar citire</);
-  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-247/);
-  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.247"/);
-  const info = JSON.parse(citeste("BUILD_INFO.json"));
-  assert.equal(info.version, "v100.247");
-  assert.equal(info.badge, "v100.247 · RÂND");
-  assert.equal(info.engineContract, "54.1");
+  assert.match(citeste("public", "index.html"), /id="topVersiune">v100\.38 · doar citire</);
+  assert.equal(JSON.parse(citeste("BUILD_INFO.json")).engineContract, "54.1");
   assert.match(citeste("scripts", "colector.mjs"), /VERSIUNE_COLECTOR = "v101\.136"/);
+  assert.match(citeste("public", "app.css").trim().split("\n").pop(), /#topLive\{display:none!important\}/);
 });
 
 console.log(picate ? `\n${picate} PICA din ${teste}\n` : `\ntoate ${teste} ok\n`);
