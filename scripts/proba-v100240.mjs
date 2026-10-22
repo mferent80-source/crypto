@@ -83,22 +83,16 @@ await test("Monte Carlo e același rând, nu o a doua socoteală; drumul e frate
   assert.match(grafic, /Math\.max\(210, Math\.min\(300, W \* 0\.18\)\)/);
 });
 
-await test("versiunea v100.240, insigna AȘEZ, colectorul rămâne v101.136", () => {
+await test("versiunea de la v100.240 în sus, colectorul rămâne v101.136", () => {
   const P = JSON.parse(citeste("package.json"));
-  assert.equal(P.version, "100.240.0");
+  const parti = P.version.split(".").map(Number);
+  assert.ok(parti[0] === 100 && parti[1] >= 240, P.version);   /* v100.241: insigna live nu mai e AȘEZ */
   assert.equal(P.scripts["test:v100240"], "node scripts/proba-v100240.mjs");
   assert.equal((P.scripts.test.match(/test:v100240/g) || []).length, 1);
   assert.equal((P.scripts.test.match(/test:v100239/g) || []).length, 1);
   assert.doesNotMatch(P.scripts["test:v100240"], /npm run test:v100240/);
-  assert.equal((idx.match(/v100\.240/g) || []).length, 4);
-  assert.match(idx, /id="sideVersiune"[^>]*>v100\.240 · AȘEZ</);
   assert.match(idx, /id="topVersiune">v100\.38 · doar citire</);
-  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-240/);
-  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.240"/);
-  const info = JSON.parse(citeste("BUILD_INFO.json"));
-  assert.equal(info.version, "v100.240");
-  assert.equal(info.badge, "v100.240 · AȘEZ");
-  assert.equal(info.engineContract, "54.1");
+  assert.equal(JSON.parse(citeste("BUILD_INFO.json")).engineContract, "54.1");
   assert.match(citeste("scripts", "colector.mjs"), /VERSIUNE_COLECTOR = "v101\.136"/);
 });
 

@@ -1,11 +1,12 @@
 {
-  "version": "v100.240",
-  "badge": "v100.240 · AȘEZ",
+  "version": "v100.241",
+  "badge": "v100.241 · STĂ",
   "engineContract": "54.1",
   "dataSchema": 54,
   "baseRelease": "v77.4 · TABLOUL BOTULUI",
   "releaseType": "valul de reparatii din revizia finala pe ansamblu: marginStatus/riskStatus citite, telefon, scurgere WS/ceas la iesire prin tab-uri, ATR adevarat, pret viu, istoric fara pret inghetat, sortare dupa timp, comision nemasurabil, durata la margine",
   "features": {
+    "sta241": "Tabloul (22.10.2026, el: „în ce spune piața acum tot se închide și deschide o fereastră”): rândurile citirii se pliază în aceeași clipă cu rescrierea la prețul viu, nu la tura de 1,5 s. Rândul deschis de om rămâne deschis. Butoanele și linkurile rămân întregi. Pragurile, textele și culorile neschimbate. Colectorul rămâne v101.136.",
     "asez240": "Tabloul botului (22.10.2026, el: „poți trece la treabă”): fâșia de boți pe un rând, verdictul lângă antet și cele 4 cifre, Monte Carlo (același rând din citire) apoi drumul, graficul botului mai scurt (acțiunile rămân 340–520), trendul tot pe lățime, restul în pachet. Calculul, pragurile, textele și culorile lumânărilor neschimbate. #tbVerdictCard rămâne ascuns. Colectorul rămâne v101.136.",
     "audit221": "auditul scorului (19.10.2026, agent Opus + măsurători; el: „repară tot”): 🔴 „sezon nou” pe un sezon pornit azi nu mai mută startul înapoi (se închide acum, nou de la acum; sezonNouCalc pur); ora de vară/iarnă pe server (decalajul de la miezul nopții); Acasă își împrospătează cardurile la 5 min din arhiva KV și istoricul T212, fără Pionex; ținta ridicată se anunță din nou; formularul ține ce ai tastat; colectorul v101.129 la 10 min; GET-ul picat spus pe card; culoarea neutră sub 10; rata = win ÷ toți (ca Jurnalul); rata mereu procent; ținta cu virgulă; „Trade-uri” pe T212; scor-sezon.js în service worker; trade-urile ținute minte (cache); zeroul nu rupe seria; −0,02 nu e roșu; GET-ul în zbor nu suprascrie POST-ul",
     "oprireT212_220": "el (19.10): „fă și butonul de oprire și fă și pentru Trade 212, dar cu trade-urile viitoare” - „Oprește sezonul” (cifrele îngheață la ora apăsării, ce se închide după nu intră; „Pornește sezon nou de azi” îl închide în Sezoanele tale și pornește altul) + al doilea card, Trading 212 (trade-urile închise din istoricul de acasă, în lei, sezonul din 19.10.2026 13:00 = doar cele viitoare; pe Acasă sub cardul Pionex și sus pe fila Acțiuni din Jurnal; obiectivul lui separat, implicit 55 % · 3 · +200 lei); colectorul v101.128 anunță pe Discord și pentru T212 (pauza, țintele), nimic cât un sezon e oprit",

@@ -529,7 +529,7 @@
     if (b) { var t = (des ? "▾ " : "▸ ") + "Prețul monedei alese și filele de analiză" + (des ? " (pliază)" : ""); if (b.textContent !== t) b.textContent = t; b.setAttribute("aria-expanded", des ? "true" : "false"); }
   }
 
-  window.AsezarePaznic = { valJurnal: valJurnal, valBani: valBani, verdictPozitii: verdictPozitii, verdictAlerte: verdictAlerte, nivelPastila: nivelPastila, tonVarsta: tonVarsta, randuriKv: randuriKv, ancora: ancora, GLOSAR: GLOSAR, t212Din: t212Din, colectorDin: colectorDin, colectorSursa: colectorSursa, alerteNrDin: alerteNrDin, lichDin: lichDin, nivele: nivele, drumHtml: drumHtml, verdictValid: verdictValid, tonLich: tonLich };
+  window.AsezarePaznic = { valJurnal: valJurnal, valBani: valBani, verdictPozitii: verdictPozitii, verdictAlerte: verdictAlerte, nivelPastila: nivelPastila, tonVarsta: tonVarsta, randuriKv: randuriKv, ancora: ancora, GLOSAR: GLOSAR, t212Din: t212Din, colectorDin: colectorDin, colectorSursa: colectorSursa, alerteNrDin: alerteNrDin, lichDin: lichDin, nivele: nivele, drumHtml: drumHtml, verdictValid: verdictValid, tonLich: tonLich, pliaza: pliaza };
   document.documentElement.classList.add("pzDemo");
   var rz = null; addEventListener("resize", function () { clearTimeout(rz); rz = setTimeout(tura, 200); });   // revizia I10: fără tură la fiecare pixel
   document.addEventListener("click", function (e) { if (e.target && e.target.closest && e.target.closest("#jurnaltrade .jtFiltru")) setTimeout(function () { try { pagJurnal(); } catch (x) {} }, 30); });   /* M1: antetul urmează fila pe loc */
