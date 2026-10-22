@@ -3019,6 +3019,34 @@ html.pzDemo #tabloubot .tbPretViu{display:none!important}
 #settings .settingsVechi>summary{cursor:pointer;color:var(--accent);font-size:13px;min-height:44px;display:flex;align-items:center;grid-column:1/-1}
 #settings .settingsVechi[open]{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
 @media (max-width:980px){#settings .settingsVechi[open]{grid-template-columns:1fr}}
+/* v100.249: citirea și trendul stau în coloana din dreapta, lipite de grafic.
+   display:contents de la 1181 rămâne mai sus (proba). Sub 1181 citirea stă ascunsă, ca înainte.
+   Cardurile de jos iau rândul întreg: span 2 rămâne în fișier, regula asta îl acoperă. */
+@media (min-width:1181px){
+  #tabloubot .tbGraficRand{align-items:stretch}
+  #tabloubot .tbGrCol{display:flex;flex-direction:column;gap:8px;grid-column:2;grid-row:1;align-self:stretch;min-width:0}
+  #tabloubot .tbGrStanga{grid-column:1;grid-row:1;align-self:stretch}
+  #tabloubot #tbCitireCard{grid-column:auto;grid-row:auto;align-self:auto;flex:0 0 auto}
+  #tabloubot #tbTrendCard{grid-column:auto;grid-row:auto;flex:1 1 auto;min-height:0}
+}
+.pzDemo #tabloubot.on .tbCadru>.contTot,
+.pzDemo #tabloubot.on .tbCadru>.piataAzi,
+.pzDemo #tabloubot.on .tbCadru>#tbSemaforCard,
+.pzDemo #tabloubot.on .tbCadru>#tbMotive,
+.pzDemo #tabloubot.on .tbCadru>#tbAcumCard,
+.pzDemo #tabloubot.on .tbCadru>#tbPl-plan,
+.pzDemo #tabloubot.on .tbCadru>#tbPl-sfaturi,
+.pzDemo #tabloubot.on .tbCadru>#tbPl-avert,
+.pzDemo #tabloubot.on .tbCadru>#tbPl-alerte,
+.pzDemo #tabloubot.on .tbCadru>#tbPl-prob,
+.pzDemo #tabloubot.on .tbCadru>#tbPl-risc,
+.pzDemo #tabloubot.on .tbCadru>#tbPl-fisa,
+.pzDemo #tabloubot.on .tbCadru>#tbPl-sapt,
+.pzDemo #tabloubot.on .tbCadru>#tbPl-socoteala,
+.pzDemo #tabloubot.on .tbCadru>#tbPl-port{grid-column:1 / -1}
+#tabloubot .tbMotive,#tabloubot .tbConcret,#tabloubot #tbAcumCard,#tabloubot #tbSemaforCard,#tabloubot #tbSemaforCard.tbCons{margin:0}
+#tabloubot .tbConcret{gap:8px}
+#tabloubot .gbValCap{margin:8px 0 2px;font-size:13px;font-weight:600;color:#E6EDF3}
 /* v100.224: pe paginile de zi rămân alertele, banda botului și versiunea. Cipurile de cercetare revin la analiza monedei și în laborator. */
 body.peAcasa:not(.acMonedaDeschisa) .topLeft,body.peTablou .topLeft,body.peT212 .topLeft,body.peJurnal .topLeft,body.peGrid .topLeft,body.pePaginaNoua .topLeft,
 body.peAcasa:not(.acMonedaDeschisa) #wsStatus,body.peTablou #wsStatus,body.peT212 #wsStatus,body.peJurnal #wsStatus,body.peGrid #wsStatus,body.pePaginaNoua #wsStatus,
