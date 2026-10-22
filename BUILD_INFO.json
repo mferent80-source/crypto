@@ -1,11 +1,12 @@
 {
-  "version": "v100.242",
-  "badge": "v100.242 · LIN",
+  "version": "v100.243",
+  "badge": "v100.243 · LOC",
   "engineContract": "54.1",
   "dataSchema": 54,
   "baseRelease": "v77.4 · TABLOUL BOTULUI",
   "releaseType": "valul de reparatii din revizia finala pe ansamblu: marginStatus/riskStatus citite, telefon, scurgere WS/ceas la iesire prin tab-uri, ATR adevarat, pret viu, istoric fara pret inghetat, sortare dupa timp, comision nemasurabil, durata la margine",
   "features": {
+    "loc243": "Sugestii (22.10.2026, el: „lucrează și la pagina de sugestii în aceleași condiții”): vârsta lățimii stă pe un rând; la o cifră nouă se schimbă textul, nu toată pagina; un bloc nou își înlocuiește doar secțiunea; „arată toate” rămâne deschis. Pragurile neschimbate. Colectorul rămâne v101.136.",
     "lin242": "Tabloul (22.10.2026, el: „fa idei”): ceasul citirii stă pe un rând; la prețul viu se schimbă cifrele, nu tot HTML-ul, și pe telefon; drumul nu își mută rândurile cât o bară de derulare. Pragurile neschimbate. Colectorul rămâne v101.136.",
     "sta241": "Tabloul (22.10.2026, el: „în ce spune piața acum tot se închide și deschide o fereastră”): rândurile citirii se pliază în aceeași clipă cu rescrierea la prețul viu, nu la tura de 1,5 s. Rândul deschis de om rămâne deschis. Butoanele și linkurile rămân întregi. Pragurile, textele și culorile neschimbate. Colectorul rămâne v101.136.",
     "asez240": "Tabloul botului (22.10.2026, el: „poți trece la treabă”): fâșia de boți pe un rând, verdictul lângă antet și cele 4 cifre, Monte Carlo (același rând din citire) apoi drumul, graficul botului mai scurt (acțiunile rămân 340–520), trendul tot pe lățime, restul în pachet. Calculul, pragurile, textele și culorile lumânărilor neschimbate. #tbVerdictCard rămâne ascuns. Colectorul rămâne v101.136.",

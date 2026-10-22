@@ -155,14 +155,62 @@ function sugTrendHtml(x, acum) {
   return h;
 }
 // v100.192 (I-626): pe telefon lista Trend arată primele 10; butonul desface restul (CSS: .sugTrendLista:not(.sugTrendTot) li:nth-child(n+11))
-function sugTrendTot() { var l = document.querySelector('.sugTrendLista'); if (l) l.classList.add('sugTrendTot'); }
+function sugTrendTot() { sugStare.trendTot = true; var l = document.querySelector('.sugTrendLista'); if (l) l.classList.add('sugTrendTot'); }
 function sugHtml(d, acum) {
   d = d || {}; var sa = d.sugActiuni && d.sugActiuni.sugestii, pm = d.sugActiuni && d.sugActiuni.premarket;
   return '<p class="rlRasp">Toate sugestiile, fiecare cu istoricul ei pe 2 ani. Un filtru, nu o predicție: o listă cu istoric slab rămâne, cu istoricul la vedere - judeci tu.</p>'
     + sugPandaHtml(d.latime, d.boti, acum) + sugBoti(d.clasament, d.sugMonede) + sugActiuniPiata("us", sa, pm, d.idei, "📈", "Acțiuni US", acum) + sugSectoareHtml(d.sectoare, acum) + sugTrendHtml(d.trend12, acum) + sugActiuniPiata("eu", sa, pm, null, "📈", "Acțiuni EU (DAX, CAC, AEX + ale tale)", acum)
     + '<p class="tbSub">Regulile au fost fixate înainte de cifre și nu se ajustează după istoric. Istoricul: intrare la deschiderea zilei de după semnal (gap-ul: vezi cartela lui), ieșire după 10 zile de bursă, cu 0,3% comision.</p>';
 }
-function sugDeseneaza() { var el = typeof document !== "undefined" && document.getElementById("sugPagina"); if (el) el.innerHTML = sugHtml(sugStare.d, Date.now()); }
+// v100.243: o secțiune își schimbă cifrele pe loc. Pagina întreagă se rescrie doar la primul desen
+// sau când apare ori dispare un bloc. „arată toate” nu e parte din schelet: rămâne deschisă.
+function sugSchelet(h) { return String(h || "").replace(/\s*\bsugTrendTot\b/g, "").replace(/>([^<]*)</g, "><"); }
+function sugAcelasiNod(a, b) {
+  if (!a || !b || a.nodeType !== 1 || b.nodeType !== 1 || a.tagName !== b.tagName) return false;
+  var ca = String(a.className || "").replace(/\bsugTrendTot\b/g, "").replace(/\s+/g, " ").trim();
+  var cb = String(b.className || "").replace(/\bsugTrendTot\b/g, "").replace(/\s+/g, " ").trim();
+  if (ca !== cb) return false;
+  if ((a.getAttribute("href") || "") !== (b.getAttribute("href") || "")) return false;
+  if ((a.getAttribute("data-action-click") || "") !== (b.getAttribute("data-action-click") || "")) return false;
+  var ae = [], be = [], i, j;
+  for (i = 0; i < a.childNodes.length; i++) if (a.childNodes[i].nodeType === 1) ae.push(a.childNodes[i]);
+  for (j = 0; j < b.childNodes.length; j++) if (b.childNodes[j].nodeType === 1) be.push(b.childNodes[j]);
+  if (ae.length !== be.length) return false;
+  for (i = 0; i < ae.length; i++) if (!sugAcelasiNod(ae[i], be[i])) return false;
+  return true;
+}
+function sugTexte(n, L) {
+  for (var i = 0; i < n.childNodes.length; i++) {
+    var c = n.childNodes[i];
+    if (c.nodeType === 3) L.push(c);
+    else if (c.nodeType === 1) sugTexte(c, L);
+  }
+}
+function sugPeLoc(el, h) {
+  if (!el || typeof document === "undefined") return false;
+  var tmp = document.createElement("div"); tmp.innerHTML = h; var nou = tmp.firstElementChild;
+  if (!nou || !sugAcelasiNod(el, nou)) return false;
+  var a = [], b = []; sugTexte(el, a); sugTexte(nou, b);
+  if (a.length !== b.length) return false;
+  for (var i = 0; i < a.length; i++) if (a[i].nodeValue !== b[i].nodeValue) a[i].nodeValue = b[i].nodeValue;
+  return true;
+}
+function sugTineTrend(el) {
+  if (!sugStare.trendTot || !el) return;
+  var l = el.querySelector(".sugTrendLista"); if (l) l.classList.add("sugTrendTot");
+}
+function sugDeseneaza() {
+  var el = typeof document !== "undefined" && document.getElementById("sugPagina"); if (!el) return;
+  var h = sugHtml(sugStare.d, Date.now()); if (el._sugH === h) return;
+  var tmp = document.createElement("div"); tmp.innerHTML = h;
+  var nou = [].slice.call(tmp.children), vechi = [].slice.call(el.children), parti = nou.map(function (c) { return c.outerHTML; }), peLoc = vechi.length === nou.length && el._sugP;
+  if (peLoc) for (var i = 0; i < nou.length; i++) {
+    if (el._sugP[i] === parti[i]) continue;
+    if (sugSchelet(el._sugP[i]) === sugSchelet(parti[i]) && sugPeLoc(vechi[i], parti[i])) continue;
+    vechi[i].outerHTML = parti[i];
+  } else el.innerHTML = h;
+  el._sugH = h; el._sugP = parti; sugTineTrend(el);
+}
 async function sugPorneste(fortat) {
   sugDeseneaza();
   if (sugStare.inLucru || (!fortat && Date.now() - sugStare.la < 5 * 60000)) return;
