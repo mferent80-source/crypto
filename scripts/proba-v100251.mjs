@@ -152,22 +152,16 @@ await test("coloana de 240 vine după 280 și 340, trendul vechi rămâne în fi
   assert.match(idx, /id="tbInd-scara"[^>]*data-action-click="tbComutaInd\('scara'\)"/);
 });
 
-await test("versiunea v100.251, insigna AXĂ, colectorul rămâne v101.136", () => {
+await test("versiunea de la v100.251 în sus, colectorul rămâne v101.136", () => {
   const P = JSON.parse(citeste("package.json"));
-  assert.equal(P.version, "100.251.0");
+  const parti = P.version.split(".").map(Number);
+  assert.ok(parti[0] === 100 && parti[1] >= 251, P.version);   /* v100.252: insigna live nu mai e AXĂ */
   assert.equal(P.scripts["test:v100251"], "node scripts/proba-v100251.mjs");
   assert.equal((P.scripts.test.match(/test:v100251/g) || []).length, 1);
   assert.equal((P.scripts.test.match(/test:v100250/g) || []).length, 1);
   assert.doesNotMatch(P.scripts["test:v100251"], /npm run test:v100251/);
-  const idx = citeste("public", "index.html");
-  assert.equal((idx.match(/v100\.251/g) || []).length, 4);
-  assert.match(idx, /id="sideVersiune"[^>]*>v100\.251 · AXĂ</);
-  assert.match(idx, /id="topVersiune">v100\.38 · doar citire</);
-  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-251/);
-  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.251"/);
+  assert.match(citeste("public", "index.html"), /id="topVersiune">v100\.38 · doar citire</);
   const info = JSON.parse(citeste("BUILD_INFO.json"));
-  assert.equal(info.version, "v100.251");
-  assert.equal(info.badge, "v100.251 · AXĂ");
   assert.equal(info.engineContract, "54.1");
   assert.match(info.features.axa251, /240/);
   assert.match(citeste("scripts", "colector.mjs"), /VERSIUNE_COLECTOR = "v101\.136"/);

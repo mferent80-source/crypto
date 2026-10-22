@@ -427,18 +427,21 @@ var GraficBot = (function () {
     var q = [], H = mainH + gap + (trH ? trH + gap : 0) + volH + gap + laneH + (rsiH ? gap + rsiH : 0) + (adxH ? gap + adxH : 0) + axH, f1 = function (x) { return x.toFixed(1); };
     q.push('<rect x="0" y="0" width="' + f1(plotW) + '" height="' + mainH + '" fill="' + COL.fond + '"/>');
     for (var gi = 1; gi < 5; gi++) q.push('<line x1="0" x2="' + f1(plotW) + '" y1="' + f1(mainH * gi / 5) + '" y2="' + f1(mainH * gi / 5) + '" stroke="' + COL.grila + '" stroke-width="1"/>');
-    /* v100.249 desena scara peste lumânări, la x = plotW - 6. v100.250 o mută în banda din dreapta: trei prețuri, fără nume. v100.251 repetă prețul de acum în aceeași bandă, clasa gbAxaAcum, și mută un preț de cadru dacă se calcă. */
+    /* v100.249 desena scara peste lumânări, la x = plotW - 6. v100.250 o mută în banda din dreapta: trei prețuri, fără nume. v100.251 repetă prețul de acum în aceeași bandă, clasa gbAxaAcum, și mută un preț de cadru dacă se calcă. v100.251: Math.abs(y - yAcum) < 13, apoi yAcum + 14. */
     if (!ingust && hi > lo && gut > 0) {
       q.push('<line class="gbScala" x1="' + f1(plotW) + '" x2="' + f1(plotW) + '" y1="0" y2="' + mainH + '" stroke="' + COL.grila + '" stroke-width="1"/>');
-      var yAcum = pAcum !== null && pAcum > lo && pAcum < hi ? Y(pAcum) : null;
+      var yAcum = pAcum !== null && pAcum > lo && pAcum < hi ? Y(pAcum) : null, ysCadru = [];
       [0.04, 0.5, 0.96].forEach(function (fr) {
         var y = Math.max(12, Math.min(mainH - 4, fr * mainH));
-        if (yAcum !== null && Math.abs(y - yAcum) < 13) y = y >= yAcum ? Math.min(mainH - 4, yAcum + 14) : Math.max(12, yAcum - 14);
+        if (yAcum !== null && Math.abs(y - yAcum) < 22) y = y >= yAcum ? Math.min(mainH - 4, yAcum + 22) : Math.max(12, yAcum - 22);   /* v100.252: 22 px, cutia de 16 nu se mai calcă */
+        ysCadru.push(y);
         var pax = hi - fr * (hi - lo);
         q.push('<text class="gbAxa" x="' + f1(plotW + gut - 4) + '" y="' + f1(y) + '" text-anchor="end" font-size="11" fill="' + COL.mut + '" ' + HALO(3) + '>' + fmtP(pax) + '</text>');
       });
       if (yAcum !== null) {
-        var yt = Math.max(12, Math.min(mainH - 4, yAcum)), tpA = fmtP(pAcum), wA = Math.min(gut - 6, Math.round(tpA.length * 6.4 + 8));
+        var yt = Math.max(12, Math.min(mainH - 4, yAcum));
+        ysCadru.forEach(function (y) { if (Math.abs(y - (yt + 4)) < 16) yt = Math.max(12, Math.min(mainH - 4, y < yt + 4 ? y + 20 : y - 20)); });
+        var tpA = fmtP(pAcum), wA = Math.min(gut - 6, Math.round(tpA.length * 6.4 + 8));
         q.push('<g class="gbAxaAcum"><rect x="' + f1(plotW + gut - 2 - wA) + '" y="' + f1(yt - 8) + '" width="' + wA + '" height="16" rx="2" fill="' + COL.fond + '" stroke="' + COL.text + '" stroke-width="1"/><text x="' + f1(plotW + gut - 6) + '" y="' + f1(yt + 4) + '" text-anchor="end" font-size="11" font-weight="700" fill="' + COL.text + '">' + tpA + '</text></g>');
       }
     }
@@ -486,9 +489,9 @@ var GraficBot = (function () {
     if (st.vp) {
       var NB = 28, bins = []; for (var z = 0; z < NB; z++) bins.push(0);
       raw.forEach(function (x) { var tp = (x.h + x.l + x.c) / 3, bi = Math.floor((tp - lo) / (hi - lo) * NB); if (bi >= 0 && bi < NB) bins[bi] += x.v; });
-      var mx = Math.max.apply(null, bins) || 1, poc = bins.indexOf(mx), vw = plotW * (ingust ? 0.26 : 0.2), bh = mainH / NB;
-      bins.forEach(function (v, bi) { if (!v) return; var w = v / mx * vw, y = mainH - (bi + 1) * bh; q.push('<rect class="gbVp" x="' + f1(plotW - w) + '" y="' + f1(y + 1) + '" width="' + f1(w) + '" height="' + f1(Math.max(1, bh - 2)) + '" fill="' + (bi === poc ? "rgba(105,167,255,.42)" : "rgba(144,160,182,.16)") + '"/>'); });
-      q.push('<text x="' + f1(plotW - 4) + '" y="' + f1(mainH - (poc + 1) * bh - 3) + '" text-anchor="end" font-size="10.5" fill="#9fc3ff" ' + HALO(3) + '>cel mai tranzacționat ' + fmtP(lo + (poc + 0.5) / NB * (hi - lo)) + '</text>');
+      var mx = Math.max.apply(null, bins) || 1, poc = bins.indexOf(mx), vw = plotW * (ingust ? 0.26 : 0.2), bh = mainH / NB, loc = Math.min(plotW * 0.08, Math.max(28, cw * 14));   /* v100.251: x = plotW - w, text la plotW - 4. v100.252: loc lasă ultimele lumânări libere. */
+      bins.forEach(function (v, bi) { if (!v) return; var w = v / mx * vw, y = mainH - (bi + 1) * bh; q.push('<rect class="gbVp" x="' + f1(plotW - loc - w) + '" y="' + f1(y + 1) + '" width="' + f1(w) + '" height="' + f1(Math.max(1, bh - 2)) + '" fill="' + (bi === poc ? "rgba(105,167,255,.42)" : "rgba(144,160,182,.16)") + '"/>'); });
+      q.push('<text x="' + f1(plotW - loc - 4) + '" y="' + f1(mainH - (poc + 1) * bh - 3) + '" text-anchor="end" font-size="10.5" fill="#9fc3ff" ' + HALO(3) + '>cel mai tranzacționat ' + fmtP(lo + (poc + 0.5) / NB * (hi - lo)) + '</text>');
     }
     function linie(vals, cls, cul, gros, dash) {
       var d = "", pen = false;
@@ -693,7 +696,7 @@ var GraficBot = (function () {
     var ordVal = VAL.slice().sort(function (a, b) { return b.p - a.p; }), aproape = null, dAproape = Infinity;
     if (pAcum) ordVal.forEach(function (v) { if (v.acumRand || !isFinite(v.p)) return; var dd = Math.abs(v.p - pAcum); if (dd < dAproape) { dAproape = dd; aproape = v; } });   /* v100.251: un singur rând, nu „acum” */
     var valori = !cmp || (!VAL.length && !VAL.pornit) ? "" : '<p class="gbValCap">Ce e pe grafic</p><ul class="gbValori" aria-label="Valorile de pe grafic">' + ordVal.map(function (v) {
-      return '<li' + (v === aproape ? ' class="gbAproape"' : '') + (v.tit ? ' title="' + esc(v.tit) + '"' : '') + '><i style="background:' + v.c + '"></i><span class="gbVN">' + (v.afara ? v.afara + " " : "") + esc(v.t) + '</span><b class="gbVP">' + fmtP(v.p) + '</b><span class="gbVD">' + (pAcum && !v.acumRand ? pct(v.p / pAcum - 1) : "") + '</span><span class="gbVS">' + (v.sansa ? esc(ingust && v.sc ? v.sc : v.sansa) : "") + '</span></li>';
+      return '<li' + (v === aproape ? ' class="gbAproape"' : '') + (v.tit ? ' title="' + esc(v.tit) + '"' : '') + '><i style="background:' + v.c + '"></i><span class="gbVN">' + (v.afara ? v.afara + " " : "") + esc(v.t) + (v === aproape ? " · aproape" : "") + '</span><b class="gbVP">' + fmtP(v.p) + '</b><span class="gbVD">' + (pAcum && !v.acumRand ? pct(v.p / pAcum - 1) : "") + '</span><span class="gbVS">' + (v.sansa ? esc(ingust && v.sc ? v.sc : v.sansa) : "") + '</span></li>';   /* v100.252: cuvântul e în rând, nu doar în CSS */
     }).join("") + (VAL.pornit ? '<li><i class="gbVPornit" style="border-color:' + COL.accent + '"></i><span class="gbVN">botul pornit</span><b class="gbVP">' + esc(VAL.pornit) + '</b><span class="gbVD"></span><span class="gbVS"></span></li>' : "") + '</ul>';
     var Lg = o.actiune ? [] : ['<span><i style="border-color:' + COL.accent + ';opacity:.7"></i>banda și treptele gridului' + (gl ? " (" + cate(gl, "linie", "linii") + ")" : "") + '</span>', ];
     var are = function (k) { return niv.some(function (x) { return x.k === k; }); };
@@ -785,6 +788,6 @@ var GraficBot = (function () {
     return h;
   }
 
-  return { COL: COL, fereastraBot: fereastraBot, bilantUmpleri: bilantUmpleri, ziObisnuita: ziObisnuita, ziObisnuitaActiune: ziObisnuitaActiune, niveluriActiune: niveluriActiune, bare: bare, umpleri: umpleri, liniiPionex: liniiPionex, ema: ema, bollinger: bollinger, rsi: rsi, niveluriBot: niveluriBot, grupeaza: grupeaza, desen: desen, tip: tip, esc: esc, adx: adx, citire: citire, pretLaY: pretLaY, cuPretViu: cuPretViu, intrareBot: intrareBot, cuSanse: cuSanse, stopProba: stopProba, semafor: semafor, trendTabel: trendTabel, trendSumar: trendSumar, TF_SEM: TF_SEM, semZi: semZi };
+  return { COL: COL, fmtP: fmtP, fereastraBot: fereastraBot, bilantUmpleri: bilantUmpleri, ziObisnuita: ziObisnuita, ziObisnuitaActiune: ziObisnuitaActiune, niveluriActiune: niveluriActiune, bare: bare, umpleri: umpleri, liniiPionex: liniiPionex, ema: ema, bollinger: bollinger, rsi: rsi, niveluriBot: niveluriBot, grupeaza: grupeaza, desen: desen, tip: tip, esc: esc, adx: adx, citire: citire, pretLaY: pretLaY, cuPretViu: cuPretViu, intrareBot: intrareBot, cuSanse: cuSanse, stopProba: stopProba, semafor: semafor, trendTabel: trendTabel, trendSumar: trendSumar, TF_SEM: TF_SEM, semZi: semZi };   /* v100.252: fmtP e aceeași scriere ca scara */
 })();
 if (typeof globalThis !== "undefined") globalThis.GraficBot = GraficBot;

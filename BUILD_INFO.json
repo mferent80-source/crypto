@@ -1,11 +1,12 @@
 {
-  "version": "v100.251",
-  "badge": "v100.251 · AXĂ",
+  "version": "v100.252",
+  "badge": "v100.252 · CLAR",
   "engineContract": "54.1",
   "dataSchema": 54,
   "baseRelease": "v77.4 · TABLOUL BOTULUI",
   "releaseType": "valul de reparatii din revizia finala pe ansamblu: marginStatus/riskStatus citite, telefon, scurgere WS/ceas la iesire prin tab-uri, ATR adevarat, pret viu, istoric fara pret inghetat, sortare dupa timp, comision nemasurabil, durata la margine",
   "features": {
+    "clar252": "Tabloul (22.10.2026, el: fă ideile): crucea scrie prețul cu aceeași funcție ca scara, prețul apare și când mouse-ul e în jgheab, „aproape” stă în rând, barele de volum lasă ultimele lumânări libere, iar prețurile din scară nu se mai calcă. Șirurile vechi rămân. Culorile, pragurile și calculul rămân. Colectorul rămâne v101.136.",
     "axa251": "Tabloul (22.10.2026, el: toate cele 6 idei): trendul rămâne cât textul, rândul cel mai aproape de prețul de acum e marcat, scara se poate opri, prețul de acum stă și pe scara din dreapta, crucea arată prețul în scară, iar coloana de citire coboară la 240 px. Șirurile de 340 și 280 rămân. Stânga ține ecusonul. Telefonul rămâne 270, fără scară. Culorile, pragurile și calculul rămân. Colectorul rămâne v101.136.",
     "lat250": "Tabloul (22.10.2026, el: graficul ca în TradingView, un pic mai mare și mai lat): panoul botului urcă la 420–540, lumânarea e un pic mai lată, volumul de pe lat are 54 px, iar scara de 52 px stă în dreapta și ține doar prețuri. Coloana de citire și trend coboară la 280 px de la 1181 px; șirul de 340 px rămâne. Telefonul rămâne 270, fără scară. Numele lungi, culorile, pragurile și calculul rămân. Proba desenează și numără straturile. Colectorul rămâne v101.136.",
     "strans249": "Tabloul (22.10.2026, el: spațiile goale și graficul mai explicit): citirea și trendul stau în coloana din dreapta, lipite de grafic, la 8 px. Cardurile de jos iau rândul întreg. Lumânările botului sunt mai înalte, scara are trei prețuri, iar lista de sub grafic se cheamă „Ce e pe grafic”. Numele lungi nu revin peste lumânări. Telefonul, culorile lumânărilor, pragurile și calculul rămân. Colectorul rămâne v101.136.",

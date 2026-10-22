@@ -3037,6 +3037,8 @@ html.pzDemo #tabloubot .tbPretViu{display:none!important}
   #tabloubot #tbTrendCard{flex:0 0 auto}
 }
 #tabloubot .gbValori li.gbAproape .gbVN{color:#E9B949}#tabloubot .gbValori li.gbAproape .gbVN::after{content:" · aproape";font-weight:600}
+/* v100.252: cuvântul stă în rând. Regula de deasupra rămâne; asta o stinge, ca să nu se scrie de două ori. */
+#tabloubot .gbValori li.gbAproape .gbVN::after{content:none}
 .pzDemo #tabloubot.on .tbCadru>.contTot,
 .pzDemo #tabloubot.on .tbCadru>.piataAzi,
 .pzDemo #tabloubot.on .tbCadru>#tbSemaforCard,

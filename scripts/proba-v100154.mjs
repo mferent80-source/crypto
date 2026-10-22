@@ -26,11 +26,11 @@ const tel = G.desen(Object.assign({}, baza, { W: 344, ingust: true })).svg, mare
 const telV = G.desen(Object.assign({}, baza, { W: 344, ingust: true })).valori, mareV = G.desen(Object.assign({}, baza, { W: 1400, ingust: false })).valori;
 await test("(1) v100.157 (el: „aș integra altfel valorile în grafic” → fâșia de valori): pe telefon valorile NU mai stau pe grafic, ci sub el, câte una pe rând, în ordinea prețului, cu șansa la vedere (faptă, cerută pe 08.10); ecranul mare la fel ca înainte", () => {
   assert.doesNotMatch(tel, /class="gbTag"|grid↓\+ 1\.9800|>↓ lichidare|>botul pornit/, "pe grafic: doar liniile și prețul de acum");
-  assert.match(telV, /<li(?: class="gbAproape")? title="23% din drumuri ating linia"><i style="background:#5B8FC7"><\/i><span class="gbVN">grila de jos<\/span><b class="gbVP">1\.9800<\/b><span class="gbVD">−2,5%<\/span><span class="gbVS">23%<\/span><\/li>/, "rândul: culoarea liniei · nume · preț · față de acum · șansa");   /* v100.251: clasa de „aproape” poate sta pe li */
+  assert.match(telV, /<li(?: class="gbAproape")? title="23% din drumuri ating linia"><i style="background:#5B8FC7"><\/i><span class="gbVN">grila de jos(?: · aproape)?<\/span><b class="gbVP">1\.9800<\/b><span class="gbVD">−2,5%<\/span><span class="gbVS">23%<\/span><\/li>/, "rândul: culoarea liniei · nume · preț · față de acum · șansa");   /* v100.251: clasa pe li. v100.252: „ · aproape” poate sta în nume */
   assert.match(telV, /<span class="gbVN">↓ lichidare<\/span><b class="gbVP">1\.5000<\/b>/, "și cele din afara graficului, cu săgeata");
   const ord = [...telV.matchAll(/<b class="gbVP">([\d.]+)<\/b>/g)].map((m) => +m[1]); assert.deepEqual(ord, ord.slice().sort((a, b) => b - a), "în ordinea prețului: " + ord);
   // v100.161 (el: „prețurile din grafic ca pe telefon, ocupă spațiu aiurea”): și pe ecranul mare fâșia, fără etichetele din dreapta
-  assert.match(mareV, /<span class="gbVN">grila de jos<\/span><b class="gbVP">1\.9800<\/b>.*<span class="gbVS">23%<\/span>/); assert.doesNotMatch(mare, /class="gbTag"|class="gbSansa"/);
+  assert.match(mareV, /<span class="gbVN">grila de jos(?: · aproape)?<\/span><b class="gbVP">1\.9800<\/b>.*<span class="gbVS">23%<\/span>/); assert.doesNotMatch(mare, /class="gbTag"|class="gbSansa"/);   /* v100.252: cuvântul în nume */
 });
 await test("(2) prețul de acum pe telefon: PE grafic (v100.160, el: „pe grafic”) - eticheta pe linia prețului la marginea STÂNGĂ (în dreapta acoperea ultima lumânare), linia punctată pe toată lățimea, fără coloana din dreapta; numele benzilor în benzi; pe ecranul mare neschimbat", () => {
   const C = G.COL, d = G.desen(Object.assign({}, baza, { W: 344, ingust: true }));

@@ -7326,14 +7326,16 @@ function renderTabloGrafic(){
     if(sy<(d.harta.sus||0)){ascunde();return}   /* v100.144 (revizia Opus): în banda semaforului nu e nicio lumânare */
     var h=GraficBot.tip(d.harta,sx,sy,tbLaPret(b));
     var syG=sy-(d.harta.sus||0);   /* v100.144: pe telefon desenul e coborât sub banda semaforului */
-    if(crY){if(syG>=0&&syG<=d.harta.mainH){crY.setAttribute("y1",syG.toFixed(1));crY.setAttribute("y2",syG.toFixed(1));crY.style.display=""}else crY.style.display="none"}
-    if(!h){ascunde();return}
+    var inPanou=syG>=0&&syG<=d.harta.mainH,inJgheab=sx>d.harta.plotW&&sx<=d.harta.W+2;
+    var punePret=function(){if(!crP)return;var pY=GraficBot.pretLaY(d.harta,sy),lat=d.harta.W-d.harta.plotW;/* v100.251: var et=tbPretScurt(pY). v100.252: GraficBot.fmtP, aceeași scriere ca scara. */if(pY!==null&&lat>8&&(h||inJgheab)){var et=GraficBot.fmtP(pY),tx=crP.querySelector("text"),rc=crP.querySelector("rect"),w=Math.min(lat-4,Math.max(28,Math.round(et.length*6.6+8))),xR=d.harta.W-2,yR=Math.max(10,Math.min(d.harta.mainH-8,syG));tx.textContent=et;tx.setAttribute("x",(xR-4).toFixed(1));tx.setAttribute("y",(yR+4).toFixed(1));rc.setAttribute("x",Math.max(d.harta.plotW+2,xR-w).toFixed(1));rc.setAttribute("width",String(Math.min(w,lat-4)));rc.setAttribute("y",(yR-8).toFixed(1));crP.style.display=""}else crP.style.display="none"};
+    if(crY){if(inPanou&&(h||inJgheab)){crY.setAttribute("y1",syG.toFixed(1));crY.setAttribute("y2",syG.toFixed(1));crY.style.display=""}else crY.style.display="none"}
+    if(!h){tip.hidden=true;if(cr)cr.style.display="none";if(inJgheab&&inPanou){punePret();return}if(crP)crP.style.display="none";if(crY)crY.style.display="none";return}
     var bi=Math.max(0,Math.min(d.harta.bare.length-1,Math.floor(sx/d.harta.cw))),x=(bi*d.harta.cw+d.harta.cw/2).toFixed(1);
     if(cr){cr.setAttribute("x1",x);cr.setAttribute("x2",x);cr.style.display=""}
     tip.innerHTML=h;tip.hidden=false;
     var zr=zona.getBoundingClientRect(),tw=tip.offsetWidth,px=cx-zr.left+14;if(px+tw>zr.width)px=cx-zr.left-tw-14;
     tip.style.left=Math.max(0,px)+"px";tip.style.top=Math.max(0,Math.min(cy-zr.top-20,zr.height-tip.offsetHeight))+"px";
-    if(crP){var pY=GraficBot.pretLaY(d.harta,sy),lat=d.harta.W-d.harta.plotW;if(pY!==null&&lat>8){var et=tbPretScurt(pY),tx=crP.querySelector("text"),rc=crP.querySelector("rect"),w=Math.min(lat-4,Math.max(28,Math.round(et.length*6.6+8))),xR=d.harta.W-2,yR=Math.max(10,Math.min(d.harta.mainH-8,syG));tx.textContent=et;tx.setAttribute("x",(xR-4).toFixed(1));tx.setAttribute("y",(yR+4).toFixed(1));rc.setAttribute("x",Math.max(d.harta.plotW+2,xR-w).toFixed(1));rc.setAttribute("width",String(Math.min(w,lat-4)));rc.setAttribute("y",(yR-8).toFixed(1));crP.style.display=""}else crP.style.display="none"}
+    punePret();
   };
   // pe ecran tactil, eticheta ramane dupa ce ridici degetul (se muta la urmatoarea atingere)
   var fixat=false;
