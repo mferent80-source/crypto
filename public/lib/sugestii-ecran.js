@@ -85,11 +85,12 @@ function sugActiuniPiata(p, sa, pm, ii, steag, nume, acum) {
   var cand = p === "us" ? "se face înainte de deschiderea de la New York (~15:50), în zilele de bursă" : "se face după 10:20, în zilele de bursă (când vin primele 20 de minute)";
   h += sugCartela(p === "us" ? "🌅 Pre-market" : "🌅 Gap la deschidere", q ? "la " + sugOra(q.la, acum) + " · " + sugCate(q.judecate || 0, "acțiune cu prețuri", "acțiuni cu prețuri") : null, ql, q ? "nimic peste +2% azi" : cand,
     dv.gap && dv.gap.text ? dv.gap.text + (p === "us" ? " Istoricul: gap-ul la deschidere, cumpărat la deschidere (Yahoo nu păstrează pre-market-ul pe 2 ani și nu-i dă volumul)." : " Istoricul: cumpărat la închiderea zilei gap-ului (la 10:20 deschiderea a trecut), fără condiția de volum.") : null, null);
-  return '<section class="rlSec"><h4 class="sugCap">' + steag + " " + sugEsc(nume) + (s ? ' <span class="tbSub">· ' + sugEsc(sugCate(Number(s.judecate) || 0, "acțiune judecată", "acțiuni judecate") + (Number(s.fara) ? ", " + Number(s.fara) + " fără prețuri" : "")) + '</span>' : '') + '</h4><div class="sugGrila">' + h + '</div></section>';
+  var marca = p === "us" ? '<section class="rlSec" data-sug="us">' : '<section class="rlSec" data-sug="eu">';
+  return marca + '<h4 class="sugCap">' + steag + " " + sugEsc(nume) + (s ? ' <span class="tbSub">· ' + sugEsc(sugCate(Number(s.judecate) || 0, "acțiune judecată", "acțiuni judecate") + (Number(s.fara) ? ", " + Number(s.fara) + " fără prețuri" : "")) + '</span>' : '') + '</h4><div class="sugGrila">' + h + '</div></section>';
 }
 function sugBoti(cl, sg) {
   var I = typeof Idei !== "undefined" ? Idei : null, mo = function (x) { return String(x.moneda || x.simbol || "").replace(/_USDT_PERP$/, ""); };
-  if (!cl || !I) return '<section class="rlSec"><h4 class="sugCap">🤖 Boți</h4><p class="sugGol">aștept clasamentul (colectorul îl face o dată pe oră)</p></section>';
+  if (!cl || !I) return '<section class="rlSec" data-sug="boti"><h4 class="sugCap">🤖 Boți</h4><p class="sugGol">aștept clasamentul (colectorul îl face o dată pe oră)</p></section>';
   var s = sg && sg.sugestii, dv = s && s.dovada || {}, R = typeof Reveniri !== "undefined" ? Reveniri : null;
   // detaliile ca pe Tablou (intervalul, câștigul net pe grilă, trecerile pe zi) - poza 06.10: „scor 0” era un câmp care nu există
   var pr = function (v) { return (Math.round(Number(v) * 1000) / 10).toFixed(1).replace(".", ",") + "%"; };
@@ -98,7 +99,7 @@ function sugBoti(cl, sg) {
   var pzS = typeof acPauzaSezon === "function" ? acPauzaSezon() : null;
   var porn = pzS > 0 ? [] : I.ideiBoti(cl, [], 5).map(function (x) { return { s: mo(x), b: bz(mo(x)), d: [x.latime != null ? "interval " + pr(x.latime) : "", x.profitGrila != null ? pr(x.profitGrila) + " net pe grilă" : "", x.traversariZi != null ? "~" + Math.round(x.traversariZi) + " treceri pe zi" : ""].filter(Boolean).join(" · ") || "candidat" }; });
   var rev = I.reveniriBoti ? I.reveniriBoti(cl, [], 5).map(function (x) { return { s: mo(x), b: bz(mo(x)), d: "pe revenire" }; }) : [], sh = I.shortBoti ? I.shortBoti(cl, [], 5).map(function (x) { return { s: mo(x), b: bz(mo(x)), d: "liniștită, direcția short" }; }) : [];
-  return '<section class="rlSec"><h4 class="sugCap">🤖 Boți</h4><div class="sugGrila">'
+  return '<section class="rlSec" data-sug="boti"><h4 class="sugCap">🤖 Boți</h4><div class="sugGrila">'
     + sugCartela("💡 Pe ce aș porni un bot", "din clasamentul primelor 100 de monede PERP", porn, pzS > 0 ? acFrazaPauza(pzS) : "acum nicio monedă nu e candidată", "Un filtru (liniște, interval, treceri), nu o predicție; Fișa îți dă setările și proba pe moneda ta.", null)
     + sugCartela("🔁 Pe revenire", "monede care au scăzut puternic și acum revin", rev, "nimic acum", R && dv.revenire ? R.textDovada(dv.revenire.piata, "monede") + (R.TEXT_SUPRAVIETUITORI_MONEDE && dv.revenire.piata ? " ⚠ " + R.TEXT_SUPRAVIETUITORI_MONEDE : "") : null, null)   /* audit 19.10 (8): supraviețuitorii și la monede */
     + sugCartela("📉 Pentru short", "monede liniștite cu direcția short", sh, "nimic acum", R && dv.short ? R.textDovada(dv.short.piata, "short") + (R.TEXT_SUPRAVIETUITORI_MONEDE && dv.short.piata ? " ⚠ " + R.TEXT_SUPRAVIETUITORI_MONEDE : "") : null, null) + '</div></section>';
@@ -113,7 +114,7 @@ function sugLaPoarta(sim, k, probat) {
   if (typeof deschideT212 === "function") deschideT212(); setTimeout(function () { if (typeof t212BiletPentru === "function") t212BiletPentru(s); }, 900);
 }
 function sugSectoareHtml(x, acum) {
-  var h = '<section class="rlSec sugSectoare"><h3>🏆 Cele mai tari pe sectoare (acțiuni mari din SUA)</h3>';
+  var h = '<section class="rlSec sugSectoare" data-sug="sect"><h3>🏆 Cele mai tari pe sectoare (acțiuni mari din SUA)</h3>';
   if (!x || !Array.isArray(x.sectoare)) return h + '<p class="tbSub">Topul se face o dată pe zi, de la 8:00 (după închiderea bursei din SUA), din screenerul Nasdaq: cele mai mari ~25 de firme din fiecare sector, cu prețurile pe 2 ani.</p></section>';
   var ist = x.istoric || {}, P = function (v) { return v == null || !isFinite(v) ? "—" : (v >= 0 ? "+" : "−") + Math.abs(v * 100).toFixed(0) + "%"; };
   h += '<p class="rlRasp">Regula, fixată înainte de cifre: în fiecare sector, doar acțiunile cu trend în sus (prețul peste media de 50 de zile, ea peste cea de 200), ordonate după cât au urcat pe 3 și pe 6 luni față de celelalte din sector. Un clasament, nu o predicție.</p>'
@@ -132,7 +133,7 @@ function sugSectoareHtml(x, acum) {
 function sugTrendHtml(x, acum) {
   var P1 = function (v) { return v == null || !isFinite(v) ? "—" : (v >= 0 ? "+" : "−") + Math.abs(v * 100).toFixed(1).replace(".", ",") + "%"; };   /* v100.196: „+1,2%”, forma paginii */
   var ziNY = function (t) { return new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(t)); };
-  var h = '<section class="rlSec sugTrend"><h3>📈 Trend 12 luni (în probă)</h3>';
+  var h = '<section class="rlSec sugTrend" data-sug="trend"><h3>📈 Trend 12 luni (în probă)</h3>';
   if (!x || !Array.isArray(x.top) || !x.top.length) return h + '<p class="tbSub">Clasamentul vine o dată pe zi (după 8:00) de la robotul din Trading Tools: primele 20% dintre ~600 de acțiuni SUA de peste 2 mld. $ după randamentul pe lunile 2–12.</p></section>';
   var regim = !!(x.regim && x.regim.peste), b = x.bilant, probat = b && /^probat/i.test(String(b.verdict || "")) ? "1" : "";
   // v100.192 (I-627): zile de bursă NY de la EOD-ul robotului până azi, minus una (EOD de ieri = proaspăt); de la 2 ⇒ VECHI (robotul n-a publicat)
@@ -158,9 +159,9 @@ function sugTrendHtml(x, acum) {
 function sugTrendTot() { sugStare.trendTot = true; var l = document.querySelector('.sugTrendLista'); if (l) l.classList.add('sugTrendTot'); }
 function sugHtml(d, acum) {
   d = d || {}; var sa = d.sugActiuni && d.sugActiuni.sugestii, pm = d.sugActiuni && d.sugActiuni.premarket;
-  return '<p class="rlRasp">Toate sugestiile, fiecare cu istoricul ei pe 2 ani. Un filtru, nu o predicție: o listă cu istoric slab rămâne, cu istoricul la vedere - judeci tu.</p>'
+  return '<p class="rlRasp" data-sug="rasp">Toate sugestiile, fiecare cu istoricul ei pe 2 ani. Un filtru, nu o predicție: o listă cu istoric slab rămâne, cu istoricul la vedere - judeci tu.</p>'
     + sugPandaHtml(d.latime, d.boti, acum) + sugBoti(d.clasament, d.sugMonede) + sugActiuniPiata("us", sa, pm, d.idei, "📈", "Acțiuni US", acum) + sugSectoareHtml(d.sectoare, acum) + sugTrendHtml(d.trend12, acum) + sugActiuniPiata("eu", sa, pm, null, "📈", "Acțiuni EU (DAX, CAC, AEX + ale tale)", acum)
-    + '<p class="tbSub">Regulile au fost fixate înainte de cifre și nu se ajustează după istoric. Istoricul: intrare la deschiderea zilei de după semnal (gap-ul: vezi cartela lui), ieșire după 10 zile de bursă, cu 0,3% comision.</p>';
+    + '<p class="tbSub" data-sug="nota">Regulile au fost fixate înainte de cifre și nu se ajustează după istoric. Istoricul: intrare la deschiderea zilei de după semnal (gap-ul: vezi cartela lui), ieșire după 10 zile de bursă, cu 0,3% comision.</p>';
 }
 // v100.243: o secțiune își schimbă cifrele pe loc. Pagina întreagă se rescrie doar la primul desen
 // sau când apare ori dispare un bloc. „arată toate” nu e parte din schelet: rămâne deschisă.
@@ -199,17 +200,127 @@ function sugTineTrend(el) {
   if (!sugStare.trendTot || !el) return;
   var l = el.querySelector(".sugTrendLista"); if (l) l.classList.add("sugTrendTot");
 }
+// v100.244: cele 8 locuri sunt deja în pagină. Un rând nou se adaugă, unul dispărut se scoate,
+// rândul care rămâne își schimbă cifra în același nod. Lățimea grilei se ține cât o bară de derulare.
+function sugLatime(px, tinut) {
+  var w = Number(px), t = Number(tinut);
+  if (!(w >= 160)) return t >= 160 ? t : 0;
+  if (t >= 160 && Math.abs(w - t) < 48) return t;
+  var q = Math.round(w / 48) * 48;
+  return q >= 160 ? q : 160;
+}
+function sugAplicLatime(el) {
+  if (!el || typeof el.querySelectorAll !== "function") return;
+  var r = typeof el.getBoundingClientRect === "function" ? el.getBoundingClientRect() : null;
+  var mas = r && isFinite(r.width) ? r.width : 0;
+  var t = sugLatime(mas, sugStare.latimeGrila || 0);
+  sugStare.latimeGrila = t;
+  var n = t >= 160 ? Math.max(1, Math.min(4, Math.floor(t / 270))) : 0;
+  var stil = n ? "repeat(" + n + ",minmax(0,1fr))" : "";
+  var g = el.querySelectorAll(".sugGrila, .sugSectGrid"), i;
+  for (i = 0; i < g.length; i++) if (g[i].style) g[i].style.gridTemplateColumns = stil;
+}
+function sugAlinia(vechi, nou) {
+  function elemente(n) {
+    var L = [], i;
+    for (i = 0; i < n.childNodes.length; i++) if (n.childNodes[i].nodeType === 1) L.push(n.childNodes[i]);
+    return L;
+  }
+  function cheieRand(n) {
+    var i, c, tag, t, j;
+    if (!n || n.nodeType !== 1) return "";
+    for (i = 0; i < n.childNodes.length; i++) {
+      c = n.childNodes[i];
+      if (!c || c.nodeType !== 1) continue;
+      tag = String(c.tagName || "").toUpperCase();
+      if (tag !== "B" && tag !== "BUTTON") continue;
+      t = "";
+      for (j = 0; j < c.childNodes.length; j++) if (c.childNodes[j].nodeType === 3) t += c.childNodes[j].nodeValue;
+      t = t.replace(/\s+/g, " ").trim();
+      if (t) return tag + ":" + t;
+    }
+    return "";
+  }
+  function cheieBaza(n) {
+    var cls = String(n.className || "").replace(/\bsugTrendTot\b/g, "").replace(/\bales\b/g, "").replace(/\s+/g, " ").trim();
+    return String(n.tagName || "").toUpperCase() + "." + cls;
+  }
+  function chei(lista) {
+    var vazut = {}, out = [], i, k, b;
+    for (i = 0; i < lista.length; i++) {
+      k = cheieRand(lista[i]);
+      if (!k) {
+        b = cheieBaza(lista[i]);
+        vazut[b] = (vazut[b] || 0) + 1;
+        k = b + "#" + vazut[b];
+      } else {
+        vazut[k] = (vazut[k] || 0) + 1;
+        if (vazut[k] > 1) k = k + "#" + vazut[k];
+      }
+      out.push(k);
+    }
+    return out;
+  }
+  function puneClasa(a, b) {
+    var clsV = " " + String(a.className || "").replace(/\s+/g, " ") + " ";
+    var cls = String(b.className || "").replace(/\s+/g, " ").trim();
+    if (clsV.indexOf(" sugTrendTot ") >= 0 && (" " + cls + " ").indexOf(" sugTrendTot ") < 0) cls = (cls + " sugTrendTot").trim();
+    a.className = cls;
+    if (a.setAttribute) a.setAttribute("class", cls);
+  }
+  function puneLegatura(a, b) {
+    var i, k, v;
+    for (i = 0; i < 2; i++) {
+      k = i ? "data-action-click" : "href";
+      v = b.getAttribute ? b.getAttribute(k) : null;
+      if (v) a.setAttribute(k, v);
+      else if (a.getAttribute && a.getAttribute(k) != null && a.removeAttribute) a.removeAttribute(k);
+    }
+  }
+  function sincronTexte(a, b) {
+    var ta = [], tb = [], i, n;
+    for (i = 0; i < a.childNodes.length; i++) if (a.childNodes[i].nodeType === 3) ta.push(a.childNodes[i]);
+    for (i = 0; i < b.childNodes.length; i++) if (b.childNodes[i].nodeType === 3) tb.push(b.childNodes[i]);
+    n = Math.min(ta.length, tb.length);
+    for (i = 0; i < n; i++) if (ta[i].nodeValue !== tb[i].nodeValue) ta[i].nodeValue = tb[i].nodeValue;
+    for (i = n; i < tb.length; i++) a.appendChild(tb[i]);
+    for (i = ta.length - 1; i >= n; i--) if (ta[i].parentNode) ta[i].parentNode.removeChild(ta[i]);
+  }
+  function alinia(a, b) {
+    if (!a || !b || a.nodeType !== 1 || b.nodeType !== 1) return false;
+    if (String(a.tagName).toUpperCase() !== String(b.tagName).toUpperCase()) return false;
+    puneClasa(a, b);
+    puneLegatura(a, b);
+    var ae = elemente(a), be = elemente(b), ak = chei(ae), bk = chei(be);
+    var harta = {}, i, j, gasit, ordine = [], folosit = {};
+    for (i = 0; i < ae.length; i++) if (!harta[ak[i]]) harta[ak[i]] = ae[i];
+    for (j = 0; j < be.length; j++) {
+      gasit = harta[bk[j]];
+      if (gasit && !folosit[bk[j]]) {
+        if (!alinia(gasit, be[j])) return false;
+        folosit[bk[j]] = 1;
+        ordine.push(gasit);
+      } else ordine.push(be[j]);
+    }
+    for (i = 0; i < ae.length; i++) if (!folosit[ak[i]] && ae[i].parentNode) ae[i].parentNode.removeChild(ae[i]);
+    for (j = 0; j < ordine.length; j++) a.appendChild(ordine[j]);
+    sincronTexte(a, b);
+    return true;
+  }
+  return alinia(vechi, nou);
+}
 function sugDeseneaza() {
   var el = typeof document !== "undefined" && document.getElementById("sugPagina"); if (!el) return;
   var h = sugHtml(sugStare.d, Date.now()); if (el._sugH === h) return;
   var tmp = document.createElement("div"); tmp.innerHTML = h;
-  var nou = [].slice.call(tmp.children), vechi = [].slice.call(el.children), parti = nou.map(function (c) { return c.outerHTML; }), peLoc = vechi.length === nou.length && el._sugP;
+  var nou = [].slice.call(tmp.children), vechi = [].slice.call(el.children), parti = nou.map(function (c) { return c.outerHTML; }), peLoc = vechi.length === nou.length;
   if (peLoc) for (var i = 0; i < nou.length; i++) {
-    if (el._sugP[i] === parti[i]) continue;
-    if (sugSchelet(el._sugP[i]) === sugSchelet(parti[i]) && sugPeLoc(vechi[i], parti[i])) continue;
+    if (el._sugP && el._sugP[i] === parti[i]) continue;
+    if (el._sugP && sugSchelet(el._sugP[i]) === sugSchelet(parti[i]) && sugPeLoc(vechi[i], parti[i])) continue;
+    if (sugAlinia(vechi[i], nou[i])) continue;
     vechi[i].outerHTML = parti[i];
   } else el.innerHTML = h;
-  el._sugH = h; el._sugP = parti; sugTineTrend(el);
+  el._sugH = h; el._sugP = parti; sugTineTrend(el); sugAplicLatime(el);
 }
 async function sugPorneste(fortat) {
   sugDeseneaza();

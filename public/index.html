@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ro"><head><link href="/manifest.webmanifest" rel="manifest"/><meta content="#0E141A" name="theme-color"/><meta content="dark" name="color-scheme"/><meta charset="utf-8"/><meta content="v100.243" name="app-version"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
+<html lang="ro"><head><link href="/manifest.webmanifest" rel="manifest"/><meta content="#0E141A" name="theme-color"/><meta content="dark" name="color-scheme"/><meta charset="utf-8"/><meta content="v100.244" name="app-version"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
 <title>Crypto Radar</title>
 <link href="/app.css" rel="stylesheet"/>
 </head><body><div aria-live="polite" class="offlineBanner" hidden="" id="offlineBanner" role="status">OFFLINE · read-only local research mode. Network analysis/scanners are disabled; cached UI, journal and reports remain available.</div>
@@ -71,7 +71,7 @@
 </details>
 </div>
 <div class="sideFooter">
-<div class="label">Build</div><div id="sideVersiune" style="font-size:11px;font-weight:800;margin-top:3px">v100.243 · LOC</div>
+<div class="label">Build</div><div id="sideVersiune" style="font-size:11px;font-weight:800;margin-top:3px">v100.244 · PLIN</div>
 <div class="row"><span class="small">Spot source</span><b class="good">DIRECT</b></div>
 <div class="row"><span class="small">Engine</span><b class="good">READY</b></div>
 </div>
@@ -88,7 +88,7 @@
 <div class="logo">◈</div>
 <div><h1>Crypto Radar Pro · Multi-Market</h1><div class="subhead">Crypto + Nasdaq + US stocks · multi-timeframe research</div></div>
 </div>
-<div class="headerMeta"><span class="badge" id="antetVersiune">v100.243 · CRYPTO RADAR · PIONEX + TRADING 212 DOAR CITIRE</span><span class="metaChip">STRICT READ-ONLY · STATIC+RUNTIME</span><span class="metaChip">SPOT DATA · NO ORDER ROUTE</span><span class="metaChip">4 TIMEFRAMES</span></div>
+<div class="headerMeta"><span class="badge" id="antetVersiune">v100.244 · CRYPTO RADAR · PIONEX + TRADING 212 DOAR CITIRE</span><span class="metaChip">STRICT READ-ONLY · STATIC+RUNTIME</span><span class="metaChip">SPOT DATA · NO ORDER ROUTE</span><span class="metaChip">4 TIMEFRAMES</span></div>
 </div>
 <div class="toolbar"><button aria-expanded="false" class="tbarRezumat" data-action-click="tbarComuta()" id="tbarRezumat" title="Alege moneda, intervalul, modul și sursa" type="button">BTC · 4h · Auto · Binance ▾</button>
 <div class="controls">
@@ -1204,7 +1204,7 @@
 <div class="cacheBox"><span class="label">Scannerul Pionex</span><b id="healthScanner">—</b></div>
 <div class="cacheBox"><span class="label">Reconectări WS</span><b id="healthReconnects">—</b></div>
 <div class="cacheBox"><span class="label">Mod PWA</span><b id="healthPwaMode">—</b></div>
-<div class="cacheBox"><span class="label">Versiunea aplicației</span><b id="healthAppVersion">v100.243</b></div>
+<div class="cacheBox"><span class="label">Versiunea aplicației</span><b id="healthAppVersion">v100.244</b></div>
 <div class="cacheBox"><span class="label">Contractul motorului</span><b>54.1</b></div>
 <div class="cacheBox"><span class="label">Ce s-a verificat</span><b>STATIC+RUNTIME · LIVE UNVERIFIED</b></div>
 <div class="cacheBox"><span class="label">Intel API</span><b id="healthIntel">—</b></div>
@@ -1621,7 +1621,16 @@
 </section>
 <section class="panel" id="sugestii">
 <div class="sectionHead"><h3>Sugestii</h3><span class="small">boți · acțiuni US · acțiuni EU · fiecare cu istoricul ei</span></div>
-<div class="card full" id="sugPagina"><p class="tbSub">Aștept sugestiile…</p></div>
+<div class="card full" id="sugPagina">
+<p class="rlRasp" data-sug="rasp">Aștept sugestiile…</p>
+<div class="tbBloc sugPanda" data-sug="panda"><div class="tbBlocCap sugPandaCap"><h4>Lățimea pieței · 150 perp-uri Binance</h4><span class="tbSub"></span></div><p class="tbSub">Aștept sugestiile…</p></div>
+<section class="rlSec" data-sug="boti"><h4 class="sugCap">🤖 Boți</h4></section>
+<section class="rlSec" data-sug="us"><h4 class="sugCap">📈 Acțiuni US</h4></section>
+<section class="rlSec sugSectoare" data-sug="sect"><h3>🏆 Cele mai tari pe sectoare (acțiuni mari din SUA)</h3></section>
+<section class="rlSec sugTrend" data-sug="trend"><h3>📈 Trend 12 luni (în probă)</h3></section>
+<section class="rlSec" data-sug="eu"><h4 class="sugCap">📈 Acțiuni EU (DAX, CAC, AEX + ale tale)</h4></section>
+<p class="tbSub" data-sug="nota">Regulile au fost fixate înainte de cifre și nu se ajustează după istoric.</p>
+</div>
 </section>
 <section class="panel" id="carnet">
 <div class="sectionHead"><h3>Carnetul fișei</h3><span class="small">a avut fișa dreptate? · pe istoric și de acum înainte</span></div>

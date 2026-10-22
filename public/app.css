@@ -2283,6 +2283,8 @@ body:not(.peLaborator) main>.note{display:none}
 .sugLista{margin:0;padding:0;list-style:none;display:grid;gap:4px}.sugLista li{display:flex;flex-wrap:nowrap;gap:6px;align-items:baseline}.sugLista li>b{flex:none}.sugLista li>.tbSub{flex:1;min-width:0}
 .sugBusola{margin-left:auto;flex:none;min-width:32px;min-height:32px;display:inline-flex;align-items:center;justify-content:center;border-radius:var(--radius);text-decoration:none;align-self:center}.sugBusola:hover,.sugBusola:focus-visible{background:var(--line)}   /* v100.181: 🧭 spre Busola în Sugestii */.sugGol{margin:0;color:var(--muted)}
 .sugIstoric,.sugUrm{margin:0}.sugCap{margin:14px 0 6px}.sugCartela h4{margin:0}.sugCartela>.tbSub{margin:0}
+/* v100.244: fraza de istoric stă pe un rând; textul rămâne în pagină, tăiat cu puncte */
+#sugPagina .sugIstoric,#sugPagina .sugUrm{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:1.35em;line-height:1.35}
 /* v100.243: vârsta lățimii rămâne pe un rând; „acum 9 min” / „acum 10 min” nu înalță antetul pândei */
 #sugPagina .sugPandaCap{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:nowrap;margin:0 0 6px}#sugPagina .sugPandaCap h4{margin:0;flex:0 0 auto}#sugPagina .sugPandaCap>.tbSub{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;text-align:right;white-space:nowrap}
 /* v100.120: pagina Salt - pozițiile, formularul, tabelul tuturor instrumentelor */
@@ -2682,6 +2684,26 @@ html.pzDemo body:not(.pzFasiaDeschisa):has(main>#cloud.on,main>#settings.on,main
 .pzDemo #sugPagina>*{order:900}
 .pzDemo #sugPagina>.sugPanda{order:10}.pzDemo #sugPagina>.rlSec:nth-of-type(1){order:20}.pzDemo #sugPagina>.rlSec:nth-of-type(2){order:30}
 .pzDemo #sugPagina>.rlSec:nth-of-type(3){order:40}.pzDemo #sugPagina>p.rlRasp{order:5}.pzDemo #sugPagina>p.tbSub{order:990}
+/* v100.244: aceleași 8 blocuri, cu nume, ca trendul și EU să nu cadă la coadă */
+.pzDemo #sugPagina>[data-sug="rasp"]{order:5}
+.pzDemo #sugPagina>[data-sug="panda"]{order:10}
+.pzDemo #sugPagina>[data-sug="boti"]{order:20}
+.pzDemo #sugPagina>[data-sug="us"]{order:30}
+.pzDemo #sugPagina>[data-sug="sect"]{order:40}
+.pzDemo #sugPagina>[data-sug="trend"]{order:50}
+.pzDemo #sugPagina>[data-sug="eu"]{order:60}
+.pzDemo #sugPagina>[data-sug="nota"]{order:990}
+/* v100.244: antetul ca la Tablou. Verdictul lângă titlu, pagina pe toată lățimea dedesubt. DOM-ul rămâne. */
+.pzDemo #sugestii.on{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;align-items:start}
+.pzDemo #sugestii.on>*{grid-column:1 / -1;min-width:0}
+.pzDemo #sugestii.on>.sectionHead{order:8}
+.pzDemo #sugestii.on>#pzV-sug{order:10;grid-column:1 / 4;grid-row:1;align-self:stretch}
+.pzDemo #sugestii.on:has(>#pzV-sug:not([hidden]))>.sectionHead{grid-column:4 / -1;grid-row:1}
+.pzDemo #sugestii.on>#sugPagina{order:20}
+@media (max-width:1000px){
+  .pzDemo #sugestii.on{grid-template-columns:minmax(0,1fr)}
+  .pzDemo #sugestii.on>*{grid-column:1 / -1!important;grid-row:auto!important}
+}
 /* Grid: ce setez? — v100.238, ecranul #gridset: după calcul, bara (Direcția + verdictul), trendul, modelele, ÎNGUST/LARG, Busola pe 4h, apoi restul. Clasamentul urcă doar când fișa e goală */
 .pzDemo #gridset.on{display:flex;flex-direction:column;gap:8px}
 .pzDemo #gridset.on>*{order:900}
