@@ -83,6 +83,19 @@ export function listaGoalaPas(m, { goala, acum }) {
   return { tip: null, minute, nume: activi };
 }
 
+// v100.259 (auditul 23.10, punctul 2): stopurile puse direct în Trading 212 (ordinele în așteptare) rămâneau la ultima listă bună PENTRU
+// TOTDEAUNA când citirea începea să pice ⇒ un stop anulat în T212 lăsa alarma „FĂRĂ STOP” a paznicului mută. Acum: o eroare scurtă
+// (≤ STOPURI_T212_MAX_MS de la ultima citire bună) păstrează lista (fără pâlpâit); peste ea, niciun stop „știut” + `eroare` (apelantul o pune
+// în t212Eroare ⇒ paznicul spune „nesigur”, nu „ai stop”). st = { stopuri, la, eroare } ține minte între ture. Întoarce { stopuri, eroare }.
+export const STOPURI_T212_MAX_MS = 15 * 60000;
+export function stopuriT212Pas(st, { stopuri, eroare, acum }) {
+  if (!eroare && stopuri && typeof stopuri === "object") { st.stopuri = stopuri; st.la = acum; st.eroare = null; return { stopuri, eroare: null }; }
+  st.eroare = String(eroare || "răspuns fără stopuri");
+  if (st.la && acum - st.la <= STOPURI_T212_MAX_MS) return { stopuri: st.stopuri || {}, eroare: null };
+  const de = st.la ? "de " + Math.round((acum - st.la) / 60000) + " min" : "de la pornire";
+  return { stopuri: {}, eroare: "ordinele de stop din Trading 212 necitite " + de + " (" + st.eroare.slice(0, 80) + ")" };
+}
+
 // audit 19.10: tickerele PERP nu vin (bot-orders pune probleme.preturi, pretCurent null) ⇒ distanța până la lichidare e null și alerta de
 // lichidare (Alerte.evalueaza cere dist !== null) tace. 3 ture la rând fără preț pe un bot futures activ ⇒ „orb”, o singură dată până la
 // revenire; la revenire „revenit”. m = meta(); apelantul notează m.perpOrb.anuntat DOAR după ce mesajul a plecat (și îl pune 0 la revenire).

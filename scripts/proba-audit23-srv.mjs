@@ -63,5 +63,27 @@ await test("(1) „ce a urmat” (alerte-dupa) se lipește și pe alertele de pe
   assert.ok(v, "alerta de acum 30 h lipsește"); assert.deepEqual(v.dupa, { pret: 2.2 });
 });
 
+// ---------- (2) stopurile T212 ținute cu vârstă ----------
+const S = await import("./lib/sanatate-colector.mjs");
+await test("(2) stopuriT212Pas: citirea bună le ține; eroarea până la 15 min păstrează ultimele (fără pâlpâit); peste 15 min ⇒ niciun stop + „nesigur”", () => {
+  assert.equal(typeof S.stopuriT212Pas, "function"); assert.equal(S.STOPURI_T212_MAX_MS, 15 * MIN);
+  const st = {}, t0 = Date.UTC(2026, 9, 23, 12, 0);
+  assert.deepEqual(S.stopuriT212Pas(st, { stopuri: { AAPL_US_EQ: 180 }, eroare: null, acum: t0 }), { stopuri: { AAPL_US_EQ: 180 }, eroare: null });
+  assert.deepEqual(S.stopuriT212Pas(st, { stopuri: null, eroare: "HTTP 429", acum: t0 + 10 * MIN }), { stopuri: { AAPL_US_EQ: 180 }, eroare: null }, "sub 15 min: ultimele cunoscute");
+  const r = S.stopuriT212Pas(st, { stopuri: null, eroare: "HTTP 403", acum: t0 + 16 * MIN });
+  assert.deepEqual(r.stopuri, {}, "peste 15 min stopul vechi tot „există”"); assert.match(r.eroare, /stop/); assert.match(r.eroare, /16 min/); assert.match(r.eroare, /HTTP 403/);
+  assert.deepEqual(S.stopuriT212Pas(st, { stopuri: {}, eroare: null, acum: t0 + 17 * MIN }), { stopuri: {}, eroare: null }, "revenirea: lista goală bună = fără stopuri, sigur");
+  const st2 = {}; const r2 = S.stopuriT212Pas(st2, { stopuri: null, eroare: "x", acum: t0 });
+  assert.deepEqual(r2.stopuri, {}); assert.match(r2.eroare, /de la pornire/, "fără nicio citire bună: nesigur de la început");
+});
+await test("(2) colectorul: stopT212 din stopuriT212Pas, iar eroarea lui intră în t212Eroare (paznicul spune „nesigur”, nu „ai stop”)", () => {
+  const c = citeste("scripts", "colector.mjs");
+  assert.match(c, /S\.stopuriT212Pas\(stopuriT212, \{ stopuri: o && o\.stopuri, eroare: eo, acum: Date\.now\(\) \}\)/);
+  assert.match(c, /stopT212: sp\.stopuri\[x\.ticker\] \?\? null/);
+  assert.match(c, /if \(!t212Eroare && stopuriT212Nesigur\) t212Eroare = stopuriT212Nesigur;/);
+  assert.ok(!/stopuriT212Ultim/.test(c), "a rămas lista ținută fără vârstă");
+  const w = citeste("paznic", "worker.mjs"); assert.match(w, /if \(poza\.t212Eroare \|\|/, "paznicul nu mai citește t212Eroare");
+});
+
 console.log(`\n${teste - picate}/${teste} ${picate ? "— PICĂ" : "ok"}`);
 process.exitCode = picate ? 1 : 0;

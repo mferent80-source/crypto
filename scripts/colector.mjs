@@ -1065,14 +1065,17 @@ async function rezultateZilePt(tk) {
   const d = rezultateAct[tk].data; if (!d) return null;
   const zc = Math.ceil((Date.parse(d + "T12:00:00Z") - Date.now()) / 86400000); return zc >= 0 ? Math.round(zc * 5 / 7) : null;
 }
-let stopuriT212Ultim = {}, stopuriT212Eroare = null;   // v101.130
+var stopuriT212 = {}, stopuriT212Nesigur = null, stopuriT212Jurnal = null;   // v101.130; v100.259 (auditul 23.10, punctul 2): cu vârstă (S.stopuriT212Pas); var: citite din ceasul pozei
 async function pozitiiPentruPoza() {
   const v = citesteVarsSigur(); if (!(v.T212_API_KEY && v.T212_API_SECRET)) return [];
   const pz = await cere("/api/t212?action=pozitii"), poz = (pz && pz.pozitii || []).filter((x) => x && x.quantity > 0);
   let loturi = [], inchiseT = []; try { const h = await cere("/api/t212?action=istoric"), pp = T212.perechi((h && h.umpleri) || []); loturi = pp.deschise || []; inchiseT = pp.inchise || []; } catch (e) { jurnal("poza: loturi", e.message); }
   const alesT = await trailAlesPt(inchiseT);
   // v101.130: stopurile puse direct în Trading 212 (ordine în așteptare); la o eroare rămân ultimele cunoscute (ca planul), altfel alarma ar pâlpâi
-  try { const o = await cere("/api/t212?action=ordine-deschise"); if (o && o.stopuri) stopuriT212Ultim = o.stopuri; } catch (e) { if (!stopuriT212Eroare) jurnal("poza: ordinele de stop T212", e.message); stopuriT212Eroare = e.message; }
+  // v100.259 (auditul 23.10, punctul 2): doar 15 min de la ultima citire bună; după, niciun stop „știut” și poza spune „nesigur” (t212Eroare)
+  let o = null, eo = null; try { o = await cere("/api/t212?action=ordine-deschise"); if (!(o && o.stopuri)) eo = "răspuns fără stopuri"; } catch (e) { eo = e.message; }
+  if (eo && stopuriT212Jurnal !== eo) jurnal("poza: ordinele de stop T212", eo); stopuriT212Jurnal = eo;
+  const sp = S.stopuriT212Pas(stopuriT212, { stopuri: o && o.stopuri, eroare: eo, acum: Date.now() }); stopuriT212Nesigur = sp.eroare;
   let cash = null; try { cash = (await cere("/api/t212?action=cont")).cash || null; } catch {}
   if (cash && cash.total > 0) contT212 = cash.total;   // v101.2: contul in lei, pentru „câte bucăți” la simbolurile urmarite
   const pd = ponderiT212(poz, cash, ContIntreg.monedaTicker);   // v101.116 (🔵7): pe aceeași monedă; amestecat ⇒ null
@@ -1083,7 +1086,7 @@ async function pozitiiPentruPoza() {
     // revizia 01.10 (I5): la o eroare (RATE_LIMITED) ramane ultimul plan cunoscut - altfel stop-plan disparea si verdictul pâlpâia pe Discord
     try { plan = planReal(await cere("/api/istoric-bot?action=plan&bot=" + encodeURIComponent("t212-" + x.ticker))); planUltim[x.ticker] = plan; } catch { plan = planUltim[x.ticker] ?? null; }
     const mx = ActiuniSemnale.maxDupaCumparare(bare, x.initialFillDate, x.currentPrice);   // v100.40: de la ziua de dupa cumparare
-    const p = { ticker: x.ticker, simbol: T212.simbol(x.ticker), qty: x.quantity, pretMediu: x.averagePrice, pret: x.currentPrice, plan, maxDupaCumparare: mx, stopT212: stopuriT212Ultim[x.ticker] ?? null };
+    const p = { ticker: x.ticker, simbol: T212.simbol(x.ticker), qty: x.quantity, pretMediu: x.averagePrice, pret: x.currentPrice, plan, maxDupaCumparare: mx, stopT212: sp.stopuri[x.ticker] ?? null };
     // v100.8 (el, 28.09: „în alerts la Trading 212 de ce nu apar și aici insiderii”): aceeași sursă ca la simbolurile paginii
     // (Yahoo quoteSummary, cache 6 h în data/poza-ext.json); dublurile germane iau insiderii companiei din SUA
     const sursa = DUBLURI[p.simbol] || null; let extra = null;
@@ -1215,6 +1218,7 @@ async function turaPoza() {
     const [t212, boti, simboluri, radarUrl] = await Promise.all([
       pozitiiPentruPoza().then((l) => { ultimeleT212 = { lista: l, la: Date.now() }; return l; }).catch((e) => { t212Eroare = e.message; jurnal("poza: t212", e.message); return ultimeleT212.lista; }),
       botiPentruPoza(), simboluriPentruPoza().catch((e) => { jurnal("poza: simboluri", e.message); return []; }), adresaRadarului()]);
+    if (!t212Eroare && stopuriT212Nesigur) t212Eroare = stopuriT212Nesigur;   // v100.259 (punctul 2): stopurile necitite de peste 15 min ⇒ paznicul: „nesigur”
     // v101.2 (ideea 4 „câte bucăți”): la simbolurile urmarite in $ cu intrare sugerata - ActiuniSemnale.marime (1 % risc din contul T212,
     // plafon 20 %), cursul $/leu din pozitii; in € nu avem cursul euro din pozitii -> nimic, nu cifre inventate
     const fx = (await usdPeLeuBnr()) || fxDinPozitii(t212);   // v100.175 (revizia v100.173): BNR, ca pagina; pozițiile doar de rezervă
