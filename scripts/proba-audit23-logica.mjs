@@ -353,5 +353,36 @@ await test("(17) calibrarea are rândul „Poarta gridului · banii”: porneșt
   assert.ok(c.niveluri.some((x) => x.nivel === "nu") && c.niveluri.some((x) => x.nivel === "asteapta"));
 });
 
+// ---------- (5) fișa poartă verdictul Monte Carlo pe 7 zile al setării propuse ----------
+const B5 = bareSint(30 * 96, 1023, 0.006), P5 = B5[B5.length - 1].c;
+const fisa5 = (o) => GP.fisa({ simbol: "S", pret: P5, H: 1, b15: B5, b4h: G.agrega(B5, 4 * 3600000).slice(0, -1), b1d: G.agrega(B5, 86400000).slice(0, -1), suma: 100, ...o });
+await test("(5) fără Monte Carlo (faraMc) fișa zice PORNEȘTE pe moneda asta (premisa)", () => {
+  assert.equal(fisa5({ faraMc: true }).verdict.nivel, "porneste");
+  assert.equal(fisa5({ faraMc: true }).mc, undefined);
+});
+await test("(5) cu Monte Carlo pe aceeași setare: stopul atins în > 50% / pierde în > 50% ⇒ AȘTEAPTĂ, cu cifrele în motiv", () => {
+  const f = fisa5({ mc: GS });
+  assert.ok(f.mc && f.mc.n === 300 && f.mc.zile === 7, JSON.stringify(f.mc));
+  assert.ok(f.mc.pStop > 0.5 || f.mc.pPierde > 0.5, "premisa: MC contrazice (" + f.mc.pStop + " / " + f.mc.pPierde + ")");
+  assert.equal(f.verdict.nivel, "asteapta");
+  assert.match(f.verdict.motive[0], /^Monte Carlo pe 7 zile, aceeași setare: /);
+  assert.ok(f.verdict.motive[0].length <= 160, f.verdict.motive[0]);
+});
+await test("(5) Monte Carlo de acord ⇒ PORNEȘTE rămâne; stopul pe partea pierderii, ieșirea pe partea câștigului e ținta", () => {
+  let vazut = null;
+  const MOCK = { simuleaza: (b, st) => { vazut = st; return { orizonturi: [{ zile: 7, pStop: 0.2, pPierde: 0.3, pCastig: 0.7, pLich: 0, p50: 1 }] }; }, verdict: () => ({ faCe: "Aș porni: câștigă în 70% din drumuri." }) };
+  const f = fisa5({ mc: MOCK });
+  assert.equal(f.verdict.nivel, "porneste");
+  assert.equal(f.mc.contrazice, false);
+  if (vazut.dir === "long") { assert.ok(vazut.stop.jos > 0 && !vazut.stop.sus); assert.ok(vazut.tp > vazut.sus); }
+  else if (vazut.dir === "short") { assert.ok(vazut.stop.sus > 0 && !vazut.stop.jos); assert.ok(vazut.tp < vazut.jos); }
+});
+await test("(5) MC zice „N-aș porni” ⇒ AȘTEAPTĂ chiar cu stopul rar atins", () => {
+  const MOCK = { simuleaza: () => ({ orizonturi: [{ zile: 7, pStop: 0.1, pPierde: 0.4, pCastig: 0.6, pLich: 0.01 }] }), verdict: () => ({ faCe: "N-aș porni așa: lichidare în 1% din drumuri." }) };
+  const f = fisa5({ mc: MOCK });
+  assert.equal(f.verdict.nivel, "asteapta");
+  assert.match(f.verdict.motive[0], /N-aș porni așa/);
+});
+
 console.log(`\n${teste - picate}/${teste} ${picate ? "PICĂ" : "trec"}`);
 process.exitCode = picate ? 1 : 0;

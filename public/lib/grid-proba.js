@@ -315,7 +315,30 @@ var GridProba = (function () {
       f.setare = deasa.setare; f.treceriZi = deasa.treceriZi;
       f.verdict = G.verdict({ regim: rg, stat: f.stat, zile: pr.zile, pozitie: poz, pesteSigur: deasa.setare.pesteSigur, nesigur: !deasa.setare.sigur, ferestreTest: pr.ferestre.testIndependente, incercate: pr.incercate });
     }
+    // v100.259 (auditul 23.10, punctul 5): fișa poartă verdictul Monte Carlo pe 7 zile al setării PROPUSE (Simulatorul, 300 de drumuri, sămânța 12).
+    // Sub H0 (mers aleator, 300 de monede, H = 1) fișa zicea PORNEȘTE în 52, iar MC o contrazicea în 49 (stopul atins în > 50% din drumuri / pierde
+    // în > 50%); cu agitație grupată 41 din 41. PORNEȘTE coboară la AȘTEAPTĂ când MC zice „N-aș porni” / „Nu se potrivește”, stopul e în zgomot
+    // sau pierde în majoritatea drumurilor. o.mc = Simulatorul (GridSim) dat de chemător; fără el, cel global; o.faraMc = fără (carnetul, contrafactualul).
+    var GSx = o.faraMc || o.mc === false ? null : o.mc && typeof o.mc.simuleaza === "function" ? o.mc : typeof GridSim !== "undefined" && GridSim && GridSim.simuleaza ? GridSim : null;
+    if (GSx && f.setare) {
+      f.mc = mcPeSetare(GSx, o.b15, f.setare, o.suma > 0 ? o.suma : 100, pr.funding);
+      if (f.verdict && f.verdict.nivel === "porneste" && f.mc && f.mc.contrazice) f.verdict = { nivel: "asteapta", motive: [f.mc.motiv].concat(f.verdict.motive || []) };
+    }
     return f;
+  }
+  // v100.259: Monte Carlo pe 7 zile pe setarea fișei - stopul doar pe partea pierderii (long jos, short sus, neutru amândouă), ieșirea pe partea
+  // câștigului e ținta (la long, stopul de deasupra gridului nu e o pierdere)
+  function mcPeSetare(GSx, b15, s, suma, F) {
+    try {
+      var dir = s.dir, sp = s.stop || {}, st = { jos: s.jos, sus: s.sus, grile: s.grile, levier: s.levier, dir: dir, suma: suma, fundingZi: F ? F.rataZi : FUNDING_PRESUPUS, fundingCost: F ? F.presupus : true,
+        stop: dir === "long" ? { jos: sp.jos } : dir === "short" ? { sus: sp.sus } : { jos: sp.jos, sus: sp.sus }, tp: dir === "long" ? sp.sus : dir === "short" ? sp.jos : null };
+      var rez = GSx.simuleaza(b15, st, { n: 300, seed: 12, zile: 7, orizonturi: [7] });
+      if (!rez || rez.eroare || !rez.orizonturi || !rez.orizonturi[0]) return { eroare: rez && rez.eroare ? String(rez.eroare) : "fără rezultat", contrazice: false };
+      var z = rez.orizonturi[0], v = GSx.verdict ? GSx.verdict(rez, st, null, 0, null) : null, fc = v ? String(v.faCe || "").split(/[.:]/)[0].trim() : "";
+      var nuP = /^(N-aș porni|Nu se potrivește)/.test(fc), zg = z.pStop > 0.5, pi = z.pPierde > 0.5, pr0 = function (x) { return Math.round(x * 100) + "%"; };
+      var motiv = "Monte Carlo pe 7 zile, aceeași setare: " + (nuP ? "«" + fc + "»" : [zg ? "stopul atins în " + pr0(z.pStop) + " din drumuri" : null, pi ? "pierde în " + pr0(z.pPierde) : null].filter(Boolean).join(", ")) + ", deci nu zic PORNEȘTE";
+      return { n: 300, zile: 7, pStop: z.pStop, pPierde: z.pPierde, pCastig: z.pCastig, pLich: z.pLich, p50: z.p50, faCe: fc, contrazice: nuP || zg || pi, motiv: motiv };
+    } catch (e) { return { eroare: String(e && e.message || e), contrazice: false }; }
   }
   // pe zi = PERECHI incheiate pe fereastra / zilele ferestrei (nu umpleri: cele de pornire umflau cifra la gridurile dese)
   function treceriPeZi(stat, H) { return stat && typeof stat.perechiMedii === "number" && H > 0 ? stat.perechiMedii / H : null; }
