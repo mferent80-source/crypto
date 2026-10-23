@@ -186,7 +186,8 @@ await test("versiunea de la v100.244 în sus, colectorul rămâne v101.136", () 
   assert.doesNotMatch(P.scripts["test:v100244"], /npm run test:v100244/);
   assert.match(citeste("public", "index.html"), /id="topVersiune">v100\.38 · doar citire</);
   assert.equal(JSON.parse(citeste("BUILD_INFO.json")).engineContract, "54.1");
-  assert.match(citeste("scripts", "colector.mjs"), /VERSIUNE_COLECTOR = "v101\.136"/);
+  const mv = citeste("scripts", "colector.mjs").match(/VERSIUNE_COLECTOR = "v101\.(\d+)"/);
+  assert.ok(mv && Number(mv[1]) >= 136);
   assert.match(citeste("public", "app.css").trim().split("\n").pop(), /#topLive\{display:none!important\}/);
 });
 

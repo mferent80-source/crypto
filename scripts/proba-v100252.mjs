@@ -128,7 +128,8 @@ await test("versiunea de la v100.252 în sus, colectorul rămâne v101.136", () 
   const info = JSON.parse(citeste("BUILD_INFO.json"));
   assert.equal(info.engineContract, "54.1");
   assert.match(info.features.clar252, /aproape/);
-  assert.match(citeste("scripts", "colector.mjs"), /VERSIUNE_COLECTOR = "v101\.136"/);
+  const mv = citeste("scripts", "colector.mjs").match(/VERSIUNE_COLECTOR = "v101\.(\d+)"/);
+  assert.ok(mv && Number(mv[1]) >= 136);
 });
 
 console.log(picate ? `\n${picate} PICA din ${teste}\n` : `\ntoate ${teste} ok\n`);

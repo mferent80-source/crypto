@@ -21,6 +21,8 @@ function saltPret(v, m) { return v == null || !isFinite(Number(v)) ? "—" : sal
 function saltSemn(v) { return v > 0 ? "+" : v < 0 ? "−" : ""; }
 function saltSuma1(v, m) { return v == null || !isFinite(v) ? "—" : saltSemn(Math.round(v * 10) / 10) + saltBani1(Math.abs(v)) + " " + saltMon(m || "EUR"); }
 function saltLei(v) { return v == null || !isFinite(v) ? "—" : Math.round(v).toLocaleString("ro-RO") + " lei"; }
+// v100.255: aceeași regulă ca t212Bucati. Sub 10, în moneda instrumentului, bucăți întregi; de la 10 în sus, 3 zecimale. Salt se încarcă singur.
+function saltBucati(bucati, pret) { var n = Number(bucati) || 0; return (Number(pret) < 10 ? Math.round(n).toLocaleString("ro-RO") : (+n.toFixed(3)).toLocaleString("ro-RO")) + " buc"; }
 function saltCls(v) { return v > 0 ? "good" : v < 0 ? "bad" : ""; }
 // textele Consilierului au prețurile cu „$” (ca pe T212): aici în moneda simbolului, cu mii („$1109.08” ⇒ „1.109,08 EUR”)
 function saltInMoneda(t, m) { return String(t == null ? "" : t).replace(/\$(\d[\d,]*(?:\.\d+)?)/g, function (_, n) { return saltPret(Number(n.replace(/,/g, "")), m); }); }
@@ -92,7 +94,7 @@ function saltIdeeRand(x, d) {
 function saltBiletHtml(x, riscEur, fx) {
   var m = x.moneda || "", dist = x.intrare - x.stop, buc = dist > 0 && fx > 0 ? riscEur * fx / dist : null;
   return '<div class="t212Fac"><b>Biletul ' + saltEsc(x.simbol) + ':</b> cumpără la ' + saltPret(x.intrare, m) + ' · stop ' + saltPret(x.stop, m) + ' · țintă ' + saltPret(x.tinta, m)
-    + '<span class="t212Mic">la un risc de ' + Math.round(riscEur) + ' EUR ⇒ ' + (buc !== null ? buc.toLocaleString("ro-RO", { maximumFractionDigits: 3 }) + ' buc ≈ ' + Math.round(buc * x.intrare / fx).toLocaleString("ro-RO") + ' EUR' : '—') + ' · stopul pus la cumpărare, nu „după”</span></div>';
+    + '<span class="t212Mic">la un risc de ' + Math.round(riscEur) + ' EUR ⇒ ' + (buc !== null ? saltBucati(buc, x.intrare) + ' ≈ ' + Math.round(buc * x.intrare / fx).toLocaleString("ro-RO") + ' EUR' : '—') + ' · stopul pus la cumpărare, nu „după”</span></div>';
 }
 var SALT_FILE = [["idei", "Idei"], ["urcare", "Început de urcare"], ["revers", "Revers timpuriu"], ["revine", "Pe revenire"]];
 function saltFilaAleasa(d) {
@@ -135,9 +137,9 @@ function saltIdeiHtml(d) {
 }
 function saltPozRandHtml(r, d) {
   var a = r.a, p = r.p, isin = saltEsc(p.isin), des = !!(d.deschis && d.deschis[p.isin]), m = r.m;
-  var qty = Number(p.qty).toLocaleString("ro-RO", { maximumFractionDigits: 5 }), de = p.de ? p.de.slice(8, 10) + "." + p.de.slice(5, 7) + "." + p.de.slice(0, 4) : null;
+  var pretBuc = r.pret > 0 ? r.pret : p.pretMediu, qty = saltBucati(p.qty, pretBuc), de = p.de ? p.de.slice(8, 10) + "." + p.de.slice(5, 7) + "." + p.de.slice(0, 4) : null;
   var cap = '<td><div class="t212Sim">' + (a && a.cons ? '<span class="t212Pill ' + (SALT_NIVEL[a.cons.nivel] || SALT_NIVEL["fara-date"])[1] + '">' + (SALT_NIVEL[a.cons.nivel] || SALT_NIVEL["fara-date"])[0] + '</span>' : '<span class="t212Pill t212Pill-fara">' + (a && a.eroare ? "FĂRĂ DATE" : "…") + '</span>')
-    + '<div><b>' + saltEsc(p.simbol) + '</b><span class="t212Mic">' + saltEsc(String(p.nume || "").slice(0, 40)) + '</span><span class="t212Mic">' + saltEsc(qty + " buc · mediu " + saltBani(p.pretMediu) + " " + (p.plata === "EUR" ? "EUR" : saltMon(m)) + (de ? " · din " + de : "")) + '</span></div></div></td>';
+    + '<div><b>' + saltEsc(p.simbol) + '</b><span class="t212Mic">' + saltEsc(String(p.nume || "").slice(0, 40)) + '</span><span class="t212Mic">' + saltEsc(qty + " · mediu " + saltBani(p.pretMediu) + " " + (p.plata === "EUR" ? "EUR" : saltMon(m)) + (de ? " · din " + de : "")) + '</span></div></div></td>';
   if (!a || a.eroare) {
     var mes = !a ? "aștept prețurile…" : a.eroare === "fara-bare" ? "n-am prețurile simbolului (Yahoo)" : a.eroare === "fara-curs" ? "n-am cursul EUR pentru moneda simbolului" : "nu pot analiza acum";
     return '<tr class="t212Rand">' + cap + '<td colspan="6" class="tbSub" style="text-align:left">' + saltEsc(mes) + '</td></tr>';
@@ -163,7 +165,7 @@ function saltPozRandHtml(r, d) {
     + (c.motive && c.motive.length ? '<ul class="t212Motive">' + c.motive.slice(0, 4).map(function (x) { return '<li>' + saltEsc(saltInMoneda(x.titlu, m)) + (x.text ? ' <span class="t212Mic saltInline">' + saltEsc(saltInMoneda(x.text, m).replace(/ \(măsurat pe trade-urile tale\)/, "")) + '</span>' : '') + '</li>'; }).join("") + '</ul>' : '')
     + (atins && a.revine ? '<p class="saltRevine">🎲 Șansa să revină la prețul tău de intrare (' + saltPret(a.p.pretMediu, m) + (p.plata === "EUR" && m && m !== "EUR" ? ", din EUR la cursul din ziua cumpărării" : "") + ') măcar o dată în ' + a.revine.zile + ' de zile de bursă: <b>' + Math.round(a.revine.p * 100) + '%</b>; la capăt peste intrare: ' + Math.round(a.revine.pCapat * 100) + '%. <span class="t212Mic saltInline">Monte Carlo pe istoria ei, fără tendința perioadei: zile reale reluate de 1.000 de ori, nu o predicție.</span></p>' : '')
     + (c.faCe ? '<p class="t212Fac">👉 <b>Ce aș face eu:</b> ' + saltEsc(saltInMoneda(c.faCe, m)) + '<span class="t212Mic">dacă vinzi acum: ' + saltEsc(r.rez !== null ? saltSuma1(r.rez) : saltSuma1(r.rezM, m)) + (restBani ? " · " + saltEsc(restBani) : "") + '</span></p>' : '')
-    + '<p class="tbSub">' + saltEsc(qty + " buc · plătit " + saltBani(p.pretMediu) + " " + (p.plata === "EUR" ? "EUR" : saltMon(m)) + " pe bucată" + (de ? " pe " + de : "") + (p.plata === "EUR" && m && m !== "EUR" ? " (= " + saltBani(a.p.pretMediu) + " " + saltMon(m) + (de ? " la cursul din ziua cumpărării" : " la cursul de azi") + (r.fx ? "; azi 1 EUR = " + (r.fx / (m === "GBp" ? 100 : 1)).toFixed(4).replace(".", ",") + " " + (m === "GBp" ? "GBP" : m) : "") + ")" : "")) + '</p>'
+    + '<p class="tbSub">' + saltEsc(qty + " · plătit " + saltBani(p.pretMediu) + " " + (p.plata === "EUR" ? "EUR" : saltMon(m)) + " pe bucată" + (de ? " pe " + de : "") + (p.plata === "EUR" && m && m !== "EUR" ? " (= " + saltBani(a.p.pretMediu) + " " + saltMon(m) + (de ? " la cursul din ziua cumpărării" : " la cursul de azi") + (r.fx ? "; azi 1 EUR = " + (r.fx / (m === "GBp" ? 100 : 1)).toFixed(4).replace(".", ",") + " " + (m === "GBp" ? "GBP" : m) : "") + ")" : "")) + '</p>'
     + (!p.de ? '<p class="tbSub">Fără data cumpărării, stopul care urcă pornește de la prețul de azi: scrie data ca să urce de la maximul de după cumpărare.</p>' : '')
     + '<p class="saltDetBut">' + (typeof mcsPozButon === "function" ? mcsPozButon(p.simbol, pr, a.p.pretMediu, n ? n.stopPozitie : null) + ' ' : '') + '<button type="button" class="t212BtnLinie" data-action-click="saltEditeaza(\'' + isin + '\')">Editează</button> <button type="button" class="t212BtnLinie" data-action-click="saltSterge(\'' + isin + '\')"' + (d.incarcate ? '' : ' disabled') + '>Șterge poziția</button></p>'
     + '</div></td></tr>';

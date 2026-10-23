@@ -148,7 +148,8 @@ await test("cont:zile ține long sau short doar după citirea reușită", async 
   assert.doesNotMatch(buc, /exportNePotrivit/);
   const apel = col.slice(col.indexOf("async function turaContColector"), col.indexOf("const verdicteStare"));
   assert.match(apel, /funding: \(\) => \{ const p = meta\(\)\.piata/);
-  assert.match(col, /VERSIUNE_COLECTOR = "v101\.136"/);
+  const mvCol = col.match(/VERSIUNE_COLECTOR = "v101\.(\d+)"/);
+  assert.ok(mvCol && Number(mvCol[1]) >= 136);
   const kv = new Map(), env = { APP_API_TOKEN: "proba-token-1234567890", ISTORIC: { get: async (k) => kv.get(k) ?? null, put: async (k, v) => { kv.set(k, v); } } };
   const m = await import(`../functions/api/istoric-bot.js?t=${Math.random()}`);
   let ip = 0;
