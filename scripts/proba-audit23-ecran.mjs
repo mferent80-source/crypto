@@ -340,5 +340,12 @@ await test("19 Drumul botului: etichetele (text de 10,5 px) au culoarea de text 
   for (const c of et) { const hex = c.match(/#[0-9A-F]{6}/)[0]; const r = (L(hex) + 0.05) / (L("#202B37") + 0.05); assert.ok(r >= 4.5, hex + " " + r.toFixed(2)); }
 });
 
+// ---------------------------------------------------------------- 20. accesibilitate: mișcare redusă; focusul se vede unde era outline:none
+await test("20 CSS: regula prefers-reduced-motion; câmpurile și „detaliile” cu outline:none au înlocuitor :focus-visible", () => {
+  assert.match(CSS, /@media \(prefers-reduced-motion:reduce\)\{\*,\*::before,\*::after\{animation-duration:\.01ms!important;animation-iteration-count:1!important;transition-duration:\.01ms!important;scroll-behavior:auto!important\}\}/);
+  assert.match(CSS, /input:focus-visible,select:focus-visible,textarea:focus-visible\{outline:2px solid #5B8FC7;outline-offset:1px\}/);
+  assert.match(CSS, /\.vcDetails>summary:focus-visible\{outline:2px solid #5B8FC7;outline-offset:2px\}/);
+});
+
 console.log(`\n${teste - picate}/${teste} trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
 process.exit(picate ? 1 : 0);

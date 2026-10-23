@@ -3100,6 +3100,10 @@ button.toggle{padding:0;font:inherit;appearance:none}
   #settings button.toggle::before{content:"";position:absolute;left:-6px;right:-6px;top:-10px;bottom:-10px}
   #settings label.small{min-height:44px;display:inline-flex;align-items:center}
 }
+/* punctul 20: mișcarea redusă (animațiile și tranzițiile se opresc) și focusul vizibil unde era outline:none (câmpurile, „detaliile” motorului) */
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
+input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid #5B8FC7;outline-offset:1px}
+.vcDetails>summary:focus-visible{outline:2px solid #5B8FC7;outline-offset:2px}
 /* audit 23.10 · sfârșitul blocului */
 /* v100.258: pânda (v100.150) stă după orice regulă de tabel, chiar înaintea blocului v100.224 (#topLive), care rămâne ultimul - scripts/lib/panda-ultima.mjs */
 @media (max-width:640px){.sugPandaTab thead{display:table-header-group}.sugPandaTab{display:table}.sugPandaTab tbody{display:table-row-group}.sugPandaTab tr{display:table-row}.sugPandaTab td,.sugPandaTab th{display:table-cell}}
