@@ -66,7 +66,9 @@ await test("3. radacina fara fisierele din era ChatGPT; arhiva in docs/arhiva-ch
 await test("4. eticheta listei de alerte din Radar spune plafonul real (ultimele 100), nu doar „ultimele 7 zile”", () => {
   const e = citeste("../public/lib/alerte-ecran.js");
   assert.match(e, /class="alSub">[^<]*ultimele 100/, "eticheta VIZIBILA (alSub), nu un comentariu");
-  assert.match(citeste("../functions/api/istoric-bot.js"), /slice\(-100\)/, "plafonul din server e 100 (daca se schimba, schimba si eticheta)");
+  // v100.259 (auditul 23.10, punctul 1): serverul ține alertele 7 zile (plafon 3000), iar „ultimele 100” rămân doar grilele (ALERTE_GRILA_GET);
+  // eticheta din alerte-ecran.js (fișierul altei felii) trebuie dusă la „7 zile; grilele: ultimele 100” la integrare
+  assert.match(citeste("../functions/api/istoric-bot.js"), /ALERTE_GRILA_GET=100;/, "grilele: ultimele 100 (daca se schimba, schimba si eticheta)");
 });
 
 console.log(`\nV991 ${picate ? "FAIL" : "PASS"} · ${teste - picate}/${teste} probe trecute\n`);
