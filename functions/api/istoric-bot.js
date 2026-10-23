@@ -11,6 +11,10 @@ import {peCheie} from "../_shared/serializare.js";   // audit 19.10: get+put pe 
 const H={"content-type":"application/json","cache-control":"no-store"};
 const json=(o,s=200)=>new Response(JSON.stringify(o),{status:s,headers:H});
 const PASTRARE_MS=7*24*3600000;
+// v100.259 (auditul 23.10): alertele se țin 7 zile; plafonul e doar de siguranță. Mărimea: o alertă plină (titlu 200 + mesaj 600 de semne,
+// diacritice pe 2 octeți) are ~2 KB ⇒ 3000 ≈ 6 MB în cel mai rău caz (obișnuit ~0,5 KB ⇒ ~1,5 MB), sub limita de 25 MB a unei valori KV.
+// Pe viu (23.10) erau ~320 de alerte pe zi, cele mai multe grile ⇒ cele importante încap lejer în 7 zile.
+export const ALERTE_MAX=3000,ALERTE_GRILA_MAX=300,ALERTE_GRILA_GET=100;
 const CAMPURI=["perechi","pretPerp","profitNet","comisioane","gridProfitBrut","investit","profitTotal","distantaLichidarePct"];
 // Lipsa ramane null (Number(null) ar da 0, iar un 0 in istoric ar minti).
 const nr=v=>{if(typeof v==="number")return Number.isFinite(v)?v:null;if(typeof v!=="string"||!v.trim())return null;const x=Number(v);return Number.isFinite(x)?x:null};
@@ -113,9 +117,11 @@ export async function onRequestGet({request,env}){
   if(action==="ingust"){const s=simbolKv(u.searchParams.get("simbol"));if(!s)return json({error:"Lipseste simbol"},400);let v=null;try{v=JSON.parse(await env.ISTORIC.get("ingust:"+s)||"null")}catch{v=null}return json({simbol:s,ingust:v})}   // v100.58
   if(action==="profil"){const s=simbolKv(u.searchParams.get("simbol"));if(!s)return json({error:"Lipseste simbol"},400);let p=null;try{p=JSON.parse(await env.ISTORIC.get("profil:"+s)||"null")}catch{p=null}return json({simbol:s,profil:p})}
   if(action==="socoteala"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("socoteala")||"null")}catch{c=null}return json({socoteala:c})}
-  if(action==="alerte"){let a=[],d={};try{a=JSON.parse(await env.ISTORIC.get("alerte")||"[]")}catch{a=[]}try{d=JSON.parse(await env.ISTORIC.get("alerte-dupa")||"{}")||{}}catch{d={}}
+  if(action==="alerte"){let a=[],g=[],d={};try{a=JSON.parse(await env.ISTORIC.get("alerte")||"[]")}catch{a=[]}try{g=JSON.parse(await env.ISTORIC.get("alerte-grila")||"[]")}catch{g=[]}try{d=JSON.parse(await env.ISTORIC.get("alerte-dupa")||"{}")||{}}catch{d={}}
     // v100.149 (I-581, revizia): „ce a urmat” stă în cheia ei (alerte-dupa) - scrierea alertelor noi și judecata nu se calcă pe aceeași cheie
-    return json({alerte:Array.isArray(a)?a.slice().reverse().map(x=>{const k=x&&x.t+"|"+(x.bot||"");return d[k]?Object.assign({},x,{dupa:d[k]}):x}):[]})}
+    // v100.259: toate cele importante (7 zile) + cele mai noi ALERTE_GRILA_GET grile, de la cea mai nouă la cea mai veche (răspunsul rămâne mic pe telefon)
+    const toate=(Array.isArray(a)?a:[]).concat((Array.isArray(g)?g:[]).slice(-ALERTE_GRILA_GET)).filter(x=>x&&typeof x==="object").sort((x,y)=>y.t-x.t);
+    return json({alerte:toate.map(x=>{const k=x.t+"|"+(x.bot||"");return d[k]?Object.assign({},x,{dupa:d[k]}):x})})}
   if(action==="voci"){let l=[];try{l=JSON.parse(await env.ISTORIC.get("voci")||"[]")}catch{l=[]}return json({voci:Array.isArray(l)?l:[]})}   // v100.149 (I-577): jurnalul vocilor
   // v97.6: ultimul plan scris pe un bot Pionex (nu T212, nu proba), pentru propunerea la botul nou pornit fara plan
   // v100.104 (I-537): toate planurile scrise (fără cele de probă și fără T212) - pentru pragul propus din istoria lui
@@ -578,12 +584,16 @@ export async function onRequestPost({request,env}){
     if(t===null||!titlu)return json({error:"Lipseste t sau titlu"},400);
     const NIVEL=["info","atentie","critic"];
     const intrare={t,nivel:NIVEL.includes(a.nivel)?a.nivel:"info",titlu,mesaj:typeof a.mesaj==="string"?a.mesaj.slice(0,600):"",bot:idBot(a.bot)||null,cheie:typeof a.cheie==="string"?a.cheie.replace(/[^A-Za-z0-9_-]/g,"").slice(0,32):null,pret:nr(a.pret),simbol:simbolKv(a.simbol)||null};   // v100.149 (I-581): prețul și simbolul botului la alertă
+    // v100.259 (auditul 23.10): păstrarea pe TIMP (7 zile), nu „ultimele 100” (~7,5 ore: turaDupa24h nu găsea nimic peste 24 h, iar alertele
+    // critice de noapte erau împinse afară de grile). Grilele („grila”, doar în Radar) stau în cheia lor, cu plafonul lor (ALERTE_GRILA_MAX)
+    const grila=intrare.cheie==="grila",cheieKv=grila?"alerte-grila":"alerte",plafon=grila?ALERTE_GRILA_MAX:ALERTE_MAX;
     return peCheie("kv:alerte",async()=>{   // audit 19.10: pe rand - alertele venite deodata (colectorul, coada KV) nu se mai sterg una pe alta
-    let lista=[];try{lista=JSON.parse(await env.ISTORIC.get("alerte")||"[]")}catch{lista=[]}
+    let lista=[];try{lista=JSON.parse(await env.ISTORIC.get(cheieKv)||"[]")}catch{lista=[]}
     if(!Array.isArray(lista))lista=[];
+    if(!grila)lista=lista.filter(x=>x&&x.cheie!=="grila");   // v100.259: grilele vechi din lista comună (dinainte de despărțire) ies la prima scriere
     lista.push(intrare);lista.sort((x,y)=>x.t-y.t);
-    const de=Date.now()-PASTRARE_MS;lista=lista.filter(x=>x&&x.t>=de).slice(-100);
-    await env.ISTORIC.put("alerte",JSON.stringify(lista));
+    const de=Date.now()-PASTRARE_MS;lista=lista.filter(x=>x&&x.t>=de).slice(-plafon);
+    await env.ISTORIC.put(cheieKv,JSON.stringify(lista));
     return json({ok:true,alerte:lista.length})});
   }
   if(action==="config"){

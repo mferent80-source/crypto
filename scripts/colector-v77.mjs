@@ -158,13 +158,14 @@ await test("istoric: clasamentul (v79 F3) se scrie curatat si se citeste inapoi;
   assert.equal((await cheama("POST", "action=clasament", env, { corp: { monede: [] } })).status, 400);
 });
 
-await test("istoric: alertele (v79.1, fara ntfy) se pun in KV curatate, se tin ultimele 100, se citesc cele mai noi primele", async () => {
+await test("istoric: alertele (v79.1, fara ntfy) se pun in KV curatate, se tin 7 zile (v100.259), se citesc cele mai noi primele", async () => {
   const env = { APP_API_TOKEN: TOKEN, ISTORIC: kvFals() }, t = Date.now();
   for (let i = 0; i < 103; i++) await cheama("POST", "action=alerte", env, { corp: { alerta: { t: t + i, nivel: i % 2 ? "atentie" : "critic", titlu: "MET: proba " + i + " <b>", mesaj: "m", bot: "2382", cheie: "lich" } } });
   const r = await cheama("GET", "action=alerte", env);
-  assert.equal(r.status, 200); assert.equal(r.d.alerte.length, 100);
+  // v100.259 (auditul 23.10): alertele se țin pe TIMP (7 zile, plafon 3000), nu ultimele 100 ⇒ toate 103 rămân (proba-audit23-srv, punctul 1)
+  assert.equal(r.status, 200); assert.equal(r.d.alerte.length, 103);
   assert.equal(r.d.alerte[0].titlu, "MET: proba 102 <b>", "cea mai noua prima (escaparea e treaba ecranului)");
-  assert.equal(r.d.alerte[99].t, t + 3);
+  assert.equal(r.d.alerte[102].t, t);
   assert.equal((await cheama("POST", "action=alerte", env, { corp: { alerta: { nivel: "x" } } })).status, 400, "fara t/titlu -> 400");
   assert.equal((await cheama("POST", "action=alerte", env, { corp: { alerta: { t: t + 1000, nivel: "gresit", titlu: "a" } } })).d.ok, true);
   assert.equal((await cheama("GET", "action=alerte", env)).d.alerte[0].nivel, "info", "nivel necunoscut -> info");
