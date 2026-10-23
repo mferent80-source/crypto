@@ -147,6 +147,36 @@ await test("(4) mesajele: „serverul nu răspunde” nu mai spune că s-a oprit
   assert.match(citeste("scripts", "lib", "garda-alerte.mjs"), /"serverRevenit"/);
 });
 
+// ---------- (5) proba de ecran nu cheamă Pionex nici pe rutele publice (market.js) ----------
+const P = await import("../functions/_shared/pionex.js");
+const MK = await import("../functions/api/market.js");
+const fetchAdevarat = globalThis.fetch;
+let cereriFalse = [];
+const fetchFals = (raspuns) => { cereriFalse = []; globalThis.fetch = async (u, o) => { cereriFalse.push(String(u && u.url || u)); return raspuns(String(u && u.url || u), o); }; };
+const getMk = (q, antete = {}) => MK.onRequestGet({ request: new Request("https://radar.test/api/market?" + q, { headers: { authorization: "Bearer " + TOKEN, "x-forwarded-for": ip(), ...antete } }), env: { APP_API_TOKEN: TOKEN } });
+const PROBA = { "x-proba-ecran": "1" };
+await test("(5) market.js: cu `x-proba-ecran: 1` klines / tickers / funding / simboluri / trades / depth NU pleacă spre Pionex (503 „probă”)", async () => {
+  P.reseteazaRitmPionex(); fetchFals(() => new Response(JSON.stringify({ result: true, data: { klines: [] } }), { status: 200 }));
+  for (const q of ["type=pionex_klines&symbol=BTC_USDT_PERP&interval=4H", "type=pionex_tickers&market=PERP", "type=pionex_funding&symbol=BTC_USDT_PERP", "type=pionex_symbols&market=PERP", "type=pionex_trades&symbol=BTC_USDT", "type=pionex_depth&symbol=BTC_USDT"]) {
+    const r = await getMk(q, PROBA), j = await r.json();
+    assert.equal(r.status, 503, q); assert.equal(j.result, false); assert.equal(j.proba, true); assert.match(j.detail, /probă de ecran/);
+  }
+  assert.equal(cereriFalse.length, 0, "proba a chemat Pionex: " + cereriFalse.join(", "));
+  const r = await (await getMk("type=pionex_klines&symbol=ETH_USDT_PERP&interval=4H")).json();
+  assert.equal(r.result, true); assert.equal(cereriFalse.length, 1, "fără antet cererea trebuia să plece");
+  P.reseteazaRitmPionex();
+});
+await test("(5) market.js: proba ia răspunsul din cache când există (fără Pionex)", async () => {
+  const tinute = new Map(); globalThis.caches = { default: { match: async (k) => { const v = tinute.get(k.url); return v ? new Response(v) : undefined; }, put: async (k, r) => { tinute.set(k.url, await r.text()); } } };
+  try {
+    P.reseteazaRitmPionex(); fetchFals(() => new Response(JSON.stringify({ result: true, data: { tickers: [{ symbol: "X" }] } }), { status: 200 }));
+    await getMk("type=pionex_tickers&market=SPOT"); assert.equal(cereriFalse.length, 1);
+    const r = await getMk("type=pionex_tickers&market=SPOT", PROBA), j = await r.json();
+    assert.equal(r.status, 200); assert.equal(j.result, true); assert.deepEqual(j.data.tickers, [{ symbol: "X" }]); assert.equal(cereriFalse.length, 1);
+  } finally { delete globalThis.caches; P.reseteazaRitmPionex(); }
+});
+globalThis.fetch = fetchAdevarat;
+
 // ---------- (12) alertele T212 (Consilier, ±1%, SL/TP) și fără poză: fără cheile paznicului sau noaptea ----------
 await test("(12) planTuraPoza: cu paznic ziua ⇒ ritmul pozei + urcare; fără paznic SAU noaptea ⇒ tot la 5 min, doar alertele (fără urcare, fără simbolurile paginii)", () => {
   assert.equal(typeof PZ.planTuraPoza, "function"); assert.equal(PZ.ALERTE_T212_FARA_POZA_MS, 5 * MIN);
