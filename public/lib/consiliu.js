@@ -20,11 +20,14 @@ var Consiliu = (function () {
   // iar sfatul e galben după cât de des scade moneda atât într-o zi (≥ 20%), nu după cât de aproape e - acum spune cifra și frecvența
   // doi = al doilea motiv din titlu („Stopul costă peste plan, iar marginea de jos e la −0,4%”): fără frecvență, ca să încapă în 60
   function scurtMargine(s, doi) {
+    // v100.257: partea vine de pe sfat. Fără parte rămâne jos (fixturele vechi și long/neutru).
+    var sus = !!(s && s.parte === "sus");
     var p = nr(s && s.pctJos), z = nr(s && s.zile), dinT = p === null ? /(\d+(?:[.,]\d+)?)\s?%/.exec(String(s && s.titlu || "")) : null;
     if (p === null && dinT) p = Number(dinT[1].replace(",", "."));   // forma veche a sfatului: cifra din titlu
     if (p === null) return mic(s && s.titlu);
-    if (p < 0.05) return "marginea de jos e chiar la preț" + (z !== null && !doi ? ", atinsă în " + Math.round(z) + "% din zile" : "");   /* v100.107: nu „−0,0%” */
-    return "marginea de jos e la −" + TextRo.pct(p) + (z !== null && !doi ? ", atinsă în " + Math.round(z) + "% din zile" : "");
+    var lat = sus ? "sus" : "jos", semn = sus ? "+" : "−";
+    if (p < 0.05) return "marginea de " + lat + " e chiar la preț" + (z !== null && !doi ? ", atinsă în " + Math.round(z) + "% din zile" : "");   /* v100.107: nu „−0,0%” */
+    return "marginea de " + lat + " e la " + semn + TextRo.pct(p) + (z !== null && !doi ? ", atinsă în " + Math.round(z) + "% din zile" : "");
   }
   // revizia 01.10 (actiuni): un simbol in capul frazei („ECHO e în…”) nu se micsoreaza - inainte ajungea „eCHO” pe Discord
   function mic(s) { s = String(s || ""); var b = s.charAt(1); return b && b === b.toUpperCase() && b !== b.toLowerCase() ? s : s.charAt(0).toLowerCase() + s.slice(1); }
@@ -92,9 +95,10 @@ var Consiliu = (function () {
       if (!k || (k.nivel !== "iesi" && k.nivel !== "atentie")) return;
       // v100.61: explicatia semaforului (deCe) e textul motivului; sursa profilului (mută gridul) sta sub motiv
       var m = { cod: k.cod, nivel: k.nivel, c: k.nivel === "iesi" ? "r" : "g", titlu: mare(k.motiv), text: k.deCe || "", faCe: k.faCe || "", faCeSlab: k.faCeSlab || "", scurt: mic(k.motiv), extra: k.sursa || null };
-      // „mută gridul” si sfatul „Până la marginea de jos” spun acelasi lucru: un singur motiv, cu cifrele sfatului
-      // revizia 01.10: sfatul „margine” e mereu despre marginea de JOS - nu se lipeste peste „mută gridul” de la marginea de sus (short)
-      if (k.cod === "muta" && k.parte !== "sus" && sfCod("margine")) { var s = sfCod("margine"); m.cod = "margine"; m.titlu = s.titlu; m.text = s.text; m.faCe = s.faCe || m.faCe; m.extra = [mare(k.motiv), k.deCe, k.sursa].filter(Boolean).join(" · "); folosite.margine = 1; }   /* revizia Opus I1: si „de ce”-ul (frecventa, pragul) */
+      // „mută gridul” și sfatul de margine spun același lucru doar pe ACEEAȘI parte.
+      // v100.257: short-ul vorbește despre sus; un „mută” de jos nu se acoperă cu el. Fără parte, rămâne jos.
+      var smg = sfCod("margine");
+      if (k.cod === "muta" && smg && (k.parte || "jos") === (smg.parte || "jos")) { var s = smg; m.cod = "margine"; m.parte = s.parte || null; m.titlu = s.titlu; m.text = s.text; m.faCe = s.faCe || m.faCe; m.extra = [mare(k.motiv), k.deCe, k.sursa].filter(Boolean).join(" · "); folosite.margine = 1; }   /* revizia Opus I1: si „de ce”-ul (frecventa, pragul) */
       else if (k.cod === "costuri" && sfCod("costuri")) { m.text = sfCod("costuri").text; folosite.costuri = 1; }
       else if (k.cod === "miscare" && sfCod("miscare")) { m.text = sfCod("miscare").text; folosite.miscare = 1; }
       cand.push(m);
@@ -121,6 +125,7 @@ var Consiliu = (function () {
       if (cand.some(function (m) { return m.cod === s.cod; })) { folosite[s.cod] = 1; return; }
       folosite[s.cod] = 1;
       cand.push({ cod: s.cod, nivel: s.ton === "critic" ? "iesi" : "atentie", c: s.ton === "critic" ? "r" : "g", titlu: s.titlu, text: s.cod === "directie" ? structura(s.text) : s.text || "", faCe: s.faCe || "",
+        parte: s.parte || null,
         scurt: s.cod === "margine" ? scurtMargine(s) : mic(s.titlu), scurtDoi: s.cod === "margine" ? scurtMargine(s, true) : null });
     });
     // 3b) v100.51 (I-477): gridul incheie sub jumatate din perechile pe care le astepta fisa pe istoricul de dinaintea pornirii
@@ -193,7 +198,10 @@ var Consiliu = (function () {
     var bani = [];
     if (cf && nr(cf.laPropus) !== null) bani.push("pierderea maximă: " + (nr(cf.laOpritor) !== null ? U(nr(cf.laOpritor)) + " cu stopul de acum" : "fără margine (n-ai stop)") + " · " + U(nr(cf.laPropus)).replace(" USDT", "") + " cu stopul planului");
     // v100.106 (el: „exprimarea e ambiguă”): ce prag, ce sumă, ce unitate - „dacă atinge doar marginea de jos: −6,3” nu spunea nimic din ele
-    if (avert.some(function (m) { return m.cod === "margine"; }) && nr(x.laJos) !== null) bani.push("dacă prețul coboară la marginea de jos" + (nr(x.jos) !== null ? " (" + fp(x.jos) + ")" : "") + ": total " + U(nr(x.laJos)));
+    // v100.257: la short, banii sunt la marginea de sus. Fără laSus nu se tipărește totalul de jos ca și cum ar fi pericolul.
+    var mgA = avert.filter(function (m) { return m.cod === "margine"; })[0];
+    if (mgA && mgA.parte === "sus") { if (nr(x.laSus) !== null) bani.push("dacă prețul urcă la marginea de sus" + (nr(x.sus) !== null ? " (" + fp(x.sus) + ")" : "") + ": total " + U(nr(x.laSus))); }
+    else if (mgA && nr(x.laJos) !== null) bani.push("dacă prețul coboară la marginea de jos" + (nr(x.jos) !== null ? " (" + fp(x.jos) + ")" : "") + ": total " + U(nr(x.laJos)));
 
     // increderea verdictului: cand semaforul singur spunea altceva, se spune si cat a avut el dreptate
     var inc = null;

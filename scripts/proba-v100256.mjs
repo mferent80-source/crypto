@@ -82,26 +82,20 @@ await test("stopul în procente: se copiază procentul, prețul mare rămâne ci
   assert.match(citeste("public", "lib", "asezare-paznic.js"), /prețul de pe bară e doar acum/);
 });
 
-await test("versiunea v100.256, insigna COPIE, colectorul pe disc v101.138, lanțul o dată", () => {
+await test("versiunea e cel puțin v100.256, lanțul are proba o singură dată", () => {
   const P = JSON.parse(citeste("package.json"));
-  assert.equal(P.version, "100.256.0");
+  assert.ok(Number(P.version.split(".")[1]) >= 256, P.version);
   assert.equal(P.scripts["test:v100256"], "node scripts/proba-v100256.mjs");
   assert.equal((P.scripts.test.match(/test:v100256/g) || []).length, 1);
   assert.equal((P.scripts.test.match(/test:v100255/g) || []).length, 1);
   assert.doesNotMatch(P.scripts["test:v100256"], /npm run test:v100256/);
   assert.doesNotMatch(P.scripts["test:v100256"], /test:v100255/);
-  const idx = citeste("public", "index.html");
-  assert.equal((idx.match(/v100\.256/g) || []).length, 4);
-  assert.match(idx, /id="sideVersiune"[^>]*>v100\.256 · COPIE</);
-  assert.match(idx, /id="topVersiune">v100\.38 · doar citire</);
-  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-256/);
-  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.256"/);
-  assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.138"/);
+  assert.match(citeste("public", "index.html"), /id="topVersiune">v100\.38 · doar citire</);
+  assert.ok(Number((citeste("scripts", "colector.mjs").match(/const VERSIUNE_COLECTOR = "v101\.(\d+)"/) || [0, 0])[1]) >= 138);
   const info = JSON.parse(citeste("BUILD_INFO.json"));
-  assert.equal(info.version, "v100.256");
-  assert.equal(info.badge, "v100.256 · COPIE");
+  assert.ok(Number(String(info.version).replace(/^v/, "").split(".")[1]) >= 256, info.version);
   assert.equal(info.engineContract, "54.1");
-  assert.match(info.features.copie256, /v101\.138/);
+  assert.match(info.features.copie256, /procentul/);
   assert.match(info.features.scala255, /v101\.137/);
 });
 

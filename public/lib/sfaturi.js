@@ -58,8 +58,23 @@ var Sfaturi = (function () {
       });
     }
 
-    // 3) Cat de des a ajuns pretul, in trecut, pana la marginea de jos.
-    if (laJos && p !== null && jos !== null && p > jos) {
+    // 3) Cat de des a ajuns pretul, in trecut, pana la marginea care il umple.
+    // v100.257: la SHORT partea rea e marginea de SUS (pozitia creste cand urca). Jos e partea buna: gridul cumpara inapoi.
+    // Long, neutru si directia lipsa raman pe jos. Pragul de atentie ramane 20% din zile. Un singur sfat.
+    var dirM = String(b.directie || "").toLowerCase(), sus = nr(b.gridSus);
+    var laSus = scen ? scen.randuri.filter(function (r) { return r.eticheta === "sus"; })[0] : null;
+    if (dirM === "short") {
+      if (laSus && p !== null && sus !== null && p > 0 && p < sus) {
+        var fzS = frecventa(x.sanse && x.sanse.susZi, "din zile"), fsS = frecventa(x.sanse && x.sanse.susSapt, "din săptămâni");
+        var dzS = x.sanse && x.sanse.susZi && x.sanse.susZi.valoare, tonS = dzS === null || dzS === undefined ? "info" : dzS >= 20 ? "atentie" : "info";
+        var pjS = Math.abs(100 * (sus - p) / p);
+        out.push({ cod: "margine", ton: tonS, parte: "sus", pctJos: pjS, zile: dzS === null || dzS === undefined ? null : dzS, titlu: "Marginea de sus (" + pret(sus) + ") e cu " + TextRo.pct(pjS) + " peste preț",
+          text: "Acolo botul ar avea ~" + Math.round(laSus.pozitie) + " " + nume + " (acum " + Math.round(scen.grid.poz) + "), total ~" + usdt(laSus.total) + "; " +
+            (fzS || fsS ? "moneda urcă cu atât în " + [fzS, fsS].filter(Boolean).join(" și ") + "." : "n-am destul istoric pentru cât de des urcă moneda atât."),
+          sursa: "Frecvență pe lumânările de 4 ore ale monedei, ferestre fără suprapunere.",
+          faCe: tonS === "atentie" ? "N-aș mări levierul și n-aș pune bani în plus în botul ăsta." : null });
+      }
+    } else if (laJos && p !== null && jos !== null && p > jos) {
       var fz = frecventa(x.sanse && x.sanse.josZi, "din zile"), fs = frecventa(x.sanse && x.sanse.josSapt, "din săptămâni");
       var dz = x.sanse && x.sanse.josZi && x.sanse.josZi.valoare, ton = dz === null || dz === undefined ? "info" : dz >= 20 ? "atentie" : "info";
       // v100.62: titlul cu cifra intai (asa il rescria Consilierul); textul = o fraza - ce ar fi la margine si cat de des coboara atat
@@ -224,10 +239,15 @@ var Sfaturi = (function () {
     return best;
   }
   function intrare(o) {
-    o = o || {}; var b = o.bot || {}, acum = nr(o.acum) || Date.now(), jos = nr(b.gridJos), p = nr(b.pretCurent);
+    o = o || {}; var b = o.bot || {}, acum = nr(o.acum) || Date.now(), jos = nr(b.gridJos), sus = nr(b.gridSus), p = nr(b.pretCurent);
+    var shortM = String(b.directie || "").toLowerCase() === "short";
     var S = typeof Scenariu !== "undefined" ? Scenariu : null, TE = typeof TabloExtra !== "undefined" ? TabloExtra : null;
-    var scen = S ? S.scenarii(b.brut || null, b, [{ eticheta: "jos", pret: jos }]) : null;
-    var sanse = S && o.k4 && p !== null && jos !== null ? { josZi: S.sansaAtingere(o.k4, p, jos, 6), josSapt: S.sansaAtingere(o.k4, p, jos, 42) } : {};
+    // v100.257: short-ul cere scenariul si frecventa la marginea de SUS. Jos ramane pentru long, neutru si directia lipsa.
+    var scen = S ? S.scenarii(b.brut || null, b, shortM ? [{ eticheta: "sus", pret: sus }] : [{ eticheta: "jos", pret: jos }]) : null;
+    var sanse = {};
+    if (S && o.k4 && p !== null && (shortM ? sus !== null : jos !== null)) sanse = shortM
+      ? { susZi: S.sansaAtingere(o.k4, p, sus, 6), susSapt: S.sansaAtingere(o.k4, p, sus, 42) }
+      : { josZi: S.sansaAtingere(o.k4, p, jos, 6), josSapt: S.sansaAtingere(o.k4, p, jos, 42) };
     var bu = b.brut && b.brut.buOrderData || {}, zile = nr(b.pornitLa) ? (acum - nr(b.pornitLa)) / 86400000 : null;
     var ritm = { grile24h: nr(bu.gridProfit24h), medieZi: zile && nr(b.gridProfitBrut) != null ? nr(b.gridProfitBrut) / zile : null, tranz24h: nr(bu.trx24h),
       tranzMedieZi: zile && nr(bu.closedExchangeOrderCount) != null ? nr(bu.closedExchangeOrderCount) / zile : null, zile: zile };

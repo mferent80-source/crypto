@@ -327,7 +327,8 @@ export function alerteSLTP(poza, acum) {
   for (const s of Array.isArray(poza.simboluri) ? poza.simboluri : []) {
     const g = s && s.sugestie, pret = s && nr(s.pret);
     if (!g || g.nivel || !g.intrare || nr(g.intrare.pret) === null || !pret || pret > g.intrare.pret * 1.005) continue;
-    const m = s.moneda === "€" ? "€" : "$", q = g.proba || {};
+    // v101.139: moneda instrumentului, cum e ținută (GBp, £, €, $). Fără conversie. Lipsa rămâne $.
+    const m = s.moneda === "€" ? "€" : (s.moneda && s.moneda !== "$" ? String(s.moneda).replace(/[^A-Za-z£€$]/g, "").slice(0, 4) || "$" : "$"), q = g.proba || {};
     // v101.138: sub prețul instrumentului 10, bucăți întregi (virgulă nu se citește ca mii). De la 10, două zecimale, ca la INTC 3,62. Fără conversie.
     const pretBuc = nr(g.intrare.pret), bucN = g.marime && g.marime.bucati;
     const bucTxt = bucN > 0 ? (pretBuc !== null && pretBuc < 10 ? String(Math.round(bucN)) : bucN.toFixed(2).replace(".", ",")) : "";
