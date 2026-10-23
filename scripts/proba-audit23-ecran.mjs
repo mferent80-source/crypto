@@ -291,5 +291,41 @@ await test("16 TextRo.volum: „4,5 M”, „16 M”, „1,2 mld”, „850 k”
   assert.ok(!/Math\.round\(m\.volum\/1000\)\.toLocaleString\("ro-RO"\)\+" k"/.test(APP));
 });
 
+// ---------------------------------------------------------------- 17. un singur formatator de preț sub 1 (TextRo.pret)
+await test("17a TextRo.pret = GraficBot.fmtP (aceleași cifre semnificative); sub 1 PEPE iese „0.000004962” peste tot", () => {
+  assert.equal(typeof TR.pret, "function");
+  for (const v of [0.0000049623, 0.00000496, 0.000004960, 0.0000050871, 0.566, 0.0123, 0.99999, 1, 1.2345, 99.5, 108123.5, 0, null, NaN]) assert.equal(TR.pret(v), GB.fmtP(v), String(v));
+  assert.equal(TR.pret(0.0000049623), "0.000004962");
+});
+await test("17b tbPretScurt: sub 1 = TextRo.pret; de la 1 în sus neschimbat (2 zecimale ≥ 100, 4 ≥ 1)", () => {
+  const ctx = { TextRo: TR }; vm.createContext(ctx); vm.runInContext(fnApp("tbPretScurt"), ctx);
+  assert.equal(ctx.tbPretScurt(0.0000050716), "0.000005072"); assert.equal(ctx.tbPretScurt(0.566), TR.pret(0.566));
+  assert.equal(ctx.tbPretScurt(1.23456), "1.2346"); assert.equal(ctx.tbPretScurt(108123.456), "108123.46"); assert.equal(ctx.tbPretScurt(null), "—");
+  const fara = {}; vm.createContext(fara); vm.runInContext(fnApp("tbPretScurt"), fara); assert.equal(fara.tbPretScurt(0.0000050716), "0.00000507", "fără TextRo: scrierea veche");
+});
+await test("17c Drumul (fP), banda și capul Tabloului scriu prețul sub 1 cu TextRo.pret (nu textul brut Pionex „0.0000050871”)", () => {
+  assert.match(AS, /var fP = function \(v\) \{ return typeof TextRo !== "undefined" && TextRo\.pret \? TextRo\.pret\(v\) :/);
+  assert.match(APP, /function bsPretText\(pa\)\{/);
+  assert.match(fnApp("pvArata"), /bp\.textContent=bsPretText\(pa\)\+sag/);
+  assert.match(fnApp("pvArata"), /\$\("tbPretViuVal"\)\.textContent=bsPretText\(pa\)\+sag/);
+  assert.match(fnApp("pvArata"), /var pzT=pa\?bsPretText\(pa\)\+sag:""/);
+  assert.match(APP, /if\(p\.k==="pret"&&r\.pret\)p\.t=bsPretText\(r\.pret\)\+p\.t\.slice\(String\(r\.pret\.text\)\.length\)/);
+  const f = new Function("TextRo", "return " + APP.match(/function bsPretText\(pa\)\{[^\n]*/)[0])(TR);
+  assert.equal(f({ pret: 0.0000050871, text: "0.0000050871" }), "0.000005087"); assert.equal(f({ pret: 108123.5, text: "108123.5" }), "108123.5", "≥ 1 rămâne textul Pionex");
+});
+
+// ---------------------------------------------------------------- 18. țintele de atingere pe telefon ≥ 44 px
+await test("18 CSS (≤ 640 px): legăturile din citire, alegerile 10/30/60, comutatoarele Alerte/Scanner, rândurile și comutatoarele din Setări au ≥ 44 px", () => {
+  const i = CSS.indexOf("/* punctul 18:"); assert.ok(i >= 0, "lipsește blocul punctului 18");
+  const b = CSS.slice(i, CSS.indexOf("/* audit 23.10 · sfârșitul blocului */"));
+  assert.match(b, /@media \(max-width:640px\)\{/);
+  assert.match(b, /#tabloubot \.tbCitLink,#tabloubot \.tbMcBtn\{min-height:44px/);
+  assert.match(b, /\.rlAlege \.rlK\{min-height:44px\}/);
+  assert.match(b, /\.alComut,\.scComut\{min-height:44px\}/);
+  assert.match(b, /#settings \.settingRow\{min-height:44px\}/);
+  assert.match(b, /#settings button\.toggle::before\{content:"";position:absolute;left:-6px;right:-6px;top:-10px;bottom:-10px\}/);
+  assert.match(IDX, /<label class="settingRow"><span>Doar pe durata sesiunii \(cercetare\)<\/span><input aria-label="[^"]+" id="privacySessionOnly" type="checkbox"\/><\/label>/);
+});
+
 console.log(`\n${teste - picate}/${teste} trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
 process.exit(picate ? 1 : 0);

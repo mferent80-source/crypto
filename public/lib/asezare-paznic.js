@@ -12,7 +12,7 @@
   var esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); };
   var semn = function (v, z) { return v == null ? "—" : (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(z == null ? 1 : z).replace(".", ","); };
   // v100.258 (auditul 23.10, 🔴): sub 1 cu cifre semnificative, ca graficul (GraficBot.fmtP) - toFixed(5) scria PEPE „0.00000”
-  var fP = function (v) { return v == null ? "—" : v >= 100 ? v.toFixed(2) : v >= 1 || v <= 0 ? v.toFixed(4) : v.toFixed(Math.min(10, Math.max(4, 3 - Math.floor(Math.log10(v))))); };
+  var fP = function (v) { return typeof TextRo !== "undefined" && TextRo.pret ? TextRo.pret(v) : v == null ? "—" : v >= 100 ? v.toFixed(2) : v >= 1 || v <= 0 ? v.toFixed(4) : v.toFixed(Math.min(10, Math.max(4, 3 - Math.floor(Math.log10(v))))); };
   var ingust = function () { return innerWidth <= 550; };
   var st = function () { try { return typeof tbStare !== "undefined" ? tbStare : null; } catch (e) { return null; } };
   var bot = function () { var s = st(); return s && s.routeOk !== false && s.bot || null; };

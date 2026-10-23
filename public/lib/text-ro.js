@@ -69,6 +69,13 @@ var TextRo = (function () {
     var a = Math.abs(x), u = function (d, s) { var v = a / d; return (x < 0 ? "−" : "") + (v < 9.95 ? v.toFixed(1).replace(".", ",") : String(Math.round(v))) + " " + s; };
     return a >= 1e9 ? u(1e9, "mld") : a >= 1e6 ? u(1e6, "M") : a >= 1e3 ? (x < 0 ? "−" : "") + Math.round(a / 1e3) + " k" : (x < 0 ? "−" : "") + Math.round(a);
   }
-  return { num: num, pct: pct, pctSemn: pctSemn, ori: ori, usdt: usdt, zecMici: zecMici, lei: lei, ore: ore, cate: cate, oreN: oreN, cifreNoi: cifreNoi, rupe: rupe, volum: volum };
+  // audit 23.10 (ideea 3): un singur formatator de preț - aceleași cifre ca scara graficului (GraficBot.fmtP): sub 1, 4 cifre semnificative
+  // (PEPE „0.000004962”, nu 0.0000049623 / 0.00000496 / 0.000004960); de la 1 în sus 4 zecimale, de la 100 două. Punctul rămâne (prețul Pionex).
+  function pret(v) {
+    v = nr(v); if (v === null) return "—";
+    if (v >= 100) return v.toFixed(2); if (v >= 1 || v <= 0) return v.toFixed(4);
+    return v.toFixed(Math.min(10, Math.max(4, 3 - Math.floor(Math.log10(v)))));
+  }
+  return { num: num, pct: pct, pctSemn: pctSemn, ori: ori, usdt: usdt, zecMici: zecMici, lei: lei, ore: ore, cate: cate, oreN: oreN, cifreNoi: cifreNoi, rupe: rupe, volum: volum, pret: pret };
 })();
 if (typeof globalThis !== "undefined") globalThis.TextRo = TextRo;

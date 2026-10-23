@@ -6935,7 +6935,7 @@ function renderTabloTrend(){
     +'</tbody></table></div>';
   if(bo){tbCazuriAdu();bo.textContent=tbCazuri.sem?"Pe boții tăi: "+String(tbCazuri.sem).replace(/^pe boții tăi[,:]?\s*/,""):""}   // I-545, mutat din citire
 }
-function tbPretScurt(v){if(v==null||!isFinite(v))return "—";var a=Math.abs(v);return v.toFixed(a>=100?2:a>=1?4:a>=0.01?5:8)}
+function tbPretScurt(v){if(v==null||!isFinite(v))return "—";var a=Math.abs(v);if(a<1&&typeof TextRo!=="undefined"&&TextRo.pret)return TextRo.pret(v);/* audit 23.10: sub 1 același formatator ca graficul și Drumul */return v.toFixed(a>=100?2:a>=1?4:a>=0.01?5:8)}
 // v100 (demo-ul aprobat 28.09): graficul desenat de GraficBot (public/lib/grafic-bot.js, pur): lumanari + volum, planul, zero-ul,
 // gridul, stopul, lichidarea, alertele DOAR ale botului (TabloExtra.alerteleBotului), Bollinger / EMA 20·50 / RSI / profil de volum.
 var TB_IND_KEY="tbGraficInd",tbGrafRz=null;
@@ -7494,7 +7494,7 @@ function tbActualizeazaBanda(){
     distanteGrid:typeof TabloExtra!=="undefined"?TabloExtra.distanteGrid(pvBotLive(b)):null,piata:z}):null;
   if(!r){el.hidden=true;return}
   // audit 23.10: verde = bine pentru tine. „azi +13%” la un SHORT e rău (roșu); totalul pe minus e roșu, nu galbenul benzii
-  r.parti.forEach(function(p){if(p.k==="zi"&&p.ton)p.ton=bsTonEfect(p.ton,b.directie);if(p.k==="total"&&b.profitTotal!=null)p.ton=Math.round(Number(b.profitTotal)*10)<0?"jos":Math.round(Number(b.profitTotal)*10)>0?"sus":""});
+  r.parti.forEach(function(p){if(p.k==="pret"&&r.pret)p.t=bsPretText(r.pret)+p.t.slice(String(r.pret.text).length);if(p.k==="zi"&&p.ton)p.ton=bsTonEfect(p.ton,b.directie);if(p.k==="total"&&b.profitTotal!=null)p.ton=Math.round(Number(b.profitTotal)*10)<0?"jos":Math.round(Number(b.profitTotal)*10)>0?"sus":""});
   // v100.59 (I-481): botul pornit cu setarile variantei ingusta -> ora de inchidere in banda (asa a fost probat)
   try{var pc=b.id?tbCeasBot(String(b.id)):null;   /* revizia 01.10 (I6): ceasul tinut minte de colector, nu recalculat din rezultatul rescris la 6 h */
     if(pc){var dc=new Date(pc.inchideLa);r.parti.push({k:"ingust",t:"⚡ grid îngust · închide-l la "+String(dc.getHours()).padStart(2,"0")+":"+String(dc.getMinutes()).padStart(2,"0")+(Date.now()>=pc.inchideLa?" (a trecut)":""),ton:Date.now()>=pc.inchideLa?"jos":"",title:"Probat cu închidere după "+pc.ore+" h"})}}catch(e){}
@@ -7593,6 +7593,8 @@ function pvAduZi(simbol){
 }
 // Doar pretul se rescrie la fiecare tranzactie (banda + capul Tabloului + „Pretul in grid”), nu tot ecranul;
 // graficul se redeseneaza cu pretul live cel mult o data la 5 s si niciodata cat tii mouse-ul pe el.
+// audit 23.10 (ideea 3): prețul botului în bandă și în capul Tabloului - sub 1 cu TextRo.pret (ca graficul și Drumul), de la 1 în sus textul Pionex
+function bsPretText(pa){return pa&&pa.pret>0&&pa.pret<1&&typeof TextRo!=="undefined"&&TextRo.pret?TextRo.pret(pa.pret):String(pa&&pa.text||"")}
 // audit 23.10: tonul mișcării de azi după efectul pe bot (clasele sus = verde, jos = roșu): la short prețul în sus e rău
 function bsTonEfect(ton,dir){return String(dir||"").toLowerCase()==="short"&&(ton==="sus"||ton==="jos")?(ton==="sus"?"jos":"sus"):ton}
 function pvArata(){
@@ -7601,7 +7603,7 @@ function pvArata(){
   var sag=pa&&pa.viu&&pa.dir==="sus"?" ▲":pa&&pa.viu&&pa.dir==="jos"?" ▼":"";
   var zt=pa?PretViu.textZi(PretViu.procentZi(pa.pret,pvZiPentru(b))):null;
   var bp=$("botStripPret");
-  if(bp&&pa){bp.textContent=pa.text+sag;bp.className="bsPret"+(pa.viu?" viu":"");bp.title="Prețul botului "+pa.sursa}
+  if(bp&&pa){bp.textContent=bsPretText(pa)+sag;bp.className="bsPret"+(pa.viu?" viu":"");bp.title="Prețul botului "+pa.sursa}
   var el=$("botStrip");
   if(el&&b){
     var bz=el.querySelector('.bsParte[data-k="zi"]');if(bz&&zt){bz.textContent=zt.t;bz.className="bsParte "+bsTonEfect(zt.ton,b.directie)}
@@ -7609,7 +7611,7 @@ function pvArata(){
     if(bg&&dg)bg.textContent=PretViu.textGrid(dg);
   }
   var pz=$("pzPret");
-  if(pz){var pzT=pa?pa.text+sag:"",pzC="pzPret"+(pa&&pa.viu&&pa.dir?" "+pa.dir:"");if(pz.textContent!==pzT)pz.textContent=pzT;if(pz.className!==pzC)pz.className=pzC}   // audit 23.10: doar când s-a schimbat
+  if(pz){var pzT=pa?bsPretText(pa)+sag:"",pzC="pzPret"+(pa&&pa.viu&&pa.dir?" "+pa.dir:"");if(pz.textContent!==pzT)pz.textContent=pzT;if(pz.className!==pzC)pz.className=pzC}   // audit 23.10: doar când s-a schimbat
   if(b&&tbPanouVizibil()){
     tbKpiPretDeseneaza(b);tbCitireLive(b,pa);
     var g=$("tbGrafic");
@@ -7620,7 +7622,7 @@ function pvArata(){
   cap.hidden=false;
   cap.className="tbPretViu"+(pa.viu?" viu":"")+(pa.viu&&pa.dir?" "+pa.dir:"");
   cap.title="Prețul botului "+pa.sursa;
-  if($("tbPretViuVal"))$("tbPretViuVal").textContent=pa.text+sag;
+  if($("tbPretViuVal"))$("tbPretViuVal").textContent=bsPretText(pa)+sag;
   if($("tbPretViuSub"))$("tbPretViuSub").textContent=(pa.viu?"live · Pionex":pa.sursa)+(zt?" · "+zt.t:"");
 }
 // Indicatorii generali (Dashboard, Engine, Multi-TF...) pornesc pe moneda
