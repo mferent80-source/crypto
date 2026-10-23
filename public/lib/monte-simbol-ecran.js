@@ -83,6 +83,8 @@ function mcsSetariBot(boti, sim, idx) {
   var tp = dir !== "neutru" && b.opritorProfitActiv && Number(b.opritorProfit) > 0 ? Number(b.opritorProfit) : null;
   var r = { jos: Number(b.gridJos), sus: Number(b.gridSus), grile: row > 1 ? row - 1 : 20, levier: Number(b.levier) || 1, dir: dir, suma: Number(b.investit) || 50, stop: stop, tp: tp, botulTau: true };
   if (tp && b.opritorProfitTip === "raport") r.tpAprox = true;   // revizia (R4): Pionex l-a dat în % din investiție
+  // v100.259 (auditul 23.10): stopul pus în PROCENTE intră în simulare ca procent (totalul cu grilele de pe drum), nu ca prețul serverului
+  if (b.opritorPierdereActiv && b.opritorPierdereTip === "raport" && Number(b.opritorPierdereRaport) < 0) r.stopRaport = Number(b.opritorPierdereRaport);
   return r;
 }
 // fără bot activ: setări de probă (schimbabile pe pagină) - ±8% în jurul prețului, 20 de grile, 2×, long, 50 USDT, fără stop
@@ -92,7 +94,7 @@ function mcsEticheteBoti(boti, sim) {
 function mcsSetariProba(P) { return { jos: +(P * 0.92).toPrecision(5), sus: +(P * 1.08).toPrecision(5), grile: 20, levier: 2, dir: "long", suma: 50, stop: null, tp: null, botulTau: false }; }
 function mcsAceleasiSetari(a, b) {
   if (!a || !b) return false; var eq = function (x, y) { return Math.abs(Number(x) - Number(y)) <= 1e-9 * Math.max(1, Math.abs(Number(x))); }, sa = a.stop ? (a.stop.sus || a.stop.jos) : null, sb = b.stop ? (b.stop.sus || b.stop.jos) : null;
-  return eq(a.jos, b.jos) && eq(a.sus, b.sus) && eq(a.grile, b.grile) && eq(a.levier, b.levier) && a.dir === b.dir && eq(a.suma, b.suma) && (sa === null ? sb === null : sb !== null && eq(sa, sb)) && (a.tp > 0 ? b.tp > 0 && eq(a.tp, b.tp) : !(b.tp > 0));   // v100.132: și TP-ul
+  return eq(a.jos, b.jos) && eq(a.sus, b.sus) && eq(a.grile, b.grile) && eq(a.levier, b.levier) && a.dir === b.dir && eq(a.suma, b.suma) && (sa === null ? sb === null : sb !== null && eq(sa, sb)) && (a.tp > 0 ? b.tp > 0 && eq(a.tp, b.tp) : !(b.tp > 0)) && (a.stopRaport || null) === (b.stopRaport || null);   // v100.132: și TP-ul
 }
 // v100.129: variantele pe aceleași drumuri - interval pe jumătate / ×1,5 (același centru), levier ±1, grile ½ / ×2. Stopul se mută cu
 // marginea gridului (aceeași distanță de ea), ca să nu ajungă în mijlocul gridului.
@@ -142,7 +144,7 @@ function mcsVariantaBuna(rows) {
   var b = rows[0], prag = Math.max(1, 0.02 * (Number(b && b.st && b.st.suma) || 0));
   if (!b || !b.g || b.g.eroare) return "Nu pot compara: " + (b && b.g && b.g.eroare || "botul n-are rezultat pe drumurile astea.");   // revizia (I1): nu pe zerouri
   // v100.130: ȘI mai bună decât a ta în mai multe drumuri decât mai rea (altfel mijlocul mai bun vine din câteva drumuri norocoase)
-  var bune = rows.slice(1).filter(function (x) { return x.g && !x.g.eroare && x.g.pLichidare <= 0.02 && x.g.p50 - b.g.p50 >= prag && !(x.g.p5 < b.g.p5) && !(x.g.pPlus < b.g.pPlus) && !(x.drum && x.drum.maiBun <= x.drum.maiRau); }).sort(function (x, y) { return y.g.p50 - x.g.p50; });
+  var bune = rows.slice(1).filter(function (x) { return x.g && !x.g.eroare && GridSim.lichidareAcceptata(x.g.pLichidare) && x.g.p50 - b.g.p50 >= prag && !(x.g.p5 < b.g.p5) && !(x.g.pPlus < b.g.pPlus) && !(x.drum && x.drum.maiBun <= x.drum.maiRau); }).sort(function (x, y) { return y.g.p50 - x.g.p50; });
   // mijloacele la fel în limita pragului (zgomot) ⇒ câștigă cea mai bună drum cu drum (PONS 07.10: ½ grile, mai bună în 99%, față de levier −1, în 72%)
   var marja = function (x) { return x.drum ? x.drum.maiBun - x.drum.maiRau : 0; }, c = bune[0];
   // revizia (R6): toate față de cea mai bună pe mijloc (bune[0]), nu față de ultima aleasă - altfel alunecă din aproape în aproape
@@ -184,15 +186,15 @@ function mcsTpRecomandat(rows, suma) {
   var tu = rows.filter(function (x) { return x.tu; })[0] || rows[0], prag = Math.max(1, 0.02 * (Number(suma) || 0));
   var n = function (x) { return x.tp === null ? "fără TP" : mcsPretTxt(x.tp); };
   if (!tu || !tu.g || tu.g.eroare) return "Nu pot compara: botul n-are rezultat pe drumurile astea.";
-  var ok = rows.filter(function (x) { return x !== tu && x.g && !x.g.eroare && x.g.p50 - tu.g.p50 >= prag && mcsSigur(x.drum) && x.g.pLichidare <= 0.02 && !(x.g.p5 < tu.g.p5); }).sort(function (a, b) { return b.g.p50 - a.g.p50; })[0];
+  var ok = rows.filter(function (x) { return x !== tu && x.g && !x.g.eroare && x.g.p50 - tu.g.p50 >= prag && mcsSigur(x.drum) && GridSim.lichidareAcceptata(x.g.pLichidare) && !(x.g.p5 < tu.g.p5); }).sort(function (a, b) { return b.g.p50 - a.g.p50; })[0];
   if (ok) return (ok.tp === null ? "Aș scoate TP-ul" : "Aș pune TP-ul la " + n(ok)) + ": de obicei " + mcsBani1(ok.g.p50) + " în loc de " + mcsBani1(tu.g.p50) + ", mai bun în " + mcsPr(ok.drum.maiBun) + " din drumuri (mai rău în " + mcsPr(ok.drum.maiRau) + "), pe aceleași drumuri. Pe istoria scurtă a monedei, nu o promisiune.";
   // revizia (R7): „ca protecție” - pe o urcare urmată de cădere (pump & dump) mijlocul e același, dar TP-ul taie coada de jos (măsurat:
   // 5% sub −29,8 ⇒ +1,3 USDT). Doar un TP (nu scoaterea lui), mijlocul nu mai rău (10 cenți), coada de jos mai bună cu pragul ȘI cu 25%,
   // fără lichidare în plus și nu mai rău în majoritatea drumurilor. Pe mers aleator nu apare (proba (R7b)): acolo TP-ul strică mijlocul
-  var prot = rows.filter(function (x) { return x !== tu && x.tp !== null && x.g && !x.g.eroare && x.g.p50 >= tu.g.p50 - 0.1 && x.g.p5 - tu.g.p5 >= Math.max(prag, 0.25 * Math.abs(tu.g.p5)) && x.g.pLichidare <= Math.max(0.02, tu.g.pLichidare) && !(x.drum && x.drum.maiRau > 0.5); }).sort(function (a, b) { return b.g.p5 - a.g.p5; })[0];
+  var prot = rows.filter(function (x) { return x !== tu && x.tp !== null && x.g && !x.g.eroare && x.g.p50 >= tu.g.p50 - 0.1 && x.g.p5 - tu.g.p5 >= Math.max(prag, 0.25 * Math.abs(tu.g.p5)) && x.g.pLichidare <= Math.max(GridSim.LICHIDARI_ACCEPTATE, tu.g.pLichidare) && !(x.drum && x.drum.maiRau > 0.5); }).sort(function (a, b) { return b.g.p5 - a.g.p5; })[0];
   if (prot) return "Aș pune TP-ul la " + n(prot) + " ca protecție: de obicei cam la fel (" + mcsBani1(prot.g.p50) + " față de " + mcsBani1(tu.g.p50) + "), dar în 5% din drumuri cele mai proaste " + mcsBani1(prot.g.p5) + " în loc de " + mcsBani1(tu.g.p5) + " - taie coada de jos (o urcare urmată de cădere)." + (isFinite(prot.g.p95) && isFinite(tu.g.p95) ? " Costul: 5% din drumuri peste " + mcsBani1(prot.g.p95) + " în loc de " + mcsBani1(tu.g.p95) + "." : "") + " Pe istoria scurtă a monedei, nu o promisiune.";
   var nes = rows.filter(function (x) { return x !== tu && x.g && !x.g.eroare && x.g.p50 - tu.g.p50 >= prag; }).sort(function (a, b) { return b.g.p50 - a.g.p50; })[0];
-  return (tu.tp === null ? "Rămâi fără TP" : "Păstrează TP-ul la " + n(tu)) + ": " + (nes ? n(nes) + " are mijlocul mai bun (" + mcsBani1(nes.g.p50) + " față de " + mcsBani1(tu.g.p50) + ")" + (nes.drum ? ", mai bun în " + mcsPr(nes.drum.maiBun) + " din drumuri, mai rău în " + mcsPr(nes.drum.maiRau) + ", la fel în " + mcsPr(nes.drum.egal) : "") + (nes.g.pLichidare > 0.02 ? ", dar cu lichidare în " + mcsPr(nes.g.pLichidare) : nes.g.p5 < tu.g.p5 ? ", dar coada de jos e mai rea (" + mcsBani1(nes.g.p5) + ")" : "") + " - nu destul de sigur ca să-l schimb" : "niciun alt TP nu iese mai bine cu cel puțin " + mcsNr(prag, 1) + " USDT de obicei") + ". Un TP aproape încasează des puțin și oprește botul; unul departe îl lasă să lucreze - de obicei unul strică mijlocul, celălalt coada de jos: de aceea recomand rar alt TP.";
+  return (tu.tp === null ? "Rămâi fără TP" : "Păstrează TP-ul la " + n(tu)) + ": " + (nes ? n(nes) + " are mijlocul mai bun (" + mcsBani1(nes.g.p50) + " față de " + mcsBani1(tu.g.p50) + ")" + (nes.drum ? ", mai bun în " + mcsPr(nes.drum.maiBun) + " din drumuri, mai rău în " + mcsPr(nes.drum.maiRau) + ", la fel în " + mcsPr(nes.drum.egal) : "") + (nes.!GridSim.lichidareAcceptata(g.pLichidare) ? ", dar cu lichidare în " + mcsPr(nes.g.pLichidare) : nes.g.p5 < tu.g.p5 ? ", dar coada de jos e mai rea (" + mcsBani1(nes.g.p5) + ")" : "") + " - nu destul de sigur ca să-l schimb" : "niciun alt TP nu iese mai bine cu cel puțin " + mcsNr(prag, 1) + " USDT de obicei") + ". Un TP aproape încasează des puțin și oprește botul; unul departe îl lasă să lucreze - de obicei unul strică mijlocul, celălalt coada de jos: de aceea recomand rar alt TP.";
 }
 // tabelul TP la cerere (ca variantele)
 function mcsTpHtml(r, act) {
@@ -207,7 +209,7 @@ function mcsTpHtml(r, act) {
       var g = x.g || {}, er = !x.g || g.eroare, dd = x.drum;
       var dc = x.tu || !dd ? '<td class="tbSub">—</td>' : '<td class="' + (dd.maiBun > dd.maiRau ? "good" : dd.maiRau > dd.maiBun ? "bad" : "") + '">mai bun în ' + mcsPr(dd.maiBun) + '<span class="t212Mic">mai rău în ' + mcsPr(dd.maiRau) + '</span></td>';
       return '<tr' + (x.tu ? ' class="mcsVarTu"' : '') + '><td>' + mcsEsc(x.tp === null ? "fără TP" : mcsPretTxt(x.tp)) + '<span class="t212Mic">' + mcsEsc(x.tu ? "al tău" : x.nume) + '</span></td>'
-        + (er ? '<td colspan="7" class="tbSub">' + mcsEsc(g && g.eroare || "fără date") + '</td>' : '<td class="' + mcsCls(Math.round(g.p50 * 10) / 10) + '">' + mcsBani1(g.p50) + (g.deAici ? '<span class="t212Mic">de aici încolo</span>' : '') + '</td><td>' + mcsPr(g.pPlus) + '</td><td>' + (x.tp === null ? "—" : mcsPr(g.pTp)) + '</td><td>' + (st.stop ? mcsPr(g.pStop) : "fără stop") + '</td><td class="' + (g.pLichidare > 0.02 ? "bad" : "") + '">' + mcsPr(g.pLichidare) + '</td><td>' + mcsBani1(g.p5) + '</td>' + dc) + '</tr>';
+        + (er ? '<td colspan="7" class="tbSub">' + mcsEsc(g && g.eroare || "fără date") + '</td>' : '<td class="' + mcsCls(Math.round(g.p50 * 10) / 10) + '">' + mcsBani1(g.p50) + (g.deAici ? '<span class="t212Mic">de aici încolo</span>' : '') + '</td><td>' + mcsPr(g.pPlus) + '</td><td>' + (x.tp === null ? "—" : mcsPr(g.pTp)) + '</td><td>' + (st.stop ? mcsPr(g.pStop) : "fără stop") + '</td><td class="' + (!GridSim.lichidareAcceptata(g.pLichidare) ? "bad" : "") + '">' + mcsPr(g.pLichidare) + '</td><td>' + mcsBani1(g.p5) + '</td>' + dc) + '</tr>';
     }).join("") + '</tbody></table></div>'
     + '<p class="t212Fac">👉 <b>Ce aș face eu:</b> ' + mcsEsc(mcsTpRecomandat(rows, st.suma)) + '</p>'
     + '<p class="tbSub">Același bot, aceleași drumuri; se schimbă doar TP-ul (botul se închide când prețul îl atinge). În Pionex: „Take profit” la prețul de mai sus.</p></div>';
@@ -353,7 +355,7 @@ function mcsGridHtml(r) {
     + '<div class="mcsCifre">' + mcsCif("5% din drumuri, sub", mcsBani1(g.p5), "bad") + mcsCif("de obicei (mijlocul)", mcsBani1(g.p50), mcsCls(Math.round(g.p50 * 10) / 10)) + mcsCif("5% din drumuri, peste", mcsBani1(g.p95), "good") + '</div>'
     + mcsHist(g.hist, mk, function (v) { return mcsBani1(v); }) + '</div>'
     + '<div class="mcsCart"><h5>Cât de des, în ' + mcsEsc(mcsCate(g.zile, "zi", "zile")) + '</h5>'
-    + mcsRand("lichidare", mcsPr(g.pLichidare), g.pLichidare > 0.02 ? "bad" : "good") + (stopV ? mcsRand("atinge stopul (" + mcsPretTxt(stopV) + ")", mcsPr(g.pStop), g.pStop > 0.5 ? "bad" : "") : "") + (st.tp > 0 ? mcsRand("atinge TP-ul (" + mcsPretTxt(st.tp) + ")", mcsPr(g.pTp)) : "")
+    + mcsRand("lichidare", mcsPr(g.pLichidare), !GridSim.lichidareAcceptata(g.pLichidare) ? "bad" : "good") + (stopV ? mcsRand("atinge stopul (" + mcsPretTxt(stopV) + ")", mcsPr(g.pStop), g.pStop > 0.5 ? "bad" : "") : "") + (st.tp > 0 ? mcsRand("atinge TP-ul (" + mcsPretTxt(st.tp) + ")", mcsPr(g.pTp)) : "")
     + mcsRand("iese măcar o dată din grid", mcsPr(g.pIesire)) + mcsRand("se închide pe plus", mcsPr(g.pPlus), g.pPlus >= 0.5 ? "good" : "bad") + mcsRand("grile încasate, în medie", mcsNr(g.perechiMedii, 1))
     + (r.fundingInfo ? mcsRand("funding (rata reală Pionex, " + mcsPctF(r.fundingInfo.rataZi) + " pe zi, la " + mcsNr(r.fundingInfo.intervalOre, r.fundingInfo.intervalOre % 1 ? 1 : 0) + " h), în medie", mcsFundingTxt(g.funding || 0)) : mcsRand("funding (cost fix presupus, 0,03% pe zi, plătit oricare ar fi direcția - Pionex n-a dat ratele monedei), în medie", mcsFundingTxt(g.funding || 0)))
     + (g.cuTendinta ? '<p class="tbSub">Cu tendința perioadei păstrată: mijlocul ' + mcsBani1(g.cuTendinta.p50) + ', pe plus ' + mcsPr(g.cuTendinta.pPlus) + (stopV ? ', stopul ' + mcsPr(g.cuTendinta.pStop) : '') + '.</p>' : '')
@@ -374,7 +376,7 @@ function mcsVarHtml(r, act, zile) {
       // v100.130: față de al tău pe fiecare drum; verde doar când e mai bun în mai multe drumuri decât mai rău
       var dc = i === 0 ? '<td class="tbSub">al tău</td>' : dd ? '<td class="' + (dd.maiBun > dd.maiRau ? "good" : dd.maiRau > dd.maiBun ? "bad" : "") + '">mai bună în ' + mcsPr(dd.maiBun) + '<span class="t212Mic">mai rea în ' + mcsPr(dd.maiRau) + '</span></td>' : '<td class="tbSub">—</td>';
       return '<tr' + (i === 0 ? ' class="mcsVarTu"' : '') + '><td>' + mcsEsc(x.nume) + '</td>'
-        + (er ? '<td colspan="6" class="tbSub">' + mcsEsc(g && g.eroare || "fără date") + '</td>' : '<td class="' + mcsCls(Math.round(g.p50 * 10) / 10) + '">' + mcsBani1(g.p50) + (g.deAici ? '<span class="t212Mic">de aici încolo</span>' : '') + '</td><td>' + mcsPr(g.pPlus) + '</td><td>' + (st.stop ? mcsPr(g.pStop) : "fără stop") + '</td><td class="' + (g.pLichidare > 0.02 ? "bad" : "") + '">' + mcsPr(g.pLichidare) + '</td><td>' + mcsBani1(g.p5) + '</td>' + dc) + '<td>' + mcsEsc(mcsPretTxt(st.jos) + "–" + mcsPretTxt(st.sus) + " · " + mcsCate(st.grile, "grilă", "grile") + " · " + st.levier + "×") + '</td>' + '</tr>';
+        + (er ? '<td colspan="6" class="tbSub">' + mcsEsc(g && g.eroare || "fără date") + '</td>' : '<td class="' + mcsCls(Math.round(g.p50 * 10) / 10) + '">' + mcsBani1(g.p50) + (g.deAici ? '<span class="t212Mic">de aici încolo</span>' : '') + '</td><td>' + mcsPr(g.pPlus) + '</td><td>' + (st.stop ? mcsPr(g.pStop) : "fără stop") + '</td><td class="' + (!GridSim.lichidareAcceptata(g.pLichidare) ? "bad" : "") + '">' + mcsPr(g.pLichidare) + '</td><td>' + mcsBani1(g.p5) + '</td>' + dc) + '<td>' + mcsEsc(mcsPretTxt(st.jos) + "–" + mcsPretTxt(st.sus) + " · " + mcsCate(st.grile, "grilă", "grile") + " · " + st.levier + "×") + '</td>' + '</tr>';
     }).join("") + '</tbody></table></div>'
     + '<p class="t212Fac">👉 <b>Ce aș face eu:</b> ' + mcsEsc(mcsVariantaBuna(rows)) + '</p>'
     + '<p class="tbSub">Toate pe aceleași drumuri (aceeași sămânță), din același istoric scurt: o diferență mică între rânduri e zgomot; mai multe variante vecine care merg în aceeași direcție spun mai mult decât una singură. În Pionex, la grile scrii N+1 linii.</p></div>';

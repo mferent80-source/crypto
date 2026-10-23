@@ -76,6 +76,8 @@ var Consiliu = (function () {
   function alcatuieste(x) {
     x = x || {}; var sm = x.sm || { nivel: "asteapta", cod: "fara-fisa", motiv: "încă socotesc", faCe: "", componente: [] }, soc = x.socoteala || null;
     var cand = [], folosite = {}, sf = Array.isArray(x.sfaturi) ? x.sfaturi : [];
+    // v100.259 (auditul 23.10): la un bot neutru sunt DOUĂ sfaturi de margine (jos și sus) - cheia ține partea, ca al doilea să nu se piardă
+    var cheieSf = function (o) { return o && o.cod === "margine" && o.parte ? "margine-" + o.parte : o && o.cod; };
     var sfCod = function (c) { for (var i = 0; i < sf.length; i++) if (sf[i] && sf[i].cod === c) return sf[i]; return null; };
     // 0) verdictul vechi al Tabloului: starile de pericol raportate de Pionex (margin call, LIQUIDATION) - singurul loc care le judeca
     // v100.61 (poza pe CRV la 4,5%, 02.10): lichidarea sub 8% o spune deja semaforul (acelasi prag, aceeasi actiune) - fara al doilea motiv
@@ -97,8 +99,8 @@ var Consiliu = (function () {
       var m = { cod: k.cod, nivel: k.nivel, c: k.nivel === "iesi" ? "r" : "g", titlu: mare(k.motiv), text: k.deCe || "", faCe: k.faCe || "", faCeSlab: k.faCeSlab || "", scurt: mic(k.motiv), extra: k.sursa || null };
       // „mută gridul” și sfatul de margine spun același lucru doar pe ACEEAȘI parte.
       // v100.257: short-ul vorbește despre sus; un „mută” de jos nu se acoperă cu el. Fără parte, rămâne jos.
-      var smg = sfCod("margine");
-      if (k.cod === "muta" && smg && (k.parte || "jos") === (smg.parte || "jos")) { var s = smg; m.cod = "margine"; m.parte = s.parte || null; m.titlu = s.titlu; m.text = s.text; m.faCe = s.faCe || m.faCe; m.extra = [mare(k.motiv), k.deCe, k.sursa].filter(Boolean).join(" · "); folosite.margine = 1; }   /* revizia Opus I1: si „de ce”-ul (frecventa, pragul) */
+      var smg = sf.filter(function (q) { return q && q.cod === "margine" && (q.parte || "jos") === (k.parte || "jos"); })[0] || null;
+      if (k.cod === "muta" && smg && (k.parte || "jos") === (smg.parte || "jos")) { var s = smg; m.cod = "margine"; m.parte = s.parte || null; m.titlu = s.titlu; m.text = s.text; m.faCe = s.faCe || m.faCe; m.extra = [mare(k.motiv), k.deCe, k.sursa].filter(Boolean).join(" · "); folosite[cheieSf(s)] = 1; }   /* revizia Opus I1: si „de ce”-ul (frecventa, pragul) */
       else if (k.cod === "costuri" && sfCod("costuri")) { m.text = sfCod("costuri").text; folosite.costuri = 1; }
       else if (k.cod === "miscare" && sfCod("miscare")) { m.text = sfCod("miscare").text; folosite.miscare = 1; }
       cand.push(m);
@@ -119,11 +121,11 @@ var Consiliu = (function () {
     if (trPliat) folosite.trend = 1;
     // 3) sfaturile de atentie / critice care n-au intrat deja
     sf.forEach(function (s) {
-      if (!s || folosite[s.cod] || (s.ton !== "atentie" && s.ton !== "critic")) return;
+      if (!s || folosite[cheieSf(s)] || (s.ton !== "atentie" && s.ton !== "critic")) return;
       // v100.60: „pericol” din regulile alertelor despre lichidare spune acelasi lucru ca semaforul - un singur motiv (titlul era „…, iar lichidarea la …”)
       if (s.cod === "pericol" && s.tip === "lich" && cand.some(function (m) { return m.cod === "lichidare"; })) return;
-      if (cand.some(function (m) { return m.cod === s.cod; })) { folosite[s.cod] = 1; return; }
-      folosite[s.cod] = 1;
+      if (cand.some(function (m) { return cheieSf(m) === cheieSf(s); })) { folosite[cheieSf(s)] = 1; return; }
+      folosite[cheieSf(s)] = 1;
       cand.push({ cod: s.cod, nivel: s.ton === "critic" ? "iesi" : "atentie", c: s.ton === "critic" ? "r" : "g", titlu: s.titlu, text: s.cod === "directie" ? structura(s.text) : s.text || "", faCe: s.faCe || "",
         parte: s.parte || null,
         scurt: s.cod === "margine" ? scurtMargine(s) : mic(s.titlu), scurtDoi: s.cod === "margine" ? scurtMargine(s, true) : null });
@@ -211,10 +213,10 @@ var Consiliu = (function () {
     }
 
     // restul, pliat: tot ce n-a intrat in motive - nimic nu se pierde
-    var inMotive = {}; motive.forEach(function (m) { inMotive[m.cod] = 1; });
+    var inMotive = {}; motive.forEach(function (m) { inMotive[cheieSf(m)] = 1; });
     var rest = [];
     cand.slice(3).forEach(function (m) { rest.push({ titlu: m.titlu, text: m.text }); });
-    sf.forEach(function (s) { if (!s || folosite[s.cod] || inMotive[s.cod] || s.cod === "nimic") return; rest.push({ titlu: s.titlu, text: [s.cod === "directie" ? structura(s.text) : s.text, s.faCe ? "👉 " + s.faCe : ""].filter(Boolean).join(" ") }); });
+    sf.forEach(function (s) { if (!s || folosite[cheieSf(s)] || inMotive[cheieSf(s)] || s.cod === "nimic") return; rest.push({ titlu: s.titlu, text: [s.cod === "directie" ? structura(s.text) : s.text, s.faCe ? "👉 " + s.faCe : ""].filter(Boolean).join(" ") }); });
     (Array.isArray(x.consilier) ? x.consilier : []).forEach(function (k) { if (k && k.titlu) rest.push({ titlu: k.titlu, text: [k.text, k.ceAsFace ? "👉 " + k.ceAsFace : ""].filter(Boolean).join(" ") }); });
     if (x.indicatori) rest.push({ titlu: String(x.indicatori), text: "" });
     if (x.btc) rest.push({ titlu: String(x.btc), text: "" });

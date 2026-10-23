@@ -87,7 +87,7 @@ var TabloBot = (function () {
     return { valoare: Math.abs(net) / drum, semn: net > 0 ? 1 : net < 0 ? -1 : 0 };
   }
 
-  // ATR(n) adevarat, cu high/low - nu doar |delta close|. |delta close| ignora
+  // ATR(n) pe true range (cu high/low - nu doar |delta close|), media SIMPLĂ pe n bare, nu netezirea Wilder (v100.259, auditul 23.10). |delta close| ignora
   // mustatile: o lumanare care sare sus si coboara inapoi la acelasi close
   // arata "amplitudine zero" in formula veche, desi tocmai a miscat pretul cu
   // toata mustatea aia. Lumanarile Pionex au high/low - le folosim.

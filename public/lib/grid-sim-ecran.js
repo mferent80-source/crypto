@@ -208,6 +208,9 @@ function gsCiteste(bland) {
   var jos = n("gsJos"), sus = n("gsSus"), linii = n("gsLinii"), lev = n("gsLev"), stop = n("gsStop"), tp = st.dir === "neutru" ? null : n("gsTp"), suma = n("gsSuma"), tipEl = gsEl("gsTip");
   if (jos > 0) st.jos = jos; if (sus > 0) st.sus = sus; if (linii >= 3) st.grile = Math.round(linii) - 1; if (lev >= 1) st.levier = Math.round(lev); if (suma > 0) st.suma = suma; if (tipEl) st.tip = tipEl.value === "aritmetic" ? "aritmetic" : "geometric";
   var ref = gsStare.pret > 0 ? gsStare.pret : (st.jos + st.sus) / 2;   // revizia (R1): la neutru partea stopului după PREȚ, nu după mijlocul gridului
+  // v100.259: stopul venit de la bot în PROCENTE (st.stopRaport) rămâne doar cât prețul din câmp e cel al botului; schimbat de mână ⇒ prețul tău
+  var stopVechi = st.stop ? (st.stop.sus || st.stop.jos) : null, aceeasiStop = stopVechi > 0 && stop > 0 && Math.abs(stop - stopVechi) <= 1e-9 * Math.max(1, stopVechi);
+  if (st.stopRaport && !aceeasiStop) delete st.stopRaport;
   if (gsEl("gsStop")) st.stop = stop > 0 ? (st.dir === "short" ? { sus: stop } : st.dir === "neutru" ? (stop < ref ? { jos: stop } : { sus: stop }) : { jos: stop }) : null;
   if (gsEl("gsTp")) st.tp = tp > 0 ? tp : null;
   var pm = n("gsPlanMinus"), pp = n("gsPlanPlus"); if (gsEl("gsPlanMinus")) gsStare.plan = { minus: pm > 0 ? pm : null, plus: pp > 0 ? pp : null };

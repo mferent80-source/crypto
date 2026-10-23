@@ -29,7 +29,7 @@ export async function turaContrafactual(d) {
       const r4 = await d.cereKlines(s, "4H", 300, t.pornit - 1), r1 = await d.cereKlines(s, "1D", 200, t.pornit - 1);
       // barele in formare la pornire ies (taie); bare() scoate apoi ultima bara, deci pun una falsa la coada
       const coada = (a, pas) => d.Contrafactual.taie(a, t.pornit, pas).concat([{ time: t.pornit + 1, open: "1", high: "1", low: "1", close: "1" }]);
-      const f = d.GridProba.fisa({ simbol: s, pret: t.pretInit, b15: d.GridCalcul.bare(coada(r15, Q)), b4h: d.GridCalcul.bare(coada(r4, 4 * 3600000)), b1d: d.GridCalcul.bare(coada(r1, 86400000)), suma: t.investit || 100, H: 2, dir: null, levier: null, minNotional: null });
+      const f = d.GridProba.fisa({ simbol: s, pret: t.pretInit, b15: d.GridCalcul.bare(coada(r15, Q)), b4h: d.GridCalcul.bare(coada(r4, 4 * 3600000)), b1d: d.GridCalcul.bare(coada(r1, 86400000)), suma: t.investit || 100, H: 2, dir: null, levier: null, minNotional: null, faraMc: true });   // v100.259: rejocul fără Monte Carlo (30–80 ms pe caz)
       const z = d.Contrafactual.zice(f && !f.eroare ? f : null, t);
       rez.push({ id: t.id, moneda: t.moneda, dir: t.dir, pornit: t.pornit, rezultat: t.rezultat, zice: z });
     } catch (e) {

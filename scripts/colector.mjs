@@ -353,6 +353,8 @@ const directii = {}; // bot -> { la, fata4h, dir4h, regim }
 // v79.1: regimul "miscare" pe ACELEASI lumanari ca fisa: 15M, ~30 de zile. La prima tura se
 // aduc 6 pagini (cu pauza), apoi doar pagina cea mai noua se imbina peste cele vechi.
 const lumanari15 = {}; // simbol -> { randuri, la }
+// v100.259: măsura pe bani a porții gridului, socotită o dată și ținută pe disc (tura verdictelor)
+const netCache = { citeste: () => { try { return JSON.parse(fs.readFileSync(path.join(DATA, "verdicte-net.json"), "utf8")) || {}; } catch { return {}; } }, scrie: (o) => { try { scrieAtomic(path.join(DATA, "verdicte-net.json"), o); } catch {} } };
 async function lumanari15M(s) {
   const st = lumanari15[s];
   if (st && Date.now() - st.la < DIRECTIE_MS) return st.randuri;
@@ -415,7 +417,7 @@ async function semnaleBot(b, ctx, acum) {
   const s = TabloBot.simboluri(b.baza, b.quote, b.simbolPionex).pionex;
   const r15 = await lumanari15M(s);
   const b4 = GridCalcul.bare(d.k4), b1 = GridCalcul.agrega(b4, 86400000);
-  const fisa = GridProba.fisa({ simbol: s, pret: GridCalcul.pretCurent(r15), b15: GridCalcul.bare(r15), b4h: b4, b1d: b1.slice(0, -1), suma: Number(b.investit) || 100, fundingZi: d.funding && d.funding.rataZi, H: 2, dir: null, levier: null, minNotional: null });
+  const fisa = GridProba.fisa({ simbol: s, pret: GridCalcul.pretCurent(r15), b15: GridCalcul.bare(r15), b4h: b4, b1d: b1.slice(0, -1), suma: Number(b.investit) || 100, fundingZi: d.funding && d.funding.rataZi, H: 2, dir: null, levier: null, minNotional: null, mc: GridSim });   // v100.259: fișa poartă Monte Carlo pe 7 zile (GridSim e local aici)
   const f = fisa && !fisa.eroare ? fisa : null;
   let regimBtc = null; try { regimBtc = GridCalcul.regim(GridCalcul.bare(await lumanari15M("BTC_USDT_PERP"))); } catch (e) { jurnal("regim BTC", e.message); }
   let fut = null; try { fut = await cere("/api/market?type=futures&symbol=" + encodeURIComponent(TabloBot.simboluri(b.baza, b.quote, b.simbolPionex).binance)); } catch (e) { fut = null; }
@@ -2214,7 +2216,7 @@ async function turaContColector() {
 }
 const verdicteStare = (() => { try { return JSON.parse(fs.readFileSync(path.join(DATA, "verdicte-stare.json"), "utf8")) || {}; } catch { return {}; } })();
 async function turaVerdicteColector() {
-  await turaVerdicteModul({ cere, trimite, jurnal, Verdicte, GridCalcul, bareZi: bareZiCont, Macro, Acasa, LatimeUS, ScorZi, fetch, Carnet, Retea, modeleRetea, modeleArbori }, verdicteStare);   /* v101.116: + registrul întreg */   // v101.114: + Scorul zilei
+  await turaVerdicteModul({ cere, trimite, jurnal, Verdicte, GridCalcul, bareZi: bareZiCont, Macro, Acasa, LatimeUS, ScorZi, fetch, Carnet, Retea, modeleRetea, modeleArbori, GridLaborator, GridProba, lumanari15M, netCache }, verdicteStare);   /* v101.116: + registrul întreg */   // v101.114: + Scorul zilei
   try { const { inLucru, ...deScris } = verdicteStare; scrieAtomic(path.join(DATA, "verdicte-stare.json"), deScris); } catch {}
 }
 // v101.106 (disciplina, el 13.10: „fă 1, 2, 3, 4”): (1) o dată pe zi, din boții închiși și barele de 1 h ale arhivei: ce s-a întâmplat după ce
