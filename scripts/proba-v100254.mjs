@@ -224,7 +224,7 @@ await test("lista goală ține boții 10 minute, prețul 0 nu e în afara grilei
   assert.match(citeste("public", "lib", "asezare-paznic.js"), /s\.citireGoala \? stare : \(fr \|\| stare\)/);
   assert.match(col, /Number\(b\.pretCurent\) > 0/);
   assert.match(col, /Number\.isFinite\(p\) && p > 0 && b\.gridJos/);
-  assert.match(col, /VERSIUNE_COLECTOR = "v101\.137"/);
+  assert.ok(Number((col.match(/const VERSIUNE_COLECTOR = "v101\.(\d+)"/) || [0, 0])[1]) >= 137, "colectorul");
   const piata = ae.slice(ae.indexOf("async function acasaPiataCol"), ae.indexOf("async function acasaPorneste"));
   assert.doesNotMatch(piata, /acasa\.inLucru = true/);
   assert.match(piata, /acasa\.piataInLucru = true/);
@@ -255,7 +255,7 @@ await test("versiunea e cel puțin v100.254, colectorul pe disc v101.137", () =>
   assert.match(info.features.poarta254, /v101\.137/);
   assert.match(info.features.alaturi253, /unul lângă altul/);
   assert.match(info.features.clar252, /aproape/);
-  assert.match(citeste("scripts", "colector.mjs"), /VERSIUNE_COLECTOR = "v101\.137"/);
+  assert.ok(Number((citeste("scripts", "colector.mjs").match(/const VERSIUNE_COLECTOR = "v101\.(\d+)"/) || [0, 0])[1]) >= 137);
 });
 
 console.log(picate ? `\n${picate} PICA din ${teste}\n` : `\ntoate ${teste} ok\n`);

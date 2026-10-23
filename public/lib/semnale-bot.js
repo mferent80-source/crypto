@@ -178,7 +178,8 @@ var SemnaleBot = (function () {
     var st0 = out[0], gr0 = out[1], mi0 = out[2];
     var etProc = etichetaStopProc(b);   // v100.222: „stop −5%” lângă preț, doar la stopul în procente
     st0.mare = op !== null ? fmtPret(op) : "nepus";
-    st0.mic = op !== null ? ((etProc ? etProc + " · " : "") + (p !== null ? "activ · " + S1(op / p - 1) + " de preț" : "activ")) : "fără stop în Pionex";
+    // v100.256: la stopul în procente, procentul se copiază în Pionex. Prețul mare e echivalentul de acum și se mută când se umplu grilele.
+    st0.mic = op !== null ? ((etProc ? etProc + " · procentul se copiază · " : "") + (p !== null ? "activ · " + S1(op / p - 1) + " de preț" + (etProc ? " · prețul mare se mută" : "") : "activ")) : "fără stop în Pionex";
     // v101.8 (2): cu plan pe minus, cartela spune cat costa stopul ATINS (TabloExtra.planStare -> minus.laOpritor, cu grilele de
     // pe drum) si il judeca dupa PLAN, nu dupa loc (la LIGHTER, 3,787 sub grid era „pus” verde si costa ≈ 60 fata de planul de 15,7)
     var pm = x.plan && x.plan.minus && !(x.plan.atins && x.plan.atins.indexOf("minus") >= 0) ? x.plan.minus : null, laOp = pm ? nr(pm.laOpritor) : null, pgm = pm ? nr(pm.prag) : null;

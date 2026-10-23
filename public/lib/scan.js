@@ -27,7 +27,7 @@ var Scan = (function () {
       p: u, ch: r2(ch), ch7: r2((u / c[c.length - 8] - 1) * 100), ch30: c.length > 31 ? r2((u / c[c.length - 31] - 1) * 100) : null,
       e20: u > ema(c.slice(-120), 20), e50: u > ema(c.slice(-200), 50), e200: c.length >= 200 ? u > ema(c, 200) : null,
       rsi: Math.round(rsi(c) * 10) / 10, mis: p75 > 0 ? r2(Math.abs(ch / 100) / p75) : null,
-      sparge: u > max20, dMax20: r2((u / max20 - 1) * 100), dMin20: r2((u / min20 - 1) * 100), atrPct: r2(tr / n / u * 100),
+      sparge: u > max20, dMax20: r2((u / max20 - 1) * 100), dMin20: r2((u / min20 - 1) * 100), atrPct: r2(tr / n / u * 100),   // v100.256: media aritmetică a ultimelor 14 intervale adevărate / închidere; nu e Wilder și nu e stopul de acțiuni
       vol: vz.length ? Math.round(vz.reduce(function (s, x) { return s + x.v * x.c; }, 0) / vz.length) : null,
       spark: c.slice(-30).map(function (v) { return +v.toPrecision(5); })
     };

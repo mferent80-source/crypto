@@ -1,11 +1,12 @@
 {
-  "version": "v100.255",
-  "badge": "v100.255 · SCALĂ",
+  "version": "v100.256",
+  "badge": "v100.256 · COPIE",
   "engineContract": "54.1",
   "dataSchema": 54,
   "baseRelease": "v77.4 · TABLOUL BOTULUI",
   "releaseType": "valul de reparatii din revizia finala pe ansamblu: marginStatus/riskStatus citite, telefon, scurgere WS/ceas la iesire prin tab-uri, ATR adevarat, pret viu, istoric fara pret inghetat, sortare dupa timp, comision nemasurabil, durata la margine",
   "features": {
+    "copie256": "Copie (23.10.2026, el: „fa idei”): pe Discord, sub prețul 10, bucățile ies întregi; de la 10 rămân două zecimale. Lângă ATR-ul de pe Scan stă media a 14 intervale adevărate; cifra rămâne. La stopul în procente se copiază procentul, nu prețul mare. Pragurile rămân. Fișierul colectorului e v101.138, procesul nu e repornit.",
     "scala255": "Scară (23.10.2026, el: „fa idei”): frica crypto în afara 0–100 nu intră în scor și se spune „în afara 0–100”; 0 și 100 rămân. Sub prețul 10, bucățile de pe poziție, de pe trade-ul închis și de pe Salt ies întregi. Pragurile rămân. Fișierul colectorului rămâne v101.137, procesul nu e repornit.",
     "poarta254": "Poarta (23.10.2026, el: „fa tot”): la revenire nu se tipăresc bucăți sau lei; fără reconciliere pe tot contul sau fără valoarea în lei nu se dă o sumă; gura de acasă spune 4% ca tripwire-ul; sub 10 închideri netul nu se colorează și nu se anunță; lista goală ține boții 10 minute; prețul 0 nu e în afara grilei; barele din viitor nu intră în regim sau în prețul de acum. Pragurile rămân. Fișierul colectorului e v101.137, procesul nu e repornit.",
     "alaturi253": "Tabloul (23.10.2026, el: piața întinde fereastra): linia „Ce spune piața acum” rămâne pe toată lățimea. Celelalte rânduri stau unul lângă altul, sub grafic, iar graficul își păstrează înălțimea. Trendul rămâne lângă grafic. Sub 1181 citirea de pe telefon rămâne. Culorile, pragurile și calculul rămân. Colectorul rămâne v101.136.",

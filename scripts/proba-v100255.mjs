@@ -133,26 +133,20 @@ await test("probele v100239–v100252 nu mai cer colectorul exact v101.136; fiș
     assert.doesNotMatch(s, /VERSIUNE_COLECTOR = "v101\\.136"/, f);
     assert.match(s, /Number\((?:mv\[1\]|mv|mvCol\[1\])\) >= 136/, f);
   }
-  assert.match(citeste("scripts", "colector.mjs"), /VERSIUNE_COLECTOR = "v101\.137"/);
+  assert.ok(Number((citeste("scripts", "colector.mjs").match(/const VERSIUNE_COLECTOR = "v101\.(\d+)"/) || [0, 0])[1]) >= 137);
 });
 
-await test("versiunea v100.255, insigna SCALĂ, lanțul are proba o singură dată", () => {
+await test("versiunea e cel puțin v100.255, lanțul are proba o singură dată", () => {
   const P = JSON.parse(citeste("package.json"));
-  assert.equal(P.version, "100.255.0");
+  assert.ok(Number(P.version.split(".")[1]) >= 255, P.version);
   assert.equal(P.scripts["test:v100255"], "node scripts/proba-v100255.mjs");
   assert.equal((P.scripts.test.match(/test:v100255/g) || []).length, 1);
   assert.equal((P.scripts.test.match(/test:v100254/g) || []).length, 1);
   assert.doesNotMatch(P.scripts["test:v100255"], /npm run test:v100255/);
   assert.doesNotMatch(P.scripts["test:v100255"], /test:v100254/);
-  const idx = citeste("public", "index.html");
-  assert.equal((idx.match(/v100\.255/g) || []).length, 4);
-  assert.match(idx, /id="sideVersiune"[^>]*>v100\.255 · SCALĂ</);
-  assert.match(idx, /id="topVersiune">v100\.38 · doar citire</);
-  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-255/);
-  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.255"/);
+  assert.match(citeste("public", "index.html"), /id="topVersiune">v100\.38 · doar citire</);
   const info = JSON.parse(citeste("BUILD_INFO.json"));
-  assert.equal(info.version, "v100.255");
-  assert.equal(info.badge, "v100.255 · SCALĂ");
+  assert.ok(Number(String(info.version).replace(/^v/, "").split(".")[1]) >= 255, info.version);
   assert.equal(info.engineContract, "54.1");
   assert.match(info.features.scala255, /în afara 0–100/);
   assert.match(info.features.poarta254, /v101\.137/);

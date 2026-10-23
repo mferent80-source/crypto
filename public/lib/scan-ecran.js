@@ -230,7 +230,7 @@ function scDetaliu(x) {
       + (pa.intrare ? '' : '<p class="scNota">' + escapeHtml(pa.motivIntrare || "") + '</p>');
   } else if (x.fel === "c") {
     var plC = Scan.plan(x, null);
-    if (plC) plan = '<h5>Plan orientativ (2× / 3× mișcarea zilnică)</h5><div class="scLin"><span>Mișcarea zilnică (ATR)</span><b>' + scNf(x.atrPct, 1) + '%</b></div>'
+    if (plC) plan = '<h5>Plan orientativ (2× / 3× mișcarea zilnică)</h5><div class="scLin"><span>Mișcarea zilnică (ATR)</span><b title="media aritmetică a ultimelor 14 intervale adevărate, împărțită la închidere">' + scNf(x.atrPct, 1) + '% · media a 14 intervale adevărate</b></div>'
       + '<div class="scLin"><span>Stop</span><b class="bad">' + pr + scPret(plC.stop) + ' (' + scPct(plC.stopPct) + ')</b></div><div class="scLin"><span>Țintă</span><b class="good">' + pr + scPret(plC.tinta) + ' (' + scPct(plC.tintaPct) + ')</b></div>';
   }
   if (x.fel === "c") {

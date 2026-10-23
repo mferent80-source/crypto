@@ -113,7 +113,7 @@
     var TE = window.TabloExtra, r = nr(b.opritorPierdereRaport), raport = b.opritorPierdereTip === "raport" && r !== null;
     var p = TE && TE.pretStopLive ? TE.pretStopLive(b) : nr(b.opritorPierdere);
     if (!(p > 0)) return null;
-    return { p: p, n: raport ? "stop " + (r >= 0 ? "+" : "−") + Math.abs(r * 100).toFixed(1).replace(".", ",") + "%" : "stop", tit: raport ? "stopul din Pionex în procente din investiție; prețul e socotit acum, cu grilele de pe drum, și se mută cu poziția" : "stopul din Pionex" };
+    return { p: p, n: raport ? "stop " + (r >= 0 ? "+" : "−") + Math.abs(r * 100).toFixed(1).replace(".", ",") + "%" : "stop", tit: raport ? "stopul din Pionex în procente din investiție; procentul se copiază; prețul de pe bară e doar acum și se mută cu grilele" : "stopul din Pionex" };
   }
   function nivele(b) {
     var L = [], add = function (p, n, c, cls, tit) { p = nr(p); if (p != null && p > 0) L.push({ p: p, n: n, c: c, cls: cls || "", tit: tit || "" }); };

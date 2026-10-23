@@ -328,6 +328,9 @@ export function alerteSLTP(poza, acum) {
     const g = s && s.sugestie, pret = s && nr(s.pret);
     if (!g || g.nivel || !g.intrare || nr(g.intrare.pret) === null || !pret || pret > g.intrare.pret * 1.005) continue;
     const m = s.moneda === "€" ? "€" : "$", q = g.proba || {};
+    // v101.138: sub prețul instrumentului 10, bucăți întregi (virgulă nu se citește ca mii). De la 10, două zecimale, ca la INTC 3,62. Fără conversie.
+    const pretBuc = nr(g.intrare.pret), bucN = g.marime && g.marime.bucati;
+    const bucTxt = bucN > 0 ? (pretBuc !== null && pretBuc < 10 ? String(Math.round(bucN)) : bucN.toFixed(2).replace(".", ",")) : "";
     out.push({ cheie: "sltp-intrare-" + s.s + "-" + zi(s.s), nivel: "info", titlu: s.s + ": a ajuns la intrarea sugerată (" + m + pr(g.intrare.pret) + ")",
       // v100.68 (pachetul 3): randul 1 = pretul, stopul, tinta si istoricul; randul 2 = cat as cumpara (reper, nu semnal)
       mesaj: "Prețul e " + m + pr(pret) + " · stop " + m + pr(g.stop) + " · țintă " + m + pr(g.tinta)
@@ -335,7 +338,7 @@ export function alerteSLTP(poza, acum) {
         // v101.3 (el, 28.09): si cat cumpar, cand colectorul a calculat marimea (doar in $, cu contul T212 citit)
         // v100.70 (revizia pachetului 3, I7): marimea e conditionala („dacă intru”), nu o recomandare de cumparare; „decizia e a ta” revine
         + (g.marime && g.marime.plin ? "Ai deja 20% din cont în ea: n-aș adăuga nimic; e un reper din istoricul ei, decizia e a ta."   /* v101.116 (revizia, 🔴2) */
-          : g.marime && g.marime.bucati > 0 ? "Aș lua cel mult " + g.marime.bucati.toFixed(2).replace(".", ",") + " buc, dacă intru (~" + Math.round(g.marime.suma).toLocaleString("ro-RO") + " lei, risc ~" + Math.round(g.marime.risc).toLocaleString("ro-RO") + " lei" + (g.marime.plafonat ? ", plafon 20% din cont" : " = 1% din cont") + "); e un reper, decizia e a ta."
+          : g.marime && g.marime.bucati > 0 ? "Aș lua cel mult " + bucTxt + " buc, dacă intru (~" + Math.round(g.marime.suma).toLocaleString("ro-RO") + " lei, risc ~" + Math.round(g.marime.risc).toLocaleString("ro-RO") + " lei" + (g.marime.plafonat ? ", plafon 20% din cont" : " = 1% din cont") + "); e un reper, decizia e a ta."
           : "Aș intra doar cu stopul pus; e un reper din istoricul lui, decizia e a ta.") });
   }
   return out;
