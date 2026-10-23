@@ -78,7 +78,9 @@ await test("cine se misca: doar PERP-urile din top dupa volum; 5 sus / 5 jos; et
 await test("frica/lacomia: interval pe 30 de zile, unde e acum (aproape de varf / minim / la mijloc) si pragul extrem", () => {
   const f = A.fg([71, 73, 68, 50, 56, 78, 71, 74]);
   assert.equal(f.acum, 74); assert.equal(f.min, 50); assert.equal(f.max, 78);
-  assert.match(f.text, /între 50 și 78/); assert.match(f.text, /aproape de vârf/); assert.match(f.text, /Peste 75/);
+  assert.match(f.text, /între 50 și 78/); assert.match(f.text, /aproape de vârf/);
+  // v100.259 (auditul 23.10): „Peste 75 …” doar peste 75 (la 74 scria „Peste 75” cu pragul de 70)
+  assert.doesNotMatch(f.text, /Peste 75/); assert.match(A.fg([71, 73, 68, 50, 56, 78, 71, 76]).text, /Peste 75/);
   assert.match(A.fg([60, 40, 22, 24]).text, /aproape de minim/); assert.match(A.fg([60, 40, 22, 24]).text, /Sub 25/);
   assert.equal(A.fg([]).acum, null); assert.equal(A.fg(null).text, "");
 });

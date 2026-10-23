@@ -25,6 +25,8 @@ var Consilier = (function () {
   // ---------------- piata azi ----------------
   // o: {qqq, spy, vix: bare zilnice (t,o,h,l,c), fg: {valoare, clasa}}
   var FG = { "Extreme Fear": "frică extremă", Fear: "frică", Neutral: "neutru", Greed: "lăcomie", "Extreme Greed": "lăcomie extremă" };
+  // v100.259 (auditul 23.10, punctul 11): indicele e valid doar pe 0–100 (ca Macro.scor și Acasa.fgValid) - 150 dintr-un răspuns stricat nu e „lăcomie extremă”
+  function fgOk(v) { var x = typeof v === "string" && v.trim() ? Number(v) : v; return typeof x === "number" && isFinite(x) && x >= 0 && x <= 100; }
   function piata(o) {
     o = o || {};
     var q = Array.isArray(o.qqq) && o.qqq.length ? o.qqq : null, parti = [], ton = "fara-date";
@@ -39,7 +41,7 @@ var Consilier = (function () {
     var s = ultima(o.spy), s0 = Array.isArray(o.spy) && o.spy.length > 1 ? o.spy[o.spy.length - 2] : null;
     if (s && s0) parti.push({ et: "S&P 500", val: "ultima zi " + P(s.c / s0.c - 1, Math.abs(s.c / s0.c - 1) < 0.001 ? 2 : 1), cls: s.c >= s0.c ? "good" : "bad" });
     if (vv !== null) parti.push({ et: "VIX", val: vv.toFixed(1).replace(".", ",") + (vv >= 25 ? " (frică mare)" : vv >= 20 ? " (agitat)" : " (liniște)"), cls: vv >= 25 ? "bad" : vv >= 20 ? "tbWarn" : "good" });
-    if (o.fg && isFinite(o.fg.valoare)) parti.push({ et: "Frica/lăcomia crypto", val: o.fg.valoare + " (" + (FG[o.fg.clasa] || o.fg.clasa || "—") + ")", cls: o.fg.valoare >= 75 || o.fg.valoare <= 25 ? "tbWarn" : "" });
+    if (o.fg && fgOk(o.fg.valoare)) parti.push({ et: "Frica/lăcomia crypto", val: o.fg.valoare + " (" + (FG[o.fg.clasa] || o.fg.clasa || "—") + ")", cls: o.fg.valoare >= 75 || o.fg.valoare <= 25 ? "tbWarn" : "" });
     var text = parti.map(function (x) { return x.et + ": " + x.val; }).join(" · ");
     return { ton: ton, parti: parti, text: text || "fără date despre piață" };
   }
@@ -109,7 +111,7 @@ var Consilier = (function () {
     if (ist.n) out.push({ nivel: ist.total < 0 && ist.n >= 2 ? "g" : "n", sursa: "istoric", titlu: "Pe " + m + ": " + cate(ist.n, "bot", "boți") + ", " + ist.pePlus + " pe plus, total " + (ist.total >= 0 ? "+" : "−") + Math.abs(ist.total).toFixed(2).replace(".", ",") + " USDT",
       text: ist.n < 10 ? "(puține cazuri)" : "", ceAsFace: ist.total < 0 && ist.n >= 3 ? "N-aș mări botul: pe " + m + " boții tăi au pierdut de obicei." : null });
     var fg = ctx.fg;
-    if (fg && isFinite(fg.valoare) && (fg.valoare >= 75 || fg.valoare <= 25)) out.push({ nivel: "n", sursa: "piata", titlu: "Frica/lăcomia crypto e la " + fg.valoare + " (" + (FG[fg.clasa] || fg.clasa) + ")",
+    if (fg && fgOk(fg.valoare) && (fg.valoare >= 75 || fg.valoare <= 25)) out.push({ nivel: "n", sursa: "piata", titlu: "Frica/lăcomia crypto e la " + fg.valoare + " (" + (FG[fg.clasa] || fg.clasa) + ")",
       text: "Piața e la o extremă: mișcările mari vin mai des în astfel de zile.", ceAsFace: "N-aș pune bani în plus azi și aș ține stopul pornit." });
     var s = stiriRecente(ctx.stiri, acum);
     if (s.length) out.push({ nivel: "n", sursa: "stiri", titlu: cate(s.length, "știre", "știri") + " despre " + m + " în ultimele 48 h", text: "", ceAsFace: null, stiri: s });

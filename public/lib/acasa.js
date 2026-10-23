@@ -15,7 +15,7 @@ var Acasa = (function () {
     o = o || {};
     var c = o.clasament, ev = c ? nr(c.evita) : null, ca = c ? nr(c.candidati) : null;
     if (ev === null || ca === null || ev + ca <= 0) return { nivel: "fara-date", eticheta: "FĂRĂ DATE", titlu: "Clasamentul pieței n-a venit încă.", text: "Îl face colectorul de acasă o dată pe oră, pe primele 100 de monede după volum.", faCe: "" };
-    var n = ev + ca, cota = ev / n, btcMis = !!(o.btc && o.btc.miscare), fg = nr(o.fg);
+    var n = ev + ca, cota = ev / n, btcMis = !!(o.btc && o.btc.miscare), fg = fgValid(o.fg);   // v100.259: 0–100, ca regimul macro
     var d = c.dir || {}, lo = nr(d.long) || 0, sh = nr(d.short) || 0, tot = lo + sh + (nr(d.neutru) || 0);
     var sens = tot > 0 && lo / tot >= 0.6 ? "urca" : tot > 0 && sh / tot >= 0.6 ? "coboara" : "imp";
     var sensTxt = sens === "urca" ? "Piața urcă în general" : sens === "coboara" ? "Piața coboară în general" : "Piața e împărțită";
@@ -23,7 +23,8 @@ var Acasa = (function () {
     // cate monede urca / coboara si „de acolo piața a revenit des” trec in text
     var lac = fg !== null && fg >= 70 && sens === "urca", fri = fg !== null && fg <= 30 && sens === "coboara", fgR = fg !== null ? Math.round(fg) : null;
     if (lac) sensTxt += " (" + lo + " din " + tot + " de monede)"; else if (fri) sensTxt += " (" + sh + " din " + tot + " de monede)";
-    var fgTxt = fg === null ? "" : fg >= 70 ? ", cu lăcomie mare" : fg <= 30 ? ", cu frică mare" + (fri ? ", de la care piața a revenit des" : "") : "";
+    // v100.259 (auditul 23.10): fără „de la care piața a revenit des” - n-am măsurat ce urmează după frica mare; rămâne faptul
+    var fgTxt = fg === null ? "" : fg >= 70 ? ", cu lăcomie mare" : fg <= 30 ? ", cu frică mare" : "";
     var adaos = lac ? ", fără pariuri mari pe urcare (lăcomia e la " + fgR + ")." : fri ? ", fără vânzări în panică (frica e la " + fgR + ")." : null;
     var text = sensTxt + fgTxt + ". " + ev + " din cele " + n + " de monede mari sunt în mișcare, regimul în care gridul iese cel mai rău.";
     var r;
@@ -32,8 +33,10 @@ var Acasa = (function () {
         : "N-aș porni boți grid noi până nu se liniștește; pe cei porniți i-aș urmări cu alerta de mișcare." };
     else if (cota >= 0.25) r = { nivel: "amestecat", eticheta: "🟡 AMESTECAT", titlu: "BTC e liniștit, dar monedele mici sunt agitate.",
       faCe: "Aș porni boți grid doar pe monedele liniștite" + (adaos || ", nu pe cele din lista de mișcare.") };
-    else r = { nivel: "liniste", eticheta: "🟢 LINIȘTE", titlu: "Piața e liniștită: mediul bun pentru grid.",
-      faCe: "Aș porni boți grid pe monedele liniștite din clasament" + (adaos || ": e un moment bun.") };
+    // v100.259 (auditul 23.10): liniștea nu e o dovadă că gridul câștigă (dovedit e doar că DUPĂ mișcare iese mai rău) ⇒ faptul, iar pornirea
+    // rămâne la fișa fiecărei monede (același filtru „după mișcare nu” ca fișa, „mută gridul” și Scanul)
+    else r = { nivel: "liniste", eticheta: "🟢 LINIȘTE", titlu: "Piața e liniștită: puține monede în mișcare.",
+      faCe: "Aș porni boți grid doar unde fișa monedei zice PORNEȘTE" + (adaos || ", nu pe liniștea pieței singură.") };
     r.text = text; r.inMiscare = ev; r.total = n;
     return r;
   }
@@ -51,14 +54,21 @@ var Acasa = (function () {
   }
 
   // frica/lacomia: istoricul (cel mai vechi -> azi)
+  // v100.259 (auditul 23.10, punctul 11): indicele e pe 0–100 - o valoare în afara scării (150 dintr-un răspuns stricat) nu e „lăcomie extremă”;
+  // aceeași regulă ca regimul macro (Macro.scor, v100.255) și Consilierul
+  function fgValid(v) { var x = nr(v); return x !== null && x >= 0 && x <= 100 ? x : null; }
   function fg(ist) {
-    var l = (Array.isArray(ist) ? ist : []).map(nr).filter(function (v) { return v !== null; });
+    var r = (Array.isArray(ist) ? ist : []).map(nr).filter(function (v) { return v !== null; }), l = r.filter(function (v) { return fgValid(v) !== null; });
     if (!l.length) return { acum: null, min: null, max: null, text: "" };
-    var a = l[l.length - 1], mi = Math.min.apply(null, l), ma = Math.max.apply(null, l), poz = ma > mi ? (a - mi) / (ma - mi) : 0.5;
-    var unde = poz >= 0.75 ? "aproape de vârf" : poz <= 0.25 ? "aproape de minim" : "la mijloc";
-    var t = "În ultimele " + l.length + " de zile între " + Math.round(mi) + " și " + Math.round(ma) + "; acum " + unde + ".";
-    if (a >= 70) t += " Peste 75 e lăcomie extremă: urcările țin mai greu de acolo.";
-    else if (a <= 30) t += " Sub 25 e frică extremă: de acolo piața a revenit des.";
+    // ultima citire stricată ⇒ „acum” lipsește (nu se arată ieri drept azi); istoricul valid rămâne pentru minim / maxim
+    var a = r.length && fgValid(r[r.length - 1]) !== null ? r[r.length - 1] : null, mi = Math.min.apply(null, l), ma = Math.max.apply(null, l);
+    var t = "În ultimele " + cate(l.length, "zi", "zile") + " între " + Math.round(mi) + " și " + Math.round(ma);
+    if (a === null) return { acum: null, min: mi, max: ma, text: t + "; citirea de azi e în afara scării 0–100, n-o folosesc." };
+    var poz = ma > mi ? (a - mi) / (ma - mi) : 0.5, unde = poz >= 0.75 ? "aproape de vârf" : poz <= 0.25 ? "aproape de minim" : "la mijloc";
+    t += "; acum " + unde + ".";
+    // v100.259 (auditul 23.10): fără „urcările țin mai greu” / „de acolo piața a revenit des” - nemăsurat pe datele noastre; pragul scris = pragul folosit
+    if (a >= 75) t += " Peste 75 e lăcomie extremă; ce urmează de acolo n-am măsurat.";
+    else if (a <= 25) t += " Sub 25 e frică extremă; ce urmează de acolo n-am măsurat.";
     return { acum: a, min: mi, max: ma, text: t };
   }
 
@@ -463,6 +473,6 @@ var Acasa = (function () {
     return o;
   }
 
-  return { SECTOR: SECTOR, sectoare: sectoare, ziuaTa: ziuaTa, raportSaptamana: raportSaptamana, socotealaAlerte: socotealaAlerte, miscareTipica: miscareTipica, fundingPiata: fundingPiata, fundingAtentie: fundingAtentie, schimbari: schimbari, vreme: vreme, miscari: miscari, fg: fg, largime: largime, ro: ro, rezumatActiune: rezumatActiune, largimeNdx: largimeNdx, vremeBursa: vremeBursa, corelatie: corelatie, calendar: calendar, MAG7: MAG7, franaVerb: franaVerb, frazaPauza: frazaPauza, masuraFranei: masuraFranei, unesteZileFrana: unesteZileFrana };
+  return { SECTOR: SECTOR, sectoare: sectoare, ziuaTa: ziuaTa, raportSaptamana: raportSaptamana, socotealaAlerte: socotealaAlerte, miscareTipica: miscareTipica, fundingPiata: fundingPiata, fundingAtentie: fundingAtentie, schimbari: schimbari, vreme: vreme, miscari: miscari, fg: fg, fgValid: fgValid, largime: largime, ro: ro, rezumatActiune: rezumatActiune, largimeNdx: largimeNdx, vremeBursa: vremeBursa, corelatie: corelatie, calendar: calendar, MAG7: MAG7, franaVerb: franaVerb, frazaPauza: frazaPauza, masuraFranei: masuraFranei, unesteZileFrana: unesteZileFrana };
 })();
 if (typeof globalThis !== "undefined") globalThis.Acasa = Acasa;
