@@ -77,13 +77,19 @@ const LOG = path.join(DATA, "colector.log");
 function jurnal(...a) {
   const linie = new Date().toISOString() + " " + a.join(" ") + "\n";
   // v100.40: rotirea si scrierea separat - o rotire picata (fisier tinut deschis de `tail -f`) nu mai lasa jurnalul mut
-  try { if (fs.existsSync(LOG) && fs.statSync(LOG).size > 1_000_000) fs.renameSync(LOG, LOG + ".vechi"); } catch {}
+  // v100.259 (auditul 23.10, punctul 16): 3 rotiri (colector.log.1 … .3), nu una singură (.vechi)
+  S.rotesteJurnal(fs, LOG);
   try { fs.appendFileSync(LOG, linie); } catch {}
   if (process.env.COLECTOR_CONSOLA) process.stdout.write(linie);
 }
 // v101.55 (ideea 2): numărătorile din jurnal - „1 bot”, „25 de boți” (TextRo.cate; rezerva știe aceeași regulă)
 function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
 
+// v100.259 (auditul 23.10, punctul 16): după o oprire bruscă jurnalul are octeți NUL - ies la pornire
+if (!process.env.COLECTOR_DOAR_INCARCA) { const nul = S.curataNulJurnal(fs, LOG); if (nul) jurnal("jurnalul avea " + cate(nul, "octet NUL", "octeți NUL") + " (oprire bruscă a PC-ului) - curățat la pornire"); }
+// v100.259 (auditul 23.10, punctul 17): repornirea fără administrator - livrarea (copie-de-lucru.mjs) lasă data\colector-iesi.semnal; mai nou decât
+// pornirea ⇒ ies curat (bucla și ceasul de 10 s îl verifică), apoi sarcina „Crypto Radar pornire” pornește colectorul nou
+const SEMNAL_IESIRE = path.join(DATA, "colector-iesi.semnal"), PORNIT_LA = Date.now();
 // O singura instanta. Fisierul pid are si o "bataie de inima" (ora ultimei ture):
 // un pid ramas dupa o oprire brusca a PC-ului poate fi refolosit de Windows pentru
 // alt program, iar colectorul ar crede ca mai ruleaza unul si n-ar porni niciodata.
@@ -103,6 +109,7 @@ if (!DOAR_INCARCA) try {
   // v101.140 (auditul 23.10): colectorul pornit de sarcina S4U stă în sesiunea 0 ⇒ din sesiunea lui kill(…, 0) dă EPERM = rulează, nu „a murit”
 } catch (e) { if (pidVerificat && e && e.code === "EPERM") { jurnal("mai rulează un colector (PID " + pidVerificat + "), în altă sesiune - ies"); process.exit(0); } }
 const bate = () => { if (DOAR_INCARCA) return; try { fs.writeFileSync(PID, process.pid + " " + Date.now()); } catch {} };
+function iesiLaSemnal() { if (DOAR_INCARCA) return; if (S.verificaSemnal(fs, SEMNAL_IESIRE, PORNIT_LA) === "iesi") { jurnal("semnal de ieșire (data\\colector-iesi.semnal, de la livrare) - ies curat, sarcina „Crypto Radar pornire” mă pornește din nou"); try { scrieStare(); } catch {} process.exit(0); } }
 bate();
 const curataPid = () => { if (DOAR_INCARCA) return; try { if (Number(fs.readFileSync(PID, "utf8").split(/\s+/)[0]) === process.pid) fs.unlinkSync(PID); } catch {} };
 process.on("exit", curataPid);
@@ -2354,6 +2361,7 @@ async function turaBilantBusola() {
 }
 
 async function bucla() {
+  iesiLaSemnal();   // v100.259 (punctul 17)
   try { await tura(); turaGataLa = Date.now(); } catch (e) { jurnal("tură", e.message); }
   // v98.2 (audit 28.09, #1): planurile si poza cer amandoua pozitiile T212 - una dupa alta, nu deodata (serverul leaga oricum
   // cererile identice in zbor; asa nici cele diferite nu se calca in aceeasi secunda)
@@ -2397,6 +2405,6 @@ async function bucla() {
   setTimeout(bucla, S.pasDupaEsecuri(esecuri, PAS_MS));   // v100.259 (punctul 4): fără server, pauze tot mai lungi (cel mult 5 min), fără ieșire
   // v101.34: bucla e la 60 s - poza are ceasul ei (16–17 la 30 s); turaPoza se pazeste singura (ritmul, pozaInLucru)
   // v101.116 (auditul sever, C1): și bătaia din colector.pid la 10 s - o tură lungă (Pionex lent) nu mai lasă un lansator să pornească al doilea colector
-  if (!globalThis.__ceasPoza) globalThis.__ceasPoza = setInterval(() => { bate(); turaPoza().catch((e) => jurnal("poza", e.message)); }, 10000);
+  if (!globalThis.__ceasPoza) globalThis.__ceasPoza = setInterval(() => { iesiLaSemnal(); bate(); turaPoza().catch((e) => jurnal("poza", e.message)); }, 10000);
 }
 bucla();

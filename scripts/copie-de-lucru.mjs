@@ -107,12 +107,51 @@ export function decizieRepornire(pid, linie, kill = (p) => process.kill(p, 0)) {
   return { opreste: false, porneste: false, motiv: "viu-necunoscut" };
 }
 const asteaptaMs = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+// v100.259 (auditul 23.10, punctul 17): repornirea colectorului din sesiunea 0 FĂRĂ administrator. Livrarea lasă data\colector-iesi.semnal; colectorul
+// îl vede în bucla lui (cel mult ~10 s) și iese curat; aici se așteaptă ieșirea PID-ului vechi (cel mult 90 s; kill(pid, 0): EPERM = încă rulează în
+// altă sesiune, ESRCH = a ieșit), apoi `schtasks /run /tn "Crypto Radar pornire"` (sarcina lui, fără UAC) pornește colectorul nou; se verifică
+// PID-ul nou din data\colector.pid și versiunea din data\pentru-busola.json (scrisă la prima tură, mai nouă decât repornirea).
+// Logica e pură: dependențele vin în `d` (probele le dau false; depSemnal le dă pe cele adevărate). Întoarce { ok, motiv, pid }.
+export function repornestePrinSemnal(d) {
+  const pana = (cond, ms, pas) => { const t0 = d.acum(); for (;;) { if (cond()) return true; if (d.acum() - t0 >= ms) return false; d.asteaptaMs(pas); } };
+  d.scrieSemnal();
+  d.scrie(`Colectorul (PID ${d.pidVechi}) stă în altă sesiune: i-am lăsat semnalul de ieșire (data\\colector-iesi.semnal) și aștept să iasă…`);
+  if (!pana(() => !d.eViu(d.pidVechi), 90000, 2000)) {
+    d.stergeSemnal();
+    d.scrie(`⚠ Colectorul (PID ${d.pidVechi}) n-a ieșit în 90 s — am șters semnalul și NU pornesc al doilea. Codul nou intră la următoarea repornire a lui.`);
+    return { ok: false, motiv: "nu-a-iesit", pid: d.pidVechi };
+  }
+  const t0 = d.acum();
+  if (!d.ruleaza("schtasks", ["/run", "/tn", "Crypto Radar pornire"])) {
+    d.scrie("⚠ Colectorul vechi a ieșit, dar sarcina „Crypto Radar pornire” n-a pornit (schtasks) — pornește-l: PORNESTE-CRYPTO-RADAR.bat.");
+    return { ok: false, motiv: "schtasks", pid: null };
+  }
+  let pid = null, v = null;
+  const gata = pana(() => { pid = d.citestePid(); v = d.citesteVersiune(); return !!pid && pid !== d.pidVechi && d.eViu(pid) && !!v && Number(v.la) > t0 && v.versiune === d.versiuneAsteptata; }, 150000, 3000);
+  if (gata) { d.scrie(`Colectorul repornit prin sarcină: PID ${pid}, versiunea ${v.versiune} (data\\pentru-busola.json).`); return { ok: true, motiv: "repornit", pid }; }
+  const viu = !!pid && pid !== d.pidVechi && d.eViu(pid);
+  d.scrie(viu ? `⚠ Colectorul nou (PID ${pid}) rulează, dar data\\pentru-busola.json arată ${v && v.versiune || "nimic"}, nu ${d.versiuneAsteptata} — uită-te în data\\colector.log.`
+    : "⚠ Colectorul nou NU a pornit în 150 s după sarcină — uită-te în data\\pornire-la-logare.log și pornește-l: PORNESTE-CRYPTO-RADAR.bat.");
+  return { ok: false, motiv: viu ? "versiunea-veche" : "nu-a-pornit", pid };
+}
+function depSemnal(rad, pid) {
+  const semnal = path.join(rad, "data", "colector-iesi.semnal");
+  let asteptata = null; try { asteptata = (fs.readFileSync(path.join(rad, "scripts", "colector.mjs"), "utf8").match(/const VERSIUNE_COLECTOR = "([^"]+)"/) || [])[1] || null; } catch {}
+  return { pidVechi: pid, versiuneAsteptata: asteptata, acum: () => Date.now(), asteaptaMs, scrie,
+    scrieSemnal: () => fs.writeFileSync(semnal, new Date().toISOString() + " livrarea\n"),
+    stergeSemnal: () => { try { fs.unlinkSync(semnal); } catch {} },
+    eViu: (p) => { try { process.kill(p, 0); return true; } catch (err) { return !!(err && err.code === "EPERM"); } },
+    ruleaza: (cmd, args) => spawnSync(cmd, args, { encoding: "utf8", windowsHide: true }).status === 0,
+    citestePid: () => { try { return pidDinFisier(fs.readFileSync(path.join(rad, "data", "colector.pid"), "utf8")); } catch { return null; } },
+    citesteVersiune: () => { try { const o = JSON.parse(fs.readFileSync(path.join(rad, "data", "pentru-busola.json"), "utf8")); return { versiune: o && o.versiune, la: o && o.la }; } catch { return null; } } };
+}
 function ps(cmd) { const r = spawnSync("powershell", ["-NoProfile", "-Command", cmd], { encoding: "utf8", windowsHide: true }); return String(r.stdout || "").trim(); }
 const linieDeComanda = (pid) => ps(`(Get-CimInstance Win32_Process -Filter 'ProcessId=${Number(pid)}' -ErrorAction SilentlyContinue).CommandLine`);
 function repornesteColectorul(rad) {
   let pid = null; try { pid = pidDinFisier(fs.readFileSync(path.join(rad, "data", "colector.pid"), "utf8")); } catch {}
   const d = decizieRepornire(pid, pid ? linieDeComanda(pid) : "");
   if (!d.porneste) {
+    if (d.motiv === "alta-sesiune" && process.platform === "win32") return repornestePrinSemnal(depSemnal(rad, pid)).ok;   // v100.259 (punctul 17)
     scrie(`⚠ Colectorul rulează (PID ${pid}) ${d.motiv === "alta-sesiune" ? "în altă sesiune (pornit de sarcina S4U după repornirea PC-ului)" : "dar nu-i pot citi linia de comandă"} — nu-l pot opri și NU pornesc al doilea.`
       + "\n  Codul nou intră în colector la următoarea repornire a lui (repornirea PC-ului / logarea, sau Stop-Process ca administrator, apoi schtasks /run /tn \"Crypto Radar pornire\").");
     return false;

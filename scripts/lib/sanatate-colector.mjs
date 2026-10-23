@@ -51,6 +51,30 @@ export function unaInZbor(fn) {
   };
 }
 
+// v100.259 (auditul 23.10, punctul 16): după o oprire bruscă a PC-ului (pana de curent) jurnalul are octeți NUL (fișierul lungit, datele
+// nescrise) - îl făceau greu de citit și de căutat. La pornire ies (întoarce câți au fost; 0 = nimic rescris). fs injectat (probe).
+export function curataNulJurnal(fsx, log) {
+  let t; try { if (!fsx.existsSync(log)) return 0; t = String(fsx.readFileSync(log, "utf8")); } catch { return 0; }
+  const n = (t.match(/\u0000/g) || []).length; if (!n) return 0;
+  fsx.writeFileSync(log, t.replace(/\u0000+/g, "")); return n;
+}
+// Rotirea: peste maxOcteti, log → log.1 → log.2 → log.3 (al patrulea iese) - înainte una singură (.vechi), iar o zi agitată lua tot istoricul.
+// Întoarce true dacă a rotit.
+export function rotesteJurnal(fsx, log, maxOcteti = 1_000_000, pastrate = 3) {
+  try { if (!fsx.existsSync(log) || fsx.statSync(log).size <= maxOcteti) return false; } catch { return false; }
+  try { if (fsx.existsSync(log + "." + pastrate)) fsx.unlinkSync(log + "." + pastrate); } catch {}
+  for (let i = pastrate - 1; i >= 1; i--) { try { if (fsx.existsSync(log + "." + i)) fsx.renameSync(log + "." + i, log + "." + (i + 1)); } catch {} }
+  try { fsx.renameSync(log, log + ".1"); return true; } catch { return false; }
+}
+// v100.259 (auditul 23.10, punctul 17): repornirea colectorului fără administrator. Din sesiunea lui colectorul pornit de sarcina S4U (sesiunea 0)
+// nu se poate opri (EPERM) ⇒ livrarea lasă un fișier-semnal; colectorul îl vede în bucla lui: mai nou decât pornirea ⇒ „iesi” (îl șterge, iese
+// curat); unul rămas de dinainte de pornire ⇒ „vechi” (șters, nu iese); lipsă ⇒ null.
+export function verificaSemnal(fsx, fisier, pornitLa) {
+  let st; try { if (!fsx.existsSync(fisier)) return null; st = fsx.statSync(fisier); } catch { return null; }
+  try { fsx.unlinkSync(fisier); } catch {}
+  return Number(st && st.mtimeMs) >= pornitLa ? "iesi" : "vechi";
+}
+
 // C6 + 🔵3: o coadă de alerte netrimise (KV-ul Radarului, Discord), golită în ORDINE: după primul eșec restul așteaptă tura următoare;
 // se renunță doar la ce e mai vechi decât maxMs(x) (critic: 24 h, restul 12 h - apelantul hotărăște). O excepție la trimitere = eșec, nu pierdere.
 // Întoarce { ramase, trimise, renuntate } (listele, în ordinea cozii); apelantul păzește reintrarea și scrie coada pe disc.
