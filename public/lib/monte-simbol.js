@@ -96,6 +96,9 @@ var MonteSimbol = (function () {
     return { lo: lo, hi: hi, n: v.length, c: c };
   }
   // (2) botul grid: GridProba.simuleaza (exact fișa Grid: grilele, comisioanele, lichidarea) pe drumuri de 15 minute compuse din zile întregi
+  // v100.259 (auditul 23.10, punctul 9): blocul rămâne de 1 zi. Măsurat pe 64 de monede (bare orare reale, ~185 de zile; criteriul scris înainte):
+  // în eșantion blocurile de 3 / 5 zile apropie probabilitatea de atingere pe 7 zile (eroarea 6,6 → 4,3 / 3,4 puncte la 1,5× amplitudinea zilei),
+  // dar în afara eșantionului, ca în producție (31 de zile ⇒ următoarele 7), Brier-ul se strică (26,53 → 26,89 / 27,44; 12,83 → 13,07 / 13,33 la 3×)
   function grid(b15, st, o) {
     o = o || {}; var GP = o.GridProba || (typeof GridProba !== "undefined" ? GridProba : null), BZ = 96, zile = o.zile || 7, H = zile * BZ;
     if (!GP) return { eroare: "lipsește simulatorul gridului" };
