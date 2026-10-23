@@ -354,5 +354,20 @@ await test("21 Setări: #pzV-settings .pzVerb mic (stare, nu decizie); show() pu
   assert.match(APP, /document\.body\.classList\.toggle\("peSetari",id==="settings"\)/);
 });
 
+// ---------------------------------------------------------------- 22. Grid: ce setez? — moneda în rândul de stare; câmpul precompletat cu botul activ
+await test("22a grStareText: „PEPE · calculat la 13:44 · se reface singur la 5 min”; fără monedă în câmp nu scrie „calculat”", () => {
+  const m = APP.match(/function grStareText\([^\n]*/); assert.ok(m, "lipsește grStareText");
+  const f = new Function("return " + m[0])();
+  const la = new Date(2026, 9, 23, 13, 44).getTime();
+  assert.match(f({ la, simbol: "PEPE_USDT_PERP", inLucru: false }, "PEPE"), /^PEPE · calculat la 13:44 · se reface singur la 5 min$/);
+  assert.doesNotMatch(f({ la, simbol: "PEPE_USDT_PERP", inLucru: false }, ""), /calculat/);
+  assert.match(f({ la, simbol: "PEPE_USDT_PERP", inLucru: true }, "PEPE"), /^calculez/);
+  assert.doesNotMatch(f({ la: 0, simbol: null, inLucru: false }, "PEPE"), /calculat/);
+  assert.match(fnApp("renderGrid"), /stare\.textContent=grStareText\(grStare,\$\("grMoneda"\)&&\$\("grMoneda"\)\.value\)/);
+});
+await test("22b porneGrid precompletează moneda cu botul activ când câmpul e gol (nu suprascrie ce a scris el)", () => {
+  assert.match(fnApp("porneGrid"), /var gm=\$\("grMoneda"\);if\(gm&&!gm\.value\.trim\(\)&&tbStare\.bot&&tbStare\.bot\.baza\)gm\.value=String\(tbStare\.bot\.baza\)\.replace\(\/\\\.PERP\$\/,""\)/);
+});
+
 console.log(`\n${teste - picate}/${teste} trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
 process.exit(picate ? 1 : 0);

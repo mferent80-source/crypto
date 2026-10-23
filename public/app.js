@@ -4996,6 +4996,7 @@ async function grAduMonede(){
   }catch(e){grStare.monede=null}
 }
 function porneGrid(){
+  var gm=$("grMoneda");if(gm&&!gm.value.trim()&&tbStare.bot&&tbStare.bot.baza)gm.value=String(tbStare.bot.baza).replace(/\.PERP$/,"");   // audit 23.10: câmpul gol ia moneda botului activ
   grAduMonede();grSoldInPagina();gridJurnalActualizeaza(false);gridHartieRender(false);gridClasamentAdu(false);gridLaboratorAdu();
   if(!grStare.timer)grStare.timer=setInterval(function(){if(grPanouVizibil()&&grStare.simbol)gridCalculeaza()},GR_REIMPROSPATARE_MS);
   renderGrid();
@@ -5895,9 +5896,11 @@ function grTrendTfHtml(f){
     // „Direcția” din stânga e regula fișei (EMA20/EMA50 + structura); aici e regula Tabloului (cât de drept merge prețul) — pot diferi, se spune
     +'<p class="tbSub">Regula din Tabloul botului: cât de drept merge prețul. „Lateral” aici = prețul se plimbă, chiar dacă EMA-urile din „Direcția” au pantă.</p></div>';
 }
+// audit 23.10: „calculat la 13:44” fără monedă ⇒ „PEPE · calculat la 13:44 · se reface singur la 5 min”; câmp gol ⇒ textul de început
+function grStareText(s,camp){if(s.inLucru)return "calculez… (aduc ~30 de zile de lumânări)";var m=s.simbol?String(s.simbol).replace(/_USDT_PERP$/,""):"";if(!s.la||!m||!String(camp||"").trim())return "futures grid Pionex · calcul + probă pe ultimele ~30 de zile";return m+" · calculat la "+new Date(s.la).toLocaleTimeString("ro-RO",{hour:"2-digit",minute:"2-digit"})+" · se reface singur la 5 min"}
 function renderGrid(){
   var box=$("grFisa"),stare=$("grStare");if(!box)return;
-  if(stare)stare.textContent=grStare.inLucru?"calculez… (aduc ~30 de zile de lumânări)":grStare.la?("calculat la "+new Date(grStare.la).toLocaleTimeString("ro-RO",{hour:"2-digit",minute:"2-digit"})+" · se reface singur la 5 min"):"futures grid Pionex · calcul + probă pe ultimele ~30 de zile";
+  if(stare)stare.textContent=grStareText(grStare,$("grMoneda")&&$("grMoneda").value);   // audit 23.10: cu moneda; fără monedă în câmp nu scrie „calculat”
   if(grStare.eroare){box.innerHTML='<div class="tbBloc"><p class="bad">'+escapeHtml(grStare.eroare)+'</p></div>';return}
   var f=grStare.fisa,ceScrie=grSimbol($("grMoneda")&&$("grMoneda").value);
   // v97.3 (27.09: "apăs pe Fișa și mă duce aiurea, fără nimic legat de moneda respectivă"): fisa altei monede (cea calculata
