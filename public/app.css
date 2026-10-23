@@ -3083,6 +3083,8 @@ html.pzDemo #tabloubot .tbPretViu{display:none!important}
 }
 /* Monte Carlo o singură dată: cardul de sus îl are, rândul din citirea de pe telefon tace cât cardul e vizibil */
 #tabloubot .tbCadru:has(>#tbMcSus:not([hidden])) #tbCitireMobil .tbCitMc{display:none}
+/* punctul 10: pe telefon „Acum” repeta cele 6 cifre ale fâșiei #pzKpi (y=114 și y=260); grila a doua tace cât fâșia are cifre */
+#pzKpi:not(:empty)~#dash #pzAcum>.pzAcumGrila{display:none}
 /* audit 23.10 · sfârșitul blocului */
 /* v100.258: pânda (v100.150) stă după orice regulă de tabel, chiar înaintea blocului v100.224 (#topLive), care rămâne ultimul - scripts/lib/panda-ultima.mjs */
 @media (max-width:640px){.sugPandaTab thead{display:table-header-group}.sugPandaTab{display:table}.sugPandaTab tbody{display:table-row-group}.sugPandaTab tr{display:table-row}.sugPandaTab td,.sugPandaTab th{display:table-cell}}

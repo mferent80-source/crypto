@@ -204,5 +204,10 @@ await test("9 CSS: pe telefon graficul vine înaintea KPI-urilor (ordinea 11–1
   assert.match(b, /#tabloubot \.tbCadru:has\(>#tbMcSus:not\(\[hidden\]\)\) #tbCitireMobil \.tbCitMc\{display:none\}/);
 });
 
+// ---------------------------------------------------------------- 10. Piața azi pe telefon: cifrele contului o singură dată
+await test("10 grila din „Acum” (telefon) se ascunde cât fâșia #pzKpi are cifre (aceleași 6 celule)", () => {
+  assert.match(CSS, /#pzKpi:not\(:empty\)~#dash #pzAcum>\.pzAcumGrila\{display:none\}/);
+});
+
 console.log(`\n${teste - picate}/${teste} trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
 process.exit(picate ? 1 : 0);
