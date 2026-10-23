@@ -138,7 +138,8 @@
     L.sort(function (a, c) { return a.p - c.p; });
     for (var mi = L.length - 1; mi >= 1; mi--) if (Math.abs(L[mi].p - L[mi - 1].p) / (hi - lo) < 0.004) { L[mi - 1].n += " · " + L[mi].n; L[mi - 1].cls += " " + L[mi].cls; L.splice(mi, 1); }
     var W = Math.max(280, latime || 1100), rand = [];   // rândurile etichetelor după lățimea REALĂ a cartelei (revizia I7)
-    L.forEach(function (x) { var w = (x.n.length + 8) * 6.3, cx = X(x.p) * W / 100, k = 0; while (rand[k] && rand[k] > cx - w / 2 - 8) k++; rand[k] = cx + w / 2; x.rand = k; });
+    /* audit 23.10: var w = (x.n.length + 8) * 6.3 … rand[k] > cx - w / 2 - 8 socotea etichete centrate; sub 12% / peste 88% ancora() le lipește de margine ⇒ pe telefon se călcau. Acum: intervalul real (ancora + lungimea prețului). */
+    L.forEach(function (x) { var w = (x.n.length + 1 + fP(x.p).length) * 6.3, xp = +X(x.p), cx = xp * W / 100, a = xp < 12 ? cx - 6 : xp > 88 ? cx + 6 - w : cx - w / 2, k = 0; while (rand[k] != null && rand[k] > a - 8) k++; rand[k] = a + w; x.rand = k; });
     var nrR = Math.max.apply(null, L.map(function (x) { return (x.rand || 0) + 1; })), h = '<div class="pzDrum' + (mic ? " pzDrumMic" : "") + '"' + (mic ? "" : ' style="padding-bottom:' + (14 + nrR * 16) + 'px"') + '><div class="pzDrumPista">';
     var gj = nr(b.gridJos), gs = nr(b.gridSus);
     if (gj && gs) h += '<i class="pzDrumGrid" style="left:' + X(gj) + '%;width:' + (X(gs) - X(gj)).toFixed(2) + '%"></i>';

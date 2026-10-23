@@ -50,5 +50,34 @@ await test("1b JTO (0,5…): scara rămâne 52 px (minimul), plotW 948 la 1000 p
   assert.equal(tel.harta.plotW, 390, "telefonul nu are scară");
 });
 
+
+// ---------------------------------------------------------------- 2. etichetele „Drumului botului” nu se calcă pe telefon
+const AS = LIB("asezare-paznic.js");
+function incarcaAsezarea() {
+  const doc = { documentElement: { classList: { add() {} } }, addEventListener() {}, getElementById: () => null, querySelector: () => null, querySelectorAll: () => [], body: { innerText: "", classList: { add() {}, remove() {} } } };
+  const ctx = { window: {}, document: doc, setInterval() {}, setTimeout() {}, addEventListener() {}, innerWidth: 390, localStorage: { getItem: () => null, setItem() {} }, console, TabloExtra: globalThis.TabloExtra };
+  ctx.window = ctx; vm.createContext(ctx); vm.runInContext(AS, ctx);
+  return ctx;
+}
+// intervalul REAL al etichetei: fără ancoră e centrată; „translateX(-6px)” pornește din punct; „calc(-100% + 6px)” se termină în punct
+function intervaleDrum(h, W) {
+  return [...h.matchAll(/<span class="pzDrumEt" style="left:([\d.]+)%;([^"]*?)top:(\d+)px[^"]*">([\s\S]*?)<\/span>/g)].map((m) => {
+    const cx = Number(m[1]) * W / 100, txt = m[4].replace(/<[^>]+>/g, ""), w = txt.length * 6.3;
+    const a = /translateX\(-6px\)/.test(m[2]) ? cx - 6 : /calc\(-100% \+ 6px\)/.test(m[2]) ? cx + 6 - w : cx - w / 2;
+    return { txt, top: Number(m[3]), a, b: a + w };
+  });
+}
+await test("2 Drumul botului la 384 px: două etichete pe același rând nu se suprapun, socotit pe ancorarea reală (margine stânga/dreapta)", () => {
+  const ctx = incarcaAsezarea();
+  const W = 384;
+  const h = ctx.AsezarePaznic.drumHtml({ id: "1", baza: "PEPE.PERP", directie: "short", pretCurent: 0.0000049623, gridJos: 0.0000048, gridSus: 0.0000050,
+    opritorPierdereActiv: true, opritorPierdereTip: "pret", opritorPierdere: 0.00000512 }, false, W);
+  const I = intervaleDrum(h, W);
+  assert.ok(I.length >= 3, "etichetele lipsesc: " + I.length);
+  for (let i = 0; i < I.length; i++) for (let j = i + 1; j < I.length; j++) if (I[i].top === I[j].top)
+    assert.ok(I[i].b + 4 <= I[j].a || I[j].b + 4 <= I[i].a, `„${I[i].txt}” [${I[i].a.toFixed(0)}–${I[i].b.toFixed(0)}] se calcă cu „${I[j].txt}” [${I[j].a.toFixed(0)}–${I[j].b.toFixed(0)}]`);
+  for (const x of I) assert.ok(x.a >= -2 && x.b <= W + 2, `„${x.txt}” iese din cartelă: ${x.a.toFixed(0)}–${x.b.toFixed(0)}`);
+});
+
 console.log(`\n${teste - picate}/${teste} trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
 process.exit(picate ? 1 : 0);
