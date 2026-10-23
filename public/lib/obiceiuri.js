@@ -186,7 +186,10 @@ var Obiceiuri = (function () {
     if (o.autopsie && Array.isArray(o.autopsie.linii) && o.autopsie.linii.length) { linii.push("Autopsia săptămânii — sfaturile care te-ar fi costat cel mai mult:"); o.autopsie.linii.forEach(function (l) { linii.push("• " + l); }); }
     if (o.laborator && Array.isArray(o.laborator.intrebari)) {
       var dov = o.laborator.intrebari.filter(function (q) { return q.verdict === "dovedit"; });
-      linii.push(dov.length ? "Laboratorul a dovedit: " + dov.map(function (q) { return q.titlu; }).join("; ") + "." : "Laboratorul: nimic dovedit încă.");
+      // v100.259 (auditul 23.10, punctul 13): „dovedit” e acum pe NET (pe zile); fără trecerea prin corecția pe toate testele (q.dupaCorectie, pus de
+      // registru) se spune ca rezultat necorectat, nu ca dovadă
+      var corect = dov.length && dov.every(function (q) { return q.dupaCorectie === true; });
+      linii.push(!dov.length ? "Laboratorul: nimic dovedit pe net încă." : (corect ? "Laboratorul a dovedit pe net, și după corecția pe toate testele: " : "Laboratorul, pe net, fără corecția pe toate testele: ") + dov.map(function (q) { return q.titlu; }).join("; ") + ".");
     }
     // v100.72: regula = actiunea (la persoana I); greseala ei e deja pe randul „Greșeala cea mai scumpă” de mai sus
     if (g && g.cost < 0) out.regula = "Regula săptămânii: " + g.dataViitoare;

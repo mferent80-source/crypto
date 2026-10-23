@@ -54,7 +54,7 @@ var GridLaborator = (function () {
         netVa = P.simuleaza(b, s, W, stVa).net;
       }
       out.push({ inValoare: inV, netVa: netVa,
-        s: s, parte: parte, net: P.simuleaza(b, s, W, st).net,
+        s: s, t: b[s].t, parte: parte, net: P.simuleaza(b, s, W, st).net,   // v100.259: și ora pornirii (blocurile pe zile, aliniate între monede)
         miscare: (m4[u] !== null && m4[u] > C.PRAG_MISCARE * o4) || (m24[u] !== null && m24[u] > C.PRAG_MISCARE * o24),
         linisteZile: run[u] / C.BARE_ZI,
         margine: poz < C.MARGINE_RANGE || poz > 1 - C.MARGINE_RANGE
@@ -70,7 +70,48 @@ var GridLaborator = (function () {
     var poz = {}; x.forEach(function (r, i) { poz[typeof r.s === "number" ? "s" + r.s : "r" + i] = 1; });   /* fără poziție (rânduri vechi): fiecare rând */
     var nEf = Math.floor(Object.keys(poz).length * C.PAS_FERESTRE / (H * C.BARE_ZI));
     var p = x.length ? plus / x.length : null;
-    return { n: x.length, nEf: nEf, pePlus: p, mediana: G.mediana(net), ic: p === null ? null : G.wilson(Math.round(p * nEf), nEf) };
+    return { n: x.length, nEf: nEf, pePlus: p, mediana: G.mediana(net), medie: net.length ? net.reduce(function (a, v) { return a + v; }, 0) / net.length : null, ic: p === null ? null : G.wilson(Math.round(p * nEf), nEf) };   // v100.259: și media netului
+  }
+
+  // v100.259 (auditul 23.10, punctul 13): testul pe BANI (netul ferestrei), pe ZILE. Unitatea = celula (monedă, bloc de H zile, etichetă): media
+  // netului ferestrelor ei - ferestrele aceleiași monede din același bloc se suprapun și nu sunt dovezi separate. Statistica = abaterea celulelor
+  // A de la media blocului lor (piața comună din bloc se scade), ponderată ca Mantel–Haenszel; p = permutarea etichetelor ÎN INTERIORUL fiecărui
+  // bloc (exactă când eticheta nu spune nimic despre net, dată fiind ziua); IC = bootstrap pe blocuri. Simularea de mărime sub H0 (piață comună,
+  // etichete grupate în timp, varianță mai mare în mișcare): scratchpad audit23/p13-h0.mjs, cifrele în raportul auditului.
+  var ZI_MS = 86400000;
+  function blocDe(r, H) { return typeof r.t === "number" ? Math.floor(r.t / (H * ZI_MS)) : typeof r.s === "number" ? Math.floor(r.s / (H * C.BARE_ZI)) : null; }
+  function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; var t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  function testNet(rows, predA, predB, H, o) {
+    o = o || {};
+    var cel = {}, blocuri = {};
+    var PAS6 = 6 * 3600000, felii = H * 24 / 6;
+    rows.forEach(function (r) {
+      if (typeof r.net !== "number" || !isFinite(r.net)) return;
+      // doar ferestrele care NU se suprapun: pornite la fiecare H zile (aliniate pe timp, aceleași pentru toate monedele)
+      if (typeof r.t === "number" ? Math.round(r.t / PAS6) % felii !== 0 : typeof r.s === "number" ? r.s % (H * C.BARE_ZI) !== 0 : false) return;
+      var a = predA(r), b = !a && predB(r); if (!a && !b) return;
+      var bl = blocDe(r, H); if (bl === null) return;
+      var k = bl + "|" + (r.simbol || "") + "|" + (a ? "A" : "B");
+      if (!cel[k]) { cel[k] = { bl: bl, A: a, s: 0, n: 0 }; (blocuri[bl] = blocuri[bl] || []).push(cel[k]); }
+      cel[k].s += r.net; cel[k].n++;
+    });
+    var bl = Object.keys(blocuri).map(function (k) { var l = blocuri[k].map(function (c) { return { v: c.s / c.n, A: c.A }; }), nA = l.filter(function (c) { return c.A; }).length; return { l: l, nA: nA, n: l.length, m: l.reduce(function (s, c) { return s + c.v; }, 0) / l.length }; })
+      .filter(function (g) { return g.nA > 0 && g.nA < g.n; });
+    var cA = 0, cB = 0; bl.forEach(function (g) { cA += g.nA; cB += g.n - g.nA; });
+    if (bl.length < (o.minBlocuri || 8) || cA < 10 || cB < 10) return { stare: "putine", blocuri: bl.length, celuleA: cA, celuleB: cB };
+    var T = function (g, et) { var s = 0; for (var i = 0; i < g.n; i++) if (et[i]) s += g.l[i].v - g.m; return s; };
+    var Wt = bl.reduce(function (s, g) { return s + g.nA * (g.n - g.nA) / g.n; }, 0), obs = 0;
+    bl.forEach(function (g) { g.et = g.l.map(function (c) { return c.A; }); obs += T(g, g.et); });
+    var R = o.reps || 10000, rnd = mulberry32(o.seed || 259), peste = 0;
+    for (var r = 0; r < R; r++) {
+      var s = 0;
+      for (var q = 0; q < bl.length; q++) { var g = bl[q], e = g.et.slice(); for (var i = e.length - 1; i > 0; i--) { var j = Math.floor(rnd() * (i + 1)), t = e[i]; e[i] = e[j]; e[j] = t; } s += T(g, e); }
+      if (Math.abs(s) >= Math.abs(obs) - 1e-12) peste++;
+    }
+    var rb = mulberry32((o.seed || 259) + 7919), bs = [];
+    for (var k2 = 0; k2 < 1000; k2++) { var a2 = 0, w2 = 0; for (var e2 = 0; e2 < bl.length; e2++) { var h = bl[Math.floor(rb() * bl.length)]; a2 += T(h, h.et); w2 += h.nA * (h.n - h.nA) / h.n; } if (w2 > 0) bs.push(a2 / w2); }
+    bs.sort(function (x, y) { return x - y; });
+    return { stare: "testat", dif: obs / Wt, p: (peste + 1) / (R + 1), pMin: 1 / (R + 1), ic: bs.length ? [bs[Math.floor(bs.length * 0.025)], bs[Math.min(bs.length - 1, Math.floor(bs.length * 0.975))]] : null, blocuri: bl.length, celuleA: cA, celuleB: cB };
   }
 
   function compara(rows, predA, predB, H) {
@@ -78,11 +119,15 @@ var GridLaborator = (function () {
     var A = grupa(rows, predA, H), B = grupa(rows, predB, H);
     var aA = grupa(pe("a"), predA, H), aB = grupa(pe("a"), predB, H), tA = grupa(pe("t"), predA, H), tB = grupa(pe("t"), predB, H);
     var out = { A: A, B: B, alegere: { A: aA, B: aB }, nevazut: { A: tA, B: tB }, verdict: "n-am-aflat" };
-    if (A.nEf < 10 || B.nEf < 10 || aA.n < 5 || aB.n < 5 || tA.n < 5 || tB.n < 5) return out;
-    var sa = Math.sign(aA.pePlus - aB.pePlus), st = Math.sign(tA.pePlus - tB.pePlus);
+    // v100.259 (auditul 23.10, punctul 13): „dovedit” pe BANI, nu pe procentul de ferestre pe plus (un grid câștigă des puțin și pierde rar mult):
+    // diferența de net A − B pe zile (testNet), același semn pe alegere și pe nevăzut, p < 0,05 - p-ul intră în registrul BH (pentruRegistru).
+    // Mărimea sub H0 (1.000 de seturi): p < 0,05 în 5,0%, „dovedit” în 4,2% (monede cu volatilitate diferită: 5,5% / 5,1%).
+    out.net = testNet(rows, predA, predB, H);
+    out.netAlegere = testNet(pe("a"), predA, predB, H, { reps: 2000, minBlocuri: 4 }); out.netNevazut = testNet(pe("t"), predA, predB, H, { reps: 2000, minBlocuri: 4 });
+    if (out.net.stare !== "testat" || out.netAlegere.stare !== "testat" || out.netNevazut.stare !== "testat") return out;
+    var sa = Math.sign(out.netAlegere.dif), st = Math.sign(out.netNevazut.dif);
     if (sa !== 0 && st !== 0 && sa !== st) { out.verdict = "contrazis"; return out; }
-    var separat = A.ic && B.ic && (A.ic[1] < B.ic[0] || B.ic[1] < A.ic[0]);
-    if (sa !== 0 && sa === st && separat) out.verdict = "dovedit";
+    if (sa !== 0 && sa === st && sa === Math.sign(out.net.dif) && out.net.p < 0.05) out.verdict = "dovedit";
     return out;
   }
 
@@ -101,9 +146,15 @@ var GridLaborator = (function () {
     rows.forEach(function (r) { if (r.inValoare && typeof r.netVa === "number") { dub.push({ parte: r.parte, net: r.netVa, varianta: "va" }); dub.push({ parte: r.parte, net: r.net, varianta: "std" }); } });
     if (VA) q.push({ id: "valoare", titlu: "Grid ancorat pe zona de valoare (7 zile) vs gridul standard, când prețul e în zonă (ipoteză)", eticheteA: "ancorat pe zonă", eticheteB: "standard",
       c: compara(dub, function (r) { return r.varianta === "va"; }, function (r) { return r.varianta === "std"; }, H) });
-    return q.map(function (x) { return { id: x.id, titlu: x.titlu, eticheteA: x.eticheteA, eticheteB: x.eticheteB, A: x.c.A, B: x.c.B, alegere: x.c.alegere, nevazut: x.c.nevazut, verdict: x.c.verdict }; });
+    return q.map(function (x) { return { id: x.id, titlu: x.titlu, eticheteA: x.eticheteA, eticheteB: x.eticheteB, A: x.c.A, B: x.c.B, alegere: x.c.alegere, nevazut: x.c.nevazut, verdict: x.c.verdict, net: x.c.net || null }; });
   }
 
-  return { ferestre: ferestre, compara: compara, intrebari: intrebari };
+  // v100.259 (punctul 13): întrebările testate intră în registrul tuturor testelor Radarului (corecția Benjamini–Hochberg, Verdicte.registru o.alte)
+  function pentruRegistru(intrebari) {
+    return (Array.isArray(intrebari) ? intrebari : []).filter(function (q) { return q && q.net && q.net.stare === "testat"; }).map(function (q) {
+      return { sursa: "Laboratorul gridului", afirmatie: q.titlu, p: q.net.p, pMin: q.net.pMin, dif: q.net.dif, felul: "laborator", regula: q.verdict === "dovedit", directie: q.net.dif > 0 ? q.eticheteA + " iese mai bine pe net" : q.eticheteA + " iese mai rău pe net" };
+    });
+  }
+  return { ferestre: ferestre, compara: compara, intrebari: intrebari, testNet: testNet, pentruRegistru: pentruRegistru };
 })();
 if (typeof globalThis !== "undefined") globalThis.GridLaborator = GridLaborator;

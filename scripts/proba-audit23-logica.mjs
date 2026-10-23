@@ -264,5 +264,69 @@ await test("(15) MMR 0,01 nu mai e numit „prudent” (la monedele mici Pionex 
   assert.match(r, /MAI DEVREME|mai devreme/);
 });
 
+// ---------- (12) BH: p-ul nu mai are podeaua 1/1001 ----------
+const V = new Function("TextRo", `${lib("verdicte.js")}; return Verdicte;`)(globalThis.TextRo);
+const ZI = 86400000, T0 = Date.parse("2026-01-05T15:00:00Z");
+const efectClar = () => { const ev = [], r = M.generator(1); for (let i = 0; i < 400; i++) ev.push({ s: "poarta-t212", k: "S" + (i % 60), n: i % 2 ? "cumpara" : "nu", t: T0 + Math.floor(i / 20) * 30 * ZI + i * 1000, h: 20, r: 0, val: (i % 2 ? 0.03 : -0.01) + (r() - 0.5) * 0.04 }); return ev; };
+await test("(12) un efect clar dă p sub 1/1001 (repetițiile urcă la 10.000) și poartă rezoluția lui (pMin)", () => {
+  const t0 = Date.now(), c = V.calibrare(efectClar()), ms = Date.now() - t0;
+  assert.equal(c[0].test.stare, "testat");
+  assert.ok(c[0].test.p < 0.0002, "p " + c[0].test.p);
+  assert.ok(c[0].test.pMin > 0 && c[0].test.pMin <= 1 / 10001 + 1e-12, "pMin " + c[0].test.pMin);
+  assert.ok(ms < 5000, "calibrarea durează " + ms + " ms");
+});
+await test("(12) registrul cu 60 de teste: efectul clar trece BH (cu 1.000 de repetiții nu putea: 1/1001 > 0,05/60)", () => {
+  const cal = V.calibrare(efectClar());
+  const alte = Array.from({ length: 59 }, (_, i) => ({ sursa: "zgomot " + i, afirmatie: "x", p: 0.5, dif: 0, felul: "alt", regula: true }));
+  const reg = V.registru({ calibrare: cal, alte });
+  assert.equal(reg.length, 60);
+  const v = reg.find((x) => x.felul === "verdict");
+  assert.equal(v.treceBh, true, "p " + v.p + " · prag " + 0.05 / 60);
+  assert.equal(v.poateTrece, true);
+});
+await test("(12) registrul spune când un test N-AR PUTEA trece oricât de puternic ar fi (rezoluția p-ului peste pragul BH)", () => {
+  const reg = V.registru({ calibrare: [], alte: [{ sursa: "a", afirmatie: "x", p: 0.001, pMin: 0.001, dif: 1, felul: "alt", regula: true }].concat(Array.from({ length: 99 }, (_, i) => ({ sursa: "z" + i, afirmatie: "x", p: 0.6, felul: "alt", regula: true }))) });
+  const a = reg.find((x) => x.sursa === "a");
+  assert.equal(a.poateTrece, false);
+});
+
+// ---------- (13) laboratorul: „dovedit” pe net, pe zile, în registru ----------
+const GL = new Function("GridCalcul", "GridProba", "Valoare", `${lib("grid-laborator.js")}; return GridLaborator;`)(G, GP, undefined);
+// A: des pe plus puțin, rar pe minus mult (media pe minus); B: jumătate-jumătate, media pe plus ⇒ procentul zice A, banii zic B
+function randuriLab(seed) {
+  const r = M.generator(seed), out = [];
+  for (let k = 0; k < 20; k++) for (let s = 0; s < 240; s++) {
+    const A = (k + Math.floor(s / 8)) % 2 === 0, u = r(), net = A ? (u < 0.9 ? 0.002 : -0.05) : (u < 0.5 ? 0.01 : -0.008);
+    out.push({ simbol: "C" + k, s: s * 24, t: Date.UTC(2026, 6, 1) + s * 6 * 3600000, parte: s < 150 ? "a" : s >= 170 ? "t" : null, net, miscare: A });
+  }
+  return out.filter((x) => x.parte);
+}
+await test("(13) procentul pe plus mai mare, banii mai puțini ⇒ verdictul urmează BANII (A iese mai rău pe net)", () => {
+  const c = GL.compara(randuriLab(3), (x) => x.miscare, (x) => !x.miscare, 2);
+  assert.ok(c.A.pePlus > c.B.pePlus, "premisa: A e mai des pe plus");
+  assert.equal(c.net.stare, "testat");
+  assert.ok(c.net.dif < 0, "dif pe net " + c.net.dif);
+  assert.equal(c.verdict, "dovedit");
+  assert.ok(c.net.p < 0.05 && c.net.ic[1] < 0, JSON.stringify(c.net));
+  assert.ok(typeof c.A.medie === "number");
+});
+await test("(13) întrebările intră în registrul BH (pentruRegistru) cu p, pMin și direcția pe net", () => {
+  const q = GL.intrebari(randuriLab(4), 2), l = GL.pentruRegistru(q);
+  assert.ok(l.length >= 1);
+  const m = l.find((x) => /mișcare/.test(x.afirmatie));
+  assert.equal(m.felul, "laborator"); assert.ok(m.p > 0 && m.p < 0.05); assert.ok(m.pMin > 0); assert.match(m.directie, /pe net/);
+  const reg = V.registru({ calibrare: [], alte: l });
+  assert.ok(reg.some((x) => x.felul === "laborator"));
+});
+await test("(13) raportul de duminică nu mai zice „Laboratorul a dovedit” fără corecție", () => {
+  const OB = new Function("JurnalTrade", `${lib("obiceiuri.js")}; return Obiceiuri;`)({ rezumat: () => ({ n: 1, total: 1, net: 1, pePlusNet: 1, grile: 1, pozitie: 0, comisioane: 0, funding: 0, greseli: [] }) });
+  const ac = Date.UTC(2026, 9, 25), o = { acum: ac, trades: [{ inchis: ac - 1000 }], laborator: { intrebari: [{ titlu: "Pornit după mișcare vs pornit în liniște", verdict: "dovedit" }] } };
+  const r = OB.raportDuminica(o).linii.join("\n");
+  assert.doesNotMatch(r, /Laboratorul a dovedit:/);
+  assert.match(r, /Laboratorul, pe net, fără corecția pe toate testele: Pornit după mișcare/);
+  o.laborator.intrebari[0].dupaCorectie = true;
+  assert.match(OB.raportDuminica(o).linii.join("\n"), /Laboratorul a dovedit pe net, și după corecția pe toate testele/);
+});
+
 console.log(`\n${teste - picate}/${teste} ${picate ? "PICĂ" : "trec"}`);
 process.exitCode = picate ? 1 : 0;

@@ -721,7 +721,8 @@ await test("v79.5 ferestre: fiecare fereastra are net + conditii stiute LA START
 const rand = (parte, net, cond) => Object.assign({ parte, net, miscare: false, linisteZile: 0, margine: false }, cond);
 await test("v79.5 compara: efect real si stabil in ambele parti -> DOVEDIT; semn schimbat -> CONTRAZIS; putine/amestecate -> N-AM AFLAT; n efectiv = ferestre / 8", () => {
   let rows = [];
-  for (let i = 0; i < 400; i++) rows.push(rand(i < 260 ? "a" : "t", (i % 10 < 8 ? -0.01 : 0.01), { miscare: true }), rand(i < 260 ? "a" : "t", (i % 10 < 2 ? -0.01 : 0.01), { miscare: false }));
+  // v100.259 (auditul 23.10): verdictul e pe net, pe zile ⇒ rândurile poartă poziția de start (o fereastră la 6 h = 24 de bare)
+  for (let i = 0; i < 400; i++) rows.push(rand(i < 260 ? "a" : "t", (i % 10 < 8 ? -0.01 : 0.01), { miscare: true, s: i * 24 }), rand(i < 260 ? "a" : "t", (i % 10 < 2 ? -0.01 : 0.01), { miscare: false, s: i * 24 }));
   const c = GL.compara(rows, (x) => x.miscare, (x) => !x.miscare, 2);
   assert.equal(c.verdict, "dovedit"); assert.ok(c.A.pePlus < c.B.pePlus); assert.equal(c.A.nEf, Math.floor(400 / 8));
   const rows2 = rows.map((x) => x.parte === "t" ? Object.assign({}, x, { miscare: !x.miscare }) : x);
