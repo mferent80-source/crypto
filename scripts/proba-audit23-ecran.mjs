@@ -416,7 +416,7 @@ await test("25 grRandSumaMaxima dÄƒ lui sumaMaxima p5-ul Simulatorului pe aceeaÈ
   assert.equal(mk({ sim: "PEPE", rez: { eroare: "x" } })({ simbol: "PEPE_USDT_PERP" }), null);
   assert.equal(mk({ sim: "PEPE", rez: null })({ simbol: "PEPE_USDT_PERP" }), null);
   const g = fnApp("grRandSumaMaxima");
-  assert.match(g, /var p5=grP5Simulator\(f\),max=GridProba\.sumaMaxima\(sold,pierdere,rea,p5\)/);
+  assert.match(g, /var p5=typeof grP5Simulator==="function"\?grP5Simulator\(f\):null,max=GridProba\.sumaMaxima\(sold,pierdere,rea,p5\)/);
   assert.match(g, /cele mai proaste 5% din drumurile Simulatorului/);
 });
 

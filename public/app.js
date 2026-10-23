@@ -5165,7 +5165,7 @@ function grRandSumaMaxima(f){
   var rea=a==null?(t==null?null:t):(t==null?a:Math.min(a,t));   // cea mai proasta din TOATE ferestrele
   if(!(sold>0))return grRand("Cât investesc?","scrie soldul contului mai sus și îți spun");
   if(!(pierdere>0))return grRand("Cât investesc?","scrie ce pierdere accepți, în % din cont (mai mare ca 0)");
-  var p5=grP5Simulator(f),max=GridProba.sumaMaxima(sold,pierdere,rea,p5),dinSim=p5!=null&&(rea==null||!(rea<0)||p5<rea),rr=dinSim?p5:rea;
+  var p5=typeof grP5Simulator==="function"?grP5Simulator(f):null,max=GridProba.sumaMaxima(sold,pierdere,rea,p5),dinSim=p5!=null&&(rea==null||!(rea<0)||p5<rea),rr=dinSim?p5:rea;
   if(max==null)return grRand("Cât investesc?",rea==null?"n-am cea mai proastă fereastră":"pe istoric nicio fereastră n-a ieșit pe minus: nu pot socoti un maxim");
   // audit 19.10: cifra e a setarii afisate (levierul ales, grilele de copiat - GridProba.fisa o re-ruleaza) si spune la ce levier e
   var la=f.probaLa||{},Lx=la.levier||(f.setare&&f.setare.levier),P=function(x){return TextRo.pct(x*100,1)};
