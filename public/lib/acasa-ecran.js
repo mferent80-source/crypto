@@ -166,7 +166,7 @@ function acasaVerd(el, piata, v, extra) {
   el.className = "acVerd acVerd-" + v.nivel;
   // v100.224: propoziția e rândul mare; eticheta vremii e cipul de deasupra. Cuvintele din faCe rămân. Fără faCe, eticheta rămâne mare.
   el.innerHTML = '<div class="acPiata">' + piata + '</div><div class="acNiv acNiv-' + v.nivel + '">' + escapeHtml(v.eticheta) + '</div>'
-    + (v.faCe ? '<div class="acFac">' + escapeHtml(v.faCe) + '</div>' : '')
+    + (v.faCe ? '<div class="acFac' + (v.ton === "atentie" ? " acFacFrana" : "") + '">' + escapeHtml(v.faCe) + '</div>' : '')   /* audit 23.10: titlul frânat cu tonul frânei */
     + '<p><b>' + escapeHtml(v.titlu) + '</b></p>' + (v.text ? '<p class="acMut">' + escapeHtml(v.text) + '</p>' : '') + (extra || '');
 }
 function acCadran(val, f, cul0, cul1, et0, et1, eticheta) {
@@ -363,9 +363,9 @@ function acFranaSalveaza() {
 function acFraneaza(v, fel) {
   if (!v || typeof Acasa === "undefined" || !Acasa.franaVerb) return v;
   var o = { fel: fel }, rs = acRaportStare(), ev = acEvenimentAzi();
+  if (acExportNePotrivit()) o.exportNePotrivit = true;   // audit 23.10: exportul T212 nepotrivit e frâna cardului Nasdaq (Acasa.franaVerb o aplică doar la bursă)
   if (fel === "crypto") {
     var pz = acPauzaSezon(); if (pz > 0) { o.pauza = true; o.pauzaN = pz; }
-    if (acExportNePotrivit()) o.exportNePotrivit = true;
     var sideF = Acasa.fundingAtentie && acasa.d && acasa.d.piataCol ? Acasa.fundingAtentie(acasa.d.piataCol.funding) : "";
     if (sideF) o.fundingAtentie = sideF;
   }

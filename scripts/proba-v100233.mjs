@@ -27,7 +27,9 @@ const act = citeste("public", "lib", "actiuni-semnale.js");
 const col = citeste("scripts", "colector.mjs");
 const tp = citeste("scripts", "lib", "tura-piata.mjs");
 const idx = citeste("public", "index.html");
-const FRAZA = "N-aș da o sumă: jurnalul nu se potrivește cu cantitatea din cont.";
+// v100.259 (audit 23.10): pe Acasă fraza spune că e la T212 și unde se vede; paginile T212 (actiuni-semnale) păstrează fraza veche.
+// Fraza veche: "N-aș da o sumă: jurnalul nu se potrivește cu cantitatea din cont."
+const FRAZA = "N-aș da o sumă: jurnalul T212 nu se potrivește cu contul → Contul întreg.";
 const lin = () => AC.vreme({ clasament: { evita: 10, candidati: 90, dir: { long: 45, short: 45, neutru: 10 } }, btc: { miscare: false }, fg: 50 });
 const ros = () => AC.vreme({ clasament: { evita: 70, candidati: 30, dir: { long: 45, short: 45, neutru: 10 } }, btc: { miscare: false }, fg: 50 });
 const sus = (i) => 100 + i * 0.2;
@@ -36,14 +38,18 @@ const larga = () => AC.vremeBursa({ qqq: serie(sus), vix: 14, ndx: { e50: 70, n:
 const ab = (extra) => Object.assign({ raportStare: "ok", raport: { reconciliere: { t212: { abateri: [{ ticker: "AAPL_US_EQ" }] } }, valoare: { total: 100000 }, risc: { var95: 1000 } } }, extra || {});
 
 await test("gura care invită spune fraza de cantitate și la bursă; pauza rămâne prima; roșul nu o ia", () => {
-  assert.equal(AC.franaVerb(lin(), ab()).faCe, FRAZA);
+  // v100.259 (audit 23.10): abaterea de cantitate e a jurnalului T212 ⇒ nu mai frânează cardul Crypto, doar pe Nasdaq. Era: assert.equal(AC.franaVerb(lin(), ab()).faCe, FRAZA);
+  assert.match(AC.franaVerb(lin(), ab()).faCe, /^Aș porni/);
   assert.equal(FRAZA.length <= 110, true);
   assert.match(AC.franaVerb(lin(), ab({ fel: "crypto", pauza: true, pauzaN: 3 })).faCe, /alt bot azi/);
   assert.equal(AC.franaVerb(ros(), ab()).faCe, ros().faCe);
   assert.equal(AC.franaVerb(larga(), ab({ fel: "bursa" })).faCe, FRAZA);
-  assert.match(AC.franaVerb(larga(), ab({ fel: "bursa" })).faCe, /jurnalul nu se potrivește/);
-  assert.equal(AC.franaVerb(lin(), ab({ raportStare: "vechi", raportOre: 20 })).faCe, FRAZA);
-  assert.equal(AC.franaVerb(lin(), { raportStare: "lipsa", exportNePotrivit: true }).faCe, FRAZA);
+  assert.match(AC.franaVerb(larga(), ab({ fel: "bursa" })).faCe, /jurnalul T212 nu se potrivește/);   // v100.259: era /jurnalul nu se potrivește/
+  // v100.259: pe Crypto rămân frânele crypto (raportul vechi / lipsă); cantitatea și exportul T212 frânează doar Nasdaq. Era: … .faCe, FRAZA) de două ori
+  assert.match(AC.franaVerb(lin(), ab({ raportStare: "vechi", raportOre: 20 })).faCe, /e vechi de 20 de ore/);
+  assert.match(AC.franaVerb(lin(), { raportStare: "lipsa", exportNePotrivit: true }).faCe, /raportul pe tot contul lipsește/);
+  assert.equal(AC.franaVerb(larga(), ab({ fel: "bursa", raportStare: "vechi", raportOre: 20 })).faCe, FRAZA);
+  assert.equal(AC.franaVerb(larga(), { fel: "bursa", raportStare: "lipsa", exportNePotrivit: true }).faCe, FRAZA);
   assert.match(AC.franaVerb(lin(), { fel: "crypto", pauza: true, pauzaN: 4, exportNePotrivit: true }).faCe, /alt bot azi/);
   assert.match(AC.franaVerb(lin(), { raportStare: "ok", raport: { reconciliere: { t212: { abateri: [] } }, valoare: { total: 100000 }, risc: { var95: 1000 } } }).faCe, /^Aș porni/);
   assert.match(act, /N-aș da o sumă: jurnalul nu se potrivește cu cantitatea din cont\./);

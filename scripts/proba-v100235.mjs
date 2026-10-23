@@ -60,7 +60,8 @@ await test("gura care invită aude semnul; pauza, cantitatea, VaR-ul și evenime
   assert.equal(AC.franaVerb(lin(), Object.assign({ fundingAtentie: "short" }, ok)).faCe, SHORT);
   assert.ok(LONG.length <= 110 && SHORT.length <= 110);
   assert.match(AC.franaVerb(lin(), Object.assign({ fundingAtentie: "long", pauza: true, pauzaN: 3 }, ok)).faCe, /alt bot azi/);
-  assert.match(AC.franaVerb(lin(), { fundingAtentie: "long", raportStare: "ok", raport: { reconciliere: { t212: { abateri: [{ ticker: "AAPL" }] } }, valoare: { total: 100000 }, risc: { var95: 1000 } } }).faCe, /jurnalul nu se potrivește/);
+  assert.equal(AC.franaVerb(lin(), { fundingAtentie: "long", raportStare: "ok", raport: { reconciliere: { t212: { abateri: [{ ticker: "AAPL" }] } }, valoare: { total: 100000 }, risc: { var95: 1000 } } }).faCe, LONG);   // v100.259 (audit 23.10): abaterea T212 nu mai frânează Crypto (era /jurnalul nu se potrivește/); pe Nasdaq:
+  assert.match(AC.franaVerb(larga(), { fel: "bursa", fundingAtentie: "long", raportStare: "ok", raport: { reconciliere: { t212: { abateri: [{ ticker: "AAPL" }] } }, valoare: { total: 100000 }, risc: { var95: 1000 } } }).faCe, /jurnalul T212 nu se potrivește/);
   assert.match(AC.franaVerb(lin(), { fundingAtentie: "short", raportStare: "ok", raport: { valoare: { total: 100000 }, risc: { var95: 5000 } } }).faCe, /^Aș reduce/);
   assert.match(AC.franaVerb(lin(), Object.assign({ fundingAtentie: "long", eveniment: "CPI m/m" }, ok)).faCe, /chiar înainte de CPI/);
   assert.equal(AC.franaVerb(ros(), Object.assign({ fundingAtentie: "long" }, ok)).faCe, ros().faCe);

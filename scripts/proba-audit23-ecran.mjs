@@ -79,5 +79,33 @@ await test("2 Drumul botului la 384 px: două etichete pe același rând nu se s
   for (const x of I) assert.ok(x.a >= -2 && x.b <= W + 2, `„${x.txt}” iese din cartelă: ${x.a.toFixed(0)}–${x.b.toFixed(0)}`);
 });
 
+// ---------------------------------------------------------------- 3. frâna de cantitate T212 stă pe cardul Nasdaq, cu tonul frânei
+const ctxAc = { console, Date, Math, Object, Array, String, Number, JSON, isFinite, Intl, TextRo: globalThis.TextRo };
+ctxAc.window = ctxAc; vm.createContext(ctxAc); vm.runInContext(LIB("acasa.js"), ctxAc);
+const AC = ctxAc.Acasa;
+const linA = () => AC.vreme({ clasament: { evita: 10, candidati: 90, dir: { long: 45, short: 45, neutru: 10 } }, btc: { miscare: false }, fg: 50 });
+const largaA = () => AC.vremeBursa({ qqq: Array.from({ length: 260 }, (_, i) => ({ c: 100 + i * 0.2 })), vix: 14, ndx: { e50: 70, n: 100 } });
+const abA = (extra) => Object.assign({ raportStare: "ok", raport: { reconciliere: { t212: { abateri: [{ ticker: "AAPL_US_EQ" }] } }, valoare: { total: 100000 }, risc: { var95: 1000 } } }, extra || {});
+await test("3a cardul Crypto nu poartă frâna de acțiuni (abaterea de cantitate T212 / exportul nepotrivit)", () => {
+  assert.match(AC.franaVerb(linA(), abA({ fel: "crypto" })).faCe, /^Aș porni/);
+  assert.match(AC.franaVerb(linA(), { fel: "crypto", raportStare: "ok", exportNePotrivit: true, raport: { valoare: { total: 100000 }, risc: { var95: 1000 } } }).faCe, /^Aș porni/);
+});
+await test("3b cardul Nasdaq: fraza spune că e la T212 și unde se vede (Contul întreg); tonul e al frânei (atenție)", () => {
+  const r = AC.franaVerb(largaA(), abA({ fel: "bursa" }));
+  assert.match(r.faCe, /T212/); assert.match(r.faCe, /Contul întreg/); assert.ok(r.faCe.length <= 110, r.faCe);
+  assert.equal(r.ton, "atentie");
+  const r2 = AC.franaVerb(largaA(), { fel: "bursa", exportNePotrivit: true });
+  assert.match(r2.faCe, /T212/);
+  assert.equal(AC.franaVerb(linA(), { fel: "crypto", pauza: true, pauzaN: 3 }).ton, "atentie", "și pauza e o frână");
+  assert.equal(AC.franaVerb(largaA(), { fel: "bursa" }).ton, undefined, "fără frână, tonul e al pieței");
+});
+await test("3c desenul: titlul frânat are clasa lui, CSS-ul îl colorează cu --warn; exportul nepotrivit ajunge și la bursă", () => {
+  const AE = LIB("acasa-ecran.js");
+  assert.match(AE, /v\.ton === "atentie" \? " acFacFrana" : ""/);
+  assert.match(CSS, /#dash \.acVerd \.acFac\.acFacFrana\{color:var\(--warn\)\}/);
+  const f = AE.slice(AE.indexOf("function acFraneaza("), AE.indexOf("function acMasuraLin("));
+  assert.ok(f.indexOf("acExportNePotrivit()") < f.indexOf('if (fel === "crypto")'), "exportul nepotrivit se cere doar pentru crypto");
+});
+
 console.log(`\n${teste - picate}/${teste} trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
 process.exit(picate ? 1 : 0);

@@ -271,7 +271,9 @@ var Acasa = (function () {
   // v100.231: gura care invită citește pauza, raportul pe tot contul și evenimentul de azi.
   // v100.233: după pauză, gura crypto care invită aude și abaterea de cantitate (aceeași frază ca la acțiuni) și exportul care nu se potrivește cu API-ul.
   // vreme() și vremeBursa() rămân neschimbate; frâna se aplică după ele, la afișare și la trimitere.
-  var FRAZA_CANTITATE = "N-aș da o sumă: jurnalul nu se potrivește cu cantitatea din cont.";
+  // audit 23.10: abaterea e a jurnalului T212 ⇒ frâna stă pe cardul Nasdaq, nu pe Crypto, și spune unde se vede.
+  // Fraza veche („N-aș da o sumă: jurnalul nu se potrivește cu cantitatea din cont.”) rămâne pe paginile T212 (actiuni-semnale, t212-ecran).
+  var FRAZA_CANTITATE = "N-aș da o sumă: jurnalul T212 nu se potrivește cu contul → Contul întreg.";
   var FRAZA_FUNDING = {
     long: "N-aș porni boți noi: longul plătește un funding mult peste obicei.",
     short: "N-aș porni boți noi: shortul plătește un funding mult peste obicei."
@@ -288,13 +290,18 @@ var Acasa = (function () {
     var k = Math.round(Number(n)); if (!(k > 0)) k = 3;
     return "N-aș porni alt bot azi: " + cate(k, "pierdere", "pierderi") + " la rând.";
   }
+  // audit 23.10: titlul frânat poartă tonul frânei (atenție), nu pe al pieței (verde pe „liniște”).
   function franaVerb(v, o) {
+    var r = franaText(v, o);
+    return r && v && r !== v && r.faCe !== v.faCe ? Object.assign(r, { ton: "atentie" }) : r;
+  }
+  function franaText(v, o) {
     o = o || {};
     if (!v || typeof v !== "object" || !v.faCe) return v;
     var fel = o.fel === "bursa" ? "bursa" : "crypto";
     if (fel === "crypto" && o.pauza === true) return Object.assign({}, v, { faCe: frazaPauza(o.pauzaN) });
     if (!invita(v.faCe, fel)) return v;
-    if (areAbateriCantitate(o)) return Object.assign({}, v, { faCe: FRAZA_CANTITATE });
+    if (fel === "bursa" && areAbateriCantitate(o)) return Object.assign({}, v, { faCe: FRAZA_CANTITATE });
     if (o.raportStare === "lipsa") return Object.assign({}, v, { faCe: "N-aș porni nimic nou: raportul pe tot contul lipsește." });
     if (o.raportStare === "vechi") {
       var ore = Math.round(Number(o.raportOre)); if (!(ore > 0)) ore = 12;
