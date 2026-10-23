@@ -111,14 +111,15 @@ const PZ = await import(pathToFileURL(path.join(RAD, "scripts", "lib", "poza.mjs
 await test("ritmul pozei (el, 01.10): 08–16 la 3 min, 16–17 la 30 s, 17–23 la 1,5 min, 23–08 nimic (ora Romaniei, si iarna)", () => {
   const T = (s) => Date.parse(s);
   assert.equal(PZ.cadentaPoza({ acum: T("2026-10-01T09:00:00Z"), botiActivi: 1 }), 180000, "12:00 RO");
-  assert.equal(PZ.cadentaPoza({ acum: T("2026-10-01T13:00:00Z"), botiActivi: 0 }), 30000, "16:00 RO fix");
-  assert.equal(PZ.cadentaPoza({ acum: T("2026-10-01T13:59:00Z"), botiActivi: 0 }), 30000, "16:59 RO");
+  // v100.259 (auditul 23.10, punctul 3): 16–17 la 60 s (nu 30 s) - fereastra cea mai deasă rărită, cota KV a contului Cloudflare
+  assert.equal(PZ.cadentaPoza({ acum: T("2026-10-01T13:00:00Z"), botiActivi: 0 }), 60000, "16:00 RO fix");
+  assert.equal(PZ.cadentaPoza({ acum: T("2026-10-01T13:59:00Z"), botiActivi: 0 }), 60000, "16:59 RO");
   assert.equal(PZ.cadentaPoza({ acum: T("2026-10-01T14:00:00Z"), botiActivi: 1 }), 90000, "17:00 RO");
   assert.equal(PZ.cadentaPoza({ acum: T("2026-10-04T18:00:00Z"), botiActivi: 0 }), 90000, "duminica 21:00 RO - si in weekend");
   assert.equal(PZ.cadentaPoza({ acum: T("2026-10-01T20:00:00Z"), botiActivi: 1 }), null, "23:00 RO fix: gata");
   assert.equal(PZ.cadentaPoza({ acum: T("2026-10-02T04:59:00Z"), botiActivi: 1 }), null, "07:59 RO");
   assert.equal(PZ.cadentaPoza({ acum: T("2026-10-02T05:00:00Z"), botiActivi: 1 }), 180000, "08:00 RO");
-  assert.equal(PZ.cadentaPoza({ acum: T("2026-12-01T14:30:00Z"), botiActivi: 0 }), 30000, "iarna (UTC+2): 16:30 RO");
+  assert.equal(PZ.cadentaPoza({ acum: T("2026-12-01T14:30:00Z"), botiActivi: 0 }), 60000, "iarna (UTC+2): 16:30 RO");   // v100.259: 60 s
   assert.equal(PZ.cadentaPoza({ acum: T("2026-12-01T21:30:00Z"), botiActivi: 1 }), null, "iarna: 23:30 RO");
   const col = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8");
   assert.match(col, /setInterval\(\(\) => \{ bate\(\); turaPoza\(\)/, "un ceas separat pentru poza (bucla e la 60 s); v100.196: și bătaia din colector.pid");

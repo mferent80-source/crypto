@@ -31,7 +31,7 @@ import { execFile, spawn } from "node:child_process";
 import { adresaTailscale } from "./lib/adresa-radar.mjs";
 import { turaT212 as turaT212Modul, turaPlanuri as turaPlanuriModul, turaCfActiuni as turaCfActiuniModul } from "./lib/tura-t212.mjs";
 import { turaT212Exec } from "./lib/tura-t212.mjs";   // v101.102: completarea o dată a istoricului (tipul ordinului, ora) - jurnalul de execuție
-import { ziSesiune, construiestePoza, alerteSLTP, fxDinPozitii, costLeiDinLoturi, nivDinNiveluri, prevClose, prevSimbol, cadentaPoza, alerteSimboluri, alerteT212Pasi, alertaBotPas, bataieNecesara, paznicLaDupaEsec, pret30DinIstoric, pret24hDinIstoric, ziDinKlines } from "./lib/poza.mjs";
+import { ziSesiune, construiestePoza, alerteSLTP, fxDinPozitii, costLeiDinLoturi, nivDinNiveluri, prevClose, prevSimbol, cadentaPoza, alerteSimboluri, alerteT212Pasi, alertaBotPas, bataieNecesara, paznicLaDupaEsec, amprentaPoza, urcaPoza, pret30DinIstoric, pret24hDinIstoric, ziDinKlines } from "./lib/poza.mjs";
 import { creeazaYahooExtra } from "./lib/yahoo-extra.mjs";
 import { strangeBoti } from "./lib/tura-arhiva-boti.mjs";
 import { avertizariPornire } from "./lib/tura-pornire.mjs";
@@ -1207,7 +1207,7 @@ async function adresaRadarului() {
   if (fix && await raspundeCaRadar(fix, 6000)) return (tunelUrl = fix);
   return tunelUrl;
 }
-let pozaOkLa = 0, ultimeleSimboluri = {}, contT212 = null;
+let pozaOkLa = 0, ultimeleSimboluri = {}, contT212 = null; var pozaAmprenta = null;   // v100.259 (punctul 3): amprenta ultimei poze urcate
 async function turaPoza() {
   const botiActivi = ultimiiBoti.filter((b) => b && b.id && b.activ !== false).length;
   const cad = cadentaPoza({ acum: Date.now(), botiActivi });   // v101.34 (el, 01.10): 08–16 la 3 min, 16–17 la 30 s, 17–23 la 1,5 min, noaptea nimic
@@ -1230,14 +1230,18 @@ async function turaPoza() {
     // v101.86: alertele de azi, grupate pe filele paginii alerts - cu simbolurile chiar din poză (boții cu numele din botPoza)
     poza.alerte = alertePentruPoza(alerteZi, { detinute: poza.t212.map((x) => x.s).concat(poza.boti.map((b) => b.s), (ultimeleSalt && ultimeleSalt.randuri || []).map((x) => x.simbol)),
       urmarite: poza.simboluri.map((s) => s.s), boti: poza.boti, salt: (ultimeleSalt && ultimeleSalt.randuri || []).map((x) => x.simbol) }, Date.now());
-    const text = pozaInLimita(poza, 450 * 1024);   // revizia (M9): sub plafonul de 512 KB al worker-ului, întâi ies alertele-zgomot
-    const r = await fetch(PAZNIC_URL.replace(/\/+$/, "") + "/poza", { method: "POST", headers: { authorization: "Bearer " + PAZNIC_TOKEN, "content-type": "application/json" }, body: text, signal: AbortSignal.timeout(20000) });
-    if (!r.ok) {
-      jurnal("poza: refuzata", r.status, (await r.text()).slice(0, 120));
-      // v101.116 (auditul sever, 🔵11): cota KV a contului Cloudflare (1.000 de scrieri pe zi, împărțită cu alți workeri) se vede aici întâi
-      if (r.status === 429 || r.status >= 500) jurnal("poza: paznicul refuză scrierea (" + r.status + ") - posibil cota KV de pe Cloudflare (1.000 de scrieri pe zi pe tot contul); dacă ține, paznicul poate anunța fals „colectorul tace”");
+    // v100.259 (auditul 23.10, punctul 3): urcă doar la o schimbare semnificativă sau la bătaia de 8 min (scrierile KV ale contului: 1.000 pe zi)
+    const amp = amprentaPoza(poza);
+    if (urcaPoza({ amprenta: amp, ultima: pozaAmprenta, ultimaLa: pozaOkLa, acum: Date.now() })) {
+      const text = pozaInLimita(poza, 450 * 1024);   // revizia (M9): sub plafonul de 512 KB al worker-ului, întâi ies alertele-zgomot
+      const r = await fetch(PAZNIC_URL.replace(/\/+$/, "") + "/poza", { method: "POST", headers: { authorization: "Bearer " + PAZNIC_TOKEN, "content-type": "application/json" }, body: text, signal: AbortSignal.timeout(20000) });
+      if (!r.ok) {
+        jurnal("poza: refuzata", r.status, (await r.text()).slice(0, 120));
+        // v101.116 (auditul sever, 🔵11): cota KV a contului Cloudflare (1.000 de scrieri pe zi, împărțită cu alți workeri) se vede aici întâi
+        if (r.status === 429 || r.status >= 500) jurnal("poza: paznicul refuză scrierea (" + r.status + ") - posibil cota KV de pe Cloudflare (1.000 de scrieri pe zi pe tot contul); dacă ține, paznicul poate anunța fals „colectorul tace”");
+      }
+      else { pozaOkLa = Date.now(); pozaAmprenta = amp; jurnal("poza: urcata", Math.round(text.length / 1024) + " KB", cate(t212.length, "poziție", "poziții"), cate(boti.length, "bot", "boți"), cate(simboluri.length, "simbol", "simboluri"), radarUrl ? "tunel" : ""); }
     }
-    else { pozaOkLa = Date.now(); jurnal("poza: urcata", Math.round(text.length / 1024) + " KB", cate(t212.length, "poziție", "poziții"), cate(boti.length, "bot", "boți"), cate(simboluri.length, "simbol", "simboluri"), radarUrl ? "tunel" : ""); }
     // I-463: alertele pe simbolurile paginii (miscare > 2x ATR propriu, cumparare noua de insider) - o data pe zi per simbol
     const m = meta(), st = m.simAlerte || (m.simAlerte = {}), prag = new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10);
     for (const k of Object.keys(st)) if (k.slice(-10) < prag) delete st[k];

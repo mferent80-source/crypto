@@ -94,8 +94,9 @@ await test("cadentaPoza (el, 01.10): ritmul pe ore - 08–16 la 3 min, 16–17 l
   assert.equal(cadentaPoza({ acum: Date.UTC(2026, 8, 28, 18, 0), botiActivi: 0 }), 90000, "luni 14:00 NY = 21:00 RO");
   assert.equal(cadentaPoza({ acum: Date.UTC(2026, 8, 28, 9, 0), botiActivi: 0 }), 180000, "luni 5:00 NY = 12:00 RO");
   assert.equal(cadentaPoza({ acum: Date.UTC(2026, 8, 29, 1, 0), botiActivi: 0 }), null, "luni 21:00 NY = 04:00 RO: noaptea nicio poza");
-  assert.equal(cadentaPoza({ acum: ACUM, botiActivi: 0 }), 30000, "duminica 16:20 RO");
-  assert.equal(cadentaPoza({ acum: ACUM, botiActivi: 1 }), 30000, "bot activ: acelasi ritm");
+  // v100.259 (auditul 23.10, punctul 3): 16–17 la 60 s (nu 30 s) - fereastra cea mai deasă rărită, cota KV a contului Cloudflare
+  assert.equal(cadentaPoza({ acum: ACUM, botiActivi: 0 }), 60000, "duminica 16:20 RO");
+  assert.equal(cadentaPoza({ acum: ACUM, botiActivi: 1 }), 60000, "bot activ: acelasi ritm");
 });
 await test("alerteSimboluri: miscare peste 2x ATR-ul propriu (o data pe zi) si cumparare noua de insider (fata de poza anterioara)", () => {
   const c = Array.from({ length: 30 }, (_, i) => 100 + (i % 2 ? 0.5 : -0.5));   // ~1%/zi -> ATR ~1%

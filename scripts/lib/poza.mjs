@@ -217,12 +217,27 @@ const monedaBursa = (s) => (CalendarBursa.bursaSimbol(s) === "XETRA" ? "€" : C
 // trimite cat poza curge - vezi bataieNecesara - deci ramane loc)
 // v101.34 (el, 01.10): ritmul pozei pe ore, ora Romaniei, in fiecare zi: 08–16 la 3 min, 16–17 la 30 s (deschiderea bursei SUA),
 // 17–23 la 1,5 min, 23–08 NIMIC (null). ~550 de scrieri KV pe zi pe Cloudflare (o scriere pe poza; cota e 1.000 pe tot contul).
+// (v100.259: 16–17 la 60 s și urcarea doar la schimbare - vezi urcaPoza)
+// v100.259 (auditul 23.10, punctul 3): ~520 de scrieri pe zi din 1.000 pe tot contul ⇒ 16–17 la 60 s (fereastra cea mai deasă: 120 → 60) și,
+// mai ales, poza urcă doar când s-a schimbat ceva semnificativ (amprentaPoza / urcaPoza, mai jos); ritmul de aici e doar cât de des se VERIFICĂ.
 export function cadentaPoza({ acum }) {
   const mr = minutRo(acum);
   if (mr >= 23 * 60 || mr < 8 * 60) return null;
   if (mr < 16 * 60) return 180000;
-  if (mr < 17 * 60) return 30000;
+  if (mr < 17 * 60) return 60000;
   return 90000;
+}
+// v100.259 (auditul 23.10, punctul 3): amprenta pozei pe ce contează - fără ore (la, turaLa, t212La), tura, seriile de 30 de prețuri, iar
+// fiecare număr pe 2 cifre semnificative (o mișcare mică de preț nu e „schimbare”; verdictul, stopul, alertele, eroarea T212, un bot nou da).
+const FARA_AMPRENTA = new Set(["la", "turaLa", "t212La", "tura", "pret30", "closes30", "d24Ore"]);
+export function amprentaPoza(poza) {
+  return JSON.stringify(poza, (k, v) => (FARA_AMPRENTA.has(k) ? undefined : typeof v === "number" && Number.isFinite(v) ? Number(v.toPrecision(2)) : v));
+}
+// Poza neschimbată tot urcă la POZA_BATAIE_MS („bătaia”): paznicul socotește „colectorul tace” la 30 min (TACE_MS, cron la 10 min), iar
+// bataieNecesara trimite o bătaie separată (altă scriere KV) după 10 min fără poză ⇒ 8 min (cu verificarea la cel mult 1,5–3 min: ≤ ~9,5 min).
+export const POZA_BATAIE_MS = 8 * 60000;
+export function urcaPoza({ amprenta, ultima, ultimaLa, acum }) {
+  return amprenta !== ultima || !(acum - (Number(ultimaLa) || 0) < POZA_BATAIE_MS);
 }
 function pctTxt(v, z = 1) { return (Math.abs(v) * 100).toFixed(z).replace(".", ",") + "%"; }
 function miiTxt(v) { v = nr(v) || 0; return Math.abs(v) >= 1e6 ? (v / 1e6).toFixed(1).replace(".", ",") + " mil." : Math.abs(v) >= 1e3 ? Math.round(v / 1e3) + " k" : String(Math.round(v)); }

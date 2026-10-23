@@ -85,5 +85,47 @@ await test("(2) colectorul: stopT212 din stopuriT212Pas, iar eroarea lui intră 
   const w = citeste("paznic", "worker.mjs"); assert.match(w, /if \(poza\.t212Eroare \|\|/, "paznicul nu mai citește t212Eroare");
 });
 
+// ---------- (3) poza: urcată doar la schimbare (amprentă) + o bătaie la cel mult 8 min ----------
+const PZ = await import("./lib/poza.mjs");
+const pozaF = (o = {}) => ({ la: 1, turaLa: 1, versiune: "v", colector: { pid: 7, tura: 3 }, t212: [{ s: "AAPL", pret: 180.12, pctPret: 0.0123, niv: "tine", sfat: "Țin.", stopT212: 170, la: 5, closes30: [1, 2] }], t212La: 9, t212Eroare: null,
+  boti: [{ id: "1", s: "SOL", pret: 150.123, lichidarePct: 24.31, niv: "ok", pret30: [1, 2, 3], la: 4, total: 3.21 }], simboluri: [], alerte: [{ t: 1, titlu: "x" }], ...o });
+await test("(3) amprentaPoza: orele, tura, seriile de 30 și mișcările mici de preț NU schimbă amprenta; verdictul, stopul, alertele, eroarea DA", () => {
+  assert.equal(typeof PZ.amprentaPoza, "function");
+  const a = PZ.amprentaPoza(pozaF());
+  assert.equal(PZ.amprentaPoza(pozaF({ la: 99, turaLa: 98, t212La: 97, colector: { pid: 7, tura: 50 } })), a, "ceasul / tura au schimbat amprenta");
+  const p2 = pozaF(); p2.t212[0].pret = 180.4; p2.t212[0].la = 77; p2.boti[0].pret = 150.2; p2.boti[0].pret30 = [9, 9, 9]; p2.boti[0].total = 3.24;
+  assert.equal(PZ.amprentaPoza(p2), a, "o mișcare mică de preț a schimbat amprenta");
+  for (const [nume, f] of [["verdictul", (p) => { p.t212[0].niv = "iesi"; }], ["stopul T212", (p) => { p.t212[0].stopT212 = null; }], ["alertele", (p) => { p.alerte.push({ t: 2, titlu: "y" }); }],
+    ["eroarea T212", (p) => { p.t212Eroare = "HTTP 429"; }], ["un bot nou", (p) => { p.boti.push({ id: "2", s: "BTC" }); }], ["lichidarea", (p) => { p.boti[0].lichidarePct = 9.5; }]]) {
+    const p = pozaF(); f(p); assert.notEqual(PZ.amprentaPoza(p), a, nume + " n-a schimbat amprenta");
+  }
+});
+await test("(3) urcaPoza: aceeași amprentă ⇒ nu urcă până la bătaia de 8 min (sub pragul de 10 min al bătăii separate și de 30 al paznicului)", () => {
+  assert.equal(PZ.POZA_BATAIE_MS, 8 * MIN);
+  const t = Date.UTC(2026, 9, 23, 10, 0);
+  assert.equal(PZ.urcaPoza({ amprenta: "a", ultima: "a", ultimaLa: t, acum: t + 7 * MIN }), false);
+  assert.equal(PZ.urcaPoza({ amprenta: "a", ultima: "a", ultimaLa: t, acum: t + 8 * MIN }), true);
+  assert.equal(PZ.urcaPoza({ amprenta: "b", ultima: "a", ultimaLa: t, acum: t + MIN }), true);
+  assert.equal(PZ.urcaPoza({ amprenta: "a", ultima: null, ultimaLa: 0, acum: t }), true);
+  // cu poza urcată la cel mult ~9 min, bătaia separată (scriere KV în plus) nu pornește: bataieNecesara cere 10 min fără poză
+  assert.equal(PZ.bataieNecesara({ acum: t + 9 * MIN, pozaOkLa: t, paznicLa: 0 }), false);
+  const w = citeste("paznic", "worker.mjs"); assert.match(w, /const TACE_MS = 30 \* 60000/);
+});
+await test("(3) fereastra cea mai deasă rărită: 16–17 la 60 s (nu 30 s); scrierile pe o zi liniștită ≤ 130 (înainte ~520)", () => {
+  assert.equal(PZ.cadentaPoza({ acum: Date.UTC(2026, 9, 23, 13, 30), botiActivi: 1 }), 60000, "16:30 RO");
+  let urcate = 0, ultima = null, ultimaLa = 0, ultimaVerif = 0;
+  for (let t = Date.UTC(2026, 9, 22, 21, 0); t < Date.UTC(2026, 9, 23, 21, 0); t += 10000) {   // o zi întreagă, ceasul de 10 s
+    const cad = PZ.cadentaPoza({ acum: t, botiActivi: 2 }); if (cad === null || t - ultimaVerif < cad) continue; ultimaVerif = t;
+    if (PZ.urcaPoza({ amprenta: "la-fel", ultima, ultimaLa, acum: t })) { urcate++; ultima = "la-fel"; ultimaLa = t; }
+  }
+  assert.ok(urcate <= 130, "urcări pe o zi fără schimbări: " + urcate);
+});
+await test("(3) colectorul urcă poza doar când urcaPoza zice da; amprenta ținută după urcarea reușită", () => {
+  const c = citeste("scripts", "colector.mjs");
+  assert.match(c, /const amp = amprentaPoza\(poza\)/);
+  assert.match(c, /if \(urcaPoza\(\{ amprenta: amp, ultima: pozaAmprenta, ultimaLa: pozaOkLa, acum: Date\.now\(\) \}\)\) \{/);
+  assert.match(c, /pozaOkLa = Date\.now\(\); pozaAmprenta = amp;/);
+});
+
 console.log(`\n${teste - picate}/${teste} ${picate ? "— PICĂ" : "ok"}`);
 process.exitCode = picate ? 1 : 0;
