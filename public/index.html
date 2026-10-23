@@ -112,16 +112,16 @@
 <div class="heroStrip">
 <div class="heroSummary">
 <div class="heroSummaryTop">
-<div><div class="label">Selected market</div><div class="heroCoin" id="heroCoin">BTC / USDT</div><div class="heroPrice" id="heroPrice">—</div></div>
-<div><div class="label" style="text-align:right">Engine bias</div><div class="heroSignal neutral" id="heroSignal">WAIT</div><div class="small" id="heroConfidence" style="text-align:right">Confidence —</div></div>
+<div><div class="label">Piața aleasă</div><div class="heroCoin" id="heroCoin">BTC / USDT</div><div class="heroPrice" id="heroPrice">—</div></div>
+<div><div class="label" style="text-align:right">Direcția motorului</div><div class="heroSignal neutral" id="heroSignal">WAIT</div><div class="small" id="heroConfidence" style="text-align:right">Încredere —</div></div>
 </div>
-<div class="heroMeta"><span class="statusChip" id="heroRegime">Regime —</span><span class="statusChip" id="heroAdx">ADX —</span><span class="statusChip" id="heroProb">Hist —</span></div>
+<div class="heroMeta"><span class="statusChip" id="heroRegime">Regim —</span><span class="statusChip" id="heroAdx">ADX —</span><span class="statusChip" id="heroProb">Hist —</span></div>
 </div>
 <div class="quickGrid">
 <div class="quickCard"><div class="label">24H</div><div class="qv" id="hero24">—</div></div>
 <div class="quickCard"><div class="label">MTF Score</div><div class="qv" id="heroMtf">—</div></div>
-<div class="quickCard"><div class="label">Volatility</div><div class="qv" id="heroVol">—</div></div>
-<div class="quickCard"><div class="label">Volume</div><div class="qv" id="heroVol24">—</div></div>
+<div class="quickCard"><div class="label">Volatilitate</div><div class="qv" id="heroVol">—</div></div>
+<div class="quickCard"><div class="label">Volum</div><div class="qv" id="heroVol24">—</div></div>
 </div>
 </div>
 <div class="tabs">
@@ -190,8 +190,8 @@
     <div class="decisionKpi"><span class="label">Acord direcțional</span><b id="decisionAgreement">—</b></div>
     <div class="decisionKpi"><span class="label">Prob. calibrată</span><b id="decisionCalibrated">—</b></div>
     <div class="decisionKpi"><span class="label">Consens ponderat</span><b id="decisionConsensus">—</b></div>
-    <div class="decisionKpi"><span class="label">Coverage module</span><b id="decisionCoverage">—</b></div>
-    <div class="decisionKpi"><span class="label">Data quality</span><b id="decisionQuality">—</b></div>
+    <div class="decisionKpi"><span class="label">Acoperirea modulelor</span><b id="decisionCoverage">—</b></div>
+    <div class="decisionKpi"><span class="label">Calitatea datelor</span><b id="decisionQuality">—</b></div>
   </div>
   <div class="decisionExplainGrid">
     <div class="decisionExplain support"><b>De ce susține direcția</b><div id="decisionWhyList" class="decisionList"><span>—</span></div></div>
@@ -229,7 +229,7 @@
 <div class="masterMetric"><span class="label">Setup DNA v66</span><b id="masterDnaV66">—</b></div>
 <div class="masterMetric"><span class="label">Evidence sufficiency</span><b id="masterSuffV66">—</b></div>
 <div class="masterMetric"><span class="label">Operations v67</span><b id="masterOpsV67">—</b></div><div class="masterMetric"><span class="label">Pionex access</span><b id="masterPionexMode">READ ONLY</b></div>
-<div class="masterMetric"><span class="label">Data quality</span><b id="masterData">—</b></div>
+<div class="masterMetric"><span class="label">Calitatea datelor</span><b id="masterData">—</b></div>
 </div>
 <div class="vcSummary">
 <div class="sectionHead"><h3>Verdict Center · Full Module Consensus</h3><span class="validationBadge">BULLISH · BEARISH · NEUTRAL · BLOCKER</span></div>
@@ -490,7 +490,7 @@
 <div class="cloudBox"><span class="label">Top score</span><b id="cloudTopScore">—</b></div>
 <div class="cloudBox"><span class="label">Push sender</span><b id="cloudPushSender">—</b></div>
 </div>
-<div class="pushState"><button data-action-click="loadCloudMonitor(true)">Refresh cloud</button><button class="actionGhost" data-action-click="runCloudMonitorNow()">Run server monitor now</button><button class="actionGhost" data-action-click="persistCurrentSnapshot(true)">Save current snapshot</button><button class="actionGhost" data-action-click="loadCloudHistory()">Recent history</button></div>
+<div class="pushState"><button data-action-click="loadCloudMonitor(true)">Refresh cloud</button><button class="actionGhost" data-action-click="runCloudMonitorNow()">Verifică serverul acum</button><button class="actionGhost" data-action-click="persistCurrentSnapshot(true)">Salvează instantaneul de acum</button><button class="actionGhost" data-action-click="loadCloudHistory()">Recent history</button></div>
 <p class="note">The scheduled monitor is a separate Cloudflare Worker. The Pages app can read D1 history even when the monitor Worker is not deployed.</p>
 </div>
 <div class="card full" style="margin-top:10px">
@@ -1057,7 +1057,7 @@
 <div class="ldBox"><span class="label">Calibration / drift</span><b id="reportGovernance">—</b></div>
 <div class="ldBox"><span class="label">Best observed context</span><b id="reportBestContext">—</b></div>
 <div class="ldBox"><span class="label">Avoid context</span><b id="reportAvoidContext">—</b></div>
-<div class="ldBox"><span class="label">Data quality</span><b id="reportQuality">—</b></div>
+<div class="ldBox"><span class="label">Calitatea datelor</span><b id="reportQuality">—</b></div>
 </div>
 <div class="reportSections" id="reportBody"><div class="emptyState">Generate a report to summarize archived research data.</div></div>
 </div>
@@ -1097,8 +1097,8 @@
 <div class="settingsCard">
 <h4>Profilul semnalelor (motorul vechi)</h4>
 <div class="presetBar">
-<button class="presetBtn" data-action-click="applyPreset('conservative')">Conservative</button>
-<button class="presetBtn" data-action-click="applyPreset('balanced')">Balanced</button>
+<button class="presetBtn" data-action-click="applyPreset('conservative')">Prudent</button>
+<button class="presetBtn" data-action-click="applyPreset('balanced')">Echilibrat</button>
 <button class="presetBtn" data-action-click="applyPreset('aggressive')">Aggressive</button>
 </div>
 <div class="settingRow"><span>Încrederea minimă a semnalului</span><select aria-label="Încrederea minimă a semnalului" id="setSignalMin" style="width:120px"><option>60</option><option selected="">64</option><option>68</option><option>72</option></select></div>
@@ -1158,8 +1158,8 @@
 <h4>Modelul de execuție (Paper)</h4>
 <div class="settingRow"><span>Comision / parte</span><select aria-label="Comision pe parte" id="setFeeBps" style="width:128px"><option value="2">2 bps</option><option value="5">5 bps</option><option selected="" value="10">10 bps</option><option value="15">15 bps</option></select></div>
 <div class="settingRow"><span>Slippage / parte</span><select aria-label="Slippage pe parte" id="setSlipBps" style="width:128px"><option value="1">1 bp</option><option selected="" value="3">3 bps</option><option value="5">5 bps</option><option value="10">10 bps</option></select></div>
-<div class="settingRow"><span>Ieșirea</span><select aria-label="Ieșirea" id="setExecPolicy" style="width:170px"><option selected="" value="staged">40/35/25 staged</option><option value="tp1full">100% at TP1</option></select></div>
-<div class="settingRow"><span>Expirarea intrării</span><select aria-label="Expirarea intrării" id="setEntryExpiry" style="width:170px"><option value="6">6 candles</option><option selected="" value="12">12 candles</option><option value="24">24 candles</option><option value="48">48 candles</option></select></div>
+<div class="settingRow"><span>Ieșirea</span><select aria-label="Ieșirea" id="setExecPolicy" style="width:170px"><option selected="" value="staged">40/35/25 în trepte</option><option value="tp1full">100% at TP1</option></select></div>
+<div class="settingRow"><span>Expirarea intrării</span><select aria-label="Expirarea intrării" id="setEntryExpiry" style="width:170px"><option value="6">6 lumânări</option><option selected="" value="12">12 lumânări</option><option value="24">24 lumânări</option><option value="48">48 lumânări</option></select></div>
 <div class="execPolicy">
 <div class="execHint"><b>Staged</b><br/>40% la TP1 · 35% la TP2 · 25% la TP3. După TP1 stopul trece la intrare; după TP2, la TP1.</div>
 <div class="execHint"><b>TP1 full</b><br/>Toată poziția Paper iese la TP1 sau la stopul inițial. Model mai simplu.</div>
@@ -1317,7 +1317,7 @@
 <label>Max positions/orders<select aria-label="Max paper positions and orders" id="paperMaxPositions"><option value="3">3</option><option selected value="6">6</option><option value="10">10</option><option value="15">15</option></select></label>
 <label>Entry order<select aria-label="Entry order" id="paperEntryType"><option selected value="LIMIT">Limit ladder</option><option value="MARKET">Market immediate</option></select></label>
 <label>Entry layers<select aria-label="Entry ladder layers" id="paperEntryLayers"><option value="1">1 layer</option><option value="2">2 layers</option><option selected value="3">3 layers</option></select></label>
-<label>Fill model<select aria-label="Fill model" id="paperFillModel"><option selected value="CONSERVATIVE">Conservative</option><option value="BALANCED">Balanced</option></select></label>
+<label>Fill model<select aria-label="Fill model" id="paperFillModel"><option selected value="CONSERVATIVE">Prudent</option><option value="BALANCED">Echilibrat</option></select></label>
 <label>Entry expiry<select aria-label="Entry expiry" id="paperMaxWaitBars"><option value="4">4 bars</option><option selected value="8">8 bars</option><option value="12">12 bars</option><option value="20">20 bars</option></select></label>
 <label>TP1 / TP2 scale-out<select aria-label="Target scale out plan" id="paperTpPlan"><option value="25/25">25% / 25%</option><option selected value="35/30">35% / 30%</option><option value="40/35">40% / 35%</option><option value="50/25">50% / 25%</option></select></label>
 <label>Break-even trigger<select aria-label="Break even trigger R" id="paperBreakEvenR"><option value="0.75">0.75R</option><option selected value="1">1.00R</option><option value="1.25">1.25R</option><option value="1.5">1.50R</option></select></label>
@@ -1651,14 +1651,14 @@
 <select aria-label="Mc Source" id="mcSource"><option value="journal">Signal Journal</option><option value="paper">Paper Portfolio</option></select>
 <select aria-label="Mc Method" id="mcMethod"><option selected="" value="BLOCK">Block bootstrap</option><option value="IID">IID bootstrap</option></select>
 <select aria-label="Mc Block" id="mcBlock"><option value="3">Block 3</option><option selected="" value="5">Block 5</option><option value="10">Block 10</option></select>
-<button data-action-click="runMonteCarlo()">Run simulation</button>
+<button data-action-click="runMonteCarlo()">Rulează simularea</button>
 </div>
 <div class="mcGrid" style="margin-top:10px">
 <div class="mcBox"><span class="label">Median ending R</span><b id="mcMedian">—</b></div>
 <div class="mcBox"><span class="label">5th percentile</span><b id="mcP5">—</b></div>
 <div class="mcBox"><span class="label">95th percentile</span><b id="mcP95">—</b></div>
 <div class="mcBox"><span class="label">Median max DD</span><b id="mcDd">—</b></div>
-<div class="mcBox"><span class="label">Loss probability</span><b id="mcLossProb">—</b></div>
+<div class="mcBox"><span class="label">Șansa de pierdere</span><b id="mcLossProb">—</b></div>
 </div>
 <p class="note" id="mcNote">Block bootstrap preserves short runs of wins/losses better than IID resampling. It still cannot prove future edge.</p>
 </div>
@@ -2063,7 +2063,7 @@
 <div class="oppBox"><span class="label">Liquidity</span><b id="sqLiquidity">—</b><div class="qualityMeter"><div id="sqmLiquidity"></div></div></div>
 <div class="oppBox"><span class="label">Risk / reward</span><b id="sqRisk">—</b><div class="qualityMeter"><div id="sqmRisk"></div></div></div>
 <div class="oppBox"><span class="label">Microstructure</span><b id="sqMicro">—</b><div class="qualityMeter"><div id="sqmMicro"></div></div></div>
-<div class="oppBox"><span class="label">Data quality</span><b id="sqData">—</b><div class="qualityMeter"><div id="sqmData"></div></div></div>
+<div class="oppBox"><span class="label">Calitatea datelor</span><b id="sqData">—</b><div class="qualityMeter"><div id="sqmData"></div></div></div>
 </div>
 <div class="row" style="margin-top:10px"><span>Main blocker</span><b id="setupBlocker">—</b></div>
 <div class="row"><span>Empirical net-R estimate</span><b id="setupNetR">—</b></div>
@@ -2208,10 +2208,10 @@
 </div>
 <div class="scanMeta"><span id="pionexUniverseCount">Universe —</span><span id="pionexUniverseTime">Updated —</span><span id="pionexScanMode">Mode FAST 4H</span><span id="pionexRateState">Rate-safe queue</span></div>
 <div class="scanProgress"><div id="scanProgressBar"></div></div>
-<div class="scanBreadthStrip"><span>Market Breadth</span><b id="scanBreadthState">—</b><span id="scanBreadthScore">—</span><span id="scanBreadthCoverage">—</span><button class="actionGhost" data-action-click="refreshMarketBreadthV64(true,false)">Refresh breadth</button></div>
+<div class="scanBreadthStrip"><span>Lățimea pieței</span><b id="scanBreadthState">—</b><span id="scanBreadthScore">—</span><span id="scanBreadthCoverage">—</span><button class="actionGhost" data-action-click="refreshMarketBreadthV64(true,false)">Reîmprospătează lățimea</button></div>
 <div class="scanStats">
 <div class="scanStat"><span>Processed</span><b id="scanProcessed">0/0</b></div>
-<div class="scanStat"><span>Results</span><b id="scanResults">0</b></div>
+<div class="scanStat"><span>Rezultate</span><b id="scanResults">0</b></div>
 <div class="scanStat"><span>Errors</span><b id="scanErrors">0</b></div>
 <div class="scanStat"><span>Cache hits</span><b id="scanCacheHits">0</b></div>
 <div class="scanStat"><span>Elapsed</span><b id="scanElapsed">—</b></div>
@@ -2228,7 +2228,7 @@
 <select aria-label="Ordinea scanării" data-action-change="saveScanPrefs();renderScan()" id="scanSort"><option value="strength">Sort: Strength (forță)</option><option value="turnover">Sort: Turnover</option><option value="adx">Sort: ADX</option><option value="change">Sort: 24h %</option></select>
 <button class="actionGhost" data-action-click="cancelScan()" disabled="" hidden="" id="scanCancelBtn">Stop scan</button>
 </div>
-<div class="scanTableHead"><b id="scanAssetHead">Coin</b><b>Score · forță</b><b>Bias</b><b>ADX</b><b>Regime</b><b>Conf.</b><b id="scanTurnoverHead">24h Turnover</b></div>
+<div class="scanTableHead"><b id="scanAssetHead">Coin</b><b>Score · forță</b><b>Bias</b><b>ADX</b><b>Regim</b><b>Conf.</b><b id="scanTurnoverHead">24h Turnover</b></div>
 <div id="scanout">Apasă Rescanează pentru universul Pionex.</div>
 <div class="scanRecovery">Universe source: <b id="scanUniverseSource">—</b> · <span id="scanUniverseNote">Pionex live when available; saved/snapshot fallback otherwise.</span></div>
 </div><button data-action-click="scan()" id="scanActionBtn" style="width:100%;margin-top:7px">↻ Scanează coinurile Pionex</button></details></section>
@@ -2298,7 +2298,7 @@
 </div>
 <div class="edgeGovGrid" style="margin-top:10px">
 <div class="card"><div class="sectionHead"><h3>Model / Edge Drift Monitor</h3><button class="actionGhost" data-action-click="renderV61Governance()">Recompute</button></div><div class="edgeProKpis"><div><span>State</span><b id="v61EdgeState">—</b></div><div><span>Edge health</span><b id="v61EdgeHealth">—</b></div><div><span>Baseline exp.</span><b id="v61EdgeBase">—</b></div><div><span>Recent exp.</span><b id="v61EdgeRecent">—</b></div><div><span>Δ expectancy</span><b id="v61EdgeDelta">—</b></div><div><span>Feature drift</span><b id="v61EdgeFeature">—</b></div></div><p class="note" id="v61EdgeWhy">Combines recent-vs-baseline performance, rolling stability, model PSI, forward evidence and Shadow outcomes.</p></div>
-<div class="card"><div class="sectionHead"><h3>Automatic Risk Governor</h3><label class="small">Enabled <input id="v61GovEnable" type="checkbox" checked data-action-change="saveV61GovSettings()"/></label></div><div class="edgeProKpis"><div><span>Governor</span><b id="v61GovState">—</b></div><div><span>Paper multiplier</span><b id="v61GovMult">—</b></div><div><span>Readiness</span><b id="v61GovReady">—</b></div><div><span>Data quality</span><b id="v61GovQuality">—</b></div></div><p class="note" id="v61GovWhy">The governor can cap Paper risk at 1.00× / 0.75× / 0.50× / 0.25× / 0.00×. It never changes LONG/SHORT direction and never sends live orders.</p></div>
+<div class="card"><div class="sectionHead"><h3>Automatic Risk Governor</h3><label class="small">Enabled <input id="v61GovEnable" type="checkbox" checked data-action-change="saveV61GovSettings()"/></label></div><div class="edgeProKpis"><div><span>Governor</span><b id="v61GovState">—</b></div><div><span>Paper multiplier</span><b id="v61GovMult">—</b></div><div><span>Readiness</span><b id="v61GovReady">—</b></div><div><span>Calitatea datelor</span><b id="v61GovQuality">—</b></div></div><p class="note" id="v61GovWhy">The governor can cap Paper risk at 1.00× / 0.75× / 0.50× / 0.25× / 0.00×. It never changes LONG/SHORT direction and never sends live orders.</p></div>
 </div>
 <div class="card full" style="margin-top:10px"><div class="sectionHead"><h3>Champion vs Challenger</h3><div><button data-action-click="runChampionChallenger()">Run locked comparison</button><button id="v61PromoteBtn" class="actionGhost" disabled data-action-click="promoteChallengerV61()">Promote eligible challenger</button></div></div><div class="edgeProKpis six"><div><span>Champion</span><b id="v61Champion">—</b></div><div><span>Challenger</span><b id="v61Challenger">—</b></div><div><span>State</span><b id="v61CcState">NOT TESTED</b></div><div><span>Holdout exp. C→X</span><b id="v61CcHold">—</b></div><div><span>Forward exp. C→X</span><b id="v61CcForward">—</b></div><div><span>Bootstrap p</span><b id="v61CcP">—</b></div></div><p class="note" id="v61CcNote">A challenger can become the research champion only after it leads on the locked holdout and on enough post-start forward points. Promotion does not alter the base directional engine.</p></div>
 <div class="card full" style="margin-top:10px"><div class="sectionHead"><h3>Performance Breakdown</h3><div><select aria-label="Performance dimension" id="epPerfDim" data-action-change="renderEdgePro()"><option value="symbol">Symbol</option><option value="tf">Timeframe</option><option value="regime">Regime</option><option value="direction">LONG / SHORT</option><option value="session">Session</option><option value="mode">Mode</option><option value="volatility">Volatility bucket</option><option value="setup">Setup family</option></select></div></div><div class="edgeProTable" id="epPerfTable"><div class="emptyState">Need resolved outcomes.</div></div></div>

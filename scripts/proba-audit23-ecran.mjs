@@ -246,5 +246,23 @@ await test("13b KPI-urile Tabloului (tbKpiPretDeseneaza / tbDeseneazaKpi): textu
   }
 });
 
+// ---------------------------------------------------------------- 14. textele în engleză de pe paginile zilnice, în română; „NaN” nu are voie
+await test("14a index.html: Futures (Selected market, Engine bias, Confidence, Volatility), Scanner, Monte Carlo, Setări, Cloud — în română", () => {
+  for (const s of [">Selected market<", ">Engine bias<", ">Confidence —<", ">Regime —<", '<div class="label">Volatility</div>', ">Run simulation<", ">Loss probability<",
+    ">Conservative<", ">Balanced<", "Run server monitor now", "Save current snapshot", "<span>Market Breadth</span>", ">Refresh breadth<", "<span>Results</span>", "<b>Regime</b>",
+    "40/35/25 staged", " candles</option>", ">Coverage module<", ">Data quality<"]) assert.ok(!IDX.includes(s), "a rămas „" + s + "”");
+  for (const s of [">Piața aleasă<", ">Direcția motorului<", ">Încredere —<", ">Rulează simularea<", ">Șansa de pierdere<", ">Prudent<", ">Echilibrat<", "<span>Lățimea pieței</span>", ">Rezultate<", "12 lumânări</option>"])
+    assert.ok(IDX.includes(s), "lipsește „" + s + "”");
+  assert.match(IDX, /value="BALANCED">Echilibrat</, "valorile opțiunilor rămân (BALANCED se citește în cod)");
+});
+await test("14b app.js: Piața azi (consensul, acoperirea, direcția de bază), Scanner (rezerva, lumânările), Setări (NEEDS CONFIG, Need ≥15) — în română; fără „NaN”", () => {
+  for (const s of ["Base direction is", "Coverage este", "Data quality este", "Fallback ready", "NEEDS CONFIG", "Need ≥15 signals", "Binance candles", "Weighted module consensus"]) assert.ok(!APP.includes(s), "a rămas „" + s + "”");
+  const m = APP.match(/function roConsens\([^\n]*/); assert.ok(m, "lipsește roConsens");
+  const f = new Function("return " + m[0])();
+  assert.equal(f("NO DATA"), "FĂRĂ DATE"); assert.equal(f("BULLISH"), "CRESCĂTOR"); assert.equal(f("BEARISH"), "DESCRESCĂTOR"); assert.equal(f("NEUTRAL"), "NEUTRU");
+  assert.match(APP, /\$\("vcConsensus"\)\.textContent=roConsens\(x\.consensus\)\+\(Number\.isFinite\(x\.weightedBias\)\?/);
+  assert.match(APP, /\$\("decisionConsensus"\)\.textContent=`\$\{roConsens\(vc\.consensus\)\|\|"N\/A"\}/);
+});
+
 console.log(`\n${teste - picate}/${teste} trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
 process.exit(picate ? 1 : 0);

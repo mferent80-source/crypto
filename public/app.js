@@ -1324,7 +1324,7 @@ function pushServerConfig(reia=false){
  return pushConfigPromis=pushServerConfigCitire();
 }
 async function pushServerConfigCitire(){
- try{const r=await getJSON("/api/push?action=config");window.__pushServerConfig=r;if($("pushServerStatus"))$("pushServerStatus").textContent=!r.configured?"NEEDS CONFIG":r.deliverySenderConfigured?"READY":"SUBSCRIBE READY · SENDER NEEDED";return r}catch(e){if($("pushServerStatus"))$("pushServerStatus").textContent="UNAVAILABLE";return {configured:false}}
+ try{const r=await getJSON("/api/push?action=config");window.__pushServerConfig=r;if($("pushServerStatus"))$("pushServerStatus").textContent=!r.configured?"TREBUIE CONFIGURAT":r.deliverySenderConfigured?"GATA":"ABONAREA E GATA · LIPSEȘTE TRIMIȚĂTORUL";/* audit 23.10: în română */return r}catch(e){if($("pushServerStatus"))$("pushServerStatus").textContent="INDISPONIBIL";return {configured:false}}
 }
 function b64ToU8(s){const pad="=".repeat((4-s.length%4)%4),b=(s+pad).replace(/-/g,"+").replace(/_/g,"/"),raw=atob(b);return Uint8Array.from([...raw].map(c=>c.charCodeAt(0)))}
 async function enablePushAlerts(){
@@ -1402,7 +1402,7 @@ function setAssetClass(v){
     if($("symbol"))$("symbol").placeholder="BTC, ETH, SOL...";
   }
   stopProviderLive();stopLiquidationTape();invalidateDecisionContext(null,null,null,true);window.__radarState=null;window.__signalState=null;window.__stockEarnings=null;window.__portfolioRisk=null;window.__structureV38=null;marketCache={ts:0,rows:[],source:null};scannerRows=[];
-  updateSourceLineage(analysisSource());updateScannerUi();setScanUniverseStatus("PIONEX_SNAPSHOT","Fallback ready · live Pionex will replace it when available.");syncTop(norm($("symbol").value),$("tf").value,$("mode").value);renderLists();renderOpportunity();renderDailyDesk();
+  updateSourceLineage(analysisSource());updateScannerUi();setScanUniverseStatus("PIONEX_SNAPSHOT","Rezerva e gata · lista vie Pionex o înlocuiește când răspunde.");syncTop(norm($("symbol").value),$("tf").value,$("mode").value);renderLists();renderOpportunity();renderDailyDesk();
   if($("volume24Label"))$("volume24Label").textContent=market==="STOCKS"?"Daily $ volume":"Volum 24H USDT";
   if($("fearGreed"))$("fearGreed").textContent=market==="STOCKS"?"N/A":"—";
   if($("sentimentText"))$("sentimentText").textContent=market==="STOCKS"?"Crypto Fear & Greed is not used in US stock scoring.":"Sentiment extern opțional; engine-ul tehnic nu depinde de el.";
@@ -1501,7 +1501,7 @@ function updateScannerUi(){
   if($("scanDepth")){
     const opts=$("scanDepth").options;if(opts&&opts.length>=2){opts[0].textContent=stocks?"FAST · 1D · Core 30":"FAST · 4H · 100 coins";opts[1].textContent=stocks?"FULL · 1D · NDX 101":"DEEP · MTF · 100 coins"}
   }
-  if($("pionexScanMode"))$("pionexScanMode").textContent=stocks?($("scanDepth")?.value==="DEEP"?"Mode FULL · NDX 101 · 1D":"Mode FAST · Core 30 · 1D"):($("scanDepth")?.value==="DEEP"?"Mode DEEP MTF · Binance candles":"Mode FAST 4H · Binance candles");
+  if($("pionexScanMode"))$("pionexScanMode").textContent=stocks?($("scanDepth")?.value==="DEEP"?"Mod COMPLET · NDX 101 · 1D":"Mod RAPID · Core 30 · 1D"):($("scanDepth")?.value==="DEEP"?"Mod ADÂNC MTF · lumânări Binance":"Mod RAPID 4H · lumânări Binance");
   if($("pionexRateState"))$("pionexRateState").textContent=stocks?"Server-side batch requests":"Pionex universe only · Binance analysis";
   if($("opportunityTitle"))$("opportunityTitle").textContent=stocks?"Opportunity Engine · Nasdaq / US Stocks":"Opportunity Engine · Pionex coins / Binance data";
   if($("oppScanBtn"))$("oppScanBtn").textContent=stocks?"Scan Nasdaq":"Scan Pionex";
@@ -2587,13 +2587,14 @@ function vcChipList(rows,empty){
 function renderVerdictCenter(snapshot=null){
   const x=snapshot?.modules?snapshot:buildVerdictCenterSnapshot();window.__verdictCenter=x;
   if(!$("vcAgreement"))return x;
-  const ag=Number.isFinite(x.agreement)?x.agreement:null;$("vcAgreement").textContent=ag==null?"N/A":ag.toFixed(0)+"%";$("vcAgreementBar").style.width=(ag==null?0:clamp(ag,0,100))+"%";$("vcConsensus").textContent=`${x.consensus} · ${x.weightedBias>=0?"+":""}${(x.weightedBias*100).toFixed(0)}`;$("vcConsensus").className=x.consensus==="BULLISH"?"vcBiasBull":x.consensus==="BEARISH"?"vcBiasBear":"vcBiasNeutral";$("vcBullishCount").textContent=x.counts.bullish;$("vcBearishCount").textContent=x.counts.bearish;$("vcNeutralCount").textContent=x.counts.neutral;$("vcBlockerCount").textContent=`${x.counts.hard} hard / ${x.counts.warn} warn`;$("vcCoverage").textContent=`${x.coverage.toFixed(0)}% · ${x.modules.filter(m=>m.available).length}/${x.modules.length}`;$("vcConviction").textContent=x.conviction.toFixed(0)+"/100";
+  const ag=Number.isFinite(x.agreement)?x.agreement:null;$("vcAgreement").textContent=ag==null?"N/A":ag.toFixed(0)+"%";$("vcAgreementBar").style.width=(ag==null?0:clamp(ag,0,100))+"%";$("vcConsensus").textContent=roConsens(x.consensus)+(Number.isFinite(x.weightedBias)?` · ${x.weightedBias>=0?"+":""}${(x.weightedBias*100).toFixed(0)}`:"");   /* audit 23.10: „NO DATA · NaN” ⇒ „FĂRĂ DATE” */$("vcConsensus").className=x.consensus==="BULLISH"?"vcBiasBull":x.consensus==="BEARISH"?"vcBiasBear":"vcBiasNeutral";$("vcBullishCount").textContent=x.counts.bullish;$("vcBearishCount").textContent=x.counts.bearish;$("vcNeutralCount").textContent=x.counts.neutral;$("vcBlockerCount").textContent=`${x.counts.hard} hard / ${x.counts.warn} warn`;$("vcCoverage").textContent=`${x.coverage.toFixed(0)}% · ${x.modules.filter(m=>m.available).length}/${x.modules.length}`;$("vcConviction").textContent=x.conviction.toFixed(0)+"/100";
   $("vcFamilyTechnical").textContent=vcFamilyText(x.families["Technical"]);$("vcFamilyModels").textContent=vcFamilyText(x.families["Models"]);$("vcFamilyFlow").textContent=vcFamilyText(x.families["Flow"]);$("vcFamilyContext").textContent=vcFamilyText(x.families["Context"]);$("vcFamilyRisk").textContent=vcFamilyText(x.families["Risk / execution"]);
   $("vcBullishModules").innerHTML=vcChipList(x.modules.filter(m=>m.category==="BULLISH"),"No bullish module above threshold.");$("vcBearishModules").innerHTML=vcChipList(x.modules.filter(m=>m.category==="BEARISH"),"No bearish module above threshold.");$("vcNeutralModules").innerHTML=vcChipList(x.modules.filter(m=>m.category==="NEUTRAL"),"No neutral/unavailable modules.");$("vcBlockerModules").innerHTML=vcChipList(x.modules.filter(m=>m.category==="BLOCKER"),"No blocker or warning.");
   const cls=c=>c==="BULLISH"?"vcBiasBull":c==="BEARISH"?"vcBiasBear":c==="BLOCKER"?"vcBiasBlock":"vcBiasNeutral";
   $("vcModuleTable").innerHTML=`<div class="vcRow"><div class="vcCell">Module</div><div class="vcCell">Family</div><div class="vcCell">Category</div><div class="vcCell">Strength</div><div class="vcCell">Weight</div><div class="vcCell">Current value</div><div class="vcCell note">Interpretation</div></div>`+x.modules.map(m=>`<div class="vcRow"><div class="vcCell">${escapeHtml(m.name)}</div><div class="vcCell">${escapeHtml(m.family)}</div><div class="vcCell ${cls(m.category)}">${m.category}${m.severity?" · "+m.severity:""}</div><div class="vcCell">${m.directional&&Number.isFinite(m.strength)?m.strength.toFixed(0)+"/100":"—"}</div><div class="vcCell">${m.weight?m.weight.toFixed(3):"—"}</div><div class="vcCell">${escapeHtml(m.value)}</div><div class="vcCell note">${escapeHtml(m.note)}</div></div>`).join("");
-  const baseDir=x.dir>0?"LONG":x.dir<0?"SHORT":"WAIT",agreementText=Number.isFinite(x.agreement)?`${x.agreement.toFixed(0)}% of non-neutral directional modules agree with base ${baseDir}.`:`Base direction is ${baseDir}; directional agreement is not defined.`,riskText=x.counts.hard?`${x.counts.hard} hard blocker${x.counts.hard===1?"":"s"} active.`:x.counts.warn?`${x.counts.warn} warning${x.counts.warn===1?"":"s"} active; no hard blocker.`:"No explicit risk blocker is active.";
-  $("vcNarrative").textContent=`${agreementText} Weighted module consensus: ${x.consensus} (${x.conviction.toFixed(0)}/100 conviction). Coverage ${x.coverage.toFixed(0)}%. ${riskText} Module counts are descriptive; many modules share the same underlying price/volume history and are not independent probabilities.`;
+  /* audit 23.10: fraza consensului (direcția de bază, acordul, acoperirea, blocajele) era în engleză; acum în română */
+  const baseDir=x.dir>0?"LONG":x.dir<0?"SHORT":"AȘTEAPTĂ",agreementText=Number.isFinite(x.agreement)?`${x.agreement.toFixed(0)}% din modulele cu direcție sunt de acord cu direcția de bază (${baseDir}).`:`Direcția de bază: ${baseDir}; acordul modulelor nu se poate socoti.`,riskText=x.counts.hard?`${TextRo.cate(x.counts.hard,"blocaj tare activ","blocaje tari active")}.`:x.counts.warn?`${TextRo.cate(x.counts.warn,"avertisment activ","avertismente active")}; niciun blocaj tare.`:"Niciun blocaj de risc activ.";
+  $("vcNarrative").textContent=`${agreementText} Consensul ponderat al modulelor: ${roConsens(x.consensus)} (convingere ${Number.isFinite(x.conviction)?x.conviction.toFixed(0):"—"}/100). Acoperire ${Number.isFinite(x.coverage)?x.coverage.toFixed(0):"—"}%. ${riskText} Numărătoarea modulelor e descriptivă: multe module pleacă din același istoric de preț și volum, nu sunt probabilități independente.`;
   return x
 }
 
@@ -2625,11 +2626,11 @@ function renderVerdictExplainer(ctx={}){
   if($("decisionHeadline"))$("decisionHeadline").textContent=headline;if($("decisionActionLine"))$("decisionActionLine").textContent=action;
   if($("decisionBaseBias"))$("decisionBaseBias").textContent=base;if($("decisionAgreement"))$("decisionAgreement").textContent=Number.isFinite(ag)?ag.toFixed(0)+"%":"N/A";
   if($("decisionCalibrated"))$("decisionCalibrated").textContent=dir&&Number.isFinite(+cal?.p)?`${base} ${(cal.p*100).toFixed(0)}%`:"N/A";
-  if($("decisionConsensus"))$("decisionConsensus").textContent=`${vc.consensus||"N/A"}${Number.isFinite(+vc.weightedBias)?` · ${vc.weightedBias>=0?"+":""}${(vc.weightedBias*100).toFixed(0)}`:""}`;
+  if($("decisionConsensus"))$("decisionConsensus").textContent=`${roConsens(vc.consensus)||"N/A"}${Number.isFinite(+vc.weightedBias)?` · ${vc.weightedBias>=0?"+":""}${(vc.weightedBias*100).toFixed(0)}`:""}`;
   if($("decisionCoverage"))$("decisionCoverage").textContent=`${cov.toFixed(0)}% · ${(vc.modules||[]).filter(m=>m.available).length}/${(vc.modules||[]).length}`;if($("decisionQuality"))$("decisionQuality").textContent=quality.toFixed(0)+"/100";
   veSetList("decisionWhyList",support.map(veModuleText),"support",targetDir?"Nu există încă dovezi direcționale puternice aliniate.":"Direcția dominantă nu este încă definită.");
   const againstRows=oppose.map(veModuleText);if(!againstRows.length&&warnings.length)againstRows.push(...warnings.slice(0,3).map(m=>`${m.name} · ${m.value}`));veSetList("decisionAgainstList",againstRows,"oppose","Nu există opoziție direcțională puternică.");
-  const unlocks=gates.map(g=>g.unlock||g.why||String(g));if(!gates.length){if(Number.isFinite(ag)&&ag<60)unlocks.push(`Acordul direcțional este ${ag.toFixed(0)}%; o confirmare mai largă ar reduce conflictul.`);if(cov<75)unlocks.push(`Coverage este ${cov.toFixed(0)}%; așteaptă mai multe module disponibile.`);if(quality<70)unlocks.push(`Data quality este ${quality.toFixed(0)}/100; ideal este să crească înainte de a forța setup-ul.`)}
+  const unlocks=gates.map(g=>g.unlock||g.why||String(g));if(!gates.length){if(Number.isFinite(ag)&&ag<60)unlocks.push(`Acordul direcțional este ${ag.toFixed(0)}%; o confirmare mai largă ar reduce conflictul.`);if(cov<75)unlocks.push(`Acoperirea modulelor este ${cov.toFixed(0)}%; așteaptă mai multe module disponibile.`);if(quality<70)unlocks.push(`Calitatea datelor este ${quality.toFixed(0)}/100; ideal este să crească înainte de a forța setup-ul.`)}
   if(warnings.length)unlocks.push(...warnings.slice(0,2).map(m=>`Atenție: ${m.name} · ${m.value}`));veSetList("decisionUnlockList",unlocks,"unlock",verdict==="WAIT"?"Așteaptă o nouă analiză cu direcție și edge suficient.":"Niciun blocker hard; monitorizează dacă apar avertismente noi.");
   const tm=ss?.tm,hasPlan=tm&&Number.isFinite(+tm.entryLow)&&Number.isFinite(+tm.entryHigh)&&Number.isFinite(+tm.stop);let plan="—";
   if(hasPlan){plan=`${base==="WAIT"?"CANDIDAT":base} · Entry ${num(tm.entryLow)}–${num(tm.entryHigh)} · Stop ${num(tm.stop)}${Number.isFinite(+tm.tp1)?` · TP1 ${num(tm.tp1)}`:""}${Number.isFinite(+tm.tp2)?` · TP2 ${num(tm.tp2)}`:""}`;if(verdict==="WAIT")plan+=" · INACTIV"}
@@ -2708,7 +2709,7 @@ function renderMasterVerdict(){
   if(edge66.hardBlock)gate("EDGE_VALIDATION_V66",`v66 evidence gate: ${edge66.hardReasons.join(", ")}.`,"Așteaptă recuperarea edge-ului sau suficiente rezultate noi care scot Setup DNA din blacklist; sample-urile mici nu blochează.");
   if(ops67?.hardBlock)gate("OPERATIONS_V67",`Operations ${ops67.state}: ${ops67.reasons.join(", ")}.`,`Restabilește starea operațională și rulează watchdog/reconciliation înainte de o intrare nouă.`);
   if(life?.state==="RETIRED")gate("LIFECYCLE_RETIRED","Strategy lifecycle este RETIRED.","Strategia nu trebuie să fie în starea RETIRED.");
-  if(quality<55)gate("DATA_QUALITY",`Data quality este ${quality.toFixed(0)}/100.`,`Data quality trebuie să fie cel puțin 55/100; ideal peste 70/100.`);
+  if(quality<55)gate("DATA_QUALITY",`Calitatea datelor este ${quality.toFixed(0)}/100.`,`Calitatea datelor trebuie să fie cel puțin 55/100; ideal peste 70/100.`);
   if(Math.abs(signed)<.12)gate("EDGE_WEAK",`Consensul family-capped este ${(Math.abs(signed)*100).toFixed(0)}/100, sub pragul 12.`,`Consensul family-capped trebuie să depășească pragul de 12/100 în direcția setup-ului.`);
   let verdict=dir>0?"LONG":dir<0?"SHORT":"WAIT",blocker=gates.length>0;if(blocker)verdict="WAIT";
   if(meta.action==="SKIP"&&metaUsable)risks.push("Meta-label says SKIP");if(budget==="BLOCK")risks.push("Portfolio risk budget BLOCK");if(quality<55)risks.push("Data quality below gate");if(reg?.state==="HIGH_VOL")risks.push("High-volatility regime");
@@ -2957,7 +2958,7 @@ function renderSettings(){
  const best=obj=>Object.entries(obj).sort((a,b)=>(b[1].reduce((x,y)=>x+y,0)/b[1].length)-(a[1].reduce((x,y)=>x+y,0)/a[1].length))[0]?.[0]||"—";
  if($("calBestMode"))$("calBestMode").textContent=best(byMode);
  if($("calBestRegime"))$("calBestRegime").textContent=best(byReg);
- if($("calThreshold"))$("calThreshold").textContent=r.length<15?"Need ≥15 signals":String(x.signalMin);
+ if($("calThreshold"))$("calThreshold").textContent=r.length<15?"Trebuie ≥15 semnale":String(x.signalMin);
 }
 function recalibrate(){
  let r=resolvedR(analysisSource());if(r.length<30){toast("Need at least 30 cost-aware resolved signals for this source","warn");renderSettings();return}
@@ -3183,6 +3184,8 @@ function loadPionexUniverseCache(){
 const $=id=>document.getElementById(id);function norm(s){return marketSymbol(s)}function coin(s){return String(s||"").replace(/USDT$/,"")}
 // audit 19.10: limba "ro-RO" peste tot, ca punctul / virgula să nu depindă de limba telefonului
 function num(x){return Number(x).toLocaleString("ro-RO",{maximumFractionDigits:8})}function compact(x){return Intl.NumberFormat("ro-RO",{notation:"compact",maximumFractionDigits:2}).format(x)}
+// audit 23.10: starea consensului pe ecran, în română (valorile din cod rămân BULLISH / BEARISH / NO DATA)
+function roConsens(s){return {BULLISH:"CRESCĂTOR",BEARISH:"DESCRESCĂTOR",NEUTRAL:"NEUTRU","NO DATA":"FĂRĂ DATE",MIXED:"AMESTECAT"}[s]||s}
 function cls(v){return v==="BULLISH"?"good":v==="BEARISH"?"bad":"neutral"}function show(id){document.body.classList.toggle("peLaborator",typeof PAGINI_ZILNICE!=="undefined"&&!PAGINI_ZILNICE.includes(id))/* v100.214: subsolul motorului vechi doar aici */;document.body.classList.toggle("peTablou",id==="tabloubot");document.body.classList.toggle("peAcasa",id==="dash");document.body.classList.toggle("peScan",id==="scan");document.body.classList.toggle("peAlerte",id==="alerts");if(typeof acasaBara==="function")acasaBara();document.body.classList.toggle("peT212",id==="t212");document.body.classList.toggle("peJurnal",id==="jurnaltrade");document.body.classList.toggle("peGrid",id==="gridset")/* v100.40: fara antetul vechi gol („WAIT”, „—”) deasupra ferestrei Grid */;document.body.classList.toggle("pePaginaNoua",["salt","sugestii","carnet","gridsim","contintreg","montecarlo","rezultate"].includes(id))/* v100.121: la fel pe Salt, Sugestii, Carnet - pe telefon era un ecran intreg gol deasupra; v100.196 (auditul UI 🟡6): și pe Simulator, Contul întreg, Monte Carlo, Rezultate - au simbolul lor, banda veche „Engine bias WAIT” se citea ca un sfat */;if(typeof tbarActualizeaza==="function")tbarActualizeaza()/* v100.123: rezumatul barei stranse, si cand moneda s-a schimbat din cod */;var tbActiv=document.querySelector(".panel.on");var tbIeseDeTablou=tbActiv&&tbActiv.id==="tabloubot"&&id!=="tabloubot";document.querySelectorAll(".panel").forEach(x=>x.classList.remove("on"));$(id).classList.add("on");if(tbIeseDeTablou)opresteTabloBot();document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));const map={dash:0,engine:1,mtf:2,scan:3,backtest:4,signals:5,deriv:6,watch:7};const tabs=document.querySelectorAll(".tab");if(tabs[map[id]])tabs[map[id]].classList.add("active");document.querySelectorAll("[data-nav]").forEach(x=>x.classList.toggle("active",x.dataset.nav===id))}
 function ema(a,n){let k=2/(n+1),v=a[0],o=[];for(const x of a){v=x*k+v*(1-k);o.push(v)}return o}
 function RSI(a,n=14){let g=0,l=0,o=Array(a.length).fill(50);for(let i=1;i<a.length;i++){let d=a[i]-a[i-1],u=Math.max(d,0),dn=Math.max(-d,0);if(i<=n){g+=u;l+=dn;if(i===n){g/=n;l/=n}}else{g=(g*(n-1)+u)/n;l=(l*(n-1)+dn)/n;if(i>=n)o[i]=l?100-100/(1+g/l):100}}return o}
@@ -3374,13 +3377,13 @@ async function pionexTop100(){
       pionexUniverse=cached.rows.map(x=>({...x,universeSource:"PIONEX_SAVED"}));
       pionexUniverseUpdated=Date.now();
       const ageH=Math.max(0,(Date.now()-cached.ts)/3600000);
-      setScanUniverseStatus("PIONEX_SAVED",`${reason} · saved Pionex universe ${ageH<1?Math.round(ageH*60)+"m":ageH.toFixed(1)+"h"} old · Binance candles`);
+      setScanUniverseStatus("PIONEX_SAVED",`${reason} · lista Pionex salvată acum ${ageH<1?Math.round(ageH*60)+" min":ageH.toFixed(1).replace(".",",")+" h"} · lumânări Binance`);
       if($("pionexUniverseCount"))$("pionexUniverseCount").textContent=`Universe ${pionexUniverse.length}`;
       if($("pionexUniverseTime"))$("pionexUniverseTime").textContent=`Saved Pionex · ${ageH<1?Math.round(ageH*60)+"m":ageH.toFixed(1)+"h"} old`;
       return pionexUniverse
     }
     pionexUniverse=staticPionexUniverse();pionexUniverseUpdated=Date.now();
-    const snapRef=pionexSnapshotState(PIONEX_FALLBACK_SNAPSHOT_DATE);setScanUniverseStatus("PIONEX_SNAPSHOT",`${reason} · embedded Pionex/USDT core · ${snapRef.label} · Binance candles${snapRef.state==="STALE"?" · refresh live/saved universe before relying on membership":""}`);
+    const snapRef=pionexSnapshotState(PIONEX_FALLBACK_SNAPSHOT_DATE);setScanUniverseStatus("PIONEX_SNAPSHOT",`${reason} · embedded Pionex/USDT core · ${snapRef.label} · lumânări Binance${snapRef.state==="STALE"?" · refresh live/saved universe before relying on membership":""}`);
     if($("pionexUniverseCount"))$("pionexUniverseCount").textContent=`Universe ${pionexUniverse.length}`;
     if($("pionexUniverseTime"))$("pionexUniverseTime").textContent=`Fallback snapshot ${PIONEX_FALLBACK_SNAPSHOT_DATE}`;
     return pionexUniverse
@@ -3403,7 +3406,7 @@ async function pionexTop100(){
     }).filter(x=>x.turnover>0&&x.close>0).sort((a,b)=>b.turnover-a.turnover).slice(0,100);
     if(!rows.length)throw Error("Pionex returned empty universe");
     pionexUniverse=rows;pionexUniverseUpdated=Date.now();savePionexUniverseCache(rows);
-    setScanUniverseStatus("PIONEX_LIVE","Live Pionex SPOT/USDT universe · Binance candles");
+    setScanUniverseStatus("PIONEX_LIVE","Lista vie Pionex SPOT/USDT · lumânări Binance");
     if($("pionexUniverseCount"))$("pionexUniverseCount").textContent=`Universe ${rows.length}`;
     if($("pionexUniverseTime"))$("pionexUniverseTime").textContent=`Pionex live · ${new Date().toLocaleTimeString("ro-RO")}`;
     return rows
@@ -3451,7 +3454,7 @@ async function pionexScanFast(item){
 async function pionexScanDeep(item){
   const mode=$("mode")?$("mode").value:"auto",tfs=["15m","1h","4h","1d"],raw={};
   const m=(await Promise.all(tfs.map(async tf=>{try{const rows=await pionexUniverseBinanceKlines(item,tf,300);raw[tf]=rows;return {tf,...calc(rows,mode)}}catch{return null}}))).filter(Boolean);
-  if(!m.length)throw Error("No Binance candles for this Pionex coin");
+  if(!m.length)throw Error("Binance n-are lumânări pentru moneda asta de pe Pionex");
   const mc=mtfComposite(m),anchor=m.find(x=>x.tf==="4h")||m[0],ms=scannerStatsFrom4h(raw["4h"]||[],item);
   return {c:item.base,pionexSymbol:item.symbol,avg:mc.avg,dir:mc.comp,conf:anchor.confluence,adx:anchor.adx,regime:anchor.regime,turnover:ms.turnover,change:ms.change,source:"BINANCE",universeSource:item.universeSource||"PIONEX",trend:anchor.trendScore,mom:anchor.momScore,structure:anchor.structureScore,volume:anchor.volScore,chop:anchor.chop,efficiency:anchor.efficiency,hurst:anchor.hurst,rvPercentile:anchor.rvPercentile}
 }
@@ -4345,7 +4348,7 @@ async function derivatives(){
  /* audit 23.10: let context=crowd>0?"CONTRARIAN +":crowd<0?"CROWDED":"BALANCED" — fără funding și fără L/S ieșea BALANCED galben, din nimic. Acum fără semnal: „— fără date”, iar starea nu poartă context. */
  let context=fr==null&&ls==null?null:crowd>0?"CONTRARIAN +":crowd<0?"CROWDED":"BALANCED";
  $("fcontext").textContent=context==null?"— fără date":context;$("fcontext").className="value "+(context==null?"muted":context==="CONTRARIAN +"?"good":context==="CROWDED"?"bad":"neutral");
- $("fundingBias").textContent=fr==null?"N/A":fr>.0003?"Long crowded":fr<-.0003?"Short crowded":"Balanced";
+ $("fundingBias").textContent=fr==null?"N/A":fr>.0003?"longurile înghesuite":fr<-.0003?"shorturile înghesuite":"echilibrat";   /* audit 23.10: în română */
  $("crowdingRisk").textContent=ls==null?"N/A":ls>1.5||ls<.67?"Ridicat":"Normal";
  $("oiContext").textContent=oi==null?"N/A":"OI "+compact(oi)+(oiTrend!=="N/A"?" · "+oiTrend.replace(".",","):"");
  let longPct=ls==null?null:(ls/(1+ls))*100, shortPct=ls==null?null:(100-(ls/(1+ls))*100);
@@ -4384,7 +4387,7 @@ async function scan(){
    const top=peBinance?universPionex.filter(x=>peBinance.has(`${String(x.base||"").toUpperCase()}USDT`)):universPionex;
    const sarite=universPionex.length-top.length;
    if(!top.length)throw Error("Niciuna dintre monedele Pionex nu e pe Binance");
-   $("pionexScanMode").textContent=(depth==="DEEP"?"Mode DEEP MTF · Binance candles":"Mode FAST 4H · Binance candles")+(sarite?` · ${sarite} sărite (nu sunt pe Binance)`:"");
+   $("pionexScanMode").textContent=(depth==="DEEP"?"Mod ADÂNC MTF · lumânări Binance":"Mod RAPID 4H · lumânări Binance")+(sarite?` · ${sarite} sărite (nu sunt pe Binance)`:"");
    $("scanProcessed").textContent=`0/${top.length}`;
    const concurrency=4;
    const worker=async item=>depth==="DEEP"?pionexScanDeep(item):pionexScanFast(item);
