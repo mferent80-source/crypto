@@ -209,5 +209,10 @@ await test("10 grila din „Acum” (telefon) se ascunde cât fâșia #pzKpi are
   assert.match(CSS, /#pzKpi:not\(:empty\)~#dash #pzAcum>\.pzAcumGrila\{display:none\}/);
 });
 
+// ---------------------------------------------------------------- 11. Salt la 1440: panoul „Vreau să cumpăr…” sub tabel sub 1600 px
+await test("11 Salt: sub 1600 px grila e o coloană (tabelul pozițiilor nu mai derulează lateral, „Țintă” nu e tăiată)", () => {
+  assert.match(CSS, /@media \(max-width:1599px\)\{#salt \.t212Grila\{grid-template-columns:minmax\(0,1fr\)\}\}/);
+});
+
 console.log(`\n${teste - picate}/${teste} trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
 process.exit(picate ? 1 : 0);
