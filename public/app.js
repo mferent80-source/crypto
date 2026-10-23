@@ -2948,7 +2948,7 @@ function renderSettings(){
  if($("setEntryExpiry"))$("setEntryExpiry").value=String(x.entryExpiryBars??12);
  if($("setSpotProvider"))$("setSpotProvider").value=x.spotProvider||"BINANCE";
  if($("privacySessionOnly"))$("privacySessionOnly").checked=!!x.privacySessionOnly;
- for(const k of ["sr","ls","funding","oi","signal"]){const el=$("toggle"+k.charAt(0).toUpperCase()+k.slice(1));if(el)el.classList.toggle("on",!!x.alerts[k])}
+ for(const k of ["sr","ls","funding","oi","signal"]){const el=$("toggle"+k.charAt(0).toUpperCase()+k.slice(1));if(el){el.classList.toggle("on",!!x.alerts[k]);el.setAttribute("aria-checked",x.alerts[k]?"true":"false")}}   // audit 23.10: comutatoarele sunt <button role="switch">, starea și pentru cititorul de ecran
  if($("notifStatus"))$("notifStatus").textContent=typeof Notification==="undefined"?"Unsupported":Notification.permission;renderPushStatus().catch(()=>{});
  const r=journal().filter(x=>Number.isFinite(x.rResult));
  if($("calResolved"))$("calResolved").textContent=r.length;

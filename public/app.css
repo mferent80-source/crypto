@@ -3087,6 +3087,8 @@ html.pzDemo #tabloubot .tbPretViu{display:none!important}
 #pzKpi:not(:empty)~#dash #pzAcum>.pzAcumGrila{display:none}
 /* punctul 11: Salt la 1440 — tabelul pozițiilor (1051 px) derula în 887 px și „Țintă” era tăiată de panoul „Vreau să cumpăr…”; sub 1600 px panoul stă sub tabel */
 @media (max-width:1599px){#salt .t212Grila{grid-template-columns:minmax(0,1fr)}}
+/* punctul 12: comutatoarele din Setări sunt <button role="switch"> — fără umplutura și fontul butonului, arată ca înainte */
+button.toggle{padding:0;font:inherit;appearance:none}
 /* audit 23.10 · sfârșitul blocului */
 /* v100.258: pânda (v100.150) stă după orice regulă de tabel, chiar înaintea blocului v100.224 (#topLive), care rămâne ultimul - scripts/lib/panda-ultima.mjs */
 @media (max-width:640px){.sugPandaTab thead{display:table-header-group}.sugPandaTab{display:table}.sugPandaTab tbody{display:table-row-group}.sugPandaTab tr{display:table-row}.sugPandaTab td,.sugPandaTab th{display:table-cell}}

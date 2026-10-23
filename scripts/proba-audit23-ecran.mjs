@@ -214,5 +214,19 @@ await test("11 Salt: sub 1600 px grila e o coloană (tabelul pozițiilor nu mai 
   assert.match(CSS, /@media \(max-width:1599px\)\{#salt \.t212Grila\{grid-template-columns:minmax\(0,1fr\)\}\}/);
 });
 
+// ---------------------------------------------------------------- 12. Setări: comutatoarele sunt butoane role="switch"
+await test("12 Setări: #toggleSr/Ls/Funding/Oi/Signal = <button type=button role=switch aria-checked>, aceeași acțiune; renderSettings ține aria-checked", () => {
+  for (const [id, k] of [["toggleSr", "sr"], ["toggleLs", "ls"], ["toggleFunding", "funding"], ["toggleOi", "oi"], ["toggleSignal", "signal"]]) {
+    const m = IDX.match(new RegExp('<(\\w+)([^>]*id="' + id + '"[^>]*)>'));
+    assert.ok(m, "lipsește " + id);
+    assert.equal(m[1], "button", id + " e " + m[1]);
+    assert.match(m[2], /type="button"/); assert.match(m[2], /role="switch"/); assert.match(m[2], /aria-checked="true"/); assert.match(m[2], /aria-label="[^"]+"/);
+    assert.match(m[2], new RegExp("data-action-click=\"toggleSetting\\('" + k + "'\\)\""));
+  }
+  assert.ok(!/<div class="toggle/.test(IDX), "a rămas un comutator div");
+  assert.match(fnApp("renderSettings"), /el\.setAttribute\("aria-checked",x\.alerts\[k\]\?"true":"false"\)/);
+  assert.match(CSS, /button\.toggle\{padding:0;font:inherit;appearance:none\}/);
+});
+
 console.log(`\n${teste - picate}/${teste} trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
 process.exit(picate ? 1 : 0);
