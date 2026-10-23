@@ -90,6 +90,18 @@ var SemnaleBot = (function () {
     var fr = lung ? (geo ? Math.log(x / jos) / Math.log(sus / jos) : (x - jos) / (sus - jos)) : (geo ? Math.log(sus / x) / Math.log(sus / jos) : (sus - x) / (sus - jos));
     return { moarte: Math.round(fr * N), intervale: N, txt: Math.round(fr * N) + " din " + cate(N, "grilă", "grile") };
   }
+  // v100.259 (auditul 23.10): totalul botului dacă prețul ajunge la o margine, cu grilele de pe drum (TabloExtra, unde e încărcat); altfel null
+  function totalLaMargine(b, mg) {
+    if (mg === null || mg === undefined || typeof TabloExtra === "undefined" || !TabloExtra.totalCuGridLa) return null;
+    try { return nr(TabloExtra.totalCuGridLa(b, mg)); } catch (e) { return null; }
+  }
+  // v100.259: textul scurt pentru un stop pus la x (zero-ul, podeaua): câte grile taie, dacă x e în grid; altfel null
+  function taieGrile(b, x) {
+    var jos = nr(b && b.gridJos), sus = nr(b && b.gridSus);
+    if (!inGridPret(nr(x), jos, sus)) return null;
+    var m = griliMoarte(b, nr(x));
+    return m && m.moarte >= 1 ? m.txt : null;
+  }
   var T = function (v) { return v === null || v === undefined ? "?" : TextRo.num(Math.round(v * 10) / 10, 1); };
   // v99 (cererea lui, 28.09): botul e mult mai RAR decat gridul des propus de fisa in liniste -> propunere cu cifre.
   // Nu e alerta (n-ar fi "urgent"), e o sugestie pe Tablou: gridurile rare sunt atinse rar; cu 0,30% a facut mai multi bani lateral.
@@ -140,8 +152,12 @@ var SemnaleBot = (function () {
       } else if (peProfit) {
         var dincolo = op !== null && (dir === "long" ? op >= pz : op <= pz);
         pretStop = dincolo ? null : pz;   // v100.43 (I-467): pretul la care propun stopul
+        // v100.259 (auditul 23.10): zero-ul pe plus poate cădea ÎN grid (long 90–110 la 106: zero 99,6 ⇒ 10 din 20 de grile moarte) - regula lui:
+        // stopul nu stă în mijlocul gridului fără să se spună ce parte moare; alternativa e dincolo de margine, cu totalul de acolo
+        var zG = !dincolo && inGridPret(pz, jos, sus), mtZ = zG ? griliMoarte(b, pz) : null, mgZ = dir === "short" ? sus : jos, laMgZ = zG ? totalLaMargine(b, mgZ) : null;
         out.push({ cod: "stop", titlu: "Stopul", text: dincolo
           ? "Stopul tău: " + opTxt + ", deja dincolo de zero-ul botului (" + fmtPret(pz) + "): o întoarcere nu te mai poate duce pe minus; l-aș lăsa, iar pe măsură ce " + (dir === "short" ? "coboară, îl cobor" : "urcă, îl ridic") + "."
+          : zG ? "Stopul tău: " + opTxt + ". Zero-ul botului (" + fmtPret(pz) + ", la " + dist(pz, p) + " de preț) cade în grid: un stop acolo păstrează câștigul, dar " + (dir === "short" ? "peste el " : "sub el ") + (mtZ && mtZ.moarte >= 1 ? mtZ.txt + " nu mai lucrează" : "gridul nu mai lucrează") + ". În Pionex: botul → Edit → Stop loss price."
           : "Stopul tău: " + opTxt + " → l-aș muta la " + fmtPret(pz) + " (zero-ul botului, la " + dist(pz, p) + " de preț): de acolo câștigul nu se mai pierde. În Pionex: botul → Edit → Stop loss price." });
       } else {
         // pe minus: LONG pierde in jos -> protectia sub gridul de jos; SHORT pierde in SUS -> protectia peste gridul de sus (revizia 28.09: era inversat la short)
@@ -202,9 +218,13 @@ var SemnaleBot = (function () {
     if (neutru) { st0.tag = { t: "reper", c: "mut" }; st0.act = "Aș pune protecția la o grilă în afara intervalului, pe ambele părți (botul e neutru)."; }
     else if (p === null || (pz === null && !pzN)) { st0.tag = { t: "de socotit", c: "mut" }; st0.act = "Zero-ul botului nu se poate socoti încă (lipsesc umplerile sau prețul)."; }
     else if (peProfit) {
-      st0.tag = dincolo ? { t: "la adăpost", c: "good" } : { t: op === null ? "de pus la zero" : "de mutat la zero", c: "warn" };
-      st0.act = dincolo ? "L-aș lăsa: e deja dincolo de zero-ul botului (" + fmtPret(pz) + ")." : "Aș " + (op === null ? "pune" : "muta") + " stopul la " + fmtPret(pz) + " (zero-ul botului, " + S1(pz / p - 1) + " de preț): câștigul nu se mai pierde.";
-      st0.deCe = dincolo ? "O întoarcere nu te mai duce pe minus." : "";
+      st0.tag = dincolo ? { t: "la adăpost", c: "good" } : zG ? { t: "zero în grid", c: "warn" } : { t: op === null ? "de pus la zero" : "de mutat la zero", c: "warn" };
+      // v100.259 (auditul 23.10): zero-ul în grid ⇒ alegerea spusă (încasez sau stopul la zero, cu grilele tăiate), alternativa în „de ce”
+      st0.act = dincolo ? "L-aș lăsa: e deja dincolo de zero-ul botului (" + fmtPret(pz) + ")."
+        : zG ? "Aș alege: încasez acum sau pun stopul la " + fmtPret(pz) + " (zero-ul), care taie " + (mtZ && mtZ.moarte >= 1 ? mtZ.txt : "gridul de " + (dir === "short" ? "deasupra" : "dedesubt")) + "."
+        : "Aș " + (op === null ? "pune" : "muta") + " stopul la " + fmtPret(pz) + " (zero-ul botului, " + S1(pz / p - 1) + " de preț): câștigul nu se mai pierde.";
+      st0.deCe = dincolo ? "O întoarcere nu te mai duce pe minus."
+        : zG ? "Zero-ul cade în grid, deci " + (dir === "short" ? "peste" : "sub") + " el gridul nu mai lucrează" + (mgZ !== null ? "; " + (dir === "short" ? "peste gridul de sus" : "sub gridul de jos") + " (" + fmtPret(mgZ) + ") ar lucra tot" + (laMgZ !== null ? ", dar acolo totalul e ≈ " + TextRo.usdt(laMgZ, 1) : "") : "") + "." : "";
     } else {
       var inAfara = op !== null && (dir === "short" ? sus !== null && op > sus : jos !== null && op < jos), parteP = dir === "short" ? "peste gridul de sus" : "sub gridul de jos";
       st0.tag = op === null ? { t: "fără protecție", c: "bad" } : inAfara ? { t: "pus", c: "good" } : { t: "stop în grid", c: "warn" };
@@ -340,9 +360,9 @@ var SemnaleBot = (function () {
     var p = nr(b.pretCurent), sus = nr(b.gridSus), jos = nr(b.gridJos), pz = zero ? nr(zero.pretZero) : null, op = pretStopEcran(b);   // v100.222
     var parte = dir === "long" ? "de sus" : "de jos", marg = dir === "long" ? sus : jos, areMarg = marg !== null && p !== null && p > 0;
     var peProfit = pz !== null && p !== null && (dir === "long" ? pz < p : pz > p), ok = peProfit && op !== null && (dir === "long" ? op >= pz : op <= pz);
-    var dupa = areMarg && !(dir === "long" ? p < marg : p > marg);
+    var dupa = areMarg && !(dir === "long" ? p < marg : p > marg), tZ = peProfit && !ok ? taieGrile(b, pz) : null;   // v100.259: zero-ul în grid ⇒ grilele tăiate
     var faCe = dupa ? "Aș încasa sau aș porni unul nou din fișă: prețul a trecut de marginea " + parte + " (" + fmtPret(marg) + ")."
-      : peProfit && !ok ? "Aș muta stopul la zero-ul botului (" + fmtPret(pz) + "), fără bani în plus."
+      : peProfit && !ok ? "Aș muta stopul la zero-ul botului (" + fmtPret(pz) + "), " + (tZ ? "știind că taie " + tZ + "." : "fără bani în plus.")
       : ok ? "L-aș lăsa să lucreze, fără bani în plus: stopul (" + numeOp(b, op, fmtPret) + ") e deja dincolo de zero."
       : "L-aș lăsa să lucreze, fără bani în plus.";
     var deCe = dupa ? "Botul nu mai are poziție și nu mai câștigă" + (peProfit && !ok ? "; stopul la zero-ul botului (" + fmtPret(pz) + ") păstrează ce ai" : ok ? "; stopul (" + numeOp(b, op, fmtPret) + ") e deja dincolo de zero" : "") + "."
@@ -438,6 +458,8 @@ var SemnaleBot = (function () {
       // v96.5 opritorul care urca: la 1,5% de pret pastrezi mai mult decat tinta -> spune cat (v100.61: in „de ce”, langa actiune)
       var urcaTxt = ur && (ur.opritorPastreaza === null || ur.opritorPastreaza < ur.pastrezi - 0.5) ? "cu " + TextRo.pct(ur.perna * 100) + " loc de respirație, stopul la " + fmtPret(ur.pret) + " ar păstra " + U(ur.pastrezi) + (ur.opritorPastreaza !== null ? " (cel de acum: " + U(ur.opritorPastreaza) + ")" : "") : "";
       var aproape = Math.abs(podea / p0 - 1) < 0.02, mare1 = function (s) { return s.charAt(0).toUpperCase() + s.slice(1); };
+      // v100.259 (auditul 23.10): podeaua în grid ⇒ „de ce”-ul spune întâi ce parte a gridului taie stopul acolo
+      var tPod = laAdapost ? null : taieGrile(b, podea), cuTaie = function (s) { return tPod ? "Cade în grid, " + (dir === "short" ? "peste" : "sub") + " el " + tPod + " nu lucrează; " + s.charAt(0).toLowerCase() + s.slice(1) : s; };
       c = c.filter(function (y) { return !(y.cod === "plan" && y.nivel === "iesi"); });
       c.unshift(laAdapost
         ? { nivel: "podea", cod: "podea", motiv: "ținta de +" + tinta + " USDT, atinsă și la adăpost",
@@ -445,9 +467,9 @@ var SemnaleBot = (function () {
             deCe: urcaTxt ? mare1(urcaTxt) + "." : "O întoarcere te scoate tot cu cel puțin +" + tinta + " USDT; îți scriu pe Discord când merită urcat stopul." }
         : { nivel: "atentie", cod: "podea", motiv: "ținta ta de +" + tinta + " USDT e atinsă — păstreaz-o",
             faCe: "Aș muta stopul la " + fmtPret(podea) + " (" + distPodea(podea, p0) + " de preț): închis acolo, totalul e +" + tinta + " USDT după comision.",
-            deCe: aproape && urcaTxt ? "E aproape (o mișcare obișnuită îl atinge curând); " + urcaTxt + "."
+            deCe: cuTaie(aproape && urcaTxt ? "E aproape (o mișcare obișnuită îl atinge curând); " + urcaTxt + "."
               : aproape ? "E aproape: o mișcare obișnuită îl poate atinge curând, iar mai departe înseamnă ceva sub țintă."
-              : urcaTxt ? mare1(urcaTxt) + "." : "Câștigul nu se mai poate pierde, iar botul merge mai departe cât merge." });
+              : urcaTxt ? mare1(urcaTxt) + "." : "Câștigul nu se mai poate pierde, iar botul merge mai departe cât merge.") });
     }
     var iesi = c.filter(function (y) { return y.nivel === "iesi"; }), at = c.filter(function (y) { return y.nivel === "atentie"; });
     var pod = c.filter(function (y) { return y.nivel === "podea"; })[0];

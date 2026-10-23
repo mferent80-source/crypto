@@ -136,11 +136,12 @@ var Alerte = (function () {
         if (bun) {
           var opPa = nr(ctx.plan.plus.opritorPastreaza), tolA = Math.max(0.05, ctx.plan.plus.prag * 0.01);
           var adapost = opP !== null && (opPa !== null ? opPa >= ctx.plan.plus.prag - tolA : (dP === "long" ? opP >= pod : opP <= pod));
+          var mtPod = adapost ? null : griliMoarte(b, pod);   // v100.259 (auditul 23.10): podeaua în grid ⇒ acțiunea spune grilele tăiate
           out.plan = adapost
             ? { nivel: "info", titlu: nume + ": ținta de +" + nz(ctx.plan.plus.prag) + " USDT e la adăpost", mesaj: "Stopul (" + pret(opP) + ") e dincolo de " + pret(pod) + ", unde totalul e exact ținta; botul merge mai departe." }
             : { nivel: "atentie", titlu: nume + ": ținta de +" + nz(ctx.plan.plus.prag) + " USDT e atinsă — păstreaz-o",
                 mesaj: msg("Condiții bune: la " + pret(pod) + " (" + vg((pod / pA - 1) * 100) + "% de prețul de acum" + (Math.abs(pod / pA - 1) < 0.02 ? ", aproape: o mișcare obișnuită îl poate atinge" : "") + ") totalul e exact +" + nz(ctx.plan.plus.prag) + " USDT, închizând.",
-                  "Aș muta stopul din Pionex la " + pret(pod) + ": câștigul rămâne, botul merge mai departe.") };
+                  "Aș muta stopul din Pionex la " + pret(pod) + ": câștigul rămâne, " + (mtPod && mtPod.moarte >= 1 ? "dar " + (dP === "short" ? "peste" : "sub") + " el " + mtPod.txt + " nu lucrează." : "botul merge mai departe.")) };
         } else out.plan = { nivel: "atentie", titlu: nume + ": planul tău — ținta de " + (ctx.plan.plus ? "+" + nz(ctx.plan.plus.prag) + " USDT" : "plus") + " e atinsă",
           mesaj: msg("Ai atins ținta pe care ți-ai pus-o.", "Aș încasa acum: aș închide botul pe plus.") };
       }
@@ -319,7 +320,10 @@ var Alerte = (function () {
     // si impingea exact spre inchiderile repezi (botii inchisi in prima ora: −2.065 USDT in 2026)
     var tanar = nr(b.pornitLa) > 0 && Date.now() - nr(b.pornitLa) < 3600000;
     if (pz !== null && p !== null && (dirB === "long" || dirB === "short") && !tanar) {
-      var peZero = fost("p-zero") !== "ok" ? (dirB === "long" ? p >= pz * 0.997 : p <= pz * 1.003) : (dirB === "long" ? p >= pz : p <= pz);
+      // v100.259 (auditul 23.10): doar la TRAVERSARE - prețul abia a trecut de zero (cel mult 0,5% dincolo); cât stă departe pe plus nu e „a ajuns
+      // pe zero” (pleca pe orice long pe plus, la 12 h). În alertă rămâne între −0,3% și +1% (histerezis), apoi iese în tăcere.
+      var inA = fost("p-zero") !== "ok", lo0 = inA ? 0.997 : 1, hi0 = inA ? 1.01 : 1.005;
+      var peZero = dirB === "long" ? p >= pz * lo0 && p <= pz * hi0 : p <= pz * (2 - lo0) && p >= pz * (2 - hi0);
       out["p-zero"] = peZero
         ? { nivel: "atentie", titlu: nume + ": botul a ajuns pe zero (" + pret(pz) + ")",
           mesaj: msg("Prețul e " + pret(p) + ": închis acum, ieși fără pierdere, după comisionul de închidere.", "Aș alege acum: închid botul fără pierdere sau îl las să prindă grilele.") }
@@ -408,9 +412,10 @@ var Alerte = (function () {
     var treapta = Math.max(1, pl.prag / 4), baza = Math.max(pl.prag, vechi && nr(vechi.anuntat) !== null ? vechi.anuntat : -Infinity, u.opritorPastreaza !== null ? u.opritorPastreaza : -Infinity);
     if (u.pastrezi < baza + treapta) return { mesaje: [], stare: vechi || null };
     var U = function (v) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(Math.abs(v) < 0.095 && v !== 0 ? 2 : 1).replace(".", ",") + " USDT"; };   // v100.196: o zecimală (regula lui), sub 0,1 două
+    var mtU = griliMoarte(b, u.pret);   // v100.259 (auditul 23.10): la 1,5% de preț stopul stă de obicei ÎN grid ⇒ acțiunea spune grilele tăiate
     return { stare: { anuntat: u.pastrezi }, mesaje: [{ cheie: "podea-urca", nivel: "info", titlu: "🪜 " + nume + ": poți urca stopul — păstrezi " + U(u.pastrezi),
       mesaj: msg("Stopul la " + pret(u.pret) + " (" + vg(u.perna * 100) + "% de preț) îți păstrează " + U(u.pastrezi) + " dacă piața se întoarce" + (u.opritorPastreaza !== null ? ", cel de acum (" + pret(u.opritor) + ") " + U(u.opritorPastreaza) : "") + ".",
-        "Aș muta stopul în Pionex la " + pret(u.pret) + "; botul merge mai departe.") }] };
+        "Aș muta stopul în Pionex la " + pret(u.pret) + "; " + (mtU && mtU.moarte >= 1 ? (d === "short" ? "peste" : "sub") + " el " + mtU.txt + " nu mai lucrează." : "botul merge mai departe.")) }] };
   }
 
   function grila(b, vechi) {

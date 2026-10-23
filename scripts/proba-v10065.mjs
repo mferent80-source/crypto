@@ -80,7 +80,7 @@ await test("(b) long pe minus (zero-ul peste preț): fără stop la zero (s-ar e
 await test("(b) short pe minus (zero-ul sub preț): fără stop; short pe plus: stopul la zero; fără zero: fără stop", () => {
   const sh = CRV({ directie: "short" });
   assert.equal(cuBotul(sh, { pretZero: 0.38, distantaZeroPct: -0.015 }).faCe, "L-aș lăsa să lucreze, fără bani în plus.");
-  assert.equal(cuBotul(sh, { pretZero: 0.3925, distantaZeroPct: 0.0174 }).faCe, "Aș muta stopul la zero-ul botului (0.3925), fără bani în plus.");
+  assert.equal(cuBotul(sh, { pretZero: 0.3925, distantaZeroPct: 0.0174 }).faCe, "Aș muta stopul la zero-ul botului (0.3925), știind că taie 5 din 6 grile.");   // v100.259 (auditul 23.10): zero-ul cade în grid ⇒ se spun grilele tăiate
   assert.equal(cuBotul(CRV(), null).faCe, "L-aș lăsa să lucreze, fără bani în plus.");
 });
 
