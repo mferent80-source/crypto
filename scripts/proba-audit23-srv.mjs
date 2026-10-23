@@ -380,5 +380,117 @@ await test("(12) colectorul: turaPoza pornește după planTuraPoza, urcă doar c
   assert.ok(!blocUrca.includes("alerteSLTP") && !blocUrca.includes("alerteT212Pasi"), "alertele au rămas legate de urcarea pozei");
 });
 
+// ---------- (14) CSP: pagina trece prin proxy, nu mai are voie direct la api.pionex.com ----------
+await test("(14) public/_headers: connect-src fără https://api.pionex.com (pagina cere prin /api/market); restul neatins", () => {
+  const h = citeste("public", "_headers"), csp = (h.match(/Content-Security-Policy:\s*([^\n]+)/) || [])[1] || "", cs = ((csp.match(/connect-src([^;]*)/) || [])[1] || "").trim().split(/\s+/);
+  assert.ok(!cs.includes("https://api.pionex.com"), "connect-src tot permite api.pionex.com");
+  for (const x of ["'self'", "https://fapi.binance.com", "https://api.alternative.me", "https://busola.mferent80.workers.dev", "wss://fstream.binance.com"]) assert.ok(cs.includes(x), "lipsește " + x);
+  // garda veche (garzi-v746) nu mai socotește „chemată” o adresă ținută doar într-o constantă nefolosită (PIONEX_BASE din app.js)
+  assert.match(citeste("scripts", "garzi-v746.mjs"), /constantaMoarta\(src, m\.index\)/);
+});
+
+// ---------- (15) știrile picate nu se mai țin 30 de minute ca „nicio știre” ----------
+const ST = await import("../functions/api/stiri.js");
+const getSt = (q) => ST.onRequestGet({ request: new Request("https://radar.test/api/stiri?" + q, { headers: { authorization: "Bearer " + TOKEN, "x-forwarded-for": ip() } }), env: { APP_API_TOKEN: TOKEN } }).then((r) => r.json());
+const RSS = '<rss><channel><item><title>Titlu A</title><link>https://x.test/a</link><pubDate>Thu, 23 Oct 2026 10:00:00 GMT</pubDate></item></channel></rss>';
+await test("(15) actiune / crypto / bursa: sursa picată ⇒ câmpul `eroare` și NU se ține în cache (cererea următoare reîncearcă); reușita se ține", async () => {
+  let rau = true; fetchFals(async () => (rau ? new Response("x", { status: 503 }) : new Response(RSS, { status: 200 })));
+  for (const q of ["action=actiune&ticker=ZZZ_US_EQ", "action=crypto&moneda=ZZZ", "action=bursa"]) {
+    const n0 = cereriFalse.length, r = await getSt(q);
+    assert.ok(r.eroare, q + ": fără `eroare` la sursa picată"); assert.ok(cereriFalse.length > n0, q);
+    const n1 = cereriFalse.length; rau = false; const r2 = await getSt(q);
+    assert.ok(cereriFalse.length > n1, q + ": eșecul a fost ținut în cache"); assert.equal(r2.eroare, undefined, q);
+    const n2 = cereriFalse.length; await getSt(q); assert.equal(cereriFalse.length, n2, q + ": reușita nu s-a ținut"); rau = true;
+  }
+  rau = false;
+});
+globalThis.fetch = fetchAdevarat;
+
+// ---------- (16) jurnalul colectorului după o oprire bruscă: NUL curățat, 3 rotiri ----------
+function fsFals(fisiere = {}) { const f = { ...fisiere }; return { f, existsSync: (p) => p in f, statSync: (p) => ({ size: Buffer.byteLength(f[p] || ""), mtimeMs: (f.__mtime && f.__mtime[p]) || 0 }), readFileSync: (p) => { if (!(p in f)) throw Object.assign(new Error("ENOENT"), { code: "ENOENT" }); return f[p]; }, writeFileSync: (p, t) => { f[p] = String(t); }, renameSync: (a, b) => { f[b] = f[a]; delete f[a]; }, unlinkSync: (p) => { delete f[p]; } }; }
+await test("(16) curataNulJurnal: octeții NUL de la oprirea bruscă ies la pornire (câți au fost); fără NUL nu rescrie", () => {
+  assert.equal(typeof S.curataNulJurnal, "function");
+  const fx = fsFals({ "L": "a\n" + "\u0000".repeat(500) + "b\n" });
+  assert.equal(S.curataNulJurnal(fx, "L"), 500); assert.equal(fx.f.L, "a\nb\n");
+  assert.equal(S.curataNulJurnal(fx, "L"), 0); assert.equal(S.curataNulJurnal(fsFals(), "L"), 0, "fără jurnal: nimic");
+});
+await test("(16) rotesteJurnal: peste 1 MB ⇒ L→L.1→L.2→L.3, al patrulea iese; sub 1 MB nimic; colectorul le folosește", () => {
+  assert.equal(typeof S.rotesteJurnal, "function");
+  const mare = "x".repeat(1_000_001), fx = fsFals({ L: mare, "L.1": "u1", "L.2": "u2", "L.3": "u3" });
+  assert.equal(S.rotesteJurnal(fx, "L"), true);
+  assert.deepEqual([fx.f.L, fx.f["L.1"], fx.f["L.2"], fx.f["L.3"]], [undefined, mare, "u1", "u2"]);
+  assert.equal(S.rotesteJurnal(fsFals({ L: "mic" }), "L"), false);
+  const c = citeste("scripts", "colector.mjs");
+  assert.match(c, /S\.rotesteJurnal\(fs, LOG\)/); assert.match(c, /const nul = S\.curataNulJurnal\(fs, LOG\);/); assert.ok(!/LOG \+ "\.vechi"/.test(c), "a rămas rotirea veche, una singură");
+});
+
+// ---------- (17) repornirea colectorului fără administrator: fișierul-semnal ----------
+await test("(17) verificaSemnal: semnalul mai nou decât pornirea ⇒ „iesi” (și-l șterge); cel vechi ⇒ „vechi” (șters, nu iese); lipsă ⇒ null", () => {
+  assert.equal(typeof S.verificaSemnal, "function");
+  const fx = fsFals({ "D/colector-iesi.semnal": "x", __mtime: { "D/colector-iesi.semnal": 2000 } });
+  assert.equal(S.verificaSemnal(fx, "D/colector-iesi.semnal", 1000), "iesi"); assert.ok(!("D/colector-iesi.semnal" in fx.f));
+  const fv = fsFals({ s: "x", __mtime: { s: 500 } }); assert.equal(S.verificaSemnal(fv, "s", 1000), "vechi"); assert.ok(!("s" in fv.f));
+  assert.equal(S.verificaSemnal(fsFals(), "s", 1000), null);
+});
+await test("(17) colectorul verifică semnalul în bucla lui și în ceasul de 10 s, scrie în jurnal și iese curat (exit 0)", () => {
+  const c = citeste("scripts", "colector.mjs");
+  assert.match(c, /const SEMNAL_IESIRE = path\.join\(DATA, "colector-iesi\.semnal"\), PORNIT_LA = Date\.now\(\);/);
+  assert.match(c, /function iesiLaSemnal\(\) \{ if \(DOAR_INCARCA\) return; if \(S\.verificaSemnal\(fs, SEMNAL_IESIRE, PORNIT_LA\) === "iesi"\) \{ jurnal\("semnal de ieșire/);
+  assert.match(c, /process\.exit\(0\); \} \}/);
+  const b = c.slice(c.indexOf("async function bucla()"), c.indexOf("\nbucla();"));
+  assert.match(b, /^  iesiLaSemnal\(\);/m); assert.match(b, /setInterval\(\(\) => \{ iesiLaSemnal\(\); bate\(\);/);
+});
+const CL = await import("./copie-de-lucru.mjs");
+function lumeSemnal({ moareDupa = 3, nouPid = 4242, versiune = "v101.141", ruleazaOk = true } = {}) {
+  const w = { urme: [], t: 0, vechiViu: true, pid: 1111, vers: { versiune: "v101.140", la: 0 }, verifVechi: 0 };
+  w.d = { pidVechi: 1111, versiuneAsteptata: "v101.141", acum: () => w.t,
+    scrieSemnal: () => w.urme.push("semnal"), stergeSemnal: () => w.urme.push("sters"),
+    eViu: (p) => { if (p === 1111) { w.verifVechi++; if (w.verifVechi > moareDupa) w.vechiViu = false; return w.vechiViu; } return p === nouPid; },
+    asteaptaMs: (ms) => { w.t += ms; if (!w.vechiViu && w.urme.includes("schtasks") && w.t > w.tRun + 6000) { w.pid = nouPid; w.vers = { versiune, la: w.t }; } },
+    ruleaza: (cmd, args) => { w.urme.push(cmd === "schtasks" ? "schtasks" : cmd); w.tRun = w.t; w.args = args; return ruleazaOk; },
+    citestePid: () => w.pid, citesteVersiune: () => w.vers, scrie: (m) => w.urme.push("» " + m) };
+  return w;
+}
+await test("(17) repornestePrinSemnal: semnal ⇒ așteaptă ieșirea PID-ului vechi ⇒ schtasks /run ⇒ PID nou viu + versiunea nouă în pentru-busola.json", () => {
+  assert.equal(typeof CL.repornestePrinSemnal, "function");
+  const w = lumeSemnal(), r = CL.repornestePrinSemnal(w.d);
+  assert.equal(r.ok, true, JSON.stringify(r)); assert.equal(r.pid, 4242);
+  assert.deepEqual(w.urme.filter((x) => !x.startsWith("»")), ["semnal", "schtasks"]);
+  assert.deepEqual(w.args, ["/run", "/tn", "Crypto Radar pornire"]);
+});
+await test("(17) repornestePrinSemnal: colectorul nu iese în 90 s ⇒ semnalul șters, FĂRĂ schtasks; schtasks picat sau versiunea veche ⇒ ok:false, spus", () => {
+  const w = lumeSemnal({ moareDupa: 1e9 }), r = CL.repornestePrinSemnal(w.d);
+  assert.equal(r.ok, false); assert.equal(r.motiv, "nu-a-iesit"); assert.ok(w.urme.includes("sters")); assert.ok(!w.urme.includes("schtasks"));
+  assert.ok(w.t <= 92000, "a așteptat prea mult: " + w.t);
+  const w2 = lumeSemnal({ ruleazaOk: false }); assert.equal(CL.repornestePrinSemnal(w2.d).motiv, "schtasks");
+  const w3 = lumeSemnal({ versiune: "v101.140" }); assert.equal(CL.repornestePrinSemnal(w3.d).motiv, "versiunea-veche");
+});
+await test("(17) livrarea: la „alta-sesiune” repornește prin semnal (nu doar sfatul); calea semnalului = data\\colector-iesi.semnal", () => {
+  const s = citeste("scripts", "copie-de-lucru.mjs");
+  assert.match(s, /if \(d\.motiv === "alta-sesiune" && process\.platform === "win32"\) return repornestePrinSemnal\(depSemnal\(rad, pid\)\)\.ok;/);
+  assert.match(s, /path\.join\(rad, "data", "colector-iesi\.semnal"\)/);
+  assert.match(s, /err && err\.code === "EPERM"/, "eViu: EPERM = rulează în altă sesiune, ESRCH = a ieșit");
+});
+
+// ---------- (18) CMG_CA: vânzarea lipsă = umplerea unui ordin PARTIALLY_FILLED, aruncată de filtrul „FILLED” ----------
+const TT = await import("./lib/tura-t212.mjs");
+const T212L = new Function(fs.readFileSync(path.join(RAD, "public", "lib", "t212.js"), "utf8") + "; return T212;")();
+const itemCMG = (status, oid, fid, q, p, net) => ({ order: { id: oid, status, side: q < 0 ? "SELL" : "BUY", type: "LIMIT", ticker: "CMG_CA_EQ", quantity: -60.83983836, filledQuantity: q, createdAt: "2025-10-27T17:49:18.000Z", instrument: { name: "Computer Modelling" } },
+  fill: { id: fid, quantity: q, price: p, filledAt: "2025-10-27T17:51:57.000Z", type: "TRADE", walletImpact: { currency: "RON", netValue: net, fxRate: 0.32, realisedProfitLoss: -0.87, taxes: [] } } });
+await test("(18) itemeUmplute: umplerea reală a unui ordin PARTIALLY_FILLED / CANCELLED (fill cu cantitate) intră în jurnal; ordinele fără umplere nu", () => {
+  assert.equal(typeof TT.itemeUmplute, "function");
+  const items = [itemCMG("PARTIALLY_FILLED", 40964582621, 40964582731, -9.38, 5.77, 168.45), { order: { id: 1, status: "CANCELLED", side: "SELL", ticker: "CMG_CA_EQ", filledQuantity: 0 }, fill: null }];
+  assert.equal(T212L.umpleri(items).length, 0, "(dovada) filtrul vechi „FILLED” o arunca");
+  const u = T212L.umpleri(TT.itemeUmplute(items));
+  assert.equal(u.length, 1); assert.equal(u[0].side, "SELL"); assert.equal(u[0].qty, 9.38); assert.equal(u[0].id, "40964582731");
+  assert.equal(items[0].order.status, "PARTIALLY_FILLED", "lista primită a fost modificată");
+});
+await test("(18) colectorul dă turelor T212 umplerile prin itemeUmplute și recitește o dată istoricul (data\\t212-exec-partiale.json)", () => {
+  const c = citeste("scripts", "colector.mjs");
+  assert.match(c, /const umpleriT212 = \(items\) => T212\.umpleri\(itemeUmplute\(items\)\);/);
+  assert.ok(!/umpleri: T212\.umpleri[,\s]/.test(c), "a rămas T212.umpleri direct");
+  assert.match(c, /path\.join\(DATA, "t212-exec-partiale\.json"\)/);
+});
+
 console.log(`\n${teste - picate}/${teste} ${picate ? "— PICĂ" : "ok"}`);
 process.exitCode = picate ? 1 : 0;

@@ -30,7 +30,7 @@ import os from "node:os";
 import { execFile, spawn } from "node:child_process";
 import { adresaTailscale } from "./lib/adresa-radar.mjs";
 import { turaT212 as turaT212Modul, turaPlanuri as turaPlanuriModul, turaCfActiuni as turaCfActiuniModul } from "./lib/tura-t212.mjs";
-import { turaT212Exec } from "./lib/tura-t212.mjs";   // v101.102: completarea o dată a istoricului (tipul ordinului, ora) - jurnalul de execuție
+import { turaT212Exec, itemeUmplute } from "./lib/tura-t212.mjs";   // v100.259 (punctul 18): + umplerile ordinelor parțiale   // v101.102: completarea o dată a istoricului (tipul ordinului, ora) - jurnalul de execuție
 import { ziSesiune, construiestePoza, alerteSLTP, fxDinPozitii, costLeiDinLoturi, nivDinNiveluri, prevClose, prevSimbol, cadentaPoza, alerteSimboluri, alerteT212Pasi, alertaBotPas, bataieNecesara, paznicLaDupaEsec, amprentaPoza, urcaPoza, planTuraPoza, pret30DinIstoric, pret24hDinIstoric, ziDinKlines } from "./lib/poza.mjs";
 import { creeazaYahooExtra } from "./lib/yahoo-extra.mjs";
 import { strangeBoti } from "./lib/tura-arhiva-boti.mjs";
@@ -169,6 +169,8 @@ const Valoare = incarca("valoare.js", "Valoare");   // v101.30 (I-470): zona de 
 const GridLaborator = new Function("GridCalcul", "GridProba", "Valoare", fs.readFileSync(path.join(RAD, "public", "lib", "grid-laborator.js"), "utf8") + "; return GridLaborator;")(GridCalcul, GridProba, Valoare);
 const GridPlan = new Function("GridCalcul", "GridProba", fs.readFileSync(path.join(RAD, "public", "lib", "grid-plan.js"), "utf8") + "; return GridPlan;")(GridCalcul, GridProba);   // v101.9
 const T212 = incarca("t212.js", "T212");
+// v100.259 (auditul 23.10, punctul 18 - CMG_CA): și umplerea unui ordin PARTIALLY_FILLED / CANCELLED (vânzarea de 9,38 CMG_CA lipsea din jurnal)
+const umpleriT212 = (items) => T212.umpleri(itemeUmplute(items));
 const ActiuniSemnale = new Function("GridCalcul", fs.readFileSync(path.join(RAD, "public", "lib", "actiuni-semnale.js"), "utf8") + "; return ActiuniSemnale;")(GridCalcul);
 const Consilier = new Function("ActiuniSemnale", fs.readFileSync(path.join(RAD, "public", "lib", "consilier.js"), "utf8") + "; return Consilier;")(ActiuniSemnale);
 const Idei = new Function("ActiuniSemnale", fs.readFileSync(path.join(RAD, "public", "lib", "idei.js"), "utf8") + "; return Idei;")(ActiuniSemnale);
@@ -945,7 +947,7 @@ async function turaT212() {
       cereStare: async () => { const d = await cere("/api/t212?action=istoric"); return d && d.stare || {}; },
       cerePagina: (c) => cere("/api/t212?action=ordine" + (c ? "&cursor=" + encodeURIComponent(c) : "")),
       salveaza: (corp) => trimite("/api/t212?action=istoric", corp),
-      umpleri: T212.umpleri, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)), jurnal, max: 12 });
+      umpleri: umpleriT212, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)), jurnal, max: 12 });
     // v87: la 5 minute (o pagina de cap pe tura), ca frana de "cumparat in jos" sa vina repede dupa cumparare
     t212La = Date.now();
     // v101.102 (jurnalul de execuție): o singură dată, istoricul întreg se recitește (12 pagini pe tură) ca umplerile vechi să aibă tipul
@@ -953,9 +955,18 @@ async function turaT212() {
     const fe = path.join(DATA, "t212-exec.json"); let se = {}; try { se = JSON.parse(fs.readFileSync(fe, "utf8")) || {}; } catch { se = {}; }
     if (!se.gata) {
       const r = await turaT212Exec({ cerePagina: (c) => cere("/api/t212?action=ordine" + (c ? "&cursor=" + encodeURIComponent(c) : "")), salveaza: (corp) => trimite("/api/t212?action=istoric", corp),
-        umpleri: T212.umpleri, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)), max: 12, salveazaStare: (x) => { try { scrieAtomic(fe, x); } catch {} } }, se);
+        umpleri: umpleriT212, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)), max: 12, salveazaStare: (x) => { try { scrieAtomic(fe, x); } catch {} } }, se);
       try { scrieAtomic(fe, se); } catch {}
       jurnal("t212 completare execuție: " + cate(r.pagini, "pagină", "pagini") + (r.gata ? " · gata" : ""));
+    }
+    // v100.259 (punctul 18): după completarea de mai sus, încă o recitire o dată a istoricului întreg (12 pagini pe tură), ca umplerile ordinelor
+    // parțiale aruncate până acum (CMG_CA_EQ: 9,38 bucăți vândute) să intre în jurnal; starea pe disc (data\t212-exec-partiale.json)
+    const fp = path.join(DATA, "t212-exec-partiale.json"); let sp = {}; try { sp = JSON.parse(fs.readFileSync(fp, "utf8")) || {}; } catch { sp = {}; }
+    if (se.gata && !sp.gata) {
+      const r2 = await turaT212Exec({ cerePagina: (c) => cere("/api/t212?action=ordine" + (c ? "&cursor=" + encodeURIComponent(c) : "")), salveaza: (corp) => trimite("/api/t212?action=istoric", corp),
+        umpleri: umpleriT212, pauza: (ms) => new Promise((rs) => setTimeout(rs, ms)), max: 12, salveazaStare: (x) => { try { scrieAtomic(fp, x); } catch {} } }, sp);
+      try { scrieAtomic(fp, sp); } catch {}
+      jurnal("t212 recitire (umplerile ordinelor parțiale): " + cate(r2.pagini, "pagină", "pagini") + (r2.gata ? " · gata" : ""));
     }
   } catch (e) { jurnal("t212 ESEC", e.message); t212La = Date.now() + 5 * 60000; }
   t212InLucru = false;

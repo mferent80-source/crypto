@@ -117,6 +117,19 @@ export async function turaCfActiuni(d) {
 }
 // v100.176 (jurnalul de execuție): completarea o singură dată - pagină cu pagină de la cap la capăt, retrimite umplerile (serverul le
 // înlocuiește după id, cu tipul ordinului și ora la care a fost dat); st = { cursor, gata } ținut de colector pe disc
+// v100.259 (auditul 23.10, punctul 18 - CMG_CA): T212.umpleri (public/lib/t212.js) păstrează doar ordinele cu status „FILLED”. Un ordin LIMIT
+// de vânzare umplut PARȚIAL și apoi anulat (CMG_CA_EQ, 27.10.2025: 9,38 din 60,84 bucăți la 5,77, status PARTIALLY_FILLED) are totuși o
+// umplere reală (fill cu cantitate, preț și walletImpact) - aruncată, jurnalul Radarului ținea 9,38 bucăți pe care contul nu le mai are.
+// Aici: orice item cu o umplere reală trece drept „FILLED” (copie; lista primită rămâne neatinsă); ordinele fără umplere rămân pe dinafară.
+export function itemeUmplute(items) {
+  return (Array.isArray(items) ? items : []).map((x) => {
+    const o = x && x.order, f = x && x.fill;
+    if (!o || !f || o.status === "FILLED") return x;
+    if (!(Math.abs(Number(f.quantity)) > 0) || !(Number(f.price) > 0) || !f.walletImpact) return x;
+    return { ...x, order: { ...o, status: "FILLED" } };
+  });
+}
+
 export async function turaT212Exec(d, st) {
   if (st.gata) return { pagini: 0, gata: true };
   const max = d.max || 12, pas = d.pasMs == null ? 11000 : d.pasMs;
