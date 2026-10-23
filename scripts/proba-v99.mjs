@@ -154,7 +154,8 @@ await test("6. acumConcret: stopul, gridul si miscarea, cu cifre - pe plus: stop
   for (const x of l) assert.ok(x.titlu && x.text && x.text.length > 30, JSON.stringify(x));
   // pe plus, cu stopul lui sub zero: „muta stopul la zero"
   const plus = S.acumConcret({ bot: bot({ profitTotal: 4.2, pretCurent: 0.62, opritorPierdere: 0.5, opritorPierdereActiv: true }), fisa: fisaStub(), zero: { pretZero: 0.6012 }, costuri, geom: TE.geometrieBot(bot()), acum: T0 });
-  const s2 = plus.find((x) => x.cod === "stop"); assert.match(s2.text, /0\.6012|0,6012/); assert.match(s2.text, /muta|mută|ridic/i); assert.match(s2.text, /0\.5(0)?\b|0,50/);
+  // v100.259 (auditul 23.10): zero-ul 0,6012 cade în grid ⇒ textul spune grilele tăiate, iar acțiunea e alegerea (încasez / stopul la zero)
+  const s2 = plus.find((x) => x.cod === "stop"); assert.match(s2.text, /0\.6012|0,6012/); assert.match(s2.text, /cade în grid/); assert.match(s2.act, /pun stopul la 0\.6012/); assert.match(s2.text, /0\.5(0)?\b|0,50/);
   // in miscare: randul de miscare spune „nu adauga"
   const mm = S.acumConcret({ bot: bot(), fisa: fisaStub({ regim: { r4h: 1.9, r24h: 1.1, miscare: true }, propusa: "aleasa" }), zero, costuri, geom: TE.geometrieBot(bot()), acum: T0 });
   assert.match(mm.find((x) => x.cod === "miscare").text, /1,9×/); assert.match(mm.find((x) => x.cod === "miscare").text, /mișcare/i);

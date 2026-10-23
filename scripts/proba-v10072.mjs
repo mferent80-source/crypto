@@ -33,7 +33,8 @@ await test("raportul de duminică: regula săptămânii la persoana I, „Labora
   const rd = OB.raportDuminica({ trades: [], acum: T0 });
   assert.ok(rd.linii.every((l) => verifica(l, "raport").length === 0), rd.linii.join(" | "));
   const r2 = OB.raportDuminica({ trades: [tr("CRV", -3, { inchis: T0 - ZI })], acum: T0, laborator: { intrebari: [{ verdict: "dovedit", titlu: "după o mișcare mare, gridul iese mai rău" }] } });
-  const tot = r2.linii.join("\n"); assert.doesNotMatch(tot, /DOVEDIT/); assert.match(tot, /Laboratorul a dovedit/);
+  // v100.259 (auditul 23.10, punctul 13): fără trecerea prin corecția pe toate testele, laboratorul se spune „pe net, fără corecția…”
+  const tot = r2.linii.join("\n"); assert.doesNotMatch(tot, /DOVEDIT/); assert.match(tot, /Laboratorul, pe net, fără corecția pe toate testele/);
   assert.match(r2.regula, /^Regula săptămânii: (Aș|N-aș) /, r2.regula); faraAb(r2.regula, "raport", "regula");
 });
 

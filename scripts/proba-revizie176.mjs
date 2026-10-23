@@ -69,7 +69,7 @@ await test("C2: verdicte ZILNICE persistente pe aceleași simboluri (randamente 
       bare[sym] = b;
     }
     /* v100.196 (🔴2): Poarta se judecă pe zile; la h = 20 cele 40 de simboluri se răresc în aceleași ~8 zile ⇒ „puține” (corect); rata se măsoară la h = 5 */
-    const cal = V.calibrare(V.evalueaza(jurnal, bare, {})), c = cal.find((x) => x.h === 5), c20 = cal.find((x) => x.h === 20);
+    const cal = V.calibrare(V.evalueaza(jurnal, bare, {}), { repsP: 1000 }), c = cal.find((x) => x.h === 5), c20 = cal.find((x) => x.h === 20);   // v100.259: simularea de mărime rămâne pe 1.000 de permutări (producția: 10.000)
     assert.ok(!c20 || c20.test.stare === "putine", "h = 20: " + (c20 && c20.test.stare));
     if (c && c.test.stare === "testat") { testate++; if (c.test.p < 0.05) mic++; }
   }
