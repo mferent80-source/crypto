@@ -137,17 +137,17 @@ await test("paginile refacute folosesc o singura latime comuna (--latime-pagina:
   }
   assert.ok(!/max-width:1180px;margin/.test(css), "a ramas o limita de 1180px");
 });
-await test("graficul (boti si actiuni) creste cu latimea: botul 210–300, actiunile 340–520, telefonul 270", () => {
+await test("graficul (boti si actiuni) creste cu latimea: botul 420–540 (v100.250, design.md §5), actiunile 340–520, telefonul 270", () => {
   const bare = bareZ(60, true), d = (W, ingust, actiune) => GB.desen({ bare, W, ingust, actiune, niv: [], st: {} });
   const bot = (W, ingust) => d(W, ingust, false).harta.mainH, act = (W) => d(W, false, true).harta.mainH;
   assert.ok(bot(1800, false) > bot(800, false), "botul crește cu lățimea: " + bot(800, false) + " vs " + bot(1800, false));
-  assert.ok(bot(800, false) >= 210 && bot(800, false) <= 300, "botul la 800: " + bot(800, false));
-  assert.ok(bot(2400, false) <= 300, "botul plafonat la 300");
+  assert.ok(bot(800, false) >= 420 && bot(800, false) <= 540, "botul la 800: " + bot(800, false));
+  assert.ok(bot(2400, false) <= 540, "botul plafonat la 540");
   assert.equal(bot(390, true), 270);
   assert.ok(act(1300) - act(800) >= 120, "acțiunile rămân 340–520");
   assert.ok(act(800) >= 340 && act(2400) <= 520);
-  assert.ok(d(800, false, false).inaltime >= 210 + 8 + 46 + 8 + 26 + 20);
-  assert.ok(d(2400, false, false).inaltime <= 300 + 8 + 46 + 8 + 26 + 20);
+  assert.ok(d(800, false, false).inaltime >= 420 + 8 + 54 + 8 + 26 + 20);
+  assert.ok(d(2400, false, false).inaltime <= 540 + 8 + 54 + 8 + 26 + 20);
   assert.ok(d(390, true, false).inaltime >= 270 + 8 + 34 + 8 + 26 + 20);
 });
 

@@ -170,7 +170,10 @@ await test("pagina: răspunsul în cuvinte (valoarea, ziua proastă, criza), „
   const h = ctxE.ciHtml(RAP, { acum: RAP.la + 3600000 });
   assert.match(h, /Contul tău: 28\.150 lei\. Într-o zi proastă \(1 din 20\) pozițiile de acum pierd cel puțin ~1\.190 lei/);
   assert.match(h, /Cea mai rea criză din trecut, pe ce ai acum: Covid, martie 2020, −9\.694 lei/);
-  assert.match(h, /👉 <b>Ce aș face eu:<\/b> WDC și STX se mișcă aproape la fel/); assert.match(h, /<svg class="ciHisto"/);
+  // v100.258: din v100.254 abaterea de reconciliere T212 trece înaintea corelației (fixtura are CMG_CA); fără ea, corelația ca înainte
+  assert.match(h, /👉 <b>Ce aș face eu:<\/b> Aș verifica în T212 CMG_CA: jurnalul Radarului nu se potrivește cu contul\./); assert.match(h, /<svg class="ciHisto"/);
+  const curat = JSON.parse(JSON.stringify(RAP)); curat.reconciliere.t212 = { ok: true, abateri: [], verificate: 10 };
+  assert.match(ctxE.ciHtml(curat, { acum: RAP.la + 3600000 }), /👉 <b>Ce aș face eu:<\/b> WDC și STX se mișcă aproape la fel/);
   assert.match(h, /✗ <b>Trading 212: 1 abatere<\/b>/); assert.match(h, /CMG_CA: cont 0, jurnal 9,38/);
   assert.match(h, /Cât te costă execuția/); assert.match(h, /Ordine la piață date cu bursa închisă/);
   assert.match(h, /banii puși la lucru au făcut −12,0% ponderat în timp; BTC a făcut −8,0%, S&amp;P \+16,0%/);

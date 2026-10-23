@@ -33,10 +33,10 @@ vm.createContext(c2);
 vm.runInContext(ae.slice(i0, i1), c2);
 
 function rand(h, stare) { return { sursa: "macro", h, test: { stare, dif: 0.01 } }; }
-function reg(h, ramane) { return { ramane, sursa: "Regimul macro · " + h + " zile de bursă" }; }
+function reg(h, ramane) { return { ramane, sursa: "Regimul macro · " + TextRo.cate(h, "zi", "zile") + " de bursă" }; }   // v100.258: ca verdicte.js („20 de zile”)
 
 await test("orice abatere de cantitate tace suma, pe orice simbol", () => {
-  assert.match(t212, /if \(rec && Array\.isArray\(rec\.abateri\) && rec\.abateri\.length\) return "reconciliere"/);
+  assert.match(t212, /if \(Array\.isArray\(r\.reconciliere\.t212\.abateri\) && r\.reconciliere\.t212\.abateri\.length\) return "reconciliere";/);   // v100.258: forma din v100.254 (t212FaraSuma)
   assert.doesNotMatch(t212, /t212AbatereSimbol|t212SimbolEg/);
   const rec = "N-aș da o sumă: jurnalul nu se potrivește cu cantitatea din cont.";
   assert.equal(AS.facPoarta("cumpara", { suma: 1837 }, { faraSuma: "reconciliere" }), rec);

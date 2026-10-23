@@ -59,7 +59,10 @@ await test("datele stricate nu strică pagina: zile fără valoare sau cu z gre�
 await test("pagina: ciPorneste aduce `contZile` și pune secțiunea sus, înaintea raportului; CSS-ul ei înaintea pândei", () => {
   const ce = citeste("public", "lib", "cont-ecran.js"), css = citeste("public", "app.css");
   assert.match(ce, /getJSON\("\/api\/istoric-bot\?action=contZile"\)/);
-  assert.equal((ce.match(/ciZileHtml\(ciStare\.zile\) \+ /g) || []).length, 2, "și din memorie, și după aducere");
+  // v100.258: din v100.233 ambele drumuri (din memorie, după aducere) desenează prin ciDeseneaza, care pune zilele primele
+  assert.equal((ce.match(/ciZileHtml\(ciStare\.zile\) \+ /g) || []).length, 1, "zilele într-un singur desen");
+  const porn = ce.slice(ce.indexOf("async function ciPorneste("), ce.indexOf("\n}", ce.indexOf("async function ciPorneste(")));
+  assert.equal((porn.match(/ciDeseneaza\(\);/g) || []).length, 2, "și din memorie, și după aducere");
   const iZ = css.indexOf(".ciZileGraf{"), iPanda = css.lastIndexOf("@media (max-width:640px){.sugPandaTab thead"); assert.ok(iZ > 0 && iPanda > iZ, "pânda rămâne ultima");
 });
 await test("versiunile: v100.197, proba în lanțul `test`", () => {
