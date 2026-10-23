@@ -28,6 +28,29 @@ export function pasDupaEsecuri(esecuri, pasMs) {
   return Math.min(PAUZA_FARA_SERVER_MAX_MS, pasMs * 2 ** Math.min(10, n - MAX_ESECURI));
 }
 
+// v100.259 (auditul 23.10, punctul 13): bot-orders citește cel mult 10 pagini (100 de boți) și pune probleme.trunchiat - colectorul o ignora,
+// iar boții de peste 100 rămâneau fără nicio alertă, tăcut. Lista tăiată ⇒ „trunchiat” (apelantul notează m.trunchiatAnuntat DOAR după ce
+// mesajul a plecat), repetat cel mult la 24 h; lista întreagă ⇒ episodul se închide. Întoarce { tip: "trunchiat" | null }.
+const REPETA_TRUNCHIAT_MS = 24 * 3600000;
+export function trunchiatPas(m, { trunchiat, acum }) {
+  if (!trunchiat) { m.trunchiatAnuntat = 0; return { tip: null }; }
+  return { tip: acum - (Number(m.trunchiatAnuntat) || 0) >= REPETA_TRUNCHIAT_MS ? "trunchiat" : null };
+}
+
+// v100.259 (auditul 23.10, punctul 6): la pornire TOATE turele plecau în aceeași secundă (timeout-uri grupate la server, Pionex în rafală).
+// Valul turei: prima = doar alertele (bucla boților, T212, poza, cozile); a doua = turele medii; de la a treia, și cele grele.
+export function valPornire(turaNr) { const n = Number(turaNr) || 0; return { medii: n >= 2, grele: n >= 3 }; }
+// v100.259 (punctul 6): cererile identice în zbor legate - cât rulează una, ceilalți primesc aceeași promisiune (botiInchisiToti era chemat
+// de 3 ture în aceeași milisecundă). Fiecare chemător primește COPIA listei (cu `complet`), ca unul să n-o strice pe a altuia.
+export function unaInZbor(fn) {
+  let zbor = null;
+  const copie = (v) => { if (!Array.isArray(v)) return v; const c = v.slice(); for (const k of Object.keys(v)) if (!/^\d+$/.test(k)) c[k] = v[k]; return c; };
+  return () => {
+    if (!zbor) zbor = Promise.resolve().then(fn).finally(() => { zbor = null; });
+    return zbor.then(copie);
+  };
+}
+
 // C6 + 🔵3: o coadă de alerte netrimise (KV-ul Radarului, Discord), golită în ORDINE: după primul eșec restul așteaptă tura următoare;
 // se renunță doar la ce e mai vechi decât maxMs(x) (critic: 24 h, restul 12 h - apelantul hotărăște). O excepție la trimitere = eșec, nu pierdere.
 // Întoarce { ramase, trimise, renuntate } (listele, în ordinea cozii); apelantul păzește reintrarea și scrie coada pe disc.
@@ -116,7 +139,16 @@ export function preturiPerpPas(m, { probleme, boti, acum }) {
   if (!Array.isArray(boti) || !boti.length) return { tip: null, nume: [], minute: 0, motiv: null };
   const nume = boti.filter((b) => b && b.activ !== false && eBotFutures(b) && !(Number(b.pretCurent) > 0)).map((b) => String(b.baza || b.simbol || "?").replace(/\.PERP$/, ""));
   const motiv = probleme && probleme.preturi ? String(probleme.preturi) : null;
-  if (!nume.length) { st.ture = 0; st.de = 0; return { tip: st.anuntat ? "revenit" : null, nume: st.nume || [], minute: 0, motiv: null }; }
+  // v100.259 (auditul 23.10, punctul 11): „vede iar” doar pe boții anunțați orbi care sunt TOT activi acum; închiși cât erau orbi ⇒ episodul se
+  // închide tăcut (un „pot judeca din nou lichidarea la ONDO” pe un bot închis era fals)
+  if (!nume.length) {
+    st.ture = 0; st.de = 0;
+    if (!st.anuntat) return { tip: null, nume: st.nume || [], minute: 0, motiv: null };
+    const vii = new Set(boti.filter((b) => b && b.activ !== false && eBotFutures(b)).map((b) => String(b.baza || b.simbol || "?").replace(/\.PERP$/, "")));
+    const inca = (st.nume || []).filter((n) => vii.has(n));
+    if (!inca.length) { st.anuntat = 0; return { tip: null, nume: [], minute: 0, motiv: null }; }
+    return { tip: "revenit", nume: inca, minute: 0, motiv: null };
+  }
   st.ture = (st.ture || 0) + 1; st.de = st.de || acum;
   const minute = Math.max(1, Math.round((acum - st.de) / 60000));
   if (st.ture >= PRAG_TURE_PERP && !st.anuntat) { st.nume = nume; return { tip: "orb", nume, minute, motiv }; }

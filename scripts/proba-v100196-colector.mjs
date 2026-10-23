@@ -260,7 +260,7 @@ await test("C6 colector: alerta ratată în KV intră în coada de pe disc și s
   assert.match(c, /if \(golireDiscord \|\| CANAL !== "discord" \|\| !coadaDiscord\.length\) return;/);
   assert.match(c, /if \(S\.eLimitaDeRitm\(eroare\)\) ritmPauzaPana = Date\.now\(\) \+ 60000;/);
   assert.match(c, /const greleOk = Date\.now\(\) >= ritmPauzaPana;/);
-  assert.match(c, /if \(greleOk\) turaProfil\(\)/);
+  assert.match(c, /if \(val\.grele && greleOk\) turaProfil\(\)/);   // v100.259 (auditul 23.10, punctul 6): + valul pornirii (cele grele de la a treia tură)
 });
 
 

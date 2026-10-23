@@ -129,7 +129,9 @@ await test("noaptea (fara poze) colectorul bate la paznic la 20 de minute - sub 
   assert.equal(PZ.bataieNecesara({ acum, pozaOkLa: acum - 4 * 3600000, paznicLa: acum - 6 * MIN }), false, "noaptea: 6 min nu ajung");
   assert.equal(PZ.bataieNecesara({ acum, pozaOkLa: acum - 4 * 3600000, paznicLa: acum - 21 * MIN }), true, "noaptea: dupa 20 min bate");
   const col = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8");
-  assert.match(col, /cad === null/, "colectorul sare poza cand ritmul e null");
+  // v100.259 (auditul 23.10, punctul 12): noaptea (ritmul null) tura pozei nu mai e sărită de tot - judecă alertele T212 la 5 min, dar NU urcă poza
+  assert.match(fs.readFileSync(path.join(RAD, "scripts", "lib", "poza.mjs"), "utf8"), /if \(cheiPaznic && cad !== null\) return \{ intervalMs: cad, urca: true, simboluri: true \};/, "noaptea poza urcă");
+  assert.match(col, /if \(plan\.urca && urcaPoza\(/, "colectorul urcă poza și când ritmul e null");
 });
 
 // ---- revizia finala pachetul 3 actiuni (Opus, 01.10): I1–I5 + re-gradate („eCHO”, faCe contra verdictului, sf-istoric dublu) ----

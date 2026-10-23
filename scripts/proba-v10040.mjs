@@ -44,7 +44,7 @@ const boti = Array.from({ length: 26 }, (_, i) => ({ strategyId: String(3000 + i
   buOrderData: { totalRealizedProfit: "1", gridProfit: "0.8", totalFee: "-0.2", totalFundingFee: "-0.1", usdtInvestment: "50", leverage: "5", trend: "long", bottom: "0.37", top: "0.42", row: 10, gridType: "geometric" } }));
 
 await test("🔴 colectorul: raportul de duminica si „Dacă ascultai” citesc TOTI botii inchisi (arhiva + prima pagina), nu ultimii 10", () => {
-  assert.match(colector, /async function botiInchisiToti\(\)/);
+  assert.match(colector, /async function botiInchisiTotiCorp\(\)/); assert.match(colector, /var botiInchisiToti = S\.unaInZbor\(botiInchisiTotiCorp\);/);   // v100.259 (punctul 6): cererile deodată legate
   const tr = colector.slice(colector.indexOf("async function turaRaport("), colector.indexOf("async function turaRaport(") + 900);
   // v100.173: lista se ia întâi (const toti = await botiInchisiToti()), ca raportul să se amâne când arhiva n-a venit
   assert.match(tr, /const toti = await botiInchisiToti\(\);[\s\S]*JurnalTrade\.din\(toti\)/, "turaRaport");

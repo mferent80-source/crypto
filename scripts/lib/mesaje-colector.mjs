@@ -41,6 +41,11 @@ export const lichidareOarba = (nume, minute, motiv) => ({ nivel: "critic", titlu
     "Aș urmări lichidarea direct în aplicația Pionex până revin prețurile.") });
 export const lichidareVedeIar = (nume) => ({ nivel: "info", titlu: "Prețurile futures au revenit", mesaj: "Pot judeca din nou lichidarea" + ((nume || []).length ? " la " + scurt(nume.join(", "), 80) : "") + "." });
 
+// v100.259 (auditul 23.10, punctul 13): Radarul citește cel mult 100 de boți porniți (10 pagini Pionex) - cei în plus n-au alerte
+export const botiTrunchiati = (n) => ({ nivel: "atentie", titlu: "Peste " + cate(n, "bot", "boți") + " porniți: cei în plus n-au alerte",
+  mesaj: msg("Pionex dă boții pe pagini de câte 10, iar Radarul citește cel mult 10 pagini, deci boții de după primii " + cate(n, "bot", "boți") + " nu sunt păziți.",
+    "Aș închide boții de care nu mai am nevoie, ca toți să fie păziți.") });
+
 export const lipsaPionex = (nume) => ({ nivel: "critic", titlu: (nume || "Botul") + " nu mai apare în lista Pionex", mesaj: msg("Poate a fost închis sau lichidat.", "Aș verifica în aplicația Pionex.") });
 
 // pp = TabloExtra.propunePlan(...) = { plus, minus, afaraOre, nota } sau null

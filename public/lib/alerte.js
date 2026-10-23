@@ -371,16 +371,22 @@ var Alerte = (function () {
           // revizia 01.10 (C1): o regula cu doarRadar (ex. „s-iesi”) ramane doar in Radar - inainte cheia se pierdea aici si pleca pe Discord
           if (a.titlu) mesaje.push(tacuta(cheie, ctx) || a.doarRadar ? { cheie: cheie, nivel: "info", titlu: a.titlu, mesaj: a.mesaj, doarRadar: true } : { cheie: cheie, nivel: "info", titlu: a.titlu, mesaj: a.mesaj });
           nou[cheie] = { nivel: "ok", la: acum };
-        } else nou[cheie] = { nivel: v.nivel, la: v.la, okDe: de };
+        } else nou[cheie] = v.max ? { nivel: v.nivel, la: v.la, okDe: de, max: v.max } : { nivel: v.nivel, la: v.la, okDe: de };
         return;
       }
+      // v100.259 (auditul 23.10, punctul 11): nivelul cel mai înalt ANUNȚAT în episod (max) ține până la ieșirea stabilă - lichidarea care
+      // oscila critic ↔ atenție în jurul pragului de 9,5% retrimitea critica la fiecare urcare („s-a agravat” față de atenție)
+      var vMax = v.max && RANG[v.max] > RANG[v.nivel] ? v.max : v.nivel;
       var trimite = false;
-      if (RANG[a.nivel] > RANG[v.nivel]) trimite = true;                       // s-a agravat
+      if (RANG[a.nivel] > RANG[vMax]) trimite = true;                          // s-a agravat (peste ce s-a anunțat deja)
       else if (a.nivel !== "ok" && a.nivel === v.nivel && acum - v.la >= (REPETA_CHEIE_MS[cheie + ":" + a.nivel] || REPETA_CHEIE_MS[cheie] || REPETA_MS[a.nivel])) trimite = true; // persista
       // v100.68: nota „tăcut pe Discord” pe randul 1 (faptul), nu lipita de actiune
       if (trimite) mesaje.push(tacuta(cheie, ctx) ? { cheie: cheie, nivel: a.nivel, titlu: a.titlu, mesaj: cuNota(a.mesaj, "nu-l trimit pe Discord: pe boții tăi nu bate întâmplarea"), doarRadar: true } : a.doarRadar ? { cheie: cheie, nivel: a.nivel, titlu: a.titlu, mesaj: a.mesaj, doarRadar: true } : { cheie: cheie, nivel: a.nivel, titlu: a.titlu, mesaj: a.mesaj });
       // coborarea critic -> atentie NU reseteaza ceasul: o revenire rapida in critic nu e o agravare noua
-      nou[cheie] = { nivel: a.nivel, la: trimite ? acum : (RANG[a.nivel] <= RANG[v.nivel] ? v.la : acum) };
+      // v100.259: nici urcarea înapoi până la nivelul deja anunțat (vMax) - ceasul repetării rămâne al anunțului
+      var nMax = RANG[a.nivel] > RANG[vMax] ? a.nivel : vMax;
+      nou[cheie] = { nivel: a.nivel, la: trimite ? acum : (RANG[a.nivel] <= RANG[vMax] ? v.la : acum) };
+      if (a.nivel !== "ok" && nMax !== a.nivel) nou[cheie].max = nMax;
     });
     return { mesaje: mesaje, stare: nou };
   }

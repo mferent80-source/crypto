@@ -546,6 +546,11 @@ async function tura() {
     if (lg.tip === "orb" && (await anuntaMesaj(MesajeColector.botiNevazuti(lg.minute, lg.nume)))) m.listaGoalaAnuntat = acum;
     if (lg.tip === "vede" && (await anuntaMesaj(MesajeColector.botiVazutiIar()))) m.listaGoalaAnuntat = 0;
   }
+  // v100.259 (auditul 23.10, punctul 13): peste 100 de boți porniți (bot-orders: probleme.trunchiat) cei în plus n-au alerte ⇒ spus, nu tăcere
+  {
+    const tr = S.trunchiatPas(m, { trunchiat: !!(d && d.probleme && d.probleme.trunchiat), acum });
+    if (tr.tip === "trunchiat" && (await anuntaMesaj(MesajeColector.botiTrunchiati(boti.length)))) m.trunchiatAnuntat = acum;
+  }
   // audit 19.10: fara tickere PERP 3 ture la rand alerta de lichidare e oarba (alerte.js cere dist !== null) ⇒ spus o data, si la revenire
   {
     const po = S.preturiPerpPas(m, { probleme: d && d.probleme, boti, acum });
@@ -817,7 +822,9 @@ async function turaArhivaBoti() {
 // Toti botii inchisi = arhiva de acasa (action=botiInchisi, toata istoria) + prima pagina Pionex (cei inchisi dupa ultima tura
 // de arhiva), unificati pe strategyId.
 // v100.173 (auditul Opus): lista poartă `complet` (arhiva de acasă a venit) — raportul, frâna și socoteala NU judecă doar pe ultimii 10 boți
-async function botiInchisiToti() {
+// v100.259 (auditul 23.10, punctul 6): 3 ture o cereau în aceeași milisecundă ⇒ cererile identice în zbor legate (S.unaInZbor), fiecare cu copia ei
+var botiInchisiToti = S.unaInZbor(botiInchisiTotiCorp);
+async function botiInchisiTotiCorp() {
   const out = new Map(); let arhivaOk = false;
   try { const a = await cere("/api/istoric-bot?action=botiInchisi"); for (const x of (a && Array.isArray(a.boti) ? a.boti : [])) { const id = String(x && (x.strategyId || x.buOrderId) || ""); if (id) out.set(id, x); } if (Array.isArray(a && a.boti)) arhivaOk = true; } catch (e) { jurnal("arhiva botilor", e.message); }
   try { const d = await cere("/api/bot-orders?status=finished&limit=100"); for (const y of (d && Array.isArray(d.bots) ? d.bots : [])) { const x = y.brut || y, id = String(x && (x.strategyId || x.buOrderId) || y.id || ""); if (id && !out.has(id)) out.set(id, x); } } catch (e) { jurnal("botii inchisi (Pionex)", e.message); }
@@ -2356,33 +2363,36 @@ async function bucla() {
   golesteCoada().catch((e) => jurnal("coada discord", e.message));   // v100.40
   golesteCoadaKv().catch((e) => jurnal("coada kv", e.message));   // v101.116 (C6): alertele ratate în KV
   const greleOk = Date.now() >= ritmPauzaPana;   // v101.116 (C6): 60 s după un 429 de ritm, turele grele nu pornesc
+  // v100.259 (auditul 23.10, punctul 6): la pornire nu mai pleacă toate deodată (timeout-uri grupate) - prima tură doar alertele (bucla boților,
+  // T212, poza, cozile, paznicul), a doua și turele medii, de la a treia și cele grele (S.valPornire). COLECTOR_O_TURA (o singură tură) le pornește pe toate.
+  const val = process.env.COLECTOR_O_TURA ? { medii: true, grele: true } : S.valPornire(turaNr);
   turaPerechiOra().catch((e) => jurnal("perechi pe ora", e.message));   // v100.40
-  turaSocoteala().catch((e) => jurnal("socoteala", e.message));   // v100.43 (I-466)
-  turaFrana().catch((e) => jurnal("frana", e.message));   // v100.43 (I-468)
-  if (greleOk) turaProfil().then(() => turaArhivaOre()).then(() => turaCazuri()).then(() => turaRisc()).then(() => turaVarianteNoapte()).then(() => turaProfilActiuni()).catch((e) => jurnal("profil/cazuri", e.message));   // v101.31: + profilurile actiunilor   // v101.26 (pachetul 1) + v101.28 (I-469)
-  turaProbabilitati().catch((e) => jurnal("probabilitati", e.message));   // v101.27 (pachetul 2a)
-  turaReteaColector().catch((e) => jurnal("retea", e.message));   // v101.56 (rețeaua neuronală, livrarea 1): noaptea, o dată pe zi
-  turaSugestiiColector().catch((e) => jurnal("sugestii", e.message));   // v101.58 (reveniri + short): o dată pe zi, de la 8:00
-  turaDecizii().catch((e) => jurnal("decizii", e.message));   // v101.29 (I-472)
-  turaPerechi().catch((e) => jurnal("perechi", e.message));   // v101.30 (I-477)
-  turaSocotealaActiuni().catch((e) => jurnal("socoteala actiuni", e.message));   // v101.33
-  turaArhivaBoti().catch((e) => jurnal("arhiva boti inchisi", e.message)).then(() => turaScor()).catch((e) => jurnal("scor sezon", e.message));   // v101.127: scorul sezonului după arhivă (garda v100.25 cere forma turaArhivaBoti().catch)
+  if (val.medii) turaSocoteala().catch((e) => jurnal("socoteala", e.message));   // v100.43 (I-466)
+  if (val.medii) turaFrana().catch((e) => jurnal("frana", e.message));   // v100.43 (I-468)
+  if (val.grele && greleOk) turaProfil().then(() => turaArhivaOre()).then(() => turaCazuri()).then(() => turaRisc()).then(() => turaVarianteNoapte()).then(() => turaProfilActiuni()).catch((e) => jurnal("profil/cazuri", e.message));   // v101.31: + profilurile actiunilor   // v101.26 (pachetul 1) + v101.28 (I-469)
+  if (val.grele) turaProbabilitati().catch((e) => jurnal("probabilitati", e.message));   // v101.27 (pachetul 2a)
+  if (val.grele) turaReteaColector().catch((e) => jurnal("retea", e.message));   // v101.56 (rețeaua neuronală, livrarea 1): noaptea, o dată pe zi
+  if (val.grele) turaSugestiiColector().catch((e) => jurnal("sugestii", e.message));   // v101.58 (reveniri + short): o dată pe zi, de la 8:00
+  if (val.medii) turaDecizii().catch((e) => jurnal("decizii", e.message));   // v101.29 (I-472)
+  if (val.medii) turaPerechi().catch((e) => jurnal("perechi", e.message));   // v101.30 (I-477)
+  if (val.medii) turaSocotealaActiuni().catch((e) => jurnal("socoteala actiuni", e.message));   // v101.33
+  if (val.medii) turaArhivaBoti().catch((e) => jurnal("arhiva boti inchisi", e.message)).then(() => turaScor()).catch((e) => jurnal("scor sezon", e.message));   // v101.127: scorul sezonului după arhivă (garda v100.25 cere forma turaArhivaBoti().catch)
   turaPaznic().catch(() => {});
-  turaBilantBusola().catch((e) => jurnal("busola bilanț", e.message));   // v101.65 (ideea 1): bilanțul Busolei despre predicțiile 🧠, în KV
-  turaPiataColector().catch((e) => jurnal("piata", e.message));
-  turaContColector().catch((e) => jurnal("cont", e.message));   // v101.102 (contul întreg): la 6 ore
-  turaVerdicteColector().catch((e) => jurnal("verdicte", e.message));
-  turaSectoareColector().catch((e) => jurnal("sectoare", e.message));
-  turaTrendColector().catch((e) => jurnal("trend", e.message));   // v101.111: o dată pe zi, de la 8:00
-  turaProbaLatimePaznic().catch((e) => jurnal("proba PAZNIC–lățime", e.message));   // v101.113 (I-630): o dată pe zi, de la 12:00, cât mai e PAZNIC
-  turaDisciplinaBanda().catch((e) => jurnal("disciplina", e.message));   // v101.106: o dată pe zi
-  turaBandaLive().catch((e) => jurnal("banda pe viu", e.message));   // v101.106: la fiecare tură   // v101.105: topul pe sectoare o dată pe zi, DVOL la o oră   // v101.103: verdictele zilei + judecata la 6 ore
-  turaLatimeColector().catch((e) => jurnal("latime", e.message));   // v101.93 (I-583): lățimea pieței la 15 minute
-  turaIdeiZi().then(() => turaDimineata()).then(() => turaSaltZi()).catch((e) => jurnal("idei/dimineata", e.message));   // v101.82: + Salt
-  turaSugestiiIntraday().catch((e) => jurnal("sugestii intraday", e.message));   // v101.81 (pagina Sugestii)
-  turaSaltPozitii().catch((e) => jurnal("salt poziții", e.message));   // v101.84: alerta la stop + rezumatul Salt (la 15 minute)
-  turaMonteCarloBot().then(() => turaDupa24h()).catch((e) => jurnal("monte carlo boți", e.message));   // v101.89: Monte Carlo pe boți la 15 minute; v101.92: + judecata după 24 h (voci, alerte)
-  if (greleOk && !process.env.COLECTOR_FARA_CLASAMENT) turaClasament().then(() => turaLaborator()).then(() => turaIngust()).then(() => turaCf()).then(() => turaT212()).then(() => turaCfActiuni()).then(() => turaScanColector()).catch((e) => jurnal("clasament/laborator", e.message));   // nu blocheaza tura de un minut
+  if (val.medii) turaBilantBusola().catch((e) => jurnal("busola bilanț", e.message));   // v101.65 (ideea 1): bilanțul Busolei despre predicțiile 🧠, în KV
+  if (val.medii) turaPiataColector().catch((e) => jurnal("piata", e.message));
+  if (val.grele) turaContColector().catch((e) => jurnal("cont", e.message));   // v101.102 (contul întreg): la 6 ore
+  if (val.grele) turaVerdicteColector().catch((e) => jurnal("verdicte", e.message));
+  if (val.grele) turaSectoareColector().catch((e) => jurnal("sectoare", e.message));
+  if (val.grele) turaTrendColector().catch((e) => jurnal("trend", e.message));   // v101.111: o dată pe zi, de la 8:00
+  if (val.grele) turaProbaLatimePaznic().catch((e) => jurnal("proba PAZNIC–lățime", e.message));   // v101.113 (I-630): o dată pe zi, de la 12:00, cât mai e PAZNIC
+  if (val.grele) turaDisciplinaBanda().catch((e) => jurnal("disciplina", e.message));   // v101.106: o dată pe zi
+  if (val.medii) turaBandaLive().catch((e) => jurnal("banda pe viu", e.message));   // v101.106: la fiecare tură   // v101.105: topul pe sectoare o dată pe zi, DVOL la o oră   // v101.103: verdictele zilei + judecata la 6 ore
+  if (val.grele) turaLatimeColector().catch((e) => jurnal("latime", e.message));   // v101.93 (I-583): lățimea pieței la 15 minute
+  if (val.medii) turaIdeiZi().then(() => turaDimineata()).then(() => turaSaltZi()).catch((e) => jurnal("idei/dimineata", e.message));   // v101.82: + Salt
+  if (val.medii) turaSugestiiIntraday().catch((e) => jurnal("sugestii intraday", e.message));   // v101.81 (pagina Sugestii)
+  if (val.medii) turaSaltPozitii().catch((e) => jurnal("salt poziții", e.message));   // v101.84: alerta la stop + rezumatul Salt (la 15 minute)
+  if (val.medii) turaMonteCarloBot().then(() => turaDupa24h()).catch((e) => jurnal("monte carlo boți", e.message));   // v101.89: Monte Carlo pe boți la 15 minute; v101.92: + judecata după 24 h (voci, alerte)
+  if (val.grele && greleOk && !process.env.COLECTOR_FARA_CLASAMENT) turaClasament().then(() => turaLaborator()).then(() => turaIngust()).then(() => turaCf()).then(() => turaT212()).then(() => turaCfActiuni()).then(() => turaScanColector()).catch((e) => jurnal("clasament/laborator", e.message));   // nu blocheaza tura de un minut
   if (process.env.COLECTOR_O_TURA) process.exit(0);
   setTimeout(bucla, S.pasDupaEsecuri(esecuri, PAS_MS));   // v100.259 (punctul 4): fără server, pauze tot mai lungi (cel mult 5 min), fără ieșire
   // v101.34: bucla e la 60 s - poza are ceasul ei (16–17 la 30 s); turaPoza se pazeste singura (ritmul, pozaInLucru)

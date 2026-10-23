@@ -290,6 +290,77 @@ await test("(10) serverul: 3200 de „fara-date” trimiși în loturi rămân t
   assert.match(citeste("functions", "api", "istoric-bot.js"), /taieContrafactual\(m\);/);
 });
 
+// ---------- (11) lichidarea critică nu se retrimite la oscilația critic ↔ atenție; „vede iar” doar pe boții încă activi ----------
+const Alerte = new Function(fs.readFileSync(path.join(RAD, "public", "lib", "alerte.js"), "utf8") + "; return Alerte;")();
+await test("(11a) evalueaza: critic → atenție → critic (sub o oră) NU retrimite critica; repetarea critică tot la o oră; după ieșirea stabilă, din nou", () => {
+  const b = (d) => ({ id: "7", baza: "SOL.PERP", quote: "USDT", activ: true, distantaLichidarePct: d, pretCurent: 100, pretLichidare: 100 * (1 - d / 100), lichidareDepasita: false, directie: "long" });
+  const t0 = Date.UTC(2026, 9, 23, 2, 0); let st = {}, trimise = [];
+  const pas = (d, t) => { const r = Alerte.evalueaza(b(d), {}, st, t); st = r.stare; const m = r.mesaje.filter((x) => x.cheie === "lich"); trimise.push(...m.map((x) => x.nivel)); return m; };
+  pas(7, t0); assert.deepEqual(trimise, ["critic"]);
+  pas(12, t0 + 2 * MIN); pas(7, t0 + 4 * MIN); pas(12, t0 + 6 * MIN); pas(7, t0 + 8 * MIN);
+  assert.deepEqual(trimise, ["critic"], "critica s-a retrimis la oscilație: " + trimise.join(", "));
+  pas(7, t0 + 61 * MIN); assert.deepEqual(trimise, ["critic", "critic"], "repetarea critică (o oră) trebuia să plece");
+  pas(30, t0 + 62 * MIN); pas(30, t0 + 73 * MIN); assert.equal(trimise[trimise.length - 1], "info", "ieșirea stabilă (10 min) nu s-a spus");
+  pas(7, t0 + 80 * MIN); assert.equal(trimise[trimise.length - 1], "critic", "după ieșirea stabilă, o critică nouă trebuie să plece");
+});
+await test("(11b) preturiPerpPas: botul închis cât era orb NU primește „vede iar”; cel încă activ, da", () => {
+  const botF = (id, pret, extra = {}) => ({ id, baza: id + ".PERP", quote: "USDT", simbolPionex: id + "_USDT_PERP", activ: true, pretCurent: pret, ...extra });
+  const m = {}, A = Date.UTC(2026, 9, 23, 2, 0);
+  for (let i = 0; i < 3; i++) S.preturiPerpPas(m, { probleme: { preturi: "x" }, boti: [botF("SOL", null), botF("ONDO", null)], acum: A + i * MIN });
+  m.perpOrb.anuntat = A + 2 * MIN;
+  const r = S.preturiPerpPas(m, { probleme: null, boti: [botF("SOL", 150)], acum: A + 9 * MIN });   // ONDO s-a închis cât era orb
+  assert.equal(r.tip, "revenit"); assert.deepEqual(r.nume, ["SOL"]);
+  const m2 = {}; for (let i = 0; i < 3; i++) S.preturiPerpPas(m2, { probleme: { preturi: "x" }, boti: [botF("ONDO", null), botF("BTC", 60000)], acum: A + i * MIN }); m2.perpOrb.anuntat = 1;
+  const r2 = S.preturiPerpPas(m2, { probleme: null, boti: [botF("BTC", 60000)], acum: A + 9 * MIN });
+  assert.equal(r2.tip, null, "„vede iar” fals pe un bot închis"); assert.equal(m2.perpOrb.anuntat, 0, "episodul trebuia închis tăcut");
+});
+
+// ---------- (13) peste 100 de boți (bot-orders: probleme.trunchiat) ⇒ spus, nu tăcere ----------
+await test("(13) trunchiatPas: lista tăiată ⇒ „trunchiat” o dată, repetat cel mult la 24 h; netăiată ⇒ episodul se închide", () => {
+  assert.equal(typeof S.trunchiatPas, "function");
+  const m = {}, A = Date.UTC(2026, 9, 23, 9, 0);
+  assert.equal(S.trunchiatPas(m, { trunchiat: false, acum: A }).tip, null);
+  assert.equal(S.trunchiatPas(m, { trunchiat: true, acum: A }).tip, "trunchiat");
+  assert.equal(S.trunchiatPas(m, { trunchiat: true, acum: A + MIN }).tip, "trunchiat", "netrimisă (apelantul n-a notat) ⇒ se reîncearcă");
+  m.trunchiatAnuntat = A + MIN;
+  assert.equal(S.trunchiatPas(m, { trunchiat: true, acum: A + 23 * ORA }).tip, null);
+  assert.equal(S.trunchiatPas(m, { trunchiat: true, acum: A + 25 * ORA }).tip, "trunchiat");
+  S.trunchiatPas(m, { trunchiat: false, acum: A + 26 * ORA }); assert.equal(m.trunchiatAnuntat, 0);
+});
+await test("(13) mesajul (atenție, ≤ 60) și colectorul îl trimite din d.probleme.trunchiat, notând doar după ce a plecat", () => {
+  const a = MC.botiTrunchiati(100); assert.equal(a.nivel, "atentie"); assert.ok(a.titlu.length <= 60); assert.match(a.titlu, /100 de boți/); assert.match(a.mesaj, /\n👉 /);
+  const c = citeste("scripts", "colector.mjs");
+  assert.match(c, /S\.trunchiatPas\(m, \{ trunchiat: !!\(d && d\.probleme && d\.probleme\.trunchiat\), acum \}\)/);
+  assert.match(c, /tr\.tip === "trunchiat" && \(await anuntaMesaj\(MesajeColector\.botiTrunchiati\(boti\.length\)\)\)\) m\.trunchiatAnuntat = acum/);
+  assert.match(citeste("scripts", "lib", "garda-alerte.mjs"), /"botiTrunchiati"/);
+});
+
+// ---------- (6) pornirea eșalonată + cererile identice în zbor legate (botiInchisiToti) ----------
+await test("(6) valPornire: prima tură = doar alertele; a doua = turele medii; de la a treia, toate (cele grele)", () => {
+  assert.equal(typeof S.valPornire, "function");
+  assert.deepEqual([1, 2, 3, 50].map(S.valPornire), [{ medii: false, grele: false }, { medii: true, grele: false }, { medii: true, grele: true }, { medii: true, grele: true }]);
+});
+await test("(6) unaInZbor: 3 chemări deodată = UN apel, fiecare cu copia ei (cu `complet`); după terminare se cheamă iar; eroarea ajunge la toți", async () => {
+  assert.equal(typeof S.unaInZbor, "function");
+  let n = 0, rau = false; const f = S.unaInZbor(async () => { n++; await pauza(10); if (rau) throw new Error("arhiva"); const l = [{ id: 1 }, { id: 2 }]; l.complet = true; return l; });
+  const r = await Promise.all([f(), f(), f()]);
+  assert.equal(n, 1); assert.ok(r.every((x) => x.length === 2 && x.complet === true)); assert.notEqual(r[0], r[1], "aceeași listă dată tuturor (unul o poate strica)");
+  r[0].push({ id: 3 }); assert.equal(r[1].length, 2);
+  await f(); assert.equal(n, 2, "după terminare trebuia chemat iar");
+  rau = true; const e = await Promise.allSettled([f(), f()]); assert.equal(n, 3); assert.ok(e.every((x) => x.status === "rejected"));
+});
+await test("(6) colectorul: botiInchisiToti prin unaInZbor; bucla pornește turele medii / grele după valPornire(turaNr)", () => {
+  const c = citeste("scripts", "colector.mjs");
+  assert.match(c, /var botiInchisiToti = S\.unaInZbor\(botiInchisiTotiCorp\);/);
+  const b = c.slice(c.indexOf("async function bucla()"), c.indexOf("\nbucla();"));
+  assert.match(b, /const val = process\.env\.COLECTOR_O_TURA \? \{ medii: true, grele: true \} : S\.valPornire\(turaNr\);/);
+  assert.match(b, /if \(val\.grele && greleOk && !process\.env\.COLECTOR_FARA_CLASAMENT\) turaClasament\(\)/);
+  assert.match(b, /if \(val\.grele && greleOk\) turaProfil\(\)/);
+  assert.match(b, /if \(val\.medii\) turaArhivaBoti\(\)/);
+  assert.match(b, /turaPlanuriT212\(\)\.catch/, "alertele T212 trebuie să plece din prima tură");
+  assert.ok(!/if \(val\.[a-z]+\) turaPlanuriT212/.test(b));
+});
+
 // ---------- (12) alertele T212 (Consilier, ±1%, SL/TP) și fără poză: fără cheile paznicului sau noaptea ----------
 await test("(12) planTuraPoza: cu paznic ziua ⇒ ritmul pozei + urcare; fără paznic SAU noaptea ⇒ tot la 5 min, doar alertele (fără urcare, fără simbolurile paginii)", () => {
   assert.equal(typeof PZ.planTuraPoza, "function"); assert.equal(PZ.ALERTE_T212_FARA_POZA_MS, 5 * MIN);
