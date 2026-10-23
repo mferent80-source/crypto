@@ -25,9 +25,11 @@ function rss(xml, max) {
   }
   return out;
 }
+// v100.259 (auditul 23.10, punctul 15): sursa picată întoarce null (nu []), ca ruta să n-o țină 30 de minute drept „nicio știre”
 async function aduRss(url, max) {
-  try { const r = await fetch(url, { signal: AbortSignal.timeout(12000), headers: UA }); if (!r.ok) return []; return rss(await r.text(), max); } catch { return []; }
+  try { const r = await fetch(url, { signal: AbortSignal.timeout(12000), headers: UA }); if (!r.ok) return null; return rss(await r.text(), max); } catch { return null; }
 }
+const NEVENITE = "știrile n-au venit acum — se reîncearcă la următoarea cerere";
 async function chart(simbol) {
   try {
     const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(simbol)}?interval=1d&range=1y`, { signal: AbortSignal.timeout(12000), headers: UA });
@@ -47,7 +49,9 @@ export async function onRequestGet({ request, env }) {
     const tk = String(u.searchParams.get("ticker") || "").replace(/[^A-Za-z0-9._]/g, "").slice(0, 32), cand = candidati(tk);
     if (!cand.length) return json({ error: "Simbol necunoscut." }, 400);
     const k = "a:" + tk, c = dinCache(k); if (c) return json(c);
-    const v = { ticker: tk, simbol: cand[0], stiri: await aduRss(`https://feeds.finance.yahoo.com/rss/2.0/headline?s=${encodeURIComponent(cand[0])}&region=US&lang=en-US`, 6) };
+    const l = await aduRss(`https://feeds.finance.yahoo.com/rss/2.0/headline?s=${encodeURIComponent(cand[0])}&region=US&lang=en-US`, 6);
+    const v = { ticker: tk, simbol: cand[0], stiri: l || [] };
+    if (!l) return json(Object.assign(v, { eroare: NEVENITE }));   // v100.259: eșecul nu se ține minte
     inCache(k, v, 1800); return json(v);
   }
   if (a === "crypto") {
@@ -55,12 +59,15 @@ export async function onRequestGet({ request, env }) {
     const k = "c:" + m, c = dinCache(k); if (c) return json(c);
     const [ct, cd] = await Promise.all([aduRss("https://cointelegraph.com/rss", 40), aduRss("https://www.coindesk.com/arc/outboundfeeds/rss", 40)]);
     const re = m ? new RegExp("(^|[^A-Za-z0-9])" + m + "([^A-Za-z0-9]|$)") : null;
-    const v = { moneda: re ? ct.concat(cd).filter((x) => re.test(x.titlu)).slice(0, 6) : [], general: ct.slice(0, 5) };
+    const v = { moneda: re ? (ct || []).concat(cd || []).filter((x) => re.test(x.titlu)).slice(0, 6) : [], general: (ct || []).slice(0, 5) };
+    if (!ct || !cd) return json(Object.assign(v, { eroare: (!ct && !cd ? "" : (!ct ? "Cointelegraph: " : "CoinDesk: ")) + NEVENITE }));   // v100.259: și o singură sursă picată
     inCache(k, v, 1800); return json(v);
   }
   if (a === "bursa") {
     const c = dinCache("bursa"); if (c) return json(c);
-    const l = (await aduRss("https://www.cnbc.com/id/20910258/device/rss/rss.html", 30)).sort((x, y) => (y.la || 0) - (x.la || 0)).slice(0, 3);
+    const a = await aduRss("https://www.cnbc.com/id/20910258/device/rss/rss.html", 30);
+    if (!a) return json({ stiri: [], eroare: NEVENITE });   // v100.259: eșecul nu se ține minte
+    const l = a.sort((x, y) => (y.la || 0) - (x.la || 0)).slice(0, 3);
     const v = { stiri: l }; inCache("bursa", v, 1800); return json(v);
   }
   if (a === "calendar") {
