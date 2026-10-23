@@ -90,13 +90,35 @@ var GridProba = (function () {
       return rezultat({ net: real - fee, oprit: true, iesit: parte, bare: nb });
     }
     var pret = P, inauntru = true, sj = st.stop ? st.stop.jos : -Infinity, ss = st.stop ? st.stop.sus : Infinity;
+    // v100.259 (auditul 23.10): stopul pus în PROCENTE din investiție (Pionex profit_ratio) - st.stopRaport = r (negativ, fracție din marjă):
+    // botul se închide când rezultatul, CU grilele umplute pe drum, ajunge la r. Prețul serverului e socotit pe poziția de la un moment dat
+    // (fără grilele de pe drum) ⇒ ieșea prea jos (−14,1 în loc de −10). Fără stopRaport, drumul e exact cel de dinainte.
+    var raportValid = function (v) { return v !== null && v !== undefined && v !== "" && isFinite(v) && Number(v) < 0 ? Number(v) : null; };
+    var sr = raportValid(st.stopRaport);
+    // pe drumul de la a la x, nivel cu nivel (între două niveluri poziția nu se schimbă, deci rezultatul e liniar în preț): prețul la care
+    // rezultatul atinge sr, sau null (atunci prețul a ajuns la x cu toate umplerile făcute)
+    function mergiCuRaport(a, x) {
+      var rup = [], j;
+      if (x < a) { for (j = primulPeste(niv, a) - 1; j >= 0 && niv[j] > x; j--) rup.push(niv[j]); }
+      else if (x > a) { for (j = primulPeste(niv, a); j <= N && niv[j] < x; j++) if (niv[j] > a) rup.push(niv[j]); }
+      rup.push(x);
+      var cur = a;
+      for (var k2 = 0; k2 < rup.length; k2++) {
+        var y = rup[k2], B = Ql - Qs - (Ql + Qs) * com, A0 = real - fee - Cl + Cs;
+        if (A0 + B * cur <= sr) return cur;   // deja dincolo de prag (pornit sub el): Pionex închide pe loc
+        if (A0 + B * y <= sr) { var z = B !== 0 ? (sr - A0) / B : y; if (!((z - cur) * (z - y) <= 0)) z = y; return z; }
+        misca(cur, y); cur = y;
+        if (netLa(y) <= sr) return y;   // umplerea de la nivel (comisionul ei) poate trece pragul chiar acolo
+      }
+      return null;
+    }
     // v100.136: opt.dinBara + opt.stopDupa ⇒ DIN bara dinBara (fata de start) stopul / tinta devin stopDupa ({jos, sus} sau {}) - tinta
     // schimbata ACUM pe un bot care ruleaza: pe prefixul real ramane cea veche (st.stop), de la prima bara simulata vine cea noua
     var sd = opt && opt.stopDupa !== undefined && opt.stopDupa !== null ? opt.stopDupa : null, dinBara = opt && isFinite(opt.dinBara) ? Math.max(0, opt.dinBara) : 0;
     var fin = Math.min(b.length, start + lungime);
     for (var i = start; i < fin; i++) {
       var x = b[i], drum = x.c >= x.o ? [x.o, x.l, x.h, x.c] : [x.o, x.h, x.l, x.c];
-      if (sd && i - start === dinBara) { sj = sd.jos > 0 ? sd.jos : -Infinity; ss = sd.sus > 0 ? sd.sus : Infinity; sd = null; }   // v100.136
+      if (sd && i - start === dinBara) { sj = sd.jos > 0 ? sd.jos : -Infinity; ss = sd.sus > 0 ? sd.sus : Infinity; if ("raport" in sd) sr = raportValid(sd.raport); sd = null; }   // v100.136; v100.259: și raportul
       // v100.134: la 8 h; v100.135: cu semn pe pozitia neta; revizia: de la bara 0 (Pionex ia la urmatoarea ora de funding: 3 plati pe zi
       // si pe orizontul de o zi); st.fundingCost (rata PRESUPUSA, nu cea reala) = cost oricare ar fi directia, pe |Ql - Qs|
       if (fundingZi && (i - start) % 32 === 0) { var fz = fundingZi / 3 * (st.fundingCost ? Math.abs(Ql - Qs) : Ql - Qs) * x.o; fee += fz; funding += fz; }
@@ -109,7 +131,9 @@ var GridProba = (function () {
         var p = drum[d];
         if (p <= sj) { misca(pret, sj); if (inauntru) iesiri++; return inchide(sj, "jos", i - start + 1); }
         if (p >= ss) { misca(pret, ss); if (inauntru) iesiri++; return inchide(ss, "sus", i - start + 1); }
-        misca(pret, p); pret = p;
+        if (sr !== null) { var xr = mergiCuRaport(pret, p); if (xr !== null) { if (inauntru) iesiri++; return inchide(xr, xr < pret ? "jos" : xr > pret ? "sus" : (st.dir === "short" ? "sus" : "jos"), i - start + 1); } }   // v100.259
+        else misca(pret, p);
+        pret = p;
         if (tr) { var nlp = netLa(p); if (nlp < bMin) bMin = nlp; if (nlp > bMax) bMax = nlp; }   // v100.135: in interiorul barei
         var acum = p >= st.jos && p <= st.sus;
         if (inauntru && !acum) iesiri++;

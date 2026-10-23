@@ -97,5 +97,67 @@ await test("(2) short: oglinda (zero 100, prețul 99,8 ⇒ alertă; 97 ⇒ nu)",
   assert.notEqual(A.reguli(s(97), { pretZero: 100 }, {})["p-zero"].nivel, "atentie");
 });
 
+// ---------- (3) stopul în PROCENTE în Monte Carlo: „totalul ≤ r · investiție” pe drum, nu prețul serverului ----------
+// bare sintetice de 15M: mers aleator cu mulberry32 (lecția: niciodată LCG)
+function bareSint(n, seed, vol = 0.004, drift = 0, p0 = 100) {
+  const rnd = M.generator(seed), out = []; let p = p0, t = Date.UTC(2026, 8, 1);
+  for (let i = 0; i < n; i++) {
+    const z = Math.sqrt(-2 * Math.log(rnd() + 1e-12)) * Math.cos(2 * Math.PI * rnd());
+    const o = p, c = p * Math.exp(drift + vol * z);
+    out.push({ t, o, h: Math.max(o, c) * (1 + Math.abs(vol * 0.5 * rnd())), l: Math.min(o, c) * (1 - Math.abs(vol * 0.5 * rnd())), c, v: 1 }); p = c; t += 900000;
+  }
+  return out;
+}
+const cadere = (de, la, n) => Array.from({ length: n }, (_, i) => { const o = de + (la - de) * i / n, c = de + (la - de) * (i + 1) / n; return { t: i * 9e5, o, h: o, l: c, c, v: 1 }; });
+const ST3 = { dir: "long", jos: 80, sus: 110, grile: 30, levier: 3, tip: "aritmetic" };
+await test("(3) GridProba.simuleaza: stopul în procente (−10%) iese când totalul CU grilele de pe drum ajunge la −10%", () => {
+  const b = cadere(100, 70, 120);
+  const r = GP.simuleaza(b, 0, b.length, { ...ST3, stopRaport: -0.1 });
+  assert.equal(r.oprit, true); assert.equal(r.lichidat, false);
+  assert.ok(r.net <= -0.099 && r.net >= -0.106, "net " + r.net);
+  // prețul serverului (poziția de la pornire, fără grilele de pe drum) ⇒ ieșirea mult mai jos și pierderea peste −10%
+  const r0 = GP.simuleaza(b, 0, 1, ST3), q = 3 / 30 * [...Array(30).keys()].filter((k) => 80 + k + 1 > 100).reduce((s, k) => s + 1 / (80 + k), 0);
+  const pServer = 100 + (-0.1 - r0.net) / q, rf = GP.simuleaza(b, 0, b.length, { ...ST3, stop: { jos: pServer } });
+  assert.ok(rf.net < -0.12, "la prețul serverului totalul e mult sub −10%: " + rf.net + " (preț " + pServer + ")");
+});
+await test("(3) fără stopRaport, simulatorul dă exact aceleași cifre ca înainte", () => {
+  const b = bareSint(96 * 3, 5);
+  const a = GP.simuleaza(b, 0, b.length, { ...ST3, stop: { jos: 78, sus: 113 } }), c = GP.simuleaza(b, 0, b.length, { ...ST3, stop: { jos: 78, sus: 113 }, stopRaport: null });
+  assert.deepEqual(c, a);
+});
+const BOT3 = { id: "R", baza: "XYZ.PERP", directie: "long", activ: true, investit: 100, levier: 3, pretCurent: 100, gridJos: 80, gridSus: 110,
+  opritorPierdereActiv: true, opritorPierdereTip: "raport", opritorPierdereRaport: -0.1, opritorPierdere: 91, brut: { buOrderData: { row: 31, gridType: "arithmetic" } } };
+await test("(3) setariDinBot: stopul în procente ajunge în setări ca raport (prețul serverului rămâne doar de afișat)", () => {
+  const d = GS.setariDinBot(BOT3);
+  assert.equal(d.st.stopRaport, -0.1);
+  assert.deepEqual(d.st.stop, { jos: 91 });
+  const pret = GS.setariDinBot({ ...BOT3, opritorPierdereTip: "pret" });
+  assert.equal(pret.st.stopRaport, undefined);
+});
+await test("(3) Simulatorul și Monte Carlo pe drumuri: cu raportul, cel mai rău drum oprit nu trece mult de −10 USDT; cu prețul serverului, da", () => {
+  const b = bareSint(96 * 20, 7, 0.006);
+  const P0 = b[b.length - 1].c, k = P0 / 100, st = { ...GS.setariDinBot(BOT3).st, jos: 80 * k, sus: 110 * k, suma: 100 };
+  // prețul serverului pentru botul pornit acum: poziția de la pornire (grilele 100–110, câte 3/30 din marjă) fără grilele de pe drum
+  let Ql = 0; for (let i = 20; i < 30; i++) Ql += 0.1 / ((80 + i) * k);
+  st.stop = { jos: P0 + (-0.1 + 0.0005 * Ql * P0) / Ql };
+  const cu = GS.simuleaza(b, st, { n: 200, seed: 3, zile: 7, orizonturi: [7] }).orizonturi[0];
+  const fara = GS.simuleaza(b, { ...st, stopRaport: undefined }, { n: 200, seed: 3, zile: 7, orizonturi: [7] }).orizonturi[0];
+  assert.ok(cu.pStop > fara.pStop, "raportul se atinge mai des decât prețul serverului: " + cu.pStop + " / " + fara.pStop);
+  assert.ok(cu.p5 >= -11.5, "coada cu raportul ≈ −10: " + cu.p5);
+  const mc = M.grid(b, { ...st }, { n: 200, seed: 3, zile: 7, GridProba: GP });
+  const mc0 = M.grid(b, { ...st, stopRaport: undefined }, { n: 200, seed: 3, zile: 7, GridProba: GP });
+  assert.ok(mc.pStop > mc0.pStop, "Monte Carlo: " + mc.pStop + " / " + mc0.pStop);
+  assert.ok(mc.p5 >= -11.5, "Monte Carlo coada: " + mc.p5);
+});
+
+// ---------- (4) un singur prag de lichidări, în motor ----------
+await test("(4) GridSim.LICHIDARI_ACCEPTATE = 0 și lichidareAcceptata: orice lichidare pe drumuri ⇒ nu", () => {
+  assert.equal(GS.LICHIDARI_ACCEPTATE, 0);
+  assert.equal(GS.lichidareAcceptata(0), true);
+  assert.equal(GS.lichidareAcceptata(0.01), false);
+  assert.equal(GS.lichidareAcceptata(null), false);
+  assert.match(citeste("public", "lib", "grid-sim.js"), /else if \(!lichidareAcceptata\(o\.pLich\)\) faCe = /);
+});
+
 console.log(`\n${teste - picate}/${teste} ${picate ? "PICĂ" : "trec"}`);
 process.exitCode = picate ? 1 : 0;

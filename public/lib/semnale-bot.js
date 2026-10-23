@@ -221,7 +221,7 @@ var SemnaleBot = (function () {
       st0.tag = dincolo ? { t: "la adăpost", c: "good" } : zG ? { t: "zero în grid", c: "warn" } : { t: op === null ? "de pus la zero" : "de mutat la zero", c: "warn" };
       // v100.259 (auditul 23.10): zero-ul în grid ⇒ alegerea spusă (încasez sau stopul la zero, cu grilele tăiate), alternativa în „de ce”
       st0.act = dincolo ? "L-aș lăsa: e deja dincolo de zero-ul botului (" + fmtPret(pz) + ")."
-        : zG ? "Aș alege: încasez acum sau pun stopul la " + fmtPret(pz) + " (zero-ul), care taie " + (mtZ && mtZ.moarte >= 1 ? mtZ.txt : "gridul de " + (dir === "short" ? "deasupra" : "dedesubt")) + "."
+        : zG ? "Aș alege: încasez acum sau pun stopul la " + fmtPret(pz) + " (zero-ul botului), care taie " + (mtZ && mtZ.moarte >= 1 ? mtZ.txt : "gridul de " + (dir === "short" ? "deasupra" : "dedesubt")) + "."
         : "Aș " + (op === null ? "pune" : "muta") + " stopul la " + fmtPret(pz) + " (zero-ul botului, " + S1(pz / p - 1) + " de preț): câștigul nu se mai pierde.";
       st0.deCe = dincolo ? "O întoarcere nu te mai duce pe minus."
         : zG ? "Zero-ul cade în grid, deci " + (dir === "short" ? "peste" : "sub") + " el gridul nu mai lucrează" + (mgZ !== null ? "; " + (dir === "short" ? "peste gridul de sus" : "sub gridul de jos") + " (" + fmtPret(mgZ) + ") ar lucra tot" + (laMgZ !== null ? ", dar acolo totalul e ≈ " + TextRo.usdt(laMgZ, 1) : "") : "") + "." : "";

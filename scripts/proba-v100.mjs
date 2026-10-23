@@ -171,7 +171,7 @@ await test("revizie: cartela Stop - „sub gridul de jos” doar daca stopul CHI
   const sub = S.acumConcret({ bot: BOT, fisa: f, zero: { pretZero: 0.5951 }, costuri: {}, acum: T0 }).find((x) => x.cod === "stop");
   assert.match(sub.act, /sub gridul de jos/);
   const nepus = S.acumConcret({ bot: { ...BOT, opritorPierdereActiv: false, pretCurent: 0.62, profitTotal: 3 }, fisa: f, zero: { pretZero: 0.6012 }, costuri: {}, acum: T0 }).find((x) => x.cod === "stop");
-  assert.match(nepus.tag.t, /zero în grid/); assert.match(nepus.act, /^Aș alege: încasez acum sau pun stopul la 0\.6012 \(zero-ul\)/);   // v100.61: persoana I; v100.259 (auditul 23.10): zero-ul 0,6012 cade în grid (0,5722–0,6572) ⇒ alegerea, nu reparația simplă
+  assert.match(nepus.tag.t, /zero în grid/); assert.match(nepus.act, /^Aș alege: încasez acum sau pun stopul la 0\.6012 \(zero-ul botului\)/);   // v100.61: persoana I; v100.259 (auditul 23.10): zero-ul 0,6012 cade în grid (0,5722–0,6572) ⇒ alegerea, nu reparația simplă
 });
 await test("revizie: botul NEUTRU (zero-ul nu se socoteste niciodata) -> „reper”, nu „de socotit”; pretul in afara gridului -> Miscarea nu mai spune „gridul lucreaza”", () => {
   const f = { dir: "neutru", regim: { r4h: 0.8, r24h: 0.9, miscare: false }, setare: { jos: 0.52, sus: 0.63, grile: 9, pas: 0.022, levier: 5, dir: "neutru", stop: { jos: 0.5, sus: 0.66 } }, propusa: "aleasa", deasa: null };

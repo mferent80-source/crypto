@@ -67,9 +67,20 @@ var GridSim = (function () {
     // v100.196 (auditul 14.10, 🔵2): la neutru partea stopului vine din pret (peste pret = sus), nu „jos” mereu
     var opB = Number(b.opritorPierdere), pB = Number(b.pretCurent), row = Number(bu.row), stop = b.opritorPierdereActiv && opB > 0 ? (dir === "short" || (dir === "neutru" && pB > 0 && opB > pB) ? { sus: opB } : { jos: opB }) : null;
     var tp = dir !== "neutru" && b.opritorProfitActiv && Number(b.opritorProfit) > 0 ? Number(b.opritorProfit) : null;
-    return { st: { jos: Number(b.gridJos), sus: Number(b.gridSus), grile: row > 1 ? Math.round(row) - 1 : 20, levier: Number(b.levier) || 1, dir: dir, suma: Number(b.investit) > 0 ? Number(b.investit) : null, stop: stop, tp: tp, tip: tipDin(bu.gridType) },
+    var r = { st: { jos: Number(b.gridJos), sus: Number(b.gridSus), grile: row > 1 ? Math.round(row) - 1 : 20, levier: Number(b.levier) || 1, dir: dir, suma: Number(b.investit) > 0 ? Number(b.investit) : null, stop: stop, tp: tp, tip: tipDin(bu.gridType) },
       pornitLa: Number(b.pornitLa) > 0 ? Number(b.pornitLa) : null, tpAprox: !!(tp && b.opritorProfitTip === "raport") };
+    // v100.259 (auditul 23.10): stopul pus în PROCENTE intră în simulare ca raport (totalul cu grilele de pe drum ≤ r · investiție); prețul
+    // serverului (poziția înghețată) rămâne în st.stop doar de afișat - simularea nu-l folosește când are raportul
+    var rP = Number(b.opritorPierdereRaport);
+    if (b.opritorPierdereActiv && b.opritorPierdereTip === "raport" && isFinite(rP) && rP < 0) r.st.stopRaport = rP;
+    return r;
   }
+  // v100.259: stopurile pe care le folosește SIMULAREA - cu raportul, prețul fix al stopului iese (doar ținta rămâne)
+  function raportValid(v) { return v !== null && v !== undefined && v !== "" && isFinite(v) && Number(v) < 0 ? Number(v) : null; }
+  // v100.259 (auditul 23.10, punctul 4): UN singur prag de lichidări pe drumuri, pentru Simulator și pagina Monte Carlo - orice lichidare ⇒ nu
+  // (decizia din v100.196, B2: 2% pe 7 zile ≈ 63% pe an). Ecranul Monte Carlo îl citește de aici, nu-l scrie cu mâna.
+  var LICHIDARI_ACCEPTATE = 0;
+  function lichidareAcceptata(p) { return p !== null && p !== undefined && isFinite(p) && Number(p) <= LICHIDARI_ACCEPTATE; }
   // TP-ul de partea greșită a prețului (long sub, short peste) s-ar atinge pe prima bară: nu intră (aceeași regulă ca mcsTpValid)
   function tpValid(st, P) { if (!(st.tp > 0) || (st.dir === "long" && st.tp > P) || (st.dir === "short" && st.tp < P)) return { st: st, ignorat: null }; var x = {}; for (var k in st) x[k] = st[k]; x.tp = null; return { st: x, ignorat: st.dir === "neutru" ? null : st.tp }; }
 
@@ -147,16 +158,17 @@ var GridSim = (function () {
       if (rauJ || rauS) return { eroare: "Stopul (" + pretTxt(rauJ ? sj0 : ss0) + ") e de partea greșită a prețului pentru " + st.dir + " (prețul " + (pre ? "de la pornire" : "de acum") + " e " + pretTxt(Pst) + "): la long stopul stă sub preț, la short deasupra, la neutru fiecare pe partea lui." };
     }
     var v = tpValid(st, P0), stS = {}; for (var k in v.st) stS[k] = v.st[k];
-    var opr = stS.stop ? { jos: stS.stop.jos, sus: stS.stop.sus } : null, parteTp = stS.tp > 0 ? (stS.dir === "long" ? "sus" : stS.dir === "short" ? "jos" : null) : null;
+    var rapS = raportValid(stS.stopRaport), opr = stS.stop && rapS === null ? { jos: stS.stop.jos, sus: stS.stop.sus } : null, parteTp = stS.tp > 0 ? (stS.dir === "long" ? "sus" : stS.dir === "short" ? "jos" : null) : null;   // v100.259: cu raportul, fără prețul fix
     if (parteTp) { opr = opr || {}; opr[parteTp] = stS.tp; }
     stS.stop = opr;
     // v100.136: o.stPrefix = setarea botului PE prefix (gridul lui, stopul lui, ținta lui de până acum); ținta / stopul din st se aplică abia
     // de la prima bară simulată - „schimb ținta acum” pe botul care rulează, cu pozițiile de acum (GridProba: dinBara + stopDupa)
     var optGP = { traseu: true }, tpIgnoratPrefix = null;
     if (pre && o.stPrefix) {
-      var vp = tpValid(o.stPrefix, Pst), oprP = vp.st.stop ? { jos: vp.st.stop.jos, sus: vp.st.stop.sus } : null, ptP = vp.st.tp > 0 ? (vp.st.dir === "long" ? "sus" : vp.st.dir === "short" ? "jos" : null) : null;
+      var vp = tpValid(o.stPrefix, Pst), rapP = raportValid(vp.st.stopRaport), oprP = vp.st.stop && rapP === null ? { jos: vp.st.stop.jos, sus: vp.st.stop.sus } : null, ptP = vp.st.tp > 0 ? (vp.st.dir === "long" ? "sus" : vp.st.dir === "short" ? "jos" : null) : null;
       if (ptP) { oprP = oprP || {}; oprP[ptP] = vp.st.tp; }
-      optGP.dinBara = pre; optGP.stopDupa = opr || {}; stS.stop = oprP; tpIgnoratPrefix = vp.ignorat || null;   // revizia (I2): spus, nu tăcut
+      // v100.259: pe prefix raportul botului de până acum, de la prima bară simulată cel al setării noi
+      optGP.dinBara = pre; optGP.stopDupa = Object.assign({}, opr || {}, { raport: rapS }); stS.stop = oprP; stS.stopRaport = rapP; tpIgnoratPrefix = vp.ignorat || null;   // revizia (I2): spus, nu tăcut
     }
     // fără tendința perioadei: mijlocul log al capătului drumurilor la zero (ca MonteSimbol.grid)
     // v100.149 (I-579): pe regim, drumurile pornesc doar din ferestrele cu aceeași stare a Busolei; sub 3 zile de starturi ⇒ eroare pe nume
@@ -293,7 +305,7 @@ var GridSim = (function () {
     if (rel) sub += " · pe istoria reală, pornit în fiecare zi: în medie " + bani1(rel.media) + ", pe plus în " + pr(rel.pPlus) + " (" + cate(rel.n, "pornire", "porniri") + ", ~" + cate(rel.independente, "fereastră independentă", "ferestre independente") + ")";
     if (meu && rez.acum.oprit) faCe = "Reluarea arată botul " + (rez.acum.oprit === "lichidat" ? "LICHIDAT" : "OPRIT") + " pe drumul real: setările de aici nu se potrivesc cu botul tău din Pionex (stopul sau gridul diferă) - verifică-le înainte să te iei după cifre.";
     // v100.196 (B2): orice lichidare pe drumuri (era tolerată până la 2% pe 7 zile ≈ 63% pe an); sub 0,5% se scrie „sub 1%”, nu „0%”
-    else if (o.pLich > 0) faCe = meu ? "L-aș opri: lichidare în " + prMic(o.pLich) + " din drumuri de aici încolo. La un bot pornit levierul nu se schimbă: oprește-l și pornește altul mai strâns de partea pierderii." : "N-aș porni așa: lichidare în " + prMic(o.pLich) + " din drumuri. Levier mai mic sau grid mai strâns de partea pierderii.";
+    else if (!lichidareAcceptata(o.pLich)) faCe = meu ? "L-aș opri: lichidare în " + prMic(o.pLich) + " din drumuri de aici încolo. La un bot pornit levierul nu se schimbă: oprește-l și pornește altul mai strâns de partea pierderii." : "N-aș porni așa: lichidare în " + prMic(o.pLich) + " din drumuri. Levier mai mic sau grid mai strâns de partea pierderii.";
     else if (pl && pl.minus > 0 && o.p5 < -pl.minus) faCe = meu ? "Nu se potrivește cu planul tău: în cele mai proaste 5% ajungi la −" + nrRo(Math.abs(o.p5), 1) + " USDT de la pornire, planul tău zice −" + nrRo(pl.minus, 1) + ". Mută stopul la planul tău." : "Nu se potrivește cu planul tău: în cele mai proaste 5% pierzi " + nrRo(Math.abs(o.p5), 1) + " USDT, planul tău zice −" + nrRo(pl.minus, 1) + ". Mută stopul la planul tău sau micșorează suma.";
     // v100.196 (B2): fără „renunță la el” (contra alertei CRITIC „n-ai stop activ”): stopul se mută dincolo de o zi obișnuită a monedei
     else if (o.pStop > 0.5) faCe = "Stopul e în zgomot: atins în " + pr(o.pStop) + " din drumuri în " + zi + ". L-aș muta dincolo de cât merge moneda împotriva botului într-o zi obișnuită (profilul monedei), nu l-aș scoate.";
@@ -348,6 +360,6 @@ var GridSim = (function () {
     var stare = atins === "minus" ? "rau" : atins === "plus" ? "bine" : rau ? "rau" : v.culoare === "good" ? "bine" : v.culoare === "bad" ? "rau" : "atentie";
     return { stare: stare, text: parti.join(" · "), culoare: v.culoare, faCe: v.faCe, rand: v.rand, atins: atins };
   }
-  return { starturiRegim: starturiRegim, dinCod: dinCod, inCod: inCod, setariDinBot: setariDinBot, tpValid: tpValid, simuleaza: simuleaza, compara: compara, comparaLa: comparaLa, verdict: verdict, verdictScurt: verdictScurt, rataFunding: rataFunding, marja: marja, bani1: bani1, pr: pr, NUME: NUME, textCalibrareMc: textCalibrareMc };
+  return { LICHIDARI_ACCEPTATE: LICHIDARI_ACCEPTATE, lichidareAcceptata: lichidareAcceptata, starturiRegim: starturiRegim, dinCod: dinCod, inCod: inCod, setariDinBot: setariDinBot, tpValid: tpValid, simuleaza: simuleaza, compara: compara, comparaLa: comparaLa, verdict: verdict, verdictScurt: verdictScurt, rataFunding: rataFunding, marja: marja, bani1: bani1, pr: pr, NUME: NUME, textCalibrareMc: textCalibrareMc };
 })();
 if (typeof globalThis !== "undefined") globalThis.GridSim = GridSim;

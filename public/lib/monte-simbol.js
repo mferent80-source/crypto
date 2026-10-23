@@ -105,12 +105,15 @@ var MonteSimbol = (function () {
     // fără tendința perioadei (implicit), ca la preț: un short pe o lună care a căzut nu iese „bun” doar din căderea care a fost
     // v100.132: ținta (TP) botului = închiderea pe partea profitului - la long deasupra (stop.sus), la short dedesubt (stop.jos); la neutru
     // nu există o parte a profitului. Atingerea ei se numără separat (pTp), nu ca „stop atins”
-    var parteTp = st.tp > 0 ? (st.dir === "long" ? "sus" : st.dir === "short" ? "jos" : null) : null, opr0 = st.stop ? { jos: st.stop.jos, sus: st.stop.sus } : null;
+    // v100.259 (auditul 23.10): stopul în PROCENTE (st.stopRaport < 0) ⇒ „totalul cu grilele de pe drum ≤ r · investiție”; prețul fix al stopului
+    // (cel al serverului, pe poziția de atunci) nu mai intră în simulare
+    var sRap = st.stopRaport !== null && st.stopRaport !== undefined && isFinite(st.stopRaport) && Number(st.stopRaport) < 0 ? Number(st.stopRaport) : null;
+    var parteTp = st.tp > 0 ? (st.dir === "long" ? "sus" : st.dir === "short" ? "jos" : null) : null, opr0 = st.stop && sRap === null ? { jos: st.stop.jos, sus: st.stop.sus } : null;
     if (parteTp) { opr0 = opr0 || {}; opr0[parteTp] = st.tp; }
     function trece(m) {
       var rnd = generator(o.seed || 1), net = [], lich = 0, ies = 0, opr = 0, per = 0, cap = [], tpa = 0, fund = 0;   // v100.136: și funding-ul
       for (var s = 0; s < n; s++) {
-        var d = drum(b15, H, BZ, P, rnd, m), r = GP.simuleaza(d, 0, H, { jos: st.jos, sus: st.sus, grile: st.grile, levier: st.levier, dir: st.dir, stop: opr0, tip: st.tip, fundingZi: st.fundingZi, fundingCost: st.fundingCost });   // v100.135 (revizia): tipul și funding-ul nu se mai pierd
+        var d = drum(b15, H, BZ, P, rnd, m), r = GP.simuleaza(d, 0, H, { jos: st.jos, sus: st.sus, grile: st.grile, levier: st.levier, dir: st.dir, stop: opr0, stopRaport: sRap, tip: st.tip, fundingZi: st.fundingZi, fundingCost: st.fundingCost });   // v100.135 (revizia): tipul și funding-ul nu se mai pierd
         cap.push(d[d.length - 1].c / P - 1); net.push(r.net * suma); if (r.lichidat) lich++; if (r.iesiri > 0) ies++; if (r.oprit) { if (parteTp && r.iesit === parteTp) tpa++; else opr++; } per += r.perechi || 0; fund += r.funding || 0;
       }
       // v100.130: o.peDrum ⇒ rezultatele în ordinea drumurilor (variantele se compară drum cu drum, pe aceleași drumuri)
