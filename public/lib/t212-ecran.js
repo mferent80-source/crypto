@@ -718,7 +718,7 @@ function tbIdeiRender() {
   }).join("");
   tbUrmAdu();
   if (tbUrm.v && typeof GridProba !== "undefined") { try { h += '<p class="tbSub">⚡ ' + escapeHtml(GridProba.socotealaUrmarire(tbUrm.v).text) + '</p>'; } catch (e) {} }
-  contTotPune(box, h + '<p class="tbSub tbTodoGol">Un filtru (liniște, interval, treceri), nu o predicție: laboratorul n-a găsit încă o diferență clară. Fișa îți dă setările și proba pe istoricul monedei.</p>' + tbSugestiiHtml(cl, contTot.sugestii, contTot.inchise));   /* v100.85 (reveniri + short): sub nota listei de candidați */
+  var hI = h + '<p class="tbSub tbTodoGol">Un filtru (liniște, interval, treceri), nu o predicție: laboratorul n-a găsit încă o diferență clară. Fișa îți dă setările și proba pe istoricul monedei.</p>' + tbSugestiiHtml(cl, contTot.sugestii, contTot.inchise); if (box._contH !== hI) { box._contH = hI; box.innerHTML = hI; }   /* audit 23.10: doar când s-a schimbat. v100.85 (reveniri + short): sub nota listei de candidați */
 }
 // v100.85 (reveniri + short, 03.10): sub „Pe ce aș porni un bot acum” - două liste cu istoricul pe față și urmărirea (filtre, nu predicții)
 // v100.89 (ideea 2): istoricul boților tăi pe o monedă, pe rândurile Tabloului (candidații + revenire / short) - un singur loc,
@@ -1111,7 +1111,7 @@ function t212PiataDin(pz) {
 function piataAziRender() {
   var p = t212.piata;
   document.querySelectorAll("[data-piata-azi]").forEach(function (el) {
-    contTotPune(el, !p ? '<span class="tbSub">Piața azi: aduc datele…</span>' : '<b>Piața azi</b> ' + p.parti.map(function (x) { return '<span>' + escapeHtml(x.et) + ': ' + (Array.isArray(x.bucati) && x.bucati.length ? x.bucati.map(function (y) { return '<b class="' + (y.cls || "") + '">' + escapeHtml(y.t) + '</b>'; }).join("") : '<b class="' + (x.cls || "") + '">' + escapeHtml(x.val) + '</b>') + '</span>'; }).join('<span class="contTotSep">·</span>'));   /* v100.196: fiecare bucată cu culoarea ei */
+    var hP = (!p ? '<span class="tbSub">Piața azi: aduc datele…</span>' : '<b>Piața azi</b> ' + p.parti.map(function (x) { return '<span>' + escapeHtml(x.et) + ': ' + (Array.isArray(x.bucati) && x.bucati.length ? x.bucati.map(function (y) { return '<b class="' + (y.cls || "") + '">' + escapeHtml(y.t) + '</b>'; }).join("") : '<b class="' + (x.cls || "") + '">' + escapeHtml(x.val) + '</b>') + '</span>'; }).join('<span class="contTotSep">·</span>')); if (el._contH !== hP) { el._contH = hP; el.innerHTML = hP; }   /* audit 23.10: doar când s-a schimbat. v100.196: fiecare bucată cu culoarea ei */
   });
 }
 // v100.177 (el 13.10, „din a doua recomandare 1–4”): (4) profitul așteptat - media pe istoria ei în starea de acum, TRASĂ SPRE ZERO după câte

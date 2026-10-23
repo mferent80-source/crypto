@@ -3074,12 +3074,12 @@ html.pzDemo #tabloubot .tbPretViu{display:none!important}
 @media (max-width:640px){
   .pzDemo #tabloubot .tbCadru>.tbGraficRand,.pzDemo #tabloubot .tbGraficRand>.tbGrStanga,.pzDemo #tabloubot .tbGraficRand>.tbGrCol,.pzDemo #tabloubot .tbGrStanga>#tbGraficCard{display:contents}
   .pzDemo #tabloubot #tbGraficCard>*,.pzDemo #tabloubot .tbGrStanga>*,.pzDemo #tabloubot .tbGrCol>*{grid-column:1 / -1;min-width:0}
-  .pzDemo #tabloubot #tbGraficCard>.tbBlocCap{order:11}
-  .pzDemo #tabloubot #tbGraficCard>#tbGrafic{order:12}
-  .pzDemo #tabloubot #tbGraficCard>#tbCitireMobil{order:24}
-  .pzDemo #tabloubot #tbGraficCard>#pzUltimii{order:25}
-  .pzDemo #tabloubot .tbGrStanga>#tbTodo{order:26}
-  .pzDemo #tabloubot .tbGrCol>*{order:27}
+.pzDemo #tabloubot .tbCadru>.tbGraficRand>.tbGrStanga>#tbGraficCard>.tbBlocCap{order:11}
+.pzDemo #tabloubot .tbCadru>.tbGraficRand>.tbGrStanga>#tbGraficCard>#tbGrafic{order:12}
+.pzDemo #tabloubot .tbCadru>.tbGraficRand>.tbGrStanga>#tbGraficCard>#tbCitireMobil{order:24}
+.pzDemo #tabloubot .tbCadru>.tbGraficRand>.tbGrStanga>#tbGraficCard>#pzUltimii{order:25}
+.pzDemo #tabloubot .tbCadru>.tbGraficRand>.tbGrStanga>#tbTodo{order:26}
+.pzDemo #tabloubot .tbCadru>.tbGraficRand>.tbGrCol>*{order:27}
 }
 /* Monte Carlo o singură dată: cardul de sus îl are, rândul din citirea de pe telefon tace cât cardul e vizibil */
 #tabloubot .tbCadru:has(>#tbMcSus:not([hidden])) #tbCitireMobil .tbCitMc{display:none}

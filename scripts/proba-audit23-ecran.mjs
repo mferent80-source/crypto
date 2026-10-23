@@ -198,8 +198,8 @@ await test("9 CSS: pe telefon graficul vine înaintea KPI-urilor (ordinea 11–1
   const i = CSS.indexOf("/* punctul 9:"); assert.ok(i >= 0, "lipsește blocul punctului 9");
   const b = CSS.slice(i, CSS.indexOf("/* audit 23.10 · sfârșitul blocului */"));
   assert.match(b, /\.pzDemo #tabloubot \.tbGrStanga>#tbGraficCard\{display:contents\}/);
-  assert.match(b, /#tbGraficCard>#tbGrafic\{order:12\}/);
-  assert.match(b, /#tbGraficCard>#tbCitireMobil\{order:24\}/);
+  assert.match(b, /^\.pzDemo #tabloubot \.tbCadru>\.tbGraficRand>\.tbGrStanga>#tbGraficCard>#tbGrafic\{order:12\}/m);
+  assert.match(b, /^\.pzDemo #tabloubot \.tbCadru>\.tbGraficRand>\.tbGrStanga>#tbGraficCard>#tbCitireMobil\{order:24\}/m);
   assert.match(CSS, /\.pzDemo #tabloubot \.tbCadru>\.tbSus\{order:14\}/, "KPI-urile rămân la 14");
   assert.match(b, /#tabloubot \.tbCadru:has\(>#tbMcSus:not\(\[hidden\]\)\) #tbCitireMobil \.tbCitMc\{display:none\}/);
 });

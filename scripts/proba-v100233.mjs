@@ -38,7 +38,7 @@ const larga = () => AC.vremeBursa({ qqq: serie(sus), vix: 14, ndx: { e50: 70, n:
 const ab = (extra) => Object.assign({ raportStare: "ok", raport: { reconciliere: { t212: { abateri: [{ ticker: "AAPL_US_EQ" }] } }, valoare: { total: 100000 }, risc: { var95: 1000 } } }, extra || {});
 
 await test("gura care invită spune fraza de cantitate și la bursă; pauza rămâne prima; roșul nu o ia", () => {
-  // v100.259 (audit 23.10): abaterea de cantitate e a jurnalului T212 ⇒ nu mai frânează cardul Crypto, doar pe Nasdaq. Era: assert.equal(AC.franaVerb(lin(), ab()).faCe, FRAZA);
+  /* v100.259 (audit 23.10): abaterea de cantitate e a jurnalului T212 ⇒ nu mai frânează cardul Crypto, doar pe Nasdaq (înainte: Crypto spunea FRAZA). */
   assert.match(AC.franaVerb(lin(), ab()).faCe, /^Aș porni/);
   assert.equal(FRAZA.length <= 110, true);
   assert.match(AC.franaVerb(lin(), ab({ fel: "crypto", pauza: true, pauzaN: 3 })).faCe, /alt bot azi/);
