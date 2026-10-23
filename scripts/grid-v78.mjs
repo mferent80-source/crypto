@@ -133,7 +133,8 @@ await test("regim: liniste -> nu e miscare; salt mare in ultimele 4h -> miscare"
 });
 
 await test("verdict: miscare -> nu; liniste + proba buna -> porneste; proba la limita -> asteapta; fara date -> fara-date", () => {
-  const bun = { antren: { mediana: 0.01, lichidari: 0 }, test: { mediana: 0.004 } };
+  // v100.258: „proba bună” are și media pe test peste zero (PORNEȘTE nu mai trece pe mediana singură)
+  const bun = { antren: { mediana: 0.01, lichidari: 0 }, test: { mediana: 0.004, medie: 0.003 } };
   const linist = { r4h: 0.8, r24h: 0.9, miscare: false };
   assert.equal(GC.verdict({ regim: { r4h: 2.1, r24h: 1, miscare: true }, stat: bun, zile: 30, pozitie: 0.5 }).nivel, "nu");
   assert.equal(GC.verdict({ regim: linist, stat: bun, zile: 30, pozitie: 0.5 }).nivel, "porneste");

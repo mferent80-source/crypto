@@ -282,8 +282,8 @@ var Alerte = (function () {
       var mT = !sm.muta ? "" : mA ? (sm.muta.dist && sm.muta.parte ? nume + ": la " + sm.muta.dist + " de marginea de " + sm.muta.parte + ", nu mut acum" : nume + ": " + sm.muta.motiv)
         : sm.muta.dist && sm.muta.parte ? nume + ": mută gridul, la " + sm.muta.dist + " de marginea de " + sm.muta.parte : nume + ": mută gridul — " + sm.muta.motiv;
       out["s-muta"] = sm.muta && mA ? { nivel: "atentie", titlu: taie(mT, 60),
-        mesaj: msg(sm.muta.poz ? "Prețul e la " + sm.muta.poz + " din interval" + (sm.muta.deCe ? "; " + mic(sm.muta.deCe) : ".") : mare(sm.muta.motiv) + ".",
-          "N-aș muta gridul acum: " + sm.muta.motivNu + ". Aștept să se liniștească piața.") }
+        mesaj: msg((sm.muta.poz ? "Prețul e la " + sm.muta.poz + " din interval" : mare(sm.muta.motiv)) + "; fișa: " + sm.muta.motivNu + ".",
+          "N-aș muta gridul acum, aștept să se liniștească piața.") }
       : sm.muta ? { nivel: "atentie", titlu: taie(mT, 60),
         mesaj: msg(sm.muta.poz ? "Prețul e la " + sm.muta.poz + " din interval" + (sm.muta.deCe ? "; " + mic(sm.muta.deCe) : ".") : sm.muta.deCe || "Fișa propune un grid nou, pe unde e prețul acum.",
           "Aș muta gridul" + (sm.muta.des ? " des (0,3%)" : "") + " la " + pret(nr(sm.muta.setare.jos)) + " – " + pret(nr(sm.muta.setare.sus)) + ", " + cate(sm.muta.setare.grile + 1, "grilă", "grile") + " în Pionex, " + sm.muta.setare.levier + "×" + (nr(sm.muta.treceriZi) !== null ? ", ~" + vg(nr(sm.muta.treceriZi)) + " perechi/zi" : "") + " (setările în Tablou).") } : { nivel: "ok", titlu: "", mesaj: "" };

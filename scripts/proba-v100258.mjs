@@ -35,7 +35,8 @@ await test("(1) fișa zice NU după mișcare: „mută” spune faptul, dar făr
   assert.ok(al, "alerta s-muta există");
   assert.doesNotMatch(al.mesaj, /Aș muta gridul/);
   assert.doesNotMatch(al.mesaj, /grile în Pionex|5×/);
-  assert.match(al.mesaj, /N-aș muta gridul acum: prețul abia a făcut o mișcare de 5,2×/);
+  assert.match(al.mesaj, /fișa: prețul abia a făcut o mișcare de 5,2×/);
+  assert.match(al.mesaj, /👉 N-aș muta gridul acum, aștept să se liniștească piața\.$/);
   assert.doesNotMatch(al.titlu, /mută gridul/);
 });
 await test("(1) semaforul nu mai spune „pornesc cu setările din cartela Gridul” pe NU", () => {

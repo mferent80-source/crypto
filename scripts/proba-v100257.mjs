@@ -162,24 +162,18 @@ await test("Discord scrie moneda instrumentului; INTC rămâne $, Scan rămâne 
   assert.match(citeste("scripts", "colector.mjs"), /laSus: TabloExtra\.totalCuGridLa\(b, Number\(b\.gridSus\)\)/);
 });
 
-await test("versiunea v100.257, insigna PARTE, colectorul pe disc v101.139, lanțul o dată", () => {
+await test("versiunea e cel puțin v100.257, lanțul are proba o singură dată", () => {
   const P = JSON.parse(citeste("package.json"));
-  assert.equal(P.version, "100.257.0");
+  assert.ok(Number(P.version.split(".")[1]) >= 257, P.version);
   assert.equal(P.scripts["test:v100257"], "node scripts/proba-v100257.mjs");
   assert.equal((P.scripts.test.match(/test:v100257/g) || []).length, 1);
   assert.equal((P.scripts.test.match(/test:v100256/g) || []).length, 1);
   assert.doesNotMatch(P.scripts["test:v100257"], /npm run test:v100257/);
   assert.doesNotMatch(P.scripts["test:v100257"], /test:v100256/);
-  const idx = citeste("public", "index.html");
-  assert.equal((idx.match(/v100\.257/g) || []).length, 4);
-  assert.match(idx, /id="sideVersiune"[^>]*>v100\.257 · PARTE</);
-  assert.match(idx, /id="topVersiune">v100\.38 · doar citire</);
-  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-257/);
-  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.257"/);
-  assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.139"/);
+  assert.match(citeste("public", "index.html"), /id="topVersiune">v100\.38 · doar citire</);
+  assert.ok(Number((citeste("scripts", "colector.mjs").match(/const VERSIUNE_COLECTOR = "v101\.(\d+)"/) || [0, 0])[1]) >= 139);
   const info = JSON.parse(citeste("BUILD_INFO.json"));
-  assert.equal(info.version, "v100.257");
-  assert.equal(info.badge, "v100.257 · PARTE");
+  assert.ok(Number(String(info.version).replace(/^v/, "").split(".")[1]) >= 257, info.version);
   assert.equal(info.engineContract, "54.1");
   assert.match(info.features.parte257, /v101\.139/);
   assert.match(info.features.copie256, /procentul/);

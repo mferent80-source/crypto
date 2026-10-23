@@ -93,7 +93,7 @@ await test("versiunea de la v100.230 în sus și colectorul v101.132", () => {
   const info = JSON.parse(citeste("BUILD_INFO.json"));
   assert.equal(info.version, "v100." + minor);
   assert.match(col, /if \(S\.eLimitaDeRitm\(e\)\) return;/);
-  assert.match(col, /VERSIUNE_COLECTOR = "v101\.13[2-9]"/);
+  assert.match(col, /VERSIUNE_COLECTOR = "v101\.(13[2-9]|1[4-9]\d)"/);
 });
 
 console.log(picate ? `\n${picate} PICA din ${teste}\n` : `\ntoate ${teste} ok\n`);
