@@ -153,5 +153,11 @@ await test("5a bsTonEfect: la SHORT prețul în sus e rău (jos = roșu), la LON
   assert.match(APP, /p\.k==="total"&&b\.profitTotal!=null\)p\.ton=/);
 });
 
+// ---------------------------------------------------------------- 6. fâșia contului: „alerte necitite”, nu „alerte 0” sub „CRITICE: 4+”
+await test("6 fâșia contului numește celula „necitite” (deschiderea Alertelor le citește; nu contrazice „CRITICE: 4+”)", () => {
+  assert.doesNotMatch(AS, /cel\("alerte", a\.t/);
+  assert.match(AS, /cel\("alerte necitite", a\.t/);
+});
+
 console.log(`\n${teste - picate}/${teste} trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
 process.exit(picate ? 1 : 0);

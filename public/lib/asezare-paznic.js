@@ -158,7 +158,7 @@
     cel("cea mai aproape lichidare", L ? (L.depasita ? '<span class="pzR">DEPĂȘITĂ</span> <small>' + esc((L.bot.baza || "").replace(".PERP", "")) + '</small>' : '<span class="' + tonLich(L.d) + '">' + L.d.toFixed(1).replace(".", ",") + '%</span> <small>' + esc((L.bot.baza || "").replace(".PERP", "")) + '</small>') : "—", L && (L.depasita || L.d < 8) ? "pzRosu" : "", "cât mai are prețul până la lichidare (cel mai expus bot)", "tabloubot");
     var t = D.t212;
     cel("T212 deschise", t ? '<span class="' + (t.minus ? "pzR" : "pzV") + '">' + esc(t.deschise) + '</span> <small>lei</small>' : "—", "", t ? "Trading 212: cont " + t.cont + " lei" : "se citește din rândul contului, când e adus", "t212");
-    var a = alerteNr(); cel("alerte", a.t, a.n ? "pzAtentie" : "", "alerte necitite", "alerts");
+    var a = alerteNr(); cel("alerte necitite", a.t,   /* audit 23.10: „alerte 0” stătea sub „CRITICE: 4+” (deschiderea Alertelor le citește) */ a.n ? "pzAtentie" : "", "alerte necitite", "alerts");
     var c = D.col;
     cel("colectorul de acasă", c ? (c.viu ? '<span class="pzV">merge</span> <small>acum ' + c.min + ' min</small>' : '<span class="pzR">oprit de ' + c.min + ' min</span>') : "—", c && !c.viu ? "pzRosu" : "", c ? (c.viu ? "colectorul a dat semn acum " + c.min + " min" : "ultimul semn al colectorului: acum " + c.min + " min — pornește PORNESTE-CRYPTO-RADAR.bat") : "colectorul nu a dat semn (sau serverul de acasă nu răspunde)", "tabloubot");   /* nu „cloud”: Cloud Monitor e despre D1, nu despre colector (harta paginilor) */
     return C.join("");
