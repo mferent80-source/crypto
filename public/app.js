@@ -7052,7 +7052,12 @@ function latimeUsDeseneaza(){
 function deschideAlertsPagina(){window.open("https://mferent80-source.github.io/premarket_scanner.html/alerts/","_blank","noopener")}
 // Rezultate (v100.163, 11.10.2026): pagina earnings-hub din premarket_scanner mutată în Radar. Desenul în lib/rezultate.js,
 // datele din /api/rezultate (cheia Finnhub în KV-ul de acasă). ⭐ = pozițiile T212 + Salt („deții”) și lista urmărită („urmărești”).
+// audit 23.10: pe telefon cele 849 de companii făceau 65.691 px și îngropau cele 5 ⭐ ⇒ implicit „doar ⭐ + 7 zile”; alegerea lui se ține minte
+var RZ_FILTRU_KEY="radar-rezultate-filtru-v1";
+function rzFiltruCitit(){try{var o=JSON.parse(localStorage.getItem(RZ_FILTRU_KEY)||"null");if(o&&typeof o==="object")return{zile:[7,14,30].indexOf(o.zile)>=0?o.zile:7,doarStea:o.doarStea!==false}}catch(e){}return{zile:7,doarStea:true}}
+function rzFiltruSalveaza(){try{localStorage.setItem(RZ_FILTRU_KEY,JSON.stringify({zile:rzStare.zile,doarStea:rzStare.doarStea}))}catch(e){}}
 var rzStare={cheie:null,zile:7,doarStea:false,cal:null,stele:{},deschis:null,istoric:{},arataCheie:false,mesajCheie:"",steleLa:0,calLa:0};
+(function(){var f=rzFiltruCitit();rzStare.zile=f.zile;rzStare.doarStea=f.doarStea})();
 function rzDeseneaza(){var el=$("rzPagina");if(!el||typeof Rezultate==="undefined")return;el.innerHTML=rzStare.cheie===null?'<p class="tbSub">Aduc starea…</p>':Rezultate.htmlPagina(Object.assign({acum:Date.now()},rzStare))}
 async function rzStele(){
   if(Date.now()-rzStare.steleLa<10*60000)return;
@@ -7070,9 +7075,9 @@ async function rzCalendar(fortat){
 async function rzPorneste(){
   if(rzStare.cheie===null){try{var s=await getJSON("/api/rezultate?action=stare");rzStare.cheie=!!(s&&s.areCheie)}catch(e){rzStare.cheie=false;rzStare.mesajCheie="Serverul de acasă nu a răspuns: "+((e&&e.message)||"")}}
   rzDeseneaza();await rzStele();await rzCalendar(false);rzDeseneaza()}
-function rzZile(n){rzStare.zile=n;rzStare.deschis=null;rzCalendar(true).then(rzDeseneaza)}
-function rzDoarStea(){rzStare.doarStea=true;rzDeseneaza()}
-function rzToate(){rzStare.doarStea=false;rzDeseneaza()}
+function rzZile(n){rzStare.zile=n;rzStare.deschis=null;rzFiltruSalveaza();rzCalendar(true).then(rzDeseneaza)}
+function rzDoarStea(){rzStare.doarStea=true;rzFiltruSalveaza();rzDeseneaza()}
+function rzToate(){rzStare.doarStea=false;rzFiltruSalveaza();rzDeseneaza()}
 function rzReincarca(){rzCalendar(true).then(rzDeseneaza)}
 function rzArataCheie(){rzStare.arataCheie=!rzStare.arataCheie;rzStare.mesajCheie="";rzDeseneaza()}
 async function rzDesfa(s){

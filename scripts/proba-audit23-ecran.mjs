@@ -165,5 +165,33 @@ await test("7 deschiderea paginii Cont citește boții o dată (doar cât e NEC�
   assert.match(fnApp("incarcaBoti"), /getJSON\('\/api\/bot-orders'\)/);
 });
 
+// ---------------------------------------------------------------- 8. Rezultate: implicit „doar ⭐ + 7 zile”, alegerea ținută minte
+function rzIncarca(salvat, aruncaLa) {
+  const i = APP.indexOf("var RZ_FILTRU_KEY="), j = APP.indexOf("function rzReincarca(");
+  assert.ok(i >= 0 && j > i, "lipsește RZ_FILTRU_KEY înaintea funcțiilor rzZile / rzDoarStea / rzToate");
+  const mem = {}; if (salvat !== undefined) mem["radar-rezultate-filtru-v1"] = salvat;
+  const localStorage = { getItem: (k) => { if (aruncaLa) throw new Error("blocat"); return k in mem ? mem[k] : null; }, setItem: (k, v) => { if (aruncaLa) throw new Error("blocat"); mem[k] = String(v); } };
+  const ctx = { localStorage, $: () => null, Rezultate: undefined, getJSON: async () => ({}), Date, Promise, JSON };
+  vm.createContext(ctx);
+  vm.runInContext(APP.slice(i, j).replace(/rzCalendar\(true\)\.then\(rzDeseneaza\)/g, "0"), ctx);
+  return { ctx, mem };
+}
+await test("8a la prima deschidere: doar ⭐ și 7 zile", () => {
+  const { ctx } = rzIncarca();
+  assert.equal(ctx.rzStare.doarStea, true); assert.equal(ctx.rzStare.zile, 7);
+});
+await test("8b alegerea („toate”, 14 zile) se ține minte și se citește la pornire; stocarea blocată nu strică pagina", () => {
+  const { ctx, mem } = rzIncarca();
+  ctx.rzToate(); ctx.rzZile(14);
+  const s = JSON.parse(mem["radar-rezultate-filtru-v1"]);
+  assert.equal(s.doarStea, false); assert.equal(s.zile, 14);
+  const b = rzIncarca(mem["radar-rezultate-filtru-v1"]).ctx;
+  assert.equal(b.rzStare.doarStea, false); assert.equal(b.rzStare.zile, 14);
+  const c = rzIncarca(undefined, true).ctx;
+  assert.equal(c.rzStare.doarStea, true); c.rzToate(); assert.equal(c.rzStare.doarStea, false);
+  const d = rzIncarca('{"zile":99,"doarStea":"x"}').ctx;
+  assert.equal(d.rzStare.zile, 7, "o fereastră necunoscută cade pe 7");
+});
+
 console.log(`\n${teste - picate}/${teste} trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
 process.exit(picate ? 1 : 0);
