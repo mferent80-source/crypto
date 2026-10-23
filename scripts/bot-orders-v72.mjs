@@ -471,7 +471,8 @@ await test("nicio ruta care SCRIE nu s-a strecurat", async () => {
   const exporturi = [...src.matchAll(/export\s+(?:async\s+)?function\s+(\w+)/g)].map((m) => m[1]);
   // audit 19.10: + preturiPerp / hartaSimboluri (GET pe datele publice de piata, exportate ca proba sa vada ca respecta lacatul Pionex comun);
   // regula ramane: niciun handler care scrie (tiparele interzise de mai sus se verifica tot)
-  assert.deepEqual(exporturi, ["preturiPerp", "hartaSimboluri", "onRequestGet"], `exporturi neasteptate: ${exporturi.join(", ")}`);
+  // v100.259 (auditul 23.10, punctul 8): + reseteazaCacheBotOrders (golește cache-ul de 20 s al tickerelor PERP, doar pentru probe; nu scrie nimic)
+  assert.deepEqual(exporturi, ["reseteazaCacheBotOrders", "preturiPerp", "hartaSimboluri", "onRequestGet"], `exporturi neasteptate: ${exporturi.join(", ")}`);
 });
 
 await test("indemnul de a bifa 'Bot reading' apare DOAR cand lipseste dreptul", async () => {

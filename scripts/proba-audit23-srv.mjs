@@ -203,6 +203,27 @@ await test("(9) poarta privată (bot-orders): la fel - anulată la coadă ⇒ nu
   assert.match(citeste("functions", "api", "bot-orders.js"), /citesteBoti\(env,params,request\.signal\)/);
   P.reseteazaRitmPionex();
 });
+// ---------- (8) tickerele PERP și lista de simboluri din bot-orders: prin cache (20 s), cererile identice legate ----------
+const BO = await import("../functions/api/bot-orders.js");
+await test("(8) preturiPerp: 3 cereri deodată = UN apel la Pionex; încă una în 20 s = din cache; după 20 s se cere iar; eroarea nu se ține minte", async () => {
+  assert.equal(typeof BO.reseteazaCacheBotOrders, "function"); assert.equal(BO.PRETURI_PERP_TTL_MS, 20000);
+  P.reseteazaRitmPionex(); BO.reseteazaCacheBotOrders();
+  let rau = false;
+  fetchFals(async () => { await pauza(10); return rau ? new Response("x", { status: 500 }) : new Response(JSON.stringify({ result: true, data: { tickers: [{ symbol: "SOL_USDT_PERP", close: "150" }] } }), { status: 200 }); });
+  const t = Date.now(), r = await Promise.all([BO.preturiPerp(t), BO.preturiPerp(t), BO.preturiPerp(t)]);
+  assert.equal(cereriFalse.length, 1); assert.deepEqual(r[0], { SOL_USDT_PERP: 150 }); assert.deepEqual(r[2], r[0]);
+  await BO.preturiPerp(t + 19000); assert.equal(cereriFalse.length, 1, "în 20 s trebuia din cache");
+  rau = true; await assert.rejects(() => BO.preturiPerp(t + 21000)); assert.equal(cereriFalse.length, 2);
+  rau = false; await BO.preturiPerp(t + 22000); assert.equal(cereriFalse.length, 3, "eroarea a rămas ținută minte");
+  BO.reseteazaCacheBotOrders(); P.reseteazaRitmPionex();
+});
+await test("(8) hartaSimboluri: cererile deodată legate (un apel); bot-orders folosește tot preturiPerp / hartaSimboluri", async () => {
+  P.reseteazaRitmPionex(); BO.reseteazaCacheBotOrders();
+  fetchFals(async () => { await pauza(10); return new Response(JSON.stringify({ result: true, data: { symbols: [{ symbol: "PUMP_USDT_PERP", baseCurrency: "PUMPFUN", quoteCurrency: "USDT" }] } }), { status: 200 }); });
+  const r = await Promise.all([BO.hartaSimboluri(), BO.hartaSimboluri()]);
+  assert.equal(cereriFalse.length, 1); assert.equal(r[1]["PUMPFUN.PERP|USDT"], "PUMP_USDT_PERP");
+  BO.reseteazaCacheBotOrders(); P.reseteazaRitmPionex();
+});
 globalThis.fetch = fetchAdevarat;
 
 // ---------- (12) alertele T212 (Consilier, ±1%, SL/TP) și fără poză: fără cheile paznicului sau noaptea ----------

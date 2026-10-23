@@ -57,7 +57,19 @@ async function citesteBoti(env,params={},semnal=null){
 // Preturile perpetuelor, ca sa putem spune cat mai e pana la lichidare.
 // Daca nu se poate, botii tot se intorc - lipsa se raporteaza, nu se ascunde.
 // audit 19.10: cat tine lacatul Pionex nu pleaca (ar prelungi lacatul IP-ului); un refuz cu lacat se tine minte pentru toti
-export async function preturiPerp(){
+// v100.259 (auditul 23.10, punctul 8): tickerele PERP ocoleau orice cache - fiecare citire a boților (colectorul la minut, pagina, Tabloul)
+// era o cerere la Pionex. Acum: ținute PRETURI_PERP_TTL_MS în memoria serverului, iar cererile identice în zbor sunt legate (o promisiune
+// comună). O eroare nu se ține minte. `acum` doar pentru probe.
+export const PRETURI_PERP_TTL_MS=20000;
+let perpTinute={la:0,harta:null},perpZbor=null,simboluriZbor=null;
+export function reseteazaCacheBotOrders(){perpTinute={la:0,harta:null};perpZbor=null;simboluriTinute={la:0,harta:null};simboluriZbor=null}
+export async function preturiPerp(acum=Date.now()){
+  if(perpTinute.harta&&acum-perpTinute.la<PRETURI_PERP_TTL_MS)return perpTinute.harta;
+  if(perpZbor)return perpZbor;
+  perpZbor=citestePreturiPerp().then(h=>{perpTinute={la:acum,harta:h};return h}).finally(()=>{perpZbor=null});
+  return perpZbor;
+}
+async function citestePreturiPerp(){
   if(lacatRamasMs())throw eroareLacat("tickere PERP");
   const r=await fetch(`${PIONEX}/api/v1/market/tickers?type=PERP`,{headers:{accept:"application/json"},signal:AbortSignal.timeout(TIMEOUT_MS)});
   if(!r.ok){lacatDinRaspuns(r.headers,r.status,15);throw Error(`tickere PERP: HTTP ${r.status}`)}
@@ -77,6 +89,12 @@ const SIMBOLURI_TTL=6*3600*1000;
 let simboluriTinute={la:0,harta:null};
 export async function hartaSimboluri(){
   if(simboluriTinute.harta&&Date.now()-simboluriTinute.la<SIMBOLURI_TTL)return simboluriTinute.harta;
+  // v100.259 (punctul 8): cererile deodată (lista nu e încă ținută) - o singură cerere la Pionex
+  if(simboluriZbor)return simboluriZbor;
+  simboluriZbor=citesteSimboluri().finally(()=>{simboluriZbor=null});
+  return simboluriZbor;
+}
+async function citesteSimboluri(){
   if(lacatRamasMs())throw eroareLacat("simboluri PERP");   // audit 19.10
   const r=await fetch(`${PIONEX}/api/v1/common/symbols?type=PERP`,{headers:{accept:"application/json"},signal:AbortSignal.timeout(TIMEOUT_MS)});
   if(!r.ok){lacatDinRaspuns(r.headers,r.status,15);throw Error(`simboluri PERP: HTTP ${r.status}`)}
