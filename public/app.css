@@ -3057,6 +3057,18 @@ html.pzDemo #tabloubot .tbPretViu{display:none!important}
 #tabloubot .tbMotive,#tabloubot .tbConcret,#tabloubot #tbAcumCard,#tabloubot #tbSemaforCard,#tabloubot #tbSemaforCard.tbCons{margin:0}
 #tabloubot .tbConcret{gap:8px}
 #tabloubot .gbValCap{margin:8px 0 2px;font-size:13px;font-weight:600;color:#E6EDF3}
+/* v100.253: „Ce spune piața acum” nu mai întinde graficul. Linia de sus rămâne pe toată lățimea. Celelalte rânduri stau unul lângă altul, sub grafic. Șirurile vechi (stretch, flex, 240 px) rămân mai sus. */
+@media (min-width:1181px){
+  #tabloubot .tbGraficRand{align-items:start}
+  #tabloubot .tbGrStanga{align-self:start}
+  #tabloubot .tbGrCol{display:contents}
+  #tabloubot #tbTrendCard{grid-column:2;grid-row:1;align-self:start}
+  #tabloubot #tbCitireCard{grid-column:1 / -1;grid-row:2;align-self:start}
+  #tabloubot #tbCitire{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));column-gap:8px;align-items:start}
+  #tabloubot #tbCitire>.tbCitScurt,#tabloubot #tbCitire>.tbCitVoci{grid-column:1 / -1}
+  #tabloubot #tbCitire>.tbCitR{min-width:0}
+  #tabloubot #tbCitire>.tbCitR:has(button,a){grid-column:1 / -1}
+}
 /* v100.224: pe paginile de zi rămân alertele, banda botului și versiunea. Cipurile de cercetare revin la analiza monedei și în laborator. */
 body.peAcasa:not(.acMonedaDeschisa) .topLeft,body.peTablou .topLeft,body.peT212 .topLeft,body.peJurnal .topLeft,body.peGrid .topLeft,body.pePaginaNoua .topLeft,
 body.peAcasa:not(.acMonedaDeschisa) #wsStatus,body.peTablou #wsStatus,body.peT212 #wsStatus,body.peJurnal #wsStatus,body.peGrid #wsStatus,body.pePaginaNoua #wsStatus,
