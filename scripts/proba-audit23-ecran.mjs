@@ -420,5 +420,22 @@ await test("25 grRandSumaMaxima dă lui sumaMaxima p5-ul Simulatorului pe aceea�
   assert.match(g, /cele mai proaste 5% din drumurile Simulatorului/);
 });
 
+// ---------------------------------------------------------------- 26. „Detaliile indicatorilor” (tbTrendDet) se țin minte după reîncărcare
+await test("26 tbTrendDetTine: deschis ⇒ ținut minte (tbTrendDetDeschis = 1) și redeschis la pornire; stocarea blocată nu strică; pornirea o cheamă", () => {
+  const m = APP.match(/function tbTrendDetTine\(\)\{[^\n]*/); assert.ok(m, "lipsește tbTrendDetTine");
+  const fac = (mem, arunca) => {
+    let asc = null; const d = { open: false, addEventListener: (ev, f) => { if (ev === "toggle") asc = f; } };
+    const ls = { getItem: (k) => { if (arunca) throw new Error("x"); return k in mem ? mem[k] : null; }, setItem: (k, v) => { if (arunca) throw new Error("x"); mem[k] = String(v); } };
+    new Function("$", "localStorage", m[0] + "; tbTrendDetTine();")((id) => id === "tbTrendDet" ? d : null, ls);
+    return { d, asc };
+  };
+  const mem = {}; const a = fac(mem); assert.equal(a.d.open, false);
+  a.d.open = true; a.asc(); assert.equal(mem.tbTrendDetDeschis, "1");
+  const b = fac(mem); assert.equal(b.d.open, true, "după reîncărcare rămâne deschis");
+  b.d.open = false; b.asc(); assert.equal(mem.tbTrendDetDeschis, "0");
+  const c = fac({}, true); c.d.open = true; c.asc();
+  assert.match(APP, /try\{sideVechiTine\(\)\}catch\(_\)\{\}try\{tbTrendDetTine\(\)\}catch\(_\)\{\}/);
+});
+
 console.log(`\n${teste - picate}/${teste} trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
 process.exit(picate ? 1 : 0);
