@@ -6434,7 +6434,7 @@ function tbDeseneazaSemafor(b){
   if(mot)mot.hidden=true;
   // "Acum, concret": cifra mare + eticheta + actiunea; detaliile (si setarile de copiat ale gridului propus) sub "detalii"
   var gmd=muta?null:SemnaleBot.gridMaiDes(b,f),T1=function(v){return v==null?"?":(Math.round(v*10)/10).toFixed(1).replace(".",",")};
-  var prop=muta?{setare:muta.setare,titlu:"Gridul propus acum (din fișa de azi"+(muta.des?", grid des 0,3%":"")+")",sub:muta.treceriZi!=null?"~"+T1(muta.treceriZi)+" perechi încheiate pe zi pe ultimele 30 de zile":""}
+  var prop=muta&&muta.setare?{setare:muta.setare,titlu:"Gridul propus acum (din fișa de azi"+(muta.des?", grid des 0,3%":"")+")",sub:muta.treceriZi!=null?"~"+T1(muta.treceriZi)+" perechi încheiate pe zi pe ultimele 30 de zile":""}
     :gmd?{setare:gmd.setare,titlu:"Grid mai des (0,3%)",sub:gmd.motiv+". Nu e o dovadă, e regula ta (0,30%); proba pe 30 z n-a respins-o."}:null;
   var propHtml="";
   if(prop){var s=prop.setare,i=grStare.monede&&grStare.monede[TabloBot.simboluri(b.baza,b.quote,b.simbolPionex).pionex];

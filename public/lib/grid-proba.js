@@ -128,7 +128,7 @@ var GridProba = (function () {
     for (var i = 0; i < rez.length; i++) { net.push(rez[i].net); ies += rez[i].iesiri; ump += rez[i].umpleri || 0; per += rez[i].perechi || 0; if (rez[i].lichidat) lich++; if (rez[i].oprit) opr++; }
     // v99: perechiMedii = cate grile INCASEAZA setarea intr-o fereastra, in medie - "gridul e atins des sau rar?"
     // (umpleriMedii numara si umplerile de pornire - un grid des cu N mare "umple" mult si pe o piata moarta; revizia 28.09)
-    return { n: rez.length, mediana: G.mediana(net), ceaMaiProasta: Math.min.apply(null, net), iesiriMedii: ies / rez.length, lichidari: lich, opriri: opr, umpleriMedii: ump / rez.length, perechiMedii: per / rez.length };
+    return { n: rez.length, mediana: G.mediana(net), medie: net.reduce(function (a, v) { return a + v; }, 0) / net.length, ceaMaiProasta: Math.min.apply(null, net), iesiriMedii: ies / rez.length, lichidari: lich, opriri: opr, umpleriMedii: ump / rez.length, perechiMedii: per / rez.length };
   }
 
   // Platou, nu varf: scorul unei celule = media medianelor ei si a vecinilor
@@ -446,7 +446,7 @@ var GridProba = (function () {
     var la = r && r.la, ore = la > 0 || la === 0 ? Math.max(0, Math.round(((acum || Date.now()) - la) / 3600000)) : null;
     return { ore: ore, vechi: ore !== null && ore > 12, text: ore === null ? "" : ore > 12 ? "calculat acum " + ore + " h — vechi, colectorul îl reface la 6 h" : "calculat acum " + ore + " h" };
   }
-  return { fundingDe: fundingDe, FUNDING_PRESUPUS: FUNDING_PRESUPUS, potrivireIngust: potrivireIngust, judecaUrmarire: judecaUrmarire, socotealaUrmarire: socotealaUrmarire, directiaLa: directiaLa, verdictIngust: verdictIngust, ingust: ingust, rezumatIngust: rezumatIngust, notaBloc: notaBloc, inchise: inchise, varstaIngust: varstaIngust, simuleaza: simuleaza, statistici: statistici, alegePlatou: alegePlatou, proba: proba, probaSetare: probaSetare, contrazice: contrazice, sumaMaxima: sumaMaxima, fisa: fisa,
+  return { statistici: statistici, fundingDe: fundingDe, FUNDING_PRESUPUS: FUNDING_PRESUPUS, potrivireIngust: potrivireIngust, judecaUrmarire: judecaUrmarire, socotealaUrmarire: socotealaUrmarire, directiaLa: directiaLa, verdictIngust: verdictIngust, ingust: ingust, rezumatIngust: rezumatIngust, notaBloc: notaBloc, inchise: inchise, varstaIngust: varstaIngust, simuleaza: simuleaza, statistici: statistici, alegePlatou: alegePlatou, proba: proba, probaSetare: probaSetare, contrazice: contrazice, sumaMaxima: sumaMaxima, fisa: fisa,
     respinge: respinge, propune: propune, setarePropusa: setarePropusa, treceriPeZi: treceriPeZi };
 })();
 if (typeof globalThis !== "undefined") globalThis.GridProba = GridProba;

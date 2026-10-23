@@ -60,6 +60,9 @@ var SemnaleBot = (function () {
       }
     } else if ((nr(afaraOre) || 0) >= 2) motiv = "prețul e în afara gridului de " + TextRo.ore(nr(afaraOre) * ORA);
     if (!motiv) return null;
+    // v100.258 (auditul 23.10, 🔴): fișa zice NU sau piața e în mișcare ⇒ faptul rămâne, setările de copiat nu (după mișcare gridul iese cel mai rău)
+    if (fisaOpreste(f)) return { nivel: "atentie", motiv: motiv, deCe: deCe, sursa: sursa, parte: lm ? lm.parte : null, dist: lm && lm.parte ? P(lm.dist) : null, poz: lm && lm.parte ? P(lm.poz) : null,
+      asteapta: true, motivNu: motivOprire(f), setare: null };
     // v99: setarea PROPUSA de fisa (deasa, 0,30% - v100.39: oricand proba n-o respinge), altfel cea aleasa de platou
     var s = f.propusa === "deasa" && f.deasa && f.deasa.setare ? f.deasa.setare : f.setare, des = f.propusa === "deasa";
     // v100.70 (revizia pachetului 3, I4): si cifrele separat (dist = cat mai e pana la margine, poz = unde e in interval) - titlul alertei
@@ -90,8 +93,13 @@ var SemnaleBot = (function () {
   var T = function (v) { return v === null || v === undefined ? "?" : TextRo.num(Math.round(v * 10) / 10, 1); };
   // v99 (cererea lui, 28.09): botul e mult mai RAR decat gridul des propus de fisa in liniste -> propunere cu cifre.
   // Nu e alerta (n-ar fi "urgent"), e o sugestie pe Tablou: gridurile rare sunt atinse rar; cu 0,30% a facut mai multi bani lateral.
+  function fisaOpreste(f) { return !!(f && ((f.verdict && f.verdict.nivel === "nu") || (f.regim && f.regim.miscare))); }
+  function motivOprire(f) {
+    var m = f && f.verdict && f.verdict.nivel === "nu" && f.verdict.motive && f.verdict.motive[0];
+    return m || "piața e în mișcare mare și după mișcare gridul iese cel mai rău";
+  }
   function gridMaiDes(b, f) {
-    if (!b || !f || f.propusa !== "deasa" || !f.deasa || !f.deasa.setare) return null;
+    if (!b || !f || f.propusa !== "deasa" || !f.deasa || !f.deasa.setare || fisaOpreste(f)) return null;
     var g = pasBot(b), s = f.deasa.setare;
     if (!g || !(s.pas > 0) || g.pas <= 1.5 * s.pas) return null;
     return { setare: s, pasBot: g.pas, pasDes: s.pas, grileBot: g.grile, treceriZi: nr(f.deasa.treceriZi),
@@ -411,7 +419,7 @@ var SemnaleBot = (function () {
         deCe: "Busola a măsurat pe date noi: după „mai agitat” gridul a pierdut mai mult decât oricând" + (bl.monede > 0 ? " (" + TextRo.cate(bl.monede, "monedă", "monede") + ")" : "") + "." });
     var ip = x.iaProfit, ipT = ip && nr(ip.total) !== null ? ": totalul " + U(ip.total) + (nr(ip.proc) !== null ? " (" + P(ip.proc) + ")" : "") : "";
     if (ip) c.push({ nivel: "atentie", cod: "ia-profit", motiv: "moment bun de încasat" + ipT, faCe: "Aș închide botul pe plus și aș reporni doar când fișa zice iar 🟢.", deCe: ip.deCe || "" });
-    if (x.muta) c.push({ nivel: "atentie", cod: "muta", motiv: x.muta.motiv, parte: x.muta.parte || null, faCe: "Aș muta gridul: închid botul și pornesc cu setările din cartela Gridul.", deCe: x.muta.deCe || "", sursa: x.muta.sursa || null });
+    if (x.muta) c.push({ nivel: "atentie", cod: "muta", motiv: x.muta.motiv, parte: x.muta.parte || null, faCe: x.muta.asteapta ? "N-aș muta gridul acum: " + x.muta.motivNu + "; aștept să se liniștească." : "Aș muta gridul: închid botul și pornesc cu setările din cartela Gridul.", deCe: x.muta.deCe || "", sursa: x.muta.sursa || null });
     if (x.costuri && x.costuri.netZi !== null && x.costuri.netZi !== undefined && x.costuri.netZi < 0) c.push({ nivel: "atentie", cod: "costuri", motiv: "costurile pe zi depășesc grilele: " + TextRo.usdt(x.costuri.netZi, TextRo.zecMici(x.costuri.netZi)) + " net/zi", faCe: "Aș lua levier mai mic sau grile mai rare la următorul bot." });
     var rB = x.btc ? nr(x.btc.r) : null;
     if (x.btc) c.push({ nivel: "atentie", cod: "btc", motiv: "BTC în mișcare" + (rB !== null ? " (" + X(rB) + " față de obișnuit)" : "") + ", moneda încă nu", faCe: "N-aș adăuga bani până nu se vede încotro trage BTC.", deCe: "Altcoinii urmează des BTC." });

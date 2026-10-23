@@ -374,6 +374,11 @@ var GridCalcul = (function () {
     if (a.mediana >= 0 && a.mediana < C.MEDIANA_VERDE) galben.push("pe istoric iese la limită (mediana " + procent(a.mediana) + ")");
     if (!o.stat.test) galben.push("n-am avut zile nevăzute pe care s-o verific");
     else if (o.stat.test.mediana < 0) galben.push("pe ultimele zile, nevăzute la alegere, a ieșit pe minus (" + procent(o.stat.test.mediana) + ")");
+    // v100.258 (auditul 23.10, 🔴): mediana singură trecea strategii cu speranță negativă - pe mers aleator PORNEȘTE în 27–35% din cazuri,
+    // cu media pe test −0,6…−2,7%. PORNEȘTE cere și media pe zilele nevăzute peste zero (ca gridul îngust, verdictIngust).
+    else if (!(o.stat.test.medie > 0)) galben.push(typeof o.stat.test.medie === "number" && isFinite(o.stat.test.medie)
+      ? "pe zilele nevăzute, media e pe minus (" + procent(o.stat.test.medie) + "): câștigă des puțin și pierde rar mult"
+      : "pe zilele nevăzute n-am media câștigului, doar mediana: nu zic PORNEȘTE");
     // v100.196 (auditul 14.10, B5): setarea e cea mai buna din ~36 de combinatii pe antrenare, verificata pe ~6 ferestre independente (BTC, SOL si DOGE
     // ieseau toate „porneste” short din aceleasi 12 zile de scadere - un singur regim, nu trei confirmari). Sub prag: astept mai multe zile.
     if (o.ferestreTest !== undefined && o.ferestreTest !== null && o.ferestreTest < C.MIN_FERESTRE_TEST) galben.push("pe zilele nevăzute am doar " + cate(o.ferestreTest, "fereastră independentă", "ferestre independente")

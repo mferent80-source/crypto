@@ -277,8 +277,14 @@ var Alerte = (function () {
       // „de ce”-ul ajunge si pe Discord / pagina alerts (revizia pachetului 1, R2): randul 1; gridul nou e actiunea (randul 2)
       // v100.70 (revizia pachetului 3, I4): titlul cu distanta pana la margine (motivul intreg era taiat la 60, „…(12%…”), pozitia in
       // interval si pragul pe randul 1; fara cifre (pretul afara din grid) - motivul ca inainte
-      var mT = !sm.muta ? "" : sm.muta.dist && sm.muta.parte ? nume + ": mută gridul, la " + sm.muta.dist + " de marginea de " + sm.muta.parte : nume + ": mută gridul — " + sm.muta.motiv;
-      out["s-muta"] = sm.muta ? { nivel: "atentie", titlu: taie(mT, 60),
+      // v100.258 (auditul 23.10, 🔴): fișa zice NU / piața în mișcare ⇒ faptul și „n-aș muta acum”, fără setări de copiat
+      var mA = !!(sm.muta && sm.muta.asteapta);
+      var mT = !sm.muta ? "" : mA ? (sm.muta.dist && sm.muta.parte ? nume + ": la " + sm.muta.dist + " de marginea de " + sm.muta.parte + ", nu mut acum" : nume + ": " + sm.muta.motiv)
+        : sm.muta.dist && sm.muta.parte ? nume + ": mută gridul, la " + sm.muta.dist + " de marginea de " + sm.muta.parte : nume + ": mută gridul — " + sm.muta.motiv;
+      out["s-muta"] = sm.muta && mA ? { nivel: "atentie", titlu: taie(mT, 60),
+        mesaj: msg(sm.muta.poz ? "Prețul e la " + sm.muta.poz + " din interval" + (sm.muta.deCe ? "; " + mic(sm.muta.deCe) : ".") : mare(sm.muta.motiv) + ".",
+          "N-aș muta gridul acum: " + sm.muta.motivNu + ". Aștept să se liniștească piața.") }
+      : sm.muta ? { nivel: "atentie", titlu: taie(mT, 60),
         mesaj: msg(sm.muta.poz ? "Prețul e la " + sm.muta.poz + " din interval" + (sm.muta.deCe ? "; " + mic(sm.muta.deCe) : ".") : sm.muta.deCe || "Fișa propune un grid nou, pe unde e prețul acum.",
           "Aș muta gridul" + (sm.muta.des ? " des (0,3%)" : "") + " la " + pret(nr(sm.muta.setare.jos)) + " – " + pret(nr(sm.muta.setare.sus)) + ", " + cate(sm.muta.setare.grile + 1, "grilă", "grile") + " în Pionex, " + sm.muta.setare.levier + "×" + (nr(sm.muta.treceriZi) !== null ? ", ~" + vg(nr(sm.muta.treceriZi)) + " perechi/zi" : "") + " (setările în Tablou).") } : { nivel: "ok", titlu: "", mesaj: "" };
       out["s-btc"] = sm.btc ? { nivel: "atentie", titlu: nume + ": BTC a intrat în mișcare", mesaj: msg(sm.btc.text, "N-aș adăuga bani până nu se vede încotro trage BTC.") } : { nivel: "ok", titlu: "", mesaj: "" };
