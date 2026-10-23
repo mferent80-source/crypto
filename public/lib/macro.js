@@ -118,13 +118,13 @@
     const pct = (x) => (x == null || !isFinite(Number(x)) ? "" : (Number(x) > 0 ? "+" : Number(x) < 0 ? "−" : "") + Math.abs(Number(x) * 100).toFixed(1).replace(".", ",") + "%");
     const buc = [5, 20].map((h) => {
       const r = rand.find((x) => x.h === h), t = r && r.test;
-      if (!t) return "la " + h + " zile încă nu e măsurat";
-      if (t.stare === "putine") return "la " + h + " zile puține (" + Number(t.nFav || 0) + " / " + Number(t.nRest || 0) + ")";
-      const dov = rg.some((x) => x && x.ramane === true && x.sursa === "Regimul macro · " + h + " zile de bursă");
+      if (!t) return "la " + cate(h, "zi", "zile") + " încă nu e măsurat";
+      if (t.stare === "putine") return "la " + cate(h, "zi", "zile") + " puține (" + Number(t.nFav || 0) + " / " + Number(t.nRest || 0) + ")";
+      const dov = rg.some((x) => x && x.ramane === true && x.sursa === "Regimul macro · " + cate(h, "zi", "zile") + " de bursă");
       const dif = isFinite(Number(t.dif)) ? ", diferența " + pct(t.dif) : "";
-      if (t.stare === "testat" && dov) return "la " + h + " zile dovedit" + dif;
-      if (t.stare === "testat") return "la " + h + " zile măsurat, nu e dovedit" + dif;
-      return "la " + h + " zile încă nu e măsurat";
+      if (t.stare === "testat" && dov) return "la " + cate(h, "zi", "zile") + " dovedit" + dif;
+      if (t.stare === "testat") return "la " + cate(h, "zi", "zile") + " măsurat, nu e dovedit" + dif;
+      return "la " + cate(h, "zi", "zile") + " încă nu e măsurat";
     });
     return "Regimul, S&P după pofta de risc: " + buc.join("; ") + ".";
   }
@@ -133,7 +133,7 @@
     const rg = Array.isArray(c.registru) ? c.registru : [];
     const masurat = c.calibrare.filter((x) => x && x.sursa === "macro" && x.test && x.test.stare === "testat");
     if (!masurat.length) return false;
-    return masurat.some((r) => !rg.some((x) => x && x.ramane === true && x.sursa === "Regimul macro · " + r.h + " zile de bursă"));
+    return masurat.some((r) => !rg.some((x) => x && x.ramane === true && x.sursa === "Regimul macro · " + cate(r.h, "zi", "zile") + " de bursă"));
   }
   function htmlCard(r, tinut, laCitire, cal) {
     // v100.224: ceasul „actualizat” și nota de colector oprit apar doar când pagina trimite ora citirii. Apelul cu două argumente, pe un regim vechi, rămâne neschimbat.

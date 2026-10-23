@@ -106,7 +106,7 @@ await test("Porțile trimit verdictul în jurnal (o dată pe simbol pe zi, făr�
 const ctxP = { console, Date, Math, Object, Array, String, Number, JSON, isFinite, Intl, TextRo: globalThis.TextRo, ContIntreg: ctx.ContIntreg, document: { getElementById: () => null }, localStorage: { getItem: () => null, setItem() {} } };
 ctxP.window = ctxP; ctxP.globalThis = ctxP; vm.createContext(ctxP);
 const T = citeste("public", "lib", "t212-ecran.js"), fn = (n) => { const i = T.indexOf("function " + n + "("); let a = 0, j = T.indexOf("{", i); for (; j < T.length; j++) { if (T[j] === "{") a++; else if (T[j] === "}") { a--; if (!a) break; } } return T.slice(i, j + 1); };
-vm.runInContext(["t212Cate", "t212Suma", "t212Lei", "t212PoartaCont"].map(fn).join("\n") + "\nvar escapeHtml = function (s) { return String(s); }; var t212 = { cont: null }; var ciStare = { raport: null };", ctxP);
+vm.runInContext(["t212Cate", "t212Suma", "t212Lei", "t212PoartaCont"].map(fn).join("\n") + "\nvar escapeHtml = function (s) { return String(s); }; var t212 = { cont: null }; var ciStare = { raport: null }; var t212FaraSuma = function () { return null; };   /* v100.258: din v100.254 Poarta cere reconcilierea pentru sumă; aici suma e știută */", ctxP);
 await test("Poarta T212: profitul așteptat = media pe istoria ei TRASĂ SPRE ZERO după ferestrele independente; ≤ 0 ⇒ „fără avantaj”", () => {
   ctxP.t212MarimePoarta = () => ({ suma: 3000 }); ctxP.t212Jurnal = () => null;
   const h = ctxP.t212PoartaCont({ niv: { nivel: "ok", proba: { medie: 0.012, n: 200, nIndep: 10 } } });

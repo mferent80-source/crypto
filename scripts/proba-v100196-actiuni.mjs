@@ -143,6 +143,7 @@ function pagina(o) {
   for (const f of LIB.concat(["t212.js", "t212-ecran.js"])) vm.runInContext(citeste("public", "lib", f), c, { filename: f });
   c.t212.cont = { cash: { total: 27549.75, free: o.liber === undefined ? 20000 : o.liber } }; c.t212.bnr = { zi: "2026-10-14", curs: 4.7706 };
   c.t212.poz = o.poz || [];
+  c.t212.raportCont = { reconciliere: { t212: { abateri: [] } } }; c.t212.cititBine = ACUM;   // v100.258: din v100.254 suma cere reconcilierea curată și citirea proaspătă
   return { c, el, $, cereri };
 }
 async function poarta(o, simbol) {
@@ -259,7 +260,8 @@ await test("B3. „Pe revenire”: „(1% din cont)” doar când chiar e 1% —
   const P = pagina({}); P.c.t212.cont.cash.total = 3000;
   P.c.Reveniri = { textDovada: () => "dovada", TEXT_SUPRAVIETUITORI: "supraviețuitori" };
   const h = P.c.t212ReveniriCorp({ reveniri: [Object.assign({}, REV, { stop: 71.5 })], dovadaReveniri: null });
-  assert.match(h, /tăiat la 20% din cont/); assert.ok(!/\(1% din cont\) · tăiat/.test(h), "plafonat și tot „1% din cont”");
+  // v100.258: din v100.254 (el: „fa tot”) „Pe revenire” nu mai tipărește bucăți sau lei - nici „1% din cont”, nici plafonul
+  assert.match(h, /Nu tipăresc bucăți sau lei\./); assert.ok(!/\(1% din cont\)|tăiat la 20% din cont/.test(h), "pe revenire a apărut o sumă");
 });
 
 function randPoz(P, o) {

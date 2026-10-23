@@ -249,7 +249,7 @@ await test("🟡 B4 gridul îngust spune funding-ul folosit", () => {
 });
 
 // ---------------------------------------------------------------- 🟡 B5 cea mai bună din 36, pe ~6 ferestre ----------------------------------------------------------------
-const STAT_BUN = { antren: { mediana: 0.01, lichidari: 0 }, test: { mediana: 0.01, lichidari: 0 } };
+const STAT_BUN = { antren: { mediana: 0.01, lichidari: 0 }, test: { mediana: 0.01, medie: 0.008, lichidari: 0 } };   // v100.258: „proba bună” are și media pe test peste zero
 await test("🟡 B5 sub 10 ferestre independente de test ⇒ fișa nu zice PORNEȘTE; spune câte combinații s-au încercat", () => {
   const v = G.verdict({ regim: { miscare: false }, stat: STAT_BUN, zile: 31, pozitie: 0.5, ferestreTest: 5, incercate: 36 });
   assert.equal(v.nivel, "asteapta"); assert.ok(v.motive.some((m) => /5 ferestre independente/.test(m) && /36 de combinații/.test(m)), v.motive.join(" | "));

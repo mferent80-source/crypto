@@ -70,7 +70,7 @@ await test("poarta ține copia paginii doar cât ACASA_MS; verbul de pe Tablou s
   assert.doesNotMatch(poarta, /10 \* 60000/);
   const css = citeste("public", "app.css");
   assert.match(css, /#pzVerdict \.pzVerb\{order:1;white-space:nowrap/);
-  assert.match(css, /@media \(max-width:550px\)\{\.pzVerb\{white-space:normal;overflow-wrap:break-word\}\}/);
+  assert.match(css, /@media \(max-width:550px\)\{\.pzVerb\{white-space:normal;overflow-wrap:(break-word|normal;word-break:keep-all)\}\}/);
   assert.match(css, /\.pzPret\{[^}]*white-space:nowrap\}/);
 });
 

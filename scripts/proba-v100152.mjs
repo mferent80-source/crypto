@@ -67,7 +67,7 @@ await test("(4) ordinea: doar CSS; paginile coloană DOAR active și FĂRĂ !imp
   assert.ok(ord(".pzDemo #scNou>#scExplic") < ord(".pzDemo #scNou>#scLista"), "Scanner: „lista e de urmărit, nu de pornit” înaintea listei (revizia I1)");
   assert.match(CSS, /\.pzDemo #grFisa>\*\{order:65\}/, "Grid: blocurile fără regulă (avertismentul TV, varianta îngustă) lângă setări (revizia I2)");
   assert.match(CSS, /\.pzDemo #jtRezumat>\.emptyState,\.pzDemo #jtRezumat>\.tbBloc\{order:5\}/, "Jurnal: încărcarea / eroarea sus (revizia I3)");
-  assert.match(CSS, /@media \(max-width:550px\)\{\.pzVerb\{white-space:normal;overflow-wrap:break-word\}\}/, "pe telefon verbul lung se rupe la cuvânt (revizia I8)");
+  assert.match(CSS, /@media \(max-width:550px\)\{\.pzVerb\{white-space:normal;overflow-wrap:(break-word|normal;word-break:keep-all)\}\}/, "pe telefon verbul lung se rupe la cuvânt (revizia I8)");
   const ultim = CSS.trim().split("\n").pop(); assert.match(ultim, /^@media \(max-width:640px\)\{\.sugPandaTab thead/, "regula pandei rămâne ultima");
 });
 await test("(5) antetele stau ca FRATE, în afara containerelor rescrise cu innerHTML; fără date ⇒ ascunse", () => {

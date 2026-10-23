@@ -76,7 +76,7 @@ function deseneazaIdei(id) {
     t212Usd: (v) => "$" + v, t212Lei: (v) => v + " lei", t212Pct: (v) => v + "%", t212IdeiSit: () => "", t212ReveniriHtml: () => "" };
   vm.createContext(ctx);
   // t212Cate e pe un singur rând (dedesubt e `var t212 = {…}`, care ar acoperi datele probei)
-  vm.runInContext(fnDin("t212-ecran.js", "t212Cate").split("\n")[0] + "\n" + fnDin("t212-ecran.js", "t212IdeiRand") + "\n" + fnDin("t212-ecran.js", "t212File") + "\n" + fnDin("t212-ecran.js", "t212FilaAleasa") + "\n" + fnDin("t212-ecran.js", "t212IdeiRender") + "\n;t212IdeiRender();", ctx);   /* v100.92 (I-520): + filele */
+  vm.runInContext(fnDin("t212-ecran.js", "t212Cate").split("\n")[0] + "\n" + fnDin("t212-ecran.js", "t212FrazaCitire") + "\n" + fnDin("t212-ecran.js", "t212IdeiRand") + "\n" + fnDin("t212-ecran.js", "t212File") + "\n" + fnDin("t212-ecran.js", "t212FilaAleasa") + "\n" + fnDin("t212-ecran.js", "t212IdeiRender") + "\n;t212IdeiRender();", ctx);   /* v100.92 (I-520): + filele */
   return box.innerHTML;
 }
 const CINCI = ["LITE", "DELL", "ARM", "INTC", "NBIS"].map((s) => idee(s));
