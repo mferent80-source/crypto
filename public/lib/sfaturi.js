@@ -63,7 +63,22 @@ var Sfaturi = (function () {
     // Long, neutru si directia lipsa raman pe jos. Pragul de atentie ramane 20% din zile. Un singur sfat.
     var dirM = String(b.directie || "").toLowerCase(), sus = nr(b.gridSus);
     var laSus = scen ? scen.randuri.filter(function (r) { return r.eticheta === "sus"; })[0] : null;
-    if (dirM === "short") {
+    // v100.259 (auditul 23.10, punctul 10): botul NEUTRU pierde pe AMBELE părți - sub marginea de jos ține poziția long strânsă la coborâre,
+    // peste cea de sus poziția short strânsă la urcare. Câte un sfat pe fiecare margine, cu frecvența ei (scenariul nu știe neutrul: fără total).
+    var neutruM = !!dirM && dirM !== "long" && dirM !== "short";
+    if (neutruM) {
+      [["jos", jos, x.sanse && x.sanse.josZi, x.sanse && x.sanse.josSapt], ["sus", sus, x.sanse && x.sanse.susZi, x.sanse && x.sanse.susSapt]].forEach(function (m) {
+        var parteN = m[0], mg = m[1];
+        if (mg === null || p === null || !(p > 0) || !(nr(b.gridJos) < p && p < nr(b.gridSus))) return;
+        var fzN = frecventa(m[2], "din zile"), fsN = frecventa(m[3], "din săptămâni"), dzN = m[2] && m[2].valoare, tonN = dzN === null || dzN === undefined ? "info" : dzN >= 20 ? "atentie" : "info";
+        var pN = Math.abs(100 * (mg - p) / p), josN = parteN === "jos";
+        out.push({ cod: "margine", ton: tonN, parte: parteN, pctJos: pN, zile: dzN === null || dzN === undefined ? null : dzN, titlu: "Marginea de " + parteN + " (" + pret(mg) + ") e cu " + TextRo.pct(pN) + (josN ? " sub" : " peste") + " preț",
+          text: (josN ? "Sub ea neutrul rămâne long, fără perechi; " : "Peste ea neutrul rămâne short, fără perechi; ")
+            + (fzN || fsN ? "moneda " + (josN ? "scade" : "urcă") + " cu atât în " + [fzN, fsN].filter(Boolean).join(" și ") + "." : "n-am destul istoric pentru cât de des " + (josN ? "scade" : "urcă") + " moneda atât."),
+          sursa: "Frecvență pe lumânările de 4 ore ale monedei, ferestre fără suprapunere.",
+          faCe: tonN === "atentie" ? "N-aș mări levierul și n-aș pune bani în plus în botul ăsta." : null });
+      });
+    } else if (dirM === "short") {
       if (laSus && p !== null && sus !== null && p > 0 && p < sus) {
         var fzS = frecventa(x.sanse && x.sanse.susZi, "din zile"), fsS = frecventa(x.sanse && x.sanse.susSapt, "din săptămâni");
         var dzS = x.sanse && x.sanse.susZi && x.sanse.susZi.valoare, tonS = dzS === null || dzS === undefined ? "info" : dzS >= 20 ? "atentie" : "info";
@@ -114,7 +129,8 @@ var Sfaturi = (function () {
     if (cuB && rg.r4h != null && rg.r24h != null) {
       out.push({ cod: "miscare-cu", ton: "bine", titlu: "Mișcare cu botul: " + X(rg.r4h) + " obișnuitul (4 h), " + X(rg.r24h) + " (24 h)",
         text: "Prețul merge în direcția botului: grilele " + (dirBot === "long" ? "de sus" : "de jos") + " încasează pe drum și poziția scade.",
-        sursa: "Pe 40 de monede (27.09), după o mișcare cu botul, 59% din ferestre au ieșit pe plus (contra 50%, în liniște 56%).",
+        // v100.259 (auditul 23.10, punctul 7): 40 de monede în ACEEAȘI perioadă nu sunt 40 de dovezi și n-a fost niciun test ⇒ observație, nu cifră-dovadă
+        sursa: "Observație nedovedită (27.09, 40 de monede în aceleași zile, fără test): după mișcarea cu botul gridul n-a ieșit mai rău decât în liniște.",
         // v100.65 (problema b) + revizia Opus a 2b (4): O SINGURA VOCE cu semaforul (SemnaleBot.pasiCuBotul) - stopul la zero doar pe plus
         // si doar daca stopul de acum nu e deja dincolo de zero (altfel l-ar fi slabit); pe minus fara stop (take-profit-ul il spune sfatul „zero”)
         faCe: typeof SemnaleBot !== "undefined" && SemnaleBot.pasiCuBotul ? SemnaleBot.pasiCuBotul(b, dirBot, x.zero).faCe
@@ -240,12 +256,16 @@ var Sfaturi = (function () {
   }
   function intrare(o) {
     o = o || {}; var b = o.bot || {}, acum = nr(o.acum) || Date.now(), jos = nr(b.gridJos), sus = nr(b.gridSus), p = nr(b.pretCurent);
-    var shortM = String(b.directie || "").toLowerCase() === "short";
+    var dI = String(b.directie || "").toLowerCase(), shortM = dI === "short", neutruI = !!dI && dI !== "long" && !shortM;
     var S = typeof Scenariu !== "undefined" ? Scenariu : null, TE = typeof TabloExtra !== "undefined" ? TabloExtra : null;
-    // v100.257: short-ul cere scenariul si frecventa la marginea de SUS. Jos ramane pentru long, neutru si directia lipsa.
+    // v100.257: short-ul cere scenariul si frecventa la marginea de SUS. Jos ramane pentru long si directia lipsa.
+    // v100.259 (auditul 23.10, punctul 10): neutrul cere frecventa la AMBELE margini
     var scen = S ? S.scenarii(b.brut || null, b, shortM ? [{ eticheta: "sus", pret: sus }] : [{ eticheta: "jos", pret: jos }]) : null;
     var sanse = {};
-    if (S && o.k4 && p !== null && (shortM ? sus !== null : jos !== null)) sanse = shortM
+    if (S && o.k4 && p !== null && neutruI) {
+      if (jos !== null) { sanse.josZi = S.sansaAtingere(o.k4, p, jos, 6); sanse.josSapt = S.sansaAtingere(o.k4, p, jos, 42); }
+      if (sus !== null) { sanse.susZi = S.sansaAtingere(o.k4, p, sus, 6); sanse.susSapt = S.sansaAtingere(o.k4, p, sus, 42); }
+    } else if (S && o.k4 && p !== null && (shortM ? sus !== null : jos !== null)) sanse = shortM
       ? { susZi: S.sansaAtingere(o.k4, p, sus, 6), susSapt: S.sansaAtingere(o.k4, p, sus, 42) }
       : { josZi: S.sansaAtingere(o.k4, p, jos, 6), josSapt: S.sansaAtingere(o.k4, p, jos, 42) };
     var bu = b.brut && b.brut.buOrderData || {}, zile = nr(b.pornitLa) ? (acum - nr(b.pornitLa)) / 86400000 : null;
