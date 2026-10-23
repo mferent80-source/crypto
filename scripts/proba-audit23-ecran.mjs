@@ -228,5 +228,23 @@ await test("12 Setări: #toggleSr/Ls/Funding/Oi/Signal = <button type=button rol
   assert.match(CSS, /button\.toggle\{padding:0;font:inherit;appearance:none\}/);
 });
 
+// ---------------------------------------------------------------- 13. Perf: cu Tabloul în repaus nu se rescrie ce nu s-a schimbat
+await test("13a contTotPune scrie innerHTML doar când s-a schimbat (fâșia contului, Piața azi, ideile — și pe #t212Card ascuns)", () => {
+  const T = LIB("t212-ecran.js");
+  const m = T.match(/function contTotPune\(el, h\) \{[^\n]*\}/); assert.ok(m, "lipsește contTotPune");
+  const f = new Function("return " + m[0])();
+  let scrieri = 0; const el = {}; Object.defineProperty(el, "innerHTML", { set() { scrieri++; }, get() { return ""; } });
+  f(el, "<b>a</b>"); f(el, "<b>a</b>"); f(el, "<b>b</b>");
+  assert.equal(scrieri, 2);
+  assert.match(T, /document\.querySelectorAll\("\[data-cont-tot\]"\)\.forEach\(function \(el\) \{ contTotPune\(el, parti\.join/);
+  assert.ok(!/document\.querySelectorAll\("\[data-cont-tot\]"\)\.forEach\(function \(el\) \{ el\.innerHTML =/.test(T), "fâșia contului se rescrie mereu");
+});
+await test("13b KPI-urile Tabloului (tbKpiPretDeseneaza / tbDeseneazaKpi): textul și clasa se pun doar când diferă", () => {
+  for (const fn of ["tbKpiPretDeseneaza", "tbDeseneazaKpi"]) {
+    const s = fnApp(fn);
+    assert.match(s, /var pune=function\(id,text,cls\)\{var e=\$\(id\);if\(!e\)return;if\(e\.textContent!==text\)e\.textContent=text;if\(cls!=null\)\{var c=/, fn);
+  }
+});
+
 console.log(`\n${teste - picate}/${teste} trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
 process.exit(picate ? 1 : 0);

@@ -718,7 +718,7 @@ function tbIdeiRender() {
   }).join("");
   tbUrmAdu();
   if (tbUrm.v && typeof GridProba !== "undefined") { try { h += '<p class="tbSub">⚡ ' + escapeHtml(GridProba.socotealaUrmarire(tbUrm.v).text) + '</p>'; } catch (e) {} }
-  box.innerHTML = h + '<p class="tbSub tbTodoGol">Un filtru (liniște, interval, treceri), nu o predicție: laboratorul n-a găsit încă o diferență clară. Fișa îți dă setările și proba pe istoricul monedei.</p>' + tbSugestiiHtml(cl, contTot.sugestii, contTot.inchise);   /* v100.85 (reveniri + short): sub nota listei de candidați */
+  contTotPune(box, h + '<p class="tbSub tbTodoGol">Un filtru (liniște, interval, treceri), nu o predicție: laboratorul n-a găsit încă o diferență clară. Fișa îți dă setările și proba pe istoricul monedei.</p>' + tbSugestiiHtml(cl, contTot.sugestii, contTot.inchise));   /* v100.85 (reveniri + short): sub nota listei de candidați */
 }
 // v100.85 (reveniri + short, 03.10): sub „Pe ce aș porni un bot acum” - două liste cu istoricul pe față și urmărirea (filtre, nu predicții)
 // v100.89 (ideea 2): istoricul boților tăi pe o monedă, pe rândurile Tabloului (candidații + revenire / short) - un singur loc,
@@ -1111,7 +1111,7 @@ function t212PiataDin(pz) {
 function piataAziRender() {
   var p = t212.piata;
   document.querySelectorAll("[data-piata-azi]").forEach(function (el) {
-    el.innerHTML = !p ? '<span class="tbSub">Piața azi: aduc datele…</span>' : '<b>Piața azi</b> ' + p.parti.map(function (x) { return '<span>' + escapeHtml(x.et) + ': ' + (Array.isArray(x.bucati) && x.bucati.length ? x.bucati.map(function (y) { return '<b class="' + (y.cls || "") + '">' + escapeHtml(y.t) + '</b>'; }).join("") : '<b class="' + (x.cls || "") + '">' + escapeHtml(x.val) + '</b>') + '</span>'; }).join('<span class="contTotSep">·</span>');   /* v100.196: fiecare bucată cu culoarea ei */
+    contTotPune(el, !p ? '<span class="tbSub">Piața azi: aduc datele…</span>' : '<b>Piața azi</b> ' + p.parti.map(function (x) { return '<span>' + escapeHtml(x.et) + ': ' + (Array.isArray(x.bucati) && x.bucati.length ? x.bucati.map(function (y) { return '<b class="' + (y.cls || "") + '">' + escapeHtml(y.t) + '</b>'; }).join("") : '<b class="' + (x.cls || "") + '">' + escapeHtml(x.val) + '</b>') + '</span>'; }).join('<span class="contTotSep">·</span>'));   /* v100.196: fiecare bucată cu culoarea ei */
   });
 }
 // v100.177 (el 13.10, „din a doua recomandare 1–4”): (4) profitul așteptat - media pe istoria ei în starea de acum, TRASĂ SPRE ZERO după câte
@@ -1493,6 +1493,8 @@ async function contTotAsigura() {
   } finally { contTot.inLucru = false; }
   contTotRender();
 }
+// audit 23.10: cu Tabloul în repaus #t212Card (pagină ascunsă) se rescria de 32 de ori în 20 s ⇒ innerHTML doar când s-a schimbat
+function contTotPune(el, h) { if (el._contH === h) return; el._contH = h; el.innerHTML = h; }
 function contTotRender() {
   var boti = typeof tbStare !== "undefined" && tbStare.boti && tbStare.boti.length ? tbStare.boti : contTot.boti;
   var act = (boti || []).filter(function (b) { return b && b.activ; }), usdt = 0, areUsdt = false;
@@ -1514,7 +1516,7 @@ function contTotRender() {
     // v100.173 (auditul Opus): cu T212 sau Pionex căzut nu se știe dacă e ceva roșu ⇒ „nu știu”, niciodată bifa verde
     : t212.eroare || contTot.botiEroare ? '<span class="tbWarn">⚠ nu știu dacă e ceva roșu: ' + (t212.eroare ? "Trading 212" : "Pionex") + ' nu răspunde</span>'
     : t212.nrIesi == null && (!t212.poz || t212.poz.length) ? '<span class="tbSub">acțiunile: aduc prețurile…</span>' : !boti ? '<span class="tbSub">Pionex: aduc boții…</span>' : '<span class="good">✓ nimic roșu</span>');   // v100.40: fara semafor inca -> nu „nimic roșu”
-  document.querySelectorAll("[data-cont-tot]").forEach(function (el) { el.innerHTML = parti.join('<span class="contTotSep">│</span>'); });
+  document.querySelectorAll("[data-cont-tot]").forEach(function (el) { contTotPune(el, parti.join('<span class="contTotSep">│</span>')); });
   piataAziRender();
   tbIdeiRender();
 }

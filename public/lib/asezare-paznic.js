@@ -189,8 +189,9 @@
     var el = $("pzPret"), src = $("tbPretViuVal"), cap = $("tbPretViu");
     if (!el) return;
     var t = src && src.textContent ? src.textContent : "";
-    el.textContent = t;
-    el.className = "pzPret" + (t && cap && cap.classList.contains("sus") ? " sus" : t && cap && cap.classList.contains("jos") ? " jos" : "");
+    var c = "pzPret" + (t && cap && cap.classList.contains("sus") ? " sus" : t && cap && cap.classList.contains("jos") ? " jos" : "");   // audit 23.10: doar când s-a schimbat
+    if (el.textContent !== t) el.textContent = t;
+    if (el.className !== c) el.className = c;
   }
   function verdict() {
     var el = $("pzVerdict"), b = D.bot, sem = $("tbSemafor"), gL = $("tbGridLarg");
@@ -275,7 +276,7 @@
     var h = '<div class="pzRange" title="' + esc(tx) + '"><div class="pzRangePista">' + (mn != null ? '<i class="pzRangeBanda" style="left:' + X(mn) + '%;width:' + (X(mx) - X(mn)).toFixed(1) + '%"></i>' : "") + '<i class="pzRangeAcum' + (val > hi0 || val < lo0 ? " pzRangeAfara" : "") + '" style="left:' + X(val) + '%"></i></div><div class="pzRangeAx"><span>' + lo0 + '</span>' + (mn != null ? '<span class="pzRangeMm">' + (zile ? esc(zile) + " de zile: " : "") + mn + ' – ' + mx + '</span>' : "") + '<span>' + hi0 + (val > hi0 ? " ▸" : "") + '</span></div></div>';
     var r = c.querySelector(".pzRange");
     if (!r || c._pzH !== h) { if (!r) { r = document.createElement("div"); svg.parentNode.insertBefore(r, svg.nextSibling); } r.outerHTML = h; c._pzH = h; }
-    c.classList.add("pzFaraCadran");   // cadranul (decor) se ascunde; cifra, cuvântul și intervalul rămân
+    if (!c.classList.contains("pzFaraCadran")) c.classList.add("pzFaraCadran");   // audit 23.10: classList.add pe o clasă care există tot scrie atributul   // cadranul (decor) se ascunde; cifra, cuvântul și intervalul rămân
   }
 
   // ---------- I-595: proza din cartele -> rânduri (culoarea cartelei se păstrează: verde/roșu/galben - revizia I6) ----------
