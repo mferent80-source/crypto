@@ -3,6 +3,7 @@
 // · (3) graficul: perechile închise jos, nu inele pe lumânări · (4) așezarea (lib/asezare-paznic.js) și capcanele prinse pe demo · (5) versiunile.
 // Inventarul „nimic pierdut” (51 de pagini × 1920/390, foaia veche vs nouă în aceeași clipă) se rulează în browser, nu aici - vezi memoria.
 import assert from "node:assert/strict";
+import { pandaInainteaCozii } from "./lib/panda-ultima.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
@@ -79,7 +80,7 @@ await test("(4) așezarea: scriptul e în pagină și în cache-ul offline; capc
   assert.match(CSS, /\.offlineBanner\{[^}]*background:#E9B949;color:#0E141A/, "banda OFFLINE se citește");
   assert.match(CSS, /#tabloubot \.tbPill,\.t212Pill\{color:#0E141A\}/, "pastilele colorate cu text închis (alb pe galben = 1,83:1)");
   for (const f of ["sans", "mono"]) for (const w of [400, 500, 600]) assert.match(SW, new RegExp(`"/fonts/ibm-plex-${f}-latin-ext-${w}-normal\\.woff2"`), "diacriticele offline: " + f + w);
-  const ultim = CSS.trim().split("\n").pop(); assert.match(ultim, /^@media \(max-width:640px\)\{\.sugPandaTab thead\{display:table-header-group\}/, "regula pandei (v100.150) rămâne ULTIMA - bate .t212Tab thead");
+  assert.equal(pandaInainteaCozii(CSS), "", "regula pandei (v100.150) stă după orice regulă de tabel - bate .t212Tab thead");
   assert.match(CSS, /:root\{--latime-pagina:1800px\}/, "paginile mai late (1600 → 1800), toate la fel");
   assert.ok(CSS.lastIndexOf("--latime-pagina:1800px") > CSS.indexOf("--latime-pagina:1600px"), "1800 vine DUPĂ 1600 (cascada)");
 });

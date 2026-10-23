@@ -4,6 +4,7 @@
 // (4) „botul pornit” lângă marginea dreaptă se scrie spre stânga · (5) Jurnal pe Acțiuni / Tot + Sugestii cu eroarea + aria-controls
 // Poza la 390 px (0 suprapuneri, 0 texte ieșite) se face în browser; aici gărzile pe SVG și pe cititori.
 import assert from "node:assert/strict";
+import { pandaInainteaCozii } from "./lib/panda-ultima.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
@@ -74,7 +75,7 @@ await test("(5) Jurnal pe Acțiuni / Tot: „Rezultat total” citit în formatu
 await test("(6) v100.155: bara de analiză la 981–1359 px - butoanele pe rândul de sub câmpuri („Analizează piața” acoperea sursa); bara de sus - grupul din stânga nu se strânge sub banda botului", () => {
   assert.ok(CSS.includes("@media (min-width:981px) and (max-width:1359px){.toolbar{grid-template-columns:minmax(0,1fr)}.toolbar>.actions{grid-column:1;grid-row:2;margin-top:7px}"), "rândul butoanelor");
   assert.ok(CSS.includes(".topStatus>.topLeft{flex:0 0 auto}"), "grupul din stânga");
-  assert.ok(CSS.trim().split("\n").pop().startsWith("@media (max-width:640px){.sugPandaTab thead"), "regula pandei rămâne ultima");
+  assert.equal(pandaInainteaCozii(CSS), "", "regula pandei rămâne după orice regulă de tabel");
 });
 
 await test("(7) v100.156 (poza lui de pe telefon): fără contur sub literele graficului pe telefon (browserul care întunecă singur pagina îl făcea ALB); pe ecranul mare rămâne; pagina se declară întunecată în <head>; bara de jos opacă", () => {
@@ -99,7 +100,7 @@ await test("(9) v100.161: auditul celor 18 pagini - fâșia „Selected market�
   assert.ok(CSS.includes(".pzAcumGrila .pzCel{white-space:normal}.pzAcumGrila .pzCel>b small{white-space:nowrap}"));
   assert.match(CSS, /\.gbValori\{max-width:620px;/);
   assert.equal(G.desen(Object.assign({}, baza, { W: 1400 })).harta.plotW, 1348); /* v100.250: 1400 − scara de 52; jgheabul de nume nu se întoarce */ assert.match(citeste("public", "lib", "grafic-bot.js"), /var cmp = true;/);
-  assert.ok(CSS.trim().split("\n").pop().startsWith("@media (max-width:640px){.sugPandaTab thead"), "regula pandei rămâne ultima");
+  assert.equal(pandaInainteaCozii(CSS), "", "regula pandei rămâne după orice regulă de tabel");
 });
 
 await test("(10) v100.162: contrastul - roșul de TEXT trece de 4,5 pe fondurile temei; insigna cu număr (alb pe roșu) trece de 4,5; niciun text rămas în roșul vechi", () => {

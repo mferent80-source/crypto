@@ -1,5 +1,6 @@
 // Probele v100.175 (13.10.2026, el: „fă reparațiile”) — minorele rămase din auditul Opus (server, colector, interfață) și din revizia lui.
 import "./lib/text-ro-global.mjs";
+import { pandaInainteaCozii } from "./lib/panda-ultima.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -173,7 +174,7 @@ await test("raportul de risc mai vechi de 36 de ore se spune pe față", () => {
 });
 await test("telefon: țintele de atingere de 44 px pe ecran tactil (înaintea regulii pandei, care rămâne ultima)", () => {
   const css = citeste("public", "app.css"); assert.match(css, /@media \(pointer:coarse\)\{[^}]*\.t212BtnLinie[^}]*min-height:44px/);
-  assert.match(css.trim().split("\n").pop(), /^@media \(max-width:640px\)\{\.sugPandaTab thead/);
+  assert.equal(pandaInainteaCozii(css), "");   // v100.258: pânda după orice regulă de tabel, înaintea blocului v100.224
 });
 await test("fila „Tot”: nota spune ce curs folosește (BNR din ziua X, același pentru toți boții)", () => { assert.match(citeste("public", "app.js"), /"cursul BNR din "\+t212\.bnr\.zi\.slice\(8\)/); });
 

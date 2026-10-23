@@ -4,6 +4,7 @@
 // paginile flex FĂRĂ !important; specificitatea fiecărei reguli de ordine · (5) antetele NU intră în containerele rescrise · (6) versiunea.
 // Revizia Opus v100.152 (C1, I1–I8) are aici câte o gardă. Inventarul „nimic pierdut” (51 de pagini × 1920/390) rulează în browser, nu aici.
 import assert from "node:assert/strict";
+import { pandaInainteaCozii } from "./lib/panda-ultima.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
@@ -68,7 +69,7 @@ await test("(4) ordinea: doar CSS; paginile coloană DOAR active și FĂRĂ !imp
   assert.match(CSS, /\.pzDemo #grFisa>\*\{order:65\}/, "Grid: blocurile fără regulă (avertismentul TV, varianta îngustă) lângă setări (revizia I2)");
   assert.match(CSS, /\.pzDemo #jtRezumat>\.emptyState,\.pzDemo #jtRezumat>\.tbBloc\{order:5\}/, "Jurnal: încărcarea / eroarea sus (revizia I3)");
   assert.match(CSS, /@media \(max-width:550px\)\{\.pzVerb\{white-space:normal;overflow-wrap:(break-word|normal;word-break:keep-all)\}\}/, "pe telefon verbul lung se rupe la cuvânt (revizia I8)");
-  const ultim = CSS.trim().split("\n").pop(); assert.match(ultim, /^@media \(max-width:640px\)\{\.sugPandaTab thead/, "regula pandei rămâne ultima");
+  assert.equal(pandaInainteaCozii(CSS), "", "regula pandei rămâne după orice regulă de tabel");
 });
 await test("(5) antetele stau ca FRATE, în afara containerelor rescrise cu innerHTML; fără date ⇒ ascunse", () => {
   const refs = [...AS.matchAll(/antet\("(pzV-[a-z0-9]+)", ([^,]+),/g)].map((m) => [m[1], m[2].trim()]);

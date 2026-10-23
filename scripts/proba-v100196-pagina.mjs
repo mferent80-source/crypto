@@ -3,6 +3,7 @@
 // Node pur: citește app.js / index.html / app.css / lib-urile ca text și rulează în vm bucățile care se pot rula singure.
 //   node scripts/proba-v100196-pagina.mjs   -> exit 1 la orice picare
 import "./lib/text-ro-global.mjs";
+import { pandaInainteaCozii } from "./lib/panda-ultima.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -393,7 +394,7 @@ await test("app.css: blocul gol pentru regulile cerute de alte zone stă chiar �
   const iBloc = CSS.lastIndexOf("/* v100.196 · reguli cerute de alte zone */"), iPanda = CSS.lastIndexOf("@media (max-width:640px){.sugPandaTab thead");
   assert.ok(iBloc > 0 && iPanda > iBloc, "blocul înaintea pândei");
   assert.ok(!/@media \(max-width:640px\)\{\.sugPandaTab thead/.test(CSS.slice(iBloc, iPanda)), "în bloc stau doar regulile altor zone, nu pânda");   /* la unire: regulile cerute (data-et) au intrat aici */
-  const dupa = CSS.slice(iPanda); const inchis = dupa.indexOf("}}"); assert.equal(dupa.slice(inchis + 2).trim(), "", "pânda e ultima regulă");
+  assert.equal(pandaInainteaCozii(CSS), "", "pânda e ultima regulă de tabel");   // v100.258: înaintea blocului v100.224 (#topLive), care rămâne ultimul
 });
 await test("capcanele casei: app.js rămâne tot CRLF, fără accent grav în comentariile HTML, `let` de modul nou nu e citit la pornire", () => {
   const a = brut("public", "app.js"); assert.equal((a.match(/(?<!\r)\n/g) || []).length, 0, "app.js are rânduri LF");

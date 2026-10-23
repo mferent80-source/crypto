@@ -97,10 +97,10 @@ await test("calibrarea macro: puține, măsurat, dovedit doar cu rămâne; cardu
       { sursa: "macro", h: 5, test: { stare: "putine", nFav: 4, nRest: 12, dif: 0.01 } },
       { sursa: "macro", h: 20, test: { stare: "testat", dif: -0.005 } }
     ],
-    registru: [{ sursa: "Regimul macro · 20 zile de bursă", ramane: false }]
+    registru: [{ sursa: "Regimul macro · 20 de zile de bursă", ramane: false }]
   });
   assert.match(putine, /la 5 zile puține \(4 \/ 12\)/);
-  assert.match(putine, /la 20 zile măsurat, nu e dovedit, diferența −0,5%/);
+  assert.match(putine, /la 20 de zile măsurat, nu e dovedit, diferența −0,5%/);
   assert.match(putine, /nu e dovedit/);
   assert.doesNotMatch(putine, /zile dovedit/);
   assert.doesNotMatch(putine, /-\d|!|vezi/);
@@ -111,12 +111,12 @@ await test("calibrarea macro: puține, măsurat, dovedit doar cu rămâne; cardu
     ],
     registru: [
       { sursa: "Regimul macro · 5 zile de bursă", ramane: true },
-      { sursa: "Regimul macro · 20 zile de bursă", ramane: false }
+      { sursa: "Regimul macro · 20 de zile de bursă", ramane: false }
     ]
   });
   assert.match(dov, /la 5 zile dovedit, diferența \+1,2%/);
-  assert.match(dov, /la 20 zile măsurat, nu e dovedit/);
-  assert.match(MC.linieCalibrare({ calibrare: [{ sursa: "macro", h: 5, test: { stare: "putine", nFav: 1, nRest: 2 } }], registru: [] }), /la 20 zile încă nu e măsurat/);
+  assert.match(dov, /la 20 de zile măsurat, nu e dovedit/);
+  assert.match(MC.linieCalibrare({ calibrare: [{ sursa: "macro", h: 5, test: { stare: "putine", nFav: 1, nRest: 2 } }], registru: [] }), /la 20 de zile încă nu e măsurat/);
   const r = { scor: 3, partial: false, valide: 5, treapta: { cod: "inclinat", stare: "bine", text: "înclinat spre risc" }, semne: [] };
   assert.equal(MC.htmlCard(r), MC.htmlCard(r, undefined));
   assert.doesNotMatch(MC.htmlCard(r), /mcCal/);
