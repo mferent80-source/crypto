@@ -41,8 +41,8 @@ function ciFac(r) {
   if (cr && tot > 0 && -cr.lei > 0.35 * tot) return "O criză ca „" + cr.nume + "” ți-ar lua ~" + Math.round(-cr.lei / tot * 100) + "% din cont: aș micșora întâi poziția care pierde cel mai mult acolo (" + ((cr.pozitii || [])[0] || {}).nume + ").";
   var p = (r.corelatii || []).filter(function (x) { return x.acelasiRisc; })[0];
   if (p && p.rho >= 0.8) return p.a + " și " + p.b + " se mișcă aproape la fel (ρ " + ciNr(p.rho) + "): aș socoti-le o singură poziție când îmi pun riscul.";
-  if (r.risc && r.risc.var95 && tot > 0 && r.risc.var95 > 0.04 * tot) return "O zi proastă îți ia ~" + ciPct(r.risc.var95 / tot) .replace("+", "") + " din cont: aș reduce expunerea până sub 3% pe zi.";
-  return "Nimic urgent pe tot contul: aș păstra riscul pe zi sub 3% din cont și aș verifica pagina după fiecare poziție nouă.";
+  if (r.risc && r.risc.var95 && tot > 0 && r.risc.var95 > 0.04 * tot) return "O zi proastă îți ia ~" + ciPct(r.risc.var95 / tot) .replace("+", "") + " din cont: aș reduce expunerea până sub 4% pe zi.";
+  return "Nimic urgent pe tot contul: aș păstra riscul pe zi sub 4% din cont și aș verifica pagina după fiecare poziție nouă.";
 }
 // v100.197 (15.10, el: „afișează”): valoarea contului pe zile (KV cont:zile, scrisă de colector o dată pe zi, necitită până acum).
 // Cifra de azi + schimbarea față de ziua dinainte (săgeată + semn, nu doar culoare), linia pe zile (un singur șir ⇒ fără legendă;

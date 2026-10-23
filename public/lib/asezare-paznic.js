@@ -242,8 +242,8 @@
     if (!el) { el = document.createElement("section"); el.id = "pzAcum"; d.insertBefore(el, d.firstChild); }
     el.hidden = false;
     var todo = document.querySelector("#tbTodoLista > *"), fr = todo ? (todo.querySelector("b") || todo).textContent.trim() : "", bs = D.boti, s = D.s || {};
-    var stare = s.routeOk === false ? "Boții nu se pot citi acum (" + (s.eroare || "eroare") + ") — deschide Tabloul botului." : s.routeOk !== true ? "Citesc boții…" : !bs.length ? "Niciun bot pornit acum." : "Deschide Tabloul botului pentru ce ai de făcut.";   // revizia I8
-    var h = '<div class="pzAcumGrila">' + celule() + '</div><p class="pzAcumFraza">' + esc(fr || stare) + '</p>'
+    var stare = s.routeOk === false ? "Boții nu se pot citi acum (" + (s.eroare || "eroare") + ") — deschide Tabloul botului." : s.citireGoala ? "Citirea a venit goală: țin boții de dinainte." : s.routeOk !== true ? "Citesc boții…" : !bs.length ? "Niciun bot pornit acum." : "Deschide Tabloul botului pentru ce ai de făcut.";   // revizia I8
+    var h = '<div class="pzAcumGrila">' + celule() + '</div><p class="pzAcumFraza">' + esc(s.citireGoala ? stare : (fr || stare)) + '</p>'
       + (bs.length ? '<div class="pzCap"><b>Deschise acum · ' + bs.length + '</b></div>' + bs.map(function (b) {
         var t = nr(b.profitTotal);
         return '<button type="button" class="pzRandBot" data-pz-bot="' + esc(b.id) + '" data-pz-nav="tabloubot"><span><b>' + esc((b.baza || "").replace(".PERP", "")) + '</b> <small>' + esc((b.directie || "") + " " + b.levier + "×") + '</small></span>' + drumHtml(b, true) + '<b class="' + (t >= 0 ? "pzV" : "pzR") + '">' + semn(t) + '</b></button>';

@@ -4,13 +4,30 @@
 // botii / contul T212 / clasamentul din contTotAsigura (aceleasi ca pe celelalte pagini, zero cereri in plus).
 // v100.75 (ideea 3): „1 bot”, „20 de boți”, „101 cazuri” - TextRo.cate; rezerva știe aceeași regulă (contextele fără TextRo)
 function acCate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
-var acasa = { la: 0, inLucru: false, d: {} };
+var acasa = { la: 0, inLucru: false, piataLa: 0, piataInLucru: false, d: {} };
 var ACASA_MS = 5 * 60000;
 
 function acasaPe() { var el = $("dash"); return !!(el && el.classList.contains("on")); }
+async function acasaPiataCol() {
+  if (acasa.piataInLucru || acasa.inLucru) return;
+  if (!acasa.inLucru && Date.now() - acasa.la >= ACASA_MS) return;
+  if (acasa.piataLa && Date.now() - acasa.piataLa < 60000) return;
+  acasa.piataInLucru = true;
+  acasa.piataLa = Date.now();
+  var d = acasa.d;
+  try {
+    d.piataCol = await getJSON("/api/istoric-bot?action=piata");
+    d.piataColLa = Date.now();
+    d.piataColErr = null;
+  } catch (e) {
+    d.piataColErr = typeof textEroare === "function" ? textEroare(e) : String(e && e.message || e);
+  } finally { acasa.piataInLucru = false; }
+  acasaDeseneaza();
+}
 async function acasaPorneste(fortat) {
   acasaDeseneaza();
-  if (acasa.inLucru || (!fortat && Date.now() - acasa.la < ACASA_MS)) return;
+  if (acasa.inLucru) return;
+  if (!fortat && Date.now() - acasa.la < ACASA_MS) { acasaPiataCol(); return; }
   acasa.inLucru = true;
   var d = acasa.d;
   // v100.202: fiecare cerere reușită își ține ora (k + "La") — „actualizat” și „ultima citire bună” spun adevărul, nu ora încercării
@@ -522,14 +539,15 @@ function acasaDeseneaza() {
   var hb = '<div class="acCap"><h4>Boții tăi</h4><span class="acSub">' + (boti ? acCate(act.length, "activ", "activi") + " · Pionex" : "aduc boții…") + '</span></div>';
   act.slice(0, 4).forEach(function (b) {
     var nume = String(b.baza || "").replace(/\.PERP$/, ""), tot = Number(b.profitTotal), pr = Number(b.pretCurent), jo = Number(b.gridJos), su = Number(b.gridSus);
-    var inGrid = su > jo && isFinite(pr) ? Math.round((pr - jo) / (su - jo) * 100) : null, panaJos = jo > 0 && pr > 0 ? (pr / jo - 1) * 100 : null;
+    var inGrid = su > jo && pr > 0 && isFinite(pr) ? Math.round((pr - jo) / (su - jo) * 100) : null, panaJos = jo > 0 && pr > 0 ? (pr / jo - 1) * 100 : null;
     var ent = d.clasament ? (d.clasament.monede || []).filter(function (x) { return String(x.simbol).replace(/_USDT_PERP$/, "") === nume; })[0] : null, rg = !ent && d.regimBoti ? d.regimBoti[nume] : null, m2 = ent ? ent.stare === "evita" : rg ? !!rg.miscare : null;
     hb += '<div class="acLin"><span>' + escapeHtml(nume + " " + (b.directie || "") + (b.levier ? " " + b.levier + "×" : "")) + '</span><b class="' + (tot >= 0 ? "good" : "bad") + '">' + (isFinite(tot) ? (tot >= 0 ? "+" : "−") + Math.abs(tot).toFixed(1).replace(".", ",") + " USDT" : "—") + '</b></div>'
       + '<div class="acLin"><span>Prețul în grid</span><b>' + (inGrid == null ? "—" : inGrid + "%" + (panaJos != null && panaJos >= 0 ? " · " + panaJos.toFixed(1).replace(".", ",") + "% până jos" : " · sub grid")) + '</b></div>'
       + '<div class="acLin"><span>Mediul lui</span><b class="' + (m2 === null ? "acMut" : m2 ? "bad" : "good") + '">' + (m2 === null ? "fără date" : (m2 ? "mișcare" : "liniște") + (rg ? " · " + Math.max(rg.r4h || 0, rg.r24h || 0).toFixed(1).replace(".", ",") + "×" : "")) + '</b></div>'
       + acPandaLin(b);
   });
-  if (boti && !act.length) hb += '<p class="acMut">Niciun bot pornit acum.</p>';
+  if (typeof tbStare !== "undefined" && tbStare.citireGoala) hb += '<p class="acMut">Citirea a venit goală: țin boții de dinainte.</p>';
+  else if (boti && !act.length) hb += '<p class="acMut">Niciun bot pornit acum.</p>';
   // v95: ziua ta - fata de poza de ieri dimineata (colectorul, dupa ora 9)
   var ct = typeof t212 !== "undefined" && t212.cont && t212.cont.cash;
   var botiPeId = {}; act.forEach(function (b) { var v2 = Number(b.profitTotal); if (b.id && isFinite(v2)) botiPeId[String(b.id)] = v2; });

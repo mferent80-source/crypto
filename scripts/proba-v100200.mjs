@@ -1,6 +1,7 @@
-// Probele v100.200 (15.10.2026, el: „fă tot” — ideile rămase din audit): „Cât cumperi” din tabelul „Pe revenire” cu ACEEAȘI regulă ca Poarta
-// (riscul după regim, banii liberi, plafonul pe total) și spus cinstit „la prețul ideii”; regimul BLOCAT nu mai dă o sumă nici în Scan / reveniri
+// Probele v100.200 (15.10.2026, el: „fă tot” — ideile rămase din audit): mărimea din „Pe revenire” se calculează cu ACEEAȘI regulă ca Poarta
+// (riscul după regim, banii liberi, plafonul pe total); regimul BLOCAT nu mai dă o sumă nici în Scan / reveniri
 // (înainte: riscul 0 al regimului blocat cădea pe 1 % ⇒ suma întreagă, deși Poarta spunea „n-aș deschide poziții noi”).
+// v100.254: celula din tabel nu mai tipărește bucăți sau lei. Capul „la prețul ideii” rămâne. Suma de 0,5 % se dovedește în t212MarimeCalc.
 import "./lib/text-ro-global.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -38,10 +39,13 @@ await test("t212MarimeCalc: regimul „prudent” ⇒ riscul 0,5 % din cont (jum
   const p = pagina({ macro: "prudent", mb: null }).t212MarimeCalc("ABC_US_EQ", 100, 90, 100), n = pagina({ macro: "riskon", mb: null }).t212MarimeCalc("ABC_US_EQ", 100, 90, 100);
   assert.ok(Math.abs(p.riscPctReal - 0.005) < 1e-9, "0,5 %: " + p.riscPctReal); assert.ok(Math.abs(n.riscPctReal - 0.01) < 1e-9);
 });
-await test("„Pe revenire”: „Cât cumperi” cu regula Porții (regim prudent ⇒ 0,5 % din cont), capul spune „la prețul ideii”", () => {
+await test("„Pe revenire”: capul rămâne „la prețul ideii”; fără reconciliere nu se tipăresc bucăți sau lei (v100.254)", () => {
   const h = pagina({ macro: "prudent", mb: null }).t212ReveniriCorp(REV);
   assert.match(h, /<th>Cât cumperi · la prețul ideii<\/th>/);
-  assert.match(h, /\(0,5% din cont\)/);
+  assert.match(h, /N-aș da o sumă: n-am o reconciliere pe tot contul\./);
+  assert.doesNotMatch(h, /\(0,5% din cont\)/);
+  assert.doesNotMatch(h, / buc ≈ /);
+  assert.match(h, /Nu tipăresc bucăți sau lei\./);
 });
 await test("„Pe revenire” cu regimul blocat: „nimic azi” + motivul, fără sumă", () => {
   const h = pagina({ macro: "stres", mb: null }).t212ReveniriCorp(REV);

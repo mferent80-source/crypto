@@ -63,7 +63,7 @@ var Obiceiuri = (function () {
     var f = o.fisa || {}, acum = o.acum || Date.now(), tk = moneda(f.simbol), m = o.numeBot ? moneda(o.numeBot) : tk, R = [];
     var v = f.verdict && f.verdict.nivel;
     R.push({ cod: "verde", ok: v === "porneste", text: v === "porneste" ? "Fișa zice 🟢 PORNEȘTE." : "Fișa zice " + (v === "nu" ? "🔴 NU PORNI" : v === "asteapta" ? "🟡 AȘTEAPTĂ" : "că n-are date") + (f.verdict && f.verdict.motive && f.verdict.motive[0] ? ": " + f.verdict.motive[0] : "") + ".",
-      cost: "pe boții tăi închiși: doar pe 🟢 ar fi fost −0,99 în loc de −21,45 USDT" });
+      cost: null });
     var ult = (o.trades || []).filter(function (t) { return t.moneda === m; }).sort(function (a, b) { return b.inchis - a.inchis; })[0];
     var min = ult ? (acum - ult.inchis) / 60000 : null, reOk = min === null || min >= 10;
     R.push({ cod: "reintrare", ok: reOk, text: reOk ? (ult ? "Ultimul bot pe " + m + " s-a închis acum " + (min >= 120 ? cate(Math.round(min / 60), "oră", "ore") : Math.round(min) + " min") + "." : "N-ai mai avut bot pe " + m + ".") : "Ultimul bot pe " + m + " s-a închis acum " + Math.round(min) + " min: e o repornire imediată.", cost: costDin(o.trades, "reintrare") });

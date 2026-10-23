@@ -392,6 +392,7 @@ var ActiuniSemnale = (function () {
     // v100.175 (revizia v100.173): fără cont, planul LUI rămâne pe ecran (înainte poarta trecea tăcut la prețurile calculate)
     if (!(o.cont > 0)) { r.eroare = "Contul Trading 212 n-a venit încă: planul e al tău, dar nu pot socoti câte bucăți."; return r; }
     if (!(o.fx > 0)) { r.eroare = "Lipsește cursul dolar/leu (nici BNR, nici istoricul T212 n-au venit): nu pot socoti câte bucăți."; return r; }
+    if (o.deja === null) { r.eroare = "N-aș da o sumă: nu știu cât ai deja în acțiunea asta."; return r; }
     var fx = o.fx;
     r.m = marime({ intrare: intrare, stop: stop, cont: o.cont, fx: fx, riscPct: riscPct / 100, deja: o.deja, liber: o.liber, pretAcum: o.pretAcum });   /* v100.196: plafonul pe total, banii liberi */
     if (!r.m) return r;
@@ -611,11 +612,13 @@ var ActiuniSemnale = (function () {
     // v100.229: suma tace înainte de „citește întâi contul”. v100.230: tace la orice abatere de cantitate, nu doar pe simbolul porții.
     if (nivel === "cumpara" && o.faraSuma === "reconciliere") return sp("N-aș da o sumă: jurnalul nu se potrivește cu cantitatea din cont.");
     if (nivel === "cumpara" && o.faraSuma === "necitit") return sp("N-aș da o sumă: brokerul n-a fost citit de 30 de minute.");
+    if (nivel === "cumpara" && o.faraSuma === "raport") return sp("N-aș da o sumă: n-am o reconciliere pe tot contul.");
+    if (nivel === "cumpara" && o.faraSuma === "deja") return sp("N-aș da o sumă: nu știu cât ai deja în acțiunea asta.");
     if (nivel === "cumpara" && cat === null) {
       if (o.faraMarime === "trend12") return sp("N-aș pune o sumă încă: Trend 12 luni e în probă, nu-i dau mărime până nu e „probat”.");
       if (!m) return sp("Aș citi întâi contul și cursul: fără ele nu știu câte bucăți să cumpăr.");
       if (m.plin) return sp("N-aș adăuga: ai deja 20% din cont în acțiunea asta.");
-      if (m.pesteLiber) return sp("Aș cumpăra ~" + lei(m.suma) + ", dar ai doar " + lei(m.liber) + " liberi: întâi aș depune sau aș vinde ceva.");
+      if (m.pesteLiber) return sp("N-aș deschide: ai doar " + lei(m.liber) + " liberi.");
       return sp("Aș cumpăra ~" + lei(m.suma) + " și aș pune stopul imediat după.");
     }
     return sp(nivel === "cumpara" ? "Aș cumpăra cel mult " + cat + " și aș pune stopul scris imediat după."

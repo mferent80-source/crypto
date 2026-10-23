@@ -24,10 +24,13 @@
   const scS = (v) => (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v);
   const cate = (n, sg1, pl) => (global.TextRo && global.TextRo.cate ? global.TextRo.cate(n, sg1, pl) : n + " " + (n === 1 ? sg1 : pl));
 
+  // secunde (~1e9) și milisecunde (~1e12) se despart la 1e11; viitorul e dată rea, nu bară în formare
+  const timpMs = (t) => (!(t > 0) || !fin(t) ? null : t < 1e11 ? t * 1000 : t);
+  const eViitor = (t, acum) => { const ms = timpMs(t); return ms !== null && ms > (acum || Date.now()) + 120000; };
   // barele vin ca {time, close} (stiri / Pionex, uneori text) sau {t, c}; ies {t, c} crescător, doar închideri bune
-  function bare(l) {
+  function bare(l, acum) {
     return (Array.isArray(l) ? l : []).map((x) => ({ t: Number(x && (x.t != null ? x.t : x.time)), c: Number(x && (x.c != null ? x.c : x.close)) }))
-      .filter((x) => fin(x.t) && fin(x.c) && x.c > 0).sort((a, b) => a.t - b.t);
+      .filter((x) => fin(x.t) && fin(x.c) && x.c > 0 && !eViitor(x.t, acum)).sort((a, b) => a.t - b.t);
   }
   const zi = (t) => new Date(t).toISOString().slice(0, 10);
   function legatura(spy, btc) {

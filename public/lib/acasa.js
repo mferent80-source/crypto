@@ -294,18 +294,25 @@ var Acasa = (function () {
     var fel = o.fel === "bursa" ? "bursa" : "crypto";
     if (fel === "crypto" && o.pauza === true) return Object.assign({}, v, { faCe: frazaPauza(o.pauzaN) });
     if (!invita(v.faCe, fel)) return v;
-    if (fel === "crypto" && areAbateriCantitate(o)) return Object.assign({}, v, { faCe: FRAZA_CANTITATE });
+    if (areAbateriCantitate(o)) return Object.assign({}, v, { faCe: FRAZA_CANTITATE });
     if (o.raportStare === "lipsa") return Object.assign({}, v, { faCe: "N-aș porni nimic nou: raportul pe tot contul lipsește." });
     if (o.raportStare === "vechi") {
       var ore = Math.round(Number(o.raportOre)); if (!(ore > 0)) ore = 12;
       return Object.assign({}, v, { faCe: "N-aș porni nimic nou: raportul pe tot contul e vechi de " + cate(ore, "oră", "ore") + "." });
     }
     var rap = o.raport, tot = rap && rap.valoare ? nr(rap.valoare.total) : null, va = rap && rap.risc ? nr(rap.risc.var95) : null;
-    if (o.raportStare === "ok" && tot > 0 && va > 0.04 * tot) return Object.assign({}, v, { faCe: "Aș reduce expunerea până sub 3% pe zi: o zi proastă îți ia ~" + pctCont(va / tot) + " din cont." });
+    if (o.raportStare === "ok" && tot > 0 && va > 0.04 * tot) return Object.assign({}, v, { faCe: "Aș reduce expunerea până sub 4% pe zi: o zi proastă îți ia ~" + pctCont(va / tot) + " din cont." });
     var ev = o.eveniment ? String(o.eveniment).replace(/[.!?]+$/g, "").trim() : "";
     if (ev) {
-      var fraza = "N-aș porni boți noi și n-aș cumpăra chiar înainte de " + ev + ".";
-      if (fraza.length <= 110) return Object.assign({}, v, { faCe: fraza });
+      var prefix = "N-aș porni boți noi și n-aș cumpăra chiar înainte de ";
+      var fraza = prefix + ev + ".";
+      if (fraza.length > 110) {
+        var loc = 110 - prefix.length - 1;
+        var tai = ev.lastIndexOf(" ");
+        ev = (tai > 0 && tai < loc ? ev.slice(0, tai) : ev.slice(0, Math.max(0, loc - 1))) + "…";
+        fraza = prefix + ev + ".";
+      }
+      return Object.assign({}, v, { faCe: fraza });
     }
     var ff = fel === "crypto" ? FRAZA_FUNDING[o.fundingAtentie] : "";
     if (ff) return Object.assign({}, v, { faCe: ff });

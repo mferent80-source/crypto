@@ -29,6 +29,7 @@ function rlObiceiuri(l, tip, unit) {
   var ET = { "dovedit-rau": ["dovedit rău", "rl-rau"], "dovedit-bun": ["dovedit bun", "rl-bine"], "la-limita-rau": ["la limită (rău)", "rl-atentie"], "la-limita-bun": ["la limită (bun)", "rl-info"], "nedovedit": ["nedovedit", "rl-info"], "prea puțini": ["prea puțini", "rl-info"], "prea puține": ["prea puține", "rl-info"] };
   // revizia: media pe bot / poziție (totalurile pe grupuri de mărimi diferite sugerau efecte mari acolo unde verdictul e nedovedit)
   return '<div class="rlTab"><table><thead><tr><th>Obiceiul</th><th>Verdict</th><th>Ce arată</th><th>' + (tip === "boti" ? "Media pe bot, cu / fără (la suma de acum)" : "Media pe poziție, cu / fără") + '</th></tr></thead><tbody>' + (l || []).map(function (x) { var e = ET[x.stare] || [x.stare, "rl-info"];
+    if ((x.k === "A3" || x.k === "O2") && /^dovedit/.test(String(x.stare || ""))) e = ["legătură, nu cauză", e[1]];
     return "<tr><td>" + rlEsc(x.nume) + '</td><td><span class="rlPill ' + e[1] + '">' + rlEsc(e[0]) + "</span></td><td>" + rlEsc(RiscLuna.textObicei(x, tip)) + '</td><td class="rlNr">' + rlEsc((x.cu ? rlBani(rlN(x.banCu) / x.cu, unit) : "—") + " / " + (x.fara ? rlBani(rlN(x.banFara) / x.fara, unit) : "—")) + "</td></tr>"; }).join("") + "</tbody></table></div>";
 }
 function rlSuprav(l, unitate) {
@@ -47,7 +48,7 @@ function rlParte(tip, P, k, conc) {
     + (P.ritm && P.ritm.n30 === 0 ? '<p class="tbSub">' + rlEsc("În ultimele 30 de zile n-ai pornit " + (boti ? "niciun bot" : "nicio poziție") + "; suma e cea din ultimele tale " + (boti ? "porniri" : "poziții") + ".") + "</p>" : "")
     + '<div class="rlAlege" role="group" aria-label="Câte ' + noun[1] + ' pe lună"><span>Câte pe lună:</span>' + bt + "</div>"
     + '<div class="rlCifre">' + cif.map(function (c, i) { return '<div class="rlCifra"><span>' + rlEsc(c[0]) + '</span><b class="' + (i === 2 || i === 3 ? "bad" : i === 4 ? "good" : "") + '">' + rlEsc(c[1]) + "</b><small>" + rlEsc(c[2]) + "</small></div>"; }).join("") + "</div>"
-    + '<p class="tbSub">' + rlEsc((mc.n ? mc.n.toLocaleString("ro-RO") + " de luni simulate" : "Lunile simulate") + (mc.legat ? ", fiecare dintr-o fereastră reală de 30 de zile din istoria ta (lunile proaste vin cu toate pozițiile deodată)" : ", din tot istoricul (prea puține ferestre de 30 de zile)") + ".") + "</p>" + rlHist(mc, unit)
+    + '<p class="tbSub">' + rlEsc((mc.n ? mc.n.toLocaleString("ro-RO") + " de luni simulate" : "Lunile simulate") + (mc.legat ? ", fiecare dintr-o fereastră reală de 30 de zile din istoria ta (K extrageri cu revenire din aceeași fereastră de 30 de zile)" : ", din tot istoricul (prea puține ferestre de 30 de zile)") + ".") + "</p>" + rlHist(mc, unit)
     + "<h4>Ce înseamnă pentru tine</h4>" + rlConcl(conc) + "<h4>Obiceiurile tale</h4>" + rlObiceiuri(P.comportament, tip, unit)
     + "<h4>" + (boti ? "Din boții care au ajuns la o vârstă, cum s-au terminat" : "Din pozițiile ținute peste un timp, cum s-au încheiat") + "</h4>" + rlSuprav(P.supravietuire, boti ? "ore" : "zile");
   var d = P.desc || {};
@@ -75,7 +76,7 @@ function rlHtml(rp, st) {
   h += '<details class="rlMetoda"><summary>Cum am socotit (regula fixată înainte de cifre)</summary><ul>'
     + ["Boții: futures grid închiși din 1 ianuarie; rezultatul unui bot = profitul realizat după comisioane și funding, împărțit la suma pusă cu tot cu marja adăugată pe drum, apoi înmulțit cu suma ta de acum. Monte Carlo doar pe levier de cel mult 5×.",
       "Ritmul tău: câți boți / câte poziții ai pornit în ultimele 30 de zile; suma de acum = mediana lor.",
-      "O lună simulată = atâtea rezultate trase dintr-o fereastră reală de 30 de zile, aleasă la întâmplare: lunile proaste vin cu toți boții deodată.",
+      "O lună simulată = atâtea rezultate trase dintr-o fereastră reală de 30 de zile, aleasă la întâmplare: K extrageri cu revenire din aceeași fereastră de 30 de zile.",
       "Obiceiurile: lista e fixată dinainte. Dovedit = intervalul de 99% al diferenței (2.000 de reluări pe monede / acțiuni) nu conține zero și diferența are același semn în ambele jumătăți de timp. Altfel nedovedit, adică poate fi întâmplare (nu „fără efect”). Se testează ~12 obiceiuri deodată: chiar cu regula asta, cam o dată din 15 rapoarte unul poate ieși „dovedit” din întâmplare — un singur obicei dovedit, fără să se repete în rapoartele următoare, e un indiciu, nu o regulă.",
       "Acțiunile: o poziție = de la prima cumpărare până la zero; rezultatul real în lei, cu comisioanele de conversie scăzute.",
       "„La limită” = semnul trece de pragul obișnuit (95%), dar nu de cel strict (99%): e un semn de urmărit, nu încă o dovadă. Pragul strict vine din probă: pe rezultate amestecate la întâmplare, cel obișnuit găsea „dovezi” false prea des.",

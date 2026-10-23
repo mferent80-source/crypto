@@ -246,7 +246,7 @@ var RiscLuna = (function () {
   }
   var CE_FAC = { A1: "N-aș mai cumpăra la preț mai mic pe o acțiune pe minus; aș aștepta să urce peste prețul meu mediu.",
     A2: "Aș păstra suma obișnuită după o pierdere, nu aș mări-o ca să recuperez.", O2: "Aș închide botul în loc să-i adaug marjă.", O3: "Aș rula cu cel mult 3×.", O4: "Aș lua banda mai largă de 10%." };
-  var TITLU_ACT = { A1: ["Cumperi la preț mai mic pe pozițiile pe minus", "Cumpărarea la preț mai mic pe minus îți iese bine"], A2: ["Mărești suma după o pierdere", "Suma mărită după o pierdere îți iese bine"], A3: ["Pozițiile lungi îți ies mai prost", "Pozițiile scurte îți ies mai bine (legătură, nu cauză)"] };
+  var TITLU_ACT = { A1: ["Cumperi la preț mai mic pe pozițiile pe minus", "Cumpărarea la preț mai mic pe minus îți iese bine"], A2: ["Mărești suma după o pierdere", "Suma mărită după o pierdere îți iese bine"], A3: ["Episoadele scurte îți ies mai prost", "Pozițiile scurte îți ies mai bine"] };
   // ⇒ { boti: [], actiuni: [] }, fiecare { nivel: "rau"|"atentie"|"bine"|"info", titlu, text, faCe } - din cifrele raportului
   function concluzii(rp) {
     var out = { boti: [], actiuni: [] }, B = rp && rp.boti, A = rp && rp.actiuni;
@@ -268,7 +268,8 @@ var RiscLuna = (function () {
     }
     if (A && A.desc) {
       (A.comportament || []).filter(function (x) { return /^(dovedit|la-limita)/.test(x.stare); }).forEach(function (x) { var rau = /rau$/.test(x.stare), sigur = /^dovedit/.test(x.stare), T = TITLU_ACT[x.k] || [x.nume, x.nume];
-        out.actiuni.push({ nivel: rau ? (sigur ? "rau" : "atentie") : "bine", titlu: (rau ? T[0] : T[1]) + (sigur ? "" : " (la limită)"), text: textObicei(x, "actiuni"), faCe: rau ? CE_FAC[x.k] || null : null }); });
+        var leg = !!(LEGATURA[x.k] && sigur);
+        out.actiuni.push({ nivel: rau ? (sigur ? "rau" : "atentie") : "bine", titlu: (rau ? T[0] : T[1]) + (leg ? " (legătură, nu cauză)" : (sigur ? "" : " (la limită)")), text: textObicei(x, "actiuni"), faCe: rau ? CE_FAC[x.k] || null : null }); });
       var e = A.desc;
       if (e.comisioane > 0 && (e.rezultat <= 0 || e.comisioane > 0.5 * e.rezultat)) out.actiuni.push({ nivel: "atentie", titlu: e.rezultat > 0 ? "Comisioanele de conversie îți iau o mare parte din câștig" : "Comisioanele de conversie îți adâncesc minusul",
         text: "Ai plătit " + mii(e.comisioane).replace("+", "") + " lei comision de conversie; rezultatul real e " + mii(e.rezultat) + " lei (T212 afișează " + mii(e.oficial) + ", fără comisioane).",

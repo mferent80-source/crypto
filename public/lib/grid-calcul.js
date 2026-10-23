@@ -97,11 +97,14 @@ var GridCalcul = (function () {
     v.pop();
     return v;
   }
-  // Pretul de acum = inchiderea barei celei mai noi (cea in formare).
-  function pretCurent(randuri) {
+  // secunde (~1e9) și milisecunde (~1e12) se despart la 1e11. O bară din viitor nu e prețul de acum.
+  function timpMs(t) { if (!(t > 0) || !isFinite(t)) return null; return t < 1e11 ? t * 1000 : t; }
+  function eViitor(t, acum) { var ms = timpMs(t); return ms !== null && ms > (acum || Date.now()) + 120000; }
+  // Pretul de acum = inchiderea barei celei mai noi care nu e in viitor (cea in formare ramane).
+  function pretCurent(randuri, acum) {
     if (!Array.isArray(randuri)) return null;
     var cea = null;
-    for (var i = 0; i < randuri.length; i++) { var b = citeste(randuri[i]); if (b && (!cea || b.t > cea.t)) cea = b; }
+    for (var i = 0; i < randuri.length; i++) { var b = citeste(randuri[i]); if (b && !eViitor(b.t, acum) && (!cea || b.t > cea.t)) cea = b; }
     return cea ? cea.c : null;
   }
 

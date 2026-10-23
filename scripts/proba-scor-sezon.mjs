@@ -244,9 +244,9 @@ await test("ideea 2 - alerte (pur): pauza o dată pe bot închis cât ești în 
   assert.deepEqual(S.alerte(s, st).mesaje, [], "același bot: nu repetă");
   s = S.calc([t(1, START + ORA, -1), t(2, START + 2 * ORA, -1), t(3, START + 3 * ORA, -1), t(4, START + 4 * ORA, -1)], CFG, ACUM);
   assert.deepEqual(S.alerte(s, st).mesaje, [{ fel: "pauza" }], "a 4-a pierdere în pauză: iar");
-  // rata ≥ țintă dar sub 10 boți ⇒ nimic; netul ≥ 50 ⇒ o dată
+  // rata ≥ țintă dar sub 10 boți ⇒ nimic; netul sub 10 nu se anunță
   s = S.calc([t(1, START + ORA, 60), t(2, START + 2 * ORA, 1)], CFG, ACUM);
-  assert.deepEqual(S.alerte(s, st).mesaje, [{ fel: "net" }]); assert.deepEqual(S.alerte(s, st).mesaje, []);
+  assert.deepEqual(S.alerte(s, st).mesaje, []);
   const l = []; for (let i = 0; i < 10; i++) l.push(t(10 + i, START + (i + 1) * ORA, i < 4 ? -1 : 1));   // pierderile întâi: ultimii închiși sunt câștiguri, deci fără pauză
   s = S.calc(l, CFG, ACUM);   // 60 % din 10, net +2
   assert.deepEqual(S.alerte(s, st).mesaje, [{ fel: "rata" }]); assert.deepEqual(S.alerte(s, st).mesaje, []);

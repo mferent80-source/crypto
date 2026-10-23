@@ -95,9 +95,13 @@ async function t212IdeiRejudeca() {
             var st = ActiuniSemnale.stare(bare, pret), niv = ActiuniSemnale.niveluri(bare, pret, {});
             var cc = t212.cont && t212.cont.cash;
             if (cc && cc.total > 0 && niv.nivel === "ok" && niv.intrare && niv.stop > 0) {
-              var liber = cc.free !== null && cc.free !== undefined && isFinite(Number(cc.free)) ? Number(cc.free) : null;
-              var mCash = ActiuniSemnale.marime({ intrare: niv.intrare.pret, stop: niv.stop, cont: cc.total, fx: t212Fx(), riscPct: ActiuniSemnale.regimPoarta(rp).riscPct, deja: t212DejaLei(tk), liber: liber, pretAcum: st.pret });
-              if (mCash && (mCash.blocat || mCash.pesteLiber || mCash.plin)) tine = false;
+              var dejaId = t212DejaLei(tk);
+              if (dejaId === null) tine = false;
+              else {
+                var liber = cc.free !== null && cc.free !== undefined && isFinite(Number(cc.free)) ? Number(cc.free) : null;
+                var mCash = ActiuniSemnale.marime({ intrare: niv.intrare.pret, stop: niv.stop, cont: cc.total, fx: t212Fx(), riscPct: ActiuniSemnale.regimPoarta(rp).riscPct, deja: dejaId, liber: liber, pretAcum: st.pret });
+                if (mCash && (mCash.blocat || mCash.pesteLiber || mCash.plin)) tine = false;
+              }
             }
           }
         }
@@ -155,8 +159,8 @@ function t212ValoriLei(poz) {
   });
   return out;
 }
-// v100.196 (🔴1): cât ai DEJA în acțiunea asta, în lei (0 fără poziție sau fără valoare știută)
-function t212DejaLei(tk) { var x = (t212.poz || []).filter(function (p) { return p && p.ticker === tk && p.quantity > 0; })[0]; if (!x) return 0; var v = t212ValoriLei([x])[tk]; return v > 0 ? v : 0; }
+// v100.254: 0 fără poziție; null când poziția există dar valoarea în lei nu e știută (marime() ar lua null drept 0)
+function t212DejaLei(tk) { var x = (t212.poz || []).filter(function (p) { return p && p.ticker === tk && p.quantity > 0; })[0]; if (!x) return 0; var v = t212ValoriLei([x])[tk]; return v > 0 ? v : null; }
 // v100.196 (🟡13): prețul unei poziții în moneda ei ($ la SUA; €, £ sau „p” = pence din metadatele T212); fără monedă știută, fără semn
 function t212PretIn(v, tk) {
   var s = t212Usd(v), m = /_US_EQ$/.test(tk || "") ? "USD" : t212.monede && t212.monede[tk];
@@ -215,7 +219,9 @@ function t212RegimPt() { var r = t212.regimPiata || {}, ok = r.macro && r.la && 
 function t212MarimeCalc(tk, intrare, stop, pretAcum) {
   var c = t212.cont && t212.cont.cash, rg = t212.regimPiata ? ActiuniSemnale.regimPoarta(t212RegimPt()) : null;
   if (rg && rg.cod === "blocat") return { blocat: true, motiv: rg.motiv };   /* v100.200: ca Poarta - regimul blocat nu dă nicio sumă (riscPct 0 cădea pe 1 %) */
-  return ActiuniSemnale.marime({ intrare: intrare, stop: stop, cont: c && c.total, fx: t212Fx(), riscPct: rg ? rg.riscPct : 0.01, deja: t212DejaLei(tk), liber: c && c.free !== null && c.free !== undefined && isFinite(Number(c.free)) ? Number(c.free) : null, pretAcum: pretAcum });   /* v100.222: risc 0 rămâne 0 */
+  var deja = t212DejaLei(tk);
+  if (deja === null) return { dejaNecunoscut: true };   /* v100.254: valoarea în lei lipsește — nu chem marime(), care ar lua null drept 0 */
+  return ActiuniSemnale.marime({ intrare: intrare, stop: stop, cont: c && c.total, fx: t212Fx(), riscPct: rg ? rg.riscPct : 0.01, deja: deja, liber: c && c.free !== null && c.free !== undefined && isFinite(Number(c.free)) ? Number(c.free) : null, pretAcum: pretAcum });   /* v100.222: risc 0 rămâne 0 */
 }
 function t212FrazaCitire() {
   var r = t212.regimPiata;
@@ -243,9 +249,12 @@ function t212CitireVeche() {
   return true;
 }
 function t212FaraSuma(p) {
+  var wouldSize = p && p.v && p.v.nivel === "cumpara" && p.v.riscPct !== 0 && !t212FaraMarime(p);
+  if (wouldSize && p.deja === null) return "deja";   /* înainte de t212MarimePoarta: ea întoarce null la deja null */
   if (!t212MarimePoarta(p)) return null;
-  var r = t212RaportCont(), rec = r && r.reconciliere && r.reconciliere.t212;
-  if (rec && Array.isArray(rec.abateri) && rec.abateri.length) return "reconciliere";
+  var r = t212RaportCont();
+  if (!r || !r.reconciliere || !r.reconciliere.t212) return "raport";
+  if (Array.isArray(r.reconciliere.t212.abateri) && r.reconciliere.t212.abateri.length) return "reconciliere";
   if (t212CitireVeche()) return "necitit";
   return null;
 }
@@ -261,6 +270,8 @@ function t212NotaRec(p) {
 function t212TextFaraSuma(fel) {
   if (fel === "reconciliere") return "N-aș da o sumă: jurnalul nu se potrivește cu cantitatea din cont.";
   if (fel === "necitit") return "N-aș da o sumă: brokerul n-a fost citit de 30 de minute.";
+  if (fel === "raport") return "N-aș da o sumă: n-am o reconciliere pe tot contul.";
+  if (fel === "deja") return "N-aș da o sumă: nu știu cât ai deja în acțiunea asta.";
   return "";
 }
 async function t212ContSiCalibrare() {
@@ -288,7 +299,7 @@ function t212RegimNedovedit() {
 }
 function t212ProbaText(n) {
   var pr = n.proba;
-  return "stop la " + String(n.k).replace(".", ",") + "× mișcarea obișnuită pe zi (ATR $" + t212Usd(n.atr).slice(1) + ")" + (Math.abs(n.d - n.k * n.atr) > 1e-9 ? ", ținut între 3% și 15%" : "")
+  return "stop la " + String(n.k).replace(".", ",") + "× mișcarea obișnuită pe zi (ATR, media simplă pe 14 zile, $" + t212Usd(n.atr).slice(1) + ")" + (Math.abs(n.d - n.k * n.atr) > 1e-9 ? ", ținut între 3% și 15%" : "")
     + " · probat pe " + t212Cate(pr.n, "zi", "zile") + " din ultimul an" + (pr.nIndep != null ? " (~" + t212Cate(pr.nIndep, "fereastră", "ferestre") + " de 20 de zile care nu se suprapun; stopul e ales cel mai bun pe aceleași zile, deci cifra e optimistă)" : "") + (pr.conditionat ? " cu trendul ca acum" : "") + ": " + Math.round(pr.pePlus * 100) + "% pe plus, " + (pr.medie !== null && Math.abs(pr.medie) < 0.001 ? (pr.medie >= 0 ? "+" : "−") + Math.abs(pr.medie * 100).toFixed(2).replace(".", ",") + "%" : t212Pct(pr.medie)) + " în medie după comision";
 }
 async function t212PlanSalveaza(tk) {
@@ -564,6 +575,15 @@ function t212RevRand(x, cat) {
   var ist = x.istoric && x.istoric.n ? t212Cate(x.istoric.n, "trade", "trade-uri") + ", " + x.istoric.pePlus + " pe plus, " + t212Lei(x.istoric.total) : "n-ai mai avut-o";
   return '<tr><td data-et="Acțiune"><b>' + escapeHtml(x.simbol) + '</b></td><td data-et="La idee">' + t212Usd(x.pret) + '</td><td class="bad" data-et="Căderea">−' + Math.round(x.cadere * 100) + '%<span class="t212Mic">de la maximul pe 60 de zile</span></td><td class="good" data-et="De la minim">+' + Math.round(x.deLaMin * 100) + '%<span class="t212Mic">' + escapeHtml("minimul acum " + t212Cate(Math.round(x.zileDeLaMin), "zi de bursă", "zile de bursă")) + '</span></td><td class="bad" data-et="Stop">' + t212Usd(x.stop) + '<span class="t212Mic">sub minim</span></td><td class="good" data-et="Țintă">' + t212Usd(x.tinta) + '<span class="t212Mic">maximul</span></td><td data-et="Istoricul tău"><span class="t212Mic' + (x.istoric && x.istoric.total < 0 ? " bad" : "") + '">' + escapeHtml(ist) + '</span></td><td data-et="Cât cumperi">' + cat + '</td></tr>';
 }
+// v100.254: pe revenire nu se tipăresc bucăți sau lei. Regimul blocat rămâne „nimic azi”, înaintea frânei.
+function t212RevFrana(tk) {
+  if (t212DejaLei(tk) === null) return "deja";
+  var r = t212RaportCont();
+  if (!r || !r.reconciliere || !r.reconciliere.t212) return "raport";
+  if (Array.isArray(r.reconciliere.t212.abateri) && r.reconciliere.t212.abateri.length) return "reconciliere";
+  if (t212CitireVeche()) return "necitit";
+  return null;
+}
 function t212ReveniriCorp(id) {
   var l = Array.isArray(id.reveniri) ? id.reveniri : [];
   // revizia (I1): mărimea pe rând, ca în bilet (1% din cont), pe stopul de sub minim - „Biletul” trece acțiunea prin poarta ideilor (trend în sus), care la o revenire spune NU
@@ -575,12 +595,14 @@ function t212ReveniriCorp(id) {
   // v100.196 (raportul UI, 🔴5 / 🟡1): „La idee” = prețul din tura de dimineață (nu cel de acum); fiecare celulă își spune coloana (data-et) pe telefon
   else h += '<div class="t212TabWrap"><table class="t212Tab t212RevTab"><thead><tr><th>Acțiune</th><th>La idee</th><th>Căderea</th><th>De la minim</th><th>Stop</th><th>Țintă</th><th>Istoricul tău</th><th>Cât cumperi · la prețul ideii</th></tr></thead><tbody>'
     + l.map(function (x) {
-      /* v100.200 (revizia, 🔵): aceeași regulă ca Poarta - riscul după regim, banii liberi, plafonul pe total; regimul blocat ⇒ nimic */
-      var m = cont > 0 && AS ? t212MarimeCalc(x.ticker, x.pret, x.stop, null) : null;
+      /* v100.254: nu tipăresc rezultatul lui marime. Blocajul de regim rămâne „nimic azi”. */
+      if (!(cont > 0) || !AS) return t212RevRand(x, '—<span class="t212Mic">citește întâi contul</span>');
+      var m = t212MarimeCalc(x.ticker, x.pret, x.stop, null);
       if (m && m.blocat) return t212RevRand(x, '<b class="bad">nimic azi</b><span class="t212Mic">' + escapeHtml(m.motiv) + '</span>');
-      var cat = m ? '<b>' + t212Bucati(m.bucati, x.pret) + '</b><span class="t212Mic">≈ ' + t212Suma(m.suma) + ' · la stop pierzi ~' + t212Suma(m.risc) + ' (' + t212PctRisc(m.riscPctReal) + ' din cont)' + (m.plin ? ' · ai deja 20% din cont în ea' : m.plafonat ? ' · tăiat la 20% din cont' : '') + '</span>' : '—' + (cont > 0 ? '' : '<span class="t212Mic">citește întâi contul</span>');
-      return t212RevRand(x, cat);
-    }).join("") + '</tbody></table></div><p class="tbSub">Fără „Biletul”: poarta lui cere trend în sus, deci la o revenire ar spune NU; mărimea de aici e pe stopul de sub minim, cu 1% din cont.</p>';
+      var fr = t212RevFrana(x.ticker);
+      if (fr) return t212RevRand(x, '<span class="t212Mic">' + escapeHtml(t212TextFaraSuma(fr)) + '</span>');
+      return t212RevRand(x, '<span class="t212Mic">poarta ar spune NU</span>');
+    }).join("") + '</tbody></table></div><p class="tbSub">Fără „Biletul”: poarta lui cere trend în sus, deci la o revenire ar spune NU. Nu tipăresc bucăți sau lei.</p>';
   if (id.urmarireReveniri && id.urmarireReveniri.text) h += '<p class="tbSub">📏 ' + escapeHtml(id.urmarireReveniri.text) + '</p>';
   return h + '</div>';
 }
@@ -830,7 +852,7 @@ function t212RandPozitie(p) {
     + (n ? '<p class="tbSub">Stop care urcă după maxim: <b class="' + (n.stopAtins ? "bad" : "") + '">' + t212PretIn(n.stopPozitie, p.ticker) + '</b> (−' + n.trailPct.toFixed(1).replace(".", ",") + '% de la maxim) · Țintă: <b class="good">' + t212PretIn(n.tintaPozitie, p.ticker) + '</b> (2× riscul)</p><p class="tbSub">' + escapeHtml(t212ProbaText(n)) + '</p>'
       + (p.prob && p.prob.length && typeof tbProbRandHtml === "function" ? '<div class="t212Prob"><p class="tbSub"><b>🎲 Probabilitățile din istoric</b> · cât de des s-a întâmplat pe acțiunea asta, în zile ca acum — nu o prognoză</p>' + t212ProbListaHtml(p.prob) + '</div>' : '') + t212ReteaHtml({ acum: Date.now(), pret: p.pret, stop: n.stopPozitie, tinta: p.plan && p.plan.tinta > 0 ? p.plan.tinta : n.tintaPozitie, ticker: p.ticker }, t212.bare[p.ticker], p.prob)
       + (n.sursaTrail ? '<p class="tbSub">Stopul care urcă: ' + escapeHtml(n.sursaTrail) + ' (socoteala: Jurnal → „Cât te-ar fi salvat stopul”).</p>' : n.trailMinim ? '<p class="tbSub">Stopul care urcă e ținut la −15% de la maxim, nu mai strâns: pe trade-urile tale, stopurile mai strânse au tăiat prea multe care își reveneau (socoteala: Jurnal → „Cât te-ar fi salvat stopul”).</p>' : '')
-      + (n.proba.medie !== null && n.proba.medie <= 0 ? '<p class="tbWarn">⚠️ Pe istoricul ei, în starea de acum, niciun stop (1,5–3× ATR) n-a ieșit pe plus în medie: prețurile limitează pierderea, nu promit câștig.</p>' : '')
+      + (n.proba.medie !== null && n.proba.medie <= 0 ? '<p class="tbWarn">⚠️ Pe istoricul ei, în starea de acum, niciun stop (1,5–3× ATR (media simplă pe 14 zile)) n-a ieșit pe plus în medie: prețurile limitează pierderea, nu promit câștig.</p>' : '')
       : '<p class="tbSub">' + escapeHtml(p.nivMotiv || "Prețurile calculate apar după ce vin prețurile zilnice.") + '</p>') + '</div>';
   return rand + '<tr class="t212Det" id="t212Det-' + tk + '"' + (des ? '' : ' hidden') + '><td colspan="8"><div class="t212DetGrila">' + stanga + dreapta + '</div><div class="t212Graf" id="t212Graf-' + tk + '"></div></td></tr>';
 }
@@ -885,10 +907,10 @@ async function t212Poarta() {
     if (rp.viu && v && v.note) v.note.push("regimul e citirea de acum: colectorul nu l-a publicat în ultimele 2 ore");
     if (v && v.note) { var fzCit = t212FrazaCitire(); if (fzCit) v.note.push(fzCit); }
     // v100.222 (I-722): verdele care nu încape în banii liberi, e plin sau e blocat devine AȘTEAPTĂ înainte de jurnal
-    if (v.nivel === "cumpara" && niv.nivel === "ok" && niv.intrare && niv.stop > 0) {
+    if (v.nivel === "cumpara" && niv.nivel === "ok" && niv.intrare && niv.stop > 0 && deja !== null) {
       var mCash = ActiuniSemnale.marime({ intrare: niv.intrare.pret, stop: niv.stop, cont: tot, fx: t212Fx(), riscPct: v.riscPct, deja: deja, liber: liber, pretAcum: st.pret });
       if (mCash && (mCash.blocat || mCash.pesteLiber || mCash.plin)) {
-        v = Object.assign({}, v, { nivel: "asteapta", motive: v.motive.concat([mCash.blocat ? "regimul blocat: risc 0, n-aș deschide" : mCash.plin ? "ai deja 20% din cont în " + (b.simbol || s) + ": n-aș adăuga" : "aș cumpăra ~" + Math.round(mCash.suma) + " lei, dar ai doar " + Math.round(mCash.liber) + " lei liberi"]), riscPct: mCash.blocat ? 0 : v.riscPct });
+        v = Object.assign({}, v, { nivel: "asteapta", motive: v.motive.concat([mCash.blocat ? "regimul blocat: risc 0, n-aș deschide" : mCash.plin ? "ai deja 20% din cont în " + (b.simbol || s) + ": n-aș adăuga" : "N-aș deschide: ai doar " + Math.round(mCash.liber) + " lei liberi."]), riscPct: mCash.blocat ? 0 : v.riscPct });
       }
     }
     // v100.177 (jurnalul verdictelor): verdictul Porții intră în jurnal cu prețul de acum (judecat după 5 și 20 de zile de bursă) - v100.196: ACELAȘI verdict ca pe ecran
@@ -1013,6 +1035,7 @@ function t212MarimePoarta(p) {
   if (t212FaraMarime(p)) return null;   /* v100.196 (revizia): Trend 12 luni în probă ⇒ fără sumă, nici din plan */
   // v100.222 (I-722): sumă doar pe verde. „ok” nu e cumpărare. Riscul 0 nu dă bucăți. Lipsa riscPct pe verde rămâne 1 %.
   if (!p || !p.v || p.v.nivel !== "cumpara" || p.v.riscPct === 0) return null;
+  if (p.deja === null) return null;   /* v100.254: după poarta de cumpărare; marime() ar lua null drept 0 */
   var n = p && p.niv, pl = t212PlanPoarta(p);
   if (pl) return pl.m && (pl.m.blocat || pl.m.pesteLiber || pl.m.plin) ? null : pl.m;
   if (!n || n.nivel !== "ok" || !n.intrare || !(n.intrare.pret > 0) || !(n.stop > 0)) return null;
@@ -1044,7 +1067,7 @@ function t212PreturiPoarta(p) {
   if (!n || n.nivel !== "ok") return n ? '<p class="tbSub">🎯 ' + escapeHtml(n.motiv || "") + '</p>' : "";
   var pl = t212PlanPoarta(p);
   if (pl) return '<div class="t212Preturi"><div class="t212PretCap"><b>🎯 Planul tău pentru ' + escapeHtml(p.simbol) + '</b><span class="tbSub">' + escapeHtml(t212ProbaText(n)) + '</span></div>' + t212PlanPoartaHtml(p, pl)
-    + (n.proba.medie !== null && n.proba.medie <= 0 ? '<p class="tbWarn">⚠️ Pe istoricul ei, în starea de acum, niciun stop (1,5–3× ATR) n-a ieșit pe plus în medie: aș sări peste ea.</p>' : '') + '</div>';
+    + (n.proba.medie !== null && n.proba.medie <= 0 ? '<p class="tbWarn">⚠️ Pe istoricul ei, în starea de acum, niciun stop (1,5–3× ATR (media simplă pe 14 zile)) n-a ieșit pe plus în medie: aș sări peste ea.</p>' : '') + '</div>';
   // fara intrare (trend jos) sau poarta pe "nu" -> nu dau o marime de cumparare: ar contrazice verdictul (regula sta in t212MarimePoarta)
   var baza = n.intrare ? n.intrare.pret : p.st.pret, cumpar = !!n.intrare && p.v && p.v.nivel === "cumpara", fara = t212FaraSuma(p), m = fara ? null : t212MarimePoarta(p);   /* v100.222: AȘTEAPTĂ nu e cumpărare */
   return '<div class="t212Preturi"><div class="t212PretCap"><b>🎯 Prețurile calculate pentru ' + escapeHtml(p.simbol) + '</b><span class="tbSub">' + escapeHtml(t212ProbaText(n)) + '</span></div><div class="t212PretGrid">'
@@ -1052,7 +1075,7 @@ function t212PreturiPoarta(p) {
     + '<div><span class="tbEt2">Stop' + (n.intrare ? "" : " (dacă o cumperi totuși)") + '</span><b class="bad">' + t212Usd(n.stop) + '</b><span class="tbSub">' + t212Pct(-n.riscPct) + (n.intrare ? ' de la intrare' : ' de la prețul de acum') + (p.planScris ? " · ai scris tu alt stop — poarta îl folosește pe al tău" : "") + '</span></div>'
     + '<div><span class="tbEt2">Țintă</span><b class="good">' + t212Usd(n.tinta) + '</b><span class="tbSub">' + t212Pct(n.tinta / baza - 1) + ' (2× riscul)</span></div>'
     + '<div><span class="tbEt2">Cât cumperi</span><b>' + (m ? t212Bucati(m.bucati, baza) : "—") + '</b><span class="tbSub">' + escapeHtml(fara ? t212TextFaraSuma(fara) : m ? t212CatText(m, p.simbol) + " · comision dus-întors ~" + t212Suma(m.comision) + ", deci ieși pe zero abia la +0,3%" + t212NotaRec(p) : !cumpar || (p.v && p.v.nivel === "fara-date") ? "nu cumpăr acum — vezi verdictul de sus" : t212FaraMarime(p) ? "Trend 12 luni e în probă: nu dau o sumă până nu zice bilanțul robotului „probat”" : p.tot > 0 && !t212Fx() ? "lipsește cursul dolar/leu (BNR și istoricul T212 n-au venit)" : "citește întâi contul") + '</span></div></div>'
-    + (n.proba.medie !== null && n.proba.medie <= 0 ? '<p class="tbWarn">⚠️ Pe istoricul ei, în starea de acum, niciun stop (1,5–3× ATR) n-a ieșit pe plus în medie: aș sări peste ea.</p>' : '') + '</div>';
+    + (n.proba.medie !== null && n.proba.medie <= 0 ? '<p class="tbWarn">⚠️ Pe istoricul ei, în starea de acum, niciun stop (1,5–3× ATR (media simplă pe 14 zile)) n-a ieșit pe plus în medie: aș sări peste ea.</p>' : '') + '</div>';
 }
 // v89: biletul la intrare - partea despre TINE: situatiile asemanatoare din istoricul tau, rezultatele, stirile, piata
 function t212BiletTu(p) {

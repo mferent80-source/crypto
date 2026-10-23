@@ -58,14 +58,20 @@ await test("verbul care invită citește raportul, VaR și evenimentul doar cân
   assert.match(AC.franaVerb(lin(), { raportStare: "vechi", raportOre: 14 }).faCe, /vechi de 14 ore/);
   assert.match(AC.franaVerb(lin(), { raportStare: "vechi", raportOre: 21 }).faCe, /vechi de 21 de ore/);
   const z = AC.franaVerb(lin(), { raportStare: "ok", raport: rap5 });
-  assert.match(z.faCe, /^Aș reduce expunerea până sub 3% pe zi: o zi proastă îți ia ~5,0% din cont\.$/);
+  assert.match(z.faCe, /^Aș reduce expunerea până sub 4% pe zi: o zi proastă îți ia ~5,0% din cont\.$/);
   assert.match(AC.franaVerb(lin(), { raportStare: "ok", raport: { valoare: { total: 100000 }, risc: { var95: 1000 } }, eveniment: "CPI m/m." }).faCe, /chiar înainte de CPI m\/m\.$/);
   assert.equal(AC.franaVerb(lin(), { raportStare: "necunoscut" }).faCe, lin().faCe);
   assert.equal(AC.franaVerb(lin(), {}).faCe, lin().faCe);
   assert.equal(AC.franaVerb(ros(), { raportStare: "lipsa" }).faCe, ros().faCe);
   assert.equal(AC.franaVerb(frica(), { fel: "bursa", raportStare: "lipsa" }).faCe, frica().faCe);
   const lung = "X".repeat(80);
-  assert.equal(AC.franaVerb(lin(), { eveniment: lung }).faCe, lin().faCe);
+  const prefix = "N-aș porni boți noi și n-aș cumpăra chiar înainte de ";
+  const gura = AC.franaVerb(lin(), { eveniment: lung }).faCe;
+  assert.equal(prefix.length, 53);
+  assert.ok(gura.startsWith(prefix));
+  assert.ok(gura.length <= 110);
+  assert.notEqual(gura, lin().faCe);
+  assert.ok(gura.endsWith("…."));
   assert.match(AC.franaVerb(larga(), { fel: "bursa", raportStare: "ok", raport: rap5 }).faCe, /^Aș reduce expunerea/);
 });
 

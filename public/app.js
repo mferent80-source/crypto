@@ -4660,10 +4660,11 @@ function botiBaniHtml(b){
 function botiProblemeText(p){
   if(!p||typeof p!=='object')return [];
   return Object.entries(p).map(([k,v])=>{
+    if(k==='listaNula')return null;
     if(k==='preturi')return `Prețurile PERP nu s-au putut citi (${v}) - distanța la lichidare și nerealizatul pot lipsi.`;
     if(k==='sumarIncomplet')return `Totalurile de sus sunt incomplete (lipsește: ${Array.isArray(v)?v.join(', '):v}) - se arată —.`;
     return `${k}: ${Array.isArray(v)?v.join(', '):typeof v==='object'?JSON.stringify(v):v}`
-  })
+  }).filter(Boolean)
 }
 // Du-l exact unde se pune parola, cu cursorul in camp.
 function mergiLaParola(){
@@ -4698,6 +4699,16 @@ async function incarcaBoti(cuToast=false){
     if(cuToast)toast(`Boți: ${ex.titlu}`,'bad');
     window.__botiPionex={eroare:e.message};return null
   }
+  var listaNula=!!(d.probleme&&d.probleme.listaNula)&&!d.bots.length;
+  var vechi=window.__botiPionex,vechiActivi=!!(vechi&&Array.isArray(vechi.bots)&&vechi.bots.some(function(b){return b&&b.activ!==false}));
+  if(listaNula&&vechiActivi){
+    if(!window.__botiGoalaDe)window.__botiGoalaDe=Date.now();
+    if(Date.now()-window.__botiGoalaDe<10*60000)d=Object.assign({},vechi,{probleme:d.probleme,citireGoala:true});
+    else{window.__botiGoalaDe=0;d.citireGoala=false}
+  }else{
+    if(d.bots.length)window.__botiGoalaDe=0;
+    d.citireGoala=false;
+  }
   window.__botiPionex=d;
   const s=d.sumar||{},bots=d.bots.filter(Boolean);
   if($('botiNumar'))$('botiNumar').textContent=`${s.active??'—'} / ${s.numar??bots.length}`;
@@ -4712,6 +4723,7 @@ async function incarcaBoti(cuToast=false){
   const toateAvert=bots.flatMap(b=>(Array.isArray(b.avertismente)?b.avertismente:[]).map(a=>`${b.simbol}: ${a}`));
   const probleme=botiProblemeText(d.probleme);
   if($('botiAvertismente'))$('botiAvertismente').innerHTML=
+    (d.citireGoala?'<div class="noticeBad">⚠ '+escapeHtml("Citirea a venit goală: țin boții de dinainte.")+'</div>':'')+
     toateAvert.map(a=>`<div class="noticeBad">⚠ ${escapeHtml(a)}</div>`).join('')+
     probleme.map(a=>`<div class="noticeBad">⚠ Server: ${escapeHtml(a)}</div>`).join('');
   if(stare){
@@ -4731,7 +4743,7 @@ async function incarcaBoti(cuToast=false){
       <div class="accountCell">${escapeHtml(String(b.pretCurent??'—'))}<br>${escapeHtml(String(b.gridJos??'—'))} … ${escapeHtml(String(b.gridSus??'—'))}<br>${botiLichidareHtml(b)}</div>
       <div class="accountCell botiBani">${botiBaniHtml(b)}</div>
     </div>`).join('')
-  ):'<div class="emptyState">Niciun bot în contul Pionex.</div>';
+  ):(d.citireGoala?'<div class="emptyState">Citirea a venit goală: țin boții de dinainte.</div>':'<div class="emptyState">Niciun bot în contul Pionex.</div>');
   if(probleme.length&&cuToast)toast('Boți: '+probleme.join(' · '),'warn');
   const netTotal=botiNr(s.profitNetTotal);
   if(cuToast)toast(`Boți: ${bots.length} · realizat net ${botiBan(s.profitNetTotal)}`,netTotal===null?'warn':netTotal>=0?'good':'warn');
@@ -4806,21 +4818,33 @@ async function tbAduDate(){
     var d=await getJSON("/api/bot-orders");
     if(gen!==tbStare.gen)return;
     if(!d||!Array.isArray(d.bots))throw new Error("Raspuns nevalid de la /api/bot-orders - lipseste lista de boti.");
+    var listaNula=!!(d.probleme&&d.probleme.listaNula)&&!d.bots.length;
+    var vechiActivi=(tbStare.boti||[]).some(function(b){return b&&b.activ!==false});
+    var tineGoala=false;
+    if(listaNula&&vechiActivi){
+      if(!tbStare.citireGoalaDe)tbStare.citireGoalaDe=Date.now();
+      if(Date.now()-tbStare.citireGoalaDe<10*60000)tineGoala=true;
+      else tbStare.citireGoalaDe=0;
+    }else if(d.bots.length)tbStare.citireGoalaDe=0;
+    tbStare.citireGoala=tineGoala;
     tbStare.probleme=d.probleme||null;
-    tbStare.boti=d.bots;
-    // Alegerea sta in modulul pur (probata acolo): preferinta omului bate, apoi
-    // un bot ACTIV, apoi primul. Ruta intoarce si boti inchisi, iar ordinea nu e
-    // garantata. Motivul se pastreaza fiindca omul trebuie sa poata afla daca se
-    // uita la botul LUI sau la unul ales de ecran.
-    var alegere=TabloBot.alegeBot(d.bots,tbCiteste(TB_BOT_ALES));
-    tbStare.bot=alegere.bot;tbStare.motivAlegere=alegere.motiv;
-    tbStare.botBrut=tbStare.bot?tbStare.bot.brut||null:null;
+    if(!tineGoala){
+      tbStare.boti=d.bots;
+      // Alegerea sta in modulul pur (probata acolo): preferinta omului bate, apoi
+      // un bot ACTIV, apoi primul. Ruta intoarce si boti inchisi, iar ordinea nu e
+      // garantata. Motivul se pastreaza fiindca omul trebuie sa poata afla daca se
+      // uita la botul LUI sau la unul ales de ecran.
+      var alegere=TabloBot.alegeBot(d.bots,tbCiteste(TB_BOT_ALES));
+      tbStare.bot=alegere.bot;tbStare.motivAlegere=alegere.motiv;
+      tbStare.botBrut=tbStare.bot?tbStare.bot.brut||null:null;
+    }
     tbStare.routeOk=true;tbStare.botLa=Date.now();
   }catch(e){
     // Ruta a picat - nu stim daca exista bot sau nu. Golim botul curent ca sa
     // nu mai ceara lumanari si sa nu mai scrie in istoric cu date vechi -
     // altfel o pana de retea ar minti verdictul (masurat mai jos, in raport).
-    tbStare.eroare=textEroare(e);tbStare.eroareStatus=e.status||null;tbStare.routeOk=false;
+    // Ceasul listei goale nu se reseteaza: o pană scurtă nu repornește cele 10 minute.
+    tbStare.eroare=textEroare(e);tbStare.eroareStatus=e.status||null;tbStare.routeOk=false;tbStare.citireGoala=false;
     tbStare.bot=null;tbStare.botBrut=null;tbStare.boti=[];tbStare.motivAlegere=null;
   }
   if(tbStare.bot){
@@ -5791,8 +5815,9 @@ function jtRender(){
     else{var pr=Obiceiuri.raportDuminica({trades:l,acum:Date.now()});rap.innerHTML='<p class="tbSub">Primul raport vine duminică după ora 20. Cum ar arăta acum, pe ultimele 7 zile:</p><ul class="grLista">'+pr.linii.map(function(x){return '<li>'+escapeHtml(x)+'</li>'}).join("")+'</ul>'}
     var RP=jtStare.raportPiata;if(RP&&Array.isArray(RP.linii)&&RP.linii.length)rap.insertAdjacentHTML("beforeend",'<div class="jtRaportPiata"><h5>'+escapeHtml(RP.titlu||"📊 Săptămâna pieței")+'</h5><ul class="grLista">'+RP.linii.map(function(x){return '<li>'+escapeHtml(TextRo.cifreNoi(x))+'</li>'}).join("")+'</ul></div>')}
   var rg=$("jtReguli");if(rg){var rp2=Obiceiuri.reguliPersonale(l,"Europe/Bucharest");
+    var sf=rp2.reguli.filter(function(r){return !/^ținuți /.test(String(r.grupa||""))});
     rg.innerHTML=!rp2.suficient?'<p class="tbSub">'+TextRo.cate(rp2.n,"bot","boți")+' în jurnal: mai trebuie '+rp2.lipsa+' ca să-ți spun unde pierzi TU (ore, monede, durate, direcție). Sub 30, orice „regulă” ar fi noroc.</p>'
-      :rp2.reguli.length?'<ul class="grLista">'+rp2.reguli.slice(0,5).map(function(r){return '<li class="bad">'+escapeHtml(r.text)+'</li>'}).join("")+'</ul><p class="tbFac">👉 <b>Ce aș face eu:</b> Aș evita deocamdată boții '+escapeHtml(rp2.reguli[0].grupa)+'.</p>':'<p class="good">Pe '+TextRo.cate(rp2.n,"bot","boți")+' nu văd o grupă care să piardă clar mai des decât restul.</p>'}
+      :rp2.reguli.length?'<ul class="grLista">'+rp2.reguli.slice(0,5).map(function(r){return '<li class="bad">'+escapeHtml(r.text)+'</li>'}).join("")+'</ul>'+(sf.length?'<p class="tbFac">👉 <b>Ce aș face eu:</b> Aș evita deocamdată boții '+escapeHtml(sf[0].grupa)+'.</p>':'<p class="tbSub">Durata se știe abia la închidere: n-aș da un sfat din ea.</p>'):'<p class="good">Pe '+TextRo.cate(rp2.n,"bot","boți")+' nu văd o grupă care să piardă clar mai des decât restul.</p>'}
   box.innerHTML=cirea+'<div class="tbKpi jtKpi">'+cel("Rezultat net",U(r.net),cls(r.net),"după comisioane și funding · "+TextRo.cate(r.n,"bot","boți")+", "+r.pePlusNet+" pe plus ("+P(r.pePlusNet/r.n)+") · înainte de costuri "+U(r.total))+cel("Din grile",U(r.grile),cls(r.grile),"ce a făcut gridul")+cel("Din poziție",U(r.pozitie),cls(r.pozitie),"direcția prețului")+cel("Comisioane + funding",U(r.comisioane+r.funding),"bad","investit mediu "+(r.investitMediu!=null?r.investitMediu.toFixed(0):"—")+" USDT")+'</div>';
   gr.innerHTML=r.greseli.length?'<div class="grTabelWrap"><table class="grTabel"><thead><tr><th>Greșeala</th><th>De câte ori</th><th>Rezultatul boților cu ea</th><th>Ce aș face data viitoare</th></tr></thead><tbody>'+r.greseli.map(function(g){return '<tr><td><b>'+escapeHtml(g.titlu)+'</b></td><td>'+g.n+'</td><td class="'+cls(g.cost)+'">'+U(g.cost)+'</td><td class="jtSfat">'+escapeHtml(g.dataViitoare)+'</td></tr>'}).join("")+'</tbody></table></div>'+(r.greseli[0]&&r.greseli[0].cost<0?'<p class="tbFac">👉 <b>Ce aș face eu:</b> Aș începe cu greșeala „'+escapeHtml(r.greseli[0].titlu)+'”: a costat '+U(r.greseli[0].cost)+' pe '+TextRo.cate(r.greseli[0].n,"bot","boți")+'.</p>':''):'<p class="good">Nicio greșeală găsită automat.</p>';
   var note=jtNote(),data=function(t){return new Date(t).toLocaleString("ro-RO",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})};
@@ -6348,6 +6373,7 @@ async function tbPregatireAdu(){
   var el=$("tbSemafor");if(el&&!(tbStare.bot))tbPregatire(el);
 }
 function tbPregatire(el){
+  if(tbStare.citireGoala){el.innerHTML='<div class="tbPreg"><p class="tbWarn">Citirea a venit goală: țin boții de dinainte.</p></div>';return}
   if(Date.now()-tbPreg.la>=5*60000&&!tbPreg.inLucru)tbPregatireAdu();
   var h='<div class="tbPreg"><div class="tbSemCap"><span class="tbSemNivel">🅿️ FĂRĂ BOT</span><div><b>Niciun bot pornit acum — pregătirea următorului</b><p class="tbSub">ce a fost, cum e piața, pe ce aș porni</p></div></div>';
   var f=tbPreg.fisa,v=tbPreg.vreme,g=tbPreg.grid;
@@ -6574,7 +6600,7 @@ function renderTabloScenarii(){
     '<p class="tbSub tbScenNota">Aproximare pe gridul tău ('+TextRo.cate(r.grid.randuri,"nivel","niveluri")+', câte '+r.grid.q+' pe nivel). După model, contul botului s-ar goli pe la <b>'+escapeHtml(tbPretScurt(r.pretGolire))+'</b>; Pionex estimează lichidarea la '+escapeHtml(tbPretScurt(botiNr(b.pretLichidare)))+'.</p>';
 }
 // v100.196 (auditul UI 🟡9): fără bot activ, „Aștept botul…” nu se termina niciodată - starea goală spune ce e și ce poți face
-function tbTextFaraBot(){if(tbStare.routeOk===true&&!tbStare.bot)return "Niciun bot activ în Pionex, deci nimic de făcut aici. Un bot nou îl alegi din „Grid: ce setez?”.";if(tbStare.routeOk===false)return "Nu pot citi boții: "+(tbStare.eroare||"eroare necunoscută")+". Reîncerc singur.";return "Aștept botul…"}
+function tbTextFaraBot(){if(tbStare.citireGoala)return "Citirea a venit goală: țin boții de dinainte.";if(tbStare.routeOk===true&&!tbStare.bot)return "Niciun bot activ în Pionex, deci nimic de făcut aici. Un bot nou îl alegi din „Grid: ce setez?”.";if(tbStare.routeOk===false)return "Nu pot citi boții: "+(tbStare.eroare||"eroare necunoscută")+". Reîncerc singur.";return "Aștept botul…"}
 function renderTabloSfaturi(){
   var el=$("tbSfaturi");if(!el)return;
   var b=tbStare.routeOk===false?null:tbStare.bot;
@@ -6604,7 +6630,7 @@ function tbRenderTodo(){
   var cu=tbStare.consUlt&&tbStare.consUlt.nivel?{nivel:tbStare.consUlt.nivel,eticheta:tbStare.consUlt.eticheta}:null,rg=null;try{rg=typeof Alerte!=="undefined"?Alerte.reguli(b,null):null}catch(e){rg=null}
   l=TabloExtra.marcheazaDepasite(l,{cons:cu,reguli:rg});
   // v100.5 (el: „pune ora la fiecare sfat ca să știu dacă e de actualitate”): alerta = ora ei; restul = ora citirii botului
-  box.innerHTML=l.map(function(x){var t=x.titlu.charAt(0).toUpperCase()+x.titlu.slice(1),o=TabloExtra.oraSfat(x.la,Date.now());
+  box.innerHTML=(tbStare.citireGoala?'<p class="tbWarn">Citirea a venit goală: țin boții de dinainte.</p>':'')+l.map(function(x){var t=x.titlu.charAt(0).toUpperCase()+x.titlu.slice(1),o=TabloExtra.oraSfat(x.la,Date.now());
     return '<div class="tbTodoRand'+(x.depasit?' tbTodoDepasit':'')+'"><span class="tbDunga '+x.c+'"></span><div><b>'+escapeHtml(t)+'</b>'+(x.depasit?'<span class="tbTodoDep">'+escapeHtml(x.depasit)+'</span>':'')+(o?'<span class="tbOra'+(o.vechi?' tbOraVeche':'')+'" title="'+(x.n?'ora ultimei alerte':'ora datelor din care e socotit')+'">🕒 '+escapeHtml(o.text)+'</span>':'')+(x.n>1?'<span class="tbNr">×'+x.n+' în 24 h</span>':'')+(x.text?'<p>'+escapeHtml(x.text)+'</p>':'')+(Array.isArray(x.copiaza)&&x.copiaza.length?'<div class="tbTodoCopiere">'+x.copiaza.map(function(c){return '<button type="button" class="tbBtnLinie tbTodoCopiaza" value="'+escapeHtml(c.pret)+'" data-action-click="gridCopiaza(this.value)" aria-label="Copiază prețul pentru '+escapeHtml(c.ce)+': '+escapeHtml(c.pret)+'">copiază '+escapeHtml(c.ce)+' '+escapeHtml(c.pret)+'</button>'}).join("")+'</div>':'')+(x.stiri&&typeof t212StiriHtml==="function"?t212StiriHtml(x.stiri,3):'')+'</div>'+(x.actiune==="plan"?'<button type="button" class="tbBtnLinie" data-action-click="tbDeschidePlan()">Scrie planul</button>':'')+'</div>'}).join("");
   var azi=alerte.filter(function(a){return a.t>0&&Date.now()-a.t<86400000}).length,pune=function(id,t){var e=$(id);if(e)e.textContent=t};
   pune("tbPlSub-alerte",azi?azi+" în ultimele 24 h":"niciuna în ultimele 24 h");
