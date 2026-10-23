@@ -257,7 +257,8 @@ export async function onRequestPost({ request, env }) {
     return peCheie("kv:t212:salt-pozitii", async () => {
       if (Array.isArray(corp && corp.inainte)) {
         const acum = await citesteKv(env, "t212:salt-pozitii", []), lista = Array.isArray(acum) ? acum : [];
-        if (JSON.stringify(lista) !== JSON.stringify(corp.inainte.map(pozSalt).filter(Boolean))) return json({ error: "lista Salt s-a schimbat între timp", pozitii: lista }, 409);
+        // ambele părți curățate la fel (pozSalt): o poziție scrisă de o formă mai veche (fără un câmp) nu dă 409 la nesfârșit
+        if (JSON.stringify(lista.map(pozSalt).filter(Boolean)) !== JSON.stringify(corp.inainte.map(pozSalt).filter(Boolean))) return json({ error: "lista Salt s-a schimbat între timp", pozitii: lista }, 409);
       }
       await env.ISTORIC.put("t212:salt-pozitii", JSON.stringify(l)); return json({ ok: true, n: l.length });
     });

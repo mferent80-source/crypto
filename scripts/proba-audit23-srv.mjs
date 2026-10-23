@@ -259,6 +259,9 @@ await test("(7) Salt: două „pune” deodată ⇒ ambele; lista întreagă a c
   assert.equal(r.status, 409); assert.equal(JSON.parse(env.ISTORIC.m.get("t212:salt-pozitii")).length, 2, "lista colectorului a scris peste pagină");
   const ok = await postT(env, "saltPozitii", { pozitii: l.concat([poz("NL0010273215", "ASML.AS")]), inainte: l });
   assert.equal(ok.status, 200); assert.equal(JSON.parse(env.ISTORIC.m.get("t212:salt-pozitii")).length, 3);
+  // o listă veche din KV, fără câmpul „plata” (formă mai veche), nu dă 409 la nesfârșit: comparația e pe aceeași curățare
+  const veche = JSON.parse(env.ISTORIC.m.get("t212:salt-pozitii")).map(({ plata, ...x }) => x); env.ISTORIC.m.set("t212:salt-pozitii", JSON.stringify(veche));
+  assert.equal((await postT(env, "saltPozitii", { pozitii: veche, inainte: veche })).status, 200, "forma veche dă 409 pentru totdeauna");
   assert.match(citeste("scripts", "colector.mjs"), /trimite\("\/api\/t212\?action=saltPozitii", \{ pozitii: a\.lista, inainte: citita \}\)/);
 });
 await test("(7) peCheie pe toate cheile cu doi scriitori (istoric-bot.js, t212.js)", () => {

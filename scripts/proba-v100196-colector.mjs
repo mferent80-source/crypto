@@ -171,7 +171,7 @@ await test("C1 colector: turaLa ținut la sfârșitul turei, dus în poză; băt
   assert.match(c, /try \{ await tura\(\); turaGataLa = Date\.now\(\); \} catch \(e\) \{ jurnal\("tură", e\.message\); \}/);
   assert.match(c, /construiestePoza\(\{ acum: Date\.now\(\), turaLa: turaGataLa \|\| null,/);
   assert.match(c, /if \(Date\.now\(\) - turaGataLa > 5 \* 60000\) return;/);
-  assert.match(c, /setInterval\(\(\) => \{ bate\(\); turaPoza\(\)/);
+  assert.match(c, /setInterval\(\(\) => \{ iesiLaSemnal\(\); bate\(\); turaPoza\(\)/);   // v100.259 (punctul 17): întâi semnalul de ieșire
 });
 
 
