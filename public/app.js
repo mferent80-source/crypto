@@ -4314,6 +4314,8 @@ async function backtestCurrent(){
   box.innerHTML=`<div class="row"><span>Selected threshold · train only</span><b>${best}</b></div><div class="row"><span>Total cost-aware trades</span><b>${all.n}</b></div><div class="row"><span>Net expectancy</span><b>${all.avg.toFixed(2)} R</b></div><div class="row"><span>Net profit factor</span><b>${all.pf.toFixed(2)}</b></div><div class="row"><span>Max drawdown</span><b>${all.dd.toFixed(2)} R</b></div><div class="row"><span>OOS trades · last 40%</span><b>${oos.n}</b></div><div class="row"><span>OOS net expectancy</span><b>${oos.n?oos.avg.toFixed(2)+" R":"—"}</b></div><div class="row"><span>OOS profit factor</span><b>${oos.n?oos.pf.toFixed(2):"—"}</b></div><p class="note">Expanding-window heuristic. Threshold is selected only on the first 60%; the final 40% is evaluated without retuning. Includes configured fees/slippage. Intrabar stop/target conflicts use conservative stop-first resolution.</p>`;
  }catch(e){box.textContent="Backtest indisponibil: "+e.message}
 }
+// audit 23.10: simbolul de futures Binance pentru monedele cotate în mii (1000PEPEUSDT, 1000SHIBUSDT…); restul rămân cum sunt
+function simBinanceFut(s){s=String(s||"").toUpperCase();const b=s.replace(/USDT$/,"");return /^(PEPE|SHIB|BONK|FLOKI|LUNC|XEC|SATS|RATS|CAT|CHEEMS|WHY)$/.test(b)?"1000"+b+"USDT":s}
 async function derivatives(){
  if(assetClass()==="STOCKS"){$("ftext").textContent="Crypto futures context is not mixed into US stock signals.";for(const id of ["funding","oi","lsratio","fcontext","fundingBias","crowdingRisk","oiContext"])if($(id))$(id).textContent="N/A";window.__derivativesState={};return}
  let sym=norm($("symbol").value);$("ftext").textContent="Se încarcă date futures…";
@@ -4322,6 +4324,7 @@ async function derivatives(){
  catch(e){motivFutures=/AUTH_RATE_LIMITED/.test(String(e.message||""))||e.status===429&&/AUTH_/.test(String(e.message||""))?"Prea multe parole greșite de pe acest calculator - așteaptă un minut și verifică parola din Setări (⚙).":eroareDeParola(e.message,e.status)?"Serverul cere parola aplicației pentru futures - pune-o în Setări (⚙).":"Serverul nu a dat futures ("+textEroare(e)+")."}
  if(!d||[d.funding,d.openInterest,d.longShort].every(x=>x==null)){
    try{
+    const sym=simBinanceFut(norm($("symbol").value));   // audit 23.10: pe Binance futures PEPE e 1000PEPEUSDT (PEPEUSDT dădea 400)
     let [fr,oi,ls,oih,fh]=await Promise.all([
       getJSON(`https://fapi.binance.com/fapi/v1/premiumIndex?symbol=${encodeURIComponent(sym)}`).catch(()=>null),
       getJSON(`https://fapi.binance.com/fapi/v1/openInterest?symbol=${encodeURIComponent(sym)}`).catch(()=>null),
@@ -4339,8 +4342,9 @@ async function derivatives(){
  $("oi").textContent=oi==null?"N/A":compact(oi);
  $("lsratio").textContent=ls==null?"N/A":Number(ls).toFixed(2).replace(".",",");
  let crowd=0;if(fr!=null){if(fr>.0003)crowd--;else if(fr<-.0003)crowd++}if(ls!=null){if(ls>1.5)crowd--;else if(ls<.67)crowd++}
- let context=crowd>0?"CONTRARIAN +":crowd<0?"CROWDED":"BALANCED";
- $("fcontext").textContent=context;$("fcontext").className="value "+(context==="CONTRARIAN +"?"good":context==="CROWDED"?"bad":"neutral");
+ /* audit 23.10: let context=crowd>0?"CONTRARIAN +":crowd<0?"CROWDED":"BALANCED" — fără funding și fără L/S ieșea BALANCED galben, din nimic. Acum fără semnal: „— fără date”, iar starea nu poartă context. */
+ let context=fr==null&&ls==null?null:crowd>0?"CONTRARIAN +":crowd<0?"CROWDED":"BALANCED";
+ $("fcontext").textContent=context==null?"— fără date":context;$("fcontext").className="value "+(context==null?"muted":context==="CONTRARIAN +"?"good":context==="CROWDED"?"bad":"neutral");
  $("fundingBias").textContent=fr==null?"N/A":fr>.0003?"Long crowded":fr<-.0003?"Short crowded":"Balanced";
  $("crowdingRisk").textContent=ls==null?"N/A":ls>1.5||ls<.67?"Ridicat":"Normal";
  $("oiContext").textContent=oi==null?"N/A":"OI "+compact(oi)+(oiTrend!=="N/A"?" · "+oiTrend.replace(".",","):"");

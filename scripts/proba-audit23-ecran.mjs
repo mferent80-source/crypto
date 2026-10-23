@@ -107,5 +107,38 @@ await test("3c desenul: titlul frânat are clasa lui, CSS-ul îl colorează cu -
   assert.ok(f.indexOf("acExportNePotrivit()") < f.indexOf('if (fel === "crypto")'), "exportul nepotrivit se cere doar pentru crypto");
 });
 
+// ---------------------------------------------------------------- 4. Futures: fără niciun semnal ⇒ „—”; rezerva Binance cere 1000PEPEUSDT
+function ruleazaDerivatives(raspuns) {
+  const el = {}, cerute = [];
+  const $ = (id) => (el[id] = el[id] || { textContent: "", className: "", innerHTML: "" });
+  const src = fnApp("derivatives").replace(/^function derivatives\(\)/, "async function()").replace(/\nlet scannerRows=\[\];[\s\S]*$/, "");
+  const deps = { $, assetClass: () => "CRYPTO", norm: (s) => s, document: { getElementById: (id) => $(id) }, window: {}, markFresh() {},
+    simBinanceFut: APP.includes("function simBinanceFut(") ? new Function("return " + APP.match(/function simBinanceFut\([^\n]*/)[0])() : (s) => s,
+    getJSON: async (u) => { cerute.push(u); if (u.startsWith("/api/")) return raspuns; throw new Error("400"); },
+    oiChangeAt: () => NaN, pctText: (x) => String(x), fundingSummary: () => null, fundingRo: (x) => x == null ? "N/A" : String(x), compact: (x) => String(x),
+    eroareDeParola: () => false, textEroare: (e) => String(e && e.message), updateFlowWindow() {}, renderLiquidationProxy() {}, renderQuantFlow() {} };
+  $("symbol").value = "PEPEUSDT";
+  const f = new Function(...Object.keys(deps), "return (" + src + ")")(...Object.values(deps));
+  return f().then(() => ({ el, cerute, st: deps.window.__derivativesState }));
+}
+await test("4a Funding, OI și L/S toate N/A ⇒ contextul e „—” (fără date), nu BALANCED galben; starea nu inventează un context", async () => {
+  const r = await ruleazaDerivatives({ funding: null, openInterest: null, longShort: null });
+  assert.doesNotMatch(r.el.fcontext.textContent, /BALANCED|ECHILIBRAT/i);
+  assert.match(r.el.fcontext.textContent, /—/);
+  assert.doesNotMatch(r.el.fcontext.className, /neutral/);
+  assert.ok(r.st.context == null, "context: " + r.st.context);
+});
+await test("4b rezerva Binance cere simbolul de futures 1000PEPEUSDT (PEPE, SHIB, BONK, FLOKI… stau în mii pe Binance)", async () => {
+  const r = await ruleazaDerivatives({ funding: null, openInterest: null, longShort: null });
+  const bin = r.cerute.filter((u) => /fapi\.binance\.com/.test(u));
+  assert.ok(bin.length >= 5, "rezerva Binance n-a fost cerută");
+  for (const u of bin) assert.match(u, /symbol=1000PEPEUSDT/, u);
+  assert.match(APP, /function simBinanceFut\(/);
+});
+await test("4c cu un semnal (funding) contextul rămâne socotit ca înainte", async () => {
+  const r = await ruleazaDerivatives({ funding: 0.0005, openInterest: null, longShort: null });
+  assert.equal(r.el.fcontext.textContent, "CROWDED");
+});
+
 console.log(`\n${teste - picate}/${teste} trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
 process.exit(picate ? 1 : 0);
