@@ -17,9 +17,11 @@ const msg = (fapt, act) => fapt + (act ? "\n👉 " + act : "");
 // coada Discord: mesajul plecat cu intarziere
 export const intarziat = (titlu, minute) => titlu + " (întârziat " + minute + " min)";
 
+// v100.259 (auditul 23.10, punctul 4): colectorul nu mai iese - așteaptă serverul și reia singur; la revenire, serverRevenit
 export const serverOprit = (minute) => ({ nivel: "critic", titlu: "Crypto Radar oprit: serverul de acasă nu mai răspunde",
-  mesaj: msg("De ~" + cate(minute, "minut", "minute") + " serverul Radarului (fereastra neagră, :8788) nu răspunde, deci și colectorul s-a oprit: alertele boților și ale acțiunilor nu mai vin.",
+  mesaj: msg("De ~" + cate(minute, "minut", "minute") + " serverul Radarului (:8788) nu răspunde: alertele nu mai vin, iar colectorul reia singur când revine.",
     "Aș porni PORNESTE-CRYPTO-RADAR.bat; stopurile din Pionex merg și fără Radar.") });
+export const serverRevenit = () => ({ nivel: "info", titlu: "Crypto Radar: serverul de acasă răspunde din nou", mesaj: "Colectorul citește iar boții; alertele merg din nou." });
 
 export const citireRea = (minute, eroare) => ({ nivel: "critic", titlu: "Crypto Radar nu mai poate citi botul",
   mesaj: "De " + cate(minute, "minut", "minute") + " (" + scurt(eroare, 60) + ") alertele nu mai sunt de încredere până se rezolvă." });

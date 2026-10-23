@@ -167,10 +167,11 @@ await test("🟡 poza: botii poarta ora CITIRII lor (nu „acum” peste boti ve
   assert.doesNotMatch(colector, /semafor: x && x\.semafor \? x\.semafor : null, la: Date\.now\(\) \}\)/);
 });
 
-await test("🟡 serverul mort: colectorul spune pe Discord inainte sa iasa; T212 cazut: alerta dupa 30 min (nu tacere)", () => {
-  const i = colector.indexOf('jurnal("ies: serverul nu mai răspunde")'), bucata = colector.slice(i, i + 900);
-  assert.ok(i > 0 && /trimiteDiscord\(MesajeColector\.serverOprit\(MAX_ESECURI\)/.test(bucata), "anuntul inainte de process.exit");   /* v100.66: mesajul vine din scripts/lib/mesaje-colector.mjs */
-  assert.ok(bucata.indexOf("trimiteDiscord") < bucata.indexOf("process.exit"));
+await test("🟡 serverul mort: colectorul spune pe Discord (si asteapta); T212 cazut: alerta dupa 30 min (nu tacere)", () => {
+  // v100.259 (auditul 23.10, punctul 4): colectorul NU mai iese dupa 15 min fara server (nu-l mai repornea nimeni) - anunta si asteapta
+  const i = colector.indexOf('jurnal("serverul nu mai răspunde - anunț și aștept, cu pauze tot mai lungi")'), bucata = colector.slice(i, i + 900);
+  assert.ok(i > 0 && /trimiteDiscord\(MesajeColector\.serverOprit\(MAX_ESECURI\)/.test(bucata), "anuntul pe Discord");   /* v100.66: mesajul vine din scripts/lib/mesaje-colector.mjs */
+  assert.ok(!/process\.exit/.test(bucata.slice(0, bucata.indexOf("\n    else {"))), "v100.259: colectorul nu mai iese");
   assert.match(colector, /async function t212Sanatate\(e\)/); assert.match(colector, /await t212Sanatate\(e\); throw e;/);
 });
 

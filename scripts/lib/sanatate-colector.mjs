@@ -18,6 +18,15 @@ export function eServerOprit(e) {
   const n = String(e.name || "");
   return n !== "TimeoutError" && n !== "AbortError";
 }
+// v100.259 (auditul 23.10, punctul 4): după 15 minute fără server colectorul IEȘEA, iar acum (serverul și colectorul pornesc ascunși, în
+// sesiunea 0, din sarcina S4U) nu-l mai repornea nimeni ⇒ alertele tăceau până la repornirea PC-ului. Acum așteaptă: primele MAX_ESECURI
+// ture la ritmul obișnuit, apoi pauze tot mai lungi (2, 4 min), cel mult PAUZA_FARA_SERVER_MAX_MS. Întoarce ms până la tura următoare.
+export const MAX_ESECURI = 15, PAUZA_FARA_SERVER_MAX_MS = 5 * 60000;
+export function pasDupaEsecuri(esecuri, pasMs) {
+  const n = Number(esecuri) || 0;
+  if (n <= MAX_ESECURI) return pasMs;
+  return Math.min(PAUZA_FARA_SERVER_MAX_MS, pasMs * 2 ** Math.min(10, n - MAX_ESECURI));
+}
 
 // C6 + 🔵3: o coadă de alerte netrimise (KV-ul Radarului, Discord), golită în ORDINE: după primul eșec restul așteaptă tura următoare;
 // se renunță doar la ce e mai vechi decât maxMs(x) (critic: 24 h, restul 12 h - apelantul hotărăște). O excepție la trimitere = eșec, nu pierdere.

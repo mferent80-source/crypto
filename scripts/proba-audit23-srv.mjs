@@ -127,6 +127,26 @@ await test("(3) colectorul urcă poza doar când urcaPoza zice da; amprenta țin
   assert.match(c, /pozaOkLa = Date\.now\(\); pozaAmprenta = amp;/);
 });
 
+// ---------- (4) colectorul nu mai iese după 15 min fără server: așteaptă cu pauze tot mai lungi ----------
+const MC = await import("./lib/mesaje-colector.mjs");
+await test("(4) pasDupaEsecuri: primele 15 eșecuri la ritmul obișnuit, apoi 2, 4, 5, 5… minute (plafon 5 min), niciodată „ieși”", () => {
+  assert.equal(typeof S.pasDupaEsecuri, "function"); assert.equal(S.PAUZA_FARA_SERVER_MAX_MS, 5 * MIN);
+  assert.deepEqual([0, 1, 14, 15].map((n) => S.pasDupaEsecuri(n, MIN)), [MIN, MIN, MIN, MIN]);
+  assert.deepEqual([16, 17, 18, 40, 5000].map((n) => S.pasDupaEsecuri(n, MIN)), [2 * MIN, 4 * MIN, 5 * MIN, 5 * MIN, 5 * MIN]);
+});
+await test("(4) colectorul: fără process.exit pe ramura „serverul nu răspunde”; bucla se reprogramează după pasDupaEsecuri; anunț la 15 și la revenire", () => {
+  const c = citeste("scripts", "colector.mjs"), i = c.indexOf("if (S.eServerOprit(e)) { esecuri++;"), bucata = c.slice(i, c.indexOf("\n    else {", i));
+  assert.ok(i > 0); assert.ok(!/process\.exit/.test(bucata), "colectorul tot iese singur");
+  assert.match(bucata, /if \(esecuri === MAX_ESECURI\)/); assert.match(bucata, /trimiteDiscord\(MesajeColector\.serverOprit\(MAX_ESECURI\)/);
+  assert.match(c, /setTimeout\(bucla, S\.pasDupaEsecuri\(esecuri, PAS_MS\)\);/);
+  assert.match(c, /if \(esecuri >= MAX_ESECURI\) \{ jurnal\("serverul răspunde din nou"\); if \(CANAL === "discord"\) await trimiteDiscord\(MesajeColector\.serverRevenit\(\)/);
+});
+await test("(4) mesajele: „serverul nu răspunde” nu mai spune că s-a oprit colectorul; „serverul răspunde din nou” (info, ≤ 60)", () => {
+  const a = MC.serverOprit(15); assert.ok(!/colectorul s-a oprit/.test(a.mesaj)); assert.match(a.mesaj, /reia singur/); assert.match(a.mesaj, /PORNESTE-CRYPTO-RADAR\.bat/);
+  const b = MC.serverRevenit(); assert.equal(b.nivel, "info"); assert.ok(b.titlu.length <= 60); assert.match(b.titlu, /răspunde din nou/);
+  assert.match(citeste("scripts", "lib", "garda-alerte.mjs"), /"serverRevenit"/);
+});
+
 // ---------- (12) alertele T212 (Consilier, ±1%, SL/TP) și fără poză: fără cheile paznicului sau noaptea ----------
 await test("(12) planTuraPoza: cu paznic ziua ⇒ ritmul pozei + urcare; fără paznic SAU noaptea ⇒ tot la 5 min, doar alertele (fără urcare, fără simbolurile paginii)", () => {
   assert.equal(typeof PZ.planTuraPoza, "function"); assert.equal(PZ.ALERTE_T212_FARA_POZA_MS, 5 * MIN);

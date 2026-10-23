@@ -176,6 +176,7 @@ export function situatiiAlerte(pune) {
   // mesajele colectorului
   const co = (sit, f, m) => pune(sit, "alerte", "colector." + f, m, AL);
   co("serverul de acasă nu mai răspunde", "serverOprit", MC.serverOprit(15));
+  co("serverul de acasă răspunde din nou", "serverRevenit", MC.serverRevenit());   // v100.259 (auditul 23.10, punctul 4)
   co("colectorul nu mai poate citi botul", "citireRea", MC.citireRea(12, "HTTP 502"));
   // v101.127 (scorul sezonului): pauza la 3 pierderi la rând, rata și netul țintă atinse
   const SC = { start: Date.UTC(2026, 9, 18, 21), n: 12, win: 7, loss: 5, net: 53.4, rata: 7 / 12, suficient: true, serie: { n: 3, fel: "l" }, obiectiv: { rata: 0.55, serie: 3, net: 50, pana: null } };

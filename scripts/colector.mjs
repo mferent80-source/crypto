@@ -4,8 +4,8 @@
 //      sa aiba ore de istoric oricand il deschizi, pe orice dispozitiv;
 //   2) judeca alertele (public/lib/alerte.js) si le trimite pe telefon prin ntfy.
 // Doar CITIRE de la Pionex (prin rutele serverului, care sunt read-only).
-// Se opreste singur daca serverul nu mai raspunde ~15 minute la rand (MAX_ESECURI), ca sa nu
-// ramana agatat dupa ce omul inchide fereastra Radarului.
+// Daca serverul nu mai raspunde ~15 minute la rand (MAX_ESECURI), anunta pe Discord si ASTEAPTA, cu pauze tot mai lungi
+// (cel mult 5 min); nu mai iese singur (v100.259: serverul si colectorul pornesc ascunsi, din sarcina S4U, si nu-l mai repornea nimeni).
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
@@ -70,7 +70,7 @@ const DATA = path.join(RAD, "data");
 const BAZA = process.env.RADAR_URL || "http://127.0.0.1:8788";
 const PAS_MS = Number(process.env.COLECTOR_PAS_MS) || 60000;
 const DIRECTIE_MS = 5 * 60000;
-const MAX_ESECURI = 15; // ~15 minute fara server -> iese
+const MAX_ESECURI = 15; // ~15 minute fara server -> anunt, apoi asteptare cu pauze tot mai lungi (v100.259: nu mai iese)
 fs.mkdirSync(DATA, { recursive: true });
 
 const LOG = path.join(DATA, "colector.log");
@@ -465,14 +465,19 @@ async function tura() {
   turaNr++;
   bate();
   let d;
-  try { d = await cere("/api/bot-orders"); esecuri = 0; }
+  try {
+    d = await cere("/api/bot-orders");
+    // v100.259 (punctul 4): după anunțul „serverul nu răspunde”, revenirea se spune o dată
+    if (esecuri >= MAX_ESECURI) { jurnal("serverul răspunde din nou"); if (CANAL === "discord") await trimiteDiscord(MesajeColector.serverRevenit(), { fetch, webhook: DISCORD_WEBHOOK, jurnal }); }
+    esecuri = 0;
+  }
   catch (e) {
     // Serverul oprit = fereastra Radarului inchisa. Dupa 15 minute ne oprim.
     // audit 19.10: doar conexiunea refuzata / eroarea de retea; un timeout (server viu, dar lent) merge pe ramura „nu pot citi” (alerta la 10 min)
-    if (S.eServerOprit(e)) { esecuri++; jurnal("serverul nu răspunde (" + esecuri + "/" + MAX_ESECURI + "):", e.message); if (esecuri >= MAX_ESECURI) { jurnal("ies: serverul nu mai răspunde");
+    if (S.eServerOprit(e)) { esecuri++; jurnal("serverul nu răspunde (" + esecuri + (esecuri <= MAX_ESECURI ? "/" + MAX_ESECURI : "") + "):", e.message); if (esecuri === MAX_ESECURI) { jurnal("serverul nu mai răspunde - anunț și aștept, cu pauze tot mai lungi");
       // v100.40 (audit 30.09): inainte iesea tacut - alertele se opreau fara niciun semn pana la paznic (~30-55 min)
-      if (CANAL === "discord") await trimiteDiscord(MesajeColector.serverOprit(MAX_ESECURI), { fetch, webhook: DISCORD_WEBHOOK, jurnal });
-      process.exit(0); } }
+      // v100.259 (auditul 23.10, punctul 4): nu mai iese - nimeni nu-l mai repornea; bucla se reprogramează după S.pasDupaEsecuri
+      if (CANAL === "discord") await trimiteDiscord(MesajeColector.serverOprit(MAX_ESECURI), { fetch, webhook: DISCORD_WEBHOOK, jurnal }); } }
     else {
       jurnal("bot-orders", e.status, e.message);
       const m = meta(); m.citireRea = m.citireRea || acum;
@@ -2379,7 +2384,7 @@ async function bucla() {
   turaMonteCarloBot().then(() => turaDupa24h()).catch((e) => jurnal("monte carlo boți", e.message));   // v101.89: Monte Carlo pe boți la 15 minute; v101.92: + judecata după 24 h (voci, alerte)
   if (greleOk && !process.env.COLECTOR_FARA_CLASAMENT) turaClasament().then(() => turaLaborator()).then(() => turaIngust()).then(() => turaCf()).then(() => turaT212()).then(() => turaCfActiuni()).then(() => turaScanColector()).catch((e) => jurnal("clasament/laborator", e.message));   // nu blocheaza tura de un minut
   if (process.env.COLECTOR_O_TURA) process.exit(0);
-  setTimeout(bucla, PAS_MS);
+  setTimeout(bucla, S.pasDupaEsecuri(esecuri, PAS_MS));   // v100.259 (punctul 4): fără server, pauze tot mai lungi (cel mult 5 min), fără ieșire
   // v101.34: bucla e la 60 s - poza are ceasul ei (16–17 la 30 s); turaPoza se pazeste singura (ritmul, pozaInLucru)
   // v101.116 (auditul sever, C1): și bătaia din colector.pid la 10 s - o tură lungă (Pionex lent) nu mai lasă un lansator să pornească al doilea colector
   if (!globalThis.__ceasPoza) globalThis.__ceasPoza = setInterval(() => { bate(); turaPoza().catch((e) => jurnal("poza", e.message)); }, 10000);

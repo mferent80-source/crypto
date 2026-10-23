@@ -346,8 +346,10 @@ await test("🔵1 starea boților: închișii fără `inchisLa` primesc ora o da
   assert.ok(stare._colector && stare["t212-MU_US_EQ"] && stare.viu && stare.nou, "meta, acțiunile T212 și boții știuți rămân");
   assert.match(citeste("scripts", "colector.mjs"), /S\.curataStareBoti\(stareAlerte, m, acumIds, acum\);/);
 });
-await test("🔵2 capul colectorului spune ce face codul: se oprește după ~15 minute fără server (MAX_ESECURI = 15)", () => {
+await test("🔵2 capul colectorului spune ce face codul: după ~15 minute fără server anunță și așteaptă (MAX_ESECURI = 15)", () => {
+  // v100.259 (auditul 23.10, punctul 4): nu mai „se oprește” - așteaptă cu pauze tot mai lungi; capul spune tot „15 minute la rand”
   const c = citeste("scripts", "colector.mjs");
+  assert.match(c.slice(0, 700), /ASTEAPTA/); assert.doesNotMatch(c.slice(0, 700), /Se opreste singur/);
   assert.match(c, /const MAX_ESECURI = 15;/); assert.match(c.slice(0, 600), /15 minute la rand/); assert.doesNotMatch(c.slice(0, 600), /raspunde 5 minute/);
 });
 await test("🔵4 turaBandaLive și turaPerechiOra au gardă de reintrare (o trimitere lentă nu dublează alertele)", () => {
