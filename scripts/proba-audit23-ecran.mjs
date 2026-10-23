@@ -193,5 +193,16 @@ await test("8b alegerea („toate”, 14 zile) se ține minte și se citește la
   assert.equal(d.rzStare.zile, 7, "o fereastră necunoscută cade pe 7");
 });
 
+// ---------------------------------------------------------------- 9. Tabloul pe telefon: verdict → grafic → cifre; Monte Carlo o dată
+await test("9 CSS: pe telefon graficul vine înaintea KPI-urilor (ordinea 11–12 < 14), citirea după cifre; MC din citire tace cât e cardul de sus", () => {
+  const i = CSS.indexOf("/* punctul 9:"); assert.ok(i >= 0, "lipsește blocul punctului 9");
+  const b = CSS.slice(i, CSS.indexOf("/* audit 23.10 · sfârșitul blocului */"));
+  assert.match(b, /\.pzDemo #tabloubot \.tbGrStanga>#tbGraficCard\{display:contents\}/);
+  assert.match(b, /#tbGraficCard>#tbGrafic\{order:12\}/);
+  assert.match(b, /#tbGraficCard>#tbCitireMobil\{order:24\}/);
+  assert.match(CSS, /\.pzDemo #tabloubot \.tbCadru>\.tbSus\{order:14\}/, "KPI-urile rămân la 14");
+  assert.match(b, /#tabloubot \.tbCadru:has\(>#tbMcSus:not\(\[hidden\]\)\) #tbCitireMobil \.tbCitMc\{display:none\}/);
+});
+
 console.log(`\n${teste - picate}/${teste} trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
 process.exit(picate ? 1 : 0);

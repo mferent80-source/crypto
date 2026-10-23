@@ -3070,6 +3070,19 @@ html.pzDemo #tabloubot .tbPretViu{display:none!important}
 }
 /* audit 23.10 (ecranul): tonul frânei, ținte de atingere, contrast, mișcare redusă, ordinea pe telefon */
 #dash .acVerd .acFac.acFacFrana{color:var(--warn)}
+/* punctul 9: Tabloul pe telefon = verdict → grafic → cifre (KPI, Monte Carlo, drumul) → citirea → de făcut → trendul. Doar ordinea (display:contents pe ramele graficului), nimic mutat în DOM, nimic ascuns în afara dublurii Monte Carlo */
+@media (max-width:640px){
+  .pzDemo #tabloubot .tbCadru>.tbGraficRand,.pzDemo #tabloubot .tbGraficRand>.tbGrStanga,.pzDemo #tabloubot .tbGraficRand>.tbGrCol,.pzDemo #tabloubot .tbGrStanga>#tbGraficCard{display:contents}
+  .pzDemo #tabloubot #tbGraficCard>*,.pzDemo #tabloubot .tbGrStanga>*,.pzDemo #tabloubot .tbGrCol>*{grid-column:1 / -1;min-width:0}
+  .pzDemo #tabloubot #tbGraficCard>.tbBlocCap{order:11}
+  .pzDemo #tabloubot #tbGraficCard>#tbGrafic{order:12}
+  .pzDemo #tabloubot #tbGraficCard>#tbCitireMobil{order:24}
+  .pzDemo #tabloubot #tbGraficCard>#pzUltimii{order:25}
+  .pzDemo #tabloubot .tbGrStanga>#tbTodo{order:26}
+  .pzDemo #tabloubot .tbGrCol>*{order:27}
+}
+/* Monte Carlo o singură dată: cardul de sus îl are, rândul din citirea de pe telefon tace cât cardul e vizibil */
+#tabloubot .tbCadru:has(>#tbMcSus:not([hidden])) #tbCitireMobil .tbCitMc{display:none}
 /* audit 23.10 · sfârșitul blocului */
 /* v100.258: pânda (v100.150) stă după orice regulă de tabel, chiar înaintea blocului v100.224 (#topLive), care rămâne ultimul - scripts/lib/panda-ultima.mjs */
 @media (max-width:640px){.sugPandaTab thead{display:table-header-group}.sugPandaTab{display:table}.sugPandaTab tbody{display:table-row-group}.sugPandaTab tr{display:table-row}.sugPandaTab td,.sugPandaTab th{display:table-cell}}
