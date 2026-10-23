@@ -3075,7 +3075,7 @@ function navTo(id,load=false){
    else if(id==="contintreg"){if(typeof ciPorneste==="function")ciPorneste(false)}   // v100.176: contul întreg (riscul, crizele, reconcilierea, randamentul)   // v100.163: pagina Rezultate (calendarul raportărilor)
    else if(id==="salt"){if(typeof saltPorneste==="function")saltPorneste(false)}   // v100.120: pagina Salt   // v100.119: pagina Sugestii (boți, US, EU)   // v100.117 (I-561): carnetul fișei
    else if(id==="jurnaltrade"){jtPorneste();if(typeof jtAplicaFiltru==="function")jtAplicaFiltru()}
-   else if(id==="account"){loadPionexAccount();loadPionexOpenOrders()}
+   else if(id==="account"){loadPionexAccount();loadPionexOpenOrders();var bs0=$("botiStare");if(bs0&&/NEC[ĂA]UTAT/.test(bs0.textContent))incarcaBoti(false)}   // audit 23.10: „Boți activi / Investit / Total” stăteau „—” cu NECĂUTAT deși Tabloul știa botul; se citesc o dată la deschidere (doar citire)
    else if(id==="stocks"){if(assetClass()!=="STOCKS")setAssetClass("STOCKS");loadStockContext();checkStocksHealth();if(typeof latimeUsDeseneaza==="function")latimeUsDeseneaza();if(typeof sectoareDeseneaza==="function")sectoareDeseneaza();if(typeof rzRandStocksDeseneaza==="function")rzRandStocksDeseneaza()}
    else if(id==="t212"){if(typeof t212Porneste==="function")t212Porneste(false);if(typeof contTotAsigura==="function")contTotAsigura()}
    else if(id==="scan"){if(typeof scanPorneste==="function")scanPorneste(false)}   // v96: lista noua; scannerul vechi porneste doar din butonul lui

@@ -159,5 +159,11 @@ await test("6 fâșia contului numește celula „necitite” (deschiderea Alert
   assert.match(AS, /cel\("alerte necitite", a\.t/);
 });
 
+// ---------------------------------------------------------------- 7. Contul Pionex: boții se citesc la deschidere, nu rămân „—” cu NECĂUTAT
+await test("7 deschiderea paginii Cont citește boții o dată (doar cât e NECĂUTAT); citirea e doar GET /api/bot-orders", () => {
+  assert.match(APP, /else if\(id==="account"\)\{loadPionexAccount\(\);loadPionexOpenOrders\(\);var bs0=\$\("botiStare"\);if\(bs0&&\/NEC\[ĂA\]UTAT\/\.test\(bs0\.textContent\)\)incarcaBoti\(false\)\}/);
+  assert.match(fnApp("incarcaBoti"), /getJSON\('\/api\/bot-orders'\)/);
+});
+
 console.log(`\n${teste - picate}/${teste} trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
 process.exit(picate ? 1 : 0);
