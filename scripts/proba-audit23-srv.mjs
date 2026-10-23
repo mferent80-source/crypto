@@ -267,6 +267,29 @@ await test("(7) peCheie pe toate cheile cu doi scriitori (istoric-bot.js, t212.j
   for (const k of ['"kv:t212:salt-pozitii"', '"kv:t212:umpleri"']) assert.ok(t.includes("peCheie(" + k), "t212: fără peCheie pe " + k);
 });
 
+// ---------- (10) contrafactualul: plafonul nu mai taie boții „fara-date” ca să-i reia roata ----------
+await test("(10) taieContrafactual: „fara-date” (mici) se țin până la ARHIVA_MAX; cei cu verdict, cel mult 3000; peste total ies întâi „fara-date” cei mai vechi", () => {
+  assert.equal(typeof IB.taieContrafactual, "function"); assert.equal(IB.CF_REALI_MAX, 3000);
+  const fd = (la) => ({ nivel: "fara-date", motive: ["Pionex nu mai dă lumânările de atunci"], dirTrend: null, la }), real = (la) => ({ nivel: "nu", motive: ["m"], dirTrend: "sus", la });
+  const m = {}; for (let i = 0; i < 3500; i++) m["f" + i] = fd(1000 + i); for (let i = 0; i < 3100; i++) m["r" + i] = real(1000 + i);
+  IB.taieContrafactual(m);
+  assert.equal(Object.keys(m).filter((k) => k[0] === "f").length, 3500, "„fara-date” tăiați (roata reîncepe)"); assert.equal(Object.keys(m).filter((k) => k[0] === "r").length, 3000);
+  assert.ok(!m.r0 && !m.r99 && m.r100, "trebuiau tăiați cei mai vechi cu verdict");
+  const m2 = {}; for (let i = 0; i < 25; i++) m2["f" + i] = fd(i); for (let i = 0; i < 5; i++) m2["r" + i] = real(100 + i);
+  IB.taieContrafactual(m2, 3000, 20);
+  assert.equal(Object.keys(m2).length, 20); assert.ok(m2.r0 && m2.r4, "peste total ies întâi „fara-date”"); assert.ok(!m2.f0 && !m2.f9 && m2.f10);
+  // mărimea: ARHIVA_MAX „fara-date” + 3000 cu verdict plin (4 motive × 200 de semne) ⇒ sub 25 MB
+  const plin = { nivel: "nu", motive: Array(4).fill("ă".repeat(200)), dirTrend: "jos", la: Date.now() }, f = fd(Date.now());
+  const marime = 20000 * (JSON.stringify(f).length + 24) + 3000 * (Buffer.byteLength(JSON.stringify(plin)) + 24);
+  assert.ok(marime < 25 * 1024 * 1024 / 2, "contrafactualul plin: " + Math.round(marime / 1048576) + " MB");
+});
+await test("(10) serverul: 3200 de „fara-date” trimiși în loturi rămân toți (arhiva are 2343 de boți, peste 3000 roata reîncepea)", async () => {
+  const env = { APP_API_TOKEN: TOKEN, ISTORIC: kvFals() };
+  for (let p = 0; p < 16; p++) await postIb(env, "contrafactual", { boti: Array.from({ length: 200 }, (_, i) => ({ id: "b" + (p * 200 + i), zice: { nivel: "fara-date", motive: ["Pionex nu mai dă lumânările de atunci"] } })) });
+  const m = JSON.parse(env.ISTORIC.m.get("contrafactual")); assert.equal(Object.keys(m).length, 3200); assert.ok(m.b0 && m.b3199);
+  assert.match(citeste("functions", "api", "istoric-bot.js"), /taieContrafactual\(m\);/);
+});
+
 // ---------- (12) alertele T212 (Consilier, ±1%, SL/TP) și fără poză: fără cheile paznicului sau noaptea ----------
 await test("(12) planTuraPoza: cu paznic ziua ⇒ ritmul pozei + urcare; fără paznic SAU noaptea ⇒ tot la 5 min, doar alertele (fără urcare, fără simbolurile paginii)", () => {
   assert.equal(typeof PZ.planTuraPoza, "function"); assert.equal(PZ.ALERTE_T212_FARA_POZA_MS, 5 * MIN);

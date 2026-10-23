@@ -97,14 +97,16 @@ await test("(2c) „endTime param error” / MARKET_INVALID_TIME ⇒ „fara-dat
   assert.deepEqual(rez[0].zice.motive, ["Pionex nu mai dă lumânările de atunci"]);
   assert.deepEqual(w.esuate, ["c"]);
 });
-await test("(2a) serverul ține 3000 de boți în contrafactual (nu 500) și primește loturi de 200", async () => {
+await test("(2a) serverul ține toți „fara-date” (v100.259; înainte 3000, nu 500) și primește loturi de 200", async () => {
   const env = { APP_API_TOKEN: TOKEN, ISTORIC: kvFals() };
   for (let p = 0; p < 16; p++) {
     const boti = Array.from({ length: 200 }, (_, i) => ({ id: "b" + (p * 200 + i), zice: { nivel: "fara-date", motive: ["Pionex nu mai dă lumânările de atunci"] } }));
     const r = await postIb(env, "contrafactual", { boti }); assert.equal(r.ok, true);
   }
   const m = JSON.parse(env.ISTORIC.m.get("contrafactual"));
-  assert.equal(Object.keys(m).length, 3000); assert.ok(m.b3199 && !m.b0, "se taie cei mai vechi");
+  // v100.259 (auditul 23.10, punctul 10): „fara-date” nu se mai taie la 3000 (roata reîncepea peste 2343 de boți) - se țin până la ARHIVA_MAX;
+  // plafonul de 3000 rămâne doar pe cei cu verdict (proba-audit23-srv, punctul 10)
+  assert.equal(Object.keys(m).length, 3200); assert.ok(m.b3199 && m.b0, "„fara-date” tăiați la 3000");
   assert.equal(m.b3199.nivel, "fara-date"); assert.deepEqual(m.b3199.motive, ["Pionex nu mai dă lumânările de atunci"]);
 });
 await test("(2) colectorul dă turei ceasul; daca-ascultai-real merge tot cu tura", () => {

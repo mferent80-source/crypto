@@ -5,7 +5,7 @@
 // Pe pagina publicata (Cloudflare) nu exista ISTORIC -> 503 cu motiv, iar
 // Tabloul ramane pe istoricul din browser.
 import {requireApiAuth,authErrorResponse,sameOrigin} from "../_shared/auth.js";
-import {uneste,FORMA_ARHIVA} from "../_shared/boti-arhiva.js";
+import {uneste,FORMA_ARHIVA,ARHIVA_MAX} from "../_shared/boti-arhiva.js";
 import {peCheie} from "../_shared/serializare.js";   // audit 19.10: get+put pe rand, pe cheie
 
 const H={"content-type":"application/json","cache-control":"no-store"};
@@ -15,6 +15,21 @@ const PASTRARE_MS=7*24*3600000;
 // diacritice pe 2 octeți) are ~2 KB ⇒ 3000 ≈ 6 MB în cel mai rău caz (obișnuit ~0,5 KB ⇒ ~1,5 MB), sub limita de 25 MB a unei valori KV.
 // Pe viu (23.10) erau ~320 de alerte pe zi, cele mai multe grile ⇒ cele importante încap lejer în 7 zile.
 export const ALERTE_MAX=3000,ALERTE_GRILA_MAX=300,ALERTE_GRILA_GET=100;
+// v100.259 (auditul 23.10, punctul 10): plafonul de 3000 tăia ORICE (și în ordinea cheilor obiectului, nu după vârstă - id-urile numerice
+// trec în față), iar cu arhiva la 2343 de boți, peste 3000 roata „de făcut” reîncepea. Acum: cei cu verdict cel mult maxReal (cei mai vechi
+// ies), „fara-date” (~130 de octeți) până la maxTot = ARHIVA_MAX; peste total ies întâi „fara-date” cei mai vechi, după `la`.
+// Mărimea în cel mai rău caz: 20.000 × ~0,13 KB + 3000 × ~1,7 KB ≈ 7,6 MB, sub limita de 25 MB a unei valori KV.
+export const CF_REALI_MAX=3000;
+export function taieContrafactual(m,maxReal=CF_REALI_MAX,maxTot=ARHIVA_MAX){
+  const dupaLa=(a,b)=>(nr(m[a]&&m[a].la)||0)-(nr(m[b]&&m[b].la)||0),fd=[],reali=[];
+  for(const id of Object.keys(m))(m[id]&&m[id].nivel==="fara-date"?fd:reali).push(id);
+  fd.sort(dupaLa);reali.sort(dupaLa);
+  while(reali.length>maxReal)delete m[reali.shift()];
+  let peste=fd.length+reali.length-maxTot;
+  while(peste>0&&fd.length){delete m[fd.shift()];peste--}
+  while(peste>0&&reali.length){delete m[reali.shift()];peste--}
+  return m;
+}
 const CAMPURI=["perechi","pretPerp","profitNet","comisioane","gridProfitBrut","investit","profitTotal","distantaLichidarePct"];
 // Lipsa ramane null (Number(null) ar da 0, iar un 0 in istoric ar minti).
 const nr=v=>{if(typeof v==="number")return Number.isFinite(v)?v:null;if(typeof v!=="string"||!v.trim())return null;const x=Number(v);return Number.isFinite(x)?x:null};
@@ -284,7 +299,7 @@ export async function onRequestPost({request,env}){
     const txt=(v,k)=>typeof v==="string"?v.slice(0,k):"";
     for(const x of l){const id=idBot(x&&x.id);if(!id||!x.zice)continue;
       m[id]={nivel:["porneste","asteapta","nu","fara-date"].includes(x.zice.nivel)?x.zice.nivel:"fara-date",motive:(Array.isArray(x.zice.motive)?x.zice.motive:[]).slice(0,4).map(v=>txt(v,200)),dirTrend:txt(x.zice.dirTrend,8)||null,la:Date.now()}}
-    const ids=Object.keys(m);if(ids.length>3000)for(const id of ids.slice(0,ids.length-3000))delete m[id];
+    taieContrafactual(m);   // v100.259 (punctul 10): nu mai taie „fara-date” la 3000 (roata reîncepea); vezi taieContrafactual
     await env.ISTORIC.put("contrafactual",JSON.stringify(m));
     return json({ok:true,n:Object.keys(m).length})});
   }
