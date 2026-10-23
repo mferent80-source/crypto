@@ -93,13 +93,15 @@ const BATAIE_MS = 3 * PAS_MS;
 // In modul de proba (COLECTOR_DOAR_INCARCA) nu se atinge pornirea unica: nici nu iese pentru
 // ca ruleaza deja unul, nici nu scrie / sterge colector.pid-ul colectorului adevarat.
 const DOAR_INCARCA = !!process.env.COLECTOR_DOAR_INCARCA;
+let pidVerificat = 0;   // v101.140: EPERM contează doar de la kill(…, 0), nu de la citirea fișierului
 if (!DOAR_INCARCA) try {
   const [vechi, la] = fs.readFileSync(PID, "utf8").split(/\s+/).map(Number);
   if (vechi && vechi !== process.pid && Date.now() - (la || 0) < BATAIE_MS) {
-    process.kill(vechi, 0);
+    pidVerificat = vechi; process.kill(vechi, 0);
     jurnal("mai rulează un colector (PID " + vechi + ") - ies"); process.exit(0);
   }
-} catch {}
+  // v101.140 (auditul 23.10): colectorul pornit de sarcina S4U stă în sesiunea 0 ⇒ din sesiunea lui kill(…, 0) dă EPERM = rulează, nu „a murit”
+} catch (e) { if (pidVerificat && e && e.code === "EPERM") { jurnal("mai rulează un colector (PID " + pidVerificat + "), în altă sesiune - ies"); process.exit(0); } }
 const bate = () => { if (DOAR_INCARCA) return; try { fs.writeFileSync(PID, process.pid + " " + Date.now()); } catch {} };
 bate();
 const curataPid = () => { if (DOAR_INCARCA) return; try { if (Number(fs.readFileSync(PID, "utf8").split(/\s+/)[0]) === process.pid) fs.unlinkSync(PID); } catch {} };

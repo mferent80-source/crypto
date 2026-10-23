@@ -97,16 +97,28 @@ function porneste(nume) {
 export function trebuieRepornitColectorul(atinse) { return (atinse || []).some((x) => x === "scripts/colector.mjs" || x.startsWith("scripts/lib/") || x.startsWith("public/lib/")); }
 export function pidDinFisier(text) { const n = Number(String(text || "").trim().split(/\s+/)[0]); return Number.isInteger(n) && n > 0 ? n : null; }
 export function eLiniaColectorului(linie) { return /(^|[\s"'\\/])scripts[\\/]colector\.mjs(["'\s]|$)/i.test(String(linie || "")); }
+// v100.258 (auditul 23.10): după repornirea PC-ului serverul și colectorul stau în sesiunea 0 (sarcina S4U „Crypto Radar pornire”):
+// din sesiunea lui linia de comandă iese goală și kill(…, 0) dă EPERM. Atunci colectorul RULEAZĂ, dar nu-l pot opri - deci nu pornesc al doilea.
+export function decizieRepornire(pid, linie, kill = (p) => process.kill(p, 0)) {
+  if (!pid) return { opreste: false, porneste: true, motiv: "fara-pid" };
+  if (linie && eLiniaColectorului(linie)) return { opreste: true, porneste: true, motiv: "al-meu" };
+  if (linie) return { opreste: false, porneste: true, motiv: "alt-program" };
+  try { kill(pid); } catch (e) { return e && e.code === "EPERM" ? { opreste: false, porneste: false, motiv: "alta-sesiune" } : { opreste: false, porneste: true, motiv: "nu-ruleaza" }; }
+  return { opreste: false, porneste: false, motiv: "viu-necunoscut" };
+}
 const asteaptaMs = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 function ps(cmd) { const r = spawnSync("powershell", ["-NoProfile", "-Command", cmd], { encoding: "utf8", windowsHide: true }); return String(r.stdout || "").trim(); }
 const linieDeComanda = (pid) => ps(`(Get-CimInstance Win32_Process -Filter 'ProcessId=${Number(pid)}' -ErrorAction SilentlyContinue).CommandLine`);
 function repornesteColectorul(rad) {
   let pid = null; try { pid = pidDinFisier(fs.readFileSync(path.join(rad, "data", "colector.pid"), "utf8")); } catch {}
-  if (pid) {
-    const linie = linieDeComanda(pid);
-    if (linie && eLiniaColectorului(linie)) { ps(`Stop-Process -Id ${pid} -Force -ErrorAction SilentlyContinue`); scrie(`Am oprit colectorul vechi (PID ${pid}).`); asteaptaMs(2000); }
-    else scrie(`PID-ul ${pid} din data\\colector.pid nu e colectorul (${linie ? "alt program" : "nu rulează"}) — nu-l opresc.`);
-  } else scrie("data\\colector.pid lipsește — colectorul nu rula; îl pornesc.");
+  const d = decizieRepornire(pid, pid ? linieDeComanda(pid) : "");
+  if (!d.porneste) {
+    scrie(`⚠ Colectorul rulează (PID ${pid}) ${d.motiv === "alta-sesiune" ? "în altă sesiune (pornit de sarcina S4U după repornirea PC-ului)" : "dar nu-i pot citi linia de comandă"} — nu-l pot opri și NU pornesc al doilea.`
+      + "\n  Codul nou intră în colector la următoarea repornire a lui (repornirea PC-ului / logarea, sau Stop-Process ca administrator, apoi schtasks /run /tn \"Crypto Radar pornire\").");
+    return false;
+  }
+  if (d.opreste) { ps(`Stop-Process -Id ${pid} -Force -ErrorAction SilentlyContinue`); scrie(`Am oprit colectorul vechi (PID ${pid}).`); asteaptaMs(2000); }
+  else scrie(d.motiv === "fara-pid" ? "data\\colector.pid lipsește — colectorul nu rula; îl pornesc." : `PID-ul ${pid} din data\\colector.pid nu e colectorul (${d.motiv === "alt-program" ? "alt program" : "nu rulează"}) — nu-l opresc.`);
   const nou = Number(ps(`(Start-Process -FilePath node -ArgumentList 'scripts\\colector.mjs' -WorkingDirectory '${rad.replace(/'/g, "''")}' -WindowStyle Hidden -PassThru).Id`));
   if (!(nou > 0)) { scrie("⚠ colectorul NU a pornit (Start-Process n-a dat un PID) — pornește-l: PORNESTE-CRYPTO-RADAR.bat."); return false; }
   asteaptaMs(20000);

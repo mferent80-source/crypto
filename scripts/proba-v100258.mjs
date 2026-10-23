@@ -114,6 +114,28 @@ await test("(3) prețurile mari rămân cum erau (2 zecimale peste 100, 4 peste 
   assert.match(h2, /grid jos <b>100000\.00<\/b>/);
 });
 
+// ---- (4) livrarea nu pornește un al doilea colector (serverul și colectorul în sesiunea 0, S4U) ----
+const { decizieRepornire } = await import("./copie-de-lucru.mjs");
+const arunca = (code) => () => { const e = new Error(code); e.code = code; throw e; };
+await test("(4) colectorul din altă sesiune (EPERM, linia de comandă ilizibilă) ⇒ nu-l opresc și NU pornesc altul", () => {
+  const d = decizieRepornire(5988, "", arunca("EPERM"));
+  assert.equal(d.opreste, false); assert.equal(d.porneste, false); assert.equal(d.motiv, "alta-sesiune");
+});
+await test("(4) colectorul meu ⇒ îl opresc și pornesc altul; mort sau lipsă ⇒ pornesc; alt program pe PID ⇒ pornesc", () => {
+  assert.deepEqual(decizieRepornire(10, "node scripts\\colector.mjs", arunca("EPERM")), { opreste: true, porneste: true, motiv: "al-meu" });
+  assert.deepEqual(decizieRepornire(10, "", arunca("ESRCH")), { opreste: false, porneste: true, motiv: "nu-ruleaza" });
+  assert.deepEqual(decizieRepornire(null, "", arunca("ESRCH")), { opreste: false, porneste: true, motiv: "fara-pid" });
+  assert.deepEqual(decizieRepornire(10, "C:\\Windows\\notepad.exe", () => true), { opreste: false, porneste: true, motiv: "alt-program" });
+  assert.equal(decizieRepornire(10, "", () => true).porneste, false, "viu, dar nu știu ce e ⇒ nu pornesc al doilea");
+});
+await test("(4) paza colectorului: EPERM (colectorul din sesiunea 0) înseamnă „rulează deja”, nu „a murit”", () => {
+  const col = citeste("scripts", "colector.mjs").replace(/\r\n/g, "\n");
+  const paza = col.slice(col.indexOf("let pidVerificat = 0;"), col.indexOf("const bate = "));
+  assert.match(paza, /pidVerificat = vechi; process\.kill\(vechi, 0\);/);
+  assert.match(paza, /catch \(e\) \{ if \(pidVerificat && e && e\.code === "EPERM"\) \{ jurnal\("mai rulează un colector \(PID " \+ pidVerificat \+ "\), în altă sesiune - ies"\); process\.exit\(0\); \} \}/);
+  assert.doesNotMatch(paza, /\} catch \{\}/);
+});
+
 await test("versiunea v100.258 și proba în lanțul `test`", () => {
   const pk = JSON.parse(citeste("package.json"));
   assert.equal(pk.version, "100.258.0");
