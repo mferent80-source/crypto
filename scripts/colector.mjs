@@ -99,6 +99,12 @@ const BATAIE_MS = 3 * PAS_MS;
 // In modul de proba (COLECTOR_DOAR_INCARCA) nu se atinge pornirea unica: nici nu iese pentru
 // ca ruleaza deja unul, nici nu scrie / sterge colector.pid-ul colectorului adevarat.
 const DOAR_INCARCA = !!process.env.COLECTOR_DOAR_INCARCA;
+// v101.141 (23.10): colectorul pornește DOAR din dosarul principal. Pornit dintr-o copie de lucru (crypto-lucru-*) are alt data\colector.pid,
+// deci paza de PID de mai jos nu vede colectorul adevărat ⇒ alertele pleacă de două ori (azi 28 de mesaje duplicate pe Discord în ~2 minute).
+const RAD_PRINCIPAL = process.env.COLECTOR_RADACINA || "C:\\Users\\Cimin\\crypto";
+if (!DOAR_INCARCA && path.resolve(RAD).toLowerCase() !== path.resolve(RAD_PRINCIPAL).toLowerCase()) {
+  console.log("colectorul pornește doar din dosarul principal (" + RAD_PRINCIPAL + "), nu din " + RAD + " - ies"); process.exit(0);
+}
 let pidVerificat = 0;   // v101.140: EPERM contează doar de la kill(…, 0), nu de la citirea fișierului
 if (!DOAR_INCARCA) try {
   const [vechi, la] = fs.readFileSync(PID, "utf8").split(/\s+/).map(Number);
