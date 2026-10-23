@@ -226,6 +226,47 @@ await test("(8) hartaSimboluri: cererile deodată legate (un apel); bot-orders f
 });
 globalThis.fetch = fetchAdevarat;
 
+// ---------- (7) cheile cu doi scriitori, serializate (peCheie) ----------
+const T2 = await import("../functions/api/t212.js");
+const postT = (env, action, corp) => T2.onRequestPost({ request: cerere("/api/t212?action=" + action, "POST", corp), env }).then(async (r) => ({ status: r.status, j: await r.json() }));
+await test("(7) config: colectorul (colectorLa) și pagina (prag, frână) deodată ⇒ toate rămân", async () => {
+  const env = { APP_API_TOKEN: TOKEN, ISTORIC: kvFals() };
+  await Promise.all([postIb(env, "config", { colectorLa: 123, canal: "discord" }), postIb(env, "config", { prag: { pierdere: 5, tinta: 3, afaraOre: 12 } }), postIb(env, "config", { frana: { zi: 10, sapt: 30, rand: 3 } })]);
+  const c = JSON.parse(env.ISTORIC.m.get("config"));
+  assert.equal(c.colectorLa, 123); assert.deepEqual(c.prag, { pierdere: 5, tinta: 3, afaraOre: 12 }); assert.deepEqual(c.frana, { zi: 10, sapt: 30, rand: 3 });
+});
+await test("(7) voci + vociDupa, contZi, teze:t212: scrieri deodată ⇒ niciuna pierdută", async () => {
+  const env = { APP_API_TOKEN: TOKEN, ISTORIC: kvFals() }, t = Date.now() - 2 * ZI;
+  await postIb(env, "voci", { intrare: { la: t, bot: "B1", simbol: "SOL_USDT_PERP", pret: 150, text: "a" } });
+  await Promise.all([postIb(env, "voci", { intrare: { la: t + 1, bot: "B2", pret: 2, text: "b" } }), postIb(env, "vociDupa", { lista: [{ la: t, bot: "B1", pret24: 155, pretDir: 1 }] }), postIb(env, "voci", { intrare: { la: t + 2, bot: "B3", pret: 3, text: "c" } })]);
+  const v = JSON.parse(env.ISTORIC.m.get("voci"));
+  assert.equal(v.length, 3, "o voce s-a pierdut"); assert.deepEqual(v.find((x) => x.bot === "B1").dupa, { pret: 155, pretDir: 1 }, "judecata s-a pierdut");
+  await Promise.all(["2026-10-20", "2026-10-21", "2026-10-22"].map((z, i) => postIb(env, "contZi", { z, valoare: 1000 + i })));
+  assert.equal(JSON.parse(env.ISTORIC.m.get("cont:zile")).length, 3);
+  await Promise.all(["AAPL_US_EQ", "MSFT_US_EQ", "NVDA_US_EQ"].map((tk) => postIb(env, "plan", { bot: "t212-" + tk, plan: { stop: 100, teza: "teza " + tk } })));
+  assert.equal(JSON.parse(env.ISTORIC.m.get("teze:t212")).length, 3);
+});
+await test("(7) t212 istoric (t212:umpleri / t212:ordine): două pagini deodată ⇒ toate umplerile rămân", async () => {
+  const env = { APP_API_TOKEN: TOKEN, ISTORIC: kvFals() }, u = (id, t) => ({ id, t, side: "BUY", ticker: "AAPL_US_EQ", qty: 1, pret: 100, net: 450 });
+  await Promise.all([postT(env, "istoric", { ordine: ["o1"], umpleri: [u("f1", 1e12)] }), postT(env, "istoric", { ordine: ["o2"], umpleri: [u("f2", 1e12 + 1)] }), postT(env, "istoric", { ordine: ["o3"], umpleri: [u("f3", 1e12 + 2)] })]);
+  assert.equal(JSON.parse(env.ISTORIC.m.get("t212:umpleri")).length, 3); assert.equal(JSON.parse(env.ISTORIC.m.get("t212:ordine")).length, 3);
+});
+await test("(7) Salt: două „pune” deodată ⇒ ambele; lista întreagă a colectorului cu `inainte` diferit de KV ⇒ 409 (nu scrie peste pagină)", async () => {
+  const env = { APP_API_TOKEN: TOKEN, ISTORIC: kvFals() }, poz = (isin, simbol) => ({ isin, simbol, nume: simbol, qty: 2, pretMediu: 10, de: "2026-10-01", plata: "EUR" });
+  await Promise.all([postT(env, "saltPoz", { pune: poz("DE0007030009", "RHM.DE") }), postT(env, "saltPoz", { pune: poz("US0378331005", "AAPL") })]);
+  const l = JSON.parse(env.ISTORIC.m.get("t212:salt-pozitii")); assert.equal(l.length, 2, "o poziție pusă deodată s-a pierdut");
+  const r = await postT(env, "saltPozitii", { pozitii: [poz("NL0010273215", "ASML.AS")], inainte: [l[0]] });
+  assert.equal(r.status, 409); assert.equal(JSON.parse(env.ISTORIC.m.get("t212:salt-pozitii")).length, 2, "lista colectorului a scris peste pagină");
+  const ok = await postT(env, "saltPozitii", { pozitii: l.concat([poz("NL0010273215", "ASML.AS")]), inainte: l });
+  assert.equal(ok.status, 200); assert.equal(JSON.parse(env.ISTORIC.m.get("t212:salt-pozitii")).length, 3);
+  assert.match(citeste("scripts", "colector.mjs"), /trimite\("\/api\/t212\?action=saltPozitii", \{ pozitii: a\.lista, inainte: citita \}\)/);
+});
+await test("(7) peCheie pe toate cheile cu doi scriitori (istoric-bot.js, t212.js)", () => {
+  const s = citeste("functions", "api", "istoric-bot.js"), t = citeste("functions", "api", "t212.js");
+  for (const k of ['"kv:config"', '"kv:voci"', '"kv:cont:zile"', '"kv:teze:t212"']) assert.ok(s.includes("peCheie(" + k), "istoric-bot: fără peCheie pe " + k);
+  for (const k of ['"kv:t212:salt-pozitii"', '"kv:t212:umpleri"']) assert.ok(t.includes("peCheie(" + k), "t212: fără peCheie pe " + k);
+});
+
 // ---------- (12) alertele T212 (Consilier, ±1%, SL/TP) și fără poză: fără cheile paznicului sau noaptea ----------
 await test("(12) planTuraPoza: cu paznic ziua ⇒ ritmul pozei + urcare; fără paznic SAU noaptea ⇒ tot la 5 min, doar alertele (fără urcare, fără simbolurile paginii)", () => {
   assert.equal(typeof PZ.planTuraPoza, "function"); assert.equal(PZ.ALERTE_T212_FARA_POZA_MS, 5 * MIN);

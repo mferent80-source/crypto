@@ -1377,7 +1377,7 @@ async function aplicaCererileSalt() {
     // M7: Radarul întoarce [] la o eroare de citire - nu scriu lista doar cu poziția nouă peste ce a scris el de mână
     if (!listaSaltSigura(citita, ultimeleSalt && ultimeleSalt.randuri)) { jurnal("salt: lista din Radar a venit goală, deși știu poziții - cererile așteaptă"); return; }
     const a = aplicaCereriSalt(citita, cer, u && u.instrumente || []), ok = a.rezultate.some((x) => x.stare === "ok");
-    if (ok) await trimite("/api/t212?action=saltPozitii", { pozitii: a.lista });   // aruncă la eșec ⇒ nu confirm, cererile rămân la worker
+    if (ok) await trimite("/api/t212?action=saltPozitii", { pozitii: a.lista, inainte: citita });   // aruncă la eșec ⇒ nu confirm, cererile rămân la worker; v100.259 (punctul 7): `inainte` ⇒ 409 dacă pagina a schimbat lista între timp (reîncerc la 2 min)
     for (const c of cer) saltAplicate.add(c.id);
     saltCereriRez = saltCereriRez.concat(a.rezultate.map((x) => ({ ...x, la: Date.now() }))).slice(-20);
     try { scrieAtomic(SALT_REZ_FIS, saltCereriRez); } catch (e) { jurnal("salt: răspunsurile nescrise", e.message); }

@@ -11,6 +11,7 @@
 // Verificat pe contul lui (25.09): istoricul vine ca items[{order, fill}], pagini cu nextPagePath.
 import {requireApiAuth,authErrorResponse,sameOrigin} from "../_shared/auth.js";
 import { candidati } from "../_shared/simboluri.js";
+import { peCheie } from "../_shared/serializare.js";   // v100.259 (auditul 23.10, punctul 7): citește-modifică-scrie pe rând, pe cheie
 
 const H = { "content-type": "application/json", "cache-control": "no-store" };
 const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: H });
@@ -249,13 +250,21 @@ export async function onRequestPost({ request, env }) {
   // o poziție Salt curățată (null = stricată) - aceeași regulă pentru lista întreagă și pentru o singură operație
   const pozSalt = (x) => { const p = { isin: String(x && x.isin || ""), simbol: String(x && x.simbol || ""), nume: txt(x && x.nume, 80), qty: nr(x && x.qty), pretMediu: nr(x && x.pretMediu), de: /^\d{4}-\d{2}-\d{2}$/.test(String(x && x.de || "")) ? String(x.de) : null, plata: x && x.plata === "EUR" ? "EUR" : "simbol" };
     return /^[A-Z]{2}[A-Z0-9]{9}\d$/.test(p.isin) && /^[A-Za-z0-9][A-Za-z0-9.^=-]{0,19}$/.test(p.simbol) && p.qty > 0 && p.pretMediu > 0 ? p : null; };
+  // v100.259 (auditul 23.10, punctul 7): lista întreagă (colectorul, cererile de pe pagina alerts) vine cu `inainte` = lista pe care a citit-o;
+  // dacă între timp pagina a schimbat-o (saltPoz), 409 cu lista de acum - colectorul nu mai scrie peste ce a pus el de mână (reîncearcă după)
   if (act === "saltPozitii") {
     const l = (Array.isArray(corp && corp.pozitii) ? corp.pozitii : []).map(pozSalt).filter(Boolean).slice(0, 60);
-    await env.ISTORIC.put("t212:salt-pozitii", JSON.stringify(l)); return json({ ok: true, n: l.length });
+    return peCheie("kv:t212:salt-pozitii", async () => {
+      if (Array.isArray(corp && corp.inainte)) {
+        const acum = await citesteKv(env, "t212:salt-pozitii", []), lista = Array.isArray(acum) ? acum : [];
+        if (JSON.stringify(lista) !== JSON.stringify(corp.inainte.map(pozSalt).filter(Boolean))) return json({ error: "lista Salt s-a schimbat între timp", pozitii: lista }, 409);
+      }
+      await env.ISTORIC.put("t212:salt-pozitii", JSON.stringify(l)); return json({ ok: true, n: l.length });
+    });
   }
   // v101.87 (el 07.10, „DA LA TOT”): pagina Salt trimite O operație (pune / scoate) aplicată pe lista PROASPĂTĂ din KV - nu toată
   // lista din memoria ei, care ar fi șters o poziție adăugată între timp de pe pagina alerts (prin colector)
-  if (act === "saltPoz") {
+  if (act === "saltPoz") return peCheie("kv:t212:salt-pozitii", async () => {   // v100.259 (punctul 7): pe rând, cu lista întreagă a colectorului
     const l = await citesteKv(env, "t212:salt-pozitii", []), lista = Array.isArray(l) ? l : [];
     let noua;
     if (corp && corp.pune) { const p = pozSalt(corp.pune); if (!p) return json({ error: "poziția nu e bună (ISIN, simbol, cantitate și preț pozitive)" }, 400); noua = lista.some((x) => x && x.isin === p.isin) ? lista.map((x) => (x && x.isin === p.isin ? p : x)) : lista.concat([p]); }
@@ -263,7 +272,7 @@ export async function onRequestPost({ request, env }) {
     else return json({ error: "saltPoz: „pune” sau „scoate”" }, 400);
     if (noua.length > 60) return json({ error: "cel mult 60 de poziții Salt" }, 400);
     await env.ISTORIC.put("t212:salt-pozitii", JSON.stringify(noua)); return json({ ok: true, pozitii: noua });
-  }
+  });
   // v100.126: rezumatul pozițiilor Salt (colectorul, la 15 minute) pentru banda de cont și Acasă - curățat, mic
   if (act === "saltRezumat") {
     const r = corp && corp.rezumat;
@@ -302,6 +311,8 @@ export async function onRequestPost({ request, env }) {
     return json({ ok: true, n: Object.keys(m).length });
   }
   const ordine = (Array.isArray(corp && corp.ordine) ? corp.ordine : []).slice(0, 200).map((x) => txt(String(x), 40).replace(/[^A-Za-z0-9_-]/g, "")).filter(Boolean);
+  // v100.259 (auditul 23.10, punctul 7): t212:ordine / t212:umpleri / t212:stare - o pagină a istoricului după alta (completarea și capul pot veni deodată)
+  return peCheie("kv:t212:umpleri", async () => {
   const vazute = new Set(await citesteKv(env, "t212:ordine", [])), inainte = vazute.size;
   ordine.forEach((o) => vazute.add(o));
   const umpleri = await citesteKv(env, "t212:umpleri", []), dupaId = new Map((Array.isArray(umpleri) ? umpleri : []).map((x) => [x.id, x]));
@@ -315,6 +326,7 @@ export async function onRequestPost({ request, env }) {
     await env.ISTORIC.put("t212:stare", JSON.stringify({ cursorVechi: cur, complet: s.complet === true, la: Date.now() }));
   }
   return json({ ok: true, noi: vazute.size - inainte, umpleri: lista.length });
+  });
 }
 
 export async function onRequestGet({ request, env }) {

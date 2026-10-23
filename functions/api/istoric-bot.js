@@ -309,7 +309,8 @@ export async function onRequestPost({request,env}){
     // v100.179 (teza la intrare): de ce am intrat, ce m-ar face să ies, orizontul în zile - doar la acțiuni (t212-…); istoricul tezelor rămâne
     const txt=(s,n)=>String(s==null?"":s).replace(/[\u0000-\u001f]/g," ").trim().slice(0,n);
     if(/^t212-/.test(bot)&&p){const tz=txt(p.teza,300),inv=txt(p.invalidare,200),oz=nr(p.orizont);if(tz)plan.teza=tz;if(inv)plan.invalidare=inv;if(oz>0&&oz<=3650)plan.orizont=Math.round(oz);
-      if(tz||inv||plan.orizont){let l=[];try{l=JSON.parse(await env.ISTORIC.get("teze:t212")||"[]")}catch{l=[]}if(!Array.isArray(l))l=[];l.push({tk:bot.slice(5),t:Date.now(),teza:tz||null,invalidare:inv||null,orizont:plan.orizont||null});await env.ISTORIC.put("teze:t212",JSON.stringify(l.slice(-2000)))}}
+      // v100.259 (auditul 23.10, punctul 7): citește-modifică-scrie pe rând (două planuri deodată nu-și mai șterg tezele)
+      if(tz||inv||plan.orizont)await peCheie("kv:teze:t212",async()=>{let l=[];try{l=JSON.parse(await env.ISTORIC.get("teze:t212")||"[]")}catch{l=[]}if(!Array.isArray(l))l=[];l.push({tk:bot.slice(5),t:Date.now(),teza:tz||null,invalidare:inv||null,orizont:plan.orizont||null});await env.ISTORIC.put("teze:t212",JSON.stringify(l.slice(-2000)))})}
     // v88: planul pus de o PROBA de ecran ramane marcat, ca sa nu declanseze alerte reale (colectorul il sare)
     if(p&&p.proba===true)plan.proba=true;
     await env.ISTORIC.put("plan:"+bot,JSON.stringify(plan));
@@ -343,7 +344,9 @@ export async function onRequestPost({request,env}){
   if(action==="universSua"){const h=corp&&corp.harta;if(!h||typeof h!=="object"||!(nr(corp.la)>0))return json({error:"universSua: la + harta"},400);const o={};for(const k of Object.keys(h).slice(0,12000)){const v=h[k];if(Array.isArray(v))o[String(k).toUpperCase().replace(/[^A-Z0-9.-]/g,"").slice(0,12)]=[String(v[0]||"").slice(0,40),String(v[1]||"").slice(0,80)]}await env.ISTORIC.put("univers:sua",JSON.stringify({la:nr(corp.la),harta:o}));return json({ok:true,n:Object.keys(o).length})}
   if(action==="trend12"){if(!(nr(corp&&corp.la)>0)||!/^\d{4}-\d{2}-\d{2}$/.test(String(corp.dataUltimei||""))||!Array.isArray(corp.top)||!corp.top.length||corp.top.length>40)return json({error:"trend12: la + dataUltimei + top"},400);await env.ISTORIC.put("sugestii:trend12",JSON.stringify(corp));return json({ok:true})}
   if(action==="sectoareTop"){if(!(nr(corp&&corp.la)>0)||!Array.isArray(corp.sectoare))return json({error:"sectoareTop: la + sectoare"},400);await env.ISTORIC.put("sugestii:sectoare",JSON.stringify(corp));return json({ok:true})}
-  if(action==="contZi"){const z=String(corp&&corp.z||"");if(!/^\d{4}-\d{2}-\d{2}$/.test(z)||!(nr(corp.valoare)>0))return json({error:"contZi: z și valoare"},400);let l=[];try{l=JSON.parse(await env.ISTORIC.get("cont:zile")||"[]")}catch{l=[]}if(!Array.isArray(l))l=[];
+  if(action==="contZi"){const z=String(corp&&corp.z||"");if(!/^\d{4}-\d{2}-\d{2}$/.test(z)||!(nr(corp.valoare)>0))return json({error:"contZi: z și valoare"},400);
+    return peCheie("kv:cont:zile",async()=>{   // v100.259 (auditul 23.10, punctul 7): pe rând
+    let l=[];try{l=JSON.parse(await env.ISTORIC.get("cont:zile")||"[]")}catch{l=[]}if(!Array.isArray(l))l=[];
     const row={z,valoare:nr(corp.valoare),complet:corp.complet===true,pionex:nr(corp.pionex),t212:nr(corp.t212),salt:nr(corp.salt)};
     if(typeof corp.pauza==="boolean")row.pauza=corp.pauza;const pn=nr(corp.pauzaN);if(pn>0)row.pauzaN=Math.round(pn);
     if(corp.raportStare==="ok"||corp.raportStare==="vechi"||corp.raportStare==="lipsa")row.raportStare=corp.raportStare;
@@ -351,7 +354,7 @@ export async function onRequestPost({request,env}){
     const laZi=nr(corp.la);if(laZi>0)row.la=Math.round(laZi);   // v100.238: ora pozei, doar dacă a venit; o citire picată nu inventează ora
     if(corp.fundingAtentie==="long"||corp.fundingAtentie==="short")row.fundingAtentie=corp.fundingAtentie;   // v100.239: semnul zilei, doar aceste două; golul nu se inventează
     const rap=corp.raport;if(rap&&typeof rap==="object"&&!Array.isArray(rap)){const tot=rap.valoare?nr(rap.valoare.total):null,va=rap.risc?nr(rap.risc.var95):null;if(tot!==null||va!==null)row.raport={valoare:tot!==null?{total:tot}:null,risc:va!==null?{var95:va}:null}}
-    l=l.filter(x=>x&&x.z!==z).concat([row]).sort((a,b)=>a.z<b.z?-1:1).slice(-800);await env.ISTORIC.put("cont:zile",JSON.stringify(l));return json({ok:true,n:l.length})}
+    l=l.filter(x=>x&&x.z!==z).concat([row]).sort((a,b)=>a.z<b.z?-1:1).slice(-800);await env.ISTORIC.put("cont:zile",JSON.stringify(l));return json({ok:true,n:l.length})})}
   if(action==="risc"){const r=corp&&corp.risc;if(!r||typeof r!=="object"||Array.isArray(r)||!(nr(r.la)>0))return json({error:"risc: raportul cu „la”"},400);await env.ISTORIC.put("risc",JSON.stringify(r));return json({ok:true})}
   if(action==="carnet"){const r=corp&&corp.carnet;if(!r||typeof r!=="object"||Array.isArray(r)||!(nr(r.la)>0))return json({error:"carnet: raportul cu „la”"},400);await env.ISTORIC.put("carnet",JSON.stringify(r));return json({ok:true})}
   if(action==="cazuri"){const l=corp&&Array.isArray(corp.cazuri)?corp.cazuri.slice(0,6000):null;if(!l)return json({error:"Lipseste cazuri"},400);const bl=corp.bilant&&typeof corp.bilant==="object"?{adx:typeof corp.bilant.adx==="string"?corp.bilant.adx.slice(0,300):null,sem:typeof corp.bilant.sem==="string"?corp.bilant.sem.slice(0,300):null,teste:testeCurate(corp.bilant.teste)}:null;await env.ISTORIC.put("cazuri",JSON.stringify({la:nr(corp.la)||Date.now(),cazuri:l,bilant:bl}));return json({ok:true,n:l.length})}
@@ -443,15 +446,18 @@ export async function onRequestPost({request,env}){
     if(la===null||!bot)return json({error:"Lipseste la / bot"},400);
     const semn=v=>v===1||v===-1?v:0,sg=x.semne&&typeof x.semne==="object"?x.semne:{};
     const intrare={la,bot,simbol:simbolKv(x.simbol),pret:nr(x.pret),dir:["long","short","neutru"].includes(x.dir)?x.dir:"neutru",text:String(x.text||"").slice(0,300),nivel:["info","atentie"].includes(x.nivel)?x.nivel:"info",contrazic:!!x.contrazic,semne:{grafic:semn(sg.grafic),busola:semn(sg.busola),mc:semn(sg.mc)}};
+    return peCheie("kv:voci",async()=>{   // v100.259 (auditul 23.10, punctul 7): vocile și judecata lor (vociDupa) pe aceeași cheie, pe rând
     let l=[];try{l=JSON.parse(await env.ISTORIC.get("voci")||"[]")}catch{l=[]}if(!Array.isArray(l))l=[];
     if(!l.some(y=>y&&y.la===la&&y.bot===bot)){l.push(intrare);l.sort((p,q)=>p.la-q.la)}
     const de=Date.now()-60*86400000;l=l.filter(y=>y&&y.la>=de).slice(-600);   // revizia: 600, ca 30 de zile să încapă
-    await env.ISTORIC.put("voci",JSON.stringify(l));return json({ok:true,voci:l.length})
+    await env.ISTORIC.put("voci",JSON.stringify(l));return json({ok:true,voci:l.length})})
   }
   if(action==="vociDupa"){
-    const l0=Array.isArray(corp&&corp.lista)?corp.lista:[];let l=[];try{l=JSON.parse(await env.ISTORIC.get("voci")||"[]")}catch{l=[]}if(!Array.isArray(l))l=[];let n=0;
+    const l0=Array.isArray(corp&&corp.lista)?corp.lista:[];
+    return peCheie("kv:voci",async()=>{   // v100.259 (punctul 7)
+    let l=[];try{l=JSON.parse(await env.ISTORIC.get("voci")||"[]")}catch{l=[]}if(!Array.isArray(l))l=[];let n=0;
     for(const d of l0.slice(0,100)){const la=nr(d&&d.la),bot=idBot(d&&d.bot),p=nr(d&&d.pret24);if(la===null||!bot||p===null)continue;const y=l.find(z=>z&&z.la===la&&z.bot===bot);if(y&&!y.dupa){y.dupa={pret:p,pretDir:d.pretDir===1||d.pretDir===-1?d.pretDir:0};n++}}
-    if(n)await env.ISTORIC.put("voci",JSON.stringify(l));return json({ok:true,judecate:n})
+    if(n)await env.ISTORIC.put("voci",JSON.stringify(l));return json({ok:true,judecate:n})})
   }
   // v100.149 (I-581): „ce a urmat” după alertă - prețul după 24 h, scris de colector
   if(action==="alerteDupa"){
@@ -596,7 +602,8 @@ export async function onRequestPost({request,env}){
     await env.ISTORIC.put(cheieKv,JSON.stringify(lista));
     return json({ok:true,alerte:lista.length})});
   }
-  if(action==="config"){
+  // v100.259 (auditul 23.10, punctul 7): pagina scrie pragul / frâna, colectorul scrie colectorLa în fiecare minut - pe rând (peCheie)
+  if(action==="config")return peCheie("kv:config",async()=>{
     const vechi=(await citesteConfig(env))||{},nou={...vechi};
     if(corp&&corp.canal!=null){const c=String(corp.canal);if(!["radar","ntfy","telegram","discord"].includes(c))return json({error:"canal invalid"},400);nou.canal=c}
     if(corp&&corp.ntfyTopic!=null){if(!/^[A-Za-z0-9_-]{8,64}$/.test(String(corp.ntfyTopic)))return json({error:"ntfyTopic invalid"},400);nou.ntfyTopic=String(corp.ntfyTopic)}
@@ -607,6 +614,6 @@ export async function onRequestPost({request,env}){
     if(corp&&Object.prototype.hasOwnProperty.call(corp,"prag")){if(corp.prag===null)delete nou.prag;else{const q=corp.prag||{},pi=nr(q.pierdere),ti=nr(q.tinta),o=nr(q.afaraOre);if(!(pi>0&&pi<100&&ti>0&&ti<100&&(o===null||(o>0&&o<=240))))return json({error:"prag: pierderea și ținta în % (între 0 și 100), orele între 1 și 240"},400);nou.prag={pierdere:pi,tinta:ti,afaraOre:o===null?12:o}}}
     await env.ISTORIC.put("config",JSON.stringify(nou));
     return json({ok:true,config:nou});
-  }
+  });
   return json({error:"Unsupported action"},400);
 }
