@@ -347,5 +347,12 @@ await test("20 CSS: regula prefers-reduced-motion; câmpurile și „detaliile�
   assert.match(CSS, /\.vcDetails>summary:focus-visible\{outline:2px solid #5B8FC7;outline-offset:2px\}/);
 });
 
+// ---------------------------------------------------------------- 21. Setări: starea parolei nu e verdictul dominant; bara de analiză nu stă pe Setări
+await test("21 Setări: #pzV-settings .pzVerb mic (stare, nu decizie); show() pune body.peSetari, iar bara cu moneda + „Analizează piața” se ascunde acolo", () => {
+  assert.match(CSS, /#pzV-settings \.pzVerb\{font-size:15px;white-space:normal;letter-spacing:\.02em\}/);
+  assert.match(CSS, /body\.peSetari \.toolbar\{display:none\}/);
+  assert.match(APP, /document\.body\.classList\.toggle\("peSetari",id==="settings"\)/);
+});
+
 console.log(`\n${teste - picate}/${teste} trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
 process.exit(picate ? 1 : 0);
