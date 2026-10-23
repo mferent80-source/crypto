@@ -106,6 +106,12 @@ var SemnaleBot = (function () {
   // v99 (cererea lui, 28.09): botul e mult mai RAR decat gridul des propus de fisa in liniste -> propunere cu cifre.
   // Nu e alerta (n-ar fi "urgent"), e o sugestie pe Tablou: gridurile rare sunt atinse rar; cu 0,30% a facut mai multi bani lateral.
   function fisaOpreste(f) { return !!(f && ((f.verdict && f.verdict.nivel === "nu") || (f.regim && f.regim.miscare))); }
+  // v100.259 (auditul 23.10, punctul 16): trendul contra - botul nou pe trend, din fișă, abia după liniște când fișa zice NU / mișcare (aceeași voce cu sfatul)
+  function textTrend(tarie, opreste) {
+    if (opreste) return tarie === "tare" ? "N-aș adăuga bani; aș închide botul lângă zero, iar unul pe trend din fișă abia după liniște." : "N-aș adăuga bani; dacă trece pe „tare”, aș închide botul lângă zero, iar unul nou abia după liniște.";
+    return tarie === "tare" ? "N-aș adăuga bani; trendul e „tare”, deci aș închide botul lângă zero și aș porni din fișă unul pe trend."
+      : "N-aș adăuga bani; dacă trece pe „tare”, aș închide botul lângă zero și aș porni din fișă unul pe trend.";
+  }
   function motivOprire(f) {
     var m = f && f.verdict && f.verdict.nivel === "nu" && f.verdict.motive && f.verdict.motive[0];
     return m || "piața e în mișcare mare și după mișcare gridul iese cel mai rău";
@@ -356,12 +362,13 @@ var SemnaleBot = (function () {
 
   // pasii cand piata merge cu botul (v100.61: o actiune + de ce): dupa margine -> incaseaza / grid nou din fisa; pe plus -> stopul la
   // zero-ul botului; altfel lasa-l, fara bani in plus. „Riscul e la întoarcere” e in legenda Consilierului (o data, nu in fiecare sfat).
-  function pasiCuBotul(b, dir, zero) {
+  // v100.259 (punctul 16): f (opțional) = fișa / regimul - după margine, botul nou din fișă abia după liniște cât fișa zice NU / mișcare
+  function pasiCuBotul(b, dir, zero, f) {
     var p = nr(b.pretCurent), sus = nr(b.gridSus), jos = nr(b.gridJos), pz = zero ? nr(zero.pretZero) : null, op = pretStopEcran(b);   // v100.222
     var parte = dir === "long" ? "de sus" : "de jos", marg = dir === "long" ? sus : jos, areMarg = marg !== null && p !== null && p > 0;
     var peProfit = pz !== null && p !== null && (dir === "long" ? pz < p : pz > p), ok = peProfit && op !== null && (dir === "long" ? op >= pz : op <= pz);
     var dupa = areMarg && !(dir === "long" ? p < marg : p > marg), tZ = peProfit && !ok ? taieGrile(b, pz) : null;   // v100.259: zero-ul în grid ⇒ grilele tăiate
-    var faCe = dupa ? "Aș încasa sau aș porni unul nou din fișă: prețul a trecut de marginea " + parte + " (" + fmtPret(marg) + ")."
+    var faCe = dupa ? (fisaOpreste(f) ? "Aș încasa; unul nou din fișă abia după liniște: prețul a trecut de marginea " + parte + " (" + fmtPret(marg) + ")." : "Aș încasa sau aș porni unul nou din fișă: prețul a trecut de marginea " + parte + " (" + fmtPret(marg) + ").")
       : peProfit && !ok ? "Aș muta stopul la zero-ul botului (" + fmtPret(pz) + "), " + (tZ ? "știind că taie " + tZ + "." : "fără bani în plus.")
       : ok ? "L-aș lăsa să lucreze, fără bani în plus: stopul (" + numeOp(b, op, fmtPret) + ") e deja dincolo de zero."
       : "L-aș lăsa să lucreze, fără bani în plus.";
@@ -422,12 +429,12 @@ var SemnaleBot = (function () {
       if (pl.atins.indexOf("plus") >= 0) c.push({ nivel: "iesi", cod: "plan", motiv: "planul tău: ținta de +" + (pl.plus ? Pl(pl.plus.prag) : "?") + " USDT e atinsă",
         faCe: cuB ? "Aș încasa acum sau aș muta ținta mai sus în „Planul tău”, conștient." : "Aș închide botul pe plus acum, cum ți-ai propus.",
         deCe: cuB ? "Piața încă merge cu botul, dar ținta nu trebuie să treacă neobservată." : "" });
-      if (pl.atins.indexOf("afara") >= 0) c.push({ nivel: "atentie", cod: "plan", motiv: "planul tău: în afara gridului peste pragul de ore", faCe: "Aș închide botul și aș porni unul nou din fișă, pe unde e prețul." });
+      // v100.259 (auditul 23.10, punctul 16): un singur filtru de regim - botul nou din fișă doar când fișa nu zice NU / mișcare
+      if (pl.atins.indexOf("afara") >= 0) c.push({ nivel: "atentie", cod: "plan", motiv: "planul tău: în afara gridului peste pragul de ore", faCe: fisaOpreste(f) ? "Aș închide botul; unul nou din fișă abia după liniște, nu acum." : "Aș închide botul și aș porni unul nou din fișă, pe unde e prețul.", deCe: fisaOpreste(f) ? "Fișa: " + motivOprire(f) + "." : "" });
     }
     var d = f && f.directie;
     if (d && (dir === "long" || dir === "short") && (d.tarie === "tare" || d.tarie === "mediu") && ((dir === "long" && d.dir === "short") || (dir === "short" && d.dir === "long")))
-      c.push({ nivel: "atentie", cod: "trend", motiv: "trendul e împotriva botului (" + d.dir + ", " + d.tarie + ")", faCe: d.tarie === "tare" ? "N-aș adăuga bani; trendul e „tare”, deci aș închide botul lângă zero și aș porni din fișă unul pe trend."
-        : "N-aș adăuga bani; dacă trece pe „tare”, aș închide botul lângă zero și aș porni din fișă unul pe trend." });   // revizia Opus a 2b (7): aceeasi voce cu sfatul, dupa tarie
+      c.push({ nivel: "atentie", cod: "trend", motiv: "trendul e împotriva botului (" + d.dir + ", " + d.tarie + ")", faCe: textTrend(d.tarie, fisaOpreste(f)) });   // revizia Opus a 2b (7): aceeasi voce cu sfatul, dupa tarie; v100.259: și cu regimul
     var sf = f && f.regim ? sensFata(b, f.regim) : null, xMis = f && f.regim ? X(Math.max(f.regim.r4h || 0, f.regim.r24h || 0)) : "";
     if (f && f.regim && f.regim.miscare && sf !== "cu") c.push({ nivel: "atentie", cod: "miscare", motiv: "mișcare mare" + (sf === "contra" ? " împotriva botului" : "") + " (" + xMis + " față de obișnuit)", faCe: "N-aș adăuga bani acum; l-aș lăsa cât lichidarea e departe." });
     // v100.92 (I-523): Busola - „mai agitată” intră în verdict DOAR când bilanțul pazei (I-512, pe date noi) e „dovedit”, cu cifra lui (x.busola =
@@ -477,7 +484,7 @@ var SemnaleBot = (function () {
     var prim = iesi[0] || at[0];
     // v99 (audit 28.09, #7): fara fisa nu e "TINE - nimic nu cere o miscare" (starea de asteptare aratata ca verdict), ci "socotesc"
     if (!prim && !f) return { nivel: "asteapta", cod: "fara-fisa", motiv: "încă socotesc fișa monedei", faCe: "Nu m-aș mișca până e gata fișa.", deCe: "Din fișă vin gridul propus, trendul și mișcarea; lichidarea și planul tău se văd și fără ea.", componente: [] };
-    if (!prim && sf === "cu") { var pc = pasiCuBotul(b, dir, x.zero); return { nivel: "tine", cod: "cu-botul", motiv: "mișcarea e cu botul: " + xMis + " față de obișnuit", faCe: pc.faCe, deCe: pc.deCe, componente: [] }; }
+    if (!prim && sf === "cu") { var pc = pasiCuBotul(b, dir, x.zero, f); return { nivel: "tine", cod: "cu-botul", motiv: "mișcarea e cu botul: " + xMis + " față de obișnuit", faCe: pc.faCe, deCe: pc.deCe, componente: [] }; }
     if (!prim) return { nivel: "tine", cod: "tine", motiv: "nimic nu cere o mișcare acum", faCe: "L-aș lăsa să lucreze și m-aș uita din nou diseară.", componente: [] };
     return { nivel: iesi.length ? "iesi" : "atentie", cod: prim.cod, motiv: prim.motiv, faCe: prim.faCe, deCe: prim.deCe || "", componente: c };
   }
@@ -576,6 +583,6 @@ var SemnaleBot = (function () {
   }
 
   return { distantaLaOra: distantaLaOra, laMargine: laMargine, judecaLaInchidere: judecaLaInchidere, socotealaToti: socotealaToti, tacute: tacute, textIncredere: textIncredere, NUME_SFAT: NUME_SFAT, podeaPeBani: podeaPeBani, sensFata: sensFata, pasiCuBotul: pasiCuBotul, semafor: semafor, mutaGridul: mutaGridul, btcAvertizare: btcAvertizare, aglomerare: aglomerare, iaProfit: iaProfit, noteaza: noteaza, judeca: judeca, socoteala: socoteala,
-    gridMaiDes: gridMaiDes, acumConcret: acumConcret, pasBot: pasBot, celelalteMotive: celelalteMotive, pretStopEcran: pretStopEcran, etichetaStopProc: etichetaStopProc };
+    gridMaiDes: gridMaiDes, fisaOpreste: fisaOpreste, textTrend: textTrend, acumConcret: acumConcret, pasBot: pasBot, celelalteMotive: celelalteMotive, pretStopEcran: pretStopEcran, etichetaStopProc: etichetaStopProc };
 })();
 if (typeof globalThis !== "undefined") globalThis.SemnaleBot = SemnaleBot;

@@ -384,5 +384,36 @@ await test("(5) MC zice „N-aș porni” ⇒ AȘTEAPTĂ chiar cu stopul rar ati
   assert.match(f.verdict.motive[0], /N-aș porni așa/);
 });
 
+// ---------- (16) un singur filtru de regim: tot ce pornește un grid nou ascultă „după mișcare nu” ----------
+const MIS = { verdict: { nivel: "nu", motive: ["prețul abia a făcut o mișcare de 4,0× față de obișnuit — după mișcare gridul iese cel mai rău"] }, regim: { r4h: 4, r24h: 2, miscare: true, sens: "coboara" } };
+const LIN = { verdict: { nivel: "porneste", motive: [] }, regim: { r4h: 1, r24h: 1, miscare: false } };
+const B16 = { id: "Q", baza: "XYZ.PERP", directie: "long", activ: true, investit: 100, levier: 3, pretCurent: 85, gridJos: 90, gridSus: 110, profitTotal: -5, distantaLichidarePct: 40 };
+await test("(16) planul „afară din grid”: în mișcare nu propune botul nou acum (semafor și alertă); în liniște da", () => {
+  const plan = { atins: ["afara"], afara: { prag: 12 } };
+  const sm = SB.semafor({ bot: B16, fisa: MIS, plan }).componente.find((c) => c.cod === "plan");
+  assert.doesNotMatch(sm.faCe, /aș porni unul nou din fișă, pe unde e prețul/);
+  assert.match(sm.faCe, /abia după liniște/);
+  assert.match(SB.semafor({ bot: B16, fisa: LIN, plan }).componente.find((c) => c.cod === "plan").faCe, /aș porni unul nou din fișă, pe unde e prețul/);
+  const al = A.reguli(B16, { plan, regim: MIS.regim }, {}).plan;
+  assert.match(al.mesaj, /abia după liniște/);
+  assert.match(A.reguli(B16, { plan, regim: LIN.regim }, {}).plan.mesaj, /aș porni din fișă unul nou, pe unde e prețul/);
+});
+await test("(16) trendul contra și „după margine” (cu botul): botul nou din fișă abia după liniște", () => {
+  const f = { ...MIS, directie: { dir: "short", tarie: "tare" } };
+  const tr = SB.semafor({ bot: B16, fisa: f }).componente.find((c) => c.cod === "trend");
+  assert.match(tr.faCe, /abia după liniște/); assert.ok(tr.faCe.length <= 110, tr.faCe);
+  const sus = { ...B16, pretCurent: 115, profitTotal: 4 };
+  const pc = SB.pasiCuBotul(sus, "long", null, { regim: { miscare: true, sens: "urca" } });
+  assert.match(pc.faCe, /abia după liniște/); assert.ok(pc.faCe.length <= 110, pc.faCe);
+  assert.match(SB.pasiCuBotul(sus, "long", null, LIN).faCe, /aș porni unul nou din fișă/);
+});
+await test("(16) sfaturile (grid afară, trend contra, ritm scăzut) nu cer un grid nou cât fișa zice NU / mișcare", () => {
+  const b = { ...B16, brut: null };
+  const l = SF.sfaturi({ bot: b, fisa: { ...MIS, directie: { dir: "short", tarie: "tare", motive: [] } }, ritm: { zile: 5, medieZi: 2, grile24h: 0.2 } });
+  const toate = l.map((s) => s.faCe || "").join(" | ");
+  assert.doesNotMatch(toate, /aș porni din fișă unul la prețul de acum|aș porni din fișă unul pe trend/, toate);
+  assert.match(toate, /abia după liniște/);
+});
+
 console.log(`\n${teste - picate}/${teste} ${picate ? "PICĂ" : "trec"}`);
 process.exitCode = picate ? 1 : 0;

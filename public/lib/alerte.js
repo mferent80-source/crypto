@@ -47,7 +47,7 @@ var Alerte = (function () {
   function nz(v) { return String(Math.round(Math.abs(Number(v)) * 100) / 100).replace(".", ","); }   // sumele planului: „15”, „7,6”, „2,55”
   // „mișcare cu botul”: aceeasi voce cu semaforul (SemnaleBot.pasiCuBotul) cand e incarcat (pagina, colectorul)
   function actiuneCuBotul(b, dir, pz) {
-    if (typeof SemnaleBot !== "undefined" && SemnaleBot.pasiCuBotul) return SemnaleBot.pasiCuBotul(b, dir, pz !== null ? { pretZero: pz } : null).faCe;
+    if (typeof SemnaleBot !== "undefined" && SemnaleBot.pasiCuBotul) return SemnaleBot.pasiCuBotul(b, dir, pz !== null ? { pretZero: pz } : null, { regim: { miscare: true } }).faCe;   // v100.259: alerta pleacă doar în mișcare
     return "L-aș lăsa să lucreze, fără bani în plus.";
   }
 
@@ -146,7 +146,8 @@ var Alerte = (function () {
           mesaj: msg("Ai atins ținta pe care ți-ai pus-o.", "Aș încasa acum: aș închide botul pe plus.") };
       }
       else if (at.indexOf("afara") >= 0) out.plan = { nivel: "atentie", titlu: nume + ": planul tău — afară din grid de peste " + (ctx.plan.afara ? oreN(ctx.plan.afara.prag) : "pragul tău"),
-        mesaj: msg("Ai hotărât să nu-l lași afară atât.", "Aș închide botul și aș porni din fișă unul nou, pe unde e prețul.") };
+        // v100.259 (auditul 23.10, punctul 16): în mișcare, botul nou din fișă abia după liniște (același filtru ca fișa și „mută gridul”)
+        mesaj: msg("Ai hotărât să nu-l lași afară atât.", ctx.regim && ctx.regim.miscare ? "Aș închide botul; unul nou din fișă abia după liniște, nu acum." : "Aș închide botul și aș porni din fișă unul nou, pe unde e prețul.") };
       else out.plan = { nivel: "ok", titlu: "", mesaj: "" };
     }
 

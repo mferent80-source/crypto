@@ -36,6 +36,8 @@ var Sfaturi = (function () {
   //            ritm: {grile24h, medieZi, tranz24h, tranzMedieZi, zile} }
   function sfaturi(x) {
     var out = [], b = x.bot || {};
+    // v100.259 (auditul 23.10, punctul 16): un singur filtru de regim - cât fișa zice NU sau piața e în mișcare, niciun sfat nu cere un grid nou acum
+    var opreste = !!(x.fisa && ((x.fisa.verdict && x.fisa.verdict.nivel === "nu") || (x.fisa.regim && x.fisa.regim.miscare)));
     var nume = String(b.baza || "botul").replace(/\.PERP$/, "");
     var dist = nr(b.distantaLichidarePct), tot = nr(b.profitTotal), inv = nr(b.investit);
     var jos = nr(b.gridJos), p = nr(b.pretCurent), pl = nr(b.pretLichidare);
@@ -50,7 +52,7 @@ var Sfaturi = (function () {
         // v100.62: aceleasi actiuni ca semaforul (o singura voce); titlul si textul vin din regulile alertelor (pachetul 3)
         // v100.70 (revizia pachetului 3, I1): lichidarea depasita = actiunea semaforului (marja nu mai ajuta), nu „aș adăuga marjă”
         var fc = k === "lich" ? (b.lichidareDepasita === true ? "Aș închide ce a rămas, după ce verific botul în Pionex." : a.nivel === "critic" ? "Aș adăuga marjă sau aș închide botul acum." : "N-aș mări poziția; dacă scade sub 8%, aș adăuga marjă.")
-          : k === "grid" ? "Aș aștepta o zi; dacă nu revine în interval, aș închide botul și aș porni din fișă unul la prețul de acum." : null;
+          : k === "grid" ? (opreste ? "Aș aștepta o zi; dacă nu revine, aș închide botul, iar unul nou din fișă abia după liniște." : "Aș aștepta o zi; dacă nu revine în interval, aș închide botul și aș porni din fișă unul la prețul de acum.") : null;
         // v100.67 (pachetul 3): mesajul alertei e pe 2 randuri (faptul + „👉 ” actiunea) - sfatul ia faptul; actiunea ramane a semaforului,
         // iar unde semaforul n-are una (starea Pionex, botul oprit) vine din alerta
         var l12 = String(a.mesaj || "").split("\n"), actA = l12[1] ? l12[1].replace(/^👉\s*/, "") : null;
@@ -118,8 +120,8 @@ var Sfaturi = (function () {
         sursa: "EMA20/EMA50 și structura pe 4 h, EMA pe 1 zi, pe bare închise.",
         // v100.65 (pachetul 2, M4) + revizia Opus a 2b (7): conditia dupa taria trendului („tare” e scorul comun 4 h + 1 zi + structura,
         // nu exista „tare pe 1 zi”); aceeasi in semafor (o singura voce)
-        faCe: contra ? (d.tarie === "tare" ? "N-aș adăuga bani; trendul e „tare”, deci aș închide botul lângă zero și aș porni din fișă unul pe trend."
-            : "N-aș adăuga bani; dacă trece pe „tare”, aș închide botul lângă zero și aș porni din fișă unul pe trend.")
+        faCe: contra ? (typeof SemnaleBot !== "undefined" && SemnaleBot.textTrend ? SemnaleBot.textTrend(d.tarie, opreste) : d.tarie === "tare" ? (opreste ? "N-aș adăuga bani; aș închide botul lângă zero, iar unul pe trend din fișă abia după liniște." : "N-aș adăuga bani; trendul e „tare”, deci aș închide botul lângă zero și aș porni din fișă unul pe trend.")
+            : opreste ? "N-aș adăuga bani; dacă trece pe „tare”, aș închide botul lângă zero, iar unul nou abia după liniște." : "N-aș adăuga bani; dacă trece pe „tare”, aș închide botul lângă zero și aș porni din fișă unul pe trend.")
           : cu ? "L-aș lăsa să lucreze." : "L-aș lăsa să facă perechi: lateral e bine pentru un grid." });
     }
 
@@ -164,7 +166,7 @@ var Sfaturi = (function () {
           titlu: "Ritmul a " + (sc ? "scăzut" : "crescut") + ": grilele " + TextRo.num(rt.grile24h, 2) + " USDT în 24 h, media " + TextRo.num(rt.medieZi, 2) + "/zi",
           text: mare((rt.tranz24h != null && rt.tranzMedieZi > 0 ? cate(rt.tranz24h, "tranzacție", "tranzacții") + " în 24 h față de " + Math.round(rt.tranzMedieZi) + " pe zi: " : "") +
             (sc ? "de obicei prețul a ieșit din zona perechilor sau piața a înghețat." : "piața se mișcă mai mult, bine pentru grile cât prețul stă în interval.")),
-          faCe: sc ? "Aș închide botul și aș porni din fișă unul la prețul de acum, dacă ritmul rămâne jos încă o zi." : "Aș verifica lichidarea: ritmul mare vine des cu mișcare mare." });
+          faCe: sc ? (opreste ? "Aș închide botul dacă ritmul rămâne jos încă o zi; unul nou din fișă abia după liniște." : "Aș închide botul și aș porni din fișă unul la prețul de acum, dacă ritmul rămâne jos încă o zi.") : "Aș verifica lichidarea: ritmul mare vine des cu mișcare mare." });
       }
     }
 
