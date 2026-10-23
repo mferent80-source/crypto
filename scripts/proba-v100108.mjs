@@ -84,7 +84,8 @@ await test("(C3) banii: „dacă vinzi acum: … $ (≈ … lei)” · „prețu
   const c = C.alcatuiesteActiune({ sem, niv: { stopPozitie: 25.1685 }, prob: [], sfaturi: [], plan: APLD.plan, pret: 24.81, pretMediu: 29.55, qty: 53.259, costLei: 7134, simbol: "APLD", fx: 4.53 });
   assert.match(c.bani, /^dacă vinzi acum: −252,\d \$ \(≈ −1\.1\d\d lei\) · prețul e deja sub stopul care urcă \(\$25\.17\)$/, c.bani);
   const c2 = C.alcatuiesteActiune({ sem, niv: { stopPozitie: 22 }, prob: [], sfaturi: [], plan: APLD.plan, pret: 24.81, pretMediu: 29.55, qty: 53.259, costLei: 7134, simbol: "APLD", fx: 4.53 });
-  assert.match(c2.bani, / · dacă atinge stopul care urcă \(\$22(\.00)?\): −40\d,\d \$ \(≈ −1\.8\d\d lei\)$/, c2.bani);
+  /* v100.259 (audit 23.10, punctul 23): suma la stop spune că e la cursul de cumpărare (era „(≈ −1.8xx lei)” fără sursă) */
+  assert.match(c2.bani, / · dacă atinge stopul care urcă \(\$22(\.00)?\): −40\d,\d \$ \(≈ −1\.8\d\d lei, la cursul de cumpărare\)$/, c2.bani);
 });
 await test("(C4) AVGO: cardul își păstrează trendul pe medii, dar spune diferența față de becul 1z (lateral, zigzag de N zile)", () => {
   const sem = AS.semafor({ simbol: "AVGO", pret: 363.33, pretMediu: 399.96, plan: {}, qty: 2.8 }, { trend: { dir: "jos", motive: ["EMA 20 sub EMA 50, care coboară"] }, miscare: { mare: false } });

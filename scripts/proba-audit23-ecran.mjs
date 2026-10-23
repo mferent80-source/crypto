@@ -369,5 +369,22 @@ await test("22b porneGrid precompletează moneda cu botul activ când câmpul e 
   assert.match(fnApp("porneGrid"), /var gm=\$\("grMoneda"\);if\(gm&&!gm\.value\.trim\(\)&&tbStare\.bot&&tbStare\.bot\.baza\)gm\.value=String\(tbStare\.bot\.baza\)\.replace\(\/\\\.PERP\$\/,""\)/);
 });
 
+// ---------------------------------------------------------------- 23. T212: o singură pierdere în lei pe poziție, cu sursa scrisă
+const ctxCo = { TextRo: TR, console }; ctxCo.window = ctxCo; vm.createContext(ctxCo); vm.runInContext(LIB("consiliu.js"), ctxCo);
+const CO = ctxCo.Consiliu;
+// datele lui (AVGO, 23.10): 2,8187 buc., mediu $399,96, acum $321,74; T212: ppl −772,98 lei, din care fxPpl +279,13 (cursul a urcat de la cumpărare)
+const AVGO = { sem: { nivel: "iesi", motive: ["stopul care urcă e atins"] }, niv: { stopPozitie: 339.46, stopAtins: true }, prob: [], sfaturi: [], plan: null, pret: 321.74, pretMediu: 399.96018385, qty: 2.81865557, costLei: 5110, simbol: "AVGO" };
+await test("23a „dacă vinzi acum”: suma în lei e cea din contul T212 (ppl), cu sursa scrisă — nu dolarii × cursul de la cumpărare", () => {
+  const c = CO.alcatuiesteActiune(Object.assign({}, AVGO, { pplLei: -772.98 }));
+  assert.match(c.bani, /^dacă vinzi acum: −220,5 \$ \(−773 lei în contul T212, cu cursul de azi\)/, c.bani);
+  assert.doesNotMatch(c.bani, /≈ −1\.000|≈ −99\d lei/);
+});
+await test("23b fără ppl (Salt, colectorul) rămâne „≈ … lei”, iar suma la stop spune „la cursul de cumpărare”", () => {
+  const c = CO.alcatuiesteActiune(Object.assign({}, AVGO, { niv: { stopPozitie: 300 } }));
+  assert.match(c.bani, /^dacă vinzi acum: −220,5 \$ \(≈ −999 lei\)/, c.bani);
+  assert.match(c.bani, /dacă atinge stopul care urcă \(\$300(\.00)?\): −281,8 \$ \(≈ −1\.277 lei, la cursul de cumpărare\)$/, c.bani);
+  assert.match(LIB("t212-ecran.js"), /costLei: p\.cost, pplLei: p\.ppl,/);
+});
+
 console.log(`\n${teste - picate}/${teste} trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
 process.exit(picate ? 1 : 0);

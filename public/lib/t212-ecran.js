@@ -423,7 +423,7 @@ function t212PregatesteP(x, pond) {
   // probabilitatile, sfaturile); pastila, motivele si „ce aș face eu” vin din el (p.semVechi ramane pentru restul paginii)
   p.semVechi = p.sem;
   if (typeof Consiliu !== "undefined" && Consiliu.alcatuiesteActiune) {
-    p.cons = Consiliu.alcatuiesteActiune({ sem: p.sem, niv: p.niv, prob: p.prob || [], sfaturi: p.sfaturi, plan: p.plan, pret: p.pret, pretMediu: p.pretMediu, qty: p.qty, costLei: p.cost, simbol: p.simbol, socoteala: t212SocAct(), semZi: t212SemZi(p.ticker) });
+    p.cons = Consiliu.alcatuiesteActiune({ sem: p.sem, niv: p.niv, prob: p.prob || [], sfaturi: p.sfaturi, plan: p.plan, pret: p.pret, pretMediu: p.pretMediu, qty: p.qty, costLei: p.cost, pplLei: p.ppl, simbol: p.simbol, socoteala: t212SocAct(), semZi: t212SemZi(p.ticker) });
     p.sem = Consiliu.pentruPozaActiune(p.cons);
   }
   return p;

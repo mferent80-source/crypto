@@ -380,9 +380,12 @@ var Consiliu = (function () {
     // banii: unde e pozitia acum si cat ar fi la stopul care urca (dolari; lei doar cu costul in lei - fara curs inventat)
     var pret = nr(x.pret), pm = nr(x.pretMediu), q = nr(x.qty), cl = nr(x.costLei), fx = cl > 0 && q > 0 && pm > 0 ? cl / (q * pm) : null, bani = [];
     // v100.108 (el: „fă explicit”): ce faci (vinzi acum / atinge stopul), suma, leii în paranteză; „e deja depășit” = prețul e deja sub stop
-    var cuLei = function (usd) { return USD(usd) + (fx ? " (≈ " + LEI(usd * fx) + ")" : ""); };
-    if (pret > 0 && pm > 0 && q > 0) bani.push("dacă vinzi acum: " + cuLei((pret - pm) * q));
-    if (niv && nr(niv.stopPozitie) > 0 && pret > 0 && q > 0) bani.push(niv.stopPozitie < pret ? "dacă atinge stopul care urcă (" + PA(niv.stopPozitie) + "): " + cuLei((niv.stopPozitie - pm) * q) : "prețul e deja sub stopul care urcă (" + PA(niv.stopPozitie) + ")");
+    // audit 23.10: pe pagina T212 „dacă vinzi acum” spune leii din contul T212 (ppl, cu cursul de azi) - aceeași sumă ca tabelul; dolarii × cursul de la
+    // cumpărare ieșeau cu ~30% altfel (AVGO: −966 față de −736 lei: diferența e câștigul din curs, fxPpl). Fără ppl (Salt, colectorul): ca până acum.
+    // Suma la stop rămâne la cursul de cumpărare și o spune.
+    var ppl = nr(x.pplLei), cuLei = function (usd, laStop) { return USD(usd) + (fx ? " (≈ " + LEI(usd * fx) + (laStop ? ", la cursul de cumpărare" : "") + ")" : ""); };
+    if (pret > 0 && pm > 0 && q > 0) bani.push("dacă vinzi acum: " + (ppl !== null ? USD((pret - pm) * q) + " (" + LEI(ppl) + " în contul T212, cu cursul de azi)" : cuLei((pret - pm) * q)));
+    if (niv && nr(niv.stopPozitie) > 0 && pret > 0 && q > 0) bani.push(niv.stopPozitie < pret ? "dacă atinge stopul care urcă (" + PA(niv.stopPozitie) + "): " + cuLei((niv.stopPozitie - pm) * q, true) : "prețul e deja sub stopul care urcă (" + PA(niv.stopPozitie) + ")");
     return { nivel: nivel, eticheta: ETICHETA[nivel], titlu: titlu, faCe: faCe, bani: bani.length ? bani.join(" · ") : null,
       motive: motive.map(function (m) { return { cod: m.cod, c: m.c, titlu: m.titlu, text: m.text, cip: null, extra: null }; }), rest: rest };
   }
