@@ -328,5 +328,30 @@ await test("(13) raportul de duminică nu mai zice „Laboratorul a dovedit” f
   assert.match(OB.raportDuminica(o).linii.join("\n"), /Laboratorul a dovedit pe net, și după corecția pe toate testele/);
 });
 
+// ---------- (17) poarta gridului judecată și pe bani ----------
+await test("(17) jurnalul păstrează setarea porții (direcția, grilele, levierul)", () => {
+  const j = V.adauga([], [{ s: "poarta-grid", k: "SOL_USDT_PERP", n: "nu", p: 100, t: T0, j: 95, u: 105, d: "long", g: 33, l: 3 }]);
+  assert.deepEqual([j[0].d, j[0].g, j[0].l], ["long", 33, 3]);
+});
+await test("(17) evaluarea pune lângă „în bandă” și netul simulat al setării pe h zile (cu comisioane); fără bare de 15 minute, doar măsura veche", () => {
+  const b15 = bareSint(96 * 6, 21, 0.003).map((x, i) => ({ ...x, t: T0 + i * 900000 }));
+  const zile = [1, 2, 3, 4, 5, 6].map((i) => ({ t: T0 + i * ZI - 3600000, c: 100, h: 101, l: 99 }));
+  const v = { s: "poarta-grid", k: "S", n: "nu", p: b15[0].o, t: T0, j: b15[0].o * 0.97, u: b15[0].o * 1.03, d: "neutru", g: 20, l: 2 };
+  const ev = V.evalueaza([v], { S: zile }, {}, { bare15: { S: b15 }, GridProba: GP });
+  const n1 = ev.find((x) => x.s === "poarta-grid-net" && x.h === 1), l1 = ev.find((x) => x.s === "poarta-grid" && x.h === 1);
+  assert.ok(l1, "măsura veche rămâne");
+  const asteptat = GP.simuleaza(b15, 0, 96, { dir: "neutru", jos: v.j, sus: v.u, grile: 20, levier: 2, fundingZi: 0.0003, fundingCost: true }).net;
+  assert.ok(n1 && Math.abs(n1.val - asteptat) < 1e-12, JSON.stringify(n1));
+  assert.equal(V.evalueaza([v], { S: zile }, {}).filter((x) => x.s === "poarta-grid-net").length, 0);
+});
+await test("(17) calibrarea are rândul „Poarta gridului · banii”: pornește / așteaptă față de „nu”, pe zile", () => {
+  const ev = [], r = M.generator(5);
+  for (let d = 0; d < 40; d++) for (let k = 0; k < 10; k++) for (const h of [1, 3]) { const nu = (k + d) % 3 === 0; ev.push({ s: "poarta-grid-net", k: "M" + k, n: nu ? "nu" : "asteapta", t: T0 + d * 3 * ZI, h, val: (nu ? -0.004 : 0.001) + (r() - 0.5) * 0.004 }); }
+  const c = V.calibrare(ev, { repsP: 2000 }).find((x) => x.sursa === "poarta-grid-net" && x.h === 1);
+  assert.equal(c.masura, "net"); assert.equal(c.unitate, "zi"); assert.equal(c.test.stare, "testat");
+  assert.ok(c.test.dif > 0 && c.test.p < 0.01, JSON.stringify(c.test));
+  assert.ok(c.niveluri.some((x) => x.nivel === "nu") && c.niveluri.some((x) => x.nivel === "asteapta"));
+});
+
 console.log(`\n${teste - picate}/${teste} ${picate ? "PICĂ" : "trec"}`);
 process.exitCode = picate ? 1 : 0;

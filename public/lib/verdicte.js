@@ -17,6 +17,10 @@ var Verdicte = (function () {
   var SURSE = {
     "poarta-t212": { nume: "Poarta Trading 212", piata: "actiuni", zi: true, fav: ["cumpara"], h: [5, 20], masura: "randament", text: "„cumpără” față de „așteaptă / nu” în aceleași zile" },
     "poarta-grid": { nume: "Poarta gridului", piata: "crypto", zi: true, fav: ["porneste"], h: [1, 3], masura: "linistit", text: "„pornește” față de „așteaptă / nu” în aceleași zile — a stat prețul în banda gridului?" },
+    // v100.259 (auditul 23.10, punctul 17): aceleași verdicte ale porții gridului, judecate pe BANI - rezultatul simulat al setării pe următoarele h zile
+    // (bare de 15 minute, comisioane, funding presupus). „Pornește” lipsește la H = 2 (prea puține ferestre de test), deci întrebarea e regula probată:
+    // ce NU e „nu” (pornește / așteaptă) iese mai bine decât „nu” (după mișcare)? Măsura veche (în bandă) rămâne alături.
+    "poarta-grid-net": { nume: "Poarta gridului · banii", piata: "crypto", zi: true, din: "poarta-grid", fav: ["porneste", "asteapta"], h: [1, 3], masura: "net", text: "„pornește / așteaptă” față de „nu” în aceleași zile — cât ar fi adus setarea, după comisioane?" },
     "idei": { nume: "Ideile zilei (acțiuni)", piata: "actiuni", cos: true, fav: ["cumpar"], h: [5, 20], masura: "pesteQqq", text: "ideile față de Nasdaq (QQQ) pe aceleași zile" },
     "top-sector": { nume: "Topul pe sectoare (Sugestii)", piata: "actiuni", cos: true, fav: ["top"], h: [5, 20], masura: "pesteQqq", text: "cele mai tari din fiecare sector față de Nasdaq (QQQ) pe aceleași zile" },
     "trend-12-1": { nume: "Trend 12 luni (Sugestii)", piata: "actiuni", cos: true, fav: ["top"], h: [20, 60], masura: "pesteSpy", text: "primele 20 după randamentul pe lunile 2–12 (ultima lună sărită) față de S&P 500 (SPY) pe aceleași zile, la 20 și 60 de zile — aceeași riglă ca bilanțul robotului; în probă" },   // v100.192 (I-622, I-623): orizontul probat și rigla auditului
@@ -40,6 +44,9 @@ var Verdicte = (function () {
     if (!SURSE[s] || !k || !n || !(p > 0) || !(t > 0)) return null;
     var o = { s: s, k: k, n: n, p: p, t: t };
     var j = nr(v.j != null ? v.j : v.jos), u = nr(v.u != null ? v.u : v.sus); if (j > 0 && u > j) { o.j = j; o.u = u; }
+    // v100.259 (punctul 17): setarea porții gridului - direcția, grilele (intervale), levierul - pentru măsura pe bani
+    var d = String(v.d || v.dir || "").toLowerCase(), g = nr(v.g != null ? v.g : v.grile), l = nr(v.l != null ? v.l : v.levier);
+    if (d === "long" || d === "short" || d === "neutru") o.d = d; if (g >= 2 && g <= 150) o.g = Math.round(g); if (l >= 1 && l <= 125) o.l = l;
     return o;
   }
   // adaugă în jurnal: un verdict pe (sursă, simbol, zi); cel mai nou din zi rămâne; cel mult MAX (cele mai vechi pleacă)
@@ -68,8 +75,19 @@ var Verdicte = (function () {
     return { c: l[j].c, hi: hi, lo: lo, t: l[j].t };
   }
   // fiecare verdict cu ce a urmat; bare = { simbol: [...] }, reper = { QQQ: [...], SPY: [...] } pentru „peste QQQ” / „peste SPY” (v100.192)
-  function evalueaza(jurnal, bare, reper) {
-    var out = [];
+  // v100.259 (punctul 17): rezultatul net al setării porții gridului pe h zile de bare de 15 minute de la ora verdictului (GridProba.simuleaza, cu
+  // comisioanele și funding-ul presupus); fără setare scrisă: neutru, pasul minim (0,30%) pe banda gridului, 1×. null = barele nu ajung încă.
+  function netGrid(v, b15, h, GP) {
+    if (!GP || !Array.isArray(b15) || !(v.j > 0) || !(v.u > v.j)) return null;
+    var i = 0; while (i < b15.length && b15[i].t < v.t) i++;
+    var W = h * 96; if (i >= b15.length || b15[i].t - v.t > 900000 || i + W > b15.length) return null;
+    var g = v.g || Math.max(2, Math.min(150, Math.floor(Math.log(v.u / v.j) / Math.log(1.003))));
+    var r = GP.simuleaza(b15, i, W, { dir: v.d || "neutru", jos: v.j, sus: v.u, grile: g, levier: v.l || 1, fundingZi: GP.FUNDING_PRESUPUS || 0.0003, fundingCost: true });
+    return r && isFinite(r.net) ? r.net : null;
+  }
+  // o (opțional) = { bare15: { simbol: [bare de 15 minute] }, GridProba } - fără ele măsura pe bani lipsește, restul e ca înainte
+  function evalueaza(jurnal, bare, reper, o) {
+    o = o || {}; var out = [], GPx = o.GridProba || (typeof GridProba !== "undefined" ? GridProba : null);
     (jurnal || []).forEach(function (v) {
       var S = SURSE[v.s], b = bare && bare[v.k]; if (!S || !b || !b.length) return;
       S.h.forEach(function (h) {
@@ -81,6 +99,7 @@ var Verdicte = (function () {
         // ieri, când verdictul e dat în ședință). Barele cu altă oră (închiderea, probele) rămân ca înainte.
         else if (S.masura === "pesteQqq" || S.masura === "pesteSpy") { var q = reper && reper[S.masura === "pesteSpy" ? "SPY" : "QQQ"], a = q ? dupa(q, v.t, h) : null, a0 = q ? q.filter(function (x) { return inchisLa(x.t) <= v.t; }).pop() : null; if (!a || !a0) return; val = r - (a.c / a0.c - 1); }
         out.push({ s: v.s, k: v.k, n: v.n, t: v.t, h: h, r: r, val: val, p: v.p });   /* v100.196: prețul rămâne pe eveniment (dublurile din coșuri) */
+        if (v.s === "poarta-grid" && o.bare15) { var nt = netGrid(v, o.bare15[v.k], h, GPx); if (nt !== null) out.push({ s: "poarta-grid-net", k: v.k, n: v.n, t: v.t, h: h, r: r, val: nt, p: v.p }); }   // v100.259
       });
     });
     return out;
