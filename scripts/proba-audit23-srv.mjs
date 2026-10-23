@@ -175,6 +175,34 @@ await test("(5) market.js: proba ia răspunsul din cache când există (fără P
     assert.equal(r.status, 200); assert.equal(j.result, true); assert.deepEqual(j.data.tickers, [{ symbol: "X" }]); assert.equal(cereriFalse.length, 1);
   } finally { delete globalThis.caches; P.reseteazaRitmPionex(); }
 });
+// ---------- (9) cererile abandonate ies din coada de ritm (nu mai pleacă la Pionex) ----------
+const PO = await import("../functions/_shared/poarta.js");
+await test("(9) abandonata: semnalul anulat sau ≥ 20 s la coadă (colectorul renunță la 20 s, pagina la 12 s)", () => {
+  assert.equal(typeof PO.abandonata, "function"); assert.equal(PO.COADA_MAX_MS, 20000);
+  const ac = new AbortController(), t = 1e12;
+  assert.equal(PO.abandonata(ac.signal, t, t + 19999), false); assert.equal(PO.abandonata(null, t, t + 20000), true);
+  ac.abort(); assert.equal(PO.abandonata(ac.signal, t, t + 1), true);
+});
+await test("(9) poarta publică: cererea anulată cât aștepta la rând nu pleacă spre Pionex și nu împinge ritmul celor de după", async () => {
+  P.reseteazaRitmPionex();
+  fetchFals(async () => { await pauza(40); return new Response(JSON.stringify({ result: true, data: { klines: [] } }), { status: 200 }); });
+  const cere = (s, signal) => MK.onRequestGet({ request: new Request("https://radar.test/api/market?type=pionex_klines&interval=4H&symbol=" + s, { signal, headers: { authorization: "Bearer " + TOKEN, "x-forwarded-for": ip() } }), env: { APP_API_TOKEN: TOKEN } }).then((r) => r.json());
+  const ac = new AbortController(), a = cere("AAA_USDT"), b = cere("BBB_USDT", ac.signal); await pauza(5); ac.abort();
+  const [ra, rb] = await Promise.all([a, b]);
+  assert.equal(ra.result, true); assert.equal(rb.result, false); assert.match(String(rb.detail), /abandonat/);
+  assert.deepEqual(cereriFalse.map((u) => /BBB/.test(u)), [false], "cererea abandonată a plecat spre Pionex");
+  P.reseteazaRitmPionex();
+});
+await test("(9) poarta privată (bot-orders): la fel - anulată la coadă ⇒ nu pleacă; bot-orders dă semnalul cererii", async () => {
+  P.reseteazaRitmPionex();
+  fetchFals(async () => { await pauza(40); return new Response(JSON.stringify({ result: true, data: { results: [] } }), { status: 200 }); });
+  const ENVP = { APP_API_TOKEN: TOKEN, PIONEX_API_KEY: "cheie", PIONEX_API_SECRET: "secret" }, ac = new AbortController();
+  const a = P.pionexPrivatGet(ENVP, "/api/v1/bot/orders", {}), b = P.pionexPrivatGet(ENVP, "/api/v1/bot/orders", { x: 1 }, ac.signal); await pauza(5); ac.abort();
+  await a; await assert.rejects(b, (e) => e.abandonata === true);
+  assert.equal(cereriFalse.length, 1, "cererea privată abandonată a plecat");
+  assert.match(citeste("functions", "api", "bot-orders.js"), /citesteBoti\(env,params,request\.signal\)/);
+  P.reseteazaRitmPionex();
+});
 globalThis.fetch = fetchAdevarat;
 
 // ---------- (12) alertele T212 (Consilier, ±1%, SL/TP) și fără poză: fără cheile paznicului sau noaptea ----------

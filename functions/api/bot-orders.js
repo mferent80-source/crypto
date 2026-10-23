@@ -25,9 +25,10 @@ const nr=v=>{
 };
 const toate=(...a)=>a.every(x=>x!==null);
 
-async function citesteBoti(env,params={}){
+async function citesteBoti(env,params={},semnal=null){
   // Poarta de ritm e aceeasi cu pionex-account: aceeasi cheie, aceeasi limita.
-  const {r,data:d}=await pionexPrivatGet(env,"/api/v1/bot/orders",params);
+  // v100.259 (auditul 23.10, punctul 9): semnalul cererii - abandonată cât stă la rând, nu mai pleacă spre Pionex
+  const {r,data:d}=await pionexPrivatGet(env,"/api/v1/bot/orders",params,semnal);
 
   // 🔑 Pionex raspunde cu HTTP 200 chiar si cand refuza. Daca ne-am uita doar la
   // codul de stare, o cheie fara dreptul "Bot reading" ar arata ca "zero boti" -
@@ -230,9 +231,9 @@ export async function onRequestGet({request,env}){
   const probleme={};
   let brute,next=null,nula=false;
   try{
-    ({results:brute,next,nula}=await citesteBoti(env,params));
+    ({results:brute,next,nula}=await citesteBoti(env,params,request.signal));
     // v100.175 (auditul Opus, I3): Pionex dă boții pe pagini de câte 10 - și lista celor PORNIȚI; al 11-lea bot n-ar fi primit nicio alertă
-    if(!brutCerut&&!params.status&&!params.pageToken){for(let i=0;next&&i<9;i++){const p=await citesteBoti(env,{...params,pageToken:next});brute=brute.concat(p.results);next=p.next}
+    if(!brutCerut&&!params.status&&!params.pageToken){for(let i=0;next&&i<9;i++){const p=await citesteBoti(env,{...params,pageToken:next},request.signal);brute=brute.concat(p.results);next=p.next}
       // v100.196 (auditul sever, 🔵7): peste 10 pagini (100 de boți) restul n-ar primi alerte - se spune, nu se taie în tăcere
       if(next)probleme.trunchiat=true}
     if(nula&&!brute.length)probleme.listaNula=true;

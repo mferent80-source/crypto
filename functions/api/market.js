@@ -1,6 +1,6 @@
 import { VERSIUNE } from "../_shared/versiune.js";
 import {requireApiAuth,authErrorResponse} from "../_shared/auth.js";
-import {dupaCelDinFata} from "../_shared/poarta.js";
+import {dupaCelDinFata,abandonata,eroareAbandon} from "../_shared/poarta.js";
 import {lacatRamasMs,lacatDinRaspuns,eroareLacat} from "../_shared/lacat-pionex.js";   // audit 19.10: lacatul comun cu poarta privata
 const FUT="https://fapi.binance.com";
 const PIONEX="https://api.pionex.com";
@@ -9,13 +9,16 @@ const wait=ms=>new Promise(r=>setTimeout(r,ms));
 async function reservePionexGlobal(env,spacing){
   if(!env?.DB?.prepare)return 0;try{const now=Date.now(),stmt=env.DB.prepare(`INSERT INTO monitor_state(key,value,updated_ts) VALUES('pionex_pages_next_at',?,?) ON CONFLICT(key) DO UPDATE SET value=CAST(MAX(CAST(monitor_state.value AS INTEGER), ?)+? AS TEXT), updated_ts=? RETURNING value`).bind(String(now+spacing),now,now,spacing,now),r=await stmt.first(),next=Number(r?.value);return Number.isFinite(next)?Math.max(0,(next-spacing)-now):0}catch{return 0}
 }
-async function pionexRateGate(weight,fn,env){
+async function pionexRateGate(weight,fn,env,semnal=null){
+  const intrat=Date.now();   // v100.259 (punctul 9): cererea abandonată cât stă la rând nu mai pleacă
   // v91.7: cererea din fata e asteptata cel mult cat poate dura ea (pauza + 8 s de fetch + marja) - _shared/poarta.js
   const run=dupaCelDinFata(pionexGate,12000).then(async()=>{
+    if(abandonata(semnal,intrat))throw eroareAbandon();
     // audit 19.10: lacatul comun (si cel pus de poarta privata, din X-RateLimit-Lock) - nimic nu pleaca pana la deblocare
     if(lacatRamasMs())throw eroareLacat("upstream cooldown");
     const spacing=Math.max(1100,Math.max(1,weight)*300),globalDelay=await reservePionexGlobal(env,spacing),delay=Math.max(globalDelay,Math.max(0,pionexNextAt-Date.now()));
     if(delay)await wait(delay);
+    if(abandonata(semnal,intrat))throw eroareAbandon();   // abandonată în pauza de ritm: nu pleacă și nu împinge ritmul celor de după
     pionexNextAt=Date.now()+spacing;
     return fn()
   });
@@ -57,8 +60,8 @@ async function pionexCached(url,ttl=30,env=null,opt={}){
   // v100.259 (auditul 23.10, punctul 5): proba de ecran (`x-proba-ecran: 1`) nu cheamă Pionex nici pe rutele PUBLICE - doar cache-ul de mai sus
   if(opt.proba)throw Object.assign(Error("probă de ecran: fără cereri către Pionex"),{status:503,proba:true});
   let data;
-  try{data=await pionexRateGate(url.includes("/common/symbols")?5:1,()=>j(url),env)}
-  catch(e){if(e.status)lacatDinRaspuns(e.antete,e.status,Math.max(75,e.retryAfter||60));throw e}   // audit 19.10: 429 ⇒ cel putin 75 s; x-ratelimit-lock ⇒ pana la ora lui
+  try{data=await pionexRateGate(url.includes("/common/symbols")?5:1,()=>j(url),env,opt.semnal||null)}
+  catch(e){if(e.status&&!e.abandonata)lacatDinRaspuns(e.antete,e.status,Math.max(75,e.retryAfter||60));throw e}   // audit 19.10: 429 ⇒ cel putin 75 s; x-ratelimit-lock ⇒ pana la ora lui
   // v100.173 (auditul Opus): Pionex refuză cu HTTP 200 + result:false - refuzul NU se ține minte (lista de simboluri goală stătea o oră)
   if(cache&&!(data&&data.result===false)){
     const res=new Response(JSON.stringify(data),{headers:{"content-type":"application/json","cache-control":`public, max-age=${ttl}`}});
@@ -73,7 +76,7 @@ export async function onRequestGet({request,env}){
   // au ACELASI IP (127.0.0.1) - o pagina deschisa in timpul clasamentului primea RATE_LIMITED. Pionex e ferit oricum
   // de pionexGate (o cerere la 1,1 s) si de racirea la 429.
   if(String(type||"").startsWith("pionex_")){const auth=await requireApiAuth(request,env,"pionex-public-proxy",120);if(!auth.ok)return authErrorResponse(auth,H)}
-  const opt={proba:request.headers.get("x-proba-ecran")==="1"};   // v100.259 (punctul 5)
+  const opt={proba:request.headers.get("x-proba-ecran")==="1",semnal:request.signal||null};   // v100.259 (punctele 5 și 9)
   if(type==="pionex_symbols"){
     const mk=String(u.searchParams.get("market")||"").toUpperCase()==="PERP"?"PERP":"SPOT";
     try{return ok(await pionexCached(`${PIONEX}/api/v1/common/symbols?type=${mk}`,3600,env,opt))}catch(e){return esec("Pionex symbols unavailable",e)}

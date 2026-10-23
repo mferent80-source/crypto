@@ -5,7 +5,7 @@
 // ACEEASI cheie, deci aceeasi limita la Pionex. Cu cate o poarta de ritm in
 // fiecare ruta, un 429 luat de una nu oprea celelalte, care loveau mai departe
 // o cheie deja in racire. Acum e o singura poarta si o singura racire.
-import {dupaCelDinFata} from "./poarta.js";
+import {dupaCelDinFata,abandonata,eroareAbandon} from "./poarta.js";
 import {lacatRamasMs,lacatPanaLa,lacatDinRaspuns,eroareLacat,reseteazaLacatPionex,oraRo} from "./lacat-pionex.js";   // audit 19.10: lacatul comun cu poarta publica
 export const PIONEX="https://api.pionex.com";
 // Niciun furnizor nu are voie sa tina ruta (si poarta de dupa ea) agatata.
@@ -27,13 +27,16 @@ let poarta=Promise.resolve(),urmatorulLa=0;
 const asteapta=ms=>new Promise(r=>setTimeout(r,ms));
 // v91.5: cererea din fata e asteptata cel mult cat poate dura ea legitim (vezi _shared/poarta.js)
 const ASTEPTARE_MAX_MS=TIMEOUT_MS+2000;
-function cuRitm(fn){
+function cuRitm(fn,semnal=null){
+  const intrat=Date.now();   // v100.259 (auditul 23.10, punctul 9): cererea abandonată cât stă la rând nu mai pleacă (poarta.js, abandonata)
   const rulare=dupaCelDinFata(poarta,ASTEPTARE_MAX_MS).then(async()=>{
+    if(abandonata(semnal,intrat))throw eroareAbandon();
     // v100.208: lacătul lung (ore) se spune cu ora lui, ca Radarul și colectorul să nu reîncerce la 15 s
     // audit 19.10: lacatul e COMUN cu poarta publica (_shared/lacat-pionex.js)
     if(lacatRamasMs())throw eroareLacat();
     const intarziere=Math.max(0,urmatorulLa-Date.now());
     if(intarziere)await asteapta(intarziere);
+    if(abandonata(semnal,intrat))throw eroareAbandon();
     urmatorulLa=Date.now()+PAUZA_MS;
     return fn();
   });
@@ -55,7 +58,7 @@ export function cuProba(env,request){
   let e=false;try{e=!!(request&&request.headers&&request.headers.get("x-proba-ecran")==="1")}catch{}
   return e?Object.create(env,{__probaEcran:{value:true}}):env
 }
-export async function pionexPrivatGet(env,path,params={}){
+export async function pionexPrivatGet(env,path,params={},semnal=null){
   if(env&&env.__probaEcran)throw Object.assign(Error("probă de ecran: fără cereri către Pionex"),{status:503});
   const apiKey=env.PIONEX_API_KEY,secret=env.PIONEX_API_SECRET;
   if(!apiKey||!secret)throw Object.assign(Error("Pionex read-only server secrets are not configured"),{status:503});
@@ -66,7 +69,7 @@ export async function pionexPrivatGet(env,path,params={}){
       "PIONEX-KEY":apiKey,
       "PIONEX-SIGNATURE":signature
     },signal:AbortSignal.timeout(TIMEOUT_MS)});
-  }).catch(e=>{
+  },semnal).catch(e=>{
     if(e?.status)throw e;
     const motiv=e?.name==="TimeoutError"||e?.name==="AbortError"?`fara raspuns in ${TIMEOUT_MS} ms`:String(e?.message||e);
     throw Object.assign(Error(`Pionex: ${motiv}`),{status:504});
