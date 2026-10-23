@@ -327,5 +327,18 @@ await test("18 CSS (≤ 640 px): legăturile din citire, alegerile 10/30/60, com
   assert.match(IDX, /<label class="settingRow"><span>Doar pe durata sesiunii \(cercetare\)<\/span><input aria-label="[^"]+" id="privacySessionOnly" type="checkbox"\/><\/label>/);
 });
 
+// ---------------------------------------------------------------- 19. contrastul etichetelor Drumului (10,5 px) ≥ 4,5:1
+await test("19 Drumul botului: etichetele (text de 10,5 px) au culoarea de text deschisă (≥ 4,5:1); liniuța de pe pistă rămâne în culoarea ei", () => {
+  const ctx = incarcaAsezarea();
+  const h = ctx.AsezarePaznic.drumHtml({ id: "1", baza: "PEPE.PERP", directie: "short", pretCurent: 0.0000049623, gridJos: 0.0000048, gridSus: 0.0000050,
+    opritorPierdereActiv: true, opritorPierdereTip: "pret", opritorPierdere: 0.00000512 }, false, 1100);
+  const et = [...h.matchAll(/<span class="pzDrumEt" style="[^"]*color:([^;"]+)/g)].map((m) => m[1]);
+  assert.ok(et.length >= 3);
+  for (const c of et) assert.match(c, /^var\(--pz(Info|Jos)Txt,#[0-9A-F]{6}\)$/, c);
+  assert.match(h, /class="pzDrumNiv [^"]*" style="left:[\d.]+%;background:var\(--pzInfo\)"/, "liniuța rămâne în culoarea ei");
+  const L = (x) => { const c = [1, 3, 5].map((i) => parseInt(x.slice(i, i + 2), 16) / 255).map((v) => v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; };
+  for (const c of et) { const hex = c.match(/#[0-9A-F]{6}/)[0]; const r = (L(hex) + 0.05) / (L("#202B37") + 0.05); assert.ok(r >= 4.5, hex + " " + r.toFixed(2)); }
+});
+
 console.log(`\n${teste - picate}/${teste} trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
 process.exit(picate ? 1 : 0);

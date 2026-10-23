@@ -72,6 +72,8 @@
       return '<div class="pzKv">' + (et ? gl(et) : '<span class="pzKfara">intervalul gridului</span>') + '<b>' + esc(m[0].trim()) + '</b></div>';
     }).join("");
   }
+  // audit 23.10: textul etichetelor Drumului (10,5 px) avea 4,0:1 pe card ⇒ o nuanță deschisă a aceleiași culori (≥ 4,5:1); liniuța rămâne în culoarea ei
+  function culText(c) { return c === "var(--pzInfo)" ? "var(--pzInfoTxt,#82ACDA)" : c === "var(--pzJos)" ? "var(--pzJosTxt,#F2847C)" : c; }
   // eticheta lângă margine se ancorează spre interior (pe 390 ieșea din ecran)
   function ancora(x) { x = +x; return x < 12 ? "transform:translateX(-6px);" : x > 88 ? "transform:translateX(calc(-100% + 6px));" : ""; }
 
@@ -143,7 +145,7 @@
     var nrR = Math.max.apply(null, L.map(function (x) { return (x.rand || 0) + 1; })), h = '<div class="pzDrum' + (mic ? " pzDrumMic" : "") + '"' + (mic ? "" : ' style="padding-bottom:' + (14 + nrR * 16) + 'px"') + '><div class="pzDrumPista">';
     var gj = nr(b.gridJos), gs = nr(b.gridSus);
     if (gj && gs) h += '<i class="pzDrumGrid" style="left:' + X(gj) + '%;width:' + (X(gs) - X(gj)).toFixed(2) + '%"></i>';
-    L.forEach(function (x) { h += '<i class="pzDrumNiv ' + x.cls + '" style="left:' + X(x.p) + '%;background:' + x.c + '" title="' + esc(x.n + " " + fP(x.p) + (x.tit ? " · " + x.tit : "")) + '"></i>' + (mic ? "" : '<span class="pzDrumEt" style="left:' + X(x.p) + '%;' + ancora(X(x.p)) + 'top:' + (16 + x.rand * 16) + 'px;color:' + x.c + '">' + esc(x.n) + ' <b>' + fP(x.p) + '</b></span>'); });
+    L.forEach(function (x) { h += '<i class="pzDrumNiv ' + x.cls + '" style="left:' + X(x.p) + '%;background:' + x.c + '" title="' + esc(x.n + " " + fP(x.p) + (x.tit ? " · " + x.tit : "")) + '"></i>' + (mic ? "" : '<span class="pzDrumEt" style="left:' + X(x.p) + '%;' + ancora(X(x.p)) + 'top:' + (16 + x.rand * 16) + 'px;color:' + culText(x.c) + '">' + esc(x.n) + ' <b>' + fP(x.p) + '</b></span>'); });
     h += '<i class="pzDrumAcum" style="left:' + X(p) + '%" title="acum ' + fP(p) + '"></i>' + (mic ? "" : '<span class="pzDrumAcumEt" style="left:' + X(p) + '%;' + ancora(X(p)) + '">acum ' + fP(p) + '</span>');
     return h + '</div></div>';
   }
