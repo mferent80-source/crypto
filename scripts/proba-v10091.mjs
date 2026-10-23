@@ -36,7 +36,8 @@ await test("(1) t212Bucati: sub 10 $/acțiune ⇒ bucăți întregi („250 buc�
   const ctx = {}; vm.createContext(ctx); vm.runInContext(fnDin("t212-ecran.js", "t212Bucati") + "\n;this.f=t212Bucati;", ctx);
   assert.equal(ctx.f(250, 3.92), "250 buc"); assert.equal(ctx.f(261.9, 3.92), "262 buc"); assert.equal(ctx.f(1012.4, 0.88), "1.012 buc", "miile cu punct, ca restul cifrelor");
   assert.equal(ctx.f(8.151, 72), "8,151 buc"); assert.equal(ctx.f(144.118, 10), "144,118 buc", "exact 10 $ ⇒ cu zecimale (regula e „sub 10”)");
-  assert.equal(ctx.f(0.4, 3.92), "0 buc", "sub o bucată întreagă rămâne 0, nu se inventează 1");
+  /* v100.259 (audit 23.10, punctul 24): sub o bucată întreagă se scrie fracția (T212 permite fracții), ca suma să se potrivească cu bucățile; tot nu se inventează 1. Era: "0 buc" */
+  assert.equal(ctx.f(0.4, 3.92), "0,4 buc", "sub o bucată întreagă: fracția, nu 0 și nu 1");
 });
 await test("(1) tabelul reveniri și biletul folosesc același ajutor; TE la 3,92 $ cu stopul 3,48 și 50.000 lei în cont ⇒ „250 buc ≈ 4.455 lei”", () => {
   const s = lib("t212-ecran.js"); assert.equal((s.match(/t212Bucati\(m\.bucati, /g) || []).length, 2, "două locuri: „Cât cumperi” din bilet și plan; revenirea nu mai tipărește bucăți");

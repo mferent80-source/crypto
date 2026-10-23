@@ -386,5 +386,25 @@ await test("23b fără ppl (Salt, colectorul) rămâne „≈ … lei”, iar su
   assert.match(LIB("t212-ecran.js"), /costLei: p\.cost, pplLei: p\.ppl,/);
 });
 
+// ---------------------------------------------------------------- 24. „Cât cumperi”: bucățile în jos (floor), suma refăcută din bucățile afișate
+await test("24 t212MarimeAfisata: sub 10 $ bucăți întregi în JOS (1,5 ⇒ 1, nu 2), suma/riscul/comisionul refăcute; sub o bucată rămâne fracția; de la 10 $ în jos la 3 zecimale", () => {
+  const T = LIB("t212-ecran.js");
+  const m1 = T.match(/function t212MarimeAfisata\(m, pret\) \{[^\n]*\n(?:[^\n]*\n)*?\}/); assert.ok(m1, "lipsește t212MarimeAfisata");
+  const mb = T.match(/function t212Bucati\([^\n]*/)[0];
+  const ctx = {}; vm.createContext(ctx); vm.runInContext(m1[0] + "\n" + mb, ctx);
+  const m = { bucati: 1.5, suma: 600, risc: 60, riscPctReal: 0.01, comision: 1.8, riscTotal: 100, riscTotalPct: 0.02, plafonat: true };
+  const a = ctx.t212MarimeAfisata(m, 8);
+  assert.equal(a.bucati, 1); assert.equal(a.suma, 400); assert.equal(a.risc, 40); assert.ok(Math.abs(a.riscPctReal - 0.00667) < 1e-4); assert.ok(Math.abs(a.comision - 1.2) < 1e-9);
+  assert.equal(a.riscTotal, 80); assert.ok(Math.abs(a.riscTotalPct - (0.02 - 0.01 + 0.01 / 1.5)) < 1e-9);
+  assert.equal(ctx.t212Bucati(a.bucati, 8), "1 buc");
+  const b = ctx.t212MarimeAfisata({ bucati: 0.4, suma: 160, risc: 16, riscPctReal: 0.004, comision: 0.48 }, 8);
+  assert.equal(b.bucati, 0.4); assert.equal(b.suma, 160); assert.equal(ctx.t212Bucati(b.bucati, 8), "0,4 buc", "sub o bucată: fracția, nu „0 buc”");
+  const c = ctx.t212MarimeAfisata({ bucati: 2.34567, suma: 1000, risc: 50, riscPctReal: 0.01, comision: 3 }, 120);
+  assert.equal(c.bucati, 2.345); assert.ok(c.suma <= 1000 && c.suma > 999);
+  assert.equal(ctx.t212MarimeAfisata(null, 8), null);
+  assert.match(T, /var m = t212MarimeAfisata\(pl\.m, pl\.intrare\), fara = t212FaraSuma\(p\)/);
+  assert.match(T, /m = fara \? null : t212MarimeAfisata\(t212MarimePoarta\(p\), baza\)/);
+});
+
 console.log(`\n${teste - picate}/${teste} trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
 process.exit(picate ? 1 : 0);

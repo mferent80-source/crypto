@@ -564,7 +564,16 @@ function t212Render() {
 }
 // v100.91 (ideea 1): sub 10 $/acțiune bucățile ies ÎNTREGI („250 buc”) - cu zecimale, „144,118 buc” se citea „144 de mii”; de la 10 $ în sus
 // rămân 3 zecimale, ca până acum (biletul și tabelul de revenire folosesc același ajutor)
-function t212Bucati(bucati, pret) { var n = Number(bucati) || 0; return (pret < 10 ? Math.round(n).toLocaleString("ro-RO") : (+n.toFixed(3)).toLocaleString("ro-RO")) + " buc"; }
+function t212Bucati(bucati, pret) { var n = Number(bucati) || 0; return (pret < 10 && n >= 1 ? Math.round(n).toLocaleString("ro-RO") : (+n.toFixed(3)).toLocaleString("ro-RO")) + " buc"; }   /* audit 23.10: sub o bucată fracția („0,4 buc”), nu „0 buc” */
+// audit 23.10: „Cât cumperi” rotunjea bucățile cu Math.round (1,5 ⇒ 2: +33% risc, peste plafonul de 20%; 0,4 ⇒ 0 cu suma fracționară). La cumpărare bucățile
+// merg în JOS (sub 10 $ întregi, de la o bucată; de la 10 $ la 3 zecimale - T212 permite fracții), iar suma, riscul și comisionul se refac din bucățile afișate.
+function t212MarimeAfisata(m, pret) {
+  var n = m ? Number(m.bucati) || 0 : 0; if (!m || !(n > 0)) return m;
+  var f = pret < 10 && n >= 1 ? Math.floor(n) : Math.floor(n * 1000 + 1e-9) / 1000, k = f / n; if (k === 1) return m;
+  var r = Object.assign({}, m, { bucati: f, k: k, suma: m.suma * k, risc: m.risc * k, riscPctReal: m.riscPctReal * k, comision: m.comision * k });
+  if (m.riscTotal > 0) { r.riscTotal = m.riscTotal - m.risc + r.risc; r.riscTotalPct = m.riscTotalPct - m.riscPctReal + r.riscPctReal; }
+  return r;
+}
 // v100.85 (reveniri, 03.10): acțiunile care au scăzut puternic și acum revin - doar long; istoricul regulii pe față (+ supraviețuitorii) și urmărirea
 function t212ReveniriHtml(id) {
   if (!id || typeof Reveniri === "undefined") return "";
@@ -1052,9 +1061,9 @@ function t212PlanPoarta(p) {
 }
 function t212PlanPoartaHtml(p, pl) {
   var n = p.niv, c = function (et, v, cls, sub) { return '<div><span class="tbEt2">' + et + '</span><b' + (cls ? ' class="' + cls + '"' : '') + '>' + v + '</b><span class="tbSub">' + sub + '</span></div>'; };
-  var m = pl.m, fara = t212FaraSuma(p), arata = !fara && p.v && p.v.nivel === "cumpara" && m && !m.blocat && !m.pesteLiber && !m.plin && !pl.eroare;   /* v100.222: bucăți doar pe verde */
+  var m = t212MarimeAfisata(pl.m, pl.intrare), fara = t212FaraSuma(p), arata = !fara && p.v && p.v.nivel === "cumpara" && m && !m.blocat && !m.pesteLiber && !m.plin && !pl.eroare;   /* v100.222: bucăți doar pe verde */
   var cat = fara ? escapeHtml(t212TextFaraSuma(fara)) : pl.eroare ? '<span class="bad">⚠ ' + escapeHtml(pl.eroare) + '</span>' : !m ? "citește întâi contul"
-    : t212CatText(m, p.simbol) + (pl.castig !== null ? " · la țintă câștigi ~" + t212Suma(pl.castig) : "") + " · comision dus-întors ~" + t212Suma(m.comision) + escapeHtml(t212NotaRec(p));
+    : t212CatText(m, p.simbol) + (pl.castig !== null ? " · la țintă câștigi ~" + t212Suma(pl.castig * (m.k || 1)) : "") + " · comision dus-întors ~" + t212Suma(m.comision) + escapeHtml(t212NotaRec(p));
   return '<div class="t212PretGrid">'
     + c("Intrare" + (pl.ale.intrare ? " · a ta" : " (ordin limită)"), t212Usd(pl.intrare), "", t212Pct(pl.intrare / p.st.pret - 1) + " față de acum" + (pl.ale.intrare ? " · calculată " + (n.intrare ? t212Usd(n.intrare.pret) : "—") : ""))
     + c("Stop" + (pl.ale.stop || (p.stopP && p.stopP.alTau) ? " · al tău" : ""), t212Usd(pl.stop), "bad", t212Pct(pl.stop / pl.intrare - 1) + " de la intrare · calculat " + t212Usd(n.stop))
@@ -1069,7 +1078,7 @@ function t212PreturiPoarta(p) {
   if (pl) return '<div class="t212Preturi"><div class="t212PretCap"><b>🎯 Planul tău pentru ' + escapeHtml(p.simbol) + '</b><span class="tbSub">' + escapeHtml(t212ProbaText(n)) + '</span></div>' + t212PlanPoartaHtml(p, pl)
     + (n.proba.medie !== null && n.proba.medie <= 0 ? '<p class="tbWarn">⚠️ Pe istoricul ei, în starea de acum, niciun stop (1,5–3× ATR (media simplă pe 14 zile)) n-a ieșit pe plus în medie: aș sări peste ea.</p>' : '') + '</div>';
   // fara intrare (trend jos) sau poarta pe "nu" -> nu dau o marime de cumparare: ar contrazice verdictul (regula sta in t212MarimePoarta)
-  var baza = n.intrare ? n.intrare.pret : p.st.pret, cumpar = !!n.intrare && p.v && p.v.nivel === "cumpara", fara = t212FaraSuma(p), m = fara ? null : t212MarimePoarta(p);   /* v100.222: AȘTEAPTĂ nu e cumpărare */
+  var baza = n.intrare ? n.intrare.pret : p.st.pret, cumpar = !!n.intrare && p.v && p.v.nivel === "cumpara", fara = t212FaraSuma(p), m = fara ? null : t212MarimeAfisata(t212MarimePoarta(p), baza);   /* v100.222: AȘTEAPTĂ nu e cumpărare. audit 23.10: bucățile în jos, suma din ele */
   return '<div class="t212Preturi"><div class="t212PretCap"><b>🎯 Prețurile calculate pentru ' + escapeHtml(p.simbol) + '</b><span class="tbSub">' + escapeHtml(t212ProbaText(n)) + '</span></div><div class="t212PretGrid">'
     + '<div><span class="tbEt2">Intrare (ordin limită)</span><b>' + (n.intrare ? t212Usd(n.intrare.pret) : "—") + '</b><span class="tbSub">' + escapeHtml(n.intrare ? n.intrare.motiv + (n.intrare.pret < p.st.pret ? " · " + t212Pct(n.intrare.pret / p.st.pret - 1) + " față de acum" : "") : n.intrareMotiv) + '</span></div>'
     + '<div><span class="tbEt2">Stop' + (n.intrare ? "" : " (dacă o cumperi totuși)") + '</span><b class="bad">' + t212Usd(n.stop) + '</b><span class="tbSub">' + t212Pct(-n.riscPct) + (n.intrare ? ' de la intrare' : ' de la prețul de acum') + (p.planScris ? " · ai scris tu alt stop — poarta îl folosește pe al tău" : "") + '</span></div>'
