@@ -123,8 +123,27 @@ await test("(3) fereastra cea mai deasă rărită: 16–17 la 60 s (nu 30 s); sc
 await test("(3) colectorul urcă poza doar când urcaPoza zice da; amprenta ținută după urcarea reușită", () => {
   const c = citeste("scripts", "colector.mjs");
   assert.match(c, /const amp = amprentaPoza\(poza\)/);
-  assert.match(c, /if \(urcaPoza\(\{ amprenta: amp, ultima: pozaAmprenta, ultimaLa: pozaOkLa, acum: Date\.now\(\) \}\)\) \{/);
+  assert.match(c, /if \(plan\.urca && urcaPoza\(\{ amprenta: amp, ultima: pozaAmprenta, ultimaLa: pozaOkLa, acum: Date\.now\(\) \}\)\) \{/);   // (12): și doar cu plan.urca
   assert.match(c, /pozaOkLa = Date\.now\(\); pozaAmprenta = amp;/);
+});
+
+// ---------- (12) alertele T212 (Consilier, ±1%, SL/TP) și fără poză: fără cheile paznicului sau noaptea ----------
+await test("(12) planTuraPoza: cu paznic ziua ⇒ ritmul pozei + urcare; fără paznic SAU noaptea ⇒ tot la 5 min, doar alertele (fără urcare, fără simbolurile paginii)", () => {
+  assert.equal(typeof PZ.planTuraPoza, "function"); assert.equal(PZ.ALERTE_T212_FARA_POZA_MS, 5 * MIN);
+  const zi = Date.UTC(2026, 9, 23, 9, 0), noapte = Date.UTC(2026, 9, 23, 22, 0);   // 12:00 și 01:00 RO
+  assert.deepEqual(PZ.planTuraPoza({ acum: zi, cheiPaznic: true, botiActivi: 1 }), { intervalMs: 180000, urca: true, simboluri: true });
+  assert.deepEqual(PZ.planTuraPoza({ acum: zi, cheiPaznic: false, botiActivi: 1 }), { intervalMs: 5 * MIN, urca: false, simboluri: false });
+  assert.deepEqual(PZ.planTuraPoza({ acum: noapte, cheiPaznic: true, botiActivi: 1 }), { intervalMs: 5 * MIN, urca: false, simboluri: false });
+});
+await test("(12) colectorul: turaPoza pornește după planTuraPoza, urcă doar cu plan.urca, iar alertele T212 / SL-TP se judecă oricum", () => {
+  const c = citeste("scripts", "colector.mjs"), i0 = c.indexOf("async function turaPoza()"), corp = c.slice(i0, c.indexOf("\nfunction turaCopie()", i0));
+  assert.match(corp, /const plan = planTuraPoza\(\{ acum: Date\.now\(\), cheiPaznic: !!\(PAZNIC_URL && PAZNIC_TOKEN\), botiActivi \}\);/);
+  assert.match(corp, /if \(pozaInLucru \|\| Date\.now\(\) - pozaLa < plan\.intervalMs\) return;/);
+  assert.ok(!/!PAZNIC_URL \|\| !PAZNIC_TOKEN/.test(corp), "turaPoza tot iese fără cheile paznicului");
+  const iUrca = corp.indexOf("if (plan.urca && urcaPoza("), iSLTP = corp.indexOf("alerteSLTP(poza, Date.now())"), iPasi = corp.indexOf("alerteT212Pasi(poza, st, Date.now())");
+  assert.ok(iUrca > 0, "urcarea nu e sub plan.urca"); assert.ok(iSLTP > 0 && iPasi > 0);
+  const blocUrca = corp.slice(iUrca, corp.indexOf("\n    }\n", iUrca));
+  assert.ok(!blocUrca.includes("alerteSLTP") && !blocUrca.includes("alerteT212Pasi"), "alertele au rămas legate de urcarea pozei");
 });
 
 console.log(`\n${teste - picate}/${teste} ${picate ? "— PICĂ" : "ok"}`);

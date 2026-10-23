@@ -31,7 +31,7 @@ import { execFile, spawn } from "node:child_process";
 import { adresaTailscale } from "./lib/adresa-radar.mjs";
 import { turaT212 as turaT212Modul, turaPlanuri as turaPlanuriModul, turaCfActiuni as turaCfActiuniModul } from "./lib/tura-t212.mjs";
 import { turaT212Exec } from "./lib/tura-t212.mjs";   // v101.102: completarea o dată a istoricului (tipul ordinului, ora) - jurnalul de execuție
-import { ziSesiune, construiestePoza, alerteSLTP, fxDinPozitii, costLeiDinLoturi, nivDinNiveluri, prevClose, prevSimbol, cadentaPoza, alerteSimboluri, alerteT212Pasi, alertaBotPas, bataieNecesara, paznicLaDupaEsec, amprentaPoza, urcaPoza, pret30DinIstoric, pret24hDinIstoric, ziDinKlines } from "./lib/poza.mjs";
+import { ziSesiune, construiestePoza, alerteSLTP, fxDinPozitii, costLeiDinLoturi, nivDinNiveluri, prevClose, prevSimbol, cadentaPoza, alerteSimboluri, alerteT212Pasi, alertaBotPas, bataieNecesara, paznicLaDupaEsec, amprentaPoza, urcaPoza, planTuraPoza, pret30DinIstoric, pret24hDinIstoric, ziDinKlines } from "./lib/poza.mjs";
 import { creeazaYahooExtra } from "./lib/yahoo-extra.mjs";
 import { strangeBoti } from "./lib/tura-arhiva-boti.mjs";
 import { avertizariPornire } from "./lib/tura-pornire.mjs";
@@ -1210,14 +1210,16 @@ async function adresaRadarului() {
 let pozaOkLa = 0, ultimeleSimboluri = {}, contT212 = null; var pozaAmprenta = null;   // v100.259 (punctul 3): amprenta ultimei poze urcate
 async function turaPoza() {
   const botiActivi = ultimiiBoti.filter((b) => b && b.id && b.activ !== false).length;
-  const cad = cadentaPoza({ acum: Date.now(), botiActivi });   // v101.34 (el, 01.10): 08–16 la 3 min, 16–17 la 30 s, 17–23 la 1,5 min, noaptea nimic
-  if (!PAZNIC_URL || !PAZNIC_TOKEN || pozaInLucru || cad === null || Date.now() - pozaLa < cad) return;
+  // v101.34 (el, 01.10): 08–16 la 3 min, 16–17 la 30 s (v100.259: 60 s), 17–23 la 1,5 min, noaptea nimic
+  // v100.259 (auditul 23.10, punctul 12): fără cheile paznicului sau noaptea, tura tot rulează la 5 min - doar alertele pozițiilor T212 (fără urcare)
+  const plan = planTuraPoza({ acum: Date.now(), cheiPaznic: !!(PAZNIC_URL && PAZNIC_TOKEN), botiActivi });
+  if (pozaInLucru || Date.now() - pozaLa < plan.intervalMs) return;
   pozaInLucru = true; pozaLa = Date.now();
   try {
     let t212Eroare = null;
     const [t212, boti, simboluri, radarUrl] = await Promise.all([
       pozitiiPentruPoza().then((l) => { ultimeleT212 = { lista: l, la: Date.now() }; return l; }).catch((e) => { t212Eroare = e.message; jurnal("poza: t212", e.message); return ultimeleT212.lista; }),
-      botiPentruPoza(), simboluriPentruPoza().catch((e) => { jurnal("poza: simboluri", e.message); return []; }), adresaRadarului()]);
+      plan.urca ? botiPentruPoza() : [], plan.simboluri ? simboluriPentruPoza().catch((e) => { jurnal("poza: simboluri", e.message); return []; }) : [], plan.urca ? adresaRadarului() : null]);
     if (!t212Eroare && stopuriT212Nesigur) t212Eroare = stopuriT212Nesigur;   // v100.259 (punctul 2): stopurile necitite de peste 15 min ⇒ paznicul: „nesigur”
     // v101.2 (ideea 4 „câte bucăți”): la simbolurile urmarite in $ cu intrare sugerata - ActiuniSemnale.marime (1 % risc din contul T212,
     // plafon 20 %), cursul $/leu din pozitii; in € nu avem cursul euro din pozitii -> nimic, nu cifre inventate
@@ -1225,14 +1227,14 @@ async function turaPoza() {
     /* v101.116 (revizia, 🔴2): ce ai deja în acțiune (lei) intră în plafonul de 20 %, ca pe Poartă */
     const dejaLei = (sym) => { const p = (t212 || []).find((x) => x && (x.simbol === sym || x.ticker === sym)); return p && p.qty > 0 && p.pret > 0 && fx > 0 ? p.qty * p.pret / fx : 0; };
     for (const s of simboluri) { const n = s.niveluri; if (n && n.nivel === "ok" && n.intrare && s.moneda === "$" && contT212 && fx) { try { s.marime = ActiuniSemnale.marime({ intrare: n.intrare.pret, stop: n.stop, cont: contT212, fx, deja: dejaLei(s.s) }); } catch (e) { jurnal("poza: marime", s.s, e.message); } } }
-    await aplicaCererileSalt();
+    if (plan.urca) await aplicaCererileSalt();
     const poza = construiestePoza({ acum: Date.now(), turaLa: turaGataLa || null, versiune: VERSIUNE_COLECTOR, pid: process.pid, tura: turaNr, radarUrl, t212, t212La: ultimeleT212.la, t212Eroare, boti, simboluri, salt: ultimeleSalt, saltCereri: saltCereriRez });
     // v101.86: alertele de azi, grupate pe filele paginii alerts - cu simbolurile chiar din poză (boții cu numele din botPoza)
     poza.alerte = alertePentruPoza(alerteZi, { detinute: poza.t212.map((x) => x.s).concat(poza.boti.map((b) => b.s), (ultimeleSalt && ultimeleSalt.randuri || []).map((x) => x.simbol)),
       urmarite: poza.simboluri.map((s) => s.s), boti: poza.boti, salt: (ultimeleSalt && ultimeleSalt.randuri || []).map((x) => x.simbol) }, Date.now());
     // v100.259 (auditul 23.10, punctul 3): urcă doar la o schimbare semnificativă sau la bătaia de 8 min (scrierile KV ale contului: 1.000 pe zi)
     const amp = amprentaPoza(poza);
-    if (urcaPoza({ amprenta: amp, ultima: pozaAmprenta, ultimaLa: pozaOkLa, acum: Date.now() })) {
+    if (plan.urca && urcaPoza({ amprenta: amp, ultima: pozaAmprenta, ultimaLa: pozaOkLa, acum: Date.now() })) {
       const text = pozaInLimita(poza, 450 * 1024);   // revizia (M9): sub plafonul de 512 KB al worker-ului, întâi ies alertele-zgomot
       const r = await fetch(PAZNIC_URL.replace(/\/+$/, "") + "/poza", { method: "POST", headers: { authorization: "Bearer " + PAZNIC_TOKEN, "content-type": "application/json" }, body: text, signal: AbortSignal.timeout(20000) });
       if (!r.ok) {

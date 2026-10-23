@@ -236,6 +236,15 @@ export function amprentaPoza(poza) {
 // Poza neschimbată tot urcă la POZA_BATAIE_MS („bătaia”): paznicul socotește „colectorul tace” la 30 min (TACE_MS, cron la 10 min), iar
 // bataieNecesara trimite o bătaie separată (altă scriere KV) după 10 min fără poză ⇒ 8 min (cu verificarea la cel mult 1,5–3 min: ≤ ~9,5 min).
 export const POZA_BATAIE_MS = 8 * 60000;
+// v100.259 (auditul 23.10, punctul 12): alertele pozițiilor T212 (Consilierul, ±1%, SL/TP) se socoteau DOAR în tura pozei ⇒ fără cheile
+// paznicului sau noaptea (cadența null) lipseau tăcut. Acum tura rulează oricum: cu paznic, ziua, în ritmul pozei și cu urcare; altfel la
+// ALERTE_T212_FARA_POZA_MS, doar pentru alerte (fără urcare și fără simbolurile paginii, care vin de la paznic).
+export const ALERTE_T212_FARA_POZA_MS = 5 * 60000;
+export function planTuraPoza({ acum, cheiPaznic, botiActivi }) {
+  const cad = cadentaPoza({ acum, botiActivi });
+  if (cheiPaznic && cad !== null) return { intervalMs: cad, urca: true, simboluri: true };
+  return { intervalMs: ALERTE_T212_FARA_POZA_MS, urca: false, simboluri: false };
+}
 export function urcaPoza({ amprenta, ultima, ultimaLa, acum }) {
   return amprenta !== ultima || !(acum - (Number(ultimaLa) || 0) < POZA_BATAIE_MS);
 }
