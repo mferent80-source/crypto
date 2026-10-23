@@ -394,7 +394,9 @@ var GraficBot = (function () {
     var etMax = 0; (o.niv || []).forEach(function (x) { if (x && x.t) etMax = Math.max(etMax, String(x.t).length + 8 + (x.sansa ? String(x.sansa).length * 0.85 + 3 : 0)); });
     if (o.consLinii && nr(o.consLinii.stopPlan) > 0) etMax = Math.max(etMax, 36);
     /* v100.240: Math.max(210, Math.min(300, W * 0.18)) — botul era scurt. v100.249: Math.max(360, Math.min(460, W * 0.46)) și var gut = cmp ? 0, volH = ingust ? 34 : 46. Acțiunile rămân 340–520; telefonul 270. Numele lungi nu revin pe grafic. v100.250: var scara = ingust ? 0 : 52. */
-    var scara = (ingust || o.scara === false) ? 0 : 52, gut = cmp ? scara : Math.min(Math.round(W * 0.24), Math.max(176, 12 + Math.round(etMax * 7.1))), plotW = W - gut, mainH = ingust ? 270 : (o.actiune ? Math.round(Math.max(340, Math.min(520, W * 0.36))) : Math.round(Math.max(420, Math.min(540, W * 0.54)))),   /* v100.250: un pic mai înalt; scara de 52 px stă în dreapta și ține doar prețuri. v100.251: o.scara === false o stinge. */ volH = ingust ? 34 : 54, laneH = o.actiune ? 0 : 26, rsiH = st.rsi ? (ingust ? 62 : 78) : 0, adxH = st.adx ? (ingust ? 56 : 70) : 0, axH = 20, gap = 8, trH = Array.isArray(o.semafor) && typeof Directie !== "undefined" ? (ingust ? 7 : 9) : 0;
+    /* audit 23.10: scara crește cu cel mai lung preț pe care îl scrie (PEPE 0.000004962 = 11 cifre ≈ 70 px), minimul rămâne 52. Prețurile vin din bare, prețul viu și nivelurile, cu marja de cadru. */
+    var latScara = 52; (function () { var mx = 0, mn = Infinity, vv = nr(o.pretViu); raw.forEach(function (b) { if (b.h > mx) mx = b.h; if (b.l < mn) mn = b.l; }); if (vv > 0) { if (vv > mx) mx = vv; if (vv < mn) mn = vv; } if (!(mx > 0)) return; [mn * 0.9, mx * 1.1, vv > 0 ? vv : mx].forEach(function (p) { if (p > 0) latScara = Math.max(latScara, Math.round(fmtP(p).length * 6.4 + 12)); }); })();
+    var scara = (ingust || o.scara === false) ? 0 : latScara, gut = cmp ? scara : Math.min(Math.round(W * 0.24), Math.max(176, 12 + Math.round(etMax * 7.1))), plotW = W - gut, mainH = ingust ? 270 : (o.actiune ? Math.round(Math.max(340, Math.min(520, W * 0.36))) : Math.round(Math.max(420, Math.min(540, W * 0.54)))),   /* v100.250: un pic mai înalt; scara de 52 px stă în dreapta și ține doar prețuri. v100.251: o.scara === false o stinge. */ volH = ingust ? 34 : 54, laneH = o.actiune ? 0 : 26, rsiH = st.rsi ? (ingust ? 62 : 78) : 0, adxH = st.adx ? (ingust ? 56 : 70) : 0, axH = 20, gap = 8, trH = Array.isArray(o.semafor) && typeof Directie !== "undefined" ? (ingust ? 7 : 9) : 0;
     var cl = raw.map(function (b) { return b.c; }), S = { e20: ema(cl, 20), e50: ema(cl, 50), bb: bollinger(cl, 20, 2), rsi: rsi(cl, 14) };
     // v100.106: trendul pe fiecare bară ÎNCHISĂ, pe istoria lungă a TF-ului (o.trendIstoric), ca banda să nu înceapă abia de la bara 60
     S.tr = null;
@@ -441,7 +443,8 @@ var GraficBot = (function () {
       if (yAcum !== null) {
         var yt = Math.max(12, Math.min(mainH - 4, yAcum));
         ysCadru.forEach(function (y) { if (Math.abs(y - (yt + 4)) < 16) yt = Math.max(12, Math.min(mainH - 4, y < yt + 4 ? y + 20 : y - 20)); });
-        var tpA = fmtP(pAcum), wA = Math.min(gut - 6, Math.round(tpA.length * 6.4 + 8));
+        /* audit 23.10: wA = Math.min(gut - 6, …) tăia cutia la 46 px sub textul de 70; scara crește acum cu textul, cutia își cuprinde prețul */
+        var tpA = fmtP(pAcum), wA = Math.min(gut - 2, Math.round(tpA.length * 6.4 + 8));
         q.push('<g class="gbAxaAcum"><rect x="' + f1(plotW + gut - 2 - wA) + '" y="' + f1(yt - 8) + '" width="' + wA + '" height="16" rx="2" fill="' + COL.fond + '" stroke="' + COL.text + '" stroke-width="1"/><text x="' + f1(plotW + gut - 6) + '" y="' + f1(yt + 4) + '" text-anchor="end" font-size="11" font-weight="700" fill="' + COL.text + '">' + tpA + '</text></g>');
       }
     }
