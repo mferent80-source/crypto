@@ -168,7 +168,8 @@ await test("🟡7 Health: fără analiză, starea furnizorilor vine din furnizor
 await test("P4 banda roșie goală din Tablou: `hidden` bate `display:grid` (și pastila distanțelor), iar pastila ascunsă se golește", () => {
   assert.match(CSS, /#tbGridLarg\[hidden\][^{]*\{display:none!important\}/);
   assert.match(CSS, /#tabloubot \.tbPill\[hidden\][^{]*\{display:none!important\}|#tabloubot \.tbPill\[hidden\]\s*,[^{]*\{display:none!important\}/);
-  assert.match(fnSursa(APP, "tbKpiPretDeseneaza"), /pill\.hidden=true;pill\.textContent=""/);
+  // v100.259 (audit 23.10, punctul 13): pastila se atinge doar când diferă; ascunsă = golită rămâne (fără dg: hidden și text ""). Era: /pill\.hidden=true;pill\.textContent=""/
+  assert.match(fnSursa(APP, "tbKpiPretDeseneaza"), /var pT=dg\?dg\.pill:"",pC=dg\?"tbPill tbPill-"\+dg\.ton:"tbPill";if\(pill\.hidden!==!dg\)pill\.hidden=!dg;if\(pill\.textContent!==pT\)pill\.textContent=pT;/);
 });
 
 await test("P5 laboratorul vechi (v67) nu mai bagă „Operations SAFE MODE” în centrul de alerte și nici notificări", () => {
