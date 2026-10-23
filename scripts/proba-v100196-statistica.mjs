@@ -139,7 +139,7 @@ function lumePoarta(seed, o) {
       }
     }
   }
-  return V.calibrare(ev).filter((x) => x.sursa === o.sursa);
+  return V.calibrare(ev, { repsP: 1000 }).filter((x) => x.sursa === o.sursa);   // v100.259: simularea de mărime rămâne pe 1.000 (p-ul de producție are 10.000)
 }
 /* pragul unei rate măsurate pe n seturi: nivelul promis + z erori standard (ales în lumea FĂRĂ efect, nu după rezultat) */
 const prag = (p0, n, z) => p0 + z * Math.sqrt(p0 * (1 - p0) / Math.max(1, n));
