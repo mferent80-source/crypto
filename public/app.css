@@ -3089,6 +3089,17 @@ html.pzDemo #tabloubot .tbPretViu{display:none!important}
 @media (max-width:1599px){#salt .t212Grila{grid-template-columns:minmax(0,1fr)}}
 /* punctul 12: comutatoarele din Setări sunt <button role="switch"> — fără umplutura și fontul butonului, arată ca înainte */
 button.toggle{padding:0;font:inherit;appearance:none}
+/* punctul 18: țintele de atingere pe telefon ≥ 44 px (Tablou „deschide în Busolă / Simulator” 18–21 px, Monte Carlo 10/30/60 27 px, Alerte #alImp și Scanner #scMele prin eticheta lor, Setări: rândurile și comutatoarele de 24 px cu zona de apăsare mărită fără să se schimbe desenul) */
+@media (max-width:640px){
+  #tabloubot .tbCitLink,#tabloubot .tbMcBtn{min-height:44px;display:inline-flex;align-items:center}
+  .rlAlege .rlK{min-height:44px}
+  .alComut,.scComut{min-height:44px}
+  #alImp,#scMele{width:22px;height:22px}
+  #settings .settingRow{min-height:44px}
+  #settings button.toggle{position:relative;min-height:0;height:24px}   /* regula butoanelor de 44 px nu-l lungește: desenul rămâne 42×24, apăsarea o ia ::before */
+  #settings button.toggle::before{content:"";position:absolute;left:-6px;right:-6px;top:-10px;bottom:-10px}
+  #settings label.small{min-height:44px;display:inline-flex;align-items:center}
+}
 /* audit 23.10 · sfârșitul blocului */
 /* v100.258: pânda (v100.150) stă după orice regulă de tabel, chiar înaintea blocului v100.224 (#topLive), care rămâne ultimul - scripts/lib/panda-ultima.mjs */
 @media (max-width:640px){.sugPandaTab thead{display:table-header-group}.sugPandaTab{display:table}.sugPandaTab tbody{display:table-row-group}.sugPandaTab tr{display:table-row}.sugPandaTab td,.sugPandaTab th{display:table-cell}}
