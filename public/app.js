@@ -7482,6 +7482,8 @@ function tbActualizeazaBanda(){
   var r=typeof PretViu!=="undefined"?PretViu.banda({bot:b,pretViu:pvPretPentru(b),botLa:tbStare.botLa,acum:Date.now(),zi:pvZiPentru(b),
     distanteGrid:typeof TabloExtra!=="undefined"?TabloExtra.distanteGrid(pvBotLive(b)):null,piata:z}):null;
   if(!r){el.hidden=true;return}
+  // audit 23.10: verde = bine pentru tine. „azi +13%” la un SHORT e rău (roșu); totalul pe minus e roșu, nu galbenul benzii
+  r.parti.forEach(function(p){if(p.k==="zi"&&p.ton)p.ton=bsTonEfect(p.ton,b.directie);if(p.k==="total"&&b.profitTotal!=null)p.ton=Math.round(Number(b.profitTotal)*10)<0?"jos":Math.round(Number(b.profitTotal)*10)>0?"sus":""});
   // v100.59 (I-481): botul pornit cu setarile variantei ingusta -> ora de inchidere in banda (asa a fost probat)
   try{var pc=b.id?tbCeasBot(String(b.id)):null;   /* revizia 01.10 (I6): ceasul tinut minte de colector, nu recalculat din rezultatul rescris la 6 h */
     if(pc){var dc=new Date(pc.inchideLa);r.parti.push({k:"ingust",t:"⚡ grid îngust · închide-l la "+String(dc.getHours()).padStart(2,"0")+":"+String(dc.getMinutes()).padStart(2,"0")+(Date.now()>=pc.inchideLa?" (a trecut)":""),ton:Date.now()>=pc.inchideLa?"jos":"",title:"Probat cu închidere după "+pc.ore+" h"})}}catch(e){}
@@ -7579,6 +7581,8 @@ function pvAduZi(simbol){
 }
 // Doar pretul se rescrie la fiecare tranzactie (banda + capul Tabloului + „Pretul in grid”), nu tot ecranul;
 // graficul se redeseneaza cu pretul live cel mult o data la 5 s si niciodata cat tii mouse-ul pe el.
+// audit 23.10: tonul mișcării de azi după efectul pe bot (clasele sus = verde, jos = roșu): la short prețul în sus e rău
+function bsTonEfect(ton,dir){return String(dir||"").toLowerCase()==="short"&&(ton==="sus"||ton==="jos")?(ton==="sus"?"jos":"sus"):ton}
 function pvArata(){
   var b=tbStare.routeOk===false?null:tbStare.bot;
   var pa=b&&typeof PretViu!=="undefined"?PretViu.pretDeAratat(b,pvPretPentru(b),tbStare.botLa,Date.now()):null;
@@ -7588,7 +7592,7 @@ function pvArata(){
   if(bp&&pa){bp.textContent=pa.text+sag;bp.className="bsPret"+(pa.viu?" viu":"");bp.title="Prețul botului "+pa.sursa}
   var el=$("botStrip");
   if(el&&b){
-    var bz=el.querySelector('.bsParte[data-k="zi"]');if(bz&&zt){bz.textContent=zt.t;bz.className="bsParte "+zt.ton}
+    var bz=el.querySelector('.bsParte[data-k="zi"]');if(bz&&zt){bz.textContent=zt.t;bz.className="bsParte "+bsTonEfect(zt.ton,b.directie)}
     var bg=el.querySelector('.bsParte[data-k="grid"]'),dg=typeof TabloExtra!=="undefined"?TabloExtra.distanteGrid(pvBotLive(b)):null;
     if(bg&&dg)bg.textContent=PretViu.textGrid(dg);
   }

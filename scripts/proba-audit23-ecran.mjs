@@ -140,5 +140,18 @@ await test("4c cu un semnal (funding) contextul rămâne socotit ca înainte", a
   assert.equal(r.el.fcontext.textContent, "CROWDED");
 });
 
+// ---------------------------------------------------------------- 5. banda botului: culoarea după efectul pe bot
+await test("5a bsTonEfect: la SHORT prețul în sus e rău (jos = roșu), la LONG bine; totalul pe minus e roșu, nu galbenul benzii", () => {
+  const m = APP.match(/function bsTonEfect\([^\n]*/);
+  assert.ok(m, "lipsește bsTonEfect");
+  const f = new Function("return " + m[0])();
+  assert.equal(f("sus", "short"), "jos"); assert.equal(f("jos", "short"), "sus");
+  assert.equal(f("sus", "long"), "sus"); assert.equal(f("jos", "long"), "jos"); assert.equal(f("egal", "short"), "egal");
+  const p = fnApp("pvArata");
+  assert.match(p, /bz\.className="bsParte "\+bsTonEfect\(zt\.ton,b\.directie\)/, "pvArata rescrie „azi” cu tonul prețului");
+  assert.match(APP, /p\.k==="zi"&&p\.ton\)p\.ton=bsTonEfect\(p\.ton,b\.directie\)/);
+  assert.match(APP, /p\.k==="total"&&b\.profitTotal!=null\)p\.ton=/);
+});
+
 console.log(`\n${teste - picate}/${teste} trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
 process.exit(picate ? 1 : 0);
