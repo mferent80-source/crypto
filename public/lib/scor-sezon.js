@@ -27,6 +27,8 @@ var ScorSezon = (function () {
   // sumele cu O zecimală și virgulă (regula lui din 03.10); „+0,0” fără semn
   function U(v, M) { if (v === null || v === undefined || !isFinite(v)) return "—"; var s = Math.abs(v).toFixed(1); return (Number(s) === 0 ? "" : v >= 0 ? "+" : "−") + s.replace(".", ",") + " " + (M || "USDT"); }
   function pr(v) { return v === null || v === undefined || !isFinite(v) ? "—" : Math.round(v * 100) + " %"; }
+  // v100.259: intervalul Wilson (95%) pentru k din n - același ca GridCalcul.wilson
+  function wilson(k, n) { if (!(n > 0)) return [0, 1]; var z = 1.96, p = k / n, d = 1 + z * z / n, c = p + z * z / (2 * n), m = z * Math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)); return [Math.max(0, (c - m) / d), Math.min(1, (c + m) / d)]; }
 
   // ---- ziua pe ora României ----
   var fmtZi = null;
@@ -156,7 +158,13 @@ var ScorSezon = (function () {
     var b = s.inainte, inTxt;
     if (b.n) {
       inTxt = "Înainte de " + esc(dataScurta(s.start)) + ": <b>" + esc(pr(b.rata)) + "</b> din " + esc(cate(b.n, fel[0], fel[1])) + " · net <b class=\"" + (!(b.n >= 10) || b.net === null ? "" : b.net >= 0 ? "good" : "bad") + "\">" + esc(Um(b.net)) + "</b> · cea mai lungă serie de pierderi " + b.seriePierderi + ". ";
-      inTxt += s.suficient ? (s.rata > b.rata && s.net > 0 ? "Sezonul nou bate trecutul." : s.rata > b.rata ? "Rata e mai bună, dar netul încă nu: pierderile sunt prea mari." : "Sezonul nou e sub trecut.") : "Sezonul nou pornește de la zero: fiecare " + P.felInchis[0] + " contează.";
+      // v100.259 (auditul 23.10, punctul 8): „bate / sub trecut” doar când intervalul Wilson (95%) al ratei de acum lasă trecutul de o parte;
+      // 7 din 10 față de 56% (p ≈ 0,29) e „încă nu se poate spune”, cu intervalul la vedere
+      var icS = wilson(s.win, s.n);
+      inTxt += !s.suficient ? "Sezonul nou pornește de la zero: fiecare " + P.felInchis[0] + " contează."
+        : icS[0] > b.rata ? (s.net > 0 ? "Sezonul nou bate trecutul: și marginea de jos a ratei (" + pr(icS[0]) + ") e peste " + pr(b.rata) + "." : "Rata e mai bună (și marginea ei de jos, " + pr(icS[0]) + ", e peste " + pr(b.rata) + "), dar netul încă nu: pierderile sunt prea mari.")
+        : icS[1] < b.rata ? "Sezonul nou e sub trecut: și marginea de sus a ratei (" + pr(icS[1]) + ") e sub " + pr(b.rata) + "."
+        : "Încă nu se poate spune dacă sezonul nou e mai bun: rata " + pr(s.rata) + " pe " + cate(s.n, fel[0], fel[1]) + " are intervalul " + pr(icS[0]) + "–" + pr(icS[1]) + ", iar trecutul (" + pr(b.rata) + ") e înăuntru.";
     } else inTxt = "Nu am istoric de dinainte de " + esc(dataScurta(s.start)) + ".";
     var zile = s.zileRamase === null ? "" : s.zileRamase < 0 ? " · termenul a trecut" : " · " + cate(s.zileRamase, "zi", "zile") + " până la " + esc(dataRo(Date.parse(ob.pana + "T00:00:00Z")));
     var pRata = s.progresRata === null ? 0 : Math.round(s.progresRata * 100), pNet = s.progresNet === null ? 0 : Math.round(s.progresNet * 100);
