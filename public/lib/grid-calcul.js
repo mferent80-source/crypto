@@ -25,7 +25,7 @@ var GridCalcul = (function () {
     INCLINARE: { long: 0.6, neutru: 0.5, short: 0.4 },   // partea de DEASUPRA pretului
     GRILE_MIN: 2, GRILE_MAX: 150,
     LEV_MAX: 5,
-    MMR: 0.01,                 // marja de intretinere, prudent
+    MMR: 0.01,                 // v100.259 (auditul 23.10): marja de intretinere PRESUPUSA 1% (nu prudenta) - n-avem treptele Pionex in cod; la monedele mici si la pozitiile mari bursa cere mai mult, deci lichidarea reala poate veni MAI DEVREME decat cea socotita aici
     PRAG_MISCARE: 1.5,
     MEDIANA_VERDE: 0.003,
     MARGINE_RANGE: 0.10,
@@ -193,7 +193,7 @@ var GridCalcul = (function () {
 
   // Pretul de lichidare cu pozitia PLINA pe partea periculoasa, marja izolata
   // normalizata la 1 (suma se simplifica). Castigul din grile nu se socoteste
-  // (prudent). Long se lichideaza jos, short sus; neutru poate si jos, si sus.
+  // (prudent). Long se lichideaza jos, short sus; neutru poate si jos, si sus. v100.259: MMR-ul insa e presupus (vezi C.MMR), nu prudent.
   function lichidare(niv, pret, dir, L) {
     var N = niv.length - 1, Qj = 0, Cj = 0, Qs = 0, Cs = 0;
     for (var k = 0; k < N; k++) {

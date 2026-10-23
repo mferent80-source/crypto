@@ -368,7 +368,9 @@ var ActiuniSemnale = (function () {
     // v100.222 (I-722): risc 0 e blocat. Lipsa câmpului rămâne 1 %.
     if (o.riscPct === 0) return { blocat: true, suma: 0, bucati: 0, risc: 0, riscPctReal: 0, plafonat: false, comision: 0, peZero: COST_CONV, deja: o.deja > 0 ? o.deja : 0, plin: false };
     // v100.169: riscPct (fracție) din planul LUI; fără el, 1 % ca înainte
-    var deja = o.deja > 0 ? o.deja : 0, fx = o.fx, riscLei = o.cont * (o.riscPct > 0 ? o.riscPct : 0.01), peBucLei = (o.intrare - o.stop) / fx, buc = riscLei / peBucLei, suma = buc * o.intrare / fx, plafon = Math.max(0, o.cont * PLAFON - deja), plaf = false;
+    // v100.259 (auditul 23.10, punctul 14): riscul pe bucată include conversia dus-întors (0,15% din intrare la cumpărare + 0,15% din stop la
+    // vânzare) - la un stop de 3%, fără ea riscul real ieșea ~1,1% în loc de 1%. Golul de la stop (deschiderea sub stop) nu e socotit: se spune.
+    var deja = o.deja > 0 ? o.deja : 0, fx = o.fx, riscLei = o.cont * (o.riscPct > 0 ? o.riscPct : 0.01), peBucLei = (o.intrare - o.stop + COST_CONV / 2 * (o.intrare + o.stop)) / fx, buc = riscLei / peBucLei, suma = buc * o.intrare / fx, plafon = Math.max(0, o.cont * PLAFON - deja), plaf = false;
     if (suma > plafon + 1e-9) { buc = plafon * fx / o.intrare; suma = plafon; plaf = true; }
     // v87: comisionul de conversie dus-intors (0,15% + 0,15%) si cat trebuie sa urce ca sa iesi pe zero
     var r = { bucati: Math.round(buc * 10000) / 10000, suma: suma, risc: buc * peBucLei, riscPctReal: buc * peBucLei / o.cont, plafonat: plaf, comision: suma * COST_CONV, peZero: COST_CONV, deja: deja, plin: deja > 0 && plafon <= 1e-9 };

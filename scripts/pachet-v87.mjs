@@ -78,7 +78,7 @@ await test("regulile tale: grupa cu destule trade-uri (>=30) care iese clar mai 
 // ---------------- T212 · 5) comisionul in poarta ----------------
 await test("marimea pozitiei spune si comisionul dus-intors (0,30% din suma) si cat trebuie sa urce ca sa iesi pe zero", () => {
   const m = A.marime({ intrare: 100, stop: 95, cont: 30000, fx: 1 });   // v100.173: cursul se dă mereu (fără el -> null)
-  aprox(m.comision, 6000 * 0.003, 1e-9); aprox(m.peZero, 0.003, 1e-12);
+  aprox(m.comision, m.suma * 0.003, 1e-9); aprox(m.suma, 100 * 300 / 5.2925, 1e-2); aprox(m.peZero, 0.003, 1e-12);   // v100.259: suma cu conversia în risc (era 6000)
 });
 
 // ---------------- T212 · 6) dividendele ----------------

@@ -28,7 +28,7 @@ const FX = 0.25, CONT = 30000;
 
 await test("marime: fără riscPct rămâne exact ca înainte (1 % din cont)", () => {
   const m = AS.marime({ intrare: 100, stop: 90, cont: CONT, fx: FX });
-  aprox(m.risc, 300, 1e-6, "riscul în lei"); aprox(m.bucati, 7.5, 1e-4, "bucăți"); assert.equal(m.plafonat, false);
+  aprox(m.risc, 300, 1e-6, "riscul în lei"); aprox(m.bucati, 300 / ((10 + 0.0015 * 190) / FX), 1e-4, "bucăți"); assert.equal(m.plafonat, false);   // v100.259: riscul pe bucată cu conversia dus-întors (era 7,5)
 });
 await test("marime: riscPct 0,015 ⇒ 1,5 % din cont și riscul real în %", () => {
   const m = AS.marime({ intrare: 100, stop: 90, cont: CONT, fx: FX, riscPct: 0.015 });
@@ -37,7 +37,7 @@ await test("marime: riscPct 0,015 ⇒ 1,5 % din cont și riscul real în %", () 
 await test("marime: plafonul de 20 % scade riscul real sub cel cerut", () => {
   const m = AS.marime({ intrare: 100, stop: 98, cont: CONT, fx: FX, riscPct: 0.015 });
   assert.equal(m.plafonat, true); aprox(m.suma, 6000, 1e-6, "suma tăiată"); assert.ok(m.riscPctReal < 0.015, "riscul real " + m.riscPctReal);
-  aprox(m.riscPctReal, 0.004, 1e-9, "6000 lei × 2 % = 120 lei = 0,4 %");
+  aprox(m.riscPctReal, 0.004594, 1e-9, "6000 lei × (2 % + conversia 0,297 %) = 137,8 lei = 0,46 %");   // v100.259: riscul real cu conversia (era 0,4 %)
 });
 
 const CALC = { intrare: 101, stop: 95, tinta: 113 };
@@ -65,7 +65,7 @@ await test("planulMeu: ținta sub intrare ⇒ avertizare, fără câștig/risc, 
 });
 await test("planulMeu: plafonul de 20 % ⇒ textul spune riscul REAL, nu cel cerut", () => {
   const r = J(AS.planulMeu({ intrare: 100, stop: 98, riscPct: 1.5, cont: CONT, fx: FX, calc: CALC }));
-  assert.equal(r.m.plafonat, true); aprox(r.riscReal, 0.004, 1e-9, "riscul real");
+  assert.equal(r.m.plafonat, true); aprox(r.riscReal, 0.004594, 1e-9, "riscul real");   // v100.259: cu conversia (era 0,004)
 });
 await test("planulMeu: fără stop ⇒ null; fără cont ⇒ planul LUI rămâne, cu „contul n-a venit” (v100.175: poarta nu mai trece tăcut la prețurile calculate)", () => {
   const fc = AS.planulMeu({ intrare: 100, stop: 92, cont: 0, fx: FX, calc: CALC });
@@ -113,7 +113,7 @@ await test("v100.172 „un trade ca ăsta” judecă trade-ul din planul LUI (in
 await test("v100.173 marime fără curs dolar/leu ⇒ null (nu dolari luați drept lei)", () => {
   assert.equal(AS.marime({ intrare: 50, stop: 47.5, cont: 20000 }), null);
   assert.equal(AS.marime({ intrare: 50, stop: 47.5, cont: 20000, fx: null }), null);
-  assert.ok(AS.marime({ intrare: 50, stop: 47.5, cont: 20000, fx: 0.2152 }).bucati > 17);
+  assert.ok(AS.marime({ intrare: 50, stop: 47.5, cont: 20000, fx: 0.2152 }).bucati > 16);   // v100.259: cu conversia în risc ~16,3 (era > 17); fără curs ar fi ~80
 });
 await test("v100.173 planulMeu fără curs ⇒ eroarea spune că lipsește cursul, fără mărime", () => {
   const r = J(AS.planulMeu({ intrare: 100, stop: 92, cont: CONT, calc: CALC }));

@@ -159,5 +159,110 @@ await test("(4) GridSim.LICHIDARI_ACCEPTATE = 0 și lichidareAcceptata: orice li
   assert.match(citeste("public", "lib", "grid-sim.js"), /else if \(!lichidareAcceptata\(o\.pLich\)\) faCe = /);
 });
 
+// ---------- modulele de text ----------
+const AC = new Function("GridCalcul", `${lib("acasa.js")}; return Acasa;`)(G);
+globalThis.Alerte = A;
+globalThis.Scenariu = new Function(`${lib("scenariu.js")}; return Scenariu;`)();
+const SF = new Function(`${lib("sfaturi.js")}; return Sfaturi;`)();
+const SS = new Function(`${lib("scor-sezon.js")}; return ScorSezon;`)();
+const AS = new Function(`${lib("actiuni-semnale.js")}; return ActiuniSemnale;`)();
+globalThis.ActiuniSemnale = AS;
+const CO = new Function(`${lib("consilier.js")}; return Consilier;`)();
+
+// ---------- (6) textele de piață fără promisiune ----------
+const CL = (ev, ca) => ({ evita: ev, candidati: ca, dir: { long: 10, neutru: 70, short: 20 } });
+await test("(6) Acasă, liniște: fără „mediul bun pentru grid” / „moment bun”; faptul și ce e dovedit", () => {
+  const v = AC.vreme({ clasament: CL(10, 90), btc: { miscare: false }, fg: 50 });
+  assert.equal(v.nivel, "liniste");
+  const tot = v.titlu + " | " + v.faCe + " | " + v.text;
+  assert.doesNotMatch(tot, /mediul bun|moment bun/);
+  assert.match(v.titlu, /^Piața e liniștită: /);
+  assert.match(v.faCe, /fișa/);
+  assert.match(v.text, /după mișcare gridul iese mai rău|regimul în care gridul iese cel mai rău/);
+});
+await test("(6) Acasă, frică mare: fără „de la care piața a revenit des”; fg(): fără „urcările țin mai greu” / „a revenit des”", () => {
+  const v = AC.vreme({ clasament: CL(60, 40), btc: { miscare: false }, fg: 20 });
+  assert.doesNotMatch(v.text + v.faCe, /a revenit des/);
+  const sus = AC.fg([40, 60, 80]), jos = AC.fg([60, 40, 20]);
+  assert.doesNotMatch(sus.text + jos.text, /țin mai greu|a revenit des/);
+  assert.match(sus.text, /Peste 75 e lăcomie extremă/); assert.match(jos.text, /Sub 25 e frică extremă/);
+  assert.doesNotMatch(AC.fg([40, 60, 72]).text, /Peste 75/, "72 nu e peste 75");
+});
+
+// ---------- (7) observația pe 40 de monede nu mai e dovadă ----------
+await test("(7) „mișcare cu botul”: sursa spune observație nedovedită, fără „59% … (contra 50%)” ca dovadă", () => {
+  const b = { baza: "XYZ.PERP", directie: "long", pretCurent: 100, gridJos: 90, gridSus: 110, profitTotal: 1, investit: 100 };
+  const s = SF.sfaturi({ bot: b, fisa: { regim: { r4h: 2, r24h: 2.1, miscare: true, sens: "urca" } } }).find((x) => x.cod === "miscare-cu");
+  assert.ok(s, "sfatul există");
+  assert.doesNotMatch(s.sursa, /59%|contra 50%/);
+  assert.match(s.sursa, /nedovedit/);
+});
+
+// ---------- (8) scorul sezonului: „bate / sub trecut” doar când intervalul o spune ----------
+const tr = (n, win, de) => Array.from({ length: n }, (_, i) => ({ id: de + i, inchis: Date.UTC(2026, 9, de === 0 ? 1 : 20) + i * 3600000, rezultat: i < win ? 2 : -1 }));
+await test("(8) 7 din 10 față de 56% istoric ⇒ „încă nu se poate spune”, cu intervalul Wilson", () => {
+  const lista = tr(100, 56, 0).concat(tr(10, 7, 1000)), cfg = { start: Date.UTC(2026, 9, 15), obiectiv: { rata: 0.55, serie: 3, net: 10 } };
+  const s = SS.calc(lista, cfg, Date.UTC(2026, 9, 23), "pionex"), h = SS.html(s, {});
+  assert.doesNotMatch(h, /Sezonul nou bate trecutul|Sezonul nou e sub trecut/);
+  assert.match(h, /Încă nu se poate spune dacă sezonul nou e mai bun: rata 70 % pe 10 boți are intervalul 40 %–89 %, iar trecutul \(56 %\) e înăuntru\./, h.match(/Înainte de[^]*?<\/div>/) + "");
+});
+await test("(8) 28 din 30 față de 56% ⇒ „bate trecutul” (marginea de jos peste trecut); 3 din 30 ⇒ „sub trecut”", () => {
+  const cfg = { start: Date.UTC(2026, 9, 15), obiectiv: { rata: 0.55, serie: 3, net: 10 } };
+  const sus = SS.html(SS.calc(tr(100, 56, 0).concat(tr(30, 28, 1000)), cfg, Date.UTC(2026, 9, 23), "pionex"), {});
+  assert.match(sus, /Sezonul nou bate trecutul: și marginea de jos a ratei \(\d+ %\) e peste 56 %\./);
+  const jos = SS.html(SS.calc(tr(100, 56, 0).concat(tr(30, 3, 1000)), cfg, Date.UTC(2026, 9, 23), "pionex"), {});
+  assert.match(jos, /Sezonul nou e sub trecut: și marginea de sus a ratei \(\d+ %\) e sub 56 %\./);
+});
+
+// ---------- (10) boții neutri: ambele margini ----------
+await test("(10) bot neutru: sfat pe marginea de jos ȘI pe cea de sus, cu frecvența fiecăreia", () => {
+  const b = { baza: "XYZ.PERP", directie: "neutral", pretCurent: 100, gridJos: 90, gridSus: 112, profitTotal: 1, investit: 100 };
+  const fr = (v) => ({ valoare: v, atinse: Math.round(v / 2), cazuri: 50, stare: "destule" });
+  const l = SF.sfaturi({ bot: b, sanse: { josZi: fr(10), josSapt: fr(30), susZi: fr(24), susSapt: fr(40) } }).filter((x) => x.cod === "margine");
+  assert.equal(l.length, 2, JSON.stringify(l));
+  const sus = l.find((x) => x.parte === "sus"), jos = l.find((x) => x.parte === "jos");
+  assert.match(sus.titlu, /^Marginea de sus \(112\.00\) e cu 12,0% peste preț$/);
+  assert.match(sus.text, /short/); assert.match(sus.text, /urcă cu atât în 24% din zile/);
+  assert.equal(sus.ton, "atentie"); assert.equal(jos.ton, "info");
+  assert.match(jos.text, /long/); assert.match(jos.text, /scade cu atât în 10% din zile/);
+});
+await test("(10) intrare(): la neutru cere frecvența la ambele margini", () => {
+  globalThis.TabloExtra = TE;
+  const k4 = Array.from({ length: 400 }, (_, i) => ({ time: Date.UTC(2026, 6, 1) + i * 4 * 3600000, open: 100, high: 100 + (i % 7), low: 100 - (i % 9), close: 100 }));
+  const x = SF.intrare({ bot: { baza: "XYZ.PERP", directie: "neutral", pretCurent: 100, gridJos: 90, gridSus: 112 }, k4, acum: Date.UTC(2026, 9, 23) });
+  assert.ok(x.sanse.josZi && x.sanse.susZi && x.sanse.josSapt && x.sanse.susSapt, Object.keys(x.sanse).join(","));
+});
+
+// ---------- (11) frica / lăcomia validată 0–100 peste tot ----------
+await test("(11) o valoare stricată (150) nu devine „lăcomie extremă” nici pe Acasă, nici în Consilier", () => {
+  assert.equal(AC.fg([40, 150]).acum, null);
+  assert.equal(AC.fg([40, 150]).max, 40);
+  const v = AC.vreme({ clasament: CL(10, 90), btc: { miscare: false }, fg: 150 });
+  assert.doesNotMatch(v.text + v.faCe, /lăcomi/);
+  const p = CO.piata({ fg: { valoare: 150, clasa: "Extreme Greed" } });
+  assert.doesNotMatch(p.text, /Frica\/lăcomia/);
+  const sb = CO.sfaturiBot({ baza: "XYZ.PERP" }, { fg: { valoare: 150, clasa: "Extreme Greed" } });
+  assert.ok(!sb.some((x) => /Frica\/lăcomia/.test(x.titlu)));
+  assert.ok(CO.sfaturiBot({ baza: "XYZ.PERP" }, { fg: { valoare: 80, clasa: "Extreme Greed" } }).some((x) => /Frica\/lăcomia/.test(x.titlu)), "80 rămâne valid");
+});
+
+// ---------- (14) riscul T212 cu conversia dus-întors ----------
+await test("(14) stop la 6% (sub plafonul de 20%): riscul de 1% include conversia (0,15% la intrare + 0,15% la ieșire)", () => {
+  const m = AS.marime({ cont: 10000, intrare: 100, stop: 94, fx: 4.5, riscPct: 0.01 });
+  assert.equal(m.plafonat, false);
+  const perBuc = (6 + 0.0015 * 100 + 0.0015 * 94) / 4.5;
+  assert.ok(Math.abs(m.bucati * perBuc - 100) < 0.05, "riscul cu conversia = 100 lei: " + m.bucati * perBuc);
+  assert.ok(Math.abs(m.riscPctReal - 0.01) < 1e-4, String(m.riscPctReal));
+  assert.ok(Math.abs(m.risc - 100) < 0.05, "risc " + m.risc);
+});
+
+// ---------- (15) MMR: eticheta cinstită ----------
+await test("(15) MMR 0,01 nu mai e numit „prudent” (la monedele mici Pionex poate cere mai mult)", () => {
+  const s = citeste("public", "lib", "grid-calcul.js");
+  const r = s.split("\n").find((l) => /MMR: 0\.01/.test(l));
+  assert.doesNotMatch(r, /intretinere, prudent/);
+  assert.match(r, /MAI DEVREME|mai devreme/);
+});
+
 console.log(`\n${teste - picate}/${teste} ${picate ? "PICĂ" : "trec"}`);
 process.exitCode = picate ? 1 : 0;

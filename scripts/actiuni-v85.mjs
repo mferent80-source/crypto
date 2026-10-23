@@ -214,7 +214,8 @@ await test("preturi pentru o pozitie deschisa: stopul urca dupa maximul de dupa 
 await test("marimea pozitiei: risc 1% din cont la stop, plafon 20% din cont; cont lipsa -> null", () => {
   const m = A.marime({ intrare: 100, stop: 95, cont: 30000, fx: 1 });   // v100.173: fără curs (fx null) -> null; aici aceeași monedă, fx 1
   // risc 300 lei / 5 pe bucata = 60 buc = 6000 lei = 20% -> exact plafonul
-  aprox(m.bucati, 60, 1e-9); aprox(m.suma, 6000, 1e-9); assert.equal(m.plafonat, false);
+  // v100.259 (auditul 23.10): pe bucată și conversia dus-întors (0,15% × (100 + 95) = 0,2925) ⇒ 300 / 5,2925 ≈ 56,7 buc, sub plafon
+  aprox(m.bucati, 300 / 5.2925, 1e-4); aprox(m.suma, 100 * 300 / 5.2925, 1e-2); assert.equal(m.plafonat, false);
   const p = A.marime({ intrare: 100, stop: 99, cont: 30000, fx: 1 });
   aprox(p.suma, 6000, 1e-9); assert.equal(p.plafonat, true, "stop strans -> ar iesi 300 buc, plafonul 20% taie");
   assert.strictEqual(A.marime({ intrare: 100, stop: 95, cont: null }), null);
