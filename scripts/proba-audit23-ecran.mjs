@@ -406,5 +406,19 @@ await test("24 t212MarimeAfisata: sub 10 $ bucăți întregi în JOS (1,5 ⇒ 1,
   assert.match(T, /m = fara \? null : t212MarimeAfisata\(t212MarimePoarta\(p\), baza\)/);
 });
 
+// ---------------------------------------------------------------- 25. „Cât investesc?” ia și coada de 5% a Simulatorului (p5)
+await test("25 grRandSumaMaxima dă lui sumaMaxima p5-ul Simulatorului pe aceeași monedă (cel mai rău orizont / sumă); altă monedă sau fără simulare ⇒ null", () => {
+  const m = APP.match(/function grP5Simulator\(f\)\{[^\n]*/); assert.ok(m, "lipsește grP5Simulator");
+  const mk = (gs) => new Function("gsStare", "return " + m[0])(gs);
+  const rez = { suma: 100, orizonturi: [{ zile: 1, p5: -4 }, { zile: 7, p5: -22 }, { zile: 14, p5: -15 }] };
+  assert.equal(mk({ sim: "PEPE", rez })({ simbol: "PEPE_USDT_PERP" }), -0.22);
+  assert.equal(mk({ sim: "BTC", rez })({ simbol: "PEPE_USDT_PERP" }), null);
+  assert.equal(mk({ sim: "PEPE", rez: { eroare: "x" } })({ simbol: "PEPE_USDT_PERP" }), null);
+  assert.equal(mk({ sim: "PEPE", rez: null })({ simbol: "PEPE_USDT_PERP" }), null);
+  const g = fnApp("grRandSumaMaxima");
+  assert.match(g, /var p5=grP5Simulator\(f\),max=GridProba\.sumaMaxima\(sold,pierdere,rea,p5\)/);
+  assert.match(g, /cele mai proaste 5% din drumurile Simulatorului/);
+});
+
 console.log(`\n${teste - picate}/${teste} trecute${picate ? ` · ${picate} PICATE` : ""}\n`);
 process.exit(picate ? 1 : 0);

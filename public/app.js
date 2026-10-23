@@ -5155,6 +5155,9 @@ function grBusolaFisaHtml(f,i){try{if(typeof Busola==="undefined")return "";var 
   var dzH=dz?dz.linii.map(function(l){return '<p class="tbSub grBusolaDecizie'+(l.nivel==="atentie"?' tbWarn':'')+'">'+escapeHtml(l.text)+'</p>'}).join(""):"";
   return (r?'<p class="tbSub grBusolaFisa">'+escapeHtml(r.text)+(r.comparatie?' <span class="'+(r.raport<-0.1?"tbWarn":"")+'">· '+escapeHtml(r.comparatie)+'</span>':'')+'</p>':"")+dzH}catch(e){return ""}}
 function grRand(et,val,copiat){return '<div class="grRand"><span class="tbEt2">'+escapeHtml(et)+'</span><b>'+escapeHtml(val)+'</b>'+(copiat!=null?'<button type="button" class="actionGhost grCopy" value="'+escapeHtml(copiat)+'" data-action-click="gridCopiaza(this.value)" aria-label="Copiază '+escapeHtml(et)+'">copiază</button>':'<span></span>')+'</div>'}
+// audit 23.10 (reparația v100.196 🔵3 nu lucra: sumaMaxima se chema fără p5): cele mai proaste 5% din drumurile Simulatorului, ca fracție din sumă, cel mai rău orizont,
+// doar dacă Simulatorul a rulat pe aceeași monedă (gsStare.rez); altfel null și rămâne fereastra cea mai proastă
+function grP5Simulator(f){try{if(typeof gsStare==="undefined"||!gsStare||!gsStare.rez||gsStare.rez.eroare||!Array.isArray(gsStare.rez.orizonturi)||!(gsStare.rez.suma>0))return null;var baza=function(s){return String(s||"").toUpperCase().replace(/_USDT_PERP$/,"").replace(/USDT$/,"").replace(/[^A-Z0-9]/g,"")};if(!f||baza(gsStare.sim)!==baza(f.simbol))return null;var v=gsStare.rez.orizonturi.map(function(o){return o&&o.p5}).filter(function(x){return typeof x==="number"&&isFinite(x)});if(!v.length)return null;var m=Math.min.apply(null,v)/gsStare.rez.suma;return m<0?m:null}catch(e){return null}}
 // F4: randul "cat investesc?" - din sold, pierderea acceptata si cea mai proasta fereastra a directiei alese
 function grRandSumaMaxima(f){
   var v=grSoldCitit(),sold=grNumar($("grSold")&&$("grSold").value)||v.sold,pierdere=grNumar($("grPierdere")&&$("grPierdere").value);
@@ -5162,12 +5165,12 @@ function grRandSumaMaxima(f){
   var rea=a==null?(t==null?null:t):(t==null?a:Math.min(a,t));   // cea mai proasta din TOATE ferestrele
   if(!(sold>0))return grRand("Cât investesc?","scrie soldul contului mai sus și îți spun");
   if(!(pierdere>0))return grRand("Cât investesc?","scrie ce pierdere accepți, în % din cont (mai mare ca 0)");
-  var max=GridProba.sumaMaxima(sold,pierdere,rea);
+  var p5=grP5Simulator(f),max=GridProba.sumaMaxima(sold,pierdere,rea,p5),dinSim=p5!=null&&(rea==null||!(rea<0)||p5<rea),rr=dinSim?p5:rea;
   if(max==null)return grRand("Cât investesc?",rea==null?"n-am cea mai proastă fereastră":"pe istoric nicio fereastră n-a ieșit pe minus: nu pot socoti un maxim");
   // audit 19.10: cifra e a setarii afisate (levierul ales, grilele de copiat - GridProba.fisa o re-ruleaza) si spune la ce levier e
   var la=f.probaLa||{},Lx=la.levier||(f.setare&&f.setare.levier),P=function(x){return TextRo.pct(x*100,1)};
-  var text="cel mult "+Math.floor(max)+" USDT · ca cea mai proastă fereastră ("+P(rea)+(Lx?", la "+Lx+"×":"")+(la.redus?", pe "+TextRo.cate(la.grile+1,"linie","linii"):"")+") să nu treacă de "+pierdere+"% din "+sold+" USDT";
-  if(f.setare.suma>max)text+=" · ⚠ ai pus "+f.setare.suma+", adică "+(f.setare.suma*Math.abs(rea)/sold*100).toFixed(1).replace(".",",")+"% din cont în cel mai rău caz";
+  var text="cel mult "+Math.floor(max)+" USDT · ca "+(dinSim?"cele mai proaste 5% din drumurile Simulatorului":"cea mai proastă fereastră")+" ("+P(rr)+(Lx?", la "+Lx+"×":"")+(la.redus?", pe "+TextRo.cate(la.grile+1,"linie","linii"):"")+") să nu treacă de "+pierdere+"% din "+sold+" USDT";
+  if(f.setare.suma>max)text+=" · ⚠ ai pus "+f.setare.suma+", adică "+(f.setare.suma*Math.abs(rr)/sold*100).toFixed(1).replace(".",",")+"% din cont în cel mai rău caz";
   return grRand("Cât investesc?",text,String(Math.floor(max)));
 }
 // ===== v84: poarta de pornire, botii de hartie =====
