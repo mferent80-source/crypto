@@ -49,14 +49,14 @@ await test("Monte Carlo pe pagină: stopul în procente intră ca procent; un si
   assert.match(s, /b\.opritorPierdereTip === "raport" && Number\(b\.opritorPierdereRaport\) < 0\) r\.stopRaport = Number\(b\.opritorPierdereRaport\)/);
   assert.match(s, /\(a\.stopRaport \|\| null\) === \(b\.stopRaport \|\| null\)/);
   assert.doesNotMatch(s, /pLichidare <= 0\.02|pLichidare > 0\.02|Math\.max\(0\.02, tu\.g\.pLichidare\)/);
-  assert.match(s, /GridSim\.lichidareAcceptata\(x\.g\.pLichidare\)/);
+  assert.match(s, /mcsLichOk\(x\.g\.pLichidare\)/); assert.match(s, /function mcsLichOk\(p\) \{ return typeof GridSim !== "undefined"/);
 });
 await test("Simulatorul: stopul schimbat de mână anulează procentul venit de la bot", () => {
   assert.match(src("public", "lib", "grid-sim-ecran.js"), /if \(st\.stopRaport && !aceeasiStop\) delete st\.stopRaport;/);
 });
 await test("Poarta gridului trimite direcția, grilele și levierul; serverul le păstrează (măsura pe bani)", () => {
   assert.match(src("public", "app.js"), /verdictTrimite\(\{s:"poarta-grid",k:f\.simbol,n:f\.verdict\.nivel,p:f\.pret,j:stV&&stV\.jos,u:stV&&stV\.sus,d:stV&&stV\.dir,g:stV&&stV\.grile,l:stV&&stV\.levier\}\)/);
-  assert.match(src("functions", "api", "istoric-bot.js"), /if\(o\.j&&\(d==="long"\|\|d==="short"\|\|d==="neutru"\)\)o\.d=d;if\(o\.j&&g>0\)o\.g=g;if\(o\.j&&l>0\)o\.l=l;/);
+  assert.match(src("functions", "api", "istoric-bot.js"), /if\(o\.j&&\(d==="long"\|\|d==="short"\|\|d==="neutru"\)\)o\.d=d;if\(o\.j&&g>=2&&g<=150\)o\.g=Math\.round\(g\);if\(o\.j&&l>=1&&l<=125\)o\.l=l;/);
 });
 await test("tura verdictelor: măsura pe bani ținută pe disc (barele de 15 min acoperă doar ~31 de zile) și laboratorul în registru", async () => {
   const { uneNet } = await import("./lib/tura-verdicte.mjs");

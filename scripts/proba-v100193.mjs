@@ -170,7 +170,7 @@ await test("jurnalul verdictelor: sursele scor-zi-actiuni / scor-zi-crypto în p
   assert.match(citeste("functions", "api", "istoric-bot.js"), /"trend-12-1","scor-zi-actiuni","scor-zi-crypto"\]\)/);
   const tv = citeste("scripts", "lib", "tura-verdicte.mjs"), col = citeste("scripts", "colector.mjs");
   assert.match(tv, /const sz = await incearca\(d, "scorul zilei", \(\) => scorZiDinDate\(d, acum\)\)/); assert.match(col, /const ScorZi = incarca\("scor-zi\.js", "ScorZi"\)/);
-  assert.match(col, /bareZi: bareZiCont, Macro, Acasa, LatimeUS, ScorZi, fetch(, Carnet, Retea, modeleRetea, modeleArbori)? \}, verdicteStare\)/);   /* v101.116: + registrul întreg */
+  assert.match(col, /bareZi: bareZiCont, Macro, Acasa, LatimeUS, ScorZi, fetch(, Carnet, Retea, modeleRetea, modeleArbori)?(, GridLaborator, GridProba, lumanari15M, netCache)? \}, verdicteStare\)/);   /* v101.116: + registrul întreg */
   const v = /const VERSIUNE_COLECTOR = "v101\.(\d+)"/.exec(col); assert.ok(v && Number(v[1]) >= 114);
   assert.ok(Number(JSON.parse(citeste("package.json")).version.split(".")[1]) >= 193); assert.ok(!/v100\.192\b/.test(citeste("public", "index.html")));   /* de la v100.193 în sus */
   assert.match(citeste("public", "sw.js"), /crypto-radar-v100-(19[3-9]|[2-9]\d\d)/); assert.match(citeste("package.json"), /npm run test:v100192 && npm run test:v100193/);

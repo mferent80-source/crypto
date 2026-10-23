@@ -100,7 +100,7 @@ await test("serverul: verdictele (unul sau mai multe), un verdict pe (sursă, si
 // pagina: Porțile
 await test("Porțile trimit verdictul în jurnal (o dată pe simbol pe zi, fără să blocheze); gridul și cu banda gridului", () => {
   const app = citeste("public", "app.js"), t = citeste("public", "lib", "t212-ecran.js");
-  assert.match(app, /function verdictTrimite\(v\)\{/); assert.match(app, /verdictTrimite\(\{s:"poarta-grid",k:f\.simbol,n:f\.verdict\.nivel,p:f\.pret,j:stV&&stV\.jos,u:stV&&stV\.sus\}\)/);
+  assert.match(app, /function verdictTrimite\(v\)\{/); assert.match(app, /verdictTrimite\(\{s:"poarta-grid",k:f\.simbol,n:f\.verdict\.nivel,p:f\.pret,j:stV&&stV\.jos,u:stV&&stV\.sus(,d:stV&&stV\.dir,g:stV&&stV\.grile,l:stV&&stV\.levier)?\}\)/);
   assert.match(t, /verdictTrimite\(\{ s: "poarta-t212", k: tk, n: v\.nivel, p: st\.pret \}\)/);
 });
 const ctxP = { console, Date, Math, Object, Array, String, Number, JSON, isFinite, Intl, TextRo: globalThis.TextRo, ContIntreg: ctx.ContIntreg, document: { getElementById: () => null }, localStorage: { getItem: () => null, setItem() {} } };
