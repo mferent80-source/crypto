@@ -136,11 +136,11 @@ await test("(4) paza colectorului: EPERM (colectorul din sesiunea 0) înseamnă 
   assert.doesNotMatch(paza, /\} catch \{\}/);
 });
 
-await test("versiunea v100.258 și proba în lanțul `test`", () => {
+await test("versiunea e cel puțin v100.258, proba o dată în lanțul `test`", () => {
   const pk = JSON.parse(citeste("package.json"));
-  assert.equal(pk.version, "100.258.0");
-  assert.match(pk.scripts.test, /npm run test:v100258$/);
-  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-258/);
+  assert.ok(Number(pk.version.split(".")[1]) >= 258, pk.version);   // v100.259: de acum „cel puțin”
+  assert.equal((pk.scripts.test.match(/test:v100258\b/g) || []).length, 1);
+  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-2(5[89]|[6-9]\d)/);
 });
 
 console.log(`\n${teste - picate}/${teste} ${picate ? "PICĂ" : "trec"}`);

@@ -1,11 +1,12 @@
 {
-  "version": "v100.258",
-  "badge": "v100.258 · PAZĂ",
+  "version": "v100.259",
+  "badge": "v100.259 · TOT",
   "engineContract": "54.1",
   "dataSchema": 54,
   "baseRelease": "v77.4 · TABLOUL BOTULUI",
   "releaseType": "valul de reparatii din revizia finala pe ansamblu: marginStatus/riskStatus citite, telefon, scurgere WS/ceas la iesire prin tab-uri, ATR adevarat, pret viu, istoric fara pret inghetat, sortare dupa timp, comision nemasurabil, durata la margine",
   "features": {
+    "tot259": "Tot (23.10.2026, el: „hai să facem tot” după auditul „absolut tot”): server - alertele pe 7 zile, stopurile T212 cu vârstă, poza mai rară, colectorul nu mai iese fără server, repornirea colectorului fără administrator (semnal), CMG_CA (umplerea parțială) reparat, colectorul pornește doar din dosarul principal; ecran - scara crește cu prețul, culorile după direcția botului, formatator unic de preț, virgula, texte în română, Rezultate pe ⭐, Tabloul pe telefon cu graficul sus, T212 cu o singură pierdere; logica - zero-ul pe plus spune grilele tăiate, stopul în procente simulat exact, fișa poartă Monte Carlo pe 7 zile, un singur prag de lichidări, scorul sezonului cu interval, laboratorul pe bani, o singură regulă de regim.",
     "paza258": "Pază (23.10.2026, el: „ok continua” după auditul „absolut tot”): „Mută gridul” și „Grid mai des” nu mai dau setări de copiat când fișa zice NU sau piața e în mișcare - spun faptul și „n-aș muta acum”. PORNEȘTE cere și media pe zilele nevăzute peste zero (pe mers aleator zicea PORNEȘTE în 27–35% din cazuri, acum 0–3%). Drumul botului scrie prețurile mici cu cifre semnificative (PEPE ieșea 0.00000).",
     "parte257": "Parte (23.10.2026, el: „fa idei” și bugul de la short): la short, atenția e marginea de sus, nu cea de jos. Butonul de pe stopul în procente copiază procentul. Lângă ATR-ul de pe grafic stă Wilder. Pe Discord, moneda instrumentului rămâne cea a lui. Pragurile rămân. Fișierul colectorului e v101.139, procesul nu e repornit.",
     "copie256": "Copie (23.10.2026, el: „fa idei”): pe Discord, sub prețul 10, bucățile ies întregi; de la 10 rămân două zecimale. Lângă ATR-ul de pe Scan stă media a 14 intervale adevărate; cifra rămâne. La stopul în procente se copiază procentul, nu prețul mare. Pragurile rămân. Fișierul colectorului e v101.138, procesul nu e repornit.",
