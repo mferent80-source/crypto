@@ -525,7 +525,10 @@ function gardaHeaders() {
   if (!connect.includes("'self'")) pica(G, "connect-src nu are 'self'");
   const fisiereClient = ["public/app.js", "public/research-worker.js", ...fs.readdirSync(cale("public/lib")).filter((f) => f.endsWith(".js")).map((f) => "public/lib/" + f)];
   const cerute = new Set();
-  for (const f of fisiereClient) for (const m of citeste(f).matchAll(/\b(https|wss):\/\/([A-Za-z0-9.-]+(?::\d+)?)/g)) cerute.add(`${m[1]}://${m[2]}`);
+  // v100.259 (auditul 23.10, punctul 14): o adresă ținută DOAR într-o constantă pe care n-o mai folosește nimeni (PIONEX_BASE din app.js,
+  // pagina cere Pionex prin /api/market) nu e „chemată” - connect-src n-o mai permite
+  const constantaMoarta = (src, i) => { const linie = src.slice(src.lastIndexOf("\n", i) + 1, i), c = /(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*["'`]$/.exec(linie); return !!c && (src.match(new RegExp("\\b" + c[1].replace(/\$/g, "\\$") + "\\b", "g")) || []).length === 1; };
+  for (const f of fisiereClient) { const src = citeste(f); for (const m of src.matchAll(/\b(https|wss):\/\/([A-Za-z0-9.-]+(?::\d+)?)/g)) if (!constantaMoarta(src, m.index)) cerute.add(`${m[1]}://${m[2]}`); }
   const lipsa = [...cerute].filter((u) => !connect.includes(u));
   if (lipsa.length) pica(G, `connect-src nu permite ce cheama pagina: ${lipsa.join(" ")} - ar pica tacut in browser`);
   const inPlus = connect.filter((x) => x !== "'self'" && !cerute.has(x));
