@@ -260,8 +260,35 @@ await test("14b app.js: Piața azi (consensul, acoperirea, direcția de bază), 
   const m = APP.match(/function roConsens\([^\n]*/); assert.ok(m, "lipsește roConsens");
   const f = new Function("return " + m[0])();
   assert.equal(f("NO DATA"), "FĂRĂ DATE"); assert.equal(f("BULLISH"), "CRESCĂTOR"); assert.equal(f("BEARISH"), "DESCRESCĂTOR"); assert.equal(f("NEUTRAL"), "NEUTRU");
-  assert.match(APP, /\$\("vcConsensus"\)\.textContent=roConsens\(x\.consensus\)\+\(Number\.isFinite\(x\.weightedBias\)\?/);
-  assert.match(APP, /\$\("decisionConsensus"\)\.textContent=`\$\{roConsens\(vc\.consensus\)\|\|"N\/A"\}/);
+  assert.match(APP, /\$\("vcConsensus"\)\.textContent=\(typeof roConsens==="function"\?roConsens\(x\.consensus\):x\.consensus\)\+\(Number\.isFinite\(x\.weightedBias\)\?/);
+  assert.match(APP, /\$\("decisionConsensus"\)\.textContent=`\$\{\(typeof roConsens==="function"\?roConsens\(vc\.consensus\):vc\.consensus\)\|\|"N\/A"\}/);
+});
+
+// ---------------------------------------------------------------- 15. virgula zecimală (nu punctul) și „−” tipografic
+await test("15a Tablou: tbFormateazaSemn scrie cu virgulă și „−” („bara de 4 ore acum 7,1%”); chemătorii doar afișează", () => {
+  const f = new Function("return " + fnApp("tbFormateazaSemn"))();
+  assert.equal(f(7.12, 1), "7,1"); assert.equal(f(-0.808, 3), "−0,808"); assert.equal(f(0, 1), "0,0");
+  assert.ok(!/parseFloat\([^)]*tbFormateazaSemn|Number\(tbFormateazaSemn/.test(APP), "un chemător citește înapoi textul");
+});
+// 15b (T212 „$25.17”): NEFĂCUT aici — t212Usd e „o singură formă” cu ActiuniSemnale.usd (actiuni-semnale.js, alt agent); gărzile v100.40/69/131/196 o cer.
+await test("15c Nasdaq: schimbările cu virgulă și „−” (pctSemnRo), nu „+0.28%” / „-2.86%”", () => {
+  const m = APP.match(/function pctSemnRo\([^\n]*/); assert.ok(m, "lipsește pctSemnRo");
+  const f = new Function("return " + m[0])();
+  assert.equal(f(0.28), "+0,28%"); assert.equal(f(-2.86), "−2,86%"); assert.equal(f(NaN), "—");
+  for (const v of ["gap", "+qqqTick.priceChangePercent", "rel", "p20", "q20", "rs20"]) assert.ok(APP.includes("pctSemnRo(" + v + ")"), "Nasdaq: " + v);
+});
+await test("15d Contul Pionex: soldurile cu num() (ro-RO, virgulă), lichidarea „+22,9%”; Calendarul „estimat 55,4”", () => {
+  assert.ok(!/\$\{escapeHtml\(x\.free\)\}/.test(APP) && !/\(\+x\.free\+ \+x\.frozen\)\.toFixed\(8\)/.test(APP), "soldurile cu punct");
+  assert.match(fnApp("botiLichidareText"), /semn\+d\.toFixed\(1\)\.replace\("\.",","\)\+'%'/);
+  assert.match(LIB("acasa-ecran.js"), /"estimat " \+ String\(x\.prognoza\)\.replace\(\/\(\\d\)\\\.\(\\d\)\/g, "\$1,\$2"\)/);
+});
+
+// ---------------------------------------------------------------- 16. formatul volumului (Grid: „4.507 k” = 4,5 M)
+await test("16 TextRo.volum: „4,5 M”, „16 M”, „1,2 mld”, „850 k”, „720”; Grid → coloana Volum îl folosește", () => {
+  assert.equal(typeof TR.volum, "function");
+  for (const [v, t] of [[4507000, "4,5 M"], [16228000, "16 M"], [1234000000, "1,2 mld"], [850400, "850 k"], [720, "720"], [null, "—"], [NaN, "—"], [9990, "10 k"]]) assert.equal(TR.volum(v), t, String(v));
+  assert.match(APP, /\(m\.volum!=null\?TextRo\.volum\(m\.volum\):"—"\)/);
+  assert.ok(!/Math\.round\(m\.volum\/1000\)\.toLocaleString\("ro-RO"\)\+" k"/.test(APP));
 });
 
 console.log(`\n${teste - picate}/${teste} trecute${picate ? ` · ${picate} PICATE` : ""}\n`);

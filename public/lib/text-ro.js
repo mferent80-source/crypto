@@ -63,6 +63,12 @@ var TextRo = (function () {
       return s.slice(0, bun).replace(/\s+$/, "") + "\n" + un(s.slice(bun).replace(/^\s+/, ""));
     }).join("\n");
   }
-  return { num: num, pct: pct, pctSemn: pctSemn, ori: ori, usdt: usdt, zecMici: zecMici, lei: lei, ore: ore, cate: cate, oreN: oreN, cifreNoi: cifreNoi, rupe: rupe };
+  // audit 23.10: volumul pe ecran - „4,5 M” (nu „4.507 k”), „16 M”, „1,2 mld”, „850 k”; o zecimală sub 10, niciuna peste
+  function volum(x) {
+    x = nr(x); if (x === null) return "—";
+    var a = Math.abs(x), u = function (d, s) { var v = a / d; return (x < 0 ? "−" : "") + (v < 9.95 ? v.toFixed(1).replace(".", ",") : String(Math.round(v))) + " " + s; };
+    return a >= 1e9 ? u(1e9, "mld") : a >= 1e6 ? u(1e6, "M") : a >= 1e3 ? (x < 0 ? "−" : "") + Math.round(a / 1e3) + " k" : (x < 0 ? "−" : "") + Math.round(a);
+  }
+  return { num: num, pct: pct, pctSemn: pctSemn, ori: ori, usdt: usdt, zecMici: zecMici, lei: lei, ore: ore, cate: cate, oreN: oreN, cifreNoi: cifreNoi, rupe: rupe, volum: volum };
 })();
 if (typeof globalThis !== "undefined") globalThis.TextRo = TextRo;

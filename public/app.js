@@ -1348,7 +1348,7 @@ async function accountApi(action,symbol=""){
 async function loadPionexAccount(){
  if(assetClass()==="STOCKS"){$("acctConfig").textContent="— · modul acțiuni";return}
  $("acctConfig").textContent="verific…";try{const st=await accountApi("status");window.__pionexAccountConfigured=!!st.configured;$("acctConfig").textContent=st.configured?"PUSE PE SERVER":"LIPSESC DE PE SERVER";if(!st.configured){$("acctBalanceRows").innerHTML='<div class="emptyState">Pune PIONEX_API_KEY și PIONEX_API_SECRET ca secrete Cloudflare, cu permisiunea doar de citire.</div>';renderDailyDesk();return}
- const d=await accountApi("balances"),rows=(d.data?.balances||[]).filter(x=>+x.free||+x.frozen);$("acctAssets").textContent=rows.length;$("acctBalanceRows").innerHTML=rows.length?`<div class="accountRow"><div class="accountCell">Moneda</div><div class="accountCell">Liberă</div><div class="accountCell">Blocată</div><div class="accountCell">Total</div></div>`+rows.map(x=>`<div class="accountRow"><div class="accountCell">${escapeHtml(x.coin)}</div><div class="accountCell">${escapeHtml(x.free)}</div><div class="accountCell">${escapeHtml(x.frozen)}</div><div class="accountCell">${(+x.free+ +x.frozen).toFixed(8)}</div></div>`).join(""):'<div class="emptyState">Niciun sold diferit de zero.</div>';renderDailyDesk()
+ const d=await accountApi("balances"),rows=(d.data?.balances||[]).filter(x=>+x.free||+x.frozen);$("acctAssets").textContent=rows.length;$("acctBalanceRows").innerHTML=rows.length?`<div class="accountRow"><div class="accountCell">Moneda</div><div class="accountCell">Liberă</div><div class="accountCell">Blocată</div><div class="accountCell">Total</div></div>`+rows.map(x=>`<div class="accountRow"><div class="accountCell">${escapeHtml(x.coin)}</div><div class="accountCell">${escapeHtml(num(x.free))}</div><div class="accountCell">${escapeHtml(num(x.frozen))}</div><div class="accountCell">${escapeHtml(num(+x.free+ +x.frozen))}</div></div>`).join(""):'<div class="emptyState">Niciun sold diferit de zero.</div>';renderDailyDesk()
  }catch(e){$("acctConfig").textContent="EROARE";$("acctBalanceRows").innerHTML=`<div class="emptyState">${escapeHtml(e.message)}</div>`}
 }
 async function loadPionexOpenOrders(){
@@ -1474,11 +1474,11 @@ async function loadStockContext(force=false){
 function renderStockContext(d){
   if(!d)return;const {tick,qqqTick,cfg,gap,rvol,p20,q20,rs20,prev,sess}=d;
   $("stockSession").textContent=sess.state;$("stockSession").className=sess.cls;$("stockFreshness").textContent=stockFreshnessLabel(tick);
-  $("stockGap").textContent=Number.isFinite(gap)?pctText(gap):"—";$("stockRvol").textContent=Number.isFinite(rvol)?rvol.toFixed(2)+"x":"—";
-  $("stockQqq").textContent=Number.isFinite(+qqqTick.priceChangePercent)?pctText(+qqqTick.priceChangePercent):"—";
+  $("stockGap").textContent=Number.isFinite(gap)?pctSemnRo(gap):"—";$("stockRvol").textContent=Number.isFinite(rvol)?rvol.toFixed(2)+"x":"—";
+  $("stockQqq").textContent=Number.isFinite(+qqqTick.priceChangePercent)?pctSemnRo(+qqqTick.priceChangePercent):"—";
   const rel=Number.isFinite(+tick.priceChangePercent)&&Number.isFinite(+qqqTick.priceChangePercent)?+tick.priceChangePercent-+qqqTick.priceChangePercent:null;
-  $("stockRelQqq").textContent=Number.isFinite(rel)?pctText(rel):"—";$("stockPdh").textContent=prev?num(+prev[2]):"—";$("stockPdl").textContent=prev?num(+prev[3]):"—";
-  const st=window.__radarState;$("stockVwap").textContent=st&&st.source==="TWELVEDATA"&&st.tf!=="1d"?numSau(st.q.calendarVwaps.day):"Intraday only";$("stock20d").textContent=Number.isFinite(p20)?pctText(p20):"—";$("stockQqq20d").textContent=Number.isFinite(q20)?pctText(q20):"—";$("stockRs20d").textContent=Number.isFinite(rs20)?pctText(rs20):"—";
+  $("stockRelQqq").textContent=Number.isFinite(rel)?pctSemnRo(rel):"—";$("stockPdh").textContent=prev?num(+prev[2]):"—";$("stockPdl").textContent=prev?num(+prev[3]):"—";
+  const st=window.__radarState;$("stockVwap").textContent=st&&st.source==="TWELVEDATA"&&st.tf!=="1d"?numSau(st.q.calendarVwaps.day):"Intraday only";$("stock20d").textContent=Number.isFinite(p20)?pctSemnRo(p20):"—";$("stockQqq20d").textContent=Number.isFinite(q20)?pctSemnRo(q20):"—";$("stockRs20d").textContent=Number.isFinite(rs20)?pctSemnRo(rs20):"—";
   $("stockProviderState").textContent=cfg?.configured?"READY":"NEEDS API KEY";$("stockProviderState").className="edgeState "+(cfg?.configured?"good":"neutral");$("stockApiState").textContent=cfg?.configured?"SERVER KEY OK":"TWELVE_DATA_API_KEY MISSING";
   $("stockExchange").textContent=tick.exchange||"—";$("stockMarketOpen").textContent=tick.isMarketOpen===true?"YES":tick.isMarketOpen===false?"NO":"—";$("stockLastQuote").textContent=tick.datetime||"—";
 }
@@ -2587,14 +2587,14 @@ function vcChipList(rows,empty){
 function renderVerdictCenter(snapshot=null){
   const x=snapshot?.modules?snapshot:buildVerdictCenterSnapshot();window.__verdictCenter=x;
   if(!$("vcAgreement"))return x;
-  const ag=Number.isFinite(x.agreement)?x.agreement:null;$("vcAgreement").textContent=ag==null?"N/A":ag.toFixed(0)+"%";$("vcAgreementBar").style.width=(ag==null?0:clamp(ag,0,100))+"%";$("vcConsensus").textContent=roConsens(x.consensus)+(Number.isFinite(x.weightedBias)?` · ${x.weightedBias>=0?"+":""}${(x.weightedBias*100).toFixed(0)}`:"");   /* audit 23.10: „NO DATA · NaN” ⇒ „FĂRĂ DATE” */$("vcConsensus").className=x.consensus==="BULLISH"?"vcBiasBull":x.consensus==="BEARISH"?"vcBiasBear":"vcBiasNeutral";$("vcBullishCount").textContent=x.counts.bullish;$("vcBearishCount").textContent=x.counts.bearish;$("vcNeutralCount").textContent=x.counts.neutral;$("vcBlockerCount").textContent=`${x.counts.hard} hard / ${x.counts.warn} warn`;$("vcCoverage").textContent=`${x.coverage.toFixed(0)}% · ${x.modules.filter(m=>m.available).length}/${x.modules.length}`;$("vcConviction").textContent=x.conviction.toFixed(0)+"/100";
+  const ag=Number.isFinite(x.agreement)?x.agreement:null;$("vcAgreement").textContent=ag==null?"N/A":ag.toFixed(0)+"%";$("vcAgreementBar").style.width=(ag==null?0:clamp(ag,0,100))+"%";$("vcConsensus").textContent=(typeof roConsens==="function"?roConsens(x.consensus):x.consensus)+(Number.isFinite(x.weightedBias)?` · ${x.weightedBias>=0?"+":""}${(x.weightedBias*100).toFixed(0)}`:"");   /* audit 23.10: „NO DATA · NaN” ⇒ „FĂRĂ DATE” */$("vcConsensus").className=x.consensus==="BULLISH"?"vcBiasBull":x.consensus==="BEARISH"?"vcBiasBear":"vcBiasNeutral";$("vcBullishCount").textContent=x.counts.bullish;$("vcBearishCount").textContent=x.counts.bearish;$("vcNeutralCount").textContent=x.counts.neutral;$("vcBlockerCount").textContent=`${x.counts.hard} hard / ${x.counts.warn} warn`;$("vcCoverage").textContent=`${x.coverage.toFixed(0)}% · ${x.modules.filter(m=>m.available).length}/${x.modules.length}`;$("vcConviction").textContent=x.conviction.toFixed(0)+"/100";
   $("vcFamilyTechnical").textContent=vcFamilyText(x.families["Technical"]);$("vcFamilyModels").textContent=vcFamilyText(x.families["Models"]);$("vcFamilyFlow").textContent=vcFamilyText(x.families["Flow"]);$("vcFamilyContext").textContent=vcFamilyText(x.families["Context"]);$("vcFamilyRisk").textContent=vcFamilyText(x.families["Risk / execution"]);
   $("vcBullishModules").innerHTML=vcChipList(x.modules.filter(m=>m.category==="BULLISH"),"No bullish module above threshold.");$("vcBearishModules").innerHTML=vcChipList(x.modules.filter(m=>m.category==="BEARISH"),"No bearish module above threshold.");$("vcNeutralModules").innerHTML=vcChipList(x.modules.filter(m=>m.category==="NEUTRAL"),"No neutral/unavailable modules.");$("vcBlockerModules").innerHTML=vcChipList(x.modules.filter(m=>m.category==="BLOCKER"),"No blocker or warning.");
   const cls=c=>c==="BULLISH"?"vcBiasBull":c==="BEARISH"?"vcBiasBear":c==="BLOCKER"?"vcBiasBlock":"vcBiasNeutral";
   $("vcModuleTable").innerHTML=`<div class="vcRow"><div class="vcCell">Module</div><div class="vcCell">Family</div><div class="vcCell">Category</div><div class="vcCell">Strength</div><div class="vcCell">Weight</div><div class="vcCell">Current value</div><div class="vcCell note">Interpretation</div></div>`+x.modules.map(m=>`<div class="vcRow"><div class="vcCell">${escapeHtml(m.name)}</div><div class="vcCell">${escapeHtml(m.family)}</div><div class="vcCell ${cls(m.category)}">${m.category}${m.severity?" · "+m.severity:""}</div><div class="vcCell">${m.directional&&Number.isFinite(m.strength)?m.strength.toFixed(0)+"/100":"—"}</div><div class="vcCell">${m.weight?m.weight.toFixed(3):"—"}</div><div class="vcCell">${escapeHtml(m.value)}</div><div class="vcCell note">${escapeHtml(m.note)}</div></div>`).join("");
   /* audit 23.10: fraza consensului (direcția de bază, acordul, acoperirea, blocajele) era în engleză; acum în română */
   const baseDir=x.dir>0?"LONG":x.dir<0?"SHORT":"AȘTEAPTĂ",agreementText=Number.isFinite(x.agreement)?`${x.agreement.toFixed(0)}% din modulele cu direcție sunt de acord cu direcția de bază (${baseDir}).`:`Direcția de bază: ${baseDir}; acordul modulelor nu se poate socoti.`,riskText=x.counts.hard?`${TextRo.cate(x.counts.hard,"blocaj tare activ","blocaje tari active")}.`:x.counts.warn?`${TextRo.cate(x.counts.warn,"avertisment activ","avertismente active")}; niciun blocaj tare.`:"Niciun blocaj de risc activ.";
-  $("vcNarrative").textContent=`${agreementText} Consensul ponderat al modulelor: ${roConsens(x.consensus)} (convingere ${Number.isFinite(x.conviction)?x.conviction.toFixed(0):"—"}/100). Acoperire ${Number.isFinite(x.coverage)?x.coverage.toFixed(0):"—"}%. ${riskText} Numărătoarea modulelor e descriptivă: multe module pleacă din același istoric de preț și volum, nu sunt probabilități independente.`;
+  $("vcNarrative").textContent=`${agreementText} Consensul ponderat al modulelor: ${typeof roConsens==="function"?roConsens(x.consensus):x.consensus} (convingere ${Number.isFinite(x.conviction)?x.conviction.toFixed(0):"—"}/100). Acoperire ${Number.isFinite(x.coverage)?x.coverage.toFixed(0):"—"}%. ${riskText} Numărătoarea modulelor e descriptivă: multe module pleacă din același istoric de preț și volum, nu sunt probabilități independente.`;
   return x
 }
 
@@ -2626,7 +2626,7 @@ function renderVerdictExplainer(ctx={}){
   if($("decisionHeadline"))$("decisionHeadline").textContent=headline;if($("decisionActionLine"))$("decisionActionLine").textContent=action;
   if($("decisionBaseBias"))$("decisionBaseBias").textContent=base;if($("decisionAgreement"))$("decisionAgreement").textContent=Number.isFinite(ag)?ag.toFixed(0)+"%":"N/A";
   if($("decisionCalibrated"))$("decisionCalibrated").textContent=dir&&Number.isFinite(+cal?.p)?`${base} ${(cal.p*100).toFixed(0)}%`:"N/A";
-  if($("decisionConsensus"))$("decisionConsensus").textContent=`${roConsens(vc.consensus)||"N/A"}${Number.isFinite(+vc.weightedBias)?` · ${vc.weightedBias>=0?"+":""}${(vc.weightedBias*100).toFixed(0)}`:""}`;
+  if($("decisionConsensus"))$("decisionConsensus").textContent=`${(typeof roConsens==="function"?roConsens(vc.consensus):vc.consensus)||"N/A"}${Number.isFinite(+vc.weightedBias)?` · ${vc.weightedBias>=0?"+":""}${(vc.weightedBias*100).toFixed(0)}`:""}`;
   if($("decisionCoverage"))$("decisionCoverage").textContent=`${cov.toFixed(0)}% · ${(vc.modules||[]).filter(m=>m.available).length}/${(vc.modules||[]).length}`;if($("decisionQuality"))$("decisionQuality").textContent=quality.toFixed(0)+"/100";
   veSetList("decisionWhyList",support.map(veModuleText),"support",targetDir?"Nu există încă dovezi direcționale puternice aliniate.":"Direcția dominantă nu este încă definită.");
   const againstRows=oppose.map(veModuleText);if(!againstRows.length&&warnings.length)againstRows.push(...warnings.slice(0,3).map(m=>`${m.name} · ${m.value}`));veSetList("decisionAgainstList",againstRows,"oppose","Nu există opoziție direcțională puternică.");
@@ -4183,6 +4183,8 @@ function updateFlowWindow(q){
 }
 
 function pctText(v){return Number.isFinite(v)?(v>=0?"+":"")+v.toFixed(2)+"%":"—"}
+// audit 23.10: schimbările de pe Nasdaq pe ecran, cu virgulă și „−” (pctText rămâne: unele texte se citesc înapoi)
+function pctSemnRo(v){return Number.isFinite(v)?(v>0?"+":v<0?"\u2212":"")+Math.abs(v).toFixed(2).replace(".",",")+"%":"—"}
 // audit 19.10: pe ecran cu virgula, ca OI (pctText rămâne cu punct: oiTrend e citit înapoi cu parseFloat în nivelurile de lichidare)
 function pctTextRo(v){return pctText(v).replace(".",",")}
 // audit 19.10: funding-ul cu 4 zecimale (e o rată, nu un rezultat), cu virgula și „−”
@@ -4637,7 +4639,7 @@ function botiLichidareText(b){
   if(b&&b.lichidareDepasita===true||(d!==null&&d<0))return {text:'LICHIDARE DEPĂȘITĂ'+(parte?' ('+parte+')':'')+abs,cls:'bad'};
   if(d===null)return {text:abs?'lichidare'+abs:'lichidare —',cls:'neutral'};
   const semn=parte==='sus'?'+':parte==='jos'?'−':'';
-  return {text:'lichidare '+(parte?parte+' ':'')+'la '+semn+d.toFixed(1)+'%'+abs,cls:d<8?'bad':d<15?'tbWarn':''}
+  return {text:'lichidare '+(parte?parte+' ':'')+'la '+semn+d.toFixed(1).replace(".",",")+'%'+abs,   /* audit 23.10: virgula */cls:d<8?'bad':d<15?'tbWarn':''}
 }
 // Aceeasi forma si pentru masura Tabloului (tablou-bot.js: valoare/partea/depasita/pretLichidare).
 function tbLichidareDinMasura(ml){return botiLichidareText({lichidarePartea:ml&&ml.partea,distantaLichidarePct:ml&&ml.valoare,lichidareDepasita:!!(ml&&ml.depasita),pretLichidare:ml&&ml.pretLichidare})}
@@ -4768,7 +4770,7 @@ function tbPretSpotProaspat(){return tbStare.pretSpot!=null&&(Date.now()-tbStare
 // mereu in fata ar minti exact ca bug-ul reparat la lichidare (vezi mai jos).
 function tbFormateazaSemn(v,zecimale){
   var z=zecimale==null?1:zecimale;
-  return v<0?"\u2212"+Math.abs(v).toFixed(z):v.toFixed(z);
+  return (v<0?"\u2212"+Math.abs(v).toFixed(z):v.toFixed(z)).replace(".",",");   /* audit 23.10: virgula („bara de 4 ore acum 7,1%”); chemătorii doar afișează */
 }
 function tbAlegeBot(id){
   // Alegerea omului se tine pe disc, ca sa supravietuiasca unui refresh. Daca
@@ -5611,7 +5613,7 @@ function renderGridClasament(){
   l.slice(0,60).forEach(function(m){
     var st=m.stare==="evita"?["🔴 EVITĂ","bad"]:m.stare==="candidat"?["🟢 candidat","good"]:["⚪ fără date","mutedInfo"];
     var rg=m.regim&&m.regim.r4h!=null?m.regim.r4h.toFixed(1).replace(".",",")+"× / "+(m.regim.r24h!=null?m.regim.r24h.toFixed(1).replace(".",","):"—")+"×":"—";
-    h+='<tr><td><button type="button" class="actionGhost grCopy" value="'+escapeHtml(m.simbol)+'" data-action-click="gridClasamentAlege(this.value)">'+escapeHtml(String(m.simbol).replace(/_USDT_PERP$/,""))+'</button></td><td class="'+st[1]+'">'+st[0]+'</td><td>'+escapeHtml(rg)+'</td><td>'+escapeHtml(m.dir?(GR_DIR[m.dir]||m.dir)+(m.tarie?" ("+m.tarie+")":""):"—")+'</td><td>'+(m.latime!=null?P(m.latime):"—")+'</td><td>'+(m.grile!=null?m.grile+" · "+P(m.pas):"—")+'</td><td>'+(m.scor!=null?P(m.scor):"—")+'</td><td>'+(m.volum!=null?Math.round(m.volum/1000).toLocaleString("ro-RO")+" k":"—")+'</td></tr>';
+    h+='<tr><td><button type="button" class="actionGhost grCopy" value="'+escapeHtml(m.simbol)+'" data-action-click="gridClasamentAlege(this.value)">'+escapeHtml(String(m.simbol).replace(/_USDT_PERP$/,""))+'</button></td><td class="'+st[1]+'">'+st[0]+'</td><td>'+escapeHtml(rg)+'</td><td>'+escapeHtml(m.dir?(GR_DIR[m.dir]||m.dir)+(m.tarie?" ("+m.tarie+")":""):"—")+'</td><td>'+(m.latime!=null?P(m.latime):"—")+'</td><td>'+(m.grile!=null?m.grile+" · "+P(m.pas):"—")+'</td><td>'+(m.scor!=null?P(m.scor):"—")+'</td><td>'+(m.volum!=null?TextRo.volum(m.volum):"—")+'</td></tr>';
   });
   box.innerHTML=h+'</tbody></table></div>';
 }

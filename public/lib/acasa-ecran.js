@@ -526,7 +526,7 @@ function acasaDeseneaza() {
   // 3b. calendarul saptamanii + stirile
   var cal = Acasa.calendar(d.calendar && d.calendar.evenimente, Date.now());
   $("acCalendar").innerHTML = '<div class="acCap"><h4>Calendarul săptămânii</h4><span class="acSub">SUA · impact mare și mediu</span></div>'
-    + (cal.urmatoare.length ? '<div class="acCal">' + cal.urmatoare.map(function (x) { return '<span class="acMut">' + escapeHtml(x.cand) + '</span><b>' + (x.mare ? "⚠️ " : "") + escapeHtml(x.titlu) + '</b><span class="acMut">' + escapeHtml(x.prognoza ? "estimat " + x.prognoza : "") + '</span>'; }).join("") + '</div>' : '')
+    + (cal.urmatoare.length ? '<div class="acCal">' + cal.urmatoare.map(function (x) { return '<span class="acMut">' + escapeHtml(x.cand) + '</span><b>' + (x.mare ? "⚠️ " : "") + escapeHtml(x.titlu) + '</b><span class="acMut">' + escapeHtml(x.prognoza ? "estimat " + String(x.prognoza).replace(/(\d)\.(\d)/g, "$1,$2") : "") + '</span>'; }).join("") + '</div>' : '')
     + '<p class="acEt">' + escapeHtml(d.calendarErr ? "Calendarul n-a venit: " + d.calendarErr : cal.text) + '</p>';
   var st = function (l) { return (l || []).slice(0, 3).map(function (x) { var cand = x.la ? new Date(x.la).toLocaleString("ro-RO", { weekday: "short", hour: "2-digit", minute: "2-digit" }) : ""; return '<a class="acStire" href="' + escapeHtml(x.link) + '" target="_blank" rel="noopener noreferrer"><span class="acMut">' + escapeHtml(cand) + '</span>' + escapeHtml(x.titlu) + '</a>'; }).join(""); };
   var sb = d.stiriBursa && d.stiriBursa.stiri, sc = d.stiriCrypto && d.stiriCrypto.general;

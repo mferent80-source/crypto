@@ -798,11 +798,11 @@ async function main() {
     await test("A1b. lichidarea spune PARTEA (sus +X%), pretul absolut si fata de ce pret", async () => {
       const bot = botNormalizat(botBrut({ strategyId: "7102" }), { lichidarePartea: "sus", distantaLichidarePct: 3.2, pretLichidare: 1.65 });
       const r = await incarcaLista([bot]);
-      assert.match(r.randuri, /lichidare sus la \+3\.2%/, `trebuie "lichidare sus la +3.2%": ${r.randuri}`);
+      assert.match(r.randuri, /lichidare sus la \+3[.,]2%/,   /* v100.259: virgula */ `trebuie "lichidare sus la +3.2%": ${r.randuri}`);
       assert.match(r.randuri, /1[.,]65/, "pretul de lichidare absolut lipseste");
       assert.match(r.randuri, /față de ultimul preț/, "lipseste nota: distanta e fata de ultimul pret, nu de marcaj");
       const jos = await incarcaLista([botNormalizat(botBrut({ strategyId: "7103" }), { lichidarePartea: "jos", distantaLichidarePct: 12.4 })]);
-      assert.match(jos.randuri, /lichidare jos la −12\.4%/, `trebuie "lichidare jos la −12.4%": ${jos.randuri}`);
+      assert.match(jos.randuri, /lichidare jos la −12[.,]4%/,   /* v100.259: virgula */ `trebuie "lichidare jos la −12.4%": ${jos.randuri}`);
     });
 
     await test("A1c. lichidarea DEPASITA se scrie cu rosu, nu ca distanta obisnuita", async () => {
@@ -1398,7 +1398,7 @@ async function main() {
         await b.ev(`window.__lichProba = { valoare: 37.5, partea: "jos", depasita: false, pretLichidare: 0.8, stare: "bine", unitate: "%" }`);
         await incarcaBotSanatos({ strategyId: "7801" });
         const rigla = await textEl(b, "tbRigla"), masura = (await celula(b, 4))?.valoare, bani = await textEl(b, "tbKpi");
-        assert.match(String(rigla), /lichidare jos la −37\.5%/, `rigla: ${rigla}`);
+        assert.match(String(rigla), /lichidare jos la −37[.,]5%/,   /* v100.259: virgula */ `rigla: ${rigla}`);
         assert.match(String(masura), /jos −37\.50%/, `masura: ${masura}`);
         assert.match(String(bani), /Până la lichidare\s*38\.5%\s*prețul trebuie să scadă până la/, `banda de sus: ${bani}`);
         await b.ev(`window.__lichProba = { valoare: -2.1, partea: "sus", depasita: true, pretLichidare: 1.26, stare: "rau", unitate: "%" }`);
