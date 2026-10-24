@@ -348,10 +348,11 @@ await test("20 CSS: regula prefers-reduced-motion; câmpurile și „detaliile�
 });
 
 // ---------------------------------------------------------------- 21. Setări: starea parolei nu e verdictul dominant; bara de analiză nu stă pe Setări
-await test("21 Setări: #pzV-settings .pzVerb mic (stare, nu decizie); show() pune body.peSetari, iar bara cu moneda + „Analizează piața” se ascunde acolo", () => {
+// v100.260 (24.10, el: „da pune înapoi”): bara cu moneda + „Analizează piața” stă din nou pe Setări
+await test("21 Setări: #pzV-settings .pzVerb mic (stare, nu decizie); bara cu moneda + „Analizează piața” rămâne la vedere pe Setări", () => {
   assert.match(CSS, /#pzV-settings \.pzVerb\{font-size:15px;white-space:normal;letter-spacing:\.02em\}/);
-  assert.match(CSS, /body\.peSetari \.toolbar\{display:none\}/);
-  assert.match(APP, /document\.body\.classList\.toggle\("peSetari",id==="settings"\)/);
+  assert.doesNotMatch(CSS, /peSetari/);
+  assert.doesNotMatch(APP, /peSetari/);
 });
 
 // ---------------------------------------------------------------- 22. Grid: ce setez? — moneda în rândul de stare; câmpul precompletat cu botul activ
