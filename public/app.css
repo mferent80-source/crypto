@@ -3113,3 +3113,21 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
 body.peAcasa:not(.acMonedaDeschisa) .topLeft,body.peTablou .topLeft,body.peT212 .topLeft,body.peJurnal .topLeft,body.peGrid .topLeft,body.pePaginaNoua .topLeft,
 body.peAcasa:not(.acMonedaDeschisa) #wsStatus,body.peTablou #wsStatus,body.peT212 #wsStatus,body.peJurnal #wsStatus,body.peGrid #wsStatus,body.pePaginaNoua #wsStatus,
 body.peAcasa:not(.acMonedaDeschisa) #topLive,body.peTablou #topLive,body.peT212 #topLive,body.peJurnal #topLive,body.peGrid #topLive,body.pePaginaNoua #topLive{display:none!important}
+/* v100.261 (27.10.2026, el: „linia vreau să cumpăr întinde f mult pagina în jos lăsând un mare gol”): raportul Porții (13 blocuri, ~3000 px
+   la 310 px) stătea în coloana îngustă din dreapta și întindea grila Trading 212; sub „Pozițiile” (~560 px) rămânea golul. Cu raport pe ecran
+   (clasa t212CuRaport, pusă de t212RenderPoarta; eroarea o scoate), de la 1101 px panoul „Vreau să cumpăr…” trece pe toată lățimea sub poziții,
+   Portofoliul urcă lângă ele, iar blocurile raportului stau pe trei coloane: verdictul, „Ce aș face eu”, motivele și avertizările de sus rămân
+   pe lățime, blocurile nu se rup (profilul da, că e cel mai înalt). Sub 1101 px grila e deja o coloană și nimic nu se schimbă. */
+@media (min-width:1101px){
+  #t212 .t212Grila.t212CuRaport>.t212Side{display:contents}
+  #t212 .t212Grila.t212CuRaport>section[aria-label="Pozițiile"]{grid-column:1;grid-row:1}
+  #t212 .t212Grila.t212CuRaport .t212Side>section[aria-label="Portofoliul"]{grid-column:2;grid-row:1}
+  #t212 .t212Grila.t212CuRaport .t212Side>section[aria-label="Vreau să cumpăr"]{grid-column:1 / -1;grid-row:2}
+  #t212 .t212CuRaport .t212PoartaCorp>.t212Intrari{grid-template-columns:minmax(0,340px) max-content}
+  #t212 .t212CuRaport .t212StopulMeu .t212Intrari{grid-template-columns:repeat(5,minmax(0,1fr))}
+  #t212 .t212CuRaport #t212PoartaRez{columns:3;column-gap:16px}
+  #t212 .t212CuRaport #t212PoartaRez>:not(.t212Preturi,.t212Preturi~*){column-span:all}
+  #t212 .t212CuRaport #t212PoartaRez>*{break-inside:avoid;margin-top:0}
+  #t212 .t212CuRaport #t212PoartaRez>.t212ProfilPoarta{break-inside:auto}
+  #t212 .t212CuRaport #t212PoartaRez>.t212ProfilPoarta>*{break-inside:avoid}
+}

@@ -1171,9 +1171,12 @@ function t212PoartaCont(p) {
   } catch (e) {}
   return h;
 }
+// v100.261 (27.10, el: „linia vreau să cumpăr întinde f mult pagina în jos lăsând un mare gol”): cu raport pe ecran, grila Trading 212 își schimbă
+// așezarea (app.css, de la 1101 px: panoul pe toată lățimea sub poziții, raportul pe coloane); eroarea și golul o lasă cum era
+function t212CuRaport(out, da) { var g = out && out.closest ? out.closest(".t212Grila") : null; if (g) g.classList.toggle("t212CuRaport", !!da); }
 function t212RenderPoarta() {
   var out = $("t212PoartaRez"), p = t212.poarta; if (!out || !p) return;
-  if (p.eroare) { out.innerHTML = '<p class="bad">' + escapeHtml(p.eroare) + '</p>'; return; }
+  if (p.eroare) { t212CuRaport(out, false); out.innerHTML = '<p class="bad">' + escapeHtml(p.eroare) + '</p>'; return; }
   var n = T212_POARTA[p.v.nivel] || T212_POARTA["fara-date"], st = p.st;
   // v100.69 (sfaturile concise, pachetul 4): „Ce aș face eu” = o actiune la persoana I, ≤ 110; lectia NPA pe randul de sub ea
   // v100.196 (auditul sever 14.10, 🟡1): „Ce aș face eu” spune suma din „Cât cumperi” (aceeași funcție), nu 20% din cont
@@ -1181,6 +1184,7 @@ function t212RenderPoarta() {
   var fara = t212FaraSuma(p);
   var fac = ActiuniSemnale.facPoarta(p.v.nivel, t212MarimePoarta(p), { faraMarime: t212FaraMarime(p), motivPlan: planMotiv, faraSuma: fara, regimNedovedit: t212RegimNedovedit() });   // v100.71 (I4): functie pura, generata si masurata de garda
   var zu = st.ultima ? new Date(st.ultima).toISOString() : "";
+  t212CuRaport(out, true);
   out.innerHTML = '<div class="t212Verdict ' + n[1] + '"><b>' + n[0] + ' · ' + escapeHtml(p.simbol) + '</b><span class="tbSub">acum ' + t212Usd(st.pret) + (zu ? ' · ultima zi închisă ' + zu.slice(8, 10) + '.' + zu.slice(5, 7) : '') + ' · trend ' + escapeHtml(st.trend.dir) + ' · față de maximul pe 7 zile ' + t212Pct(st.distMax7z) + ' · pe 52 săpt. ' + t212Pct(st.distMax52) + '</span></div>'
     + '<p class="t212Fac t212FacPoarta">👉 <b>Ce aș face eu:</b> ' + escapeHtml(fac) + '</p>'
     + t212LinieCal()
