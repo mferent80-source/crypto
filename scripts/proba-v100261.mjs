@@ -61,17 +61,17 @@ await test("sub 1101 px nimic nu se schimbă: grila rămâne o coloană, regula 
   assert.match(css, /\.t212Side\{display:flex;flex-direction:column;gap:12px;min-width:0\}/);
 });
 
-await test("versiunea v100.261 · LAT e în toate locurile", () => {
+await test("versiunea ≥ v100.261 în toate locurile (v100.262: ≥, nu egal - ca v100.217 la v100.216); nota LAT rămâne în BUILD_INFO", () => {
+  const P = JSON.parse(citeste("package.json")), ver = Number(P.version.split(".")[1]), V = "v100." + ver;
+  assert.ok(ver >= 261, "versiunea " + V);
   const bi = JSON.parse(citeste("BUILD_INFO.json"));
-  assert.equal(bi.version, "v100.261"); assert.equal(bi.badge, "v100.261 · LAT");
+  assert.equal(bi.version, V); assert.ok(bi.badge.startsWith(V + " · "), "badge-ul " + bi.badge);
   assert.ok(bi.features && typeof bi.features.lat261 === "string" && /gol/.test(bi.features.lat261));
-  assert.equal(JSON.parse(citeste("package.json")).version, "100.261.0");
-  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.261"/);
-  assert.match(citeste("public", "sw.js"), /^const CACHE="crypto-radar-v100-261";/);
+  assert.equal(P.version, "100." + ver + ".0");
+  assert.ok(citeste("functions", "_shared", "versiune.js").includes('VERSIUNE = "' + V + '"'));
+  assert.ok(citeste("public", "sw.js").startsWith('const CACHE="crypto-radar-v100-' + ver + '";'));
   const idx = citeste("public", "index.html");
-  assert.equal((idx.match(/v100\.261/g) || []).length, 4, "index.html are 4 locuri cu versiunea");
-  assert.ok(!idx.includes("v100.260"));
-  assert.match(idx, /v100\.261 · LAT</);
+  assert.equal(idx.split(V).length - 1, 4, "index.html are 4 locuri cu versiunea");
 });
 
 console.log(`\n${teste - picate}/${teste} ok${picate ? ` · ${picate} PICATE` : ""}\n`);

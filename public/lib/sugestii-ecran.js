@@ -8,11 +8,21 @@ function sugPc(x) { return x == null || !isFinite(x) ? "—" : Math.round(x * 10
 function sugCate(n, sg, pl) { return typeof TextRo !== "undefined" && TextRo.cate ? TextRo.cate(n, sg, pl) : n + " " + pl; }
 // revizia (M2): lista intraday de altă zi își spune data (în weekend, înainte de 10:20)
 function sugOra(t, acum) { var d = new Date(t), p = function (n) { return String(n).padStart(2, "0"); }; if (!isFinite(d.getTime())) return "—"; var a = new Date(acum || Date.now()), alta = d.toDateString() !== a.toDateString(); return (alta ? p(d.getDate()) + "." + p(d.getMonth() + 1) + " " : "") + p(d.getHours()) + ":" + p(d.getMinutes()); }
-// o cartelă = o listă: titlul, cel mult 5 rânduri (simbolul + ce s-a întâmplat), istoricul, urmărirea; gol ⇒ spune de ce
+// v100.262 (el 28.10: „în Sugestii să apară și direcția la boți”): direcția monedei din clasament (GridCalcul.directie pe 4h + 1z, aceeași
+// ca în Fișă) cu tăria ei, ca pastilă lângă nume pe cartelele de boți; fără direcție în rând (acțiuni, clasament vechi) nu apare nimic
+var SUG_DIR = { long: "↑ long", short: "↓ short", neutru: "→ neutru" }, SUG_TARIE = { tare: "tare", mediu: "mediu", slab: "slab" };
+function sugDir(x) {
+  var d = x && SUG_DIR[x.dir] ? x.dir : null; if (!d) return null;
+  return { c: d, t: SUG_DIR[d] + (SUG_TARIE[x.tarie] ? " · " + SUG_TARIE[x.tarie] : "") };
+}
+function sugDirHtml(dir) {
+  return dir ? '<span class="sugDir ' + dir.c + '" title="direcția trendului monedei pe 4h și 1z, ca în Fișă (long / short / neutru) și tăria lui (tare / mediu / slab); gridul se înclină după ea">' + sugEsc(dir.t) + '</span> ' : '';
+}
+// o cartelă = o listă: titlul, cel mult 5 rânduri (simbolul + direcția, când rândul o are + ce s-a întâmplat), istoricul, urmărirea; gol ⇒ spune de ce
 function sugCartela(titlu, sub, randuri, gol, istoric, urm) {
   var r = (randuri || []).slice(0, 5);
   return '<div class="tbBloc sugCartela"><h4>' + sugEsc(titlu) + '</h4>' + (sub ? '<p class="tbSub">' + sugEsc(sub) + '</p>' : '')
-    + (r.length ? '<ul class="sugLista">' + r.map(function (x) { return '<li><b>' + sugEsc(x.s) + '</b> <span class="tbSub">' + sugEsc(x.d) + '</span>'
+    + (r.length ? '<ul class="sugLista">' + r.map(function (x) { return '<li><b>' + sugEsc(x.s) + '</b> ' + sugDirHtml(x.dir) + '<span class="tbSub">' + sugEsc(x.d) + '</span>'
       + (x.b ? '<a class="sugBusola" href="' + sugEsc(x.b) + '" target="_blank" rel="noopener" aria-label="deschide ' + sugEsc(x.s) + ' în Busola" title="deschide în Busola">🧭</a>' : '') + '</li>'; }).join("")   /* v100.181: 🧭 spre Busola, doar unde rândul o are */ + '</ul>' : '<p class="sugGol">' + sugEsc(gol) + '</p>')
     + (istoric ? '<p class="tbSub sugIstoric" title="' + sugEsc(istoric) + '">' + sugEsc(istoric) + '</p>' : '') + (urm ? '<p class="tbSub sugUrm" title="' + sugEsc(urm) + '">' + sugEsc(urm) + '</p>' : '') + '</div>';
 }
@@ -97,8 +107,9 @@ function sugBoti(cl, sg) {
   // v100.181 (el 13.10: „fă idei” - ideea 1): 🧭 pe fiecare monedă, Busola pe 4h (intervalul clasamentului), ca s-o verifici înainte de pornire
   var bz = function (s) { return typeof Busola !== "undefined" && Busola.adresaBusola ? Busola.adresaBusola({ simbol: s, tf: "4h" }) : null; };
   var pzS = typeof acPauzaSezon === "function" ? acPauzaSezon() : null;
-  var porn = pzS > 0 ? [] : I.ideiBoti(cl, [], 5).map(function (x) { return { s: mo(x), b: bz(mo(x)), d: [x.latime != null ? "interval " + pr(x.latime) : "", x.profitGrila != null ? pr(x.profitGrila) + " net pe grilă" : "", x.traversariZi != null ? "~" + Math.round(x.traversariZi) + " treceri pe zi" : ""].filter(Boolean).join(" · ") || "candidat" }; });
-  var rev = I.reveniriBoti ? I.reveniriBoti(cl, [], 5).map(function (x) { return { s: mo(x), b: bz(mo(x)), d: "pe revenire" }; }) : [], sh = I.shortBoti ? I.shortBoti(cl, [], 5).map(function (x) { return { s: mo(x), b: bz(mo(x)), d: "liniștită, direcția short" }; }) : [];
+  // v100.262: + direcția (dir, tarie din GridClasament.judeca) pe fiecare rând de bot, pe toate trei cartelele
+  var porn = pzS > 0 ? [] : I.ideiBoti(cl, [], 5).map(function (x) { return { s: mo(x), b: bz(mo(x)), dir: sugDir(x), d: [x.latime != null ? "interval " + pr(x.latime) : "", x.profitGrila != null ? pr(x.profitGrila) + " net pe grilă" : "", x.traversariZi != null ? "~" + Math.round(x.traversariZi) + " treceri pe zi" : ""].filter(Boolean).join(" · ") || "candidat" }; });
+  var rev = I.reveniriBoti ? I.reveniriBoti(cl, [], 5).map(function (x) { return { s: mo(x), b: bz(mo(x)), dir: sugDir(x), d: "pe revenire" }; }) : [], sh = I.shortBoti ? I.shortBoti(cl, [], 5).map(function (x) { return { s: mo(x), b: bz(mo(x)), dir: sugDir(x), d: "liniștită, direcția short" }; }) : [];
   return '<section class="rlSec" data-sug="boti"><h4 class="sugCap">🤖 Boți</h4><div class="sugGrila">'
     + sugCartela("💡 Pe ce aș porni un bot", "din clasamentul primelor 100 de monede PERP", porn, pzS > 0 ? acFrazaPauza(pzS) : "acum nicio monedă nu e candidată", "Un filtru (liniște, interval, treceri), nu o predicție; Fișa îți dă setările și proba pe moneda ta.", null)
     + sugCartela("🔁 Pe revenire", "monede care au scăzut puternic și acum revin", rev, "nimic acum", R && dv.revenire ? R.textDovada(dv.revenire.piata, "monede") + (R.TEXT_SUPRAVIETUITORI_MONEDE && dv.revenire.piata ? " ⚠ " + R.TEXT_SUPRAVIETUITORI_MONEDE : "") : null, null)   /* audit 19.10 (8): supraviețuitorii și la monede */

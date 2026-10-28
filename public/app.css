@@ -2283,6 +2283,8 @@ body:not(.peLaborator) main>.note{display:none}
 .sugLista{margin:0;padding:0;list-style:none;display:grid;gap:4px}.sugLista li{display:flex;flex-wrap:nowrap;gap:6px;align-items:baseline}.sugLista li>b{flex:none}.sugLista li>.tbSub{flex:1;min-width:0}
 .sugBusola{margin-left:auto;flex:none;min-width:32px;min-height:32px;display:inline-flex;align-items:center;justify-content:center;border-radius:var(--radius);text-decoration:none;align-self:center}.sugBusola:hover,.sugBusola:focus-visible{background:var(--line)}   /* v100.181: 🧭 spre Busola în Sugestii */.sugGol{margin:0;color:var(--muted)}
 .sugIstoric,.sugUrm{margin:0}.sugCap{margin:14px 0 6px}.sugCartela h4{margin:0}.sugCartela>.tbSub{margin:0}
+/* v100.262: direcția monedei pe cartelele de boți din Sugestii - pastilă lângă nume: verde long, roșu short, gri neutru */
+.sugDir{flex:none;font-size:11px;font-weight:600;line-height:1.5;padding:0 6px;border-radius:4px;border:1px solid var(--line);color:var(--muted);white-space:nowrap;align-self:center}.sugDir.long{color:var(--good);border-color:var(--good)}.sugDir.short{color:var(--bad);border-color:var(--bad)}
 /* v100.244: fraza de istoric stă pe un rând; textul rămâne în pagină, tăiat cu puncte */
 #sugPagina .sugIstoric,#sugPagina .sugUrm{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:1.35em;line-height:1.35}
 /* v100.243: vârsta lățimii rămâne pe un rând; „acum 9 min” / „acum 10 min” nu înalță antetul pândei */
