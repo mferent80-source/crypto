@@ -21,20 +21,38 @@ const J = (o, s = 200, h = {}) => new Response(JSON.stringify(o), { status: s, h
 // v100.42 (audit 30.09): comparare in timp CONSTANT (=== se opreste la primul caracter diferit - timpul spune cat din cheie e ghicit)
 function egalConstant(a, b) { a = String(a); b = String(b); let d = a.length ^ b.length; for (let i = 0; i < Math.max(a.length, b.length); i++) d |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0); return d === 0; }
 function autorizat(request, secret) { const s = String(secret || ""); return s.length >= 20 && egalConstant(request.headers.get("authorization") || "", "Bearer " + s); }
+// v100.263 (auditul Radar din 28.10, I-791): scrierile paginilor (lista de simboluri, lista „cu stop”, cererile Salt) cer cheia de SCRIERE
+// (CHEIE_SCRIERE, wrangler secret put) - până azi mergeau cu cheia de citire, care stă în fiecare browser și, prin /stopuri, putea tăcea
+// alarma „fără stop loss”. Tranziție: cât CHEIE_SCRIERE nu e pusă în Cloudflare, cheia de citire scrie ca înainte (nimic nu se strică la
+// publicare); pusă, DOAR ea scrie. `scriere(env)` spune paginilor (în /) dacă e cerută.
+export function cheieScrierePusa(env) { return String(env && env.CHEIE_SCRIERE || "").length >= 20; }
+export function autorizatScriere(request, env) { return cheieScrierePusa(env) ? autorizat(request, env.CHEIE_SCRIERE) : autorizat(request, env.CHEIE_CITIRE); }
+const MSG_SCRIERE = (env) => ({ error: cheieScrierePusa(env) ? "cheia de scriere lipseste sau nu e buna" : "cheia de citire lipseste sau nu e buna" });
 
 // poza colectorului: scrisa de acasa cu tokenul, citita de pagina cu cheia de citire
-export async function pozaScrie(env, text) {
+// v100.263 (auditul Radar, P3): `la` din viitor (ceasul PC-ului greșit) e refuzat - altfel pagina spunea „poza de acum 0 min” la nesfârșit
+export const LA_VIITOR_MAX_MS = 10 * 60000;
+export async function pozaScrie(env, text, acum = Date.now()) {
   if (text.length > POZA_MAX) return { status: 413, corp: { error: "poza prea mare", max: POZA_MAX, marime: text.length } };
   let p; try { p = JSON.parse(text); } catch { return { status: 400, corp: { error: "JSON stricat" } }; }
   if (!p || typeof p !== "object" || Array.isArray(p) || !(Number(p.la) > 0)) return { status: 400, corp: { error: "lipseste 'la'" } };
+  if (Number(p.la) > acum + LA_VIITOR_MAX_MS) return { status: 400, corp: { error: "'la' e in viitor (ceasul PC-ului?)", la: Number(p.la), acum } };
   // o singura cheie (o scriere pe poza: KV-ul are limita zilnica de scrieri; si nicio pereche de chei ne-atomica)
   await env.PAZNIC.put("poza", text);
   return { status: 200, corp: { ok: true, la: Number(p.la), marime: text.length } };
 }
 // ETag-ul = "la" din corp (primul camp al pozei), fara a doua cheie
-function laDinText(text) { const m = /"la"\s*:\s*(\d{10,})/.exec(String(text || "").slice(0, 200)); return m ? m[1] : null; }
+// v100.263 (auditul Radar, P2): regexul pe primele 200 / 300 de caractere e doar calea RAPIDĂ; dacă nu prinde (câmpurile în altă ordine),
+// se parsează JSON-ul întreg - înainte poza scrisă dădea 404 „nicio poza inca”
+function campDinText(text, camp, limita) {
+  const t = String(text || ""), m = new RegExp('"' + camp + '"\\s*:\\s*(\\d{10,})').exec(t.slice(0, limita));
+  if (m) return m[1];
+  if (!t) return null;
+  try { const p = JSON.parse(t), v = Number(p && p[camp]); return v > 0 ? String(Math.floor(v)) : null; } catch { return null; }
+}
+export function laDinText(text) { return campDinText(text, "la", 200); }
 // v100.196 (auditul sever, C1): ora ultimei ture a alertelor TERMINATE (al doilea câmp al pozei); lipsă (colector vechi) = null
-function turaDinText(text) { const m = /"turaLa"\s*:\s*(\d{10,})/.exec(String(text || "").slice(0, 300)); return m ? Number(m[1]) : null; }
+export function turaDinText(text) { const v = campDinText(text, "turaLa", 300); return v === null ? null : Number(v); }
 export async function pozaCiteste(env, ifNoneMatch) {
   const text = await env.PAZNIC.get("poza"); const la = laDinText(text);
   if (!text || !la) return { status: 404, corp: { error: "nicio poza inca" } };
@@ -247,16 +265,16 @@ export default {
       return J({ error: "doar GET sau POST" }, 405, h);
     }
     if (u.pathname === "/simboluri") {
-      if (m === "POST") { if (!autorizat(request, env.CHEIE_CITIRE)) return J({ error: "cheia de citire lipseste sau nu e buna" }, 401, h); const r = await simboluriScrie(env, await request.text()); return J(r.corp, r.status, h); }
+      if (m === "POST") { if (!autorizatScriere(request, env)) return J(MSG_SCRIERE(env), 401, h); const r = await simboluriScrie(env, await request.text()); return J(r.corp, r.status, h); }
       if (m === "GET") { if (!autorizat(request, env.PAZNIC_TOKEN)) return J({ error: "neautorizat" }, 401, h); return J(await simboluriCiteste(env), 200, h); }
       return J({ error: "doar GET sau POST" }, 405, h);
     }
     if (u.pathname === "/stopuri") {
-      if (m === "POST") { if (!autorizat(request, env.CHEIE_CITIRE)) return J({ error: "cheia de citire lipseste sau nu e buna" }, 401, h); const r = await stopuriScrie(env, await request.text()); return J(r.corp, r.status, h); }
+      if (m === "POST") { if (!autorizatScriere(request, env)) return J(MSG_SCRIERE(env), 401, h); const r = await stopuriScrie(env, await request.text()); return J(r.corp, r.status, h); }
       return J({ error: "doar POST" }, 405, h);
     }
     if (u.pathname === "/salt-cereri") {
-      if (m === "POST") { if (!autorizat(request, env.CHEIE_CITIRE)) return J({ error: "cheia de citire lipseste sau nu e buna" }, 401, h); const r = await saltCerereScrie(env, await request.text()); return J(r.corp, r.status, h); }
+      if (m === "POST") { if (!autorizatScriere(request, env)) return J(MSG_SCRIERE(env), 401, h); const r = await saltCerereScrie(env, await request.text()); return J(r.corp, r.status, h); }
       if (m === "GET") { if (!autorizat(request, env.PAZNIC_TOKEN)) return J({ error: "neautorizat" }, 401, h); const v = await saltCereriCiteste(env); return J({ cereri: v.cereri }, 200, h); }
       return J({ error: "doar GET sau POST" }, 405, h);
     }
@@ -265,7 +283,7 @@ export default {
       if (!autorizat(request, env.PAZNIC_TOKEN)) return J({ error: "neautorizat" }, 401, h);
       const r = await saltCereriConfirma(env, await request.text()); return J(r.corp, r.status, h);
     }
-    return J({ serviciu: "paznicul colectorului Crypto Radar" }, 200, h);
+    return J({ serviciu: "paznicul colectorului Crypto Radar", cheieScriere: cheieScrierePusa(env) }, 200, h);   // v100.263: paginile află dacă scrierile cer cheia de scriere
   },
   // v101.126: cronul la 5 minute — paznicul colectorului la 10 minute (ca înainte), alarma „fără stop” la :00 :15 :30 :45
   async scheduled(event, env, ctx) {

@@ -3217,7 +3217,8 @@ const ecranDinLegatura=(function(){
   }
   try{
     const L=crLegaturaDin(location.hash);
-    if(L.parola)localStorage.setItem(APP_API_TOKEN_SESSION_KEY,L.parola);
+    // v100.263 (auditul Radar, P3): o parolă DIFERITĂ de cea ținută pe dispozitiv nu o mai înlocuiește tăcut - un link străin o strica (401 până o puneai iar); întreabă o dată
+    if(L.parola){const tinuta=(function(){try{return localStorage.getItem(APP_API_TOKEN_SESSION_KEY)||""}catch(x){return ""}})();if(!tinuta||tinuta===L.parola||confirm("Linkul vine cu altă parolă a Radarului decât cea ținută pe acest dispozitiv. O înlocuiesc cu cea din link?"))localStorage.setItem(APP_API_TOKEN_SESSION_KEY,L.parola);}
     if(L.parola||L.ecran)history.replaceState(null,"",location.pathname+location.search);
     // v100.203: botul cerut se pune ca ALES în Tablou (aceeași cheie ca tbAlegeBot; TB_BOT_ALES nu e încă definit aici) — supraviețuiește și reîncărcării SW
     if(L.bot){try{localStorage.setItem("tabloBotAles_v1",JSON.stringify(String(L.bot)))}catch{}}

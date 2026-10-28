@@ -211,7 +211,9 @@ export function pret30DinIstoric(intrari, ring) {
 // v100.175 (auditul Opus, M15 + M16): pe bursa SIMBOLULUI (Xetra se deschide la 9:00 Berlin, nu la 9:30 New York) și fără sărbători
 // (Thanksgiving nu mai e „ziua de ieri, din nou”) - calendarul burselor; fără simbol = New York, ca înainte
 export function ziSesiune(acum, simbol) { return CalendarBursa.ziSesiune(acum, simbol || ""); }
-const monedaBursa = (s) => (CalendarBursa.bursaSimbol(s) === "XETRA" ? "€" : CalendarBursa.bursaSimbol(s) === "LSE" ? "£" : "$");
+// v100.263 (auditul Radar, P3): exportată - colectorul o folosește ca monedă de rezervă a unui simbol fără cotație (înainte un regex propriu
+// dădea „€” la .SW, care e CHF, și „$” la .L, care e GBp)
+export const monedaBursa = (s) => (CalendarBursa.bursaSimbol(s) === "XETRA" ? "€" : CalendarBursa.bursaSimbol(s) === "LSE" ? "£" : "$");
 // cat de des pleaca poza: 2 minute cat e un bot activ sau bursa US e in ore extinse (4-20 NY, luni-vineri), altfel 5 minute
 // (KV-ul Cloudflare Free are ~1.000 de scrieri pe zi: cu un bot activ zi si noapte = 720 de poze; bataia separata NU se mai
 // trimite cat poza curge - vezi bataieNecesara - deci ramane loc)

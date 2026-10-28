@@ -1,11 +1,12 @@
 {
-  "version": "v100.262",
-  "badge": "v100.262 · DIR",
+  "version": "v100.263",
+  "badge": "v100.263 · CHE",
   "engineContract": "54.1",
   "dataSchema": 54,
   "baseRelease": "v77.4 · TABLOUL BOTULUI",
   "releaseType": "valul de reparatii din revizia finala pe ansamblu: marginStatus/riskStatus citite, telefon, scurgere WS/ceas la iesire prin tab-uri, ATR adevarat, pret viu, istoric fara pret inghetat, sortare dupa timp, comision nemasurabil, durata la margine",
   "features": {
+    "chei263": "Chei (28.10.2026, auditul Radar din Trading Tools, partea a doua): Paznicul cere cheia de SCRIERE (CHEIE_SCRIERE) pentru lista de simboluri, lista „cu stop” și cererile Salt - cât secretul nu e pus, cheia de citire scrie ca înainte; `la` din viitor refuzat; ETag-ul și pulsul se citesc și dintr-o poză cu câmpurile în altă ordine; contractul pozei (paznic/exemplu-poza.json, scripts/exemplu-poza.mjs) pentru testul paginii Alerte; moneda de rezervă a simbolului din bursa lui (.SW, .L); #parola= diferită întreabă înainte să înlocuiască.",
     "dir262": "Dir (28.10.2026, el: „în Sugestii să apară și direcția la boți”): pe cele trei cartele de boți din Sugestii (pornire, revenire, short), lângă numele monedei stă direcția ei din clasament (GridCalcul.directie pe 4h + 1z, aceeași ca în Fișă) cu tăria: ↑ long · tare, ↓ short · mediu, → neutru · slab; rândurile fără direcție rămân neschimbate.",
     "lat261": "Lat (27.10.2026, el: „linia vreau să cumpăr întinde f mult pagina în jos lăsând un mare gol”): cu raport, panoul „Vreau să cumpăr…” din Trading 212 trece pe toată lățimea sub poziții și raportul stă pe trei coloane; golul de sub „Pozițiile” dispare.",
     "bara260": "Bara înapoi (24.10.2026, el: „da pune înapoi”): bara cu moneda și „Analizează piața” stă din nou pe Setări (auditul din 23.10 o ascunsese).",

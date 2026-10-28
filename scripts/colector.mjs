@@ -31,7 +31,7 @@ import { execFile, spawn } from "node:child_process";
 import { adresaTailscale } from "./lib/adresa-radar.mjs";
 import { turaT212 as turaT212Modul, turaPlanuri as turaPlanuriModul, turaCfActiuni as turaCfActiuniModul } from "./lib/tura-t212.mjs";
 import { turaT212Exec, itemeUmplute } from "./lib/tura-t212.mjs";   // v100.259 (punctul 18): + umplerile ordinelor parțiale   // v101.102: completarea o dată a istoricului (tipul ordinului, ora) - jurnalul de execuție
-import { ziSesiune, construiestePoza, alerteSLTP, fxDinPozitii, costLeiDinLoturi, nivDinNiveluri, prevClose, prevSimbol, cadentaPoza, alerteSimboluri, alerteT212Pasi, alertaBotPas, bataieNecesara, paznicLaDupaEsec, amprentaPoza, urcaPoza, planTuraPoza, pret30DinIstoric, pret24hDinIstoric, ziDinKlines } from "./lib/poza.mjs";
+import { ziSesiune, construiestePoza, alerteSLTP, fxDinPozitii, costLeiDinLoturi, monedaBursa, nivDinNiveluri, prevClose, prevSimbol, cadentaPoza, alerteSimboluri, alerteT212Pasi, alertaBotPas, bataieNecesara, paznicLaDupaEsec, amprentaPoza, urcaPoza, planTuraPoza, pret30DinIstoric, pret24hDinIstoric, ziDinKlines } from "./lib/poza.mjs";
 import { creeazaYahooExtra } from "./lib/yahoo-extra.mjs";
 import { strangeBoti } from "./lib/tura-arhiva-boti.mjs";
 import { avertizariPornire } from "./lib/tura-pornire.mjs";
@@ -1224,7 +1224,7 @@ async function simboluriPentruPoza() {
     let niveluri = null;
     try { const b = await yahooExtra.bare(s.s), pr = c && c.pret != null ? c.pret : (b && b.length ? b[b.length - 1].c : null); if (b && pr) niveluri = ActiuniSemnale.niveluri(b, pr, {}); } catch (err) { jurnal("poza: bare", s.s, err.message); }
     // v98.2: prev = ultima sesiune incheiata (ziua NY), ca la pozitii - nu penultima inchidere (duminica arata vineri drept "azi")
-    out.push({ s: s.s, nota: s.nota, sursa, moneda: c ? c.moneda : (/\.(DE|MU|F|PA|AS|MI|SW)$/.test(s.s) ? "€" : "$"), pret: c ? c.pret : null, prev: prevSimbol(c, Date.now()), closes30: c ? c.closes30 : [], extra: e, niveluri });
+    out.push({ s: s.s, nota: s.nota, sursa, moneda: c ? c.moneda : monedaBursa(s.s), pret: c ? c.pret : null,   /* v100.263: moneda bursei, nu un regex propriu */ prev: prevSimbol(c, Date.now()), closes30: c ? c.closes30 : [], extra: e, niveluri });
   }
   return out;
 }
