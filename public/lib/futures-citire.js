@@ -324,7 +324,92 @@ var FuturesCitire = (function () {
     return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + W + ' 242" role="img" aria-label="' + aria.join(" ") + '">' + s.join("") + "</svg>";
   }
 
-  return { prima: prima, primaText: primaText, subPrima: subPrima, pionexText: pionexText, subPionex: subPionex, baniMari: baniMari, baniMariText: baniMariText,
+  // ---------------- F7 (v100.266): proba pe date noi. Protocolul scris ÎNAINTE de date (29.10):
+  //  ipoteza - după o oră „Longurile înghesuite” (C) prețul pe 24 h iese mai slab decât după „Echilibrat” (B); după „Shorturile înghesuite” (K), mai bun;
+  //  eșantionul - UN rând pe monedă pe zi UTC (primul cu ora ≤ 3), întoarcerea la 24 h ± 1 h: ferestrele nu se suprapun;
+  //  unitatea - ZIUA (diferența mediilor X − B în aceeași zi), nu moneda; verdict abia de la 30 de zile; IC95 cu t;
+  //  limita de detecție (mde ≈ 2,8 · eroarea standard, 80% putere la 5%) se spune - cu 30 de zile se văd doar efecte mari.
+  //  Verdictele: „strâng date” · „se vede pe date noi” (în sensul ipotezei) · „merge invers” · „nu se vede”. Niciodată „dovedit”.
+  var ZI_MS = 86400000, ORA_MS = 3600000, MIN_ZILE = 30;
+  function tq(df) { return df >= 1 ? 1.96 + 2.4 / df + 3 / (df * df) : NaN; }   // cuantila t 97,5% aproximată (df 9 ⇒ 2,26; df 29 ⇒ 2,05)
+  function evalForward(rows, acum) {
+    var pret = {}, prim = {}, simboluri = {}, zile = {};
+    (Array.isArray(rows) ? rows : []).forEach(function (r) {
+      var t = nr(r && r[0]), s = r && typeof r[1] === "string" ? r[1] : null, m = nr(r && r[2]), c = r && r[3];
+      if (t === null || !s || !(m > 0) || (c !== "C" && c !== "K" && c !== "B")) return;
+      pret[s + "|" + t] = m; simboluri[s] = 1;
+      var z = Math.floor(t / ZI_MS), k = s + "|" + z;
+      if (new Date(t).getUTCHours() <= 3 && (!prim[k] || t < prim[k][0])) prim[k] = [t, s, m, c, z];
+    });
+    Object.keys(prim).forEach(function (k) {
+      var p = prim[k], m2 = null;
+      [0, -ORA_MS, ORA_MS].some(function (dt) { var x = pret[p[1] + "|" + (p[0] + ZI_MS + dt)]; if (x) { m2 = x; return true; } return false; });
+      if (m2 === null || p[0] + ZI_MS > (nr(acum) || Infinity)) return;
+      (zile[p[4]] = zile[p[4]] || { C: [], K: [], B: [] })[p[3]].push(m2 / p[2] - 1);
+    });
+    var chei = Object.keys(zile).map(Number).sort(function (a, b) { return a - b; }), z0 = chei.length ? chei[0] : 0;
+    var med = function (a) { return a.reduce(function (x, y) { return x + y; }, 0) / a.length; };
+    var parte = function (X, semnAsteptat) {
+      var dif = {}, v = [];
+      chei.forEach(function (z) { var o = zile[z]; if (o[X].length && o.B.length) { dif[z - z0] = med(o[X]) - med(o.B); v.push(dif[z - z0]); } });
+      var n = v.length, m = n ? med(v) : null, sd = n > 1 ? Math.sqrt(v.reduce(function (s, x) { return s + (x - m) * (x - m); }, 0) / (n - 1)) : null, se = sd === null ? null : sd / Math.sqrt(n);
+      var lo = se === null ? null : m - tq(n - 1) * se, hi = se === null ? null : m + tq(n - 1) * se, verdict;
+      if (n < MIN_ZILE) verdict = "strâng date";
+      else if (semnAsteptat < 0 ? hi < 0 : lo > 0) verdict = "se vede pe date noi";
+      else if (semnAsteptat < 0 ? lo > 0 : hi < 0) verdict = "merge invers";
+      else verdict = "nu se vede";
+      return { r: { zile: n, medie: m, ciLo: lo, ciHi: hi, mde: se === null ? null : 2.8 * se, verdict: verdict }, dif: dif };
+    };
+    var c = parte("C", -1), k = parte("K", 1);
+    var esantion = 0; chei.forEach(function (z) { esantion += zile[z].C.length + zile[z].K.length + zile[z].B.length; });
+    return { la: nr(acum), deLa: chei.length ? new Date(z0 * ZI_MS).toISOString().slice(0, 10) : null, zile: chei.length, monede: Object.keys(simboluri).length, esantion: esantion,
+      parti: { "CROWDED": c.r, "CONTRARIAN +": k.r }, zileC: c.dif, zileK: k.dif };
+  }
+  function pct1(x) { return x === null || x === undefined || !isFinite(x) ? "—" : semn(x * 100, 1) + "%"; }
+  function subForward(rez) {
+    if (!rez || !rez.parti) return "Proba pe date noi: încă nimic - colectorul o începe la prima oră plină.";
+    var dl = rez.deLa ? rez.deLa.slice(8, 10) + "." + rez.deLa.slice(5, 7) : "—", t = ["Proba pe date noi, din " + dl + ": " + cate(nr(rez.zile) || 0, "zi", "zile") + ", " + cate(nr(rez.monede) || 0, "monedă", "monede") + "."];
+    [["CROWDED", "Longurile înghesuite"], ["CONTRARIAN +", "Shorturile înghesuite"]].forEach(function (x) {
+      var p = rez.parti[x[0]]; if (!p) return;
+      var u = x[1] + ": " + p.verdict + " (" + cate(nr(p.zile) || 0, "zi", "zile") + ")";
+      if (nr(p.medie) !== null) u += " · față de echilibrat, pe 24 h: " + pct1(p.medie) + (nr(p.ciLo) !== null ? " (IC95 " + pct1(p.ciLo) + " … " + pct1(p.ciHi) + ")" : "");
+      if (nr(p.mde) !== null) u += " · poate prinde doar efecte de peste " + pct1(Math.abs(p.mde)).replace("+", "");
+      t.push(u + ".");
+    });
+    t.push("Verdictul vine abia de la " + MIN_ZILE + " de zile; chiar și atunci e context, nu dovadă de câștig.");
+    return t.join(" ");
+  }
+  // ---------------- F8 (v100.266): tabelul futures pe monedele tale - cele 20 măsurate pe 29.10 + boții
+  var UNIVERS = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "DOGEUSDT", "COTIUSDT", "ADAUSDT", "LINKUSDT", "AVAXUSDT", "SUIUSDT", "PEPEUSDT", "LTCUSDT", "DOTUSDT", "NEARUSDT", "APTUSDT", "ARBUSDT", "OPUSDT", "TRXUSDT", "BNBUSDT", "WLDUSDT"];
+  function univers(boti) {
+    var out = UNIVERS.slice(), vazut = {}; out.forEach(function (s) { vazut[s] = 1; });
+    (Array.isArray(boti) ? boti : []).forEach(function (b) {
+      var m = String(b && b.baza || "").toUpperCase().replace(/\.PERP$/, ""), q = String(b && b.quote || "USDT").toUpperCase();
+      if (!/^[A-Z0-9]{1,20}$/.test(m) || !/^[A-Z]{3,5}$/.test(q)) return;
+      var s = m + q; if (!vazut[s]) { vazut[s] = 1; out.push(s); }
+    });
+    return out;
+  }
+  function randTabel(d) {
+    d = d || {};
+    var s = String(d.simbol || "").toUpperCase(), r = { simbol: /^[A-Z0-9]{1,24}$/.test(s) ? s : "?", faraContract: !!d.faraContract, eroare: !!d.eroare };
+    var ag = aglomerare({ funding: d.funding, ore: d.fundingIntervalHours, ls: d.longShort, lsIst: d.lsIst });
+    r.fr8 = ag.fr8; r.ore = nr(d.fundingIntervalHours); r.cost = cost1000(d.funding, d.fundingIntervalHours); r.ctx = ag.context; r.conflict = ag.conflict; r.lsPct = ag.lsPct; r.prima = prima(d.markPrice, d.indexPrice);
+    return r;
+  }
+  function tabelHtml(rows) {
+    var l = (Array.isArray(rows) ? rows : []).slice().sort(function (a, b) { var x = nr(a && a.fr8), y = nr(b && b.fr8); return (y === null ? -1 : Math.abs(y)) - (x === null ? -1 : Math.abs(x)); });
+    var cap = "<tr><th>Moneda</th><th>Funding la 8 h</th><th>Pe zi, la 1.000 USDT</th><th>Plata la</th><th>Raport L/S (față de moneda lui)</th><th>Prima</th><th>Contextul</th></tr>";
+    return "<table>" + cap + l.map(function (r) {
+      var s = /^[A-Z0-9?]{1,24}$/.test(String(r && r.simbol)) ? r.simbol : "?";
+      if (r.faraContract) return "<tr><td>" + s + "</td><td colspan=\"6\">fără contract pe Binance</td></tr>";
+      if (r.eroare || r.fr8 === null) return "<tr><td>" + s + "</td><td colspan=\"6\">n-am date acum</td></tr>";
+      return "<tr><td>" + s + "</td><td>" + rataSemn(r.fr8) + "</td><td>" + (r.cost === null ? "—" : num(r.cost, 1)) + "</td><td>" + (r.ore ? r.ore + " h" : "—") + "</td><td>" + (r.lsPct === null ? "—" : "p" + pr(r.lsPct)) + "</td><td>" + primaText(r.prima) + "</td><td>" + eticheta(r.ctx, r.conflict) + "</td></tr>";
+    }).join("") + "</table>";
+  }
+
+  return { evalForward: evalForward, subForward: subForward, univers: univers, randTabel: randTabel, tabelHtml: tabelHtml, UNIVERS: UNIVERS,
+    prima: prima, primaText: primaText, subPrima: subPrima, pionexText: pionexText, subPionex: subPionex, baniMari: baniMari, baniMariText: baniMariText,
     subBaniMari: subBaniMari, grafic: grafic,
     alertaLs: alertaLs, alertaFunding: alertaFunding, partiaProxy: partiaProxy, inVerdict: inVerdict, interval: interval, pe8h: pe8h, cost1000: cost1000, percentila: percentila, mediana: mediana, aglomerare: aglomerare, oiPret: oiPret,
     eticheta: eticheta, motiv: motiv, subFunding: subFunding, subOi: subOi, subLs: subLs, biasFunding: biasFunding, subContext: subContext,

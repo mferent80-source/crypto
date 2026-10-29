@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ro"><head><link href="/manifest.webmanifest" rel="manifest"/><meta content="#0E141A" name="theme-color"/><meta content="dark" name="color-scheme"/><meta charset="utf-8"/><meta content="v100.265" name="app-version"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
+<html lang="ro"><head><link href="/manifest.webmanifest" rel="manifest"/><meta content="#0E141A" name="theme-color"/><meta content="dark" name="color-scheme"/><meta charset="utf-8"/><meta content="v100.266" name="app-version"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
 <title>Crypto Radar</title>
 <link href="/app.css" rel="stylesheet"/>
 </head><body><div aria-live="polite" class="offlineBanner" hidden="" id="offlineBanner" role="status">OFFLINE · read-only local research mode. Network analysis/scanners are disabled; cached UI, journal and reports remain available.</div>
@@ -71,7 +71,7 @@
 </details>
 </div>
 <div class="sideFooter">
-<div class="label">Build</div><div id="sideVersiune" style="font-size:11px;font-weight:800;margin-top:3px">v100.265 · IDEI</div>
+<div class="label">Build</div><div id="sideVersiune" style="font-size:11px;font-weight:800;margin-top:3px">v100.266 · PROBA</div>
 <div class="row"><span class="small">Spot source</span><b class="good">DIRECT</b></div>
 <div class="row"><span class="small">Engine</span><b class="good">READY</b></div>
 </div>
@@ -88,7 +88,7 @@
 <div class="logo">◈</div>
 <div><h1>Crypto Radar Pro · Multi-Market</h1><div class="subhead">Crypto + Nasdaq + US stocks · multi-timeframe research</div></div>
 </div>
-<div class="headerMeta"><span class="badge" id="antetVersiune">v100.265 · CRYPTO RADAR · PIONEX + TRADING 212 DOAR CITIRE</span><span class="metaChip">STRICT READ-ONLY · STATIC+RUNTIME</span><span class="metaChip">SPOT DATA · NO ORDER ROUTE</span><span class="metaChip">4 TIMEFRAMES</span></div>
+<div class="headerMeta"><span class="badge" id="antetVersiune">v100.266 · CRYPTO RADAR · PIONEX + TRADING 212 DOAR CITIRE</span><span class="metaChip">STRICT READ-ONLY · STATIC+RUNTIME</span><span class="metaChip">SPOT DATA · NO ORDER ROUTE</span><span class="metaChip">4 TIMEFRAMES</span></div>
 </div>
 <div class="toolbar"><button aria-expanded="false" class="tbarRezumat" data-action-click="tbarComuta()" id="tbarRezumat" title="Alege moneda, intervalul, modul și sursa" type="button">BTC · 4h · Auto · Binance ▾</button>
 <div class="controls">
@@ -1206,7 +1206,7 @@
 <div class="cacheBox"><span class="label">Scannerul Pionex</span><b id="healthScanner">—</b></div>
 <div class="cacheBox"><span class="label">Reconectări WS</span><b id="healthReconnects">—</b></div>
 <div class="cacheBox"><span class="label">Mod PWA</span><b id="healthPwaMode">—</b></div>
-<div class="cacheBox"><span class="label">Versiunea aplicației</span><b id="healthAppVersion">v100.265</b></div>
+<div class="cacheBox"><span class="label">Versiunea aplicației</span><b id="healthAppVersion">v100.266</b></div>
 <div class="cacheBox"><span class="label">Contractul motorului</span><b>54.1</b></div>
 <div class="cacheBox"><span class="label">Ce s-a verificat</span><b>STATIC+RUNTIME · LIVE UNVERIFIED</b></div>
 <div class="cacheBox"><span class="label">Intel API</span><b id="healthIntel">—</b></div>
@@ -2291,6 +2291,8 @@
 <div class="card fCifra"><div class="label">Prima futures față de spot</div><div class="value" id="fPrima">—</div><div class="fSub" id="fPrimaSub">—</div></div>
 <div class="card fCifra"><div class="label">Conturile mari (pe poziții)</div><div class="value" id="fTop">—</div><div class="fSub" id="fTopSub">—</div></div>
 <div class="card full fIstoric"><div class="label">Istoria: raportul long/short și funding-ul</div><div id="fIstoric"></div><p class="fSub">Liniile punctate sunt pragurile votului (p1 / p99 din istoria monedei). Ține mouse-ul pe grafic pentru cifre. Informație, nu semnal.</p></div>
+<div class="card full fTabelCard"><div class="label">Futures pe monedele tale</div><div class="fMeta"><span>Cele 20 de monede urmărite și boții tăi, sortate după funding-ul la 8 h.</span><button class="actionGhost" data-action-click="futuresTabel()" type="button">Încarcă tabelul</button></div><div class="fTabel" id="fTabel"></div></div>
+<div class="card full"><div class="label">Proba pe date noi (din 29.10)</div><p class="fSub" id="fProba">—</p></div>
 <div class="card full"><div class="label">Interpretare</div><div class="fMeta"><span id="fMeta">—</span><button class="actionGhost" data-action-click="derivatives(true)" type="button">↻ Reîmprospătează</button></div><p aria-live="polite" id="ftext">Datele futures vor fi încărcate pentru perechile disponibile pe Binance USDⓈ-M Futures.</p></div>
 <div class="card full"><div class="label">Derivatele, pe scurt</div><div class="row"><span>Înclinarea funding-ului</span><b id="fundingBias">—</b></div><div class="row"><span>Riscul de aglomerare</span><b id="crowdingRisk">—</b></div><div class="row"><span>Contextul OI</span><b id="oiContext">—</b></div><div class="row"><span>Funding mediu</span><b id="fundingMed">—</b></div><div class="row"><span>OI și prețul în 24 h</span><b id="oiPret24">—</b></div></div>
 </div></section>

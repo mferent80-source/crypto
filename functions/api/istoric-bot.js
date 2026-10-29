@@ -72,6 +72,8 @@ export async function onRequestGet({request,env}){
   if(action==="clasament"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("clasament")||"null")}catch{c=null}return json({clasament:c})}
   // v79.1: alertele colectorului (fara ntfy) - cele mai noi primele
   if(action==="raport"){let r=null;try{r=JSON.parse(await env.ISTORIC.get("raport")||"null")}catch{r=null}return json({raport:r})}
+  // v100.266 (F7): rezumatul probei futures pe date noi (scris de colector o dată pe oră) - pentru cartela de pe pagina Futures
+  if(action==="futuresProba"){let r=null;try{r=JSON.parse(await env.ISTORIC.get("futures-proba")||"null")}catch{r=null}return json({futuresProba:r})}
   // v100.166 (12.10, Weekly Review mutat in raport): „Săptămâna pieței” de duminica, salvata de colector ca Jurnalul s-o arate
   if(action==="raportPiata"){let r=null;try{r=JSON.parse(await env.ISTORIC.get("raport:piata")||"null")}catch{r=null}return json({raport:r})}
   if(action==="contrafactual"){let m={};try{m=JSON.parse(await env.ISTORIC.get("contrafactual")||"{}")}catch{m={}}return json({contrafactual:m&&typeof m==="object"?m:{}})}
@@ -280,6 +282,14 @@ export async function onRequestPost({request,env}){
     const la=nr(corp&&corp.la),linii=corp&&Array.isArray(corp.linii)?corp.linii.slice(0,40).map(x=>typeof x==="string"?x.slice(0,1000):"").filter(Boolean):null;
     if(la===null||!linii)return json({error:"Lipseste la sau linii"},400);
     await env.ISTORIC.put("raport:piata",JSON.stringify({la,titlu:typeof corp.titlu==="string"?corp.titlu.slice(0,80):null,linii}));
+    return json({ok:true});
+  }
+  if(action==="futuresProba"){
+    // v100.266 (F7): doar numere și verdicte scurte - un câmp străin nu trece (rezumatul îl scrie colectorul, îl citește pagina)
+    const z=corp&&corp.rezumat;if(!z||typeof z!=="object")return json({error:"Lipseste rezumat"},400);
+    const curat=p=>p&&typeof p==="object"?{zile:nr(p.zile),medie:nr(p.medie),ciLo:nr(p.ciLo),ciHi:nr(p.ciHi),mde:nr(p.mde),verdict:typeof p.verdict==="string"?p.verdict.slice(0,40):null}:null;
+    const parti=z.parti&&typeof z.parti==="object"?z.parti:{};
+    await env.ISTORIC.put("futures-proba",JSON.stringify({la:nr(corp.la),deLa:typeof z.deLa==="string"&&/^\d{4}-\d{2}-\d{2}$/.test(z.deLa)?z.deLa:null,zile:nr(z.zile),monede:nr(z.monede),parti:{"CROWDED":curat(parti.CROWDED),"CONTRARIAN +":curat(parti["CONTRARIAN +"])}}));
     return json({ok:true});
   }
   if(action==="raport"){

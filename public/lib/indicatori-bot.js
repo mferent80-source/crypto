@@ -135,7 +135,9 @@ var IndicatoriBot = (function () {
       var cine = plateste ? "plătesc " + plateste + (botPlateste ? " (tu plătești)" : botIncaseaza ? " (tu încasezi)" : "") : "zero";
       // v100.70 (revizia pachetului 3, garda pe producatorii reali): minusul tipografic („−0,060%”), nu cratima din toFixed
       out.push({ k: "funding", eticheta: "Funding", text: (rate < 0 ? "−" : "") + Math.abs(rate * 100).toFixed(3).replace(".", ",") + "% la " + ore + "h · " + cine + fata + cost,
-        ton: botPlateste && raport !== null && raport >= 2 && Math.abs(rate) >= 0.0001 ? "atentie" : botIncaseaza ? "bine" : "neutru", titlu: titluF });
+        ton: botPlateste && raport !== null && raport >= 2 && Math.abs(rate) >= 0.0001 ? "atentie" : botIncaseaza ? "bine" : "neutru", titlu: titluF,
+        // v100.266 (F6): pentru alerta „funding-ul s-a întors” - botul plătește și plata dinainte (hist[1], istoria e de la nou la vechi) tot contra lui
+        botPlateste: !!botPlateste, doi: !!(botPlateste && nr((f.hist || [])[1]) !== null && nr(f.hist[1]) * rate > 0), rata: rate, ore: ore });
     }
     var b = o.btc, bd = b && b.dir, br = b && b.regim, bm = br ? nr(br.r4h) : null;
     var titluB = "Monedele mici merg de obicei după BTC: o cădere bruscă a lui trage și moneda botului spre marginea de jos a gridului.";

@@ -3095,7 +3095,7 @@ function navTo(id,load=false){
    else if(id==="depth")loadDepth();
    else if(id==="signals")renderSignals();
    else if(id==="backtest")backtestCurrent();
-   else if(id==="deriv")derivatives();
+   else if(id==="deriv"){derivatives();futuresProbaArata().catch(()=>{})}   // v100.266 (F7): și rezumatul probei pe date noi
    else if(id==="health")runHealthCheck();
    else if(id==="portfolio"){renderPortfolioV3Inputs();loadPortfolioRisk(true)}
    else if(id==="cloud")loadCloudMonitor(true);
@@ -4415,6 +4415,20 @@ async function derivatives(){
  return stare;
 }
 let scannerRows=[];
+// v100.266 (F7, 29.10, el: „fa ideile”): rezumatul probei futures pe date noi (îl scrie colectorul o dată pe oră) - doar text
+async function futuresProbaArata(){
+ const el=$("fProba");if(!el)return;let r=null;
+ try{const j=await getJSON("/api/istoric-bot?action=futuresProba");r=j&&j.futuresProba||null}catch(e){el.textContent="Proba pe date noi: serverul de acasă nu a dat rezumatul ("+textEroare(e)+").";return}
+ el.textContent=FuturesCitire.subForward(r)}
+// v100.266 (F8): tabelul futures pe monedele tale (cele 20 urmărite + boții), câte trei cereri deodată; HTML-ul îl face FuturesCitire.tabelHtml
+// (simbolul doar litere și cifre, restul numere și etichete fixe)
+async function futuresTabel(){
+ const box=$("fTabel");if(!box)return;
+ const lista=FuturesCitire.univers(typeof tbStare!=="undefined"&&tbStare&&Array.isArray(tbStare.boti)?tbStare.boti:[]),randuri=[];let i=0;
+ box.textContent="Se încarcă "+lista.length+" monede…";
+ const lucreaza=async()=>{while(i<lista.length){const s=lista[i++];try{randuri.push(FuturesCitire.randTabel(await getJSON("/api/market?type=futures&symbol="+encodeURIComponent(s))))}catch(e){randuri.push(FuturesCitire.randTabel({simbol:s,eroare:true}))}}};
+ await Promise.all([lucreaza(),lucreaza(),lucreaza()]);
+ box.innerHTML=FuturesCitire.tabelHtml(randuri)}
 function renderScan(){
  let dir=$("scanDir")?.value||"ALL",reg=$("scanRegime")?.value||"ALL",minAdx=+($("scanAdx")?.value||0),minStrength=+($("scanScore")?.value||0),q=($("scanSearch")?.value||"").trim().toUpperCase(),sort=$("scanSort")?.value||"strength";
  let rows=scannerRows.filter(x=>(!q||x.c.includes(q))&&(dir==="ALL"||x.dir===dir)&&(reg==="ALL"||x.regime.includes(reg))&&x.adx>=minAdx&&(!minStrength||Math.abs(x.avg-50)*2>=minStrength));

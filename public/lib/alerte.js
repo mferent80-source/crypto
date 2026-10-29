@@ -15,7 +15,7 @@ var Alerte = (function () {
   var RANG = { ok: 0, atentie: 1, critic: 2 };
   var REPETA_MS = { atentie: 3 * 3600000, critic: 3600000 };
   var REPETA_CHEIE_MS = { "opritor:atentie": 24 * 3600000, miscare: 24 * 3600000, "s-ia-profit": 12 * 3600000, "s-muta": 12 * 3600000, "s-btc": 12 * 3600000, "s-aglomerare": 12 * 3600000,
-    "m-btc": 12 * 3600000, "m-funding": 12 * 3600000, "p-zero": 12 * 3600000, "p-margine": 12 * 3600000, "plan-stop": 12 * 3600000, "plan-tinta": 12 * 3600000, "grid-plan": 24 * 3600000 };   // semnalele se repeta rar
+    "m-btc": 12 * 3600000, "m-funding": 12 * 3600000, "m-funding-intors": 24 * 3600000, "p-zero": 12 * 3600000, "p-margine": 12 * 3600000, "plan-stop": 12 * 3600000, "plan-tinta": 12 * 3600000, "grid-plan": 24 * 3600000 };   // semnalele se repeta rar
   // Histerezis: o alerta INTRA la un prag si IESE abia la unul mai larg, altfel
   // un bot care sta langa prag ar trimite un mesaj la fiecare minut (masurat:
   // 59/ora intre 14,9% si 15,1%). "A trecut" se spune doar dupa 10 minute stabile.
@@ -312,6 +312,11 @@ var Alerte = (function () {
           // la short inghesuiala se curata printr-o urcare, nu printr-o cadere
           mesaj: msg("Funding " + mf.text + ": mulți stau pe partea botului, risc de " + (String(b.directie || "").toLowerCase() === "short" ? "urcare" : "cădere") + " bruscă.", "N-aș mări botul acum.") }
         : { nivel: "ok", titlu: nume + ": funding-ul a revenit la normal", mesaj: "Funding " + mf.text + "." };
+      // v100.266 (F6, 29.10, el: „fa ideile”): funding-ul Pionex s-a ÎNTORS împotriva botului - botul a trecut pe partea care plătește,
+      // două plăți la rând, cel puțin 0,005% pe plată. Tace cât vorbește m-funding (mai tare); „a trecut” când botul nu mai plătește.
+      out["m-funding-intors"] = fara(mf) || mf.ton === "atentie" ? null : mf.botPlateste && mf.doi && Math.abs(nr(mf.rata) || 0) >= 0.00005
+        ? { nivel: "atentie", titlu: nume + ": funding-ul s-a întors, acum botul plătește", mesaj: msg("Funding " + mf.text + ", două plăți la rând.", "Nu e urgent: e un cost; dacă ține câteva zile, îl pun în plan.") }
+        : { nivel: "ok", titlu: nume + ": botul nu mai plătește funding", mesaj: "Funding " + mf.text + "." };
     }
 
     // v91.11 (4): pragurile puse de Radar pe fiecare bot
