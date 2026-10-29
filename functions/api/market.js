@@ -49,6 +49,16 @@ async function j(url){
   if(!data)throw Error("upstream invalid JSON");
   return data
 }
+// v100.267 (auditul 29.10, felia 4): Binance fără răcire - după 429 (prea multe cereri) sau 418 (IP-ul interzis) cererile plecau la fel, iar la 418
+// fiecare cerere în plus lungește interdicția IP-ului. Acum o pauză comună pentru tot serverul (retry-after; cel puțin 60 s la 429, 5 min la 418),
+// în care nimic nu pleacă spre fapi.binance.com; refuzul ajunge în `probleme`, ca orice eroare. Un 403 (Binance refuză Cloudflare) nu e o limită.
+let binancePauzaPana=0;
+async function jBinance(url){
+  const acum=Date.now();
+  if(acum<binancePauzaPana)throw Object.assign(Error(`Binance în răcire încă ${Math.ceil((binancePauzaPana-acum)/1000)} s după un refuz (429/418) - nu cer, ca să nu se lungească blocarea IP-ului`),{status:429,racire:true});
+  try{return await j(url)}
+  catch(e){if(e&&(e.status===429||e.status===418)){const sec=Math.max(e.status===418?300:60,Number(e.retryAfter)||0);binancePauzaPana=Math.max(binancePauzaPana,Date.now()+sec*1000)}throw e}
+}
 
 async function pionexCached(url,ttl=30,env=null,opt={}){
   const cache=(globalThis.caches&&globalThis.caches.default)||null;
@@ -138,14 +148,14 @@ const faraContractPana=new Map();let listaFut=null,listaFutLa=0;
 let infoFut=null,infoFutLa=0;
 async function oreOficiale(symbol){
   if(!infoFut||Date.now()-infoFutLa>6*3600000){
-    try{const x=await j(`${FUT}/fapi/v1/fundingInfo`);if(Array.isArray(x)){infoFut=new Map(x.map(t=>[String(t&&t.symbol||""),Number(t&&t.fundingIntervalHours)]));infoFutLa=Date.now()}}catch{return null}
+    try{const x=await jBinance(`${FUT}/fapi/v1/fundingInfo`);if(Array.isArray(x)){infoFut=new Map(x.map(t=>[String(t&&t.symbol||""),Number(t&&t.fundingIntervalHours)]));infoFutLa=Date.now()}}catch{return null}
   }
   const o=infoFut&&infoFut.get(symbol);return o>=1&&o<=24?o:null
 }
 function simbolInMii(s){const b=s.replace(/USDT$/,"");return s.endsWith("USDT")&&IN_MII[b]?IN_MII[b]+"USDT":s}
 async function gasesteInMii(cerut){
   if(!cerut.endsWith("USDT"))return null;
-  if(!listaFut||Date.now()-listaFutLa>6*3600000){try{const x=await j(`${FUT}/fapi/v1/ticker/price`);if(Array.isArray(x)){listaFut=new Set(x.map(t=>String(t&&t.symbol||"")));listaFutLa=Date.now()}}catch{return null}}
+  if(!listaFut||Date.now()-listaFutLa>6*3600000){try{const x=await jBinance(`${FUT}/fapi/v1/ticker/price`);if(Array.isArray(x)){listaFut=new Set(x.map(t=>String(t&&t.symbol||"")));listaFutLa=Date.now()}}catch{return null}}
   if(!listaFut)return null;
   const b=cerut.replace(/USDT$/,"");return ["1000","1000000","1M","10000","100000"].map(p=>p+b+"USDT").find(s=>listaFut.has(s))||null
 }
@@ -165,14 +175,14 @@ async function cereFutures(symbol){
   const incearca=async(nume,fn)=>{try{await fn()}catch(e){r.probleme[nume]=String(e&&e.message||e).slice(0,140)}};
   const numar=v=>{const x=Number(v);return v!=null&&v!==""&&Number.isFinite(x)?x:null};
   await Promise.all([
-    incearca("funding",async()=>{const x=await j(`${FUT}/fapi/v1/premiumIndex?symbol=${symbol}`);r.funding=Number(x.lastFundingRate);r.markPrice=numar(x.markPrice);r.indexPrice=numar(x.indexPrice);r.nextFundingTime=numar(x.nextFundingTime)}),
-    incearca("openInterest",async()=>{const x=await j(`${FUT}/fapi/v1/openInterest?symbol=${symbol}`);r.openInterest=Number(x.openInterest)}),
-    incearca("longShort",async()=>{const x=await j(`${FUT}/futures/data/globalLongShortAccountRatio?symbol=${symbol}&period=1h&limit=500`);if(Array.isArray(x)&&x.length){r.longShort=Number(x[x.length-1].longShortRatio);r.lsIst=x.map(t=>[numar(t&&t.timestamp),numar(t&&t.longShortRatio)]).filter(t=>t[1]!==null)}}),
-    incearca("oiHist5m",async()=>{r.oiHist5m=await j(`${FUT}/futures/data/openInterestHist?symbol=${symbol}&period=5m&limit=289`)}),
-    incearca("fundingHist",async()=>{r.fundingHist=await j(`${FUT}/fapi/v1/fundingRate?symbol=${symbol}&limit=30`)}),
+    incearca("funding",async()=>{const x=await jBinance(`${FUT}/fapi/v1/premiumIndex?symbol=${symbol}`);r.funding=Number(x.lastFundingRate);r.markPrice=numar(x.markPrice);r.indexPrice=numar(x.indexPrice);r.nextFundingTime=numar(x.nextFundingTime)}),
+    incearca("openInterest",async()=>{const x=await jBinance(`${FUT}/fapi/v1/openInterest?symbol=${symbol}`);r.openInterest=Number(x.openInterest)}),
+    incearca("longShort",async()=>{const x=await jBinance(`${FUT}/futures/data/globalLongShortAccountRatio?symbol=${symbol}&period=1h&limit=500`);if(Array.isArray(x)&&x.length){r.longShort=Number(x[x.length-1].longShortRatio);r.lsIst=x.map(t=>[numar(t&&t.timestamp),numar(t&&t.longShortRatio)]).filter(t=>t[1]!==null)}}),
+    incearca("oiHist5m",async()=>{r.oiHist5m=await jBinance(`${FUT}/futures/data/openInterestHist?symbol=${symbol}&period=5m&limit=289`)}),
+    incearca("fundingHist",async()=>{r.fundingHist=await jBinance(`${FUT}/fapi/v1/fundingRate?symbol=${symbol}&limit=30`)}),
     // v100.265 (F4): conturile mari pe POZIȚII și cumpărătorii agresivi (taker) - informație, nu intră în votul „înghesuit”
-    incearca("topLs",async()=>{const x=await j(`${FUT}/futures/data/topLongShortPositionRatio?symbol=${symbol}&period=1h&limit=500`);if(Array.isArray(x)&&x.length){r.topLs=Number(x[x.length-1].longShortRatio);r.topIst=x.map(t=>[numar(t&&t.timestamp),numar(t&&t.longShortRatio)]).filter(t=>t[1]!==null)}}),
-    incearca("taker",async()=>{const x=await j(`${FUT}/futures/data/takerlongshortRatio?symbol=${symbol}&period=1h&limit=500`);if(Array.isArray(x))r.takerIst=x.map(t=>[numar(t&&t.timestamp),numar(t&&t.buyVol),numar(t&&t.sellVol)]).filter(t=>t[1]!==null&&t[2]!==null)}),
+    incearca("topLs",async()=>{const x=await jBinance(`${FUT}/futures/data/topLongShortPositionRatio?symbol=${symbol}&period=1h&limit=500`);if(Array.isArray(x)&&x.length){r.topLs=Number(x[x.length-1].longShortRatio);r.topIst=x.map(t=>[numar(t&&t.timestamp),numar(t&&t.longShortRatio)]).filter(t=>t[1]!==null)}}),
+    incearca("taker",async()=>{const x=await jBinance(`${FUT}/futures/data/takerlongshortRatio?symbol=${symbol}&period=1h&limit=500`);if(Array.isArray(x))r.takerIst=x.map(t=>[numar(t&&t.timestamp),numar(t&&t.buyVol),numar(t&&t.sellVol)]).filter(t=>t[1]!==null&&t[2]!==null)}),
     oreOficiale(symbol).then(o=>{r.oreOficial=o},()=>{})
   ]);
   const invalid=m=>/HTTP 400\b.*Invalid symbol/i.test(String(m||""));

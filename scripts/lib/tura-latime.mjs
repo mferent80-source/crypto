@@ -18,6 +18,10 @@ export function cereBinance({ fetch: f, pauza, jurnal, ceas }) {
   const fetchul = f || globalThis.fetch, acum = ceas || Date.now;
   const stare = { pauzaPana: 0, oprit: null };
   const pauzaPana = (t) => { if (t > stare.pauzaPana) stare.pauzaPana = t; };
+  // v100.267 (auditul 29.10, felia 5): fără internet fiecare din cele ~300 de cereri ale turei făcea 3 încercări și un rând în jurnal
+  // (5.825 de rânduri pe 28.10, 15:11–20:04Z). 5 cereri la rând fără NICIUN răspuns HTTP = rețeaua moartă ⇒ restul turei se sare (ca la 418,
+  // fără pauză: tura următoare încearcă din nou); un răspuns HTTP oarecare golește numărătoarea
+  const FARA_RASPUNS_MAX = 5; let faraRaspuns = 0;
   async function binance(url) {
     for (let i = 0; i < 3; i++) {
       if (stare.oprit) return null;
@@ -25,6 +29,7 @@ export function cereBinance({ fetch: f, pauza, jurnal, ceas }) {
       if (stare.oprit) return null;
       try {
         const r = await fetchul(url, { headers: { "User-Agent": "crypto-radar/1.0" }, signal: AbortSignal.timeout(20000) });   // v100.175 (M21): undici dădea abia după ~300 s
+        faraRaspuns = 0;
         // revizia (6): greutatea pe minut din antet (limita 2400) - PAZNIC lovește același IP în zilele de suprapunere
         const g = Number(r.headers.get("x-mbx-used-weight-1m")); if (Number.isFinite(g) && g > 1500) jurnal("latime: greutatea Binance pe minut " + g + " din 2400");
         if (Number.isFinite(g) && g > GREUTATE_MAX) pauzaPana((Math.floor(acum() / 60000) + 1) * 60000 + 1000);
@@ -33,7 +38,15 @@ export function cereBinance({ fetch: f, pauza, jurnal, ceas }) {
         if (r.status === 429) { const ms = Math.max(60000, ra * 1000); pauzaPana(acum() + ms); jurnal("latime: Binance 429, pauză comună " + Math.round(ms / 1000) + " s"); continue; }
         if (!r.ok) throw new Error("HTTP " + r.status);
         return await r.json();
-      } catch (e) { if (i === 2) { jurnal("latime: " + url.replace(FAPI, "") + " - " + e.message); return null; } await pauza(700 * (i + 1)); }
+      } catch (e) {
+        if (i === 2) {
+          const faraHttp = !/^HTTP \d/.test(String(e && e.message));
+          if (faraHttp && ++faraRaspuns >= FARA_RASPUNS_MAX && !stare.oprit) { stare.oprit = "rețeaua moartă (" + FARA_RASPUNS_MAX + " cereri la rând fără răspuns)"; jurnal("latime: " + stare.oprit + " - opresc tura, încerc din nou la tura următoare"); return null; }
+          if (!stare.oprit) jurnal("latime: " + url.replace(FAPI, "") + " - " + e.message);
+          return null;
+        }
+        await pauza(700 * (i + 1));
+      }
     }
     return null;
   }
@@ -77,7 +90,7 @@ export async function turaLatime(d, st, acum) {
   if (d.binance && typeof d.binance.reia === "function" && !d.binance.reia()) { d.jurnal("latime: Binance a interzis IP-ul (418) - sar tura"); return st; }
   if (!st.univers || !st.univers.length || acum - la("univers") >= RITM.univers) {
     const u = await universul(d, P, acum);
-    if (oprita()) { d.jurnal("latime: tura oprită (Binance 418), nu public"); return st; }
+    if (oprita()) { d.jurnal("latime: tura oprită (" + d.binance.stare.oprit + "), nu public"); return st; }
     if (u.univers) { st.univers = u.univers; st.la_univers = acum; }
     else if (u.retea && st.univers && st.univers.length) d.jurnal("latime: " + u.retea + " - țin universul vechi, " + st.univers.length + " la număr");   /* fără „N monede” lipit: garda v100.75 */
     else {
@@ -99,7 +112,7 @@ export async function turaLatime(d, st, acum) {
     const s = serii.get(sym) || {};
     return d.Latime.masuraMoneda({ sym, pret: +b4[b4.length - 1][4], b4: b4.map(bara), b1d: b1d.map(bara), frAcum: fr.has(sym) ? fr.get(sym) : null, fundIst: s.fundIst, oiSerie: s.oiSerie, mari: s.mari, mici: s.mici, taker: s.taker }, P);
   });
-  if (oprita()) { d.jurnal("latime: tura oprită (Binance 418), nu public"); return st; }
+  if (oprita()) { d.jurnal("latime: tura oprită (" + d.binance.stare.oprit + "), nu public"); return st; }
   const lat = d.Latime.latimea(randuri, P), regim = d.Latime.regimPietei(lat), monede = randuri.filter(Boolean);
   const corp = { la: acum, n: st.univers.length, lipsa: lat.lipsa, incomplet: lat.lipsa > 0.2 * st.univers.length, eroare: null, regim, lat, monede };
   if (typeof d.dupa === "function") d.dupa(corp);   /* v101.107: paza boților (botul CONTRA monedei din pândă) */

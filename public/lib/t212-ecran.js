@@ -950,13 +950,15 @@ async function t212Poarta() {
     try { if (v && v.nivel && v.nivel !== "fara-date" && typeof verdictTrimite === "function") verdictTrimite({ s: "poarta-t212", k: tk, n: v.nivel, p: st.pret }); } catch (eV) {}
     await t212ContSiCalibrare();
     if (depasit()) return;
-    t212.poarta = { simbol: b.simbol || s, ticker: tk, st: st, niv: niv, bare: bare, bareZi: GridCalcul.bareBursa(b && b.randuri || [], Date.now()), planScris: !!(plan.stop || plan.trailPct), planMeu: pm, v: v, tot: tot,
+    /* revizia 29.10: biletul se publică în t212.poarta abia după ultima așteptare (știrile) - publicat înainte, un desen al paginii din timpul
+       așteptării arăta biletul vechi pe jumătate (fără profil și probabilități) peste „aduc prețurile…” al clicului nou */
+    var bilet = { simbol: b.simbol || s, ticker: tk, st: st, niv: niv, bare: bare, bareZi: GridCalcul.bareBursa(b && b.randuri || [], Date.now()), planScris: !!(plan.stop || plan.trailPct), planMeu: pm, v: v, tot: tot,
       liber: liber, deja: deja, sursa: sursa, rezultate: rez.data, rezultateStiut: rez.stiut, gasitDupaNume: !!(b && b.gasitDupaNume), inchisa: inchisa };
     // v89: biletul - ce spune istoricul tau despre situatii asemanatoare, rezultatele (aduse deja, mai sus), stirile
     // v100.267 (auditul 29.10): știrile întârziate ale unui bilet vechi nu se mai lipesc pe biletul nou (t212.poarta e deja al altui clic)
     var sp = null; try { sp = await getJSON("/api/stiri?action=actiune&ticker=" + encodeURIComponent(tk)); } catch (e) { sp = null; }
     if (depasit()) return;
-    t212.poarta.stiri = sp && sp.stiri || [];
+    bilet.stiri = sp && sp.stiri || []; t212.poarta = bilet;
     // v100.55 (actiunile T212, pachetul 4): profilul si probabilitatile actiunii propuse, din barele aduse deja (merge si pe o actiune noua
     // pentru tine) + „in situatii ca asta” din trade-urile tale. Avertizeaza, nu schimba verdictul portii (revizia 01.10: try propriu -
     // o eroare aici lasa verdictul in picioare, fara randurile noi)

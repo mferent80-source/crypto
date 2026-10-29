@@ -83,6 +83,13 @@ await test("1c SHORT cu lățimea 85: niciun cip „confirms participation”; r
   assert.ok(r.expl.risks.includes("Market breadth opposes the setup"), "risks: " + JSON.stringify(r.expl.risks));
   assert.ok(r.expl.risks.some((x) => /^Market breadth opposes setup · 85\/100$/.test(x)), "cipul v64 rămâne: " + JSON.stringify(r.expl.risks));
 });
+/* revizia 29.10: fără direcție (WAIT) nu există „contra setup-ului” - cu valorile absolute, lățimea/contextul intrau la riscuri ca „opposed” */
+await test("1f WAIT (fără direcție): lățimea 85 și contextul 15 contează în scor, dar nu apar ca „opposes the setup” la riscuri", () => {
+  const r = verdict({ dir: "WAIT", latime: 85, context: 15 });
+  const riscuri = (r.expl && r.expl.risks || []).concat([r.els.masterRisks && r.els.masterRisks.innerHTML || ""]).join(" | ");
+  assert.doesNotMatch(riscuri, /Market breadth opposes the setup|Cross-market context opposed/, riscuri);
+});
+
 await test("1d SHORT cu contextul risk-on 85: familia CONTEXT e +0,70 (contra short-ului)", () => {
   const r = verdict({ dir: "SHORT", context: 85 });
   aprox(r.fam.CONTEXT, 0.7, 0.005, "CONTEXT la SHORT/context 85:");

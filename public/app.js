@@ -2650,7 +2650,7 @@ function renderMasterVerdict(){
   const st=window.__radarState,ss=window.__signalState;if(!st||!ss){$("masterVerdict").textContent="WAIT";const vc=renderVerdictCenter();renderVerdictExplainer({verdict:"WAIT",dir:0,quality:masterDataQuality(),gates:[],vc});return}
   const dir=ss.tm.direction==="LONG"?1:ss.tm.direction==="SHORT"?-1:0,conf=Math.max(ss.sm.long,ss.sm.short)/100,reg=regimeV2State||renderRegimeV2(),meta=currentMetaDecision(),cal=calibrationV2State||renderCalibrationV2(),flow=decisionStateMatches(trueFlowState,{source:false,maxAge:10*60*1000})?trueFlowState:null,heat=observedLiquidationHeatmap(),sq=setupQualityCurrent(),budget=window.__portfolioRisk?.preTrade?.gate?.state||portfolioBudgetSummary(window.__portfolioRisk?.clusters||[]).state,quality=masterDataQuality(),gov=governedComponents(),context=decisionStateMatches(window.__intelContext,{source:false,maxAge:10*60*1000})?contextScoreFrom(window.__intelContext.global,window.__intelContext.macro):NaN,structure=window.__structureV38,life=strategyLifecycle(),guard=riskGuard(),ext=externalIntelState||{},econ=ext.calendar?.summary,onchain=decisionStateMatches(ext.onchain,{source:false,maxAge:15*60*1000})?ext.onchain:null,predObj=decisionStateMatches(ext.predLiq,{source:false,maxAge:15*60*1000})?ext.predLiq:null,predLiq=predObj?.summary,opt=decisionStateMatches(ext.options,{source:false,maxAge:15*60*1000})?ext.options:null,histCvd=decisionStateMatches(ext.histCvd,{source:false,maxAge:15*60*1000})?ext.histCvd:null,volIntel=decisionStateMatches(window.__volatilityIntel,{tf:true,maxAge:15*60*1000})?window.__volatilityIntel:null,breadth=window.__marketBreadthV64&&Date.now()-(+window.__marketBreadthV64.ts||0)<20*60*1000?window.__marketBreadthV64:null,parts=[],pos=[],risks=[];
   const decision65=v65DecisionSuite(false),edge66=v66EdgeValidationSuite(false),ops67=typeof v67OperationsSnapshot==="function"?v67OperationsSnapshot(false):null;
-  const add=(name,v,w,good,bad)=>{if(Number.isFinite(v)){parts.push({name,v,w});if(Math.abs(v)>=.15)(v*dir>0?pos:risks).push(v*dir>0?good:bad)}};
+  const add=(name,v,w,good,bad)=>{if(Number.isFinite(v)){parts.push({name,v,w});if(dir&&Math.abs(v)>=.15)(v*dir>0?pos:risks).push(v*dir>0?good:bad)}};   /* v100.267 (revizia 29.10): fără direcție (WAIT) nu există „aligned/opposed” - valorile absolute (context, lățime, regim, flux) intrau toate la riscuri */
   add("base",dir*conf,.26,"Base engine aligned","Base engine weak/opposed");
   if(reg)add("regime",(reg.probs.TREND_UP-reg.probs.TREND_DOWN),.14,"Regime supports direction","Regime opposes direction");
   if(Number.isFinite(cal?.p))add("calibration",dir*(cal.p-.5)*2,.12,"Calibration supports setup","Calibration is weak");   /* v100.267 (auditul 29.10): fără calibrare (sub 30 de rezultate, p null) nu intră - înainte încrederea brută urca familia MODEL la +0,44 */
@@ -4225,12 +4225,15 @@ function applyNetworkState(){const on=navigator.onLine!==false,b=$("offlineBanne
 window.addEventListener("online",()=>{applyNetworkState();toast("Network restored","good")});window.addEventListener("offline",()=>{applyNetworkState();toast("Offline · local research remains available","warn")});
 async function analyze(save,fallbackTried=false,srcFortat=null){
  if(!applyNetworkState()){toast("Offline · analysis requires network. Local journal/reports remain available.","warn");return}
+ /* v100.267 (auditul 29.10): jetonul analizei (ca __derivSeq la Futures) - două analize pornite repede, răspunsul VECHI venit al doilea rescria __radarState, prețul și verdictul cu moneda veche; după fiecare așteptare analiza depășită iese */
+ const seqA=window.__analyzeSeq=(window.__analyzeSeq||0)+1,depasitA=()=>seqA!==window.__analyzeSeq;
  let sym=norm($("symbol").value),t=$("tf").value,mode=$("mode").value,src=srcFortat||analysisSource();
  if(!srcFortat&&assetClass()==="CRYPTO"&&src==="PIONEX"&&pionexCooldownRemaining()>0){setAnalysisSource("BINANCE");src="BINANCE";toast("Pionex este în cooldown · am revenit automat la Binance.","warn")}
  invalidateDecisionContext(sym,src,t,false);
  $("symbol").value=assetClass()==="STOCKS"?stockSymbol(sym):coin(sym);syncTop(sym,t,mode);updateSourceLineage(src);setBusy(true,`Actualizare engine · ${src}…`);
  try{
   let [j,tick,m]=await Promise.all([analysisKlines(sym,t,750,src),analysisTicker(sym,src),mtfData(sym,src)]);
+  if(depasitA())return;   /* v100.267: a pornit altă analiză între timp */
   const jInchise=bareInchise(j,t,Date.now(),src);
   if(!jInchise||jInchise.length<100)throw Error(`${src} returned insufficient candle history`);
   let q=calc(jInchise,mode),hs=historicalSet(jInchise),mc=mtfComposite(m);
@@ -4286,9 +4289,11 @@ async function analyze(save,fallbackTried=false,srcFortat=null){
   window.__topLive={src:fallbackTried?(srcFortat?"BINANCE → "+src:"PIONEX → "+src):src,la:Date.now(),stare:fallbackTried?"rezerva":"ok"};topLiveDeseneaza();draw(q);renderVolumeProfile();if(assetClass()==="CRYPTO")loadFearGreed();else{$("fearGreed").textContent="N/A";$("sentimentText").textContent="Crypto Fear & Greed is not used in US stock scoring."}loadMarketContext();
   if(assetClass()==="CRYPTO"){derivatives().catch(()=>{});if(!pionexScannerActive)loadPionexMicrostructure().catch(()=>{})}
   await breadthPromise;
+  if(depasitA())return;   /* v100.267 */
   updateDecisionCoreAfterAnalysis();renderV65DecisionOS(true);renderV66EdgeValidation(true);if(typeof renderV67Operations==="function")renderV67Operations(true);
   $("status").textContent=assetClass()==="STOCKS"?`${stockSymbol(sym)} · USD · ${t} · ${mode.toUpperCase()} · ${src} · ${new Date().toLocaleTimeString("ro-RO")}`:`${coin(sym)}/USDT · ${t} · ${mode.toUpperCase()} · ${src} · ${new Date().toLocaleTimeString("ro-RO")}`;setBusy(false);toast(`${coin(sym)} analizat · ${window.__signalState.sm.direction}`,"good");
  }catch(e){
+   if(depasitA())return;   /* v100.267: eroarea unei analize depășite nu mai face rezervă / toast peste cea nouă */
    const failedSource=src;
    if(assetClass()==="CRYPTO"&&failedSource==="PIONEX"&&!fallbackTried){
      setBusy(false);setAnalysisSource("BINANCE");
@@ -4926,7 +4931,7 @@ async function tbAduDate(){
       tbStare.bot=alegere.bot;tbStare.motivAlegere=alegere.motiv;
       tbStare.botBrut=tbStare.bot?tbStare.bot.brut||null:null;
     }
-    tbStare.routeOk=true;tbStare.botLa=Date.now();
+    tbStare.routeOk=true;if(!tineGoala)tbStare.botLa=Date.now();   /* v100.267 (auditul 29.10): citirea goală ținută = boții de DINAINTE - nu „citit acum” */
   }catch(e){
     // Ruta a picat - nu stim daca exista bot sau nu. Golim botul curent ca sa
     // nu mai ceara lumanari si sa nu mai scrie in istoric cu date vechi -
@@ -4961,7 +4966,9 @@ async function tbAduDate(){
     // voie sa deschida WebSocket cand nu esti pe panou: "fara WebSocket in
     // fundal" cere pretul spot ramas null in istoric (vezi tbColectorTick).
     if(tbPanouVizibil())tbPorneWs(s.binance);
-    if(tbStare.bot.id){
+    if(tbStare.bot.id&&tbStare.citireGoala){
+      // v100.267 (auditul 29.10): citirea goală ținută - valorile botului sunt cele de dinainte (înghețate); nu intră în istoric ca rânduri noi la 8 s
+    }else if(tbStare.bot.id){
       // Istoricul se tine PE BOT (cheie cu id-ul normalizat), nu intr-o cheie
       // comuna - contorul de perechi e cumulativ per bot, un istoric amestecat
       // ar minti pe ritm.
@@ -7729,6 +7736,15 @@ function tbPiataPeBot(){
   if($("heroCoin"))$("heroCoin").textContent=baza+" / USDT";
   if($("topCoin"))$("topCoin").textContent=baza+"/USDT";
 }
+// v100.267 (auditul 29.10, felia 1): cardul vechi al verdictului (#tbVerdictCard) e ascuns din v82 (semaforul l-a înlocuit), iar avertismentele
+// puse acolo - stocarea locală stricată, lumânările învechite, botul ales dispărut din listă, tickerele PERP lipsă - nu se mai vedeau.
+// Rândul vizibil stă chiar înaintea cardului ascuns (creat o dată); fără avertismente e ascuns.
+function tbAvertVizibil(lista){
+  var card=$("tbVerdictCard"),av=$("tbAvertVizibil");
+  if(!av&&card&&card.parentNode&&typeof document!=="undefined"&&document.createElement){av=document.createElement("div");av.id="tbAvertVizibil";av.className="noticeBad";av.setAttribute("role","status");card.parentNode.insertBefore(av,card)}
+  if(!av)return;
+  var l=(lista||[]).filter(Boolean);av.hidden=!l.length;av.textContent=l.length?"⚠ "+l.join(" · "):"";
+}
 function renderTabloBot(){
   var eroareActiva=tbStare.routeOk===false;
   var b=eroareActiva?null:tbStare.bot;
@@ -7793,6 +7809,7 @@ function renderTabloBot(){
   if($("tbNivel")){$("tbNivel").textContent=v.nivel;$("tbNivel").className=tbNivelClasa(v.nivel)}
   if($("tbTitlu"))$("tbTitlu").textContent=v.titlu;
   if($("tbCeFac"))$("tbCeFac").textContent=v.ceFac+(note.length?" · "+note.join(" · "):"");
+  tbAvertVizibil((!eroareActiva&&b&&tbStare.stocareStricata?[v.titlu]:[]).concat(note));   /* v100.267 (auditul 29.10): cardul de mai sus e ascuns din v82 - notele lui nu se vedeau */
   if($("tbDeCe")){
     var dUnit=v.declansator&&m[v.declansator.masura]?m[v.declansator.masura].unitate:null;
     $("tbDeCe").textContent=v.declansator

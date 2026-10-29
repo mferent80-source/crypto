@@ -33,10 +33,34 @@ export function pasDupaEsecuri(esecuri, pasMs) {
 // m.serverOpritDe = prima tură fără server (minutele din mesaj). Întoarce { tip: "oprit" | null, minute }.
 const REPETA_SERVER_OPRIT_MS = 3 * 3600000;
 export function serverOpritPas(m, { esecuri, acum }) {
-  m.serverOpritDe = m.serverOpritDe || acum;
+  // revizia 29.10: episodul începe la PRIMUL eșec al acestui proces - o oră rămasă pe disc dintr-o cădere veche (colector oprit în timpul ei)
+  // dădea minutele vechiului episod în mesaj
+  if ((Number(esecuri) || 0) <= 1 || !m.serverOpritDe) m.serverOpritDe = acum;
   const minute = Math.max(MAX_ESECURI, Math.round((acum - m.serverOpritDe) / 60000));
   if ((Number(esecuri) || 0) < MAX_ESECURI) return { tip: null, minute };
   return { tip: acum - (Number(m.serverOpritAnuntat) || 0) >= REPETA_SERVER_OPRIT_MS ? "oprit" : null, minute };
+}
+// v100.267 (auditul 29.10, felia 5): o alertă „o dată pe zi” (frâna contului) pleca CRITIC la 00:00 RO, în fiecare noapte cât ținea starea.
+// Prima dată pleacă oricând; REPETAREA din ziua următoare (ultima a fost ieri) așteaptă ora 8 RO. ultimaZi / ziAzi = „AAAA-LL-ZZ” (ziua RO),
+// oraRo = ora din zi (0–24). Întoarce true dacă trebuie trimisă acum.
+export function repetaZilnicDeLa8(ultimaZi, ziAzi, oraRo) {
+  if (!ziAzi || ultimaZi === ziAzi) return false;
+  const ieri = new Date(Date.parse(ziAzi + "T12:00:00Z") - 86400000).toISOString().slice(0, 10);
+  return ultimaZi !== ieri || Number(oraRo) >= 8;
+}
+// v100.267 (auditul 29.10, felia 5): fără internet poza se reîncerca la fiecare buclă (pozaLa = acum − 4 min, la un ritm de 3 min ⇒ imediat):
+// 2.080 de rânduri în 5 h. Acum, după al n-lea eșec la rând, încercarea următoare peste 1, 2, 4, 8, apoi cel mult 10 min. Întoarce noul pozaLa
+// (tura pleacă când acum − pozaLa ≥ intervalMs).
+export function pozaLaDupaEsec(acum, intervalMs, esecuri) {
+  const n = Math.max(1, Number(esecuri) || 1), asteapta = Math.min(600000, 60000 * 2 ** Math.min(4, n - 1));
+  return acum - intervalMs + asteapta;
+}
+// v100.267 (auditul 29.10, felia 5): cursul BNR - după un eșec (sau un răspuns gol) pauză de 10 min, ȘI când n-a avut niciodată curs
+// (condiția veche `&& bnrMemo.v` sărea pauza: 450 de cereri în 5 h fără internet). memo = { la, v, eroareLa }.
+export function bnrDeCerut(memo, acum) {
+  const m = memo || {};
+  if (m.eroareLa && acum - m.eroareLa < 600000) return false;
+  return !(m.v && acum - (Number(m.la) || 0) < 6 * 3600000);
 }
 // serverul răspunde: „revenit” doar dacă s-a anunțat căderea (apelantul pune m.serverOpritAnuntat = 0 după ce mesajul a plecat)
 export function serverRevenitPas(m) {

@@ -62,7 +62,9 @@ export async function turaPlanuri(d) {
       const bare = (await d.cereBare(x.ticker)) || [];
       const mx = d.ActiuniSemnale.maxDupaCumparare(bare, x.initialFillDate, x.currentPrice);   // v100.40: de la ziua de dupa cumparare
       const p = { ticker: x.ticker, simbol: d.T212.simbol(x.ticker), qty: x.quantity, pretMediu: x.averagePrice, pret: x.currentPrice, plan, maxDupaCumparare: mx };
-      for (const a of d.ActiuniSemnale.alertePlan(p, d.acum || Date.now())) {
+      // v100.267 (auditul 29.10): cheia pe ziua ședinței bursei simbolului, nu pe ziua UTC (alerta critică se repeta la 02/03 RO, cu bursa închisă)
+      const acumP = d.acum || Date.now();
+      for (const a of d.ActiuniSemnale.alertePlan(p, acumP, { ziSesiune: CalendarBursa.ziSesiune(acumP, x.ticker) })) {
         if (d.stare[a.cheie]) continue;
         if (await d.trimite({ nivel: a.nivel, titlu: a.titlu, mesaj: a.mesaj }, a.cheie)) { d.stare[a.cheie] = true; trimise++; }
       }

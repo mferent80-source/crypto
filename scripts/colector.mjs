@@ -528,7 +528,10 @@ async function tura() {
       }
       try { scrieStare(); } catch {}
     }
-    return false;   // v100.267 (auditul 29.10): boții necitiți ⇒ bucla NU mișcă turaGataLa (pulsul paznicului)
+    // v100.267 (auditul 29.10): serverul :8788 căzut ⇒ bucla NU mișcă turaGataLa (pulsul paznicului) - asta nu vedea paznicul.
+    // Serverul a răspuns, dar fără boți (lacătul Pionex 429, parola respinsă, timeout): pulsul se mișcă - colectorul anunță singur mai sus
+    // (3 / 10 min), iar „Aș reporni” de la paznic ar fi făcut rău la un lacăt Pionex (repornirea golește lacătul și cererile îl lungesc) (revizia 29.10)
+    return !S.eServerOprit(e);
   }
   const m = meta();
   if (m.citireRea && m.anuntatRau) await anuntaMesaj(MesajeColector.citireDinNou());
@@ -1117,7 +1120,7 @@ async function turaPaznic() {
 // vine tot de acolo (GET /simboluri). Datele externe (Yahoo) au cache pe disc; o poza care nu pleaca se reincearca la tura urmatoare.
 const DUBLURI = { "1QZ.DE": "COIN", "MIGA.MU": "MSTR", "NFC.F": "NFLX" };   // dublurile germane iau insiderii/rezultatele companiei din SUA
 const yahooExtra = creeazaYahooExtra({ fisier: path.join(DATA, "poza-ext.json"), fisierBare: path.join(DATA, "poza-bare.json"), jurnal });
-let pozaLa = 0, pozaInLucru = false, ultimeleT212 = { lista: [], la: null };   // T212 limiteaza cererile: la o citire picata raman pozitiile de la poza anterioara
+let pozaLa = 0, pozaEsecuri = 0, pozaInLucru = false, ultimeleT212 = { lista: [], la: null };   // T212 limiteaza cererile: la o citire picata raman pozitiile de la poza anterioara
 function planReal(x) { return x && x.plan && !x.plan.proba ? x.plan : null; }
 // v101.31 (actiunile T212, pachetul 1): stopul care urca ales pe trade-urile lui (varianta „prof” vs −15%, o data pe ora) si profilul
 // actiunii (KV profil:<TICKER>, la 6 h) - acelasi calcul ca pagina T212
@@ -1335,8 +1338,9 @@ async function turaPoza() {
       if (await trimiteAlerta({ nivel: a.nivel, titlu: a.titlu, mesaj: a.mesaj }, null, a.cheie.replace(/[^A-Za-z0-9_.-]/g, "").slice(0, 60))) for (const k of a.marcheaza) st[k] = true;
     }
     if (poza.simboluri.length) { ultimeleSimboluri = {}; for (const s of poza.simboluri) ultimeleSimboluri[s.s] = s; }
+    pozaEsecuri = 0;
     try { scrieStare(); } catch {}
-  } catch (e) { jurnal("poza: n-a plecat", e.message); pozaLa = Date.now() - 4 * 60000; }
+  } catch (e) { jurnal("poza: n-a plecat", e.message); pozaEsecuri++; pozaLa = S.pozaLaDupaEsec(Date.now(), plan.intervalMs, pozaEsecuri); }   /* v100.267 (auditul 29.10): 1, 2, 4, 8, cel mult 10 min - nu la fiecare buclă */
   pozaInLucru = false;
 }
 
@@ -1787,9 +1791,9 @@ let franaLa = 0;
 // v100.175: cursul BNR de azi (lei pentru un dolar), ținut 6 ore - poza (câte bucăți) și contul întreg în lei îl folosesc ca pagina
 let bnrMemo = { la: 0, v: null };
 async function cursBnr() {
-  if (Date.now() - bnrMemo.la < 6 * 3600000 && bnrMemo.v) return bnrMemo.v;
-  try { const d = await cere("/api/curs-bnr?an=" + new Date().getFullYear()), z = d && d.curs ? Object.keys(d.curs).sort() : []; if (z.length) bnrMemo = { la: Date.now(), v: { zi: z[z.length - 1], curs: d.curs[z[z.length - 1]], toate: d.curs } }; }
-  catch (e) { jurnal("curs BNR", e.message); bnrMemo.la = Date.now() - 6 * 3600000 + 600000; }
+  if (!S.bnrDeCerut(bnrMemo, Date.now())) return bnrMemo.v;   /* v100.267 (auditul 29.10): pauza de 10 min după eșec și fără curs (450 de cereri în 5 h fără internet) */
+  try { const d = await cere("/api/curs-bnr?an=" + new Date().getFullYear()), z = d && d.curs ? Object.keys(d.curs).sort() : []; if (z.length) bnrMemo = { la: Date.now(), v: { zi: z[z.length - 1], curs: d.curs[z[z.length - 1]], toate: d.curs } }; else bnrMemo.eroareLa = Date.now(); }
+  catch (e) { jurnal("curs BNR", e.message); bnrMemo.eroareLa = Date.now(); }
   return bnrMemo.v;
 }
 async function usdPeLeuBnr() { const c = await cursBnr(); return c && c.curs > 0 ? 1 / c.curs : null; }
@@ -1812,7 +1816,8 @@ async function turaFrana() {
   const trades = JurnalTrade.din(toti.filter((x) => Number(x.closeTime) > Date.now() - 8 * 86400000));
   const act = await cere("/api/bot-orders"), f = Obiceiuri.frana({ trades, deschise: act && act.bots || [], acum: Date.now(), praguri });
   const m = meta(), zi = new Date(Obiceiuri.inceputZiRo(Date.now()) + 12 * 3600000).toISOString().slice(0, 10);
-  if (f.activa && m.franaZi !== zi) {
+  // v100.267 (auditul 29.10): repetarea din ziua următoare abia de la 8 RO (pleca la 00:00, critic, în fiecare noapte); prima dată, oricând
+  if (f.activa && S.repetaZilnicDeLa8(m.franaZi, zi, (Date.now() - Obiceiuri.inceputZiRo(Date.now())) / 3600000)) {
     if (await trimiteAlerta(MesajeColector.frana(f), null, "frana")) { m.franaZi = zi; scrieStare(); }
   }
 }

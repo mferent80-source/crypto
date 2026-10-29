@@ -187,6 +187,18 @@ await test("2d răspunsul vechi întârziat la ȘTIRI (ultimul await) nu-și lip
   assert.doesNotMatch(P.$("t212PoartaRez").innerHTML, /AAA/);
 });
 
+/* revizia 29.10: biletul AAA nu stă în t212.poarta cât își așteaptă știrile - un desen al paginii în acel timp îl arăta pe jumătate */
+await test("2e cât biletul vechi își așteaptă știrile, t212.poarta nu e biletul lui pe jumătate (fără profil / probabilități)", async () => {
+  const lent = amanat();
+  const P = pagina({ raspuns: (u) => /stiri/.test(u) ? (/AAA_US_EQ/.test(u) ? lent.p.then(() => ({ stiri: [] })) : { stiri: [] }) : undefined });
+  P.$("t212PSimbol").value = "AAA"; const p1 = P.c.t212Poarta();
+  for (let i = 0; i < 50 && !P.cereri.some((u) => /stiri.*AAA_US_EQ/.test(u)); i++) await new Promise((r) => setImmediate(r));
+  assert.ok(P.cereri.some((u) => /stiri.*AAA_US_EQ/.test(u)), "premisa: AAA a ajuns la știri");
+  assert.ok(!(P.c.t212.poarta && P.c.t212.poarta.simbol === "AAA"), "biletul AAA e publicat pe jumătate cât așteaptă știrile");
+  lent.da(); await p1;
+  assert.equal(P.c.t212.poarta.simbol, "AAA"); assert.ok("prob" in P.c.t212.poarta, "biletul publicat e întreg");
+});
+
 // ================================================================ 3. bursa închisă: „acum” e închiderea
 const poartaLa = async (acum, panaLa, simbol) => {
   const P = pagina({ acum, bare: bareDin(7, 320, panaLa) }); P.$("t212PSimbol").value = simbol || "BBB"; await P.c.t212Poarta();
@@ -225,6 +237,9 @@ await test("4a ActiuniSemnale.unitateBare: ~100 ⇒ barele ×100; ~0,01 ⇒ ×0,
   for (const pret of [112, 95, 60, 200, null, 0]) { const x = AS.unitateBare(b, pret); assert.equal(x.factor, 1, "preț " + pret); assert.equal(x.bare, b); }
   assert.equal(AS.unitateBare([], 10984).factor, 1);
   assert.equal(AS.unitateBare(null, 10984).factor, 1);
+  /* revizia 29.10: pence față de DOLARI (raport ~76 la GBP/USD 1,31) nu e o schimbare de unitate - ×100 ar lăsa o eroare de curs de ~24% */
+  assert.equal(AS.unitateBare(b, 109.84 * 100 / 1.31).factor, 1, "pence față de dolari luat drept pence față de lire");
+  assert.equal(AS.unitateBare(b, 109.84 * 105).factor, 100, "o zi de +5% peste unitate tot se recunoaște");
 });
 await test("4b poziția vie VUSAl_EQ (T212 10984 p, barele Yahoo 109,84 £): stopul, ATR-ul și distanța de maxim sunt în pence", () => {
   const P = pagina(), tk = "VUSAl_EQ", b = bareDin(3, 320, Date.parse("2026-10-14T22:00:00Z"), 109.84);

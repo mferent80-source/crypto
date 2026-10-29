@@ -73,7 +73,8 @@ await test("suma tace la abatere și după 30 de minute fără citire bună; 429
   assert.equal((t212.match(/30 \* 60000/g) || []).length, 1);
   assert.doesNotMatch(t212.slice(t212.indexOf("async function t212RegimAdu"), t212.indexOf("function t212RegimPt")), /10 \* 60000/);
   assert.match(t212, /await t212ContSiCalibrare\(\);/);
-  assert.ok(t212.indexOf("await t212ContSiCalibrare();") < t212.indexOf("t212.poarta = { simbol: b.simbol"));
+  /* v100.267 (revizia 29.10): biletul se construiește în `var bilet` și se publică abia după știri - calibrarea tot vine ÎNAINTEA lui */
+  assert.ok(t212.indexOf("var bilet = { simbol: b.simbol") > 0 && t212.indexOf("await t212ContSiCalibrare();") < t212.indexOf("var bilet = { simbol: b.simbol"));
   assert.doesNotMatch(t212, /ciStare\.inLucru/);
   assert.ok((t212.match(/t212FaraSuma\(p\) \? null : t212MarimePoarta\(p\)/g) || []).length >= 3);
   const rec = AS.facPoarta("cumpara", { suma: 1837 }, { faraSuma: "reconciliere" });

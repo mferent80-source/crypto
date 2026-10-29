@@ -450,7 +450,9 @@ var ActiuniSemnale = (function () {
   // rămân neatinse - o cădere sau o săritură mare dintr-o zi nu e o schimbare de unitate
   function unitateBare(bare, pret) {
     var b = Array.isArray(bare) ? bare : [], u = b.length ? b[b.length - 1] : null, r = u && u.c > 0 && pret > 0 ? pret / u.c : null, f = 1;
-    if (r !== null) { if (r / 100 >= 0.7 && r / 100 <= 1.43) f = 100; else if (r * 100 >= 0.7 && r * 100 <= 1.43) f = 0.01; }
+    /* revizia 29.10: banda ±10% în jurul lui 100, nu ±30% - cea largă prindea și pence față de dolari (GBP/USD 1,27–1,35 ⇒ raport ~74–79),
+       iar ×100 lăsa o eroare de curs de 15–35% pe care pretPotrivit o accepta: stopuri plauzibile, dar greșite */
+    if (r !== null) { if (r / 100 >= 0.9 && r / 100 <= 1.11) f = 100; else if (r * 100 >= 0.9 && r * 100 <= 1.11) f = 0.01; }
     if (f === 1) return { factor: 1, bare: bare };
     return { factor: f, bare: b.map(function (x) { var y = {}; for (var k in x) y[k] = x[k]; y.o = x.o * f; y.h = x.h * f; y.l = x.l * f; y.c = x.c * f; return y; }) };
   }
@@ -572,10 +574,12 @@ var ActiuniSemnale = (function () {
 
   // Alertele planului pentru colector: doar pragurile scrise de EL. Cheia e pe zi (ora Romaniei nu conteaza
   // aici: o zi UTC), ca acelasi prag sa sune o data pe zi, nu la fiecare minut.
-  function alertePlan(p, acum) {
+  // v100.267 (auditul 29.10): o.ziSesiune = ziua ȘEDINȚEI bursei simbolului (colectorul o dă din CalendarBursa) - cu ziua UTC, la 00:00 UTC
+  // (02/03 RO) aceeași alertă CRITICĂ pleca din nou cu bursa închisă și prețul neschimbat (BE/STX/APLD, 25–28.10); acum se repetă la deschidere
+  function alertePlan(p, acum, o) {
     var out = [], pl = p && p.plan;
     if (!pl || !(p.pret > 0)) return out;
-    var zi = new Date(acum || Date.now()).toISOString().slice(0, 10), s = p.simbol || p.ticker;
+    var zi = o && o.ziSesiune || new Date(acum || Date.now()).toISOString().slice(0, 10), s = p.simbol || p.ticker;
     function ad(tip, nivel, titlu, mesaj) { out.push({ cheie: "t212-" + p.ticker + "-" + tip + "-" + zi, nivel: nivel, titlu: titlu, mesaj: mesaj }); }
     // v99.1 (audit #9): preturile ca preturi, nu 30.690000534057617 - v100.69: scrise ca pe pagina T212 (usd = t212Usd)
     // v100.69 (pachetul 4): Discord pe 2 randuri - faptul cu pretul, apoi „👉 ” actiunea la persoana I; cheile raman

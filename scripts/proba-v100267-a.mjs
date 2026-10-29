@@ -137,11 +137,13 @@ await test("2a server :8788 căzut (conexiune refuzată) ⇒ turaGataLa NU se mi
   assert.equal(L.b.turaGataLa, T0 - MIN, "turaGataLa s-a mutat la " + new Date(L.b.turaGataLa).toISOString() + " deși boții n-au fost citiți");
 });
 
-await test("2b nici bot-orders refuzat (lacătul Pionex 429 / parola) nu mișcă turaGataLa; boții citiți îl mișcă", async () => {
+/* revizia 29.10: serverul A RĂSPUNS, dar fără boți (lacătul Pionex 429 / parola) ⇒ pulsul se mișcă - colectorul anunță singur la 3 / 10 min,
+   iar „Aș reporni” de la paznic ar fi golit lacătul Pionex și l-ar fi lungit. Doar serverul :8788 căzut ține pulsul pe loc (2a) */
+await test("2b bot-orders refuzat de un server VIU (lacătul Pionex 429 / parola) mișcă pulsul (colectorul anunță singur); boții citiți îl mișcă", async () => {
   const T0 = Date.parse("2026-10-28T16:00:00Z");
   for (const e of [Object.assign(new Error("Pionex rate limit: retry in 75s"), { status: 429 }), Object.assign(new Error("AUTH_INVALID"), { status: 401, cod: "AUTH_INVALID" })]) {
     const L = lumeTura(async () => { throw e; }); L.b.turaGataLa = T0 - MIN;
-    await L.tura(T0); assert.equal(L.b.turaGataLa, T0 - MIN, "turaGataLa mutat pe „" + e.message + "”");
+    await L.tura(T0); assert.equal(L.b.turaGataLa, T0, "serverul viu, dar „" + e.message + "”: pulsul a rămas pe loc ⇒ paznicul ar cere repornirea");
   }
   const L = lumeTura(async (cale) => (cale === "/api/bot-orders" ? { bots: [] } : null)); L.b.turaGataLa = T0 - MIN;
   await L.tura(T0); assert.equal(L.b.turaGataLa, T0, "boții citiți ⇒ turaGataLa = acum");
@@ -185,6 +187,14 @@ await test("2g revenirea refuzată de Discord (deja în coadă) nu se mai spune 
   for (let i = 0; i < 15; i++) await L.tura(T0 + i * MIN);
   jos = false; L.b.anuntOk = false; await L.tura(T0 + 20 * MIN); await L.tura(T0 + 21 * MIN); await L.tura(T0 + 22 * MIN);
   assert.equal(L.b.anunturi.filter((x) => x.titlu === TITLU_REVENIT).length, 1, "revenirea refuzată s-a pus din nou în coadă la fiecare tură");
+});
+
+await test("2h ora căderii rămasă pe disc dintr-un episod vechi (colector oprit în timpul ei) nu intră în minutele mesajului nou", async () => {
+  const T0 = Date.parse("2026-10-28T16:00:00Z"), L = lumeTura(async () => { throw RECONECTARE(); });
+  L.b.stare.serverOpritDe = T0 - 15 * ORA;   /* rămas de ieri */
+  for (let i = 0; i < 15; i++) await L.tura(T0 + i * MIN);
+  const min = Number((oprite(L.b)[0].mesaj.match(/~(\d+)/) || [])[1]);
+  assert.ok(min <= 20, "mesajul spune ~" + min + " min (episodul vechi), nu ~15");
 });
 
 await test("2e lanțul până la paznic: 40 min fără server ⇒ poza poartă turaLa vechi ⇒ paznicul spune „alertele botului stau”", async () => {
