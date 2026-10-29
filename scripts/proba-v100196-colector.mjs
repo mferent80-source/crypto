@@ -168,8 +168,9 @@ await test("C1: poza unui colector vechi (fără turaLa) ține loc de puls ca î
 });
 await test("C1 colector: turaLa ținut la sfârșitul turei, dus în poză; bătaia pleacă doar dacă bucla a mers în ultimele 5 min; colector.pid bate la 10 s", () => {
   const c = citeste("scripts", "colector.mjs");
-  assert.match(c, /try \{ await tura\(\); turaGataLa = Date\.now\(\); \} catch \(e\) \{ jurnal\("tură", e\.message\); \}/);
-  assert.match(c, /construiestePoza\(\{ acum: Date\.now\(\), turaLa: turaGataLa \|\| null,/);
+  // v100.267 (auditul 29.10): turaGataLa se mișcă doar când tura a citit boții (tura întoarce true); fără nicio tură bună, turaLa = ora pornirii
+  assert.match(c, /try \{ if \(await tura\(\)\) turaGataLa = Date\.now\(\); \} catch \(e\) \{ jurnal\("tură", e\.message\); \}/);
+  assert.match(c, /construiestePoza\(\{ acum: Date\.now\(\), turaLa: turaGataLa \|\| PORNIT_LA,/);
   assert.match(c, /if \(Date\.now\(\) - turaGataLa > 5 \* 60000\) return;/);
   assert.match(c, /setInterval\(\(\) => \{ iesiLaSemnal\(\); bate\(\); turaPoza\(\)/);   // v100.259 (punctul 17): întâi semnalul de ieșire
 });
@@ -257,7 +258,8 @@ await test("C6 colector: alerta ratată în KV intră în coada de pe disc și s
   const c = citeste("scripts", "colector.mjs");
   assert.match(c, /if \(!inKv && ok\) \{ coadaKv\.push\(\{ t: alertaKv\.t, m: alertaKv \}\); salveazaCoadaKv\(\); \}/);
   assert.match(c, /golesteCoadaKv\(\)\.catch\(\(e\) => jurnal\("coada kv", e\.message\)\);/);
-  assert.match(c, /if \(golireDiscord \|\| CANAL !== "discord" \|\| !coadaDiscord\.length\) return;/);
+  // v100.267 (auditul 29.10): garda de reintrare întoarce golirea în curs (promisiunea), ca trimiteAlerta s-o aștepte
+  assert.match(c, /if \(golireDiscord\) return golireDiscordP;\n\s*if \(CANAL !== "discord" \|\| !coadaDiscord\.length\) return;/);
   assert.match(c, /if \(S\.eLimitaDeRitm\(eroare\)\) ritmPauzaPana = Date\.now\(\) \+ 60000;/);
   assert.match(c, /const greleOk = Date\.now\(\) >= ritmPauzaPana;/);
   assert.match(c, /if \(val\.grele && greleOk\) turaProfil\(\)/);   // v100.259 (auditul 23.10, punctul 6): + valul pornirii (cele grele de la a treia tură)

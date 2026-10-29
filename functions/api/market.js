@@ -61,7 +61,9 @@ async function pionexCached(url,ttl=30,env=null,opt={}){
   if(opt.proba)throw Object.assign(Error("probă de ecran: fără cereri către Pionex"),{status:503,proba:true});
   let data;
   try{data=await pionexRateGate(url.includes("/common/symbols")?5:1,()=>j(url),env,opt.semnal||null)}
-  catch(e){if(e.status&&!e.abandonata)lacatDinRaspuns(e.antete,e.status,Math.max(75,e.retryAfter||60));throw e}   // audit 19.10: 429 ⇒ cel putin 75 s; x-ratelimit-lock ⇒ pana la ora lui
+  // v100.267 (auditul 29.10): lacătul se pune DOAR din răspunsul Pionex (doar el are `e.antete`); refuzul NOSTRU (eroareLacat, 429 fără antete)
+  // îl muta la acum + 75 s, iar cu o cerere la ≤ 30 s (pagina, colectorul) lacătul nu mai expira niciodată și Pionex nu mai era întrebat
+  catch(e){if(e.status&&e.antete&&!e.abandonata)lacatDinRaspuns(e.antete,e.status,Math.max(75,e.retryAfter||60));throw e}   // audit 19.10: 429 ⇒ cel putin 75 s; x-ratelimit-lock ⇒ pana la ora lui
   // v100.173 (auditul Opus): Pionex refuză cu HTTP 200 + result:false - refuzul NU se ține minte (lista de simboluri goală stătea o oră)
   if(cache&&!(data&&data.result===false)){
     const res=new Response(JSON.stringify(data),{headers:{"content-type":"application/json","cache-control":`public, max-age=${ttl}`}});

@@ -137,9 +137,12 @@ await test("(4) pasDupaEsecuri: primele 15 eșecuri la ritmul obișnuit, apoi 2,
 await test("(4) colectorul: fără process.exit pe ramura „serverul nu răspunde”; bucla se reprogramează după pasDupaEsecuri; anunț la 15 și la revenire", () => {
   const c = citeste("scripts", "colector.mjs"), i = c.indexOf("if (S.eServerOprit(e)) { esecuri++;"), bucata = c.slice(i, c.indexOf("\n    else {", i));
   assert.ok(i > 0); assert.ok(!/process\.exit/.test(bucata), "colectorul tot iese singur");
-  assert.match(bucata, /if \(esecuri === MAX_ESECURI\)/); assert.match(bucata, /trimiteDiscord\(MesajeColector\.serverOprit\(MAX_ESECURI\)/);
+  // v100.267 (auditul 29.10): anunțul (la 15, apoi la 3 h - S.serverOpritPas) și revenirea pleacă prin anuntaMesaj ⇒ trimiteAlerta (KV, coada), nu direct pe Discord
+  assert.match(bucata, /if \(esecuri === MAX_ESECURI\)/); assert.match(bucata, /S\.serverOpritPas\(mo, \{ esecuri, acum \}\)/); assert.match(bucata, /anuntaMesaj\(MesajeColector\.serverOprit\(so\.minute\)\)/);
+  assert.ok(!/trimiteDiscord\(MesajeColector\.server/.test(c), "anunțul serverului pleacă iar direct pe Discord");
   assert.match(c, /setTimeout\(bucla, S\.pasDupaEsecuri\(esecuri, PAS_MS\)\);/);
-  assert.match(c, /if \(esecuri >= MAX_ESECURI\) \{ jurnal\("serverul răspunde din nou"\); if \(CANAL === "discord"\) await trimiteDiscord\(MesajeColector\.serverRevenit\(\)/);
+  assert.match(c, /if \(esecuri >= MAX_ESECURI\) jurnal\("serverul răspunde din nou"\);/);
+  assert.match(c, /S\.serverRevenitPas\(mo\)\.tip === "revenit" && \(await anuntaMesaj\(MesajeColector\.serverRevenit\(\)\)\)/);
 });
 await test("(4) mesajele: „serverul nu răspunde” nu mai spune că s-a oprit colectorul; „serverul răspunde din nou” (info, ≤ 60)", () => {
   const a = MC.serverOprit(15); assert.ok(!/colectorul s-a oprit/.test(a.mesaj)); assert.match(a.mesaj, /reia singur/); assert.match(a.mesaj, /PORNESTE-CRYPTO-RADAR\.bat/);

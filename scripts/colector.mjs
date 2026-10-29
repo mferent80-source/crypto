@@ -275,17 +275,23 @@ function scrieAtomic(fis, obj) { const tmp = fis + ".tmp"; fs.writeFileSync(tmp,
 function salveazaCoada() { try { const t = taieCoada(coadaDiscord, 200); if (t.taiate) { jurnal("coada discord: plafon 200, am renunțat la " + cate(t.taiate, "alertă", "alerte") + " (întâi cele info)"); coadaDiscord = t.coada; } scrieAtomic(COADA_FIS, coadaDiscord); } catch (e) { jurnal("coada discord nescrisa", e.message); } }
 // v101.116 (auditul sever, 🔵3): gardă de reintrare (o coadă mare, ~1 s pe mesaj, se suprapunea cu bucla următoare și dubla mesaje);
 // alertele CRITICE se mai încearcă 24 h (înainte: renunțat tăcut la 12 h, ca la info); ce intră în coadă cât se golește rămâne la coadă
-let golireDiscord = false;
+// v100.267 (auditul 29.10): lângă steag, PROMISIUNEA golirii în curs - cine vine cât se golește (trimiteAlerta) o așteaptă, nu primește „gata”
+// pe loc și nu se strecoară printre mesajele cozii
+let golireDiscord = false, golireDiscordP = null;
 async function golesteCoada() {
-  if (golireDiscord || CANAL !== "discord" || !coadaDiscord.length) return;
+  if (golireDiscord) return golireDiscordP;
+  if (CANAL !== "discord" || !coadaDiscord.length) return;
   golireDiscord = true;
-  try {
-    const acum = Date.now(), lot = coadaDiscord.slice();
-    const r = await S.golesteCoadaPas(lot, { acum, maxMs: (x) => (x.m && x.m.nivel === "critic" ? 24 : 12) * 3600000,
-      trimite: (x) => trimiteDiscord({ ...x.m, titlu: MesajeColector.intarziat(x.m.titlu, Math.round((acum - x.t) / 60000)) }, { fetch, webhook: DISCORD_WEBHOOK, jurnal }) });
-    for (const x of r.renuntate) jurnal("coada discord: renunț (" + (x.m && x.m.nivel === "critic" ? "critică, peste 24 h" : "peste 12 h") + ")", x.m && x.m.titlu);
-    if (r.ramase.length !== lot.length) { coadaDiscord = r.ramase.concat(coadaDiscord.filter((x) => !lot.includes(x))); salveazaCoada(); }
-  } finally { golireDiscord = false; }
+  golireDiscordP = (async () => {
+    try {
+      const acum = Date.now(), lot = coadaDiscord.slice();
+      const r = await S.golesteCoadaPas(lot, { acum, maxMs: (x) => (x.m && x.m.nivel === "critic" ? 24 : 12) * 3600000,
+        trimite: (x) => trimiteDiscord({ ...x.m, titlu: MesajeColector.intarziat(x.m.titlu, Math.round((acum - x.t) / 60000)) }, { fetch, webhook: DISCORD_WEBHOOK, jurnal }) });
+      for (const x of r.renuntate) jurnal("coada discord: renunț (" + (x.m && x.m.nivel === "critic" ? "critică, peste 24 h" : "peste 12 h") + ")", x.m && x.m.titlu);
+      if (r.ramase.length !== lot.length) { coadaDiscord = r.ramase.concat(coadaDiscord.filter((x) => !lot.includes(x))); salveazaCoada(); }
+    } finally { golireDiscord = false; }
+  })();
+  return golireDiscordP;
 }
 // v101.116 (auditul sever, C6): alerta plecată pe Discord dar respinsă de KV-ul Radarului (429 la 16:30 / noaptea) lipsea din Radar și din
 // „ce a urmat după 24 h” ⇒ coada ei pe disc (data/de-trimis-kv.json), reîncercată la fiecare tură, cel mult 24 h, cu ora ei
@@ -321,6 +327,10 @@ async function trimiteAlerta(m, bot, cheie) {
   // v101.116 (C6): plecată pe canalul extern, dar nu în KV ⇒ coada KV (alerta e dată drept trimisă, deci tura următoare n-o mai reîncearcă)
   if (CANAL === "ntfy") { const ok = await ntfy(m); if (!inKv && ok) { coadaKv.push({ t: alertaKv.t, m: alertaKv }); salveazaCoadaKv(); } return inKv || ok; }
   if (CANAL === "discord") {
+    // v100.267 (auditul 29.10): coada veche pleacă ÎNAINTEA mesajului nou (28.10: revenirea citirii boților a sosit la 20:04:37, iar căderea ei,
+    // din coadă, abia la 20:04:39, cu 224 min întârziere); golirea în curs e așteptată. O coadă care tot nu pleacă nu ține mesajul nou pe loc:
+    // el încearcă direct, iar refuzat intră la coadă DUPĂ cele vechi
+    if (coadaDiscord.length || golireDiscord) await golesteCoada().catch((e) => jurnal("coada discord", e.message));
     const ok = await trimiteDiscord(m, { fetch, webhook: DISCORD_WEBHOOK, jurnal });
     if (!ok) { coadaDiscord.push({ t: Date.now(), m: { nivel: m.nivel, titlu: m.titlu, mesaj: m.mesaj || "" } }); salveazaCoada(); }
     if (!inKv && ok) { coadaKv.push({ t: alertaKv.t, m: alertaKv }); salveazaCoadaKv(); }
@@ -487,16 +497,22 @@ async function tura() {
   try {
     d = await cere("/api/bot-orders");
     // v100.259 (punctul 4): după anunțul „serverul nu răspunde”, revenirea se spune o dată
-    if (esecuri >= MAX_ESECURI) { jurnal("serverul răspunde din nou"); if (CANAL === "discord") await trimiteDiscord(MesajeColector.serverRevenit(), { fetch, webhook: DISCORD_WEBHOOK, jurnal }); }
+    // v100.267 (auditul 29.10): tot prin trimiteAlerta (după coada veche, cu KV), cât timp căderea anunțată e ținută minte (pe disc, și peste o repornire)
+    if (esecuri >= MAX_ESECURI) jurnal("serverul răspunde din nou");
+    { const mo = meta(); if (S.serverRevenitPas(mo).tip === "revenit" && (await anuntaMesaj(MesajeColector.serverRevenit()))) mo.serverOpritAnuntat = 0; }
     esecuri = 0;
   }
   catch (e) {
     // Serverul oprit = fereastra Radarului inchisa. Dupa 15 minute ne oprim.
     // audit 19.10: doar conexiunea refuzata / eroarea de retea; un timeout (server viu, dar lent) merge pe ramura „nu pot citi” (alerta la 10 min)
-    if (S.eServerOprit(e)) { esecuri++; jurnal("serverul nu răspunde (" + esecuri + (esecuri <= MAX_ESECURI ? "/" + MAX_ESECURI : "") + "):", e.message); if (esecuri === MAX_ESECURI) { jurnal("serverul nu mai răspunde - anunț și aștept, cu pauze tot mai lungi");
+    if (S.eServerOprit(e)) { esecuri++; jurnal("serverul nu răspunde (" + esecuri + (esecuri <= MAX_ESECURI ? "/" + MAX_ESECURI : "") + "):", e.message); if (esecuri === MAX_ESECURI) jurnal("serverul nu mai răspunde - anunț și aștept, cu pauze tot mai lungi");
       // v100.40 (audit 30.09): inainte iesea tacut - alertele se opreau fara niciun semn pana la paznic (~30-55 min)
       // v100.259 (auditul 23.10, punctul 4): nu mai iese - nimeni nu-l mai repornea; bucla se reprogramează după S.pasDupaEsecuri
-      if (CANAL === "discord") await trimiteDiscord(MesajeColector.serverOprit(MAX_ESECURI), { fetch, webhook: DISCORD_WEBHOOK, jurnal }); } }
+      // v100.267 (auditul 29.10): anunțul prin trimiteAlerta (KV picat ⇒ coada KV; Discord picat ⇒ coada de pe disc), repetat la 3 h cât ține
+      // căderea; înainte: un singur trimiteDiscord direct, cu rezultatul ignorat - un Discord picat în minutul 15 însemna tăcere până la revenire
+      const mo = meta(), so = S.serverOpritPas(mo, { esecuri, acum });
+      if (so.tip === "oprit" && (await anuntaMesaj(MesajeColector.serverOprit(so.minute)))) mo.serverOpritAnuntat = acum;
+      try { scrieStare(); } catch {} }
     else {
       jurnal("bot-orders", e.status, e.message);
       const m = meta(); m.citireRea = m.citireRea || acum;
@@ -509,7 +525,7 @@ async function tura() {
       }
       try { scrieStare(); } catch {}
     }
-    return;
+    return false;   // v100.267 (auditul 29.10): boții necitiți ⇒ bucla NU mișcă turaGataLa (pulsul paznicului)
   }
   const m = meta();
   if (m.citireRea && m.anuntatRau) await anuntaMesaj(MesajeColector.citireDinNou());
@@ -722,6 +738,7 @@ async function tura() {
   try { await turaRaport(acum); } catch (e) { jurnal("raport", e.message); }
   try { scrieStare(); } catch {}
   try { await trimite("/api/istoric-bot?action=config", Object.assign({ colectorLa: acum, canal: CANAL === "ntfy" ? "ntfy" : CANAL === "discord" ? "discord" : "radar" }, NTFY.topic ? { ntfyTopic: NTFY.topic } : {})); } catch (e) { jurnal("config", e.message); }
+  return true;   // v100.267 (auditul 29.10): boții citiți și tura terminată ⇒ bucla mișcă turaGataLa
 }
 
 // v79 F3: o data pe ora, "pe care monede pornesc grid acum?" pe top 100 PERP dupa volum,
@@ -1284,7 +1301,9 @@ async function turaPoza() {
     const dejaLei = (sym) => { const p = (t212 || []).find((x) => x && (x.simbol === sym || x.ticker === sym)); return p && p.qty > 0 && p.pret > 0 && fx > 0 ? p.qty * p.pret / fx : 0; };
     for (const s of simboluri) { const n = s.niveluri; if (n && n.nivel === "ok" && n.intrare && s.moneda === "$" && contT212 && fx) { try { s.marime = ActiuniSemnale.marime({ intrare: n.intrare.pret, stop: n.stop, cont: contT212, fx, deja: dejaLei(s.s) }); } catch (e) { jurnal("poza: marime", s.s, e.message); } } }
     if (plan.urca) await aplicaCererileSalt();
-    const poza = construiestePoza({ acum: Date.now(), turaLa: turaGataLa || null, versiune: VERSIUNE_COLECTOR, pid: process.pid, tura: turaNr, radarUrl, t212, t212La: ultimeleT212.la, t212Eroare, boti, simboluri, salt: ultimeleSalt, saltCereri: saltCereriRez });
+    // v100.267 (auditul 29.10): fără nicio tură cu boții citiți de la pornire, turaLa = ora pornirii, nu null (cu null paznicul lua ceasul pozei
+    // drept puls ⇒ un colector pornit cu serverul :8788 deja mort părea sănătos la nesfârșit)
+    const poza = construiestePoza({ acum: Date.now(), turaLa: turaGataLa || PORNIT_LA, versiune: VERSIUNE_COLECTOR, pid: process.pid, tura: turaNr, radarUrl, t212, t212La: ultimeleT212.la, t212Eroare, boti, simboluri, salt: ultimeleSalt, saltCereri: saltCereriRez });
     // v101.86: alertele de azi, grupate pe filele paginii alerts - cu simbolurile chiar din poză (boții cu numele din botPoza)
     poza.alerte = alertePentruPoza(alerteZi, { detinute: poza.t212.map((x) => x.s).concat(poza.boti.map((b) => b.s), (ultimeleSalt && ultimeleSalt.randuri || []).map((x) => x.simbol)),
       urmarite: poza.simboluri.map((s) => s.s), boti: poza.boti, salt: (ultimeleSalt && ultimeleSalt.randuri || []).map((x) => x.simbol) }, Date.now());
@@ -2399,7 +2418,9 @@ async function turaBilantBusola() {
 
 async function bucla() {
   iesiLaSemnal();   // v100.259 (punctul 17)
-  try { await tura(); turaGataLa = Date.now(); } catch (e) { jurnal("tură", e.message); }
+  // v100.267 (auditul 29.10): pulsul (turaGataLa ⇒ turaLa din poză + bătaia la paznic) se mișcă DOAR cu boții citiți; înainte se mișca și când
+  // citirea pica (tura prindea eroarea și ieșea normal), iar paznicul nu putea spune „bucla alertelor stă” cu serverul :8788 mort
+  try { if (await tura()) turaGataLa = Date.now(); } catch (e) { jurnal("tură", e.message); }
   // v98.2 (audit 28.09, #1): planurile si poza cer amandoua pozitiile T212 - una dupa alta, nu deodata (serverul leaga oricum
   // cererile identice in zbor; asa nici cele diferite nu se calca in aceeasi secunda)
   turaPlanuriT212().catch((e) => jurnal("planuri t212", e.message)).then(() => turaPoza()).catch((e) => jurnal("poza", e.message));

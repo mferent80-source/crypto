@@ -27,6 +27,22 @@ export function pasDupaEsecuri(esecuri, pasMs) {
   if (n <= MAX_ESECURI) return pasMs;
   return Math.min(PAUZA_FARA_SERVER_MAX_MS, pasMs * 2 ** Math.min(10, n - MAX_ESECURI));
 }
+// v100.267 (auditul 29.10): serverul căzut se anunța O SINGURĂ dată, direct pe Discord, cu rezultatul ignorat (Discord picat în acel minut =
+// tăcere până la revenire). Acum: după MAX_ESECURI ture la rând „oprit”, apoi din nou la 3 h cât ține căderea; apelantul îl trimite prin
+// trimiteAlerta și notează m.serverOpritAnuntat DOAR după ce a plecat. m = meta() (pe disc: ține și peste o repornire a colectorului);
+// m.serverOpritDe = prima tură fără server (minutele din mesaj). Întoarce { tip: "oprit" | null, minute }.
+const REPETA_SERVER_OPRIT_MS = 3 * 3600000;
+export function serverOpritPas(m, { esecuri, acum }) {
+  m.serverOpritDe = m.serverOpritDe || acum;
+  const minute = Math.max(MAX_ESECURI, Math.round((acum - m.serverOpritDe) / 60000));
+  if ((Number(esecuri) || 0) < MAX_ESECURI) return { tip: null, minute };
+  return { tip: acum - (Number(m.serverOpritAnuntat) || 0) >= REPETA_SERVER_OPRIT_MS ? "oprit" : null, minute };
+}
+// serverul răspunde: „revenit” doar dacă s-a anunțat căderea (apelantul pune m.serverOpritAnuntat = 0 după ce mesajul a plecat)
+export function serverRevenitPas(m) {
+  m.serverOpritDe = 0;
+  return { tip: Number(m.serverOpritAnuntat) > 0 ? "revenit" : null };
+}
 
 // v100.259 (auditul 23.10, punctul 13): bot-orders citește cel mult 10 pagini (100 de boți) și pune probleme.trunchiat - colectorul o ignora,
 // iar boții de peste 100 rămâneau fără nicio alertă, tăcut. Lista tăiată ⇒ „trunchiat” (apelantul notează m.trunchiatAnuntat DOAR după ce
