@@ -499,21 +499,46 @@ function mcsPionexFel(k) {
   if (k.data && Array.isArray(k.data.klines)) return k.data.klines.length ? "date" : "lipsa";
   return "eroare";
 }
-async function mcsAduCoin(sim) {
-  var baza = "/api/market?type=pionex_klines&symbol=" + encodeURIComponent(sim + "_USDT_PERP"), r15 = [], end = null;
-  for (var p = 0; p < 6; p++) {
-    var k = null; try { k = await getJSON(baza + "&interval=15M&limit=500" + (end ? "&endTime=" + end : "")); } catch (e) { if (p === 0) throw new Error("Pionex n-a răspuns acum (" + (e && e.message || e) + "): încearcă din nou peste un minut."); break; }
-    var fel = mcsPionexFel(k); if (fel !== "date") { if (p === 0 && fel === "lipsa") return null; if (p === 0) throw new Error("Pionex n-a dat lumânările pentru " + sim + " (" + (k && (k.code || k.message) || "fără răspuns") + "): încearcă din nou peste un minut."); break; }
-    var r = k.data.klines;
-    r15 = r15.concat(r); if (r.length < 500) break;
-    end = Math.min.apply(null, r.map(function (x) { return Number(x.time); }).filter(isFinite)) - 1; await mcsPauza(350);
+// v100.271 (ideile auditului 29.10): o = { fara1D, vechi } pe drumul paginii botului (Tabloul o cere la 15 minute): fără barele zilnice (acolo nu se
+// folosesc) și, cu barele aduse ÎNTREGI data trecută pentru aceeași monedă (vechi), doar ultima pagină lipită de ele - aceleași ultimele 2.999 de bare
+// închise ca aducerea întreagă, cu o cerere în loc de 6. Gaură (peste ~5 zile) sau pagina picată ⇒ aducerea întreagă, ca înainte. Fără o (pagina
+// monedei, Simulatorul) ⇒ exact ca înainte. intreg = istoricul nu e tăiat de o eroare (doar unul întreg se poate lipi).
+async function mcsAduCoin(sim, o) {
+  o = o || {};
+  var baza = "/api/market?type=pionex_klines&symbol=" + encodeURIComponent(sim + "_USDT_PERP"), r15 = [], end = null, b15 = null, intreg = true, MAX = 6 * 500 - 1;
+  var vechi = Array.isArray(o.vechi) && o.vechi.length ? o.vechi : null;
+  if (vechi && Date.now() - vechi[vechi.length - 1].t < 480 * 900000) {
+    // revizia 29.10: pagina picată (Pionex blocat / 429 / refuz) ⇒ eroarea, fără aducerea întreagă - altfel două cereri eșuate la 15 min, iar la un
+    // IP blocat fiecare cerere în plus lungește blocarea; doar o gaură (pagina nu se leagă de barele ținute) ⇒ aducerea întreagă
+    var kn = null; try { kn = await getJSON(baza + "&interval=15M&limit=500"); } catch (e) { throw new Error("Pionex n-a răspuns acum (" + (e && e.message || e) + "): încearcă din nou peste un minut."); }
+    var felN = mcsPionexFel(kn); if (felN === "lipsa") return null;
+    if (felN !== "date") throw new Error("Pionex n-a dat lumânările pentru " + sim + " (" + (kn && (kn.code || kn.message) || "fără răspuns") + "): încearcă din nou peste un minut.");
+    b15 = mcsLipesteBare(vechi, GridCalcul.bare(kn.data.klines), MAX);
   }
-  await mcsPauza(350);
-  var r1 = []; try { var k1 = await getJSON(baza + "&interval=1D&limit=200"); r1 = k1 && k1.data && k1.data.klines || []; } catch (e) {}
+  if (!b15) {
+    for (var p = 0; p < 6; p++) {
+      var k = null; try { k = await getJSON(baza + "&interval=15M&limit=500" + (end ? "&endTime=" + end : "")); } catch (e) { if (p === 0) throw new Error("Pionex n-a răspuns acum (" + (e && e.message || e) + "): încearcă din nou peste un minut."); intreg = false; break; }
+      var fel = mcsPionexFel(k); if (fel !== "date") { if (p === 0 && fel === "lipsa") return null; if (p === 0) throw new Error("Pionex n-a dat lumânările pentru " + sim + " (" + (k && (k.code || k.message) || "fără răspuns") + "): încearcă din nou peste un minut."); intreg = false; break; }
+      var r = k.data.klines;
+      r15 = r15.concat(r); if (r.length < 500) break;
+      end = Math.min.apply(null, r.map(function (x) { return Number(x.time); }).filter(isFinite)) - 1; await mcsPauza(350);
+    }
+    b15 = GridCalcul.bare(r15);
+  }
+  var r1 = [];
+  if (!o.fara1D) { await mcsPauza(350); try { var k1 = await getJSON(baza + "&interval=1D&limit=200"); r1 = k1 && k1.data && k1.data.klines || []; } catch (e) {} }
   // v100.136: ratele de funding ale monedei (la 4 h / 8 h, ~16 zile) ⇒ rata pe zi cu semn (gsRataFunding, din Simulatorul grid); lipsa = null
   await mcsPauza(350);
   var fi = null; try { var kf = await getJSON("/api/market?type=pionex_funding&symbol=" + encodeURIComponent(sim + "_USDT_PERP")); fi = typeof gsRataFunding === "function" ? gsRataFunding(kf && kf.data && kf.data.rates, Date.now()) : null; if (fi) fi.sim = sim; } catch (e) {}
-  return { b15: GridCalcul.bare(r15), b1: GridCalcul.bare(r1), fundingInfo: fi };
+  return { b15: b15, b1: GridCalcul.bare(r1), fundingInfo: fi, intreg: intreg };
+}
+// v100.271: barele ținute minte + ultima pagină (amândouă închise, crescător) ⇒ ultimele max; pagina trebuie să se lege de ele (prima ei bară cel
+// târziu la 15 minute după ultima veche), altfel null (gaură ⇒ aducerea întreagă). La aceeași oră rămâne bara nouă.
+function mcsLipesteBare(vechi, noi, max) {
+  if (!Array.isArray(vechi) || !vechi.length || !Array.isArray(noi) || !noi.length) return null;
+  var t0 = noi[0].t; if (!(t0 <= vechi[vechi.length - 1].t + 900000)) return null;
+  var out = vechi.filter(function (x) { return x.t < t0; }).concat(noi);
+  return max > 0 && out.length > max ? out.slice(out.length - max) : out;
 }
 // lista Salt (ISIN ⇒ simbol Yahoo cu bursa): „RHM” ⇒ RHM.DE; adusă o dată, chiar dacă pagina Salt n-a fost deschisă
 async function mcsUnivers() {

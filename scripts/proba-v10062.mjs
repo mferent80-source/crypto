@@ -106,8 +106,9 @@ await test("ritmul, costurile, setarea, mișcarea: cifrele cu virgulă; titlul �
   assert.equal(s.titlu, "Setarea botului: grile prea dese și levier prea mare");
   assert.equal(s.text, "Grilele (93, aritmetice) lasă 0,12% pe umplere după comision; levierul 8× e peste cel sigur azi (4×).");
   const m = cod(sfaturi(CRV(), { fisa: FISA({ regim: { r4h: 10.4, r24h: 10.2, miscare: true, sens: "coboara" }, liniste: { linisteAcum: false } }) }), "miscare");
-  assert.equal(m.titlu, "Mișcare mare contra botului: 10,4× obișnuitul pe 4 h"); assert.ok(m.titlu.length <= 60, m.titlu.length);   /* revizia Opus I1: „Mișcare mare …”, ca alerta */
-  assert.match(m.text, /^Pe 24 h e 10,2× obișnuitul; /);
+  /* v100.271: titlul citează cifra pe 24 h (definiția comună a mișcării, ca alerta), nu maximul cu 4 h; cea pe 4 h trece în text */
+  assert.equal(m.titlu, "Mișcare mare contra botului: 10,2× obișnuitul pe 24 h"); assert.ok(m.titlu.length <= 60, m.titlu.length);   /* revizia Opus I1: „Mișcare mare …”, ca alerta */
+  assert.match(m.text, /^Pe 4 h e 10,4× obișnuitul; /);
 });
 await test("direcția (directie.js): o frază, fără „ÎMPOTRIVA”, virgulă în nota barei de 4 ore; sfatul are concluzia în titlu și dovezile în text", () => {
   const D = globalThis.Directie, R = (d4, d1, formare) => [{ tf: "4H", eticheta: "4 ore", dir: d4, fata: { ton: d4 === "coboara" ? "rau" : "bine" }, formare: formare || null }, { tf: "1D", eticheta: "1 zi", dir: d1, fata: { ton: d1 === "coboara" ? "rau" : "bine" } }];

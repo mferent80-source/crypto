@@ -1,5 +1,5 @@
 // v101.89 (el 08.10: „fa ideile” - ideea B): Monte Carlo pe fiecare bot activ, la 15 minute, cu ACELAȘI motor ca Tabloul și Simulatorul
-// (GridSim din pagină, botul reluat cu pozițiile de acum, 2.000 de drumuri pe 14 zile, v101.116); pe Discord DOAR când verdictul își schimbă FELUL
+// (GridSim din pagină, botul reluat cu pozițiile de acum, 2.000 de drumuri pe 14 zile, v101.116; pe 7 zile de la v100.271); pe Discord DOAR când verdictul își schimbă FELUL
 // (aș ține → aș opri, stopul în zgomot → nu se potrivește cu planul…), nu cifrele la fiecare tură. Prima socotire pe un bot tace (nimic de
 // comparat). Cuvântul rămâne „șanse”, nu „predicție”.
 // deps: { boti, GridSim, GridCalcul, randuri15(simbol) -> rânduri Pionex 15M (lumânările colectorului), stare: { boti: {} } (ținută în ritm),
@@ -25,6 +25,8 @@ const NUME_CAT = { tine: "aș ține", opreste: "aș opri", plan: "nu se potrive�
 // revizia (3): un fel nou se anunță abia când ține DOUĂ ture la rând (v101.116: marja reală, pe grupe de zile, e ±28…±46 de puncte, nu ±4 - felul ar sări des fără confirmare) și cel
 // mult un mesaj pe bot pe oră; (mărunt) alerta netrimisă nu schimbă starea - se reîncearcă la tura următoare
 const TURE_PANA_LA_ANUNT = 2, PAUZA_ANUNT_MS = 60 * 60000;
+// v100.271 (ideile auditului 29.10): regimul Busolei NEVALIDAT se socotește o dată pe oră (pe aceeași stare), nu la fiecare tură - vezi turaMonteCarloBot
+const REGIM_NEVALIDAT_MS = 60 * 60000;
 function ora(t) { const d = new Date(t); return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); }
 function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); const k = Math.round(Number(n)), r = Math.abs(k) % 100; return k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
 function deCand(la, acum) { const ms = acum - la; return ms >= 86400000 ? "de " + cate(Math.round(ms / 86400000), "zi", "zile") : "de la " + ora(la); }   // peste 24 h ora singură ar minți
@@ -102,37 +104,49 @@ export async function turaMonteCarloBot(d) {
       const s = d.GridSim.setariDinBot(b), fi = d.funding ? await d.funding(simbol) : null, rata = fi ? nr(fi.rataZi) : null;
       const set = Object.assign({}, s.st, { suma: s.st.suma || 50, fundingZi: rata !== null ? rata : 0.0003, fundingCost: rata === null });
       let plan = d.plan ? await d.plan(b) : null; if (!(plan && !plan.proba && (nr(plan.minus) > 0 || nr(plan.plus) > 0))) plan = null;
-      const opt = { plan, n: d.n || 2000, seed: 12, orizonturi: [1 / 24, 4 / 24, 1, 7], zile: 14 };   // v100.269 (auditul MC): + 1 h și 4 h (riscul pe termen scurt; boții lui trăiesc în mediană 0,5 h)
+      const opt = { plan, n: d.n || 2000, seed: 12, orizonturi: [1 / 24, 4 / 24, 1, 7] };   // v100.269 (auditul MC): + 1 h și 4 h (riscul pe termen scurt; boții lui trăiesc în mediană 0,5 h)
+      /* v100.271 (ideile auditului 29.10): drumurile țin cât cel mai lung orizont citit (7 zile), nu 14 - verdictul, riscul scurt, p7, regimul și
+         KV-ul citesc doar 1 h … 7 zile; ~40% mai puțin timp pe bot, aceleași cifre în limita tragerii (proba-v100271-o) */
+      opt.zile = Math.max(...opt.orizonturi);
       let rez = d.GridSim.simuleaza(b15, set, Object.assign({ pornitLa: s.pornitLa, stPrefix: s.pornitLa ? set : null }, opt)), nota = "";
       if (rez.eroare && s.pornitLa) { const motiv = String(rez.eroare).split(/[.:]/)[0]; rez = d.GridSim.simuleaza(b15, set, Object.assign({ pornitLa: null }, opt)); if (!rez.eroare) nota = "ca bot pornit acum (" + motiv + "): "; }
       if (rez.eroare) throw new Error(rez.eroare);
       const v = d.GridSim.verdictScurt(rez, set, plan, b), cat = categorie(v.faCe), text = nota + v.text;
       out.simulati++; out.p7[String(b.id)] = pCastig7(rez);
       // v101.92 (I-579): și pe regimul Busolei (ferestrele cu starea de acum), pe aceleași setări; nevalidat ⇒ se ține în KV, nu se arată
-      let regim = null;
+      let regim = null, regimLa = null;
       if (d.regim) {
         try {
           const rg = await d.regim(b);
           if (rg && rg.stare && Array.isArray(rg.ferestre) && rg.ferestre.length) {
-            // revizia Opus: aceeași reluare ca verdictul principal (prefixul de la pornire; căzut ⇒ ca bot nou), altfel cele două n-ar fi comparabile
-            const starturi = d.GridSim.starturiRegim(b15, rg.ferestre, 96), zile = Math.ceil(starturi.length / 96);
-            let rr = d.GridSim.simuleaza(b15, set, Object.assign({ pornitLa: s.pornitLa, stPrefix: s.pornitLa ? set : null }, opt, { starturi })), notaR = "";
-            if (rr.eroare && s.pornitLa && !/regimul de acum/.test(String(rr.eroare))) { rr = d.GridSim.simuleaza(b15, set, Object.assign({ pornitLa: null }, opt, { starturi })); if (!rr.eroare) notaR = "ca bot pornit acum: "; }
-            regim = rr.eroare ? { stare: rg.stare, zile, text: String(rr.eroare).slice(0, 200), eroare: true, nevalidat: !d.regimValidat }
-              : { stare: rg.stare, zile, text: notaR + d.GridSim.verdictScurt(rr, set, plan, b).text, nevalidat: !d.regimValidat };
+            /* v100.271 (ideile auditului 29.10): cât poarta NU e validată, regimul nu se arată nicăieri (Tabloul doar „validat”), iar poarta
+               (proba-mc-regim.mjs) se judecă din bare, walk-forward, nu din KV - deci o socotire pe oră pe aceeași stare, nu la 15 minute (era a
+               doua simulare a turei); între ele rămâne în stare / KV ultimul text. Validat, stare nouă sau socotit cât era validat ⇒ la fiecare tură */
+            const pr = st.boti[String(b.id)], rv = pr && pr.regim;
+            if (!d.regimValidat && rv && rv.nevalidat === true && rv.stare === rg.stare && nr(pr.regimLa) !== null && acum - pr.regimLa < REGIM_NEVALIDAT_MS) { regim = rv; regimLa = pr.regimLa; }
+            else {
+              // revizia Opus: aceeași reluare ca verdictul principal (prefixul de la pornire; căzut ⇒ ca bot nou), altfel cele două n-ar fi comparabile
+              const starturi = d.GridSim.starturiRegim(b15, rg.ferestre, 96), zile = Math.ceil(starturi.length / 96);
+              let rr = d.GridSim.simuleaza(b15, set, Object.assign({ pornitLa: s.pornitLa, stPrefix: s.pornitLa ? set : null }, opt, { starturi })), notaR = "";
+              if (rr.eroare && s.pornitLa && !/regimul de acum/.test(String(rr.eroare))) { rr = d.GridSim.simuleaza(b15, set, Object.assign({ pornitLa: null }, opt, { starturi })); if (!rr.eroare) notaR = "ca bot pornit acum: "; }
+              regim = rr.eroare ? { stare: rg.stare, zile, text: String(rr.eroare).slice(0, 200), eroare: true, nevalidat: !d.regimValidat }
+                : { stare: rg.stare, zile, text: notaR + d.GridSim.verdictScurt(rr, set, plan, b).text, nevalidat: !d.regimValidat };
+              regimLa = acum;
+            }
           }
         } catch (e) { if (d.jurnal) d.jurnal("monte carlo regim", b.id, e && e.message || e); }
       }
       const prev = st.boti[String(b.id)], fundingZi = set.fundingZi, scurt = d.GridSim.riscScurt ? d.GridSim.riscScurt(rez) : null;   // v100.269: riscul pe 1 h / 4 h / o zi
       // v101.90: și culoarea (stare) - KV-ul o duce în Tablou, care arată ultimul text / culoare; felul (cat) rămâne cel confirmat (Discord)
-      if (!prev || !prev.cat) { st.boti[String(b.id)] = { cat, text, stare: v.stare, la: acum, ultima: acum, fundingZi, candidat: null, candidatN: 0, anuntatLa: 0, regim, scurt }; continue; }   // prima socotire tace
-      if (cat === prev.cat) { st.boti[String(b.id)] = Object.assign({}, prev, { text, stare: v.stare, ultima: acum, fundingZi, candidat: null, candidatN: 0, regim, scurt }); continue; }
-      const candidatN = prev.candidat === cat ? (prev.candidatN || 0) + 1 : 1, nou = Object.assign({}, prev, { text, stare: v.stare, ultima: acum, fundingZi, candidat: cat, candidatN, regim, scurt });
+      if (!prev || !prev.cat) { st.boti[String(b.id)] = { cat, text, stare: v.stare, la: acum, ultima: acum, fundingZi, candidat: null, candidatN: 0, anuntatLa: 0, regim, regimLa, scurt }; continue; }   // prima socotire tace
+      if (cat === prev.cat) { st.boti[String(b.id)] = Object.assign({}, prev, { text, stare: v.stare, ultima: acum, fundingZi, candidat: null, candidatN: 0, regim, regimLa, scurt }); continue; }
+      const candidatN = prev.candidat === cat ? (prev.candidatN || 0) + 1 : 1, nou = Object.assign({}, prev, { text, stare: v.stare, ultima: acum, fundingZi, candidat: cat, candidatN, regim, regimLa, scurt });
       if (candidatN >= TURE_PANA_LA_ANUNT && acum - (prev.anuntatLa || 0) >= PAUZA_ANUNT_MS) {
         const ok = await d.anunta({ nivel: cat === "opreste" || cat === "plan" || cat === "reluare" ? "atentie" : "info",
           titlu: "🎰 " + nume + ": Monte Carlo zice acum «" + (NUME_CAT[cat] || cat) + "» (era «" + (NUME_CAT[prev.cat] || prev.cat) + "» " + deCand(prev.la, acum) + ")",
-          mesaj: text + " · șanse pe drumuri ca ultimele 14 zile, nu o predicție" }, b.id, "mc-verdict-" + cat);
-        if (ok) { out.anuntate++; st.boti[String(b.id)] = { cat, text, stare: v.stare, la: acum, ultima: acum, fundingZi, candidat: null, candidatN: 0, anuntatLa: acum, regim, scurt }; continue; }
+          /* v100.271 (ideile auditului 29.10): fraza veche (cu 14 zile) era falsă - drumurile se trag din toate barele de 15 minute aduse (3000 ≈ 31 de zile) */
+          mesaj: text + " · șanse pe drumuri trase din ultima lună de prețuri, nu o predicție" }, b.id, "mc-verdict-" + cat);
+        if (ok) { out.anuntate++; st.boti[String(b.id)] = { cat, text, stare: v.stare, la: acum, ultima: acum, fundingZi, candidat: null, candidatN: 0, anuntatLa: acum, regim, regimLa, scurt }; continue; }
       }
       st.boti[String(b.id)] = nou;   // încă nu se anunță (o tură, pauza de o oră sau alerta netrimisă): felul vechi rămâne, candidatul se ține
     } catch (e) { out.erori++; if (d.jurnal) d.jurnal("monte carlo bot", b.id, e && e.message || e); }
@@ -221,4 +235,139 @@ export function raportMc(jurnal) {
     return { de, la: Math.min(la, 1), n: c.length, pMed: c.length ? c.reduce((a, e) => a + e.p, 0) / c.length : null, rata: c.length ? c.reduce((a, e) => a + e.y, 0) / c.length : null };
   });
   return { stare: "testat", n, zile, brier, brierBan: 0.25, brierBaza: baza * (1 - baza), baza, cutii, scor };
+}
+
+// ── v100.271 (ideile auditului 29.10): riscul pe termen scurt VERIFICAT pe boții lui ────────────────────────────────────────────────
+// Auditul (reluare offline pe 73 de monede) a arătat că riscul de pe 1 h / 4 h / o zi e calibrat ÎN MEDIE; pe boții lui nu era verificat.
+// Jurnal NOU, separat de cel de 7 zile (ritm.mcScurt). PROTOCOLUL - scris înainte de orice dată, nu se schimbă după ce se văd rezultatele:
+//  • Notarea: la tura Monte Carlo (15 min), pe fiecare bot activ socotit chiar în tura asta (fără „Reluarea arată botul OPRIT” - acolo
+//    cifrele nu sunt ale botului din Pionex), pe fiecare orizont h ∈ {1, 4, 24} h: pStop (stopul atins în h), p5 (cele mai proaste 5% ale
+//    schimbării totalului în h, USDT, de aici încolo), totalul botului (profitTotal = echitate − investit, aceeași bază ca jurnalul de 7 zile;
+//    lipsă ⇒ nu se notează) și ora citirii lui. Ferestre FĂRĂ suprapunere: pe (bot, h) o notare nouă abia după ce cea dinainte s-a închis.
+//  • Judecata, botul încă pornit: prima citire a listei din [t+h, t+h+20 min] (bucla de 60 s): stopul = 0 (merge, deci stopul nu l-a
+//    închis), „sub p5” = (totalul de acum − cel de la notare) < p5. Fereastra trecută cu botul pornit ⇒ „expirat” (colectorul oprit).
+//  • Botul închis (motivul din Pionex: buOrderData.reasonBy → motivInchidere), până la t+h: loss_stop ⇒ stopul = 1; profit_stop, lichidare,
+//    system_cancel ⇒ stopul = 0; „sub p5” pe totalul final (lipsă ⇒ doar stopul). user_cancel ⇒ „închis de tine”: numărat separat, NU intră
+//    în scor (clipa ai ales-o tu). Alt motiv / fără motiv / fără ora închiderii ⇒ „necitit”, separat. Închis în (t+h, t+h+20 min] ⇒ era pornit
+//    la t+h: ca o citire din fereastră, pe totalul final. Mai târziu și nejudecat ⇒ „expirat”.
+//  • Raportul, pe fiecare h: judecate, zile, stopul prezis în medie vs atins, cât de des „sub p5” (ar trebui ~5%), închise de tine, necitite,
+//    expirate, deschise. Unitatea independentă = ZIUA (UTC, a notării): intervalul are varianța pe zile (CR1), dar nu mai mică decât a unor
+//    aruncări cu șansele prezise, corelate în zi cu 0,1 (zilele fără niciun stop altfel ar „arăta” prea mult; corelația 0,1 aleasă din simularea
+//    sub H0, înainte de date: cu aruncări independente „prezice prea mult” ieșea fals în 7–15% din seturi la zile cu piață comună), t cu
+//    zile − 1 grade; pe ecran stau 2 cifre (stopul și „sub p5”) ⇒ Bonferroni: 97,5% fiecare, ca împreună să fie 95%.
+//  • Cuvintele: sub 30 de judecate sau sub 10 zile ⇒ „strâng date”, niciun verdict. Altfel stopul: intervalul (atins − prezis) peste 0 ⇒
+//    „prezice prea puțin”, sub 0 ⇒ „prezice prea mult”, tot în ±max(3 puncte, jumătate din prezis) ⇒ „se potrivește”, altfel nimic.
+//    „Sub p5”: la fel față de 5%, cu ±5 puncte.
+//  • Simularea sub H0 (scripts/sim-h0-v100271-j.mjs), făcută înainte de date: cât de des apare pe ecran „prezice prea puțin / prea mult”
+//    când riscul e corect - trebuie ~5% sau mai rar.
+//  • Revizia independentă (29.10): scos din scor, botul „închis de tine” înainte de orizont UMFLA rata stopului (rămâneau stopurile, plecau boții
+//    fără stop: risc corect 5%, 70% închiși de tine ⇒ „atins 11,3%”, fals „prezice prea puțin”). Acum intră în scor cu stopul NEATINS, iar șansa
+//    prezisă e pe cât a stat deschis (pStop × timpul deschis / orizont - risc aproximativ uniform în fereastră); „sub p5” pe totalul de la închidere.
+//    Boții FĂRĂ stop activ (areStop false) nu intră în scorul stopului (prezis 0 = atins 0 ar fi un „se potrivește” gol), doar în „sub p5”.
+const ORE_SCURT = [1, 4, 24], ORA_MS = 3600000, FEREASTRA_SCURT_MS = 20 * 60000, ASTEPT_INCHIDEREA_MS = 6 * ORA_MS, MAX_SCURT_JURNAL = 2000, MIN_SCURT = 30, MIN_ZILE_SCURT = 10;
+const r4 = (x) => (x === null || !isFinite(x) ? null : Math.round(x * 10000) / 10000);
+const deschisa = (e) => e && e.stare === "deschis";
+// scurt = GridSim.riscScurt(rez): [{ ore, pStop, pLich, p5 }]; o notare pe orizont, doar dacă pe (bot, h) nu e una deschisă
+export function noteazaScurt(jurnal, { id, scurt, total, acum, areStop } = {}) {
+  const l = Array.isArray(jurnal) ? jurnal : [], t = nr(total), la = nr(acum);
+  if (id == null || t === null || la === null || !Array.isArray(scurt)) return l;
+  const noi = [];
+  for (const ore of ORE_SCURT) {
+    const s = scurt.find((x) => x && nr(x.ore) === ore); if (!s) continue;
+    const pS = nr(s.pStop), p5 = nr(s.p5); if (pS === null || pS < 0 || pS > 1 || p5 === null) continue;
+    if (l.some((e) => deschisa(e) && e.id === String(id) && e.ore === ore)) continue;   // fereastra de dinainte încă deschisă
+    noi.push({ id: String(id), ore, t: la, z: new Date(la).toISOString().slice(0, 10), pStop: r4(pS), p5: Math.round(p5 * 100) / 100, total: r4(t), stare: "deschis", areStop: areStop !== false });   /* totalul la 4 zecimale: jurnalul stă în ritmuri.json */
+  }
+  return noi.length ? l.concat(noi).slice(-MAX_SCURT_JURNAL) : l;
+}
+// tura colectorului: stareBoti = verdictele Monte Carlo (st.boti), deLa = începutul turei - doar ce s-a socotit acum (o socotire picată lasă
+// riscul vechi în stare); „Reluarea arată botul OPRIT” ⇒ cifrele nu sunt ale botului din Pionex, nu se notează
+export function noteazaScurtBoti(jurnal, { boti, stareBoti, la, deLa } = {}) {
+  let j = Array.isArray(jurnal) ? jurnal : []; const st = stareBoti && typeof stareBoti === "object" ? stareBoti : {}, de = nr(deLa);
+  if (de === null) return j;
+  for (const b of Array.isArray(boti) ? boti : []) {
+    if (!b || b.id == null || b.activ === false) continue;
+    // revizia: și „ca bot pornit acum” (simularea n-a putut relua botul real - cifrele sunt ale unui bot nou) nu se notează
+    const sb = st[String(b.id)]; if (!sb || !(nr(sb.ultima) >= de) || /«Reluarea arată|ca bot pornit acum/.test(String(sb.text || ""))) continue;
+    const areStop = nr(b.opritorPierdere) > 0 || nr(b.opritorPierdereRaport) !== null;   /* revizia: botul fără stop nu intră în scorul stopului */
+    j = noteazaScurt(j, { id: b.id, scurt: sb.scurt, total: b.profitTotal === null || b.profitTotal === undefined || b.profitTotal === "" ? null : Number(b.profitTotal), acum: la, areStop });
+  }
+  return j;
+}
+// botul pornit: totaluri = Map(id -> totalul de acum | null), citit la `la`. Întoarce ACELAȘI jurnal când nu s-a schimbat nimic (fără scriere pe disc)
+export function judecaScurt(jurnal, totaluri, la) {
+  const l = Array.isArray(jurnal) ? jurnal : [], acum = nr(la); if (acum === null) return l;
+  let schimbat = false;
+  const out = l.map((e) => {
+    if (!deschisa(e)) return e;
+    const fin = e.t + e.ore * ORA_MS; if (acum < fin) return e;
+    const are = !!(totaluri && totaluri.has(e.id)), tot = are ? nr(totaluri.get(e.id)) : null;
+    if (acum <= fin + FEREASTRA_SCURT_MS) {
+      if (tot === null) return e;
+      schimbat = true; return Object.assign({}, e, { stare: "judecat", stop: 0, sub5: tot - e.total < e.p5 ? 1 : 0, totalDupa: r4(tot), la: acum });
+    }
+    // fereastra trecută: botul pornit ⇒ colectorul n-a citit la timp; botul lipsă ⇒ judecata la închidere, cel mult 6 h
+    if (are || acum > fin + FEREASTRA_SCURT_MS + ASTEPT_INCHIDEREA_MS) { schimbat = true; return Object.assign({}, e, { stare: "expirat", la: acum }); }
+    return e;
+  });
+  return schimbat ? out : l;
+}
+// motivul închiderii (bot-orders: motivInchidere = buOrderData.reasonBy curățat); ce nu știm sigur ⇒ „necitit”
+export function clasaInchidere(motiv) {
+  const m = String(motiv || "").toLowerCase();
+  if (m === "loss_stop") return "stop";
+  if (m === "profit_stop") return "tinta";
+  if (/liquid/.test(m)) return "lichidare";
+  if (m === "system_cancel") return "pionex";
+  if (m === "user_cancel") return "tine";
+  return "necitit";
+}
+export function judecaScurtLaInchidere(jurnal, id, { total, motiv, inchisLa } = {}) {
+  const l = Array.isArray(jurnal) ? jurnal : [], t = nr(total), la = nr(inchisLa) > 0 ? nr(inchisLa) : null, cls = clasaInchidere(motiv);
+  const brut = String(motiv || "").replace(/[^a-z_]/gi, "").slice(0, 30) || null, sub5 = (e) => (t === null ? null : t - e.total < e.p5 ? 1 : 0);
+  let schimbat = false;
+  const out = l.map((e) => {
+    if (!deschisa(e) || e.id !== String(id)) return e;
+    schimbat = true;
+    if (la === null) return Object.assign({}, e, { stare: "necitit", motivBrut: brut });
+    const fin = e.t + e.ore * ORA_MS;
+    if (e.t > la || la > fin + FEREASTRA_SCURT_MS) return Object.assign({}, e, { stare: "expirat", la });   // notat după închidere / fereastra ratată
+    if (la > fin) return Object.assign({}, e, { stare: "judecat", stop: 0, sub5: sub5(e), totalDupa: r4(t), la, laInchidere: true });   // pornit la t+h
+    // revizia: închis de tine (sau de Pionex) înainte de orizont ⇒ stopul NEATINS, șansa pe cât a stat deschis (pExp), „sub p5” pe totalul final
+    if (cls === "tine" || cls === "pionex") return Object.assign({}, e, { stare: "judecat", stop: 0, pExp: r4(e.pStop * Math.max(0, Math.min(1, (la - e.t) / (e.ore * ORA_MS)))), sub5: sub5(e), totalDupa: r4(t), la, laInchidere: true, motiv: cls, deTine: cls === "tine" });
+    if (cls === "necitit") return Object.assign({}, e, { stare: "necitit", la, motivBrut: brut });
+    return Object.assign({}, e, { stare: "judecat", stop: cls === "stop" ? 1 : 0, sub5: sub5(e), totalDupa: r4(t), la, laInchidere: true, motiv: cls });
+  });
+  return schimbat ? out : l;
+}
+// t pe 98,75% (două cifre pe ecran ⇒ Bonferroni, 97,5% fiecare), Cornish-Fisher pe z = 2,2414: la 9 grade 2,685, la 20 2,423 (ca în tabele);
+// se folosește doar de la 10 zile (≥ 9 grade), unde aproximarea e bună
+function tBonf(df) {
+  const z = 2.241402727604947, v = Math.max(1, df), z3 = z ** 3, z5 = z ** 5, z7 = z ** 7, z9 = z ** 9;
+  return z + (z3 + z) / (4 * v) + (5 * z5 + 16 * z3 + 3 * z) / (96 * v ** 2) + (3 * z7 + 19 * z5 + 17 * z3 - 15 * z) / (384 * v ** 3) + (79 * z9 + 776 * z7 + 1482 * z5 - 1920 * z3 - 945 * z) / (92160 * v ** 4);
+}
+// d = [{ z, x, p }]: x = ce s-a întâmplat (0/1), p = șansa prezisă. Media (x − p) pe judecate; varianța pe ZILE (CR1, centrată), dar nu sub cea a
+// aruncărilor cu șansele prezise corelate în zi cu ICC_ZI - zilele fără niciun stop au altfel varianța ~0 și intervalul ar „arăta” prea mult din nimic
+const ICC_ZI = 0.1;
+function intervalScurt(d, marja) {
+  const n = d.length, zile = new Map(); let s = 0;
+  for (const e of d) { s += e.x - e.p; const z = zile.get(e.z) || { r: 0, k: 0, v: 0, q: 0 }; z.r += e.x - e.p; z.k++; z.v += e.p * (1 - e.p); z.q += Math.sqrt(e.p * (1 - e.p)); zile.set(e.z, z); }
+  const D = zile.size; if (n < MIN_SCURT || D < MIN_ZILE_SCURT) return { jos: null, sus: null, verdict: "putine" };
+  const dif = s / n; let sc = 0, v0 = 0;
+  for (const z of zile.values()) { const r = z.r - z.k * dif; sc += r * r; v0 += z.v + ICC_ZI * (z.q * z.q - z.v); }   // Var(suma zilei) cu corelația ICC_ZI între notări
+  const m = tBonf(D - 1) * Math.sqrt(Math.max(D / (D - 1) * sc, v0) / (n * n)), jos = dif - m, sus = dif + m;
+  return { jos, sus, verdict: jos > 0 ? "prea-putin" : sus < 0 ? "prea-mult" : jos >= -marja && sus <= marja ? "potrivit" : "nedecis" };
+}
+export function raportScurt(jurnal) {
+  const l = (Array.isArray(jurnal) ? jurnal : []).filter((e) => e && typeof e === "object");
+  return { ore: ORE_SCURT.map((ore) => {
+    const L = l.filter((e) => e.ore === ore), j = L.filter((e) => e.stare === "judecat"), c = (s) => L.filter((e) => e.stare === s).length;
+    const st = j.filter((e) => (e.stop === 0 || e.stop === 1) && nr(e.pStop) !== null && e.areStop !== false).map((e) => ({ z: e.z, x: e.stop, p: nr(e.pExp) !== null ? e.pExp : e.pStop }));   /* revizia: fără boții fără stop; închișii de tine pe cât au stat deschiși */
+    const s5 = j.filter((e) => e.sub5 === 0 || e.sub5 === 1).map((e) => ({ z: e.z, x: e.sub5, p: 0.05 }));
+    const med = (a, f) => (a.length ? r4(a.reduce((s, x) => s + f(x), 0) / a.length) : null), pStopMed = med(st, (x) => x.p);
+    const iS = intervalScurt(st, Math.max(0.03, 0.5 * (pStopMed || 0))), i5 = intervalScurt(s5, 0.05);
+    return { ore, n: j.length, zile: new Set(j.map((e) => e.z)).size, pStopMed, stopRata: med(st, (x) => x.x), stopDifJos: r4(iS.jos), stopDifSus: r4(iS.sus), verdictStop: iS.verdict,
+      nSub5: s5.length, sub5Rata: med(s5, (x) => x.x), sub5Jos: i5.jos !== null ? r4(i5.jos + 0.05) : null, sub5Sus: i5.sus !== null ? r4(i5.sus + 0.05) : null, verdictP5: i5.verdict,
+      tine: L.filter((e) => e.deTine || e.stare === "tine").length, necitit: c("necitit"), expirat: c("expirat"), deschise: c("deschis") };
+  }) };
 }

@@ -171,7 +171,8 @@ const faraKv = () => json({ error: "ISTORIC_DOAR_ACASA", detail: "Istoricul comp
 async function salveazaNdx(env, corp, zi) {
   if (Array.isArray(corp && corp.ndx)) {
     const b = (v) => v === true;
-    const ndx = corp.ndx.slice(0, 150).map((x) => ({ s: String(x && x.s || "").toUpperCase().replace(/[^A-Z0-9.-]/g, "").slice(0, 10), p: nr(x && x.p), ch: nr(x && x.ch), ch5: nr(x && x.ch5), e50: b(x && x.e50), e200: b(x && x.e200), rsi: nr(x && x.rsi), mis: nr(x && x.mis) }))
+    const ndx = corp.ndx.slice(0, 150).map((x) => ({ s: String(x && x.s || "").toUpperCase().replace(/[^A-Z0-9.-]/g, "").slice(0, 10), p: nr(x && x.p), ch: nr(x && x.ch), ch5: nr(x && x.ch5), e50: b(x && x.e50), e200: b(x && x.e200), rsi: nr(x && x.rsi), mis: nr(x && x.mis),
+      ...(typeof (x && x.mare) === "boolean" ? { mare: x.mare } : {}) }))   /* v100.271 (ideile auditului 29.10): „în mișcare mare” (definiția comună, Acasa.rezumatActiune) - doar când vine */
       .filter((x) => x.s && x.ch !== null);
     await env.ISTORIC.put("t212:ndx", JSON.stringify({ la: nr(corp && corp.la) || Date.now(), zi, actiuni: ndx }));
   }

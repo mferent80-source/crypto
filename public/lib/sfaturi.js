@@ -128,9 +128,12 @@ var Sfaturi = (function () {
     // B) Regimul acum: miscare mare vs liniste (cu frecventa "cat mai tine").
     var rg = fisa && fisa.regim;
     var cuB = rg && rg.miscare && rg.sens && (dirBot === "long" || dirBot === "short") && (dirBot === "long") === (rg.sens === "urca");
+    // v100.271 (ideile auditului 29.10): „mișcare mare” are o singură definiție (GridCalcul.miscareMare, pe 24 h) ⇒ titlul citează cifra pe 24 h,
+    // ca alerta („mișcare mare cu botul / contra botului, 1,6× pe 24 h”); cea pe 4 h stă în text. Înainte titlul punea maximul (2,8× pe 4 h).
+    var rata = rg && rg.mare && rg.mare.rata ? rg.mare.rata : "~1 zi din 10";
     if (cuB && rg.r4h != null && rg.r24h != null) {
-      out.push({ cod: "miscare-cu", ton: "bine", titlu: "Mișcare cu botul: " + X(rg.r4h) + " obișnuitul (4 h), " + X(rg.r24h) + " (24 h)",
-        text: "Prețul merge în direcția botului: grilele " + (dirBot === "long" ? "de sus" : "de jos") + " încasează pe drum și poziția scade.",
+      out.push({ cod: "miscare-cu", ton: "bine", titlu: "Mișcare cu botul: " + X(rg.r24h) + " obișnuitul pe 24 h",
+        text: "Pe 4 h e " + X(rg.r4h) + " obișnuitul, în direcția botului: grilele " + (dirBot === "long" ? "de sus" : "de jos") + " încasează pe drum și poziția scade.",
         // v100.259 (auditul 23.10, punctul 7): 40 de monede în ACEEAȘI perioadă nu sunt 40 de dovezi și n-a fost niciun test ⇒ observație, nu cifră-dovadă
         sursa: "Observație nedovedită (27.09, 40 de monede în aceleași zile, fără test): după mișcarea cu botul gridul n-a ieșit mai rău decât în liniște.",
         // v100.65 (problema b) + revizia Opus a 2b (4): O SINGURA VOCE cu semaforul (SemnaleBot.pasiCuBotul) - stopul la zero doar pe plus
@@ -140,11 +143,11 @@ var Sfaturi = (function () {
     } else if (rg && rg.r4h != null && rg.r24h != null && rg.miscare) {
       // revizia Opus (I1, 02.10): „Mișcare mare …” ca alerta colectorului („mișcare mare împotriva botului”) - in „Ce ai de făcut acum”
       // se recunosc ca acelasi lucru (un rand, nu doua); multiplul pe 24 h trece in text, ca titlul sa ramana ≤ 60 si la 10×
-      // v100.70 (revizia pachetului 3, I6): cifra care a declansat (maximul, cu fereastra lui), ca alerta; cealalta fereastra in text
-      var m4 = rg.r4h >= rg.r24h;
-      out.push({ cod: "miscare", ton: "atentie", titlu: "Mișcare mare" + (rg.sens && (dirBot === "long" || dirBot === "short") ? " contra botului" : "") + ": " + (m4 ? X(rg.r4h) + " obișnuitul pe 4 h" : X(rg.r24h) + " obișnuitul pe 24 h"),
-        text: (m4 ? "Pe 24 h e " + X(rg.r24h) : "Pe 4 h e " + X(rg.r4h)) + " obișnuitul; până se liniștește, gridul nu face perechi, doar strânge poziție pe direcția prețului.",
-        sursa: "„Obișnuitul” = percentila 75 a mișcărilor monedei pe 30 de zile.",
+      // v100.70 (revizia pachetului 3, I6): cifra care a declansat, ca alerta; cealalta fereastra in text
+      // v100.271: cifra care declanșează e cea pe 24 h (definiția comună), nu maximul cu 4 h
+      out.push({ cod: "miscare", ton: "atentie", titlu: "Mișcare mare" + (rg.sens && (dirBot === "long" || dirBot === "short") ? " contra botului" : "") + ": " + X(rg.r24h) + " obișnuitul pe 24 h",
+        text: "Pe 4 h e " + X(rg.r4h) + " obișnuitul; până se liniștește, gridul nu face perechi, doar strânge poziție pe direcția prețului.",
+        sursa: "Mișcare mare = pe 24 h peste 9 zile din 10 ale monedei (" + rata + "); „obișnuitul” = percentila 75 a mișcărilor ei pe 30 de zile.",
         faCe: "N-aș adăuga bani și n-aș porni alt grid aici până la liniște; pe ăsta l-aș lăsa cât lichidarea e peste 15%." });
     }
     var L = fisa && fisa.liniste;

@@ -31,7 +31,8 @@ await test("(4) rotunjirea: CÂȘTIGĂ 97% · PIERDE 3% (nu 4%: suma e 100); cu 
   assert.match(functie(citeste("public", "lib", "grid-sim-ecran.js"), "gsRataFunding"), /return GridSim\.rataFunding\(rates, acum\)/);
 });
 await test("(3) tbMcRand: verdictul în text, „șanse… · socotit hh:mm · următorul hh:mm” în nota (mai mică, pe rândul ei); rândul le desenează pe amândouă", () => {
-  const r = functie(APP, "tbMcRand"); assert.match(r, /nota:/); assert.match(r, /șanse pe drumuri ca ultimele 14 zile, nu o predicție/);
+  /* v100.271 (ideile auditului 29.10): fraza adevărată (drumuri trase din ~31 de zile de bare); mai jos și drumurile de 7 zile (zile:7) */
+  const r = functie(APP, "tbMcRand"); assert.match(r, /nota:/); assert.match(r, /șanse pe drumuri trase din ultima lună de prețuri, nu o predicție/);
   const c = functie(APP, "tbDeseneazaCitire"); assert.match(c, /<span class="tbSub tbMcNota">'\+escapeHtml\(mc\.nota\)\+'<\/span>/);
   assert.match(CSS, /#tabloubot \.tbMcNota\{/);
   const ctx = { console, Date, Math, Object, Array, String, Number, JSON, isFinite, Promise, setTimeout, GridSim: GS, TextRo: G.TextRo };
@@ -40,8 +41,8 @@ await test("(3) tbMcRand: verdictul în text, „șanse… · socotit hh:mm · u
   vm.createContext(ctx); vm.runInContext(src, ctx);
   ctx.tbMc.botId = "1"; ctx.tbMc.la = Date.now(); ctx.tbMc.randLa = ctx.tbMc.la; ctx.tbMc.urmatorul = ctx.tbMc.la + 15 * 60000; ctx.tbMc.rand = { stare: "rau", text: "de aici încolo, 7 zile: CÂȘTIGĂ în 22% din drumuri · PIERDE în 78%" };
   const x = ctx.tbMcRand(ctx.tbStare.bot);
-  assert.equal(x.text, "de aici încolo, 7 zile: CÂȘTIGĂ în 22% din drumuri · PIERDE în 78%"); assert.match(x.nota, /^șanse pe drumuri ca ultimele 14 zile, nu o predicție · socotit \d\d:\d\d · următorul \d\d:\d\d$/);
-  ctx.tbMc.eroare = "Pionex n-a răspuns"; assert.match(ctx.tbMcRand(ctx.tbStare.bot).nota, /^șanse pe drumuri ca ultimele 14 zile, nu o predicție · din \d\d:\d\d; acum n-a mers: Pionex n-a răspuns · reîncerc \d\d:\d\d$/);
+  assert.equal(x.text, "de aici încolo, 7 zile: CÂȘTIGĂ în 22% din drumuri · PIERDE în 78%"); assert.match(x.nota, /^șanse pe drumuri trase din ultima lună de prețuri, nu o predicție · socotit \d\d:\d\d · următorul \d\d:\d\d$/);
+  ctx.tbMc.eroare = "Pionex n-a răspuns"; assert.match(ctx.tbMcRand(ctx.tbStare.bot).nota, /^șanse pe drumuri trase din ultima lună de prețuri, nu o predicție · din \d\d:\d\d; acum n-a mers: Pionex n-a răspuns · reîncerc \d\d:\d\d$/);
 });
 await test("(1a) lib/grid-sim-worker.js: rulează în afara paginii (fără window / document), cu modulele paginii, și dă ACELAȘI rezultat ca pe fir", () => {
   const W = citeste("public", "lib", "grid-sim-worker.js"), trimise = [];
@@ -60,7 +61,7 @@ await test("(1a) lib/grid-sim-worker.js: rulează în afara paginii (fără wind
 });
 await test("(1b) tbMcSimuleaza: cu Worker ⇒ rezultatul vine din worker (pagina nu socotește); fără Worker / worker picat ⇒ pe fir, același rezultat; tbMcPorneste îl folosește", async () => {
   /* v100.269 (auditul MC): + 1 h și 4 h (riscul pe termen scurt); 1 și 7 zile rămân */
-  assert.match(functie(APP, "tbMcPorneste"), /await tbMcSimuleaza\(tbMc\.b15,st,\{plan:plan,pornitLa:pornitLa,stPrefix:pornitLa\?st:null,n:500,seed:12,orizonturi:\[1\/24,4\/24,1,7\],zile:14\}\)/);
+  assert.match(functie(APP, "tbMcPorneste"), /await tbMcSimuleaza\(tbMc\.b15,st,\{plan:plan,pornitLa:pornitLa,stPrefix:pornitLa\?st:null,n:500,seed:12,orizonturi:\[1\/24,4\/24,1,7\],zile:7\}\)/);
   const src = APP.match(/var tbMcWorker=null[^\n]*\n/)[0] + functie(APP, "tbMcWorkerAsteptare") + "\n" + functie(APP, "tbMcSimuleaza");
   const fa = (Worker) => { const ctx = { console, Date, Math, Object, Array, String, Number, JSON, isFinite, Promise, setTimeout, clearTimeout, GridSim: GS }; if (Worker) ctx.Worker = Worker; vm.createContext(ctx); vm.runInContext(src, ctx); return ctx; };
   const o = { plan: null, n: 20, seed: 12, orizonturi: [7], zile: 14 }, peFir = GS.simuleaza(B, ST, o);

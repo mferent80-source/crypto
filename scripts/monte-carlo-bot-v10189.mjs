@@ -62,7 +62,8 @@ await test("felul s-a schimbat ⇒ UN mesaj pe Discord, cu felul vechi și de c�
   const d = deps(); await turaMonteCarloBot(d); const acum = d.stare.boti["2408"].cat, altul = acum === "tine" ? "zgomot" : "tine";
   d.stare.boti["2408"] = { cat: altul, text: "x", la: Date.now() - 3600000, ultima: Date.now() - 900000, candidat: acum, candidatN: 1 };   // felul nou s-a văzut deja o tură (revizia 3)
   const r = await turaMonteCarloBot(d); assert.equal(r.anuntate, 1); assert.equal(d.trimise.length, 1);
-  const t = d.trimise[0]; assert.equal(t.b, "2408"); assert.equal(t.cheie, "mc-verdict-" + acum); assert.match(t.m.titlu, /^🎰 PONS: Monte Carlo zice acum «[^»]+» \(era «[^»]+» de la \d\d:\d\d\)$/); assert.match(t.m.mesaj, / · șanse pe drumuri ca ultimele 14 zile, nu o predicție$/);
+  /* v100.271 (ideile auditului 29.10): fraza adevărată - drumurile se trag din ~31 de zile de bare */
+  const t = d.trimise[0]; assert.equal(t.b, "2408"); assert.equal(t.cheie, "mc-verdict-" + acum); assert.match(t.m.titlu, /^🎰 PONS: Monte Carlo zice acum «[^»]+» \(era «[^»]+» de la \d\d:\d\d\)$/); assert.match(t.m.mesaj, / · șanse pe drumuri trase din ultima lună de prețuri, nu o predicție$/);
   assert.equal(t.m.nivel, acum === "opreste" || acum === "plan" ? "atentie" : "info"); assert.equal(d.stare.boti["2408"].cat, acum); assert.ok(Date.now() - d.stare.boti["2408"].la < 5000, "de când = acum (fel nou)");
 });
 await test("botul închis iese din stare; botul fără grid se sare; lumânările picate ⇒ eroare numărată, nu crăpare; botul mai vechi decât lumânările ⇒ ca bot nou, spus", async () => {

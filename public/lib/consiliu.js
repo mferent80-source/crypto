@@ -220,11 +220,12 @@ var Consiliu = (function () {
     (Array.isArray(x.consilier) ? x.consilier : []).forEach(function (k) { if (k && k.titlu) rest.push({ titlu: k.titlu, text: [k.text, k.ceAsFace ? "👉 " + k.ceAsFace : ""].filter(Boolean).join(" ") }); });
     if (x.indicatori) rest.push({ titlu: String(x.indicatori), text: "" });
     if (x.btc) rest.push({ titlu: String(x.btc), text: "" });
-    // v100.92 (I-522): Radarul (regimul fișei: 4 h SAU 24 h peste percentila 75 a obișnuitului ei) și Busola (găleata ATR pe 4h față de un an) pot spune altceva -
+    // v100.92 (I-522): Radarul (regimul fișei: v100.271 - pe 24 h peste percentila 90 a monedei) și Busola (găleata ATR pe 4h față de un an) pot spune altceva -
     // un rând DOAR când se contrazic, ca să nu aleagă el între două „adevăruri” fără explicație; verdictul nu se schimbă (rândul ≤ 110, garda)
     var bz = x.busola, rg = x.regim, bvr = null;
     if (bz && rg && typeof rg.miscare === "boolean" && ((rg.miscare && bz.stare === "liniste") || (!rg.miscare && bz.stare === "miscare")))
-      bvr = "Radarul: " + (rg.miscare ? "mișcare" : "liniște") + " (4h/24h față de obișnuit) · Busola: " + (bz.stare === "miscare" ? "mai agitată" : "mai calmă") + " (ATR 4h față de un an) — orizonturi diferite";
+      /* v100.271 (ideile auditului 29.10): Radarul = definiția comună a mișcării (GridCalcul.miscareMare: pe 24 h, ~1 zi din 10), nu „4h/24h” */
+      bvr = "Radarul: " + (rg.miscare ? "mișcare" : "liniște") + " (24 h, prag ~1 zi din 10) · Busola: " + (bz.stare === "miscare" ? "mai agitată" : "mai calmă") + " (ATR 4h față de un an) — orizonturi diferite";
 
     return { nivel: nivel, eticheta: ETICHETA[nivel] || ETICHETA.asteapta, titlu: titlu, faCe: faCe, explica: explica, bani: bani.length ? bani.join(" · ") : null, incredere: inc,
       motive: motive.map(function (m) { return { cod: m.cod, c: m.c, titlu: m.titlu, text: m.text, cip: m.cip, extra: m.extra || null, scurt: m.scurt || null, scurtDoi: m.scurtDoi || null }; }), rest: rest, busolaVsRadar: bvr };

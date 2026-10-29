@@ -120,18 +120,24 @@ var Acasa = (function () {
     m.sort(function (x, y) { return x - y; });
     var p75 = m[Math.floor(m.length * 0.75)] || 0, ch = (u / c[c.length - 2] - 1) * 100;
     var r2 = function (v) { return Math.round(v * 100) / 100; };
-    return { p: u, ch: r2(ch), ch5: r2((u / c[c.length - 6] - 1) * 100), e50: u > ema(c.slice(-200), 50), e200: u > ema(c, 200), rsi: Math.round(rsi(c) * 10) / 10, mis: p75 > 0 ? r2(Math.abs(ch / 100) / p75) : null };
+    // v100.271 (ideile auditului 29.10): „în mișcare mare” = definiția comună (GridCalcul.miscareMare, k = 1 zi): azi peste percentila 90 a
+    // zilelor ei (~1 zi din 10), ca pagina Acțiuni - nu |azi| > 1,5 × P75 pe 120 de zile; `mis` rămâne doar de arătat („× o zi obișnuită”)
+    var mm = typeof GridCalcul !== "undefined" && GridCalcul.miscareMare ? GridCalcul.miscareMare(c.map(function (v) { return { c: v }; }), { k: 1 }) : null;
+    return { p: u, ch: r2(ch), ch5: r2((u / c[c.length - 6] - 1) * 100), e50: u > ema(c.slice(-200), 50), e200: u > ema(c, 200), rsi: Math.round(rsi(c) * 10) / 10, mis: p75 > 0 ? r2(Math.abs(ch / 100) / p75) : null,
+      mare: mm && typeof mm.mare === "boolean" ? mm.mare : null };
   }
+  // v100.271: rândurile salvate înainte (fără `mare`, până trece colectorul nou) rămân pe raportul vechi, ca să nu arate „0” fals
+  function inMiscareMare(x) { return typeof x.mare === "boolean" ? x.mare : nr(x.mis) !== null && x.mis > 1.5; }
   var MAG7 = ["AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "TSLA"];
   function largimeNdx(l) {
     l = (Array.isArray(l) ? l : []).filter(function (x) { return x && x.s && nr(x.ch) !== null; });
     if (!l.length) return null;
     var cnt = function (f) { return l.filter(f).length; };
-    var s = l.slice().sort(function (a, b) { return b.ch - a.ch; }), tag = function (x) { return { s: x.s, ch: x.ch, miscare: nr(x.mis) !== null && x.mis > 1.5 }; };
+    var s = l.slice().sort(function (a, b) { return b.ch - a.ch; }), tag = function (x) { return { s: x.s, ch: x.ch, miscare: inMiscareMare(x) }; };
     var mag = MAG7.map(function (k) { for (var i = 0; i < l.length; i++) if (l[i].s === k) return { s: k, ch: l[i].ch, e50: !!l[i].e50 }; return null; }).filter(Boolean);
     var mu = mag.filter(function (x) { return x.ch > 0; }).length;
     return { n: l.length, urca: cnt(function (x) { return x.ch > 0; }), e50: cnt(function (x) { return x.e50; }), e200: cnt(function (x) { return x.e200; }), rsi: cnt(function (x) { return nr(x.rsi) !== null && x.rsi > 50; }),
-      inMiscare: l.filter(function (x) { return nr(x.mis) !== null && x.mis > 1.5; }).map(function (x) { return x.s; }),
+      inMiscare: l.filter(inMiscareMare).map(function (x) { return x.s; }),
       sus: s.filter(function (x) { return x.ch > 0; }).slice(0, 5).map(tag), jos: s.filter(function (x) { return x.ch < 0; }).reverse().slice(0, 5).map(tag),
       mag7: mag, mag7Urca: mu, mag7Text: mag.length ? mu + " din " + mag.length + " mari au urcat" + (mag.filter(function (x) { return x.e50; }).length ? ", " + mag.filter(function (x) { return x.e50; }).length + " peste media de 50" : "") : "" };
   }

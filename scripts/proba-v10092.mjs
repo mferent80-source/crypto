@@ -166,8 +166,9 @@ await test("(C) Busola.pentruVerdict: starea + bilanțul (verdict, dif, monede) 
 });
 await test("(C) I-522 Consiliul: un rând doar când Radarul (regimul fișei) și Busola se contrazic, ≤ 110; de acord sau fără una din ele ⇒ nimic; verdictul neatins", () => {
   const sm = S.semafor({ bot: BOT, fisa: null }), x = (busola, regim) => CS.alcatuieste({ sm: sm, concret: [], sfaturi: [], busola: busola, regim: regim });
-  assert.equal(x({ stare: "miscare" }, { miscare: false }).busolaVsRadar, "Radarul: liniște (4h/24h față de obișnuit) · Busola: mai agitată (ATR 4h față de un an) — orizonturi diferite");
-  assert.equal(x({ stare: "liniste" }, { miscare: true }).busolaVsRadar, "Radarul: mișcare (4h/24h față de obișnuit) · Busola: mai calmă (ATR 4h față de un an) — orizonturi diferite");
+  /* v100.271: Radarul măsoară acum mișcarea pe 24 h peste percentila 90 a monedei (GridCalcul.miscareMare, ~1 zi din 10), nu „4h/24h” */
+  assert.equal(x({ stare: "miscare" }, { miscare: false }).busolaVsRadar, "Radarul: liniște (24 h, prag ~1 zi din 10) · Busola: mai agitată (ATR 4h față de un an) — orizonturi diferite");
+  assert.equal(x({ stare: "liniste" }, { miscare: true }).busolaVsRadar, "Radarul: mișcare (24 h, prag ~1 zi din 10) · Busola: mai calmă (ATR 4h față de un an) — orizonturi diferite");
   assert.ok(x({ stare: "miscare" }, { miscare: false }).busolaVsRadar.length <= 110);
   for (const [b, r] of [[{ stare: "miscare" }, { miscare: true }], [{ stare: "liniste" }, { miscare: false }], [{ stare: "nu-stiu" }, { miscare: true }], [null, { miscare: true }], [{ stare: "miscare" }, null]]) assert.equal(x(b, r).busolaVsRadar, null, JSON.stringify([b, r]));
   assert.equal(x({ stare: "miscare" }, { miscare: false }).nivel, x(null, null).nivel, "verdictul neatins");
@@ -240,10 +241,10 @@ await test("(F) I-525 în toate listele la fel: candidații (tbIdeiRender) cu is
   const ctx = {}; vm.createContext(ctx); vm.runInContext(fnDin("t212-ecran.js", "tbIstoricRosu") + ";this.f=tbIstoricRosu;", ctx);
   assert.equal(ctx.f({ istoric: IST(17, 10, -173.55) }), true); assert.equal(ctx.f({ istoric: IST(2, 0, -5) }), false); assert.equal(ctx.f({ istoric: IST(5, 4, 12) }), false); assert.equal(ctx.f({}), false);
 });
-await test("(F) I-522 textul spune cum măsoară Radarul de fapt (percentila 75, 4h SAU 24h) - fără „mediana”", () => {
+await test("(F) I-522 textul spune cum măsoară Radarul de fapt (v100.271: pe 24 h, pragul ~1 zi din 10) - fără „mediana”", () => {
   assert.ok(!/mediana ei/.test(lib("consiliu.js")), "textul mai zice „mediana”");
   const sm = S.semafor({ bot: BOT, fisa: null }), t = CS.alcatuieste({ sm: sm, concret: [], sfaturi: [], busola: { stare: "miscare" }, regim: { miscare: false } }).busolaVsRadar;
-  assert.equal(t, "Radarul: liniște (4h/24h față de obișnuit) · Busola: mai agitată (ATR 4h față de un an) — orizonturi diferite"); assert.ok(t.length <= 110, "lung: " + t.length);
+  assert.equal(t, "Radarul: liniște (24 h, prag ~1 zi din 10) · Busola: mai agitată (ATR 4h față de un an) — orizonturi diferite"); assert.ok(t.length <= 110, "lung: " + t.length);
 });
 await test("(F) I-526 fără inventat: „de ieșit” doar dacă T212 a fost citit (t212Citit), boții doar din rezumat proaspăt, rândul-verdict în afara try-ului bot-orders", () => {
   const col = citeste("scripts", "colector.mjs"), d = col.slice(col.indexOf("async function dateDimineata()"), col.indexOf("async function turaDimineata()"));

@@ -451,7 +451,11 @@ export async function onRequestPost({request,env}){
     const scor=s0?{d:nr(s0.d)||0,g:nr(s0.g)||0,a:nr(s0.a)||0,egal:nr(s0.egal)||0,zile:nr(s0.zile)||0,medie:nr(s0.medie),icJos:nr(s0.icJos),icSus:nr(s0.icSus),
       plus:nr(s0.plus),laInchidere:nr(s0.laInchidere),oreMediana:nr(s0.oreMediana),difMedie:nr(s0.difMedie),difJos:nr(s0.difJos),difSus:nr(s0.difSus),ultime:String(s0.ultime||"").replace(/[^DG]/g,"").slice(-10),peBot:pb}:null;
     const calibrare=c&&typeof c==="object"&&(c.stare==="putine"||c.stare==="testat")?{stare:c.stare,n:nr(c.n),zile:nr(c.zile),brier:nr(c.brier),brierBan:nr(c.brierBan),brierBaza:nr(c.brierBaza),baza:nr(c.baza),cutii:Array.isArray(c.cutii)?c.cutii.slice(0,3).map(cutie).filter(Boolean):[],scor}:null;
-    await env.ISTORIC.put("mc-verdict",JSON.stringify({la,boti,calibrare}));return json({ok:true})
+    /* v100.271 (ideile auditului 29.10): riscul pe termen scurt verificat pe boții lui (raportScurt din colector) - 1 / 4 / 24 h, doar numere și verdicte din listă */
+    const cs=corp&&corp.calibrareScurt,VERD=["putine","prea-putin","prea-mult","potrivit","nedecis"],vd=v=>VERD.includes(v)?v:null;
+    const calibrareScurt=cs&&typeof cs==="object"&&Array.isArray(cs.ore)?{ore:cs.ore.filter(x=>x&&typeof x==="object"&&[1,4,24].includes(nr(x.ore))).slice(0,3).map(x=>({ore:nr(x.ore),n:nr(x.n),zile:nr(x.zile),pStopMed:nr(x.pStopMed),stopRata:nr(x.stopRata),stopDifJos:nr(x.stopDifJos),stopDifSus:nr(x.stopDifSus),verdictStop:vd(x.verdictStop),
+      nSub5:nr(x.nSub5),sub5Rata:nr(x.sub5Rata),sub5Jos:nr(x.sub5Jos),sub5Sus:nr(x.sub5Sus),verdictP5:vd(x.verdictP5),tine:nr(x.tine),necitit:nr(x.necitit),expirat:nr(x.expirat),deschise:nr(x.deschise)}))}:null;
+    await env.ISTORIC.put("mc-verdict",JSON.stringify({la,boti,calibrare,calibrareScurt}));return json({ok:true})
   }
   // v100.150 (I-583): lățimea pieței - validată strict (numere finite, simboluri = litere/cifre din orice alfabet + USDT, 1-30 de semne - Binance are
   // și TUSDT / 4USDT și perp-uri cu nume chinezești (币安人生USDT); cel mult 200 de monede, dir din listă);

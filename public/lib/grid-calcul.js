@@ -26,7 +26,8 @@ var GridCalcul = (function () {
     GRILE_MIN: 2, GRILE_MAX: 150,
     LEV_MAX: 5,
     MMR: 0.01,                 // v100.259 (auditul 23.10): marja de intretinere PRESUPUSA 1% (nu prudenta) - n-avem treptele Pionex in cod; la monedele mici si la pozitiile mari bursa cere mai mult, deci lichidarea reala poate veni MAI DEVREME decat cea socotita aici
-    PRAG_MISCARE: 1.5,
+    PRAG_MISCARE: 1.5,         // pragul VECHI (1,5 × P75) - îl mai citește doar scripts/grid-directie-real.mjs; „mișcare mare” = MISCARE_P
+    MISCARE_P: 0.90,           // v100.271 (ideile auditului 29.10): percentila „mișcării mari” (miscareMare) - un singur loc, citit și de linisteTine și de laborator
     MEDIANA_VERDE: 0.003,
     MARGINE_RANGE: 0.10,
     BARE_ZI: 96,               // lumanari de 15M intr-o zi
@@ -286,7 +287,7 @@ var GridCalcul = (function () {
   // istoricul dat ⇒ pe istoricul ei se aprinde ~1 zi din 10, oricare ar fi moneda sau intervalul. Înainte erau trei: 4 h SAU 24 h peste
   // 1,5 × P75 (aici), 1 zi SAU 5 zile peste 1,5 × P75 (acțiunile: 23% din zile) și 2 × / 1,5 × în alertă. Sub 30 de mișcări în istoric:
   // „istoric scurt” (mare: null), nu un verdict. pct = percentila mișcării de azi (egalitățile la jumătate) - pentru ieșirea alertei.
-  var MISCARE_P = 0.90, MISCARE_MIN = 30;
+  var MISCARE_P = C.MISCARE_P, MISCARE_MIN = 30;
   function miscareMare(b, o) {
     o = o || {};
     var k = o.k > 0 ? Math.round(o.k) : C.BARE_ZI, p = o.p > 0 && o.p < 1 ? o.p : MISCARE_P, n = b ? b.length : 0, m = [], i;
@@ -335,9 +336,12 @@ var GridCalcul = (function () {
   // nu o predictie. Pentru DURATA, scara e miscarea pe 24 h (cea pe 4 h e prea zgomotoasa:
   // zgomotul pur o trece de prag in ~8% din bare, deci ar rupe "linistea" la fiecare ~12
   // bare). O perioada de liniste incepe cand miscarea pe 24 h coboara sub 1,2 x obisnuit
-  // (percentila 75 pe tot istoricul dat) si se termina cand trece de 1,5 x. Se iau perioadele
+  // (percentila 75 pe tot istoricul dat) si se termina la prima miscare mare. Se iau perioadele
   // care au ajuns la lungimea celei de acum (plafon 3 zile) si se numara cate au mai tinut
   // inca H zile. Fiecare perioada e un caz independent; cea de acum (neterminata) nu se numara.
+  // v100.271 (ideile auditului 29.10): sfârșitul liniștii = „mișcare mare” cu definiția comună (miscareMare: pe 24 h peste percentila 90),
+  // nu 1,5 × P75 - fișa zicea „liniște de N zile” când sfatul și alerta ziceau „mișcare mare” (și invers). Intrarea rămâne 1,2 × P75,
+  // dar cel mult P90, ca o bară „mare” să nu poată începe o liniște.
   function linisteTine(b, H) {
     if (!b || b.length < 2 * C.BARE_ZI + 1) return null;
     var W = H * C.BARE_ZI, n = b.length, i;
@@ -347,13 +351,14 @@ var GridCalcul = (function () {
       m24[i] = i >= C.BARE_ZI ? Math.abs(b[i].c - b[i - C.BARE_ZI].c) / b[i - C.BARE_ZI].c : null;
       if (m4[i] !== null) l4.push(m4[i]); if (m24[i] !== null) l24.push(m24[i]);
     }
-    var o4 = percentila(l4, 0.75), o24 = percentila(l24, 0.75);
+    var o4 = percentila(l4, 0.75), o24 = percentila(l24, 0.75), p24 = percentila(l24, MISCARE_P);
     if (!(o4 > 0) || !(o24 > 0)) return null;
+    var intra = Math.min(1.2 * o24, p24);
     var mis = new Array(n), inMis = true;   // pana la prima coborare sub 1,2x nu stim -> "miscare"
     for (i = 0; i < n; i++) {
       if (m24[i] === null) { mis[i] = true; continue; }
-      if (inMis && m24[i] < 1.2 * o24) inMis = false;
-      else if (!inMis && m24[i] > C.PRAG_MISCARE * o24) inMis = true;
+      if (inMis && m24[i] < intra) inMis = false;
+      else if (!inMis && m24[i] > p24) inMis = true;
       mis[i] = inMis;
     }
     // perioadele de liniste: [start, sfarsit) - sfarsitul e prima bara cu miscare sau n
@@ -390,8 +395,9 @@ var GridCalcul = (function () {
     if (!o.regim || !o.stat || !o.stat.antren) return { nivel: "fara-date", motive: ["nu am destule lumânări ca să judec"] };
     var rosu = [], galben = [], a = o.stat.antren, rg = o.regim;
     if (rg.miscare) {
-      var r = Math.max(rg.r4h || 0, rg.r24h || 0);
-      rosu.push("prețul abia a făcut o mișcare de " + r.toFixed(1).replace(".", ",") + "× față de obișnuit — după mișcare gridul iese cel mai rău");
+      // v100.271 (ideile auditului 29.10): cifra = cea pe 24 h (definiția comună miscareMare, ca alerta și sfatul), nu maximul cu 4 h
+      var r24 = nr(rg.r24h);
+      rosu.push("prețul abia a făcut o mișcare mare" + (r24 !== null ? ": " + r24.toFixed(1).replace(".", ",") + "× obișnuitul pe 24 h" : " pe 24 h") + " — un grid pornit după mișcare iese cel mai rău");
     }
     if (a.lichidari > 0) rosu.push("pe istoric, setarea asta a fost lichidată " + oriDe(a.lichidari));
     if (o.stat.test && o.stat.test.lichidari > 0) rosu.push("pe zilele nevăzute, setarea asta a fost lichidată " + oriDe(o.stat.test.lichidari));

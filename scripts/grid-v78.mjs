@@ -649,7 +649,10 @@ await test("v79.3 linisteTine: perioade lungi (600 bare) -> linistea de acum (30
   aprox(lung.zileLiniste, (300 - 96) / 96, 0.15, "linistea de acum: 300 de bare de la salt, minus cele 96 in care miscarea pe 24 h e inca mare");
   const scurt = GC.linisteTine(serieLiniste(400, 7, 300), 2);
   assert.ok(scurt && scurt.n >= 4, JSON.stringify(scurt));
-  assert.equal(scurt.k, 0); assert.equal(scurt.p, 0);
+  /* v100.271: liniștea se termină la „mișcare mare” cu definiția comună (pe 24 h peste P90 pe istoricul monedei, ~1 zi din 10). Aici barele
+     de după salt sunt 22% din serie, deci P90 cade chiar pe nivelul saltului și nu orice salt mai e „mare” față de moneda asta: două perioade
+     de 400 se lipesc într-una care ține (6 perioade, 1 ținută). Cele de 400 tot n-au ținut. */
+  assert.ok(scurt.k <= 1 && scurt.p < 0.25, JSON.stringify(scurt));
   const putine = GC.linisteTine(serieLiniste(600, 2, 300), 2);
   assert.equal(putine.suficient, false);
   assert.equal(GC.linisteTine(serieLiniste(600, 5, 300).slice(0, 100), 2), null, "sub 2 zile de istoric -> null");

@@ -29,14 +29,17 @@ var GridLaborator = (function () {
       m24[i] = i >= C.BARE_ZI ? Math.abs(b[i].c - b[i - C.BARE_ZI].c) / b[i - C.BARE_ZI].c : null;
       if (i < nA) { if (m4[i] !== null) l4.push(m4[i]); if (m24[i] !== null) l24.push(m24[i]); }
     }
-    var o4 = G.percentila(l4, 0.75), o24 = G.percentila(l24, 0.75);
+    // v100.271 (ideile auditului 29.10): „mișcare” = definiția comună (GridCalcul.miscareMare): pe 24 h peste percentila 90 (din primele 2/3,
+    // ca restul „obișnuitului” de aici), fără fereastra de 4 h și fără 1,5 × P75. Proba Busolei („după mișcare gridul iese cel mai rău”) e pe
+    // pragul vechi - întrebarea „miscare” de mai jos o remăsoară pe cel nou (nu se moștenește „dovedit”).
+    var o4 = G.percentila(l4, 0.75), o24 = G.percentila(l24, 0.75), p24 = G.percentila(l24, C.MISCARE_P);
     if (!(o4 > 0) || !(o24 > 0)) return out;
-    // durata linistii (histerezis pe 24 h, ca in linisteTine) - doar trecut
-    var run = [], inMis = true, lung = 0;
+    // durata linistii (histerezis pe 24 h, ca in linisteTine: începe sub 1,2 × P75 - cel mult P90 -, se termină peste P90) - doar trecut
+    var run = [], inMis = true, lung = 0, intra = Math.min(1.2 * o24, p24);
     for (i = 0; i < n; i++) {
       if (m24[i] === null) { inMis = true; }
-      else if (inMis && m24[i] < 1.2 * o24) inMis = false;
-      else if (!inMis && m24[i] > C.PRAG_MISCARE * o24) inMis = true;
+      else if (inMis && m24[i] < intra) inMis = false;
+      else if (!inMis && m24[i] > p24) inMis = true;
       lung = inMis ? 0 : lung + 1; run[i] = lung;
     }
     for (var s = 7 * C.BARE_ZI; s + W <= n; s += C.PAS_FERESTRE) {
@@ -55,7 +58,7 @@ var GridLaborator = (function () {
       }
       out.push({ inValoare: inV, netVa: netVa,
         s: s, t: b[s].t, parte: parte, net: P.simuleaza(b, s, W, st).net,   // v100.259: și ora pornirii (blocurile pe zile, aliniate între monede)
-        miscare: (m4[u] !== null && m4[u] > C.PRAG_MISCARE * o4) || (m24[u] !== null && m24[u] > C.PRAG_MISCARE * o24),
+        miscare: m24[u] !== null && m24[u] > p24,
         linisteZile: run[u] / C.BARE_ZI,
         margine: poz < C.MARGINE_RANGE || poz > 1 - C.MARGINE_RANGE
       });

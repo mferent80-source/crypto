@@ -36,10 +36,12 @@ await test("(a) GridSim.verdictScurt: 7 zile + «ce aș face» + pe o zi, într-
 await test("(b) app: tbMc la 15 min (TB_MC_MS), pornit la tic și la alt bot; GridSim pe botul reluat (stPrefix, [1,7] zile), funding-ul real; rândul primul în citire, cu ceasul și clicul spre Simulator", () => {
   assert.match(APP, /var TB_MC_MS=15\*60000/); assert.match(functie(APP, "tbDeseneazaTabloulUnic"), /tbMcTick\(\)/);
   /* v100.269 (auditul MC): + 1 h și 4 h (riscul pe termen scurt); 1 și 7 zile rămân */
-  const p = functie(APP, "tbMcPorneste"); assert.match(p, /mcsAduCoin\(sim\)/); assert.match(p, /GridSim\.setariDinBot\(b\)/); assert.match(p, /await tbMcSimuleaza\(tbMc\.b15,st,\{plan:plan,pornitLa:pornitLa,stPrefix:pornitLa\?st:null,n:500,seed:12,orizonturi:\[1\/24,4\/24,1,7\],zile:14\}\)/); assert.match(p, /GridSim\.verdictScurt\(/); assert.match(p, /fundingZi:fi\?fi\.rataZi:0\.0003,fundingCost:!fi/);
+  /* v100.271 (ideile auditului 29.10): mcsAduCoin(sim, {fara1D, vechi}) - barele lipite, fără 1D; drumuri de 7 zile (cel mai lung orizont citit) */
+  const p = functie(APP, "tbMcPorneste"); assert.match(p, /mcsAduCoin\(sim[,)]/); assert.match(p, /GridSim\.setariDinBot\(b\)/); assert.match(p, /await tbMcSimuleaza\(tbMc\.b15,st,\{plan:plan,pornitLa:pornitLa,stPrefix:pornitLa\?st:null,n:500,seed:12,orizonturi:\[1\/24,4\/24,1,7\],zile:7\}\)/); assert.match(p, /GridSim\.verdictScurt\(/); assert.match(p, /fundingZi:fi\?fi\.rataZi:0\.0003,fundingCost:!fi/);
   const t = functie(APP, "tbMcTick"); assert.match(t, /Date\.now\(\)-tbMc\.la<TB_MC_MS/); assert.match(t, /tbPanouVizibil\(\)/);
   const c = functie(APP, "tbDeseneazaCitire"); assert.match(c, /tbMcRand\(b\)/); assert.match(c, /out\.unshift\(/); assert.match(c, /data-action-click="gsDeschideBot\(\)">'\+escapeHtml\(mc\.buton\)\+'<\/button>/);   // v100.141: eticheta butonului după fel
-  const r = functie(APP, "tbMcRand"); assert.match(r, /șanse pe drumuri ca ultimele 14 zile, nu o predicție/); assert.match(r, /socotit "\)\+hm\(tbMc\.la\)\+" · următorul "\+hm\(tbMc\.urmatorul\)/);   // v100.141: „socotit de colector” când vine din KV
+  /* v100.271 (ideile auditului 29.10): fraza adevărată - drumurile se trag din ~31 de zile de bare, nu „ca ultimele 14” */
+  const r = functie(APP, "tbMcRand"); assert.match(r, /șanse pe drumuri trase din ultima lună de prețuri, nu o predicție/); assert.match(r, /socotit "\)\+hm\(tbMc\.la\)\+" · următorul "\+hm\(tbMc\.urmatorul\)/);   // v100.141: „socotit de colector” când vine din KV
   assert.match(CSS, /#tabloubot \.tbCitR\.tbCitMc\{/);
 });
 await test("(c) comportamentul: primul tic socotește pe bot (lumânări prin mcsAduCoin o dată), al doilea tic în 15 minute nu; alt bot ⇒ din nou; rândul pentru alt bot e null", async () => {
@@ -51,7 +53,7 @@ await test("(c) comportamentul: primul tic socotește pe bot (lumânări prin mc
   vm.createContext(ctx); vm.runInContext(src, ctx);
   await ctx.tbMcTick(); for (let i = 0; i < 100 && ctx.tbMc.inLucru; i++) await new Promise((r) => setTimeout(r, 50)); await new Promise((r) => setTimeout(r, 60));
   assert.equal(aduceri, 1); assert.ok(ctx.tbMc.rand, "verdictul e gata"); assert.equal(ctx.tbMc.botId, "1"); assert.ok(ctx.tbMc.urmatorul - ctx.tbMc.la === 15 * 60000);
-  const r = ctx.tbMcRand(ctx.tbStare.bot); assert.equal(r.ce, "Monte Carlo"); assert.match(r.text, /^de aici încolo, 7 zile: /); assert.match(r.nota, /^șanse pe drumuri ca ultimele 14 zile, nu o predicție · socotit \d\d:\d\d · următorul \d\d:\d\d$/);   // v100.140: nota separată
+  const r = ctx.tbMcRand(ctx.tbStare.bot); assert.equal(r.ce, "Monte Carlo"); assert.match(r.text, /^de aici încolo, 7 zile: /); assert.match(r.nota, /^șanse pe drumuri trase din ultima lună de prețuri, nu o predicție · socotit \d\d:\d\d · următorul \d\d:\d\d$/);   // v100.140: nota separată
   assert.equal(ctx.tbMcRand(bot("2")), null, "alt bot ⇒ nimic din verdictul vechi");
   const la = ctx.tbMc.la; await ctx.tbMcTick(); await new Promise((r) => setTimeout(r, 80)); assert.equal(aduceri, 1); assert.equal(ctx.tbMc.la, la, "în 15 minute nu se socotește din nou");
   ctx.tbStare.bot = bot("2"); await ctx.tbMcTick(); for (let i = 0; i < 100 && ctx.tbMc.inLucru; i++) await new Promise((r) => setTimeout(r, 50)); await new Promise((r) => setTimeout(r, 60));
