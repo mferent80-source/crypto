@@ -4425,7 +4425,7 @@ async function futuresProbaArata(){
 async function futuresTabel(){
  const box=$("fTabel");if(!box)return;
  const lista=FuturesCitire.univers(typeof tbStare!=="undefined"&&tbStare&&Array.isArray(tbStare.boti)?tbStare.boti:[]),randuri=[];let i=0;
- box.textContent="Se încarcă "+lista.length+" monede…";
+ box.textContent="Se încarcă "+TextRo.cate(lista.length,"monedă","monede")+"…";
  const lucreaza=async()=>{while(i<lista.length){const s=lista[i++];try{randuri.push(FuturesCitire.randTabel(await getJSON("/api/market?type=futures&symbol="+encodeURIComponent(s))))}catch(e){randuri.push(FuturesCitire.randTabel({simbol:s,eroare:true}))}}};
  await Promise.all([lucreaza(),lucreaza(),lucreaza()]);
  box.innerHTML=FuturesCitire.tabelHtml(randuri)}

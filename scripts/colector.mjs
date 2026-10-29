@@ -740,7 +740,7 @@ async function turaFuturesProbaColector() {
   try {
     const r = await turaFuturesProba({ F: FuturesCitire, cere, trimite, jurnal, fisier: path.join(DATA, "futures-jurnal.jsonl"), acum: Date.now(), univers: FuturesCitire.univers(ultimiiBoti || []) });
     futuresProbaOra = oraAcum; tineRitm("futuresProba", Date.now());
-    jurnal("futures proba", r.randuri + " rânduri noi, " + r.total + " în jurnal");
+    jurnal("futures proba", cate(r.randuri, "rând nou", "rânduri noi") + ", " + cate(r.total, "rând", "rânduri") + " în jurnal");
   } catch (e) { jurnal("futures proba ESEC", e.message); }
   futuresProbaInLucru = false;
 }
