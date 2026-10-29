@@ -123,6 +123,18 @@ await test("1i fraza din cifre: cine plătește, la câte ore, cât pe zi (o zec
   assert.doesNotMatch(t, /NaN|undefined|null/);
   const g = F.fraza({});
   assert.doesNotMatch(g, /NaN|undefined|null/);
+  // revizia Opus 5–7: „1.000 USDT” e valoarea poziției, nu marja; maximul nu e „mai sus decât în 100%”; o listare nouă nu e „în 24 h”
+  assert.match(t, /poziție de 1\.000 USDT \(valoarea poziției, nu marja\)/);
+  assert.match(F.subFunding({ funding: 0.0001, ore: 8 }), /la o poziție de 1\.000 USDT/);
+  const ist = Array.from({ length: 100 }, (_, i) => [i, 1 + i / 100]);
+  const varf = F.aglomerare({ ls: 5, lsIst: ist });
+  assert.match(F.fraza({ ls: 5, lsPct: varf.lsPct, lsMax: varf.lsMax }), /cel mai sus din ultimele ore/);
+  assert.doesNotMatch(F.fraza({ ls: 5, lsPct: varf.lsPct, lsMax: varf.lsMax }), /100%/);
+  const fund = F.aglomerare({ ls: 0.5, lsIst: ist });
+  assert.match(F.fraza({ ls: 0.5, lsPct: fund.lsPct, lsMin: fund.lsMin }), /cel mai jos din ultimele ore/);
+  const nou = F.oiPret([{ sumOpenInterest: "100", sumOpenInterestValue: "100", timestamp: 0 }, { sumOpenInterest: "110", sumOpenInterestValue: "110", timestamp: 600000 }]);
+  assert.equal(nou.ore, 0);
+  assert.match(F.fraza({ oiPret: nou }), /În ultima oră OI/);
 });
 
 // ---------------------------------------------------------------- 2. serverul
@@ -188,6 +200,12 @@ await test("2e fără contract pe Binance: faraContract, valorile null; a doua c
   assert.equal(r2.corp.faraContract, true);
   assert.equal(r2.cerute.length, 0, r2.cerute.join(" "));
 });
+await test("2g simbolul cerut se taie la 30 de caractere (memoria „fără contract” nu crește cu șiruri lungi)", async () => {
+  const rasp = (url) => /ticker\/price/.test(url) ? { corp: "[]" } : invalid;
+  const r = await server(rasp, { simbol: "A".repeat(200) + "USDT" });
+  assert.ok(r.corp.simbol.length <= 30, r.corp.simbol.length);
+  for (const u of r.cerute) assert.ok(!/A{31}/.test(u), u.slice(0, 120));
+});
 await test("2f refuzul Binance (403) rămâne spus pe fiecare din cele 5 cereri, fără „fără contract”", async () => {
   const { corp } = await server({ status: 403, corp: "<html>forbidden</html>" });
   assert.ok(Object.keys(corp.probleme || {}).length >= 5); assert.match(String(corp.probleme.funding), /403/);
@@ -197,10 +215,10 @@ await test("2f refuzul Binance (403) rămâne spus pe fiecare din cele 5 cereri,
 // ---------------------------------------------------------------- 3. pagina: derivatives()
 function cutie(raspunsServer, opt = {}) {
   const el = {}, cerute = [], fresh = [];
-  const $ = (id) => (el[id] = el[id] || { textContent: "", className: "", innerHTML: "", title: "", value: "" });
+  const $ = (id) => { if (opt.arunca && opt.arunca.id === id && opt.arunca.n-- > 0) throw new Error("proba: " + id); return (el[id] = el[id] || { textContent: "", className: "", innerHTML: "", title: "", value: "" }); };
   const src = fnApp("derivatives").replace(/^function derivatives\(\)/, "async function()").replace(/\nlet scannerRows=\[\];[\s\S]*$/, "");
   const win = opt.window || {};
-  const deps = { $, assetClass: () => opt.clasa || "CRYPTO", norm: (s) => s, document: { getElementById: (id) => $(id) }, window: win, markFresh: (k) => fresh.push(k),
+  const deps = { $, assetClass: () => (opt.clasaFn ? opt.clasaFn() : opt.clasa || "CRYPTO"), norm: (s) => s, document: { getElementById: (id) => $(id) }, window: win, markFresh: (k) => fresh.push(k),
     simBinanceFut: new Function("return " + APP.match(/function simBinanceFut\([^\n]*/)[0])(),
     getJSON: async (u) => { cerute.push(u); if (u.startsWith("/api/")) return typeof raspunsServer === "function" ? raspunsServer(u) : raspunsServer; throw new Error("400"); },
     oiChangeAt: new Function("return " + fnApp("oiChangeAt"))(), pctText: new Function("return " + fnApp("pctText"))(),
@@ -239,6 +257,33 @@ await test("3b răspunsul vechi (BTC, lent) nu scrie peste cel nou (ETH, rapid)"
   await Promise.all([p1, p2]);
   assert.equal(win.__derivativesState.funding, 0.0002);
   assert.match(a.el.fMeta.textContent, /ETHUSDT/);
+});
+// revizia Opus (29.10), punctul 1: analyze(ETH) schimbă caseta și golește starea, dar cheamă derivatives() abia după lumânări
+await test("3g caseta s-a schimbat fără o cerere nouă (analyze în curs): răspunsul vechi nu scrie starea și nici pagina", async () => {
+  const win = {};
+  const lent = () => new Promise((z) => setTimeout(() => z({ ...serverCoti, simbol: "BTCUSDT", funding: 0.0001 }), 40));
+  const a = cutie(lent, { window: win, simbol: "BTCUSDT" });
+  const p1 = a.f();
+  a.$("symbol").value = "ETHUSDT"; win.__derivativesState = {};
+  await p1;
+  assert.deepEqual(win.__derivativesState, {});
+  assert.doesNotMatch(String(a.el.fMeta && a.el.fMeta.textContent), /BTCUSDT/);
+  assert.doesNotMatch(String(a.el.funding && a.el.funding.textContent), /0,0100/);
+});
+await test("3h trecerea pe acțiuni în timpul cererii: răspunsul crypto nu mai scrie, cache-ul se golește", async () => {
+  let clasa = "CRYPTO"; const win = {};
+  const lent = () => new Promise((z) => setTimeout(() => z(serverCoti), 40));
+  const a = cutie(lent, { window: win, clasaFn: () => clasa });
+  const p1 = a.f(); clasa = "STOCKS"; await a.f(); await p1;
+  assert.deepEqual(win.__derivativesState, {}); assert.equal(win.__derivCache, null);
+});
+// revizia Opus, punctul 2: o excepție în desenare lăsa în cache o promisiune respinsă ⇒ moneda rămânea blocată
+await test("3i o excepție în desenare nu blochează moneda: următoarea cerere pleacă din nou", async () => {
+  const c = cutie(serverCoti, { arunca: { id: "oiPret24", n: 1 } });
+  await assert.rejects(c.f());
+  await c.f();
+  assert.equal(c.cerute.length, 2, c.cerute.join(" "));
+  assert.match(c.el.ftext.textContent, /Context, nu semnal/);
 });
 await test("3c aceeași monedă în 30 s: o singură cerere; în zbor: tot una; „↻” (true) cere din nou", async () => {
   const c = cutie(serverCoti);

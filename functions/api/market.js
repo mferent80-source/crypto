@@ -111,13 +111,14 @@ export async function onRequestGet({request,env}){
   if(type!=="futures")return new Response(JSON.stringify({error:"Spot data is fetched directly by the browser"}),{status:400,headers:H});
   // futures trage 5 cereri Binance pe fiecare apel: fara autentificare, oricine putea folosi serverul ca proxy.
   {const auth=await requireApiAuth(request,env,"market-futures",60);if(!auth.ok)return authErrorResponse(auth,H)}
-  const cerut=(u.searchParams.get("symbol")||"BTCUSDT").toUpperCase().replace(/[^A-Z0-9]/g,"");
+  // revizia 29.10: tăiat la 30 de caractere (cel mai lung contract Binance are ~15), ca memoria „fără contract” să nu crească cu șiruri lungi
+  const cerut=(u.searchParams.get("symbol")||"BTCUSDT").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,30);
   // v100.264: moneda fără contract perpetuu pe Binance (ținută minte 6 h) nu mai bate Binance de 5 ori la fiecare analiză
   if((faraContractPana.get(cerut)||0)>Date.now())return ok({funding:null,openInterest:null,longShort:null,oiHist5m:null,fundingHist:null,simbol:simbolInMii(cerut),faraContract:true});
   let symbol=simbolInMii(cerut),r=await cereFutures(symbol);
   // v100.264: „Invalid symbol” ⇒ poate stă în mii pe Binance (o listare nouă, ca 1000PEPE) - se caută o dată în lista contractelor
   if(r.invalid){const alt=await gasesteInMii(cerut);if(alt&&alt!==symbol){symbol=alt;r=await cereFutures(alt)}}
-  if(r.invalid){faraContractPana.set(cerut,Date.now()+6*3600000);return ok({funding:null,openInterest:null,longShort:null,oiHist5m:null,fundingHist:null,simbol:symbol,faraContract:true,probleme:r.probleme})}
+  if(r.invalid){if(faraContractPana.size>500)for(const [k,t] of faraContractPana)if(t<=Date.now())faraContractPana.delete(k);faraContractPana.set(cerut,Date.now()+6*3600000);return ok({funding:null,openInterest:null,longShort:null,oiHist5m:null,fundingHist:null,simbol:symbol,faraContract:true,probleme:r.probleme})}
   const raspuns={funding:r.funding,openInterest:r.openInterest,longShort:r.longShort,oiHist5m:r.oiHist5m,fundingHist:r.fundingHist,
     simbol:symbol,markPrice:r.markPrice,indexPrice:r.indexPrice,nextFundingTime:r.nextFundingTime,fundingIntervalHours:intervalFunding(r.fundingHist),
     oiUsd:r.openInterest!=null&&r.markPrice>0?r.openInterest*r.markPrice:null,lsIst:r.lsIst};

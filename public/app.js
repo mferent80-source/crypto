@@ -4336,16 +4336,18 @@ function simBinanceFut(s){s=String(s||"").toUpperCase();const b=s.replace(/USDT$
 // Codurile contextului (CROWDED / CONTRARIAN + / BALANCED / null) rămân în stare pentru verdict și Flux; pe pagină se scriu în română.
 async function derivatives(){
  const fortat=arguments[0]===true,F=FuturesCitire,W=window;
- if(assetClass()==="STOCKS"){$("ftext").textContent="Contextul futures crypto nu intră în semnalele acțiunilor US.";for(const id of ["funding","oi","lsratio","fcontext","fundingBias","crowdingRisk","oiContext"])if($(id))$(id).textContent="N/A";for(const id of ["fundingSub","oiSub","lsSub","fcontextSub","fundingMed","oiPret24","fMeta"])if($(id))$(id).textContent="—";window.__derivativesState={};return}
+ if(assetClass()==="STOCKS"){W.__derivSeq=(W.__derivSeq||0)+1;W.__derivCache=null;$("ftext").textContent="Contextul futures crypto nu intră în semnalele acțiunilor US.";for(const id of ["funding","oi","lsratio","fcontext","fundingBias","crowdingRisk","oiContext"])if($(id))$(id).textContent="N/A";for(const id of ["fundingSub","oiSub","lsSub","fcontextSub","fundingMed","oiPret24","fMeta"])if($(id))$(id).textContent="—";window.__derivativesState={};return}
  let sym=norm($("symbol").value);
  const c=W.__derivCache;
  if(!fortat&&c&&c.sym===sym){if(c.p)return c.p;if(c.stare&&Date.now()-c.la<30000){W.__derivativesState=c.stare;if(W.__radarState&&W.__radarState.q){updateFlowWindow(W.__radarState.q);renderLiquidationProxy(W.__radarState.q,c.stare);renderQuantFlow(W.__radarState.q,c.stare)}return}}
  const seq=W.__derivSeq=(W.__derivSeq||0)+1,p=(async()=>{
+ // revizia 29.10: analyze() schimbă caseta și golește starea înainte să cheme derivatives() ⇒ jetonul singur nu ajunge; se cer și moneda, și clasa
+ const vechi=()=>seq!==W.__derivSeq||norm($("symbol").value)!==sym||assetClass()!=="CRYPTO";
  $("ftext").textContent="Se încarcă date futures…";
  let d=null,histOI=null,fundingHist=null,motivFutures="";
  try{d=await getJSON(`/api/market?type=futures&symbol=${encodeURIComponent(sym)}`);histOI=d&&d.oiHist5m||null;fundingHist=d&&d.fundingHist||null}
  catch(e){motivFutures=/AUTH_RATE_LIMITED/.test(String(e.message||""))||e.status===429&&/AUTH_/.test(String(e.message||""))?"Prea multe parole greșite de pe acest calculator - așteaptă un minut și verifică parola din Setări (⚙).":eroareDeParola(e.message,e.status)?"Serverul cere parola aplicației pentru futures - pune-o în Setări (⚙).":"Serverul nu a dat futures ("+textEroare(e)+")."}
- if(seq!==W.__derivSeq)return null;
+ if(vechi())return null;
  const dServer=d;
  if(!(d&&d.faraContract)&&(!d||[d.funding,d.openInterest,d.longShort].every(x=>x==null))){
    try{
@@ -4361,7 +4363,7 @@ async function derivatives(){
     histOI=oih;fundingHist=fh;
    }catch{}
  }
- if(seq!==W.__derivSeq)return null;
+ if(vechi())return null;
  const fin=v=>v!=null&&v!==""&&Number.isFinite(+v)?+v:null,ore=fin(d&&d.fundingIntervalHours)||F.interval(fundingHist);
  let fr=fin(d&&d.funding),oi=fin(d&&d.openInterest),ls=fin(d&&d.longShort);
  const ag=F.aglomerare({funding:fr,ore,ls,lsIst:d&&Array.isArray(d.lsIst)?d.lsIst:null}),op=F.oiPret(histOI);
@@ -4390,12 +4392,12 @@ async function derivatives(){
  const stare={funding:fr,oi,ls,context,longPct,shortPct,oiTrend,oiDeltas,fundingStats,fundingIntervalHours:ore,fr8:ag.fr8,lsPct:ag.lsPct,conflict:ag.conflict,oiUsd,simbol:simbolF,la:Date.now()};
  W.__derivativesState=stare;if(areDate)markFresh("futures");
  if(W.__radarState&&W.__radarState.q){updateFlowWindow(W.__radarState.q);renderLiquidationProxy(W.__radarState.q,stare);renderQuantFlow(W.__radarState.q,stare)}
- $("ftext").textContent=areDate?F.fraza({funding:fr,ore,oiPret:op,ls,lsPct:ag.lsPct}):d&&d.faraContract?F.motiv(d):("Datele futures lipsesc acum; analiza spot rămâne completă. "+(motivFutures||F.motiv(dServer))).trim();
+ $("ftext").textContent=areDate?F.fraza({funding:fr,ore,oiPret:op,ls,lsPct:ag.lsPct,lsMax:ag.lsMax,lsMin:ag.lsMin}):d&&d.faraContract?F.motiv(d):("Datele futures lipsesc acum; analiza spot rămâne completă. "+(motivFutures||F.motiv(dServer))).trim();
  return areDate?stare:null;
  })();
  W.__derivCache={sym,p,la:0,stare:null};
- const stare=await p;
- if(W.__derivCache&&W.__derivCache.p===p)W.__derivCache={sym,p:null,la:stare?Date.now():0,stare};
+ let stare=null;   // revizia 29.10: și pe excepție cache-ul se eliberează (altfel moneda rămânea pe o promisiune respinsă)
+ try{stare=await p}finally{if(W.__derivCache&&W.__derivCache.p===p)W.__derivCache={sym,p:null,la:stare?Date.now():0,stare}}
  return stare;
 }
 let scannerRows=[];

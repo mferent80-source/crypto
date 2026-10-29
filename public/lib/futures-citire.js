@@ -78,8 +78,10 @@ var FuturesCitire = (function () {
     var lsVot = p === null ? 0 : p >= PCT_SUS ? -1 : p <= PCT_JOS ? 1 : 0;
     var conflict = fVot !== 0 && lsVot !== 0 && fVot !== lsVot, s = fVot + lsVot;
     var context = f === null && l === null ? null : conflict ? "BALANCED" : s > 0 ? "CONTRARIAN +" : s < 0 ? "CROWDED" : "BALANCED";
-    var n = valori(o.lsIst).length;
-    return { context: context, conflict: conflict, fVot: fVot, lsVot: lsVot, lsPct: p, fr8: f8, mediana: mediana(o.lsIst), zile: n >= MIN_IST ? Math.round(n / 24) : null };
+    var v = valori(o.lsIst), n = v.length, judecat = p !== null;
+    // revizia 29.10: percentila numără „≤”, deci maximul iese 100% - pe ecran se spune „cel mai sus”, nu „mai sus decât în 100%”
+    return { context: context, conflict: conflict, fVot: fVot, lsVot: lsVot, lsPct: p, fr8: f8, mediana: mediana(o.lsIst), zile: n >= MIN_IST ? Math.round(n / 24) : null,
+      lsMax: judecat && l >= Math.max.apply(null, v), lsMin: judecat && l <= Math.min.apply(null, v) };
   }
 
   // OI și prețul futures pe fereastra rândurilor (24 h la 289 de rânduri de 5 min); prețul = valoarea / bucățile, din aceleași rânduri
@@ -126,7 +128,7 @@ var FuturesCitire = (function () {
     var ore = nr(o.ore), c = cost1000(f, ore), parti = [];
     parti.push(ore ? "la " + ore + " h" : "intervalul nu se știe (socotit la 8 h)");
     parti.push(f > 0 ? "longurile plătesc" : f < 0 ? "shorturile plătesc" : "nimeni nu plătește");
-    if (f !== 0) parti.push("≈ " + num(Math.abs(c), 1) + " USDT pe zi la 1.000 USDT");
+    if (f !== 0) parti.push("≈ " + num(Math.abs(c), 1) + " USDT pe zi la o poziție de 1.000 USDT");
     var t = nr(o.urmatoarea), acum = nr(o.acum) || Date.now();
     if (t !== null && t > acum) {
       var m = Math.round((t - acum) / 60000);
@@ -176,20 +178,20 @@ var FuturesCitire = (function () {
     else {
       var f8 = pe8h(f, ore), c = cost1000(f, ore);
       var s = (f > 0 ? "Longurile plătesc shorturilor " : "Shorturile plătesc longurilor ") + rata(f) + (ore ? " la fiecare " + ore + " h" : " la fiecare plată (intervalul nu se știe, socotit la 8 h)") +
-        ": ≈ " + num(Math.abs(c), 1) + " USDT pe zi la 1.000 USDT.";
+        ": ≈ " + num(Math.abs(c), 1) + " USDT pe zi la o poziție de 1.000 USDT (valoarea poziției, nu marja).";
       if (Math.abs(f8) <= BAZA8) s += " Nivel obișnuit.";
       else if (Math.abs(f8) <= PRAG8) s += " Peste nivelul obișnuit, sub prag.";
       else s += " De " + num(Math.abs(f8) / BAZA8, 1) + "× nivelul de bază: " + (f > 0 ? "longurile" : "shorturile") + " sunt înghesuite.";
       t.push(s);
     }
     var op = o.oiPret;
-    if (op && op.stare) t.push("În " + (op.ore ? cate(op.ore, "oră", "ore") : "24 h") + " OI " + semn(op.oi24, 1) + "%" + (op.pret24 !== null && op.pret24 !== undefined ? " și prețul " + semn(op.pret24, 1) + "%" : "") + ": " + STARI[op.stare] + ".");
+    if (op && op.stare) t.push("În " + (op.ore == null ? "24 h" : op.ore >= 1 ? cate(op.ore, "oră", "ore") : "ultima oră") + " OI " + semn(op.oi24, 1) + "%" + (op.pret24 !== null && op.pret24 !== undefined ? " și prețul " + semn(op.pret24, 1) + "%" : "") + ": " + STARI[op.stare] + ".");
     var ls = nr(o.ls), p = nr(o.lsPct);
     if (ls !== null) {
       var u = Math.round(ls / (1 + ls) * 100) + "% din conturi sunt long (raport " + num(ls, 2) + ")";
       if (p === null) u += "; fără istoric, nu-l judec";
-      else if (p >= PCT_SUS) u += ": neobișnuit de mult long pentru moneda asta - mai sus decât în " + Math.floor(p) + "% din ultimele ore";
-      else if (p <= PCT_JOS) u += ": neobișnuit de mult short pentru moneda asta - mai jos decât în " + Math.floor(100 - p) + "% din ultimele ore";
+      else if (p >= PCT_SUS) u += ": neobișnuit de mult long pentru moneda asta - " + (o.lsMax ? "cel mai sus din ultimele ore" : "mai sus decât în " + Math.floor(p) + "% din ultimele ore");
+      else if (p <= PCT_JOS) u += ": neobișnuit de mult short pentru moneda asta - " + (o.lsMin ? "cel mai jos din ultimele ore" : "mai jos decât în " + Math.floor(100 - p) + "% din ultimele ore");
       else if (p >= ZONA_SUS) u += ": spre long, sus pentru moneda asta (p" + pr(p) + "), dar nu la extrem";
       else if (p <= ZONA_JOS) u += ": spre short, jos pentru moneda asta (p" + pr(p) + "), dar nu la extrem";
       else u += ": obișnuit pentru moneda asta (p" + pr(p) + ")";
