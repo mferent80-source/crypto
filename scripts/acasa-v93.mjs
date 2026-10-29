@@ -39,9 +39,10 @@ await test("largimeNdx: cate urca / peste medii / RSI>50 / in miscare; top 5 sus
 
 // ---------------- vremea bursei ----------------
 const urca = zile(260, (i) => 100 * Math.pow(1.002, i)), coboara = zile(260, (i) => 100 * Math.pow(0.998, i));
-await test("vremeBursa: trend sus + jumatate sub EMA50 -> URCARE INGUSTA; trend sus + majoritatea peste -> URCARE LARGA; cu 'ce as face'", () => {
+await test("vremeBursa: trend sus + jumatate sub EMA50 -> URCARE MIXTA (v100.269; sub 40% INGUSTA); trend sus + majoritatea peste -> URCARE LARGA; cu 'ce as face'", () => {
   const ing = A.vremeBursa({ qqq: urca, vix: 14.87, ndx: A.largimeNdx(NDX) });
-  assert.equal(ing.nivel, "ingusta"); assert.match(ing.eticheta, /URCARE ÎNGUSTĂ/); assert.match(ing.text, /5 din 10/); assert.match(ing.faCe, /deja pe trend/);
+  /* v100.269: 5 din 10 (50%) e „URCARE MIXTĂ” (Macro.PRAGURI.latime: sub 40% îngustă, ca Scorul zilei); nivelul rămâne „ingusta” */
+  assert.equal(ing.nivel, "ingusta"); assert.match(ing.eticheta, /URCARE MIXTĂ/); assert.match(ing.text, /5 din 10/); assert.match(ing.faCe, /deja pe trend/);
   const larg = A.vremeBursa({ qqq: urca, vix: 14.87, ndx: A.largimeNdx(NDX.map((x) => ({ ...x, e50: true }))) });
   assert.equal(larg.nivel, "larga");
 });

@@ -37,7 +37,9 @@ class El {
 }
 const pagina = () => { const els = {}; return { els, $: (id) => (els[id] ??= new El()) }; };
 /* un context nou pe fiecare rulare: funcțiile extrase văd DOAR ce le dăm (un nume uitat = ReferenceError, nu o trecere tăcută) */
-const ruleaza = (nume, box) => { vm.createContext(box); vm.runInContext(nume.map(fnApp).join("\n"), box, { filename: "app-extras.js" }); return box; };
+/* v100.269: ponderile verdictului stau într-o singură listă (`var MOTOR_PONDERI` în app.js), citită de renderMasterVerdict - o punem în fiecare context */
+const MOTOR = (() => { const i = APP.indexOf("\nvar MOTOR_PONDERI="); assert.ok(i >= 0, "lipsește MOTOR_PONDERI în app.js"); return APP.slice(i + 1, APP.indexOf("};", i) + 2); })();
+const ruleaza = (nume, box) => { vm.createContext(box); vm.runInContext(MOTOR + "\n" + nume.map(fnApp).join("\n"), box, { filename: "app-extras.js" }); return box; };
 const aprox = (a, b, eps = 0.005, msg) => assert.ok(Number.isFinite(a) && Math.abs(a - b) <= eps, (msg || "") + ` așteptat ≈${b}, primit ${a}`);
 
 // ───────────── Master Verdict (renderMasterVerdict întreg, cu modulele din jur ca stub-uri) ─────────────
@@ -177,7 +179,8 @@ await test("3f „Piața azi”: fără rezultate „Prob. calibrată” e „�
 await test("3g Verdict Center: modulul „Calibration v2” nu e disponibil fără rezultate (înainte: 72,0%, cu bias)", () => {
   const sursa = fnApp("buildVerdictCenterSnapshot"), a = sursa.indexOf("const calBias="), b = sursa.indexOf("\n", sursa.indexOf('add(vcItem("Calibration v2"', a));
   assert.ok(a > 0 && b > a, "nu găsesc rândurile calibrării în buildVerdictCenterSnapshot");
-  const ruleazaFrag = (cal, dir) => { let item = null; new Function("cal", "dir", "add", "vcItem", sursa.slice(a, b))(cal, dir, (x) => { item = x; }, (name, family, bias, value, detail, o) => ({ name, bias, value, ...o })); return item; };
+  /* v100.269: rândul ia ponderea prin pw("calibration",…) din MOTOR_PONDERI - aici pw dă mai departe opțiunile (disponibilitatea e ce se verifică) */
+  const ruleazaFrag = (cal, dir) => { let item = null; new Function("cal", "dir", "add", "vcItem", "pw", sursa.slice(a, b))(cal, dir, (x) => { item = x; }, (name, family, bias, value, detail, o) => ({ name, bias, value, ...o }), (k, o = {}) => o); return item; };
   const gol = ruleazaFrag(calibrare(0), 1);
   assert.equal(gol.available, false, JSON.stringify(gol)); assert.ok(!Number.isFinite(gol.bias), "bias=" + gol.bias);
   const c = calibrare(40), plin = ruleazaFrag(c, 1);

@@ -59,7 +59,8 @@ await test("(1a) lib/grid-sim-worker.js: rulează în afara paginii (fără wind
   assert.match(SW, /"\/lib\/grid-sim\.js","\/lib\/grid-sim-worker\.js"/, "worker-ul e în APP_SHELL (merge și instalat / offline)");
 });
 await test("(1b) tbMcSimuleaza: cu Worker ⇒ rezultatul vine din worker (pagina nu socotește); fără Worker / worker picat ⇒ pe fir, același rezultat; tbMcPorneste îl folosește", async () => {
-  assert.match(functie(APP, "tbMcPorneste"), /await tbMcSimuleaza\(tbMc\.b15,st,\{plan:plan,pornitLa:pornitLa,stPrefix:pornitLa\?st:null,n:500,seed:12,orizonturi:\[1,7\],zile:14\}\)/);
+  /* v100.269 (auditul MC): + 1 h și 4 h (riscul pe termen scurt); 1 și 7 zile rămân */
+  assert.match(functie(APP, "tbMcPorneste"), /await tbMcSimuleaza\(tbMc\.b15,st,\{plan:plan,pornitLa:pornitLa,stPrefix:pornitLa\?st:null,n:500,seed:12,orizonturi:\[1\/24,4\/24,1,7\],zile:14\}\)/);
   const src = APP.match(/var tbMcWorker=null[^\n]*\n/)[0] + functie(APP, "tbMcWorkerAsteptare") + "\n" + functie(APP, "tbMcSimuleaza");
   const fa = (Worker) => { const ctx = { console, Date, Math, Object, Array, String, Number, JSON, isFinite, Promise, setTimeout, clearTimeout, GridSim: GS }; if (Worker) ctx.Worker = Worker; vm.createContext(ctx); vm.runInContext(src, ctx); return ctx; };
   const o = { plan: null, n: 20, seed: 12, orizonturi: [7], zile: 14 }, peFir = GS.simuleaza(B, ST, o);

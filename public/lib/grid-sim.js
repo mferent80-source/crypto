@@ -108,14 +108,19 @@ var GridSim = (function () {
   // de puncte între cele două jumătăți ale istoricului (SOL 32% / 70%). Incertitudinea reală = jackknife pe GRUPE de zile consecutive: pentru
   // fiecare grupă, P din drumurile care nu folosesc nicio bară din ea (= Monte Carlo pe istoricul fără grupa aceea); varianța jackknife
   // (K−1)/K·Σ(P_g − P̄)². Grupa cu sub 20 de drumuri nu intră; sub 3 grupe ⇒ null (nu se poate socoti). Puncte procentuale, rotunjite.
-  var GRUPE_ZILE = 6, MIN_DRUMURI_GRUPA = 20;
-  function marjaZile(vals, masti, K) {
-    if (!(K >= 3) || !vals.length) return null;
-    var pg = [];
-    for (var g = 0; g < K; g++) { var n = 0, k = 0, bit = 1 << g; for (var i = 0; i < vals.length; i++) if (!(masti[i] & bit)) { n++; if (vals[i] > 0) k++; } if (n >= MIN_DRUMURI_GRUPA) pg.push(k / n); }
-    if (pg.length < 3) return null;
-    var m = pg.reduce(function (a, c) { return a + c; }, 0) / pg.length, ss = pg.reduce(function (a, c) { return a + (c - m) * (c - m); }, 0);
-    return Math.round(1.96 * Math.sqrt((pg.length - 1) / pg.length * ss) * 100);
+  // v100.269 (ideile auditului 29.10): marja pe zile ANALITIC, nu dintr-un singur set de drumuri. Jackknife-ul de mai sus se socotea din drumurile care
+  // ocolesc grupa (la 14 zile ~8% din 500): pe aceeași monedă, semințele 12…20 dădeau ±4…±41 la o zi și ±5…±63 la 7 zile, iar pe 40 de istorii
+  // independente ale aceluiași proces era de 1,2–7,7 ori cât variază P cu adevărat (ținea tendința fixă, deși drumurile o scot la fiecare istorie).
+  // Acum: fiecare zi distinctă e o singură observație - P(1−P)/D - fără partea lui „câștigă” explicată liniar de mișcarea drumului (ρ² = corelația cu
+  // randamentul drumului până la orizont; Monte Carlo scoate tendința, deci partea asta nu e incertitudine pe zile). Măsurat pe aceleași istorii:
+  // 0,75–2,6 × variația adevărată; semințele o mută cu cel mult 2 puncte; costul ~0. vals = rezultatele, R = randamentele (log), D = zilele distincte.
+  function marjaZile(vals, R, D) {
+    var n = vals ? vals.length : 0, i; if (!(D >= 1) || !n || !R || R.length !== n) return null;
+    var k = 0, mR = 0; for (i = 0; i < n; i++) { if (vals[i] > 0) k++; mR += R[i]; } mR /= n;
+    var p = k / n; if (!(p > 0 && p < 1)) return 0;
+    var cYR = 0, vR = 0; for (i = 0; i < n; i++) { var dr = R[i] - mR; cYR += ((vals[i] > 0 ? 1 : 0) - p) * dr; vR += dr * dr; }
+    var rho2 = vR > 0 ? Math.min(1, cYR * cYR / (vR * n * p * (1 - p))) : 0;
+    return Math.round(1.96 * Math.sqrt(p * (1 - p) * (1 - rho2) / D) * 100);
   }
   // v100.196 (B1): reluarea ISTORICULUI REAL - setarea (mutată relativ la prețul fiecărei porniri) pornită la începutul fiecărei zile de istoric, cu
   // tendința reală (nu drumuri), citită la fiecare orizont care încape. Media pe porniri, câte pe plus și câte ferestre nu se suprapun.
@@ -177,15 +182,14 @@ var GridSim = (function () {
     var DRUM = ST ? function (b, hh, bz, p, r, muu, urme) { return drumDin(b, hh, bz, p, r, muu, ST, urme); } : M.drum;
     var mu = tendinta(b15), m;
     { var rnd0 = M.generator(seed), v0 = []; for (var q = 0; q < n; q++) { var d0 = DRUM(b15, H, BZ, P0, rnd0, mu); v0.push(Math.log(d0[d0.length - 1].c / P0)); } v0.sort(function (a, c) { return a - c; }); m = mu + pc(v0, 0.5) / H; }
-    var rnd = M.generator(seed), bareO = oriz.map(function (z) { return pre + z * BZ; });
-    var col = oriz.map(function () { return { net: [], deAici: [], plan: 0, planRau: 0, planZile: [], lich: 0, stop: 0, tp: 0, ies: 0, per: 0, maxJos: [], funding: 0 }; });
+    var rnd = M.generator(seed), bareO = oriz.map(function (z) { return pre + Math.round(z * BZ); });   /* v100.269: orizonturile de 1 h / 4 h pe bare întregi */
+    var col = oriz.map(function () { return { net: [], deAici: [], R: [], plan: 0, planRau: 0, planZile: [], lich: 0, stop: 0, tp: 0, ies: 0, per: 0, maxJos: [], funding: 0 }; });
     var acum = null, dejaAtins = null;
-    // v100.196 (B1): grupele de zile consecutive ale istoricului și, pe fiecare drum, ce grupe a atins (mască pe biți)
-    var K = Math.min(GRUPE_ZILE, zileIst), masti = [], grupa = function (i) { return Math.min(K - 1, Math.floor(i * K / b15.length)); };
+    // v100.269 (ideile auditului 29.10): zilele distincte din care se trag drumurile (pe regim, doar zilele lui) - marja pe zile le cere; măștile
+    // grupelor (jackknife-ul de până acum) nu mai trebuie, drumurile rămân exact aceleași (aceleași trageri din rnd)
+    var D = ST ? Math.max(1, Math.round(ST.length / BZ)) : zileIst;
     for (var sIdx = 0; sIdx < n; sIdx++) {
-      var urme = [], d = DRUM(b15, H, BZ, P0, rnd, m, urme), drumT = pre ? prefix.concat(d) : d, mk = 0;
-      for (var u = 0; u < urme.length; u++) mk |= (1 << grupa(urme[u])) | (1 << grupa(Math.min(b15.length - 1, urme[u] + BZ - 1)));
-      masti.push(mk);
+      var d = DRUM(b15, H, BZ, P0, rnd, m), drumT = pre ? prefix.concat(d) : d;
       var r = GP.simuleaza(drumT, 0, drumT.length, stS, optGP), tr = r.traseu, L = tr.net.length;
       // „până acum” = traseul la ultima bară reală (identic pe toate drumurile); t = închiderea ei; oprit și când stopul cade chiar pe ea (revizia)
       if (pre && !acum) { var ia = Math.min(pre, L) - 1; acum = { net: tr.net[ia], usdt: tr.net[ia] * suma, bare: pre, t: prefix[prefix.length - 1].t + 9e5, perechi: tr.perechi[ia], oprit: (r.lichidat || r.oprit) && r.bare <= pre ? (r.lichidat ? "lichidat" : "oprit") : null }; }
@@ -196,6 +200,7 @@ var GridSim = (function () {
       for (var h = 0; h < oriz.length; h++) {
         var bare = bareO[h], ix = Math.min(bare, L) - 1, c = col[h], net = tr.net[ix];
         c.net.push(net); if (acum) c.deAici.push(net - acum.net);
+        c.R.push(Math.log(d[Math.min(d.length, Math.round(oriz[h] * BZ)) - 1].c / P0));   // v100.269: mișcarea drumului până la orizont, de la prețul de acum
         if (plan) { var hit = iPlus !== null && iPlus < bare && (iMinus === null || iPlus < iMinus), rau = iMinus !== null && iMinus < bare && (iPlus === null || iMinus <= iPlus); if (hit) { c.plan++; if (iPlus >= pre) c.planZile.push((iPlus - pre + 1) / BZ); } if (rau) c.planRau++; }   // revizia: atins în prefix ⇒ fără zile („deja”)
         if (r.lichidat && r.bare <= bare) c.lich++;
         if (r.oprit && r.bare <= bare) { if (parteTp && r.iesit === parteTp) c.tp++; else c.stop++; }
@@ -209,14 +214,14 @@ var GridSim = (function () {
     var orizonturi = oriz.map(function (z, h) {
       var c = col[h], nets = c.net.map(function (x) { return x * suma; }).sort(function (a, b) { return a - b; }), cast = 0, pier = 0;
       c.net.forEach(function (x) { if (x > 0) cast++; else if (x < 0) pier++; });
-      var mjs = c.maxJos.map(function (x) { return x * suma; }).sort(function (a, b) { return a - b; }), pC = cast / n, mD = marja(pC, n), mZ = marjaZile(c.net, masti, K), out = {
-        zile: z, bare: bareO[h], scurt: zileIst < 3 * z, pCastig: pC, pPierde: pier / n, pZero: (n - cast - pier) / n, marja: mZ !== null ? Math.max(mZ, mD) : mD, marjaDrumuri: mD, marjaZile: mZ, zileDistincte: zileIst, reluare: rel ? rel[h] : null,
+      var mjs = c.maxJos.map(function (x) { return x * suma; }).sort(function (a, b) { return a - b; }), pC = cast / n, mD = marja(pC, n), mZ = marjaZile(c.net, c.R, D), out = {
+        zile: z, bare: bareO[h], scurt: zileIst < 3 * z, pCastig: pC, pPierde: pier / n, pZero: (n - cast - pier) / n, marja: mZ !== null ? Math.max(mZ, mD) : mD, marjaDrumuri: mD, marjaZile: mZ, zileDistincte: D, reluare: rel ? rel[h] : null,
         p5: pc(nets, 0.05), p50: pc(nets, 0.5), p95: pc(nets, 0.95), hist: M.histograma(nets, 24),
         plan: plan ? { p: c.plan / n, pRau: c.planRau / n, zileMediana: c.planZile.length ? mediana(c.planZile) : null, dejaAtins: dejaAtins } : null,
         pLich: c.lich / n, pStop: c.stop / n, pTp: c.tp / n, pIesire: c.ies / n, perechi: c.per / n, maxJos: { p50: pc(mjs, 0.5), p5: pc(mjs, 0.05) }, funding: c.funding / n * suma };
       if (o.peDrum) out.drumuri = c.net.map(function (x) { return x * suma; });   // revizia (R3): rezultatele în ordinea drumurilor (drum cu drum)
       // revizia (R3): la botul care rulează, hotărârea lui („îl țin?”) depinde de ce URMEAZĂ ⇒ „de aici încolo” întreg: câștigă / pierde, marja, histograma
-      if (acum) { var da = c.deAici.map(function (x) { return x * suma; }).sort(function (a, b) { return a - b; }), dc = 0, dp = 0; c.deAici.forEach(function (x) { if (x > 0) dc++; else if (x < 0) dp++; }); var mDa = marja(dc / n, n), mZa = marjaZile(c.deAici, masti, K); out.deAici = { p5: pc(da, 0.05), p50: pc(da, 0.5), p95: pc(da, 0.95), pCastig: dc / n, pPierde: dp / n, pZero: (n - dc - dp) / n, marja: mZa !== null ? Math.max(mZa, mDa) : mDa, marjaDrumuri: mDa, marjaZile: mZa, hist: M.histograma(da, 24) }; if (o.peDrum) out.drumuriDeAici = c.deAici.map(function (x) { return x * suma; }); }   // v100.136: și de aici încolo, pe drumuri
+      if (acum) { var da = c.deAici.map(function (x) { return x * suma; }).sort(function (a, b) { return a - b; }), dc = 0, dp = 0; c.deAici.forEach(function (x) { if (x > 0) dc++; else if (x < 0) dp++; }); var mDa = marja(dc / n, n), mZa = marjaZile(c.deAici, c.R, D); out.deAici = { p5: pc(da, 0.05), p50: pc(da, 0.5), p95: pc(da, 0.95), pCastig: dc / n, pPierde: dp / n, pZero: (n - dc - dp) / n, marja: mZa !== null ? Math.max(mZa, mDa) : mDa, marjaDrumuri: mDa, marjaZile: mZa, hist: M.histograma(da, 24) }; if (o.peDrum) out.drumuriDeAici = c.deAici.map(function (x) { return x * suma; }); }   // v100.136: și de aici încolo, pe drumuri
       return out;
     });
     return { regim: ST ? { starturi: ST.length } : null, n: n, zile: zile, zileIstoric: zileIst, tendintaPeZi: Math.exp(mu * BZ) - 1, suma: suma, tpIgnorat: v.ignorat, tpIgnoratPrefix: tpIgnoratPrefix, acum: acum, orizonturi: orizonturi };
@@ -327,16 +332,36 @@ var GridSim = (function () {
   // v100.139 (el, 08.10: „Monte Carlo cu un scan automat pe bot la 15 min” în Tablou): rândul SCURT - verdictul pe 7 zile (CÂȘTIGĂ / PIERDE,
   // stopul / lichidarea / TP-ul atins), «ce aș face» (prima propoziție din faCe) și „pe o zi” - într-un singur rând; eroarea ca text
   // v100.201 (B1): verdictul verificat pe ce a urmat (raportul colectorului); Brier ×100 cu o zecimală (mai mic = mai bine; aruncarea de ban = 25,0)
+  // v100.269 (auditul Monte Carlo 29.10): boții lui trăiesc în mediană 0,5 h ⇒ verdictele „pe 7 zile” s-au judecat LA ÎNCHIDERE, nu după 7 zile;
+  // textul spune unde s-au judecat (din scorul colectorului: laInchidere, oreMediana), iar fără scor rămâne „după 7 zile sau la închidere”
+  function undeJudecate(r) {
+    var s = r && r.scor, n = s ? (Number(s.d) || 0) + (Number(s.g) || 0) : 0;
+    if (!s || !n || !(Number(s.laInchidere) * 2 > n)) return "judecate după 7 zile sau la închidere";
+    return "judecate la închiderea botului (mediana după " + (isFinite(Number(s.oreMediana)) && s.oreMediana !== null ? String(Math.round(Number(s.oreMediana) * 10) / 10).replace(".", ",") : "?") + " h)";
+  }
   function textCalibrareMc(r) {
     if (!r || typeof r !== "object") return "";
     var z1 = function (x) { return (Math.round(Number(x) * 10) / 10).toFixed(1).replace(".", ","); };
-    if (r.stare !== "testat") return "verificat pe ce a urmat: " + (Number(r.n) || 0) + " din 30 de verdicte judecate după 7 zile — încă puține";
+    if (r.stare !== "testat") return "verificat pe ce a urmat: " + (Number(r.n) || 0) + " din 30 de verdicte " + undeJudecate(r) + " — încă puține";
     var cutia = function (de) { return (r.cutii || []).filter(function (c) { return c && c.de === de && c.n > 0 && c.rata !== null; })[0]; }, sus = cutia(0.6), jos = cutia(0);
-    var parti = ["verificat pe ce a urmat: " + cate(r.n, "verdict judecat", "verdicte judecate") + " pe " + cate(r.zile, "zi", "zile"), "Brier " + z1(r.brier * 100) + " (aruncarea de ban: " + z1(r.brierBan * 100) + "; mai mic = mai bine)"];
+    var parti = ["verificat pe ce a urmat: " + cate(r.n, "verdict judecat", "verdicte judecate") + " pe " + cate(r.zile, "zi", "zile") + ", " + undeJudecate(r), "Brier " + z1(r.brier * 100) + " (aruncarea de ban: " + z1(r.brierBan * 100) + "; mai mic = mai bine)"];
     if (sus) parti.push("când zicea peste 60%: pe plus în " + z1(sus.rata * 100) + "% (" + sus.n + ")");
     if (jos) parti.push("sub 40%: pe plus în " + z1(jos.rata * 100) + "% (" + jos.n + ")");
-    parti.push("verdictele se suprapun (7 zile), deci dovezile sunt mai puține decât pare");
+    parti.push("verdictele din aceeași zi se mișcă împreună, deci dovezile sunt mai puține decât pare");
     return parti.join(" · ");
+  }
+  // v100.269 (auditul Monte Carlo 29.10, el: „verdicte și pe perioade mai scurte”): pe 1 h / 4 h / o zi „pe plus X%” nu spune mai mult decât
+  // media (reluare pe 73 de monede), dar șansa STOPULUI, a lichidării și pierderea din cele mai proaste 5% sunt calibrate în medie ⇒ riscul.
+  // rez = simuleaza(..., { orizonturi: [1/24, 4/24, 1, 7] }); la botul care rulează, pierderea e „de aici încolo” (deAici.p5).
+  var ORIZ_SCURT = [1 / 24, 4 / 24, 1];
+  function riscScurt(rez) {
+    var l = rez && Array.isArray(rez.orizonturi) ? rez.orizonturi : [], out = [];
+    ORIZ_SCURT.forEach(function (z) {
+      var o = l.filter(function (x) { return x && Math.abs(Number(x.zile) - z) < 1e-6; })[0]; if (!o) return;
+      var p5 = o.deAici && isFinite(o.deAici.p5) ? o.deAici.p5 : o.p5;
+      out.push({ ore: Math.round(z * 24), pStop: isFinite(o.pStop) ? o.pStop : null, pLich: isFinite(o.pLich) ? o.pLich : null, p5: isFinite(p5) ? Math.round(p5 * 100) / 100 : null });
+    });
+    return out;
   }
   function verdictScurt(rez, st, plan, bot) {
     if (!rez || rez.eroare) return { stare: "info", text: rez && rez.eroare ? String(rez.eroare) : "fără rezultat" };
@@ -361,6 +386,6 @@ var GridSim = (function () {
     var stare = atins === "minus" ? "rau" : atins === "plus" ? "bine" : rau ? "rau" : v.culoare === "good" ? "bine" : v.culoare === "bad" ? "rau" : "atentie";
     return { stare: stare, text: parti.join(" · "), culoare: v.culoare, faCe: v.faCe, rand: v.rand, atins: atins };
   }
-  return { LICHIDARI_ACCEPTATE: LICHIDARI_ACCEPTATE, lichidareAcceptata: lichidareAcceptata, starturiRegim: starturiRegim, dinCod: dinCod, inCod: inCod, setariDinBot: setariDinBot, tpValid: tpValid, simuleaza: simuleaza, compara: compara, comparaLa: comparaLa, verdict: verdict, verdictScurt: verdictScurt, rataFunding: rataFunding, marja: marja, bani1: bani1, pr: pr, NUME: NUME, textCalibrareMc: textCalibrareMc };
+  return { riscScurt: riscScurt, ORIZ_SCURT: ORIZ_SCURT, LICHIDARI_ACCEPTATE: LICHIDARI_ACCEPTATE, lichidareAcceptata: lichidareAcceptata, starturiRegim: starturiRegim, dinCod: dinCod, inCod: inCod, setariDinBot: setariDinBot, tpValid: tpValid, simuleaza: simuleaza, compara: compara, comparaLa: comparaLa, verdict: verdict, verdictScurt: verdictScurt, rataFunding: rataFunding, marja: marja, bani1: bani1, pr: pr, NUME: NUME, textCalibrareMc: textCalibrareMc };
 })();
 if (typeof globalThis !== "undefined") globalThis.GridSim = GridSim;

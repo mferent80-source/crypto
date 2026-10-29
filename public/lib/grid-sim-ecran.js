@@ -95,7 +95,7 @@ function gsVerdictHtml(s) {
   var mk = [{ v: d.p5, t: "5%", c: "bad" }].concat(aproape ? [] : [{ v: d.p50, t: "mijloc", c: "mijl" }]).concat([{ v: d.p95, t: "95%", c: "good" }]);
   return '<section class="t212Panou gsSec"><div class="t212PanouCap"><h4>VERDICT, ' + (v.deAici ? "de aici încolo, " : "") + 'pe ' + mcsEsc(gsCate(o.zile, "zi", "zile")) + '</h4><span class="tbSub">' + mcsEsc(gsCate(r.n, "drum", "drumuri") + " de " + gsCate(r.zile, "zi", "zile") + " pe 15 minute, din " + gsCate(r.zileIstoric, "zi", "zile") + " de istoric · " + (r.acum ? "de la pornirea botului tău" : "botul pornit la prețul de acum")) + '</span></div>'
     + (o.scurt ? '<p class="mcsAvert gsNota">Istoricul e scurt față de orizont: la ' + mcsEsc(gsCate(o.zile, "zi", "zile")) + ' simularea doar reamestecă aceleași zile. Citește cifrele ca o schiță.</p>' : '')
-    + '<div class="gsVerdict ' + v.culoare + '"><b>' + mcsEsc(v.rand) + '</b><span class="t212Mic">' + mcsEsc(v.marja) + ' · incertitudinea pe zile (cu fiecare grupă de zile scoasă pe rând), nu doar din numărul drumurilor</span></div>'
+    + '<div class="gsVerdict ' + v.culoare + '"><b>' + mcsEsc(v.rand) + '</b><span class="t212Mic">' + mcsEsc(v.marja) + ' · incertitudinea pe zile: fiecare zi distinctă din istoric e o observație, fără partea pe care drumurile o scot oricum (tendința); nu doar din numărul drumurilor</span></div>'   /* v100.269 (ideile auditului 29.10): marja analitică pe zile, stabilă cu sămânța */
     + '<p class="gsSub">' + mcsEsc(v.sub) + '</p>'
     + '<div class="gsHist">' + mcsHist(d.hist, mk, function (x) { return GridSim.bani1(x); }) + '</div>'
     + '<p class="t212Fac">👉 <b>Ce aș face eu:</b> ' + mcsEsc(gsCarte(v, r)) + '</p>'

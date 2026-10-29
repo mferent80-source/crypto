@@ -442,10 +442,15 @@ export async function onRequestPost({request,env}){
     if(la===null||!b||typeof b!=="object")return json({error:"Lipseste la / boti"},400);
     // v100.149 (I-579): + regimul Busolei (starea, câte zile de bare, textul, nevalidat) - Tabloul îl arată doar validat
     const rg=x=>x&&typeof x==="object"&&typeof x.stare==="string"?{stare:x.stare.slice(0,20),zile:nr(x.zile),text:String(x.text||"").slice(0,300),nevalidat:x.nevalidat!==false,eroare:!!x.eroare}:null;
-    const boti={};for(const k of Object.keys(b).slice(0,60)){const id=idBot(k),x=b[k];if(!id||id!==k||!x||typeof x!=="object"||!CAT.includes(x.cat))continue;boti[id]={cat:x.cat,stare:STARI.includes(x.stare)?x.stare:null,text:String(x.text||"").slice(0,400),la:nr(x.la),ultima:nr(x.ultima),regim:rg(x.regim)}}
+    const boti={};for(const k of Object.keys(b).slice(0,60)){const id=idBot(k),x=b[k];if(!id||id!==k||!x||typeof x!=="object"||!CAT.includes(x.cat))continue;/* v100.269 (auditul MC): riscul pe 1 h / 4 h / o zi - cel mult 3 rânduri, doar ore 1 / 4 / 24 și numere */const scurt=Array.isArray(x.scurt)?x.scurt.filter(y=>y&&[1,4,24].includes(nr(y.ore))).slice(0,3).map(y=>({ore:nr(y.ore),pStop:nr(y.pStop),pLich:nr(y.pLich),p5:nr(y.p5)})):null;boti[id]={cat:x.cat,stare:STARI.includes(x.stare)?x.stare:null,text:String(x.text||"").slice(0,400),la:nr(x.la),ultima:nr(x.ultima),regim:rg(x.regim),scurt}}
     /* v100.201 (B1): raportul calibrării (colectorul), doar cifre */
     const c=corp&&corp.calibrare,cutie=x=>x&&typeof x==="object"?{de:nr(x.de),la:nr(x.la),n:nr(x.n),pMed:nr(x.pMed),rata:nr(x.rata)}:null;
-    const calibrare=c&&typeof c==="object"&&(c.stare==="putine"||c.stare==="testat")?{stare:c.stare,n:nr(c.n),zile:nr(c.zile),brier:nr(c.brier),brierBan:nr(c.brierBan),brierBaza:nr(c.brierBaza),baza:nr(c.baza),cutii:Array.isArray(c.cutii)?c.cutii.slice(0,3).map(cutie).filter(Boolean):[]}:null;
+    /* v100.269 (29.10, el: „un contor … gen 1-0”): scorul verdictelor - doar numere, „D/G”, cel mult 60 de boți (id-uri ca ale boților) */
+    const s0=c&&c.scor&&typeof c.scor==="object"?c.scor:null,pb={};
+    if(s0&&s0.peBot&&typeof s0.peBot==="object")for(const k of Object.keys(s0.peBot).slice(-60)){const id=idBot(k),x=s0.peBot[k];if(id&&id===k&&x&&typeof x==="object")pb[id]={d:nr(x.d)||0,g:nr(x.g)||0,a:nr(x.a)||0}}
+    const scor=s0?{d:nr(s0.d)||0,g:nr(s0.g)||0,a:nr(s0.a)||0,egal:nr(s0.egal)||0,zile:nr(s0.zile)||0,medie:nr(s0.medie),icJos:nr(s0.icJos),icSus:nr(s0.icSus),
+      plus:nr(s0.plus),laInchidere:nr(s0.laInchidere),oreMediana:nr(s0.oreMediana),difMedie:nr(s0.difMedie),difJos:nr(s0.difJos),difSus:nr(s0.difSus),ultime:String(s0.ultime||"").replace(/[^DG]/g,"").slice(-10),peBot:pb}:null;
+    const calibrare=c&&typeof c==="object"&&(c.stare==="putine"||c.stare==="testat")?{stare:c.stare,n:nr(c.n),zile:nr(c.zile),brier:nr(c.brier),brierBan:nr(c.brierBan),brierBaza:nr(c.brierBaza),baza:nr(c.baza),cutii:Array.isArray(c.cutii)?c.cutii.slice(0,3).map(cutie).filter(Boolean):[],scor}:null;
     await env.ISTORIC.put("mc-verdict",JSON.stringify({la,boti,calibrare}));return json({ok:true})
   }
   // v100.150 (I-583): lățimea pieței - validată strict (numere finite, simboluri = litere/cifre din orice alfabet + USDT, 1-30 de semne - Binance are

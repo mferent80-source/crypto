@@ -113,7 +113,7 @@ var IndicatoriBot = (function () {
   function mediu(o, botDir) {
     o = o || {};
     var out = [], rg = o.regim, r4 = rg ? nr(rg.r4h) : null, r24 = rg ? nr(rg.r24h) : null;
-    var titluMis = "Pragul e 1,5× mișcarea obișnuită a monedei (pe ultimele ~3 săptămâni). Contează sensul: pe 40 de monede (27.09), după o mișcare CU botul gridul a ieșit pe plus în 59% din ferestre, contra 50%, în liniște 56% — nimic dovedit; regula „nu porni grid nou după mișcare” rămâne pentru pornire.";
+    var titluMis = "Mișcare mare = pe 24 h peste 9 zile din 10 ale monedei (pe ultimele ~3 săptămâni), adică ~1 zi din 10; cifrele sunt față de mișcarea ei obișnuită. Contează sensul: pe 40 de monede (27.09), după o mișcare CU botul gridul a ieșit pe plus în 59% din ferestre, contra 50%, în liniște 56% — nimic dovedit; regula „nu porni grid nou după mișcare” rămâne pentru pornire.";   // v100.269 (ideile auditului 29.10): definiția comună GridCalcul.miscareMare, nu „1,5×”
     if (r4 === null && r24 === null) out.push({ k: "miscare", eticheta: "Mișcarea", text: "n-am destule bare de 1 oră", ton: "neutru", titlu: titluMis });
     else {
       var mis = !!rg.miscare, parti = [], bd = String(botDir || "").toLowerCase();

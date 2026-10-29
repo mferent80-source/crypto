@@ -102,7 +102,7 @@ export async function turaMonteCarloBot(d) {
       const s = d.GridSim.setariDinBot(b), fi = d.funding ? await d.funding(simbol) : null, rata = fi ? nr(fi.rataZi) : null;
       const set = Object.assign({}, s.st, { suma: s.st.suma || 50, fundingZi: rata !== null ? rata : 0.0003, fundingCost: rata === null });
       let plan = d.plan ? await d.plan(b) : null; if (!(plan && !plan.proba && (nr(plan.minus) > 0 || nr(plan.plus) > 0))) plan = null;
-      const opt = { plan, n: d.n || 2000, seed: 12, orizonturi: [1, 7], zile: 14 };
+      const opt = { plan, n: d.n || 2000, seed: 12, orizonturi: [1 / 24, 4 / 24, 1, 7], zile: 14 };   // v100.269 (auditul MC): + 1 h și 4 h (riscul pe termen scurt; boții lui trăiesc în mediană 0,5 h)
       let rez = d.GridSim.simuleaza(b15, set, Object.assign({ pornitLa: s.pornitLa, stPrefix: s.pornitLa ? set : null }, opt)), nota = "";
       if (rez.eroare && s.pornitLa) { const motiv = String(rez.eroare).split(/[.:]/)[0]; rez = d.GridSim.simuleaza(b15, set, Object.assign({ pornitLa: null }, opt)); if (!rez.eroare) nota = "ca bot pornit acum (" + motiv + "): "; }
       if (rez.eroare) throw new Error(rez.eroare);
@@ -123,16 +123,16 @@ export async function turaMonteCarloBot(d) {
           }
         } catch (e) { if (d.jurnal) d.jurnal("monte carlo regim", b.id, e && e.message || e); }
       }
-      const prev = st.boti[String(b.id)], fundingZi = set.fundingZi;
+      const prev = st.boti[String(b.id)], fundingZi = set.fundingZi, scurt = d.GridSim.riscScurt ? d.GridSim.riscScurt(rez) : null;   // v100.269: riscul pe 1 h / 4 h / o zi
       // v101.90: și culoarea (stare) - KV-ul o duce în Tablou, care arată ultimul text / culoare; felul (cat) rămâne cel confirmat (Discord)
-      if (!prev || !prev.cat) { st.boti[String(b.id)] = { cat, text, stare: v.stare, la: acum, ultima: acum, fundingZi, candidat: null, candidatN: 0, anuntatLa: 0, regim }; continue; }   // prima socotire tace
-      if (cat === prev.cat) { st.boti[String(b.id)] = Object.assign({}, prev, { text, stare: v.stare, ultima: acum, fundingZi, candidat: null, candidatN: 0, regim }); continue; }
-      const candidatN = prev.candidat === cat ? (prev.candidatN || 0) + 1 : 1, nou = Object.assign({}, prev, { text, stare: v.stare, ultima: acum, fundingZi, candidat: cat, candidatN, regim });
+      if (!prev || !prev.cat) { st.boti[String(b.id)] = { cat, text, stare: v.stare, la: acum, ultima: acum, fundingZi, candidat: null, candidatN: 0, anuntatLa: 0, regim, scurt }; continue; }   // prima socotire tace
+      if (cat === prev.cat) { st.boti[String(b.id)] = Object.assign({}, prev, { text, stare: v.stare, ultima: acum, fundingZi, candidat: null, candidatN: 0, regim, scurt }); continue; }
+      const candidatN = prev.candidat === cat ? (prev.candidatN || 0) + 1 : 1, nou = Object.assign({}, prev, { text, stare: v.stare, ultima: acum, fundingZi, candidat: cat, candidatN, regim, scurt });
       if (candidatN >= TURE_PANA_LA_ANUNT && acum - (prev.anuntatLa || 0) >= PAUZA_ANUNT_MS) {
         const ok = await d.anunta({ nivel: cat === "opreste" || cat === "plan" || cat === "reluare" ? "atentie" : "info",
           titlu: "🎰 " + nume + ": Monte Carlo zice acum «" + (NUME_CAT[cat] || cat) + "» (era «" + (NUME_CAT[prev.cat] || prev.cat) + "» " + deCand(prev.la, acum) + ")",
           mesaj: text + " · șanse pe drumuri ca ultimele 14 zile, nu o predicție" }, b.id, "mc-verdict-" + cat);
-        if (ok) { out.anuntate++; st.boti[String(b.id)] = { cat, text, stare: v.stare, la: acum, ultima: acum, fundingZi, candidat: null, candidatN: 0, anuntatLa: acum, regim }; continue; }
+        if (ok) { out.anuntate++; st.boti[String(b.id)] = { cat, text, stare: v.stare, la: acum, ultima: acum, fundingZi, candidat: null, candidatN: 0, anuntatLa: acum, regim, scurt }; continue; }
       }
       st.boti[String(b.id)] = nou;   // încă nu se anunță (o tură, pauza de o oră sau alerta netrimisă): felul vechi rămâne, candidatul se ține
     } catch (e) { out.erori++; if (d.jurnal) d.jurnal("monte carlo bot", b.id, e && e.message || e); }
@@ -174,15 +174,51 @@ export function judecaMcLaInchidere(jurnal, id, totalFinal, inchisLa) {
     return Object.assign({}, e, { y: t > e.total ? 1 : 0, totalDupa: t, judecatLa: la, laInchidere: true });
   });
 }
+// v100.269 (29.10, el: „un contor care să numere de câte ori a avut dreptate sau nu, gen 1-0, să fie vizibil”): scorul verdictelor.
+// Regula, scrisă ÎNAINTE de a număra: verdictul = „pe plus” când șansa notată e peste 50%, „pe minus” sub 50%; 50% fix nu se numără.
+// A avut dreptate când botul a ieșit așa (judecat mai sus: totalul la 7 zile sau la închidere față de cel de la notare). Expiratele nu intră.
+// Intervalul (95%) e pe ZILE: verdictele din aceeași zi se mișcă împreună (aceeași piață), deci unitatea e ziua, nu verdictul.
+const T975 = [12.706, 4.303, 3.182, 2.776, 2.571, 2.447, 2.365, 2.306, 2.262, 2.228, 2.201, 2.179, 2.160, 2.145, 2.131, 2.120, 2.110, 2.101, 2.093, 2.086];
+const tCrit = (df) => (df >= 1 && df <= 20 ? T975[df - 1] : df <= 30 ? 2.086 - (df - 20) * 0.0044 : df <= 60 ? 2.042 - (df - 30) * 0.00071 : 1.98);
+// Auditul Monte Carlo (29.10): etalonul cinstit nu e banul, ci regula fixă „mereu pe plus” (pe datele lui ar fi nimerit 65 – 46, mai bine decât
+// Monte Carlo cu 59 – 52); diferența (Monte Carlo − „mereu pe plus”) se judecă tot pe ZILE. Și unde s-a judecat: boții lui trăiesc în mediană 0,5 h,
+// deci verdictele „pe 7 zile” s-au judecat la închidere - contorul o spune.
+function intervalZile(v) {
+  const n = v.length; if (n < 2) return { medie: null, jos: null, sus: null };
+  const medie = v.reduce((s, x) => s + x, 0) / n, sd = Math.sqrt(v.reduce((s, x) => s + (x - medie) ** 2, 0) / (n - 1)), m = tCrit(n - 1) * sd / Math.sqrt(n);
+  const r3 = (x) => Math.round(x * 1000) / 1000;
+  return { medie: r3(medie), jos: r3(medie - m), sus: r3(medie + m) };
+}
+export function scorMc(jurnal) {
+  const peZi = new Map(), peBot = new Map(), ultime = [], ore = []; let d = 0, g = 0, a = 0, egal = 0, plus = 0, laInchidere = 0;
+  for (const e of Array.isArray(jurnal) ? jurnal : []) {
+    if (!e || e.id == null || e.expirat) continue;
+    const b = peBot.get(String(e.id)) || { d: 0, g: 0, a: 0 }; peBot.delete(String(e.id)); peBot.set(String(e.id), b);   /* revizia: botul notat recent trece la coadă (cei 60 păstrați = cei mai recenți) */
+    if (e.y !== 0 && e.y !== 1) { a++; b.a++; continue; }
+    const p = nr(e.p); if (p === null || p === 0.5) { egal++; continue; }
+    const ok = (p > 0.5 ? 1 : 0) === e.y;
+    if (ok) { d++; b.d++; } else { g++; b.g++; }
+    if (e.y === 1) plus++;
+    if (e.laInchidere) laInchidere++;
+    const jl = nr(e.judecatLa), tl = nr(e.t); if (jl !== null && tl !== null && jl >= tl) ore.push((jl - tl) / 3600000);
+    ultime.push(ok ? "D" : "G");
+    const z = peZi.get(e.z) || [0, 0, 0]; z[0] += ok ? 1 : 0; z[1]++; z[2] += e.y === 1 ? 1 : 0; peZi.set(e.z, z);
+  }
+  const zile = [...peZi.values()], ic = intervalZile(zile.map(([k, n]) => k / n)), dif = intervalZile(zile.map(([k, n, p]) => (k - p) / n));
+  ore.sort((x, y) => x - y);
+  const oreMediana = ore.length ? Math.round((ore.length % 2 ? ore[(ore.length - 1) / 2] : (ore[ore.length / 2 - 1] + ore[ore.length / 2]) / 2) * 10) / 10 : null;
+  return { d, g, a, egal, zile: zile.length, medie: ic.medie, icJos: ic.jos, icSus: ic.sus, plus, laInchidere, oreMediana, difMedie: dif.medie, difJos: dif.jos, difSus: dif.sus,
+    ultime: ultime.slice(-10).join(""), peBot: Object.fromEntries([...peBot.entries()].slice(-60)) };
+}
 // Brier = media (p − y)²; „aruncarea de ban” = 0,25 (p = 50 % mereu); „rata de bază” = b·(1−b) (aceeași șansă pentru toți, cea care s-a întâmplat)
 export function raportMc(jurnal) {
   const j = (Array.isArray(jurnal) ? jurnal : []).filter((e) => e && (e.y === 0 || e.y === 1) && nr(e.p) !== null);
-  const zile = new Set(j.map((e) => e.z)).size;
-  if (j.length < MIN_JUDECATE) return { stare: "putine", n: j.length, zile };
+  const zile = new Set(j.map((e) => e.z)).size, scor = scorMc(jurnal);   /* v100.269: contorul pleacă mereu, și sub 30 de verdicte */
+  if (j.length < MIN_JUDECATE) return { stare: "putine", n: j.length, zile, scor };
   const n = j.length, baza = j.reduce((a, e) => a + e.y, 0) / n, brier = j.reduce((a, e) => a + (e.p - e.y) ** 2, 0) / n;
   const cutii = [[0, 0.4], [0.4, 0.6], [0.6, 1.0001]].map(([de, la]) => {
     const c = j.filter((e) => e.p >= de && e.p < la);
     return { de, la: Math.min(la, 1), n: c.length, pMed: c.length ? c.reduce((a, e) => a + e.p, 0) / c.length : null, rata: c.length ? c.reduce((a, e) => a + e.y, 0) / c.length : null };
   });
-  return { stare: "testat", n, zile, brier, brierBan: 0.25, brierBaza: baza * (1 - baza), baza, cutii };
+  return { stare: "testat", n, zile, brier, brierBan: 0.25, brierBaza: baza * (1 - baza), baza, cutii, scor };
 }

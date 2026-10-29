@@ -59,8 +59,10 @@
     // 5. Market Breadth Nasdaq 100: DOAR lățimea — câte acțiuni din indice sunt peste media de 50 de zile (≥ 60 % +1, < 40 % −1)
     // v100.196 (auditul sever, 🟡8): Master Score-ul de la piesa 4 conține deja lățimea Nasdaq 100 (S&P + NDX + R2K + Uptrend) ⇒ când el are date,
     // piesa NDX e doar informativă (ca VIX), altfel aceeași lățime dădea până la ±2 din ±4; fără el, NDX rămâne piesă. Mai veche de 30 h ⇒ fără piesă (🔵3)
+    // v100.269 (ideile auditului 29.10): pragurile din Macro.PRAGURI.latime (aceleași ca verdictul bursei de pe Acasă); fără macro.js, aceleași valori
+    const pl = typeof Macro !== "undefined" && Macro.PRAGURI && Macro.PRAGURI.latime ? Macro.PRAGURI.latime : [0.4, 0.6];
     const nd = o.ndx, cota = nd && fin(nd.n) && nd.n > 0 && fin(nd.e50) ? nd.e50 / nd.n : null, vechiNd = nd && fin(nd.la) && acum - nd.la > 30 * ORA, mbNum = A[3].v !== null;
-    A.push(cota !== null && !vechiNd ? Object.assign({ ce: "Market Breadth Nasdaq 100", val: nd.e50 + " din " + nd.n + " peste media de 50 · " + (cota >= 0.6 ? "largă" : cota < 0.4 ? "îngustă" : "mixtă"), v: mbNum ? 0 : cota >= 0.6 ? 1 : cota < 0.4 ? -1 : 0 }, mbNum ? { info: true, nota: "e deja în Master Score-ul de mai sus" } : {})
+    A.push(cota !== null && !vechiNd ? Object.assign({ ce: "Market Breadth Nasdaq 100", val: nd.e50 + " din " + nd.n + " peste media de 50 · " + (cota >= pl[1] ? "largă" : cota < pl[0] ? "îngustă" : "mixtă"), v: mbNum ? 0 : cota >= pl[1] ? 1 : cota < pl[0] ? -1 : 0 }, mbNum ? { info: true, nota: "e deja în Master Score-ul de mai sus" } : {})
       : lipsa("Market Breadth Nasdaq 100", vechiNd ? "date vechi" : "fără date", mbNum));
 
     const C = [];

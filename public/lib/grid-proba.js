@@ -34,6 +34,8 @@ var GridProba = (function () {
     var N = st.grile, niv = st.tip === "aritmetic" ? G.niveluriArit(st.jos, st.sus, N) : G.niveluri(st.jos, st.sus, N), L = st.levier, com = C.COMISION, comG = C.COMISION_GRILA;
     // v100.135: funding-ul cu SEMN dupa pozitie (rata pozitiva: longul plateste pe Ql, shortul incaseaza pe Qs; rata negativa invers) - poate fi
     // negativ (incasat); traseul tine si MINIMUL / MAXIMUL rezultatului pe cele 4 puncte ale barei (pierderea maxima si planul in interiorul barei)
+    // v100.269 (ideile auditului 29.10): opt.barePeZi (24 pe bare de 1 h) - funding-ul tot la 8 h (barePeZi / 3 bare), nu la 32 de bare
+    var fper = opt && opt.barePeZi > 0 ? Math.max(1, Math.round(opt.barePeZi / 3)) : 32;
     var fundingZi = isFinite(st.fundingZi) ? Number(st.fundingZi) : 0, funding = 0, tr = opt && opt.traseu ? { net: [], perechi: [], iesiri: [], min: [], max: [] } : null, bMin = Infinity, bMax = -Infinity;
     var P = b[start].o, tip = [], tine = [], intr = [], q = [];
     var Ql = 0, Cl = 0, Qs = 0, Cs = 0, real = 0, fee = 0, umpleri = 0, iesiri = 0, perechi = 0;   // perechi = grile INCASATE (o pereche = 2 umpleri; umplerile de pornire nu-s perechi)
@@ -121,7 +123,7 @@ var GridProba = (function () {
       if (sd && i - start === dinBara) { sj = sd.jos > 0 ? sd.jos : -Infinity; ss = sd.sus > 0 ? sd.sus : Infinity; if ("raport" in sd) sr = raportValid(sd.raport); sd = null; }   // v100.136; v100.259: și raportul
       // v100.134: la 8 h; v100.135: cu semn pe pozitia neta; revizia: de la bara 0 (Pionex ia la urmatoarea ora de funding: 3 plati pe zi
       // si pe orizontul de o zi); st.fundingCost (rata PRESUPUSA, nu cea reala) = cost oricare ar fi directia, pe |Ql - Qs|
-      if (fundingZi && (i - start) % 32 === 0) { var fz = fundingZi / 3 * (st.fundingCost ? Math.abs(Ql - Qs) : Ql - Qs) * x.o; fee += fz; funding += fz; }
+      if (fundingZi && (i - start) % fper === 0) { var fz = fundingZi / 3 * (st.fundingCost ? Math.abs(Ql - Qs) : Ql - Qs) * x.o; fee += fz; funding += fz; }
       bMin = Infinity; bMax = -Infinity;
       // v100.196 (auditul 14.10, 🔵5): stopul si tinta in ACEEASI lumanare - ordinea din bara nu se stie, deci stopul intai (pesimist), nu cine vine
       // primul pe drumul conventional (rosie O→H→L→C dadea tinta la long). Partea stopului: long jos, short sus; la neutru amandoua sunt stopuri.
@@ -155,6 +157,18 @@ var GridProba = (function () {
     return { n: rez.length, mediana: G.mediana(net), medie: net.reduce(function (a, v) { return a + v; }, 0) / net.length, ceaMaiProasta: Math.min.apply(null, net), iesiriMedii: ies / rez.length, lichidari: lich, opriri: opr, umpleriMedii: ump / rez.length, perechiMedii: per / rez.length };
   }
 
+  // v100.269 (ideile auditului 29.10): pe ferestrele de test care NU se suprapun (una la „pas” din lista celor la 6 h): câte, media, abaterea și
+  // t = medie / (abatere / √n) - ferestrele suprapuse numără aceleași zile de 4·H ori, deci media lor pare mai sigură decât e
+  function independente(rez, pas) {
+    if (!rez || !rez.length || !(pas >= 1)) return null;
+    var v = []; for (var i = 0; i < rez.length; i += pas) v.push(rez[i].net);
+    var n = v.length, m = v.reduce(function (a, x) { return a + x; }, 0) / n, s2 = 0;
+    for (var k = 0; k < n; k++) s2 += (v[k] - m) * (v[k] - m);
+    var sd = n > 1 ? Math.sqrt(s2 / (n - 1)) : null;
+    return { n: n, medie: m, abatere: sd, t: sd > 0 ? m / (sd / Math.sqrt(n)) : m > 0 ? Infinity : m < 0 ? -Infinity : 0 };
+  }
+  function cuIndependente(st, rez, pas) { if (st) st.ind = independente(rez, pas); return st; }
+
   // Platou, nu varf: scorul unei celule = media medianelor ei si a vecinilor
   // (latime +-1, pas +-1). Celulele lichidate nu se aleg; ca vecini, valoreaza
   // -100% (o setare vecina care se lichideaza e o prapastie, nu un plus).
@@ -174,15 +188,17 @@ var GridProba = (function () {
     return best;
   }
 
-  function proba(b15, H, fz) {
-    var W = H * C.BARE_ZI, F = fundingDe(fz);
-    if (!b15 || b15.length < 2 * W + C.BARE_ZI) return null;
+  // v100.269 (ideile auditului 29.10): o.barePeZi = 24 ⇒ aceeași probă pe bare de 1 h (fereastra = 24·H bare, una nouă la 6 h, funding la 8 h, pasul
+  // pe scara de 15M); fără o, exact ca până acum
+  function proba(b15, H, fz, o) {
+    var bz = o && o.barePeZi > 0 ? o.barePeZi : C.BARE_ZI, W = H * bz, F = fundingDe(fz), PF = Math.max(1, Math.round(C.PAS_FERESTRE * bz / C.BARE_ZI)), optS = bz !== C.BARE_ZI ? { barePeZi: bz } : undefined;
+    if (!b15 || b15.length < 2 * W + bz) return null;
     var nA = Math.round(b15.length * 2 / 3), A = b15.slice(0, nA);
-    var lats = G.latimi(A, H), pasV = G.pasi(A);
+    var lats = G.latimi(A, H, bz), pasV = G.pasi(A, Math.sqrt(bz / C.BARE_ZI));
     if (lats.length < 3 || !pasV) return null;
     var latV = C.PERCENTILE.map(function (p) { return G.percentila(lats, p); });
     var starturi = [], s, nAntren = 0, nTest = 0;
-    for (s = 0; s + W <= b15.length; s += C.PAS_FERESTRE) {
+    for (s = 0; s + W <= b15.length; s += PF) {
       if (s + W <= nA) { starturi.push({ s: s, t: "a" }); nAntren++; }
       else if (s >= nA) { starturi.push({ s: s, t: "t" }); nTest++; }
     }
@@ -195,9 +211,9 @@ var GridProba = (function () {
           var ra = [], rt = [];
           for (var j = 0; j < starturi.length; j++) {
             var f = starturi[j], st = cuFunding(G.construieste({ pret: b15[f.s].o, lat: latV[wi], pas: pasV[pi], dir: dir }), F);
-            (f.t === "a" ? ra : rt).push(simuleaza(b15, f.s, W, st));
+            (f.t === "a" ? ra : rt).push(simuleaza(b15, f.s, W, st, optS));
           }
-          mat[wi].push({ antren: statistici(ra), test: statistici(rt) });
+          mat[wi].push({ antren: statistici(ra), test: cuIndependente(statistici(rt), rt, Math.round(W / PF)) });   // v100.269: și ferestrele care nu se suprapun
         }
       }
       var ales = alegePlatou(mat.map(function (r) { return r.map(function (x) { return x.antren; }); }));
@@ -212,21 +228,22 @@ var GridProba = (function () {
       }
     });
     // v100.196 (B5): cate combinatii s-au incercat si cate ferestre de test nu se suprapun - verdictul le cere
-    return { H: H, zile: b15.length / C.BARE_ZI, ferestre: { antren: nAntren, test: nTest, independente: Math.floor(b15.length / W), testIndependente: Math.floor((b15.length - nA) / W) },
+    return { H: H, zile: b15.length / bz, barePeZi: bz, ferestre: { antren: nAntren, test: nTest, independente: Math.floor(b15.length / W), testIndependente: Math.floor((b15.length - nA) / W) },
       latimi: latV, pasi: pasV, pe: pe, recomandata: recomandata, incercate: latV.length * pasV.length * DIRECTII.length, funding: F };
   }
 
   // audit 19.10: o SINGURA setare (cea afisata: levierul ales, grilele reduse la minimul pe ordin) pe ACELEASI ferestre ca proba - primele 2/3
   // antrenare, ultima 1/3 test, cate una la C.PAS_FERESTRE. fac(pret) construieste setarea la pretul de pornire al ferestrei.
-  function probaSetare(b15, H, fz, fac) {
-    var W = H * C.BARE_ZI, F = fundingDe(fz);
-    if (!b15 || b15.length < 2 * W + C.BARE_ZI || typeof fac !== "function") return null;
+  // v100.269: bz = bare pe zi (24 pe 1 h), ca la proba
+  function probaSetare(b15, H, fz, fac, bz) {
+    var z = bz > 0 ? bz : C.BARE_ZI, W = H * z, F = fundingDe(fz), PF = Math.max(1, Math.round(C.PAS_FERESTRE * z / C.BARE_ZI)), optS = z !== C.BARE_ZI ? { barePeZi: z } : undefined;
+    if (!b15 || b15.length < 2 * W + z || typeof fac !== "function") return null;
     var nA = Math.round(b15.length * 2 / 3), ra = [], rt = [];
-    for (var s = 0; s + W <= b15.length; s += C.PAS_FERESTRE) {
+    for (var s = 0; s + W <= b15.length; s += PF) {
       if (s + W > nA && s < nA) continue;
-      (s + W <= nA ? ra : rt).push(simuleaza(b15, s, W, cuFunding(fac(b15[s].o), F)));
+      (s + W <= nA ? ra : rt).push(simuleaza(b15, s, W, cuFunding(fac(b15[s].o), F), optS));
     }
-    return { antren: statistici(ra), test: statistici(rt) };
+    return { antren: statistici(ra), test: cuIndependente(statistici(rt), rt, Math.round(W / PF)) };
   }
 
   // Trendul si proba nu sunt de acord? Se spune doar cand directia recomandata
@@ -258,10 +275,31 @@ var GridProba = (function () {
     return Math.min(sold, sold * (pierderePct / 100) / Math.abs(rea));
   }
 
+  // v100.269 (ideile auditului 29.10): barele de 1 h ale fișei - doar cele ÎNCHISE până la capătul ultimei bare de 15M (fișa refăcută în trecut nu vede
+  // ce a urmat); null când nu aduc mai multe ferestre independente de test decât cele de 15M (se știe din lungimi, nu din rezultate)
+  function bareOraFisa(o) {
+    if (!(o.H >= 2) || !Array.isArray(o.b1h) || !o.b15 || !o.b15.length) return null;
+    var tF = o.b15[o.b15.length - 1].t + 900000, b = o.b1h.filter(function (x) { return x && x.t + 3600000 <= tF; });
+    // revizia independentă (29.10): KV-ul `ore:` nu expiră și fișierul de pe disc poate fi vechi ⇒ doar bucata CONTINUĂ de la capăt (fără goluri
+    // peste 2 h), iar ultima ei bară la cel mult 2 h de capătul barelor de 15M; altfel fișa judeca pe altă perioadă sau peste o gaură de 79 de zile
+    var GOL = 2 * 3600000, k = b.length - 1;
+    while (k > 0 && b[k].t - b[k - 1].t <= GOL) k--;
+    b = b.slice(k);
+    if (!b.length || tF - (b[b.length - 1].t + 3600000) > GOL) return null;
+    var ind = function (n, W) { return Math.floor((n - Math.round(n * 2 / 3)) / W); };
+    return ind(b.length, o.H * C.BARE_ZI_1H) > ind(o.b15.length, o.H * C.BARE_ZI) ? b : null;
+  }
   function fisa(o) {
     if (!(o.pret > 0)) return { eroare: "N-am prețul de acum al monedei." };
     if (!o.b15 || o.b15.length < 7 * C.BARE_ZI) return { eroare: "Prea puține lumânări ca să probez: moneda are " + (o.b15 ? o.b15.length / C.BARE_ZI : 0).toFixed(1).replace(".", ",") + " zile de istoric pe 15 minute, iar proba cere cel puțin 7 zile." };
-    var pr = proba(o.b15, o.H, o.fundingZi);   // v100.196 (B4): rata Pionex a monedei, altfel costul presupus
+    // v100.269 (ideile auditului 29.10): la H ≥ 2 proba pe ~1 lună de 15M avea pe test 5 (H = 2), respectiv 3 (H = 3) ferestre independente - sub cele 10
+    // cerute, deci PORNEȘTE era imposibil din construcție. Cu barele de 1 h (o.b1h, ~6 luni: 30 / 20 de ferestre) proba se face pe ele, cu aceeași regulă
+    // plus t ≥ 1,65 pe ferestrele care nu se suprapun (G.verdict, cereT). Sub H0 (mers aleator, 300 de monede, scripts/sim-h0-v100269.mjs) PORNEȘTE:
+    // H = 2 1,0%, H = 3 1,3% (agitație grupată 0,3% / 1,0%); fără t 12,3% / 18,3%; la H = 1 (15M, neschimbat) 25,3% / 16,3%. Pe bare de 1 h gridul des
+    // (0,30%) prinde ~20% mai puține perechi decât pe 15M (mers aleator: 40,8 față de 51,2 pe 2 zile; la 0,8% la fel) - proba e mai aspră, nu mai blândă.
+    var bP = o.b15, bzP = C.BARE_ZI, b1h = bareOraFisa(o);
+    if (b1h) { bP = b1h; bzP = C.BARE_ZI_1H; }
+    var pr = proba(bP, o.H, o.fundingZi, { barePeZi: bzP });   // v100.196 (B4): rata Pionex a monedei, altfel costul presupus
     if (!pr) return { eroare: "Prea puține lumânări ca să probez: trebuie cel puțin " + cate(2 * o.H + 1, "zi", "zile") + " de istoric pe 15 minute." };
     var dT = G.directie(o.b4h, o.b1d), dir = o.dir || dT.dir, ales = pr.pe[dir];
     // v100.39 (audit 30.09): O SINGURA SURSA - setarea afisata e exact cea probata (latimea si pasul din proba, pe primele 2/3 din
@@ -289,12 +327,12 @@ var GridProba = (function () {
     // Deci celula aleasa se RE-RULEAZA pe aceleasi ferestre cu setarea afisata - verdictul, mediana si „Cât investesc?” vorbesc despre ce copiezi.
     function statPe(sx, pasX, statProba) {
       var re = sx.levier !== sx.levierSigur || !!sx.redus;
-      var ps = re ? probaSetare(o.b15, o.H, o.fundingZi, function (pret) { return G.construieste({ pret: pret, lat: lat, pas: pasX, dir: dir, levier: sx.levier, grile: sx.redus ? sx.grile : undefined }); }) : null;
+      var ps = re ? probaSetare(bP, o.H, o.fundingZi, function (pret) { return G.construieste({ pret: pret, lat: lat, pas: pasX, dir: dir, levier: sx.levier, grile: sx.redus ? sx.grile : undefined }); }, bzP) : null;   // v100.269: pe barele probei
       return { stat: ps && ps.antren ? ps : { antren: statProba.antren, test: statProba.test }, la: { levier: sx.levier, levierSigur: sx.levierSigur, grile: sx.grile, redus: !!sx.redus, reRulata: !!(ps && ps.antren) } };
     }
     var sa = statPe(st, pas, ales), statAles = sa.stat;
     var rg = G.regim(o.b15), poz = G.pozitie7z(o.b4h, o.pret), liniste = G.linisteTine(o.b15, o.H);
-    var v = G.verdict({ regim: rg, stat: statAles, zile: pr.zile, pozitie: poz, pesteSigur: st.pesteSigur, nesigur: !st.sigur, ferestreTest: pr.ferestre.testIndependente, incercate: pr.incercate });
+    var v = G.verdict({ regim: rg, stat: statAles, zile: pr.zile, pozitie: poz, pesteSigur: st.pesteSigur, nesigur: !st.sigur, ferestreTest: pr.ferestre.testIndependente, incercate: pr.incercate, cereT: pr.barePeZi === C.BARE_ZI_1H });
     if (sumaMinima !== null) {
       v = { nivel: "nu", motive: ["suma e prea mică: Pionex cere cel puțin " + mo.toFixed(2) + " USDT pe ordin, deci pentru 2 grile la " + st.levier + "× îți trebuie cel puțin " + Math.ceil(sumaMinima) + " USDT"].concat(v.motive) };
     }
@@ -313,7 +351,7 @@ var GridProba = (function () {
       f.aleasa = { setare: st, verdict: v, treceriZi: f.treceriZi };
       f.stat = { antren: deasa.antren, test: deasa.test }; f.probaLa = sd.la;
       f.setare = deasa.setare; f.treceriZi = deasa.treceriZi;
-      f.verdict = G.verdict({ regim: rg, stat: f.stat, zile: pr.zile, pozitie: poz, pesteSigur: deasa.setare.pesteSigur, nesigur: !deasa.setare.sigur, ferestreTest: pr.ferestre.testIndependente, incercate: pr.incercate });
+      f.verdict = G.verdict({ regim: rg, stat: f.stat, zile: pr.zile, pozitie: poz, pesteSigur: deasa.setare.pesteSigur, nesigur: !deasa.setare.sigur, ferestreTest: pr.ferestre.testIndependente, incercate: pr.incercate, cereT: pr.barePeZi === C.BARE_ZI_1H });
     }
     // v100.259 (auditul 23.10, punctul 5): fișa poartă verdictul Monte Carlo pe 7 zile al setării PROPUSE (Simulatorul, 300 de drumuri, sămânța 12).
     // Sub H0 (mers aleator, 300 de monede, H = 1) fișa zicea PORNEȘTE în 52, iar MC o contrazicea în 49 (stopul atins în > 50% din drumuri / pierde
@@ -499,7 +537,7 @@ var GridProba = (function () {
     var la = r && r.la, ore = la > 0 || la === 0 ? Math.max(0, Math.round(((acum || Date.now()) - la) / 3600000)) : null;
     return { ore: ore, vechi: ore !== null && ore > 12, text: ore === null ? "" : ore > 12 ? "calculat acum " + ore + " h — vechi, colectorul îl reface la 6 h" : "calculat acum " + ore + " h" };
   }
-  return { statistici: statistici, fundingDe: fundingDe, FUNDING_PRESUPUS: FUNDING_PRESUPUS, potrivireIngust: potrivireIngust, judecaUrmarire: judecaUrmarire, socotealaUrmarire: socotealaUrmarire, directiaLa: directiaLa, verdictIngust: verdictIngust, ingust: ingust, rezumatIngust: rezumatIngust, notaBloc: notaBloc, inchise: inchise, varstaIngust: varstaIngust, simuleaza: simuleaza, statistici: statistici, alegePlatou: alegePlatou, proba: proba, probaSetare: probaSetare, contrazice: contrazice, sumaMaxima: sumaMaxima, fisa: fisa,
+  return { bareOraFisa: bareOraFisa, statistici: statistici, fundingDe: fundingDe, FUNDING_PRESUPUS: FUNDING_PRESUPUS, potrivireIngust: potrivireIngust, judecaUrmarire: judecaUrmarire, socotealaUrmarire: socotealaUrmarire, directiaLa: directiaLa, verdictIngust: verdictIngust, ingust: ingust, rezumatIngust: rezumatIngust, notaBloc: notaBloc, inchise: inchise, varstaIngust: varstaIngust, simuleaza: simuleaza, statistici: statistici, alegePlatou: alegePlatou, proba: proba, probaSetare: probaSetare, contrazice: contrazice, sumaMaxima: sumaMaxima, fisa: fisa,
     respinge: respinge, propune: propune, setarePropusa: setarePropusa, treceriPeZi: treceriPeZi };
 })();
 if (typeof globalThis !== "undefined") globalThis.GridProba = GridProba;

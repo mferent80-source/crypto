@@ -95,7 +95,7 @@ await test("predictia: pe 4 ore (orizontul botului), cu directia, fata de bot si
 const F = (rate, hist) => ({ rate, hist: hist || Array(90).fill(0.00005), intervalOre: 4 });
 await test("mediul: miscarea - liniste sub prag = bine; peste 1,5x pe 4h sau 24h = rau, cu motivul dovedit", () => {
   const m = I.mediu({ regim: { r4h: 0.3, r24h: 0.48, miscare: false } }, "long").find((x) => x.k === "miscare");
-  assert.equal(m.ton, "bine"); assert.match(m.text, /liniște/); assert.match(m.text, /0,3×/); assert.match(m.text, /0,48×|0,5×/); assert.match(m.titlu, /1,5×/);
+  assert.equal(m.ton, "bine"); assert.match(m.text, /liniște/); assert.match(m.text, /0,3×/); assert.match(m.text, /0,48×|0,5×/); assert.match(m.titlu, /~1 zi din 10/);   /* v100.269: definiția comună (percentila 90 pe 24 h), nu „pragul e 1,5×” */
   const r = I.mediu({ regim: { r4h: 2.1, r24h: 0.9, miscare: true } }, "long").find((x) => x.k === "miscare");
   assert.equal(r.ton, "rau"); assert.match(r.text, /mișcare/); assert.match(r.titlu, /după mișcare/);
   assert.equal(I.mediu({ regim: null }, "long").find((x) => x.k === "miscare").ton, "neutru");

@@ -30,6 +30,8 @@ var GridCalcul = (function () {
     MEDIANA_VERDE: 0.003,
     MARGINE_RANGE: 0.10,
     BARE_ZI: 96,               // lumanari de 15M intr-o zi
+    BARE_ZI_1H: 24,            // v100.269 (ideile auditului 29.10): lumânări de 1 h într-o zi - proba fișei la H ≥ 2 (grid-proba.js, fisa)
+    T_TEST: 1.65,              // v100.269: la proba pe 1 h, media pe ferestrele de test care nu se suprapun trebuie să se vadă peste zero (t unilateral, 5%)
     ALUNECARE_STOP: 0.001,     // v100.196 (auditul 14.10, 🔵4): iesirea pe stop / tinta e la piata - 0,1% din pret impotriva pozitiei (ipoteza; alt-urile pot mai mult)
     MIN_FERESTRE_TEST: 10,     // v100.196 (auditul 14.10, B5): sub atatea ferestre independente pe zilele nevazute, fisa nu zice PORNESTE (ipoteza)
     PAS_FERESTRE: 24,          // o fereastra noua la fiecare 6h
@@ -145,9 +147,10 @@ var GridCalcul = (function () {
 
   // Cat s-a plimbat pretul (max high - min low, raportat la deschidere) in fiecare
   // fereastra de H zile, cu o fereastra noua la fiecare 6h.
-  function latimi(b, H) {
-    var W = H * C.BARE_ZI, out = [];
-    for (var s = 0; s + W <= b.length; s += C.PAS_FERESTRE) {
+  // v100.269 (ideile auditului 29.10): bz = bare pe zi (96 pe 15M, implicit; 24 pe 1 h) - aceeași fereastră de H zile, pornită tot la 6 h
+  function latimi(b, H, bz) {
+    var z = bz > 0 ? bz : C.BARE_ZI, W = H * z, pf = Math.max(1, Math.round(C.PAS_FERESTRE * z / C.BARE_ZI)), out = [];
+    for (var s = 0; s + W <= b.length; s += pf) {
       var mx = -Infinity, mn = Infinity;
       for (var i = s; i < s + W; i++) { if (b[i].h > mx) mx = b[i].h; if (b[i].l < mn) mn = b[i].l; }
       out.push((mx - mn) / b[s].o);
@@ -156,9 +159,10 @@ var GridCalcul = (function () {
   }
   // Culoarul pasului: de la minimul care lasa profit peste comision pana la
   // pasul pe care pretul inca il atinge (mediana miscarii pe 15M x 3).
-  function pasi(b) {
-    var r = [];
-    for (var i = 0; i < b.length; i++) r.push((b[i].h - b[i].l) / b[i].c);
+  // v100.269: scara (implicit 1) - pe bare de 1 h mișcarea barei e ~2× cea de 15M (√4 pe mers aleator): scara 0,5 ține culoarul pasului pe 15M
+  function pasi(b, scara) {
+    var r = [], k = scara > 0 ? scara : 1;
+    for (var i = 0; i < b.length; i++) r.push((b[i].h - b[i].l) / b[i].c * k);
     var med = mediana(r);
     if (med === null) return null;
     var mx = Math.max(C.PAS_MIN, med * C.PAS_MAX_MULT), n = C.PAS_CANDIDATI, out = [];
@@ -277,11 +281,32 @@ var GridCalcul = (function () {
     return { dir: s >= 2 ? "long" : s <= -2 ? "short" : "neutru", tarie: a >= 4 ? "tare" : a >= 2 ? "mediu" : "slab", scor: s, motive: motive };
   }
 
+  // v100.269 (ideile auditului 29.10): „mișcare mare” are O SINGURĂ definiție, chemată de fișă, sfat, alertă, Tablou și acțiuni:
+  // mișcarea pe o zi (k bare: 96 pe 15M, 24 pe 1H, 6 pe 4H, 1 pe zilnice) peste percentila 90 a mișcărilor pe o zi ale monedei, pe
+  // istoricul dat ⇒ pe istoricul ei se aprinde ~1 zi din 10, oricare ar fi moneda sau intervalul. Înainte erau trei: 4 h SAU 24 h peste
+  // 1,5 × P75 (aici), 1 zi SAU 5 zile peste 1,5 × P75 (acțiunile: 23% din zile) și 2 × / 1,5 × în alertă. Sub 30 de mișcări în istoric:
+  // „istoric scurt” (mare: null), nu un verdict. pct = percentila mișcării de azi (egalitățile la jumătate) - pentru ieșirea alertei.
+  var MISCARE_P = 0.90, MISCARE_MIN = 30;
+  function miscareMare(b, o) {
+    o = o || {};
+    var k = o.k > 0 ? Math.round(o.k) : C.BARE_ZI, p = o.p > 0 && o.p < 1 ? o.p : MISCARE_P, n = b ? b.length : 0, m = [], i;
+    for (i = k; i < n; i++) if (b[i].c > 0 && b[i - k].c > 0) m.push(Math.abs(b[i].c - b[i - k].c) / b[i - k].c);
+    var out = { k: k, p: p, n: m.length, azi: null, prag: null, r: null, pct: null, sens: null, mare: null, istoricScurt: true,
+      rata: "~" + cate(1, "zi", "zile") + " din " + Math.round(1 / (1 - p)) };
+    if (m.length < MISCARE_MIN || !(b[n - 1].c > 0) || !(b[n - 1 - k].c > 0)) return out;
+    var u = b[n - 1].c, ref = b[n - 1 - k].c, azi = Math.abs(u - ref) / ref, prag = percentila(m, p), sub = 0, eg = 0;
+    for (i = 0; i < m.length; i++) { if (m[i] < azi) sub++; else if (m[i] === azi) eg++; }
+    out.istoricScurt = false; out.azi = azi; out.prag = prag; out.r = prag > 0 ? azi / prag : null;
+    out.pct = 100 * (sub + eg / 2) / m.length; out.sens = u > ref ? "urca" : u < ref ? "coboara" : null; out.mare = azi > prag;
+    return out;
+  }
+
   // Miscarea de acum fata de cea obisnuita a monedei. "Obisnuit" = percentila 75
   // a miscarilor pe tot istoricul dat: fata de mediana, zgomotul pur ar trece de
   // 1,5x in ~31% din cazuri; fata de percentila 75, in ~8%.
   // Pe orice interval de bare: k4 = cate bare fac 4h, k24 = cate fac 24h
   // (15M: 16/96; 4H: 1/6). Sub 50 de bare nu se judeca (null, nu fals).
+  // v100.269: r4h / r24h (× fata de obisnuit) raman doar de aratat; decizia „miscare” e miscareMare pe o zi (k24), mai sus.
   function regimPeBare(b, k4, k24) {
     if (!b || b.length < Math.max(50, 2 * k24 + 1)) return null;
     function raport(k) {
@@ -293,8 +318,10 @@ var GridCalcul = (function () {
     var r4 = raport(k4), r24 = raport(k24);
     // v96.3: si SENSUL miscarii (27.09: "daca miscarea e cu botul nu ar trebui sa ma sfatuiasca sa ies")
     var u = b.length - 1, s4 = (b[u].c - b[u - k4].c) / b[u - k4].c, s24 = (b[u].c - b[u - k24].c) / b[u - k24].c;
-    var t4 = r4 !== null && r4 > C.PRAG_MISCARE, t24 = r24 !== null && r24 > C.PRAG_MISCARE, s = t24 ? s24 : t4 ? s4 : 0;
-    return { r4h: r4, r24h: r24, miscare: t4 || t24, s4h: s4, s24h: s24, sens: s > 0 ? "urca" : s < 0 ? "coboara" : null };
+    // v100.269 (ideile auditului 29.10): „mișcare” = definiția comună pe o zi, nu „4 h SAU 24 h peste 1,5 × P75”; `mare` o poartă mai departe
+    // (percentila de azi pentru ieșirea alertei, „~1 zi din 10” pentru texte)
+    var mm = miscareMare(b, { k: k24 }), mis = mm.mare === true;
+    return { r4h: r4, r24h: r24, miscare: mis, s4h: s4, s24h: s24, sens: mis ? mm.sens : null, mare: mm };
   }
   function regim(b) { return regimPeBare(b, 16, C.BARE_ZI); }
   // Intervalul Wilson (95%) pentru k din n - acelasi ca in Directie.
@@ -383,6 +410,11 @@ var GridCalcul = (function () {
     // ieseau toate „porneste” short din aceleasi 12 zile de scadere - un singur regim, nu trei confirmari). Sub prag: astept mai multe zile.
     if (o.ferestreTest !== undefined && o.ferestreTest !== null && o.ferestreTest < C.MIN_FERESTRE_TEST) galben.push("pe zilele nevăzute am doar " + cate(o.ferestreTest, "fereastră independentă", "ferestre independente")
       + (o.incercate > 0 ? ", iar setarea e cea mai bună din " + cate(o.incercate, "combinație încercată", "combinații încercate") : "") + ": prea puțin ca să zic PORNEȘTE (cer cel puțin " + C.MIN_FERESTRE_TEST + "; pot fi toate din același regim)");
+    // v100.269 (ideile auditului 29.10): la proba pe 1 h (H ≥ 2, ~30 / 20 de ferestre independente de test) regula de mai sus singură zicea PORNEȘTE
+    // sub H0 (mers aleator, 300 de monede) în 12,3% (H = 2) și 18,3% (H = 3); cu cerința ca media pe ferestrele care nu se suprapun să se vadă peste
+    // zero (t ≥ 1,65): 1,0% și 1,3% (agitație grupată: 0,3% și 1,0%) - scripts/sim-h0-v100269.mjs. Pe 15 minute (5–10 ferestre) n-are sens, deci doar cereT.
+    var ti = o.cereT && o.stat.test && o.stat.test.ind;
+    if (ti && !(ti.t >= C.T_TEST)) galben.push("pe zilele nevăzute, media pe cele " + cate(ti.n, "fereastră independentă", "ferestre independente") + " (" + (ti.medie < 0 ? "−" : "+") + Math.abs(ti.medie * 100).toFixed(1).replace(".", ",") + "%) nu se vede peste zero (t " + (isFinite(ti.t) ? (ti.t < 0 ? "−" : "") + Math.abs(ti.t).toFixed(1).replace(".", ",") : "—") + ", cer cel puțin " + String(C.T_TEST).replace(".", ",") + ")");
     if (o.pozitie !== null && o.pozitie !== undefined && (o.pozitie < C.MARGINE_RANGE || o.pozitie > 1 - C.MARGINE_RANGE)) galben.push("prețul stă lângă " + (o.pozitie < C.MARGINE_RANGE ? "minimul" : "maximul") + " ultimelor 7 zile");
     if (o.zile < C.ZILE_PLINE) galben.push("moneda are doar " + cate(Math.floor(o.zile), "zi", "zile") + " de istoric aici");
     return { nivel: rosu.length ? "nu" : galben.length ? "asteapta" : "porneste", motive: rosu.concat(galben) };
@@ -391,6 +423,6 @@ var GridCalcul = (function () {
   return { C: C, bare: bare, bareToate: bareToate, bareBursa: bareBursa, pretCurent: pretCurent, agrega: agrega, imbinaRanduri: imbinaRanduri, mediana: mediana, percentila: percentila, procent: procent, oriDe: oriDe,
     latimi: latimi, pasi: pasi, plaseaza: plaseaza, nrGrile: nrGrile, niveluri: niveluri, niveluriArit: niveluriArit, lichidare: lichidare,
     levierSigur: levierSigur, stopuri: stopuri, construieste: construieste, ema: ema, directie: directie,
-    regim: regim, regimPeBare: regimPeBare, pozitie7z: pozitie7z, verdict: verdict, wilson: wilson, linisteTine: linisteTine, eCrypto: eCrypto };
+    regim: regim, regimPeBare: regimPeBare, miscareMare: miscareMare, pozitie7z: pozitie7z, verdict: verdict, wilson: wilson, linisteTine: linisteTine, eCrypto: eCrypto };
 })();
 if (typeof globalThis !== "undefined") globalThis.GridCalcul = GridCalcul;

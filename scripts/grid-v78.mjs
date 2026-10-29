@@ -388,24 +388,26 @@ const AL = new Function(`${ALERTE}; return Alerte;`)();
 await test("F1 Alerte: miscare mare (>2x) -> atentie o data, text despre INTRARE (nu porunca de oprire); ramane pana sub 1,5x; se repeta cel mult o data pe zi; 'liniste din nou' dupa 10 min", () => {
   const bot = { id: "b1", baza: "MET.PERP", quote: "USDT", directie: "long", activ: true };
   const T0 = 1_780_000_000_000;
-  // 1,8x nu e destul (pe 4h zgomotul trece de 1,5x in ~8% din bare)
-  let r0 = AL.evalueaza(bot, { regim: { r4h: 1.8, r24h: 1.1, miscare: true } }, {}, T0);
+  // v100.269: alerta nu mai are pragul ei (2x / 1,5x) - intra pe „mișcare mare” a regimului (GridCalcul.miscareMare: 24 h peste
+  // percentila 90) si iese sub percentila 75 (rg.mare.pct). Fixturile spun acum definitia, nu cifra de 4 h.
+  // fara „mișcare mare” (percentila 85 pe 24 h) nu suna, oricat ar fi pe 4 h
+  let r0 = AL.evalueaza(bot, { regim: { r4h: 1.8, r24h: 1.1, miscare: false, mare: { pct: 85 } } }, {}, T0);
   assert.equal(r0.mesaje.filter((m) => m.cheie === "miscare").length, 0);
   let r = AL.evalueaza(bot, { regim: { r4h: 2.2, r24h: 1.1, miscare: true } }, {}, T0);
   assert.equal(r.mesaje.filter((m) => m.cheie === "miscare").length, 1);
   const m0 = r.mesaje.find((m) => m.cheie === "miscare");
   assert.match(m0.titlu, /mișcare mare/); assert.match(m0.mesaj, /n-aș porni alt grid aici până la liniște; pe ăsta l-aș lăsa/); assert.ok(!/oprește gridul/.test(m0.titlu));   /* v100.68: intrarea, la persoana I, fără majuscule */
-  // 1,7x: intre praguri -> ramane in alerta, fara mesaj nou; la 3h tot nimic (se repeta doar la 24h)
-  r = AL.evalueaza(bot, { regim: { r4h: 1.7, r24h: 1.0, miscare: false } }, r.stare, T0 + 60000);
+  // intre percentila 75 si 90 -> ramane in alerta, fara mesaj nou; la 3h tot nimic (se repeta doar la 24h)
+  r = AL.evalueaza(bot, { regim: { r4h: 1.7, r24h: 1.0, miscare: false, mare: { pct: 80 } } }, r.stare, T0 + 60000);
   assert.equal(r.mesaje.length, 0); assert.equal(r.stare.miscare.nivel, "atentie");
   r = AL.evalueaza(bot, { regim: { r4h: 2.5, r24h: 1.0, miscare: true } }, r.stare, T0 + 4 * 3600000);
   assert.equal(r.mesaje.filter((m) => m.cheie === "miscare").length, 0, "la 4 h nu se repeta");
   r = AL.evalueaza(bot, { regim: { r4h: 2.5, r24h: 1.0, miscare: true } }, r.stare, T0 + 25 * 3600000);
   assert.equal(r.mesaje.filter((m) => m.cheie === "miscare").length, 1, "la 25 h se repeta o data");
-  // 1,2x: iese; "a trecut" doar dupa 10 minute stabile
-  r = AL.evalueaza(bot, { regim: { r4h: 1.2, r24h: 1.0, miscare: false } }, r.stare, T0 + 120000);
+  // sub percentila 75: iese; "a trecut" doar dupa 10 minute stabile
+  r = AL.evalueaza(bot, { regim: { r4h: 1.2, r24h: 1.0, miscare: false, mare: { pct: 60 } } }, r.stare, T0 + 120000);
   assert.equal(r.mesaje.length, 0);
-  r = AL.evalueaza(bot, { regim: { r4h: 1.2, r24h: 1.0, miscare: false } }, r.stare, T0 + 13 * 60000);
+  r = AL.evalueaza(bot, { regim: { r4h: 1.2, r24h: 1.0, miscare: false, mare: { pct: 60 } } }, r.stare, T0 + 13 * 60000);
   assert.equal(r.mesaje.filter((m) => m.cheie === "miscare").length, 1);
   assert.equal(r.stare.miscare.nivel, "ok");
   // fara regim (lumanari picate): starea ramane, nimic nou

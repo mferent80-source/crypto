@@ -128,7 +128,9 @@ async function checkPionexHealth(){
     if($("healthPionexCooldown"))$("healthPionexCooldown").textContent="READY"
   }catch(e){$("healthPionex").textContent="FAIL · "+e.message}
 }
-async function runHealthCheck(){checkPionexHealth().catch(()=>{});checkStocksHealth().catch(()=>{});loadCloudMonitor(false).catch(()=>{});runProviderHealthV62(false).catch(()=>{});intelApi("config").then(()=>{if($("healthIntel"))$("healthIntel").textContent="OK"}).catch(()=>{if($("healthIntel"))$("healthIntel").textContent="FAIL"});$("healthSpot").textContent="Checking…";try{await analysisTicker(assetClass()==="STOCKS"?"AAPL":"BTCUSDT",analysisSource());$("healthSpot").textContent=analysisSource()+" OK"}catch{$("healthSpot").textContent=analysisSource()+" FAIL"}$("healthWs").textContent=lastWsTick&&Date.now()-lastWsTick<60000?"LIVE":"OFF";$("healthFut").textContent=window.__derivativesState&&Object.values(window.__derivativesState).some(x=>x!=null)?"OK":"OPTIONAL";$("healthSent").textContent=$("fearGreed")&&$("fearGreed").textContent!=="N/A"?"OK":"OPTIONAL";$("healthJournal").textContent=journal().length+" signals";$("healthPwa").textContent=("serviceWorker" in navigator)?"READY":"UNSUPPORTED";
+/* v100.269 (ideile auditului 29.10): „Sentiment OK” cât Fear & Greed era încă „—” (necitit) - acum a treia stare, gri, fără penalizare */
+function healthSentStare(t){t=String(t??"").trim();if(/^\d/.test(t))return {t:"OK",cls:""};if(t==="N/A")return {t:"OPTIONAL",cls:""};return {t:"NEVERIFICAT · încă nemăsurat",cls:"mutedInfo"}}
+async function runHealthCheck(){checkPionexHealth().catch(()=>{});checkStocksHealth().catch(()=>{});loadCloudMonitor(false).catch(()=>{});runProviderHealthV62(false).catch(()=>{});intelApi("config").then(()=>{if($("healthIntel"))$("healthIntel").textContent="OK"}).catch(()=>{if($("healthIntel"))$("healthIntel").textContent="FAIL"});$("healthSpot").textContent="Checking…";try{await analysisTicker(assetClass()==="STOCKS"?"AAPL":"BTCUSDT",analysisSource());$("healthSpot").textContent=analysisSource()+" OK"}catch{$("healthSpot").textContent=analysisSource()+" FAIL"}$("healthWs").textContent=lastWsTick&&Date.now()-lastWsTick<60000?"LIVE":"OFF";$("healthFut").textContent=window.__derivativesState&&Object.values(window.__derivativesState).some(x=>x!=null)?"OK":"OPTIONAL";{const hs=healthSentStare($("fearGreed")?.textContent);$("healthSent").textContent=hs.t;$("healthSent").className=hs.cls}$("healthJournal").textContent=journal().length+" signals";$("healthPwa").textContent=("serviceWorker" in navigator)?"READY":"UNSUPPORTED";
  if($("healthCache"))$("healthCache").textContent=`${requestCache.size} items · ${perfStats.cacheHits} hits`;
  if($("healthInflight"))$("healthInflight").textContent=`${requestInflight.size} active · ${perfStats.inflightHits} deduped`;
  if($("healthScanner"))$("healthScanner").textContent=perfStats.lastScanner;
@@ -1942,8 +1944,9 @@ function renderLiquidationTape(){
   const z=liqStats(),dom=z.long5>z.short5*1.2?"LONGS":z.short5>z.long5*1.2?"SHORTS":"BALANCED";$("liqLong5").textContent=compact(z.long5);$("liqShort5").textContent=compact(z.short5);$("liqTotal15").textContent=compact(z.total15);$("liqDominant").textContent=dom;$("liqSelectedN").textContent=z.sel.length;
   const rows=(z.sel.length?z.sel:liqEvents).slice(-30).reverse();$("liqTape").innerHTML=rows.length?`<div class="liqRow"><div class="liqCell">Time</div><div class="liqCell">Symbol</div><div class="liqCell">Side liquidated</div><div class="liqCell">Price</div><div class="liqCell">Notional</div></div>`+rows.map(x=>`<div class="liqRow"><div class="liqCell">${new Date(x.ts).toLocaleTimeString("ro-RO")}</div><div class="liqCell">${escapeHtml(x.symbol)}</div><div class="liqCell ${x.liquidated==="LONG"?"bad":"good"}">${x.liquidated}</div><div class="liqCell">${num(x.price)}</div><div class="liqCell">${compact(x.notional)}</div></div>`).join(""):'<div class="emptyState">Waiting for liquidation events…</div>';
 }
-function stopLiquidationTape(){
-  liqSeq++;if(liqSocket){try{liqSocket.close()}catch{}liqSocket=null}$("liqWsStatus").textContent="OFF";if($("healthLiquidation"))$("healthLiquidation").textContent="OFF"
+function stopLiquidationTape(motiv){
+  /* v100.269 (ideile auditului 29.10): la oprire se scrie ce a rămas nescris (localStorage merge cel mult o dată la 30 s); „doarme” = oprit fiindcă pagina lui nu se vede */
+  liqSeq++;if(liqSocket){try{liqSocket.close()}catch{}liqSocket=null}if(liqLsMurdar)persistObservedLiquidations(true);const st=motiv==="doarme"?"DOARME":"OFF";$("liqWsStatus").textContent=st;if($("healthLiquidation"))$("healthLiquidation").textContent=st
 }
 function startLiquidationTape(){
   if(assetClass()!=="CRYPTO"){toast("Liquidation tape is crypto-only.","warn");return}
@@ -1951,7 +1954,7 @@ function startLiquidationTape(){
   try{
     const ws=new WebSocket("wss://fstream.binance.com/ws/!forceOrder@arr");liqSocket=ws;
     ws.onopen=()=>{if(seq!==liqSeq)return;$("liqWsStatus").textContent="LIVE";if($("healthLiquidation"))$("healthLiquidation").textContent="LIVE"};
-    ws.onmessage=e=>{if(seq!==liqSeq)return;try{const d=JSON.parse(e.data),arr=Array.isArray(d)?d:[d];for(const x of arr){const q=normalizeLiqEvent(x);if(q)liqEvents.push(q)}pruneLiq();persistObservedLiquidations();renderLiquidationTape();renderObservedLiquidationHeatmap()}catch{}};
+    ws.onmessage=e=>{if(seq!==liqSeq)return;if(!liqPaginaVizibila()){stopLiquidationTape("doarme");return}/* v100.269: plecat prin show() direct (fără navTo) - primul mesaj închide fluxul */try{const d=JSON.parse(e.data),arr=Array.isArray(d)?d:[d];for(const x of arr){const q=normalizeLiqEvent(x);if(q)liqEvents.push(q)}pruneLiq();persistObservedLiquidations();renderLiquidationTape();renderObservedLiquidationHeatmap()}catch{}};
     ws.onerror=()=>{if(seq!==liqSeq)return;$("liqWsStatus").textContent="ERROR";if($("healthLiquidation"))$("healthLiquidation").textContent="ERROR"};
     ws.onclose=()=>{if(seq!==liqSeq)return;$("liqWsStatus").textContent="CLOSED";if($("healthLiquidation"))$("healthLiquidation").textContent="CLOSED"}
   }catch(e){$("liqWsStatus").textContent="UNAVAILABLE"}
@@ -2005,11 +2008,11 @@ function renderMlLens(){
 async function runResearchML(){
   const data=mlDataset(),minN=Math.max(60,+$("mlMinN").value||60),split=Math.max(.5,Math.min(.85,+$("mlSplit").value||.7)),l2=Math.max(.0001,+$("mlL2").value||.02);
   if(data.length<minN){mlShadow=null;$("mlState").textContent="NOT ENOUGH DATA";$("mlN").textContent=`${data.length}/${minN}`;$("mlNote").textContent="Need more prospective resolved cost-aware outcomes before training.";renderMlLens();return}
-  const cut=Math.max(40,Math.min(data.length-20,Math.floor(data.length*split))),train=data.slice(0,cut),test=data.slice(cut);$("mlState").textContent="TRAINING WORKER";const model=await trainLogisticOffMain(train,l2),metrics=modelEval(model,test),state=metrics.state==="USABLE"?"USABLE SHADOW":"WEAK OOS";
-  mlShadow={model,state,auc:metrics.auc,brier:metrics.brier,skill:metrics.skill,acc:metrics.acc,expectancy:metrics.expectancy,trainN:train.length,testN:test.length,trainedAt:Date.now()};mlShadow.fingerprint=researchDatasetFingerprint();autoVersionModel("SHADOW",mlShadow);
+  const cut=Math.max(40,Math.min(data.length-20,Math.floor(data.length*split))),train=data.slice(0,cut),test=data.slice(cut);$("mlState").textContent="TRAINING WORKER";const k=mlIncercareNoua("shadow",`${researchDatasetFingerprint()}|${split}|${l2}|${minN}`)/* v100.269: reantrenările se numără */,model=await trainLogisticOffMain(train,l2),metrics=modelEval(model,test,k),state=metrics.state==="USABLE"?"USABLE SHADOW":"WEAK OOS";
+  mlShadow={model,state,metrics,auc:metrics.auc,brier:metrics.brier,skill:metrics.skill,acc:metrics.acc,expectancy:metrics.expectancy,trainN:train.length,testN:test.length,trainedAt:Date.now()};mlShadow.fingerprint=researchDatasetFingerprint();autoVersionModel("SHADOW",mlShadow);
   $("mlN").textContent=`${train.length} / ${test.length}`;$("mlAuc").textContent=Number.isFinite(metrics.auc)?metrics.auc.toFixed(3):"—";$("mlBrier").textContent=Number.isFinite(metrics.brier)?metrics.brier.toFixed(3):"—";$("mlSkill").textContent=Number.isFinite(metrics.skill)?(metrics.skill*100).toFixed(1)+"%":"—";$("mlAcc").textContent=Number.isFinite(metrics.acc)?(metrics.acc*100).toFixed(1)+"%":"—";$("mlState").textContent=state;$("mlState").className=state==="USABLE SHADOW"?"good":"neutral";
   const weights=ML_FEATURES.map((name,i)=>({name,w:model.w[i+1]})).sort((a,b)=>Math.abs(b.w)-Math.abs(a.w));$("mlFeatures").innerHTML=`<div class="mlRow"><div class="mlCell">Feature</div><div class="mlCell">Coefficient</div><div class="mlCell">Effect</div><div class="mlCell">Rank</div><div class="mlCell">Scope</div></div>`+weights.map((x,i)=>`<div class="mlRow"><div class="mlCell">${escapeHtml(x.name)}</div><div class="mlCell ${x.w>=0?"contribPos":"contribNeg"}">${x.w>=0?"+":""}${x.w.toFixed(3)}</div><div class="mlCell">${x.w>=0?"positive":"negative"}</div><div class="mlCell">#${i+1}</div><div class="mlCell">utility-weighted standardized temporal model</div></div>`).join("");
-  $("mlNote").textContent=`Chronological split · train ${train.length}, test ${test.length} · no random shuffle · utility-weighted training. ${state==="USABLE SHADOW"?"OOS AUC/Brier/expectancy gates passed; model remains advisory.":"OOS gates not passed; do not use this model for decision weighting."}`;renderMlLens()
+  $("mlNote").textContent=`Chronological split · train ${train.length}, test ${test.length} · no random shuffle · utility-weighted training. ${state==="USABLE SHADOW"?"OOS AUC/Brier/expectancy gates passed; model remains advisory.":"OOS gates not passed; do not use this model for decision weighting."} ${mlPoartaText(metrics)}`;renderMlLens()
 }
 
 let governedEnsemble=null,driftSnapshot=null;
@@ -2052,17 +2055,52 @@ function calibrationDiagnostics(){
   const oosB=oos.length?oos.reduce((a,x)=>a+(x.p-x.y)**2,0)/oos.length:NaN,oosBase=oos.length?oos.reduce((a,x)=>a+(x.base-x.y)**2,0)/oos.length:NaN,oosRaw=oos.length?oos.reduce((a,x)=>a+(x.raw-x.y)**2,0)/oos.length:NaN,oosSkill=Number.isFinite(oosBase)&&oosBase?1-oosB/oosBase:NaN;
   return {n,pav,ece:n?ece/n:NaN,mce,brierRaw,brierCal,skill:Number.isFinite(baseB)&&baseB?1-brierCal/baseB:NaN,base,oof:{n:oos.length,brier:oosB,rawBrier:oosRaw,skill:oosSkill,baseBrier:oosBase}}
 }
-function modelEval(model,test){
-  const pred=test.map(r=>({p:model.predict(r.vals),y:r.label,utility:Number.isFinite(r.utility)?r.utility:metricR(r.row)})),brier=pred.length?pred.reduce((a,x)=>a+(x.p-x.y)**2,0)/pred.length:NaN,base=Number.isFinite(+model?.baseRate)?+model.baseRate:NaN,baseB=pred.length&&Number.isFinite(base)?pred.reduce((a,x)=>a+(base-x.y)**2,0)/pred.length:NaN,auc=aucMetric(pred),acc=pred.length?pred.filter(x=>(x.p>=.5?1:0)===x.y).length/pred.length:NaN,skill=Number.isFinite(baseB)&&baseB?1-brier/baseB:NaN,trade=pred.filter(x=>x.p>=.55&&Number.isFinite(x.utility)),expectancy=trade.length?trade.reduce((a,x)=>a+x.utility,0)/trade.length:NaN;
-  return {n:test.length,auc,brier,skill,acc,expectancy,tradeN:trade.length,state:test.length>=20&&auc>=.55&&skill>0&&trade.length>=8&&expectancy>0?"USABLE":"WEAK"}
+/* v100.269 (ideile auditului 29.10): poarta OOS a modelelor ML. Înainte: n_test ≥ 20 și AUC ≥ 0,55 - simulat sub H0 (date fără informație,
+   scripts/sim-v100269-poarta-ml.mjs) treceau 13–18% din modelele simple, 4,5–9,5% din ansambluri, iar pe 16 reantrenări oricare trecea în 77–83%.
+   Acum: n_test ≥ 100 (în cel puțin 20 de zile) ȘI limita de jos a IC 95% a AUC peste 0,5. Eroarea standard = cea mai mare dintre Hanley–McNeil și bootstrap pe ZILE
+   (semnalele din aceeași zi nu sunt dovezi independente); z e corectat Bonferroni pe încercări (reantrenări pe date/setări diferite). */
+function mlZUnilateral(alfa){/* z cu P(Z>z)=alfa (Acklam, eroare < 1e-8), pentru 1e-12 ≤ alfa ≤ 0,5 */
+  const p=1-Math.min(.5,Math.max(1e-12,+alfa||.025)),c=[-7.784894002430293e-03,-3.223964580411365e-01,-2.400758277161838e+00,-2.549732539343734e+00,4.374664141464968e+00,2.938163982698783e+00],d=[7.784695709041462e-03,3.224671290700398e-01,2.445134137142996e+00,3.754408661907416e+00];
+  if(p>.97575){const q=Math.sqrt(-2*Math.log(1-p));return -(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5])/((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1)}
+  const a=[-3.969683028665376e+01,2.209460984245205e+02,-2.759285104469687e+02,1.383577518672690e+02,-3.066479806614716e+01,2.506628277459239e+00],b=[-5.447609879822406e+01,1.615858368580409e+02,-1.556989798598866e+02,6.680131188771972e+01,-1.328068155288572e+01],q=p-.5,r=q*q;
+  return (((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r+a[5])*q/(((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r+1)
 }
-async function trainTemporalModelAsync(data,l2=.02,split=.7,minTrain=40,minTest=20){
-  if(data.length<minTrain+minTest)return null;const cut=Math.max(minTrain,Math.min(data.length-minTest,Math.floor(data.length*split))),train=data.slice(0,cut),test=data.slice(cut),model=await trainLogisticOffMain(train,l2),metrics=modelEval(model,test);return {model,trainN:train.length,testN:test.length,metrics}
+function aucRang(pred){/* aceeași AUC ca aucMetric, prin ranguri (n log n) - egalitățile primesc rangul mediu */
+  const a=(pred||[]).filter(x=>Number.isFinite(x.p)&&(x.y===0||x.y===1)).map(x=>[x.p,x.y]).sort((u,v)=>u[0]-v[0]);let nPos=0,nNeg=0,sumR=0;
+  for(let i=0;i<a.length;){let j=i;while(j<a.length&&a[j][0]===a[i][0])j++;const rang=(i+1+j)/2;for(let k=i;k<j;k++){if(a[k][1]===1){sumR+=rang;nPos++}else nNeg++}i=j}
+  return nPos&&nNeg?(sumR-nPos*(nPos+1)/2)/(nPos*nNeg):NaN
+}
+function aucSeHanleyMcNeil(auc,nPos,nNeg){if(!(nPos>0&&nNeg>0)||!Number.isFinite(auc))return NaN;const q1=auc/(2-auc),q2=2*auc*auc/(1+auc);return Math.sqrt(Math.max(0,(auc*(1-auc)+(nPos-1)*(q1-auc*auc)+(nNeg-1)*(q2-auc*auc))/(nPos*nNeg)))}
+function mlZiDin(ts){const t=+ts;return Number.isFinite(t)&&t>0?Math.floor(t/86400000):null}
+function aucSeZile(pred,B=400){/* bootstrap pe ZILE: se trag zile întregi cu repunere; un rând fără dată e unitatea lui */
+  const g=new Map();(pred||[]).forEach((x,i)=>{const z=mlZiDin(x.ts),k=z==null?"r"+i:"z"+z;if(!g.has(k))g.set(k,[]);g.get(k).push(x)});const grupe=[...g.values()],zile=grupe.length;if(zile<2)return {se:NaN,zile};
+  const rnd=deterministicRng(26910029+31*(pred.length)+zile),v=[];for(let b=0;b<B;b++){const s=[];for(let i=0;i<zile;i++){for(const r of grupe[Math.floor(rnd()*zile)])s.push(r)}const a=aucRang(s);if(Number.isFinite(a))v.push(a)}
+  if(v.length<Math.max(20,B/2))return {se:NaN,zile};const m=v.reduce((s,x)=>s+x,0)/v.length;return {se:Math.sqrt(v.reduce((s,x)=>s+(x-m)**2,0)/(v.length-1)),zile}
+}
+function mlPoartaOOS(pred,incercari=1,minTest=100,minZile=20){/* minZile: sub ~20 de zile bootstrapul pe zile e prea îngust (6 zile = 6 dovezi, nu 120) */
+  const c=(pred||[]).filter(x=>Number.isFinite(x.p)&&(x.y===0||x.y===1)),n=c.length,nPos=c.filter(x=>x.y===1).length,nNeg=n-nPos,k=Math.max(1,Math.round(+incercari||1)),z=mlZUnilateral(.025/k),auc=aucRang(c),seHM=aucSeHanleyMcNeil(auc,nPos,nNeg);
+  const bz=n>=minTest?aucSeZile(c):{se:NaN,zile:new Set(c.map((x,i)=>mlZiDin(x.ts)??"r"+i)).size},se=Number.isFinite(seHM)&&Number.isFinite(bz.se)?Math.max(seHM,bz.se):NaN,aucJos=Number.isFinite(se)?auc-z*se:NaN;
+  return {n,nPos,nNeg,auc,seHM,seZile:bz.se,se,z,aucJos,incercari:k,zile:bz.zile,trece:n>=minTest&&bz.zile>=minZile&&Number.isFinite(aucJos)&&aucJos>.5}
+}
+/* încercările: o antrenare pe aceleași date cu aceleași setări nu e o încercare nouă; alte date sau alte setări da (contorul nu scade la ștergerea datelor) */
+var mlIncercariSesiune={};
+function mlIncercariCitite(){if(appSettings().privacySessionOnly)return mlIncercariSesiune;try{const x=JSON.parse(localStorage.getItem("mlIncercariV269")||"{}");return x&&typeof x==="object"?x:{}}catch{return {}}}
+function mlIncercareNoua(fel,cheie){const a=mlIncercariCitite(),x=a[fel]&&Array.isArray(a[fel].chei)?a[fel]:{n:0,chei:[]};cheie=String(cheie??"");if(!x.chei.includes(cheie)){x.n=(+x.n||0)+1;x.chei=x.chei.concat(cheie).slice(-100)}a[fel]=x;if(appSettings().privacySessionOnly)mlIncercariSesiune=a;else try{localStorage.setItem("mlIncercariV269",JSON.stringify(a))}catch{}return Math.max(1,+x.n||1)}
+/* o stare „USABLE” salvată înainte de poarta nouă (fără poartaV) nu mai deblochează nimic până la o reantrenare */
+function mlStareSubPoartaNoua(state,metrics){if(+metrics?.poartaV>=269)return state;return state==="USABLE ENSEMBLE"?"RESEARCH ONLY":state==="USABLE"||state==="USABLE SHADOW"?"WEAK OOS":state}
+function mlPoartaText(m){if(!(+m?.poartaV>=269))return "";const pc=x=>Number.isFinite(x)?(x*100).toFixed(1).replace(".",",")+"%":"—";return `Poarta OOS: ${TextRo.cate(m.n,"rezultat de test","rezultate de test")} în ${TextRo.cate(m.zile,"zi","zile")} (minim 100 și 20 de zile) · AUC ${pc(m.auc)}, limita de jos ${pc(m.aucJos)} (trebuie peste 50%) · ${TextRo.cate(m.incercari||1,"încercare","încercări")} pe date sau setări diferite, pragul e corectat pentru ele.`}
+function modelEval(model,test,incercari=1){
+  const pred=test.map(r=>({p:model.predict(r.vals),y:r.label,utility:Number.isFinite(r.utility)?r.utility:metricR(r.row),ts:r.row?.ts})),brier=pred.length?pred.reduce((a,x)=>a+(x.p-x.y)**2,0)/pred.length:NaN,base=Number.isFinite(+model?.baseRate)?+model.baseRate:NaN,baseB=pred.length&&Number.isFinite(base)?pred.reduce((a,x)=>a+(base-x.y)**2,0)/pred.length:NaN,auc=aucMetric(pred),acc=pred.length?pred.filter(x=>(x.p>=.5?1:0)===x.y).length/pred.length:NaN,skill=Number.isFinite(baseB)&&baseB?1-brier/baseB:NaN,trade=pred.filter(x=>x.p>=.55&&Number.isFinite(x.utility)),expectancy=trade.length?trade.reduce((a,x)=>a+x.utility,0)/trade.length:NaN;
+  const poarta=mlPoartaOOS(pred,incercari);/* v100.269: n_test ≥ 100 și IC 95% jos al AUC > 0,5 în loc de n_test ≥ 20; AUC ≥ 0,55 rămâne prag de mărime */
+  return {n:test.length,auc,brier,skill,acc,expectancy,tradeN:trade.length,aucJos:poarta.aucJos,aucSe:poarta.se,zile:poarta.zile,incercari:poarta.incercari,poartaV:269,state:poarta.trece&&auc>=.55&&skill>0&&trade.length>=8&&expectancy>0?"USABLE":"WEAK"}
+}
+async function trainTemporalModelAsync(data,l2=.02,split=.7,minTrain=40,minTest=20,incercari=1){
+  if(data.length<minTrain+minTest)return null;const cut=Math.max(minTrain,Math.min(data.length-minTest,Math.floor(data.length*split))),train=data.slice(0,cut),test=data.slice(cut),model=await trainLogisticOffMain(train,l2),metrics=modelEval(model,test,incercari);return {model,trainN:train.length,testN:test.length,metrics}
 }
 function regimeDataset(regime){
   return mlDataset().filter(x=>x.row.regime===regime)
 }
-async function trainRegimeModelsAsync(l2=.02,split=.7){const regimes=[...new Set(mlDataset().map(x=>x.row.regime).filter(Boolean))],models={};for(const regime of regimes){const data=regimeDataset(regime),fit=await trainTemporalModelAsync(data,l2,split,50,20);if(fit)models[regime]=fit}return models}
+async function trainRegimeModelsAsync(l2=.02,split=.7,incercari=1){const regimes=[...new Set(mlDataset().map(x=>x.row.regime).filter(Boolean))],models={};for(const regime of regimes){const data=regimeDataset(regime),fit=await trainTemporalModelAsync(data,l2,split,50,20,incercari);if(fit)models[regime]=fit}return models}
 function currentHierarchicalProbability(){
   const st=window.__radarState;if(!st)return null;const h=hierarchicalReliability(st.symbol,st.tf,st.mode,st.q.regime,st.source||analysisSource());
   return {p:h.shrunkHit,n:h.exact.n,globalN:h.global.n,h}
@@ -2076,7 +2114,9 @@ function governedComponents(){
 }
 async function trainGovernedEnsemble(){
   const data=mlDataset(),split=Math.max(.5,Math.min(.85,+$("mlSplit").value||.7)),l2=Math.max(.0001,+$("mlL2").value||.02);if(data.length<90){toast("Need at least 90 resolved outcomes for governed ensemble","warn");return}
-  if($("govState"))$("govState").textContent="TRAINING WORKER";const [global,regimes]=await Promise.all([trainTemporalModelAsync(data,l2,split,50,20),trainRegimeModelsAsync(l2,split)]),calibration=calibrationDiagnostics();governedEnsemble={global,regimes,calibration,trainedAt:Date.now()};renderGovernedEnsemble();runDriftMonitor();renderDecisionWaterfall();renderMlLens()
+  /* v100.269: încercările = reantrenările pe date/setări diferite × modelele testate odată (global + câte unul pe regim) */
+  const nReg=new Set(data.map(x=>x.row?.regime).filter(Boolean)).size,k=mlIncercareNoua("governed",`${researchDatasetFingerprint()}|${l2}|${split}`)*(1+nReg);
+  if($("govState"))$("govState").textContent="TRAINING WORKER";const [global,regimes]=await Promise.all([trainTemporalModelAsync(data,l2,split,50,20,k),trainRegimeModelsAsync(l2,split,k)]),calibration=calibrationDiagnostics();governedEnsemble={global,regimes,calibration,trainedAt:Date.now(),incercari:k};renderGovernedEnsemble();runDriftMonitor();renderDecisionWaterfall();renderMlLens()
 }
 function renderGovernedEnsemble(){
   const g=governedEnsemble;if(!g){return}
@@ -2085,7 +2125,7 @@ function renderGovernedEnsemble(){
   $("govRegime").textContent=reg?`${reg.metrics.state} · N ${reg.trainN+reg.testN}`:"NO REGIME MODEL";$("govCal").textContent=g.calibration?.oof?.n>=30?`${Number.isFinite(g.calibration.oof.brier)?g.calibration.oof.brier.toFixed(3):"—"} OOF Brier · skill ${Number.isFinite(g.calibration.oof.skill)?(g.calibration.oof.skill*100).toFixed(1)+"%":"—"}`:"LEARNING";$("govHier").textContent=c?.hier?`${(c.hier.p*100).toFixed(0)}% · exact N ${c.hier.n}`:"—";$("govEnsemble").textContent=Number.isFinite(c?.ensemble)?(c.ensemble*100).toFixed(0)+"%":"—";$("govState").textContent=state;
   const rows=[["GLOBAL",g.global],...Object.entries(g.regimes).map(([k,v])=>[k,v])];
   $("govModels").innerHTML=rows.length?`<div class="govRow"><div class="govCell">Model</div><div class="govCell">Train/Test</div><div class="govCell">AUC</div><div class="govCell">Brier skill</div><div class="govCell">Accuracy</div><div class="govCell">Gate</div></div>`+rows.map(([name,x])=>`<div class="govRow"><div class="govCell">${name}</div><div class="govCell">${x?`${x.trainN}/${x.testN}`:"—"}</div><div class="govCell">${x&&Number.isFinite(x.metrics.auc)?x.metrics.auc.toFixed(3):"—"}</div><div class="govCell">${x&&Number.isFinite(x.metrics.skill)?(x.metrics.skill*100).toFixed(1)+"%":"—"}</div><div class="govCell">${x&&Number.isFinite(x.metrics.acc)?(x.metrics.acc*100).toFixed(1)+"%":"—"}</div><div class="govCell">${x?.metrics?.state||"N/A"}</div></div>`).join(""):'<div class="emptyState">No models trained.</div>';
-  $("govNote").textContent=`Base engine weights are frozen. Governed ensemble uses only components with evidence gates. ${Object.keys(g.regimes).length} regime model(s) trained.`;
+  $("govNote").textContent=`Base engine weights are frozen. Governed ensemble uses only components with evidence gates. ${Object.keys(g.regimes).length} regime model(s) trained.`+(g.incercari?` Poarta OOS cere 100 de rezultate de test în cel puțin 20 de zile și limita de jos 95% a AUC peste 50%, cu pragul corectat pentru ${TextRo.cate(g.incercari,"încercare","încercări")} (reantrenări × modele).`:"");
   renderCalibrationGovernance()
 }
 function renderCalibrationGovernance(){
@@ -2290,9 +2330,9 @@ function trainBoostedStumps(train,rounds=24,shrink=.22,minLeaf=7){
   }
   return {kind:"BOOSTED_STUMPS",base,baseRate:rate,stumps,predict(vals){let z=this.base;for(const s of this.stumps)z+=vals[s.j]<=s.threshold?s.left:s.right;return mlSigmoid(z)},contrib(vals){const c=Array(ML_FEATURES.length).fill(0);for(const s of this.stumps)c[s.j]+=vals[s.j]<=s.threshold?s.left:s.right;return c}}
 }
-function evalPredictions(pred,baseRate=NaN){
-  const clean=pred.filter(x=>Number.isFinite(x.p)&&(x.y===0||x.y===1));if(!clean.length)return {n:0,auc:NaN,brier:NaN,skill:NaN,acc:NaN,expectancy:NaN,tradeN:0,state:"WEAK"};
-  const brier=clean.reduce((a,x)=>a+(x.p-x.y)**2,0)/clean.length,base=Number.isFinite(+baseRate)?+baseRate:.5,baseB=clean.reduce((a,x)=>a+(base-x.y)**2,0)/clean.length,auc=aucMetric(clean),acc=clean.filter(x=>(x.p>=.5?1:0)===x.y).length/clean.length,skill=baseB?1-brier/baseB:NaN,trade=clean.filter(x=>x.p>=.55&&Number.isFinite(x.utility)),expectancy=trade.length?trade.reduce((a,x)=>a+x.utility,0)/trade.length:NaN,state=clean.length>=20&&auc>=.55&&skill>0&&trade.length>=8&&expectancy>0?"USABLE":"WEAK";return {n:clean.length,auc,brier,skill,acc,expectancy,tradeN:trade.length,state}
+function evalPredictions(pred,baseRate=NaN,incercari=1){
+  const clean=pred.filter(x=>Number.isFinite(x.p)&&(x.y===0||x.y===1));if(!clean.length)return {n:0,auc:NaN,brier:NaN,skill:NaN,acc:NaN,expectancy:NaN,tradeN:0,poartaV:269,state:"WEAK"};
+  const brier=clean.reduce((a,x)=>a+(x.p-x.y)**2,0)/clean.length,base=Number.isFinite(+baseRate)?+baseRate:.5,baseB=clean.reduce((a,x)=>a+(base-x.y)**2,0)/clean.length,auc=aucMetric(clean),acc=clean.filter(x=>(x.p>=.5?1:0)===x.y).length/clean.length,skill=baseB?1-brier/baseB:NaN,trade=clean.filter(x=>x.p>=.55&&Number.isFinite(x.utility)),expectancy=trade.length?trade.reduce((a,x)=>a+x.utility,0)/trade.length:NaN,poarta=mlPoartaOOS(clean,incercari)/* v100.269: aceeași poartă ca modelEval */,state=poarta.trece&&auc>=.55&&skill>0&&trade.length>=8&&expectancy>0?"USABLE":"WEAK";return {n:clean.length,auc,brier,skill,acc,expectancy,tradeN:trade.length,aucJos:poarta.aucJos,aucSe:poarta.se,zile:poarta.zile,incercari:poarta.incercari,poartaV:269,state}
 }
 function ensembleProbabilityFromModels(models,vals){
   const predictions=models.map(x=>({name:x.name,p:x.model.predict(vals)})).filter(x=>Number.isFinite(x.p));if(!predictions.length)return {predictions,raw:NaN,range:NaN,sd:NaN};
@@ -2313,33 +2353,36 @@ function restoreMetaEnsembleV2(){
   try{
     const x=appSettings().privacySessionOnly?privacySessionState.metaEnsemble:JSON.parse(localStorage.getItem(META_ENSEMBLE_V2_KEY)||"null");if(!x?.models)return false;
     const ridge=modelFromParams(x.models.ridge?.params),elastic=modelFromParams(x.models.elastic?.params),stumps=restoreBoostedStumps(x.models.stumps?.params);if(!ridge||!elastic||!stumps)return false;
-    const same=x.fingerprint===researchDatasetFingerprint(),state=same?x.state:"STALE DATASET";
+    const same=x.fingerprint===researchDatasetFingerprint(),state=same?mlStareSubPoartaNoua(x.state,x.metrics)/* v100.269: o trecere pe poarta veche nu mai deblochează */:"STALE DATASET";
     metaEnsembleV2={...x,state,models:{ridge:{model:ridge,metrics:x.models.ridge.metrics},elastic:{model:elastic,metrics:x.models.elastic.metrics},stumps:{model:stumps,metrics:x.models.stumps.metrics}}};if(localDbSupported())localDbPutRecord("models",`META_ENSEMBLE_V2|${x.trainedAt||Date.now()}`,x,x.trainedAt||Date.now()).catch(()=>{});return true
   }catch{return false}
 }
 function ensembleCurrentPrediction(){
   const cur=currentMlFeatureRow(),x=metaEnsembleV2;if(!cur||!x?.models)return {action:"NO MODEL",p:NaN,raw:NaN,disagreement:NaN,state:x?.state||"LEARNING",predictions:[]};
   const fresh=x.fingerprint===researchDatasetFingerprint(),state=fresh?x.state:"STALE DATASET",models=[{name:"L2 Logistic",model:x.models.ridge.model},{name:"Elastic-Net",model:x.models.elastic.model},{name:"Boosted Stumps",model:x.models.stumps.model}],e=ensembleProbabilityFromModels(models,cur.vals),cfg=x.config||ensembleV2Config(),p=ensembleAdjustedProbability(e.raw,e.range,cfg.maxDisagreement),strict=state==="USABLE ENSEMBLE",agree=Number.isFinite(e.range)&&e.range<=cfg.maxDisagreement,action=strict&&agree&&p>=cfg.threshold?"TRADE":"SKIP";
-  return {action,p,raw:e.raw,disagreement:e.range,sd:e.sd,state,predictions:e.predictions,agree,strict,fresh}
+  return {action,p,raw:e.raw,disagreement:e.range,sd:e.sd,state,predictions:e.predictions,agree,strict,fresh,incercari:x.metrics?.incercari||null/* v100.269: pentru cipul porții */}
 }
 async function trainMetaEnsembleV2(showToast=false){
   const data=mlDataset(),n=data.length,cfg=ensembleV2Config();if(n<90){metaEnsembleV2={state:"LEARNING",trainN:0,testN:0,config:cfg,fingerprint:researchDatasetFingerprint()};renderMetaEnsembleV2();if(showToast)toast(`Need at least 90 resolved outcomes · current ${n}`,"warn");return metaEnsembleV2}
   const cut=Math.max(60,Math.min(n-20,Math.floor(n*cfg.split))),train=data.slice(0,cut),test=data.slice(cut);if(showToast)toast("Training Ensemble v2 in research worker…","good");
-  const [ridge,elastic,stumps]=await Promise.all([trainLogisticOffMain(train,cfg.l2),trainElasticOffMain(train,cfg.l1,.015),trainStumpsOffMain(train,cfg.stumps)]),models={ridge:{model:ridge,metrics:modelEval(ridge,test)},elastic:{model:elastic,metrics:modelEval(elastic,test)},stumps:{model:stumps,metrics:modelEval(stumps,test)}};
-  const named=[["ridge",models.ridge],["elastic",models.elastic],["stumps",models.stumps]],pred=test.map(r=>{const e=ensembleProbabilityFromModels(named.map(([name,x])=>({name,model:x.model})),r.vals);return {p:e.raw,y:r.label,range:e.range,utility:r.utility}}),baseRate=train.reduce((a,x)=>a+x.label*mlSampleWeight(x),0)/(train.reduce((a,x)=>a+mlSampleWeight(x),0)||train.length),metrics=evalPredictions(pred,baseRate),allPass=named.every(([,x])=>x.metrics.state==="USABLE"),state=allPass&&metrics.state==="USABLE"?"USABLE ENSEMBLE":"RESEARCH ONLY",ranges=pred.map(x=>x.range).filter(Number.isFinite),oosDisagreement={mean:ranges.length?ranges.reduce((a,b)=>a+b,0)/ranges.length:NaN,p90:ranges.length?quantileSorted(ranges,.90):NaN};
+  /* v100.269: reantrenările pe date sau setări (split, l1, l2, stumps) diferite se numără; pragul porții se corectează pentru ele */
+  const k=mlIncercareNoua("ensemble",`${researchDatasetFingerprint()}|${JSON.stringify({split:cfg.split,l1:cfg.l1,l2:cfg.l2,stumps:cfg.stumps})}`);
+  const [ridge,elastic,stumps]=await Promise.all([trainLogisticOffMain(train,cfg.l2),trainElasticOffMain(train,cfg.l1,.015),trainStumpsOffMain(train,cfg.stumps)]),models={ridge:{model:ridge,metrics:modelEval(ridge,test,k)},elastic:{model:elastic,metrics:modelEval(elastic,test,k)},stumps:{model:stumps,metrics:modelEval(stumps,test,k)}};
+  const named=[["ridge",models.ridge],["elastic",models.elastic],["stumps",models.stumps]],pred=test.map(r=>{const e=ensembleProbabilityFromModels(named.map(([name,x])=>({name,model:x.model})),r.vals);return {p:e.raw,y:r.label,range:e.range,utility:r.utility,ts:r.row?.ts}}),baseRate=train.reduce((a,x)=>a+x.label*mlSampleWeight(x),0)/(train.reduce((a,x)=>a+mlSampleWeight(x),0)||train.length),metrics=evalPredictions(pred,baseRate,k),allPass=named.every(([,x])=>x.metrics.state==="USABLE"),state=allPass&&metrics.state==="USABLE"?"USABLE ENSEMBLE":"RESEARCH ONLY",ranges=pred.map(x=>x.range).filter(Number.isFinite),oosDisagreement={mean:ranges.length?ranges.reduce((a,b)=>a+b,0)/ranges.length:NaN,p90:ranges.length?quantileSorted(ranges,.90):NaN};
   metaEnsembleV2={models,metrics,state,trainN:train.length,testN:test.length,trainedAt:Date.now(),fingerprint:researchDatasetFingerprint(),config:cfg,oosDisagreement};persistMetaEnsembleV2();renderMetaEnsembleV2();renderMetaLabel();renderMasterVerdict();if(showToast)toast(`Ensemble v2: ${state} · ${named.filter(([,x])=>x.metrics.state==="USABLE").length}/3 models pass OOS`,state==="USABLE ENSEMBLE"?"good":"warn");return metaEnsembleV2
 }
 function renderMetaEnsembleV2(){
   const x=metaEnsembleV2,d=ensembleCurrentPrediction();if(!$("ensV2State"))return;
   const cfg=x?.config||ensembleV2Config();if($("ensV2Threshold"))$("ensV2Threshold").value=cfg.threshold;if($("ensV2MaxDisagree"))$("ensV2MaxDisagree").value=cfg.maxDisagreement;if($("ensV2L1"))$("ensV2L1").value=cfg.l1;if($("ensV2Stumps"))$("ensV2Stumps").value=cfg.stumps;if($("ensV2Split"))$("ensV2Split").value=cfg.split;
-  $("ensV2Fingerprint").textContent=x?.fingerprint||researchDatasetFingerprint();$("ensV2Action").textContent=d.action;$("ensV2Action").className=d.action==="TRADE"?"ensUsable":d.action==="SKIP"?"ensSkip":"ensWeak";$("ensV2Prob").textContent=Number.isFinite(d.p)?(d.p*100).toFixed(1)+"%":"—";$("ensV2Raw").textContent=Number.isFinite(d.raw)?(d.raw*100).toFixed(1)+"%":"—";$("ensV2Disagree").textContent=Number.isFinite(d.disagreement)?(d.disagreement*100).toFixed(1)+" pp":"—";$("ensV2DisagreeBar").style.width=Number.isFinite(d.disagreement)?Math.min(100,d.disagreement/Math.max(.01,cfg.maxDisagreement)*100)+"%":"0%";$("ensV2Auc").textContent=Number.isFinite(x?.metrics?.auc)?x.metrics.auc.toFixed(3):"—";$("ensV2Skill").textContent=Number.isFinite(x?.metrics?.skill)?(x.metrics.skill*100).toFixed(1)+"%":"—";$("ensV2N").textContent=x?`${x.trainN||0}/${x.testN||0}`:"—";const pass=x?.models?Object.values(x.models).filter(z=>z.metrics?.state==="USABLE").length:0;$("ensV2ModelsPass").textContent=x?`${pass}/3`:"—";$("ensV2OosDisagree").textContent=Number.isFinite(x?.oosDisagreement?.mean)?(x.oosDisagreement.mean*100).toFixed(1)+" pp":"—";$("ensV2OosP90").textContent=Number.isFinite(x?.oosDisagreement?.p90)?(x.oosDisagreement.p90*100).toFixed(1)+" pp":"—";$("ensV2State").textContent=d.state||"LEARNING";$("ensV2State").className=d.state==="USABLE ENSEMBLE"?"ensUsable":d.state==="RESEARCH ONLY"||d.state==="STALE DATASET"?"ensWeak":"neutral";$("ensV2Stored").textContent=(appSettings().privacySessionOnly?!!privacySessionState.metaEnsemble:!!localStorage.getItem(META_ENSEMBLE_V2_KEY))?"YES · "+(appSettings().privacySessionOnly?"SESSION":"LOCAL"):"NO";
+  $("ensV2Fingerprint").textContent=x?.fingerprint||researchDatasetFingerprint();$("ensV2Action").textContent=d.action;$("ensV2Action").className=d.action==="TRADE"?"ensUsable":d.action==="SKIP"?"ensSkip":"ensWeak";$("ensV2Prob").textContent=Number.isFinite(d.p)?(d.p*100).toFixed(1)+"%":"—";$("ensV2Raw").textContent=Number.isFinite(d.raw)?(d.raw*100).toFixed(1)+"%":"—";$("ensV2Disagree").textContent=Number.isFinite(d.disagreement)?(d.disagreement*100).toFixed(1)+" pp":"—";$("ensV2DisagreeBar").style.width=Number.isFinite(d.disagreement)?Math.min(100,d.disagreement/Math.max(.01,cfg.maxDisagreement)*100)+"%":"0%";$("ensV2Auc").textContent=Number.isFinite(x?.metrics?.auc)?x.metrics.auc.toFixed(3):"—";$("ensV2Skill").textContent=Number.isFinite(x?.metrics?.skill)?(x.metrics.skill*100).toFixed(1)+"%":"—";$("ensV2N").textContent=x?`${x.trainN||0}/${x.testN||0}`:"—";const pass=x?.models?Object.values(x.models).filter(z=>z.metrics?.state==="USABLE").length:0;$("ensV2ModelsPass").textContent=x?`${pass}/3`+(x.metrics?.incercari?" · "+TextRo.cate(x.metrics.incercari,"încercare","încercări"):""):"—";/* v100.269: contorul lângă poartă */$("ensV2OosDisagree").textContent=Number.isFinite(x?.oosDisagreement?.mean)?(x.oosDisagreement.mean*100).toFixed(1)+" pp":"—";$("ensV2OosP90").textContent=Number.isFinite(x?.oosDisagreement?.p90)?(x.oosDisagreement.p90*100).toFixed(1)+" pp":"—";$("ensV2State").textContent=d.state||"LEARNING";$("ensV2State").className=d.state==="USABLE ENSEMBLE"?"ensUsable":d.state==="RESEARCH ONLY"||d.state==="STALE DATASET"?"ensWeak":"neutral";$("ensV2Stored").textContent=(appSettings().privacySessionOnly?!!privacySessionState.metaEnsemble:!!localStorage.getItem(META_ENSEMBLE_V2_KEY))?"YES · "+(appSettings().privacySessionOnly?"SESSION":"LOCAL"):"NO";
   const rows=x?.models?[["L2 Logistic (ridge-style)",x.models.ridge],["Elastic-Net Logistic",x.models.elastic],["Boosted Stumps",x.models.stumps]]:[];$("ensV2Models").innerHTML=rows.length?`<div class="ensRow"><div class="ensCell">Model</div><div class="ensCell">OOS AUC</div><div class="ensCell">Brier</div><div class="ensCell">Brier skill</div><div class="ensCell">Accuracy</div><div class="ensCell">Gate</div></div>`+rows.map(([name,z])=>`<div class="ensRow"><div class="ensCell">${name}</div><div class="ensCell">${Number.isFinite(z.metrics?.auc)?z.metrics.auc.toFixed(3):"—"}</div><div class="ensCell">${Number.isFinite(z.metrics?.brier)?z.metrics.brier.toFixed(3):"—"}</div><div class="ensCell">${Number.isFinite(z.metrics?.skill)?(z.metrics.skill*100).toFixed(1)+"%":"—"}</div><div class="ensCell">${Number.isFinite(z.metrics?.acc)?(z.metrics.acc*100).toFixed(1)+"%":"—"}</div><div class="ensCell ${z.metrics?.state==="USABLE"?"ensUsable":"ensWeak"}">${z.metrics?.state||"—"}</div></div>`).join(""):'<div class="emptyState">Train ensemble v2 after enough resolved outcomes.</div>';
   $("ensV2Current").innerHTML=d.predictions?.length?`<div class="ensRow"><div class="ensCell">Current prediction</div>${d.predictions.map(z=>`<div class="ensCell">${z.name}: ${(z.p*100).toFixed(1)}%</div>`).join("")}<div class="ensCell">raw ${(d.raw*100).toFixed(1)}%</div><div class="ensCell">adjusted ${(d.p*100).toFixed(1)}%</div></div>`:"";
-  $("ensV2Note").textContent=d.state==="USABLE ENSEMBLE"?`Strict OOS gate passed. Current TRADE requires adjusted probability ≥ ${(cfg.threshold*100).toFixed(0)}% and disagreement ≤ ${(cfg.maxDisagreement*100).toFixed(0)} pp. Equal model weights are fixed, not tuned on OOS.`:d.state==="STALE DATASET"?"Stored ensemble fingerprint differs from the current resolved dataset. Retrain before it can gate TRADE.":"Research only until all three component models and the equal-weight ensemble pass OOS AUC/Brier-skill gates."
+  $("ensV2Note").textContent=d.state==="USABLE ENSEMBLE"?`Strict OOS gate passed. Current TRADE requires adjusted probability ≥ ${(cfg.threshold*100).toFixed(0)}% and disagreement ≤ ${(cfg.maxDisagreement*100).toFixed(0)} pp. Equal model weights are fixed, not tuned on OOS.`:d.state==="STALE DATASET"?"Stored ensemble fingerprint differs from the current resolved dataset. Retrain before it can gate TRADE.":"Research only until all three component models and the equal-weight ensemble pass OOS AUC/Brier-skill gates.";
+  {const pt=mlPoartaText(x?.metrics);if(pt)$("ensV2Note").textContent+=" "+pt}/* v100.269: poarta și încercările, spuse lângă stare */
 }
 async function trainMetaLabelModel(){
   const data=mlDataset(),n=data.length;if(n<70){metaLabelState={state:"LEARNING",n};renderMetaLabel();return metaLabelState}
-  const cut=Math.max(45,Math.min(n-20,Math.floor(n*.72))),train=data.slice(0,cut),test=data.slice(cut),model=await trainLogisticOffMain(train,.02),metrics=modelEval(model,test),usable=metrics.state==="USABLE",state=usable?"USABLE":"WEAK OOS";
+  const cut=Math.max(45,Math.min(n-20,Math.floor(n*.72))),train=data.slice(0,cut),test=data.slice(cut),k=mlIncercareNoua("meta",researchDatasetFingerprint())/* v100.269 */,model=await trainLogisticOffMain(train,.02),metrics=modelEval(model,test,k),usable=metrics.state==="USABLE",state=usable?"USABLE":"WEAK OOS";
   metaLabelState={model,metrics,trainN:train.length,testN:test.length,state,trainedAt:Date.now(),fingerprint:researchDatasetFingerprint()};autoVersionModel("META",metaLabelState);renderMetaLabel();renderMasterVerdict();return metaLabelState
 }
 function currentMetaDecision(){
@@ -2349,7 +2392,8 @@ function currentMetaDecision(){
   const p=metaLabelState.model.predict(cur.vals),action=metaLabelState.state==="USABLE"&&p>=.55?"TRADE":"SKIP";return {action,p,state:metaLabelState.state,disagreement:NaN}
 }
 function renderMetaLabel(){
-  const d=currentMetaDecision(),m=metaEnsembleV2?.models?metaEnsembleV2:metaLabelState;$("metaAction").textContent=d.action;$("metaAction").className=d.action==="TRADE"?"good":d.action==="SKIP"?"bad":"neutral";$("metaProb").textContent=Number.isFinite(d.p)?(d.p*100).toFixed(0)+"%":"—";$("metaAuc").textContent=Number.isFinite(m?.metrics?.auc)?m.metrics.auc.toFixed(3):"—";$("metaSkill").textContent=Number.isFinite(m?.metrics?.skill)?(m.metrics.skill*100).toFixed(1)+"%":"—";$("metaN").textContent=m?`${m.trainN||0}/${m.testN||0}`:"—";$("metaState").textContent=d.state||m?.state||"LEARNING";$("metaNote").textContent=metaEnsembleV2?.models?(d.action==="TRADE"?"Ensemble v2 supports TRADE after strict OOS and disagreement gates.":`Ensemble v2 says SKIP · ${Number.isFinite(d.disagreement)?(d.disagreement*100).toFixed(1)+" pp disagreement · ":""}direction still comes only from the base engine.`):(d.action==="TRADE"?"Meta model supports taking the current base setup.":d.action==="SKIP"?"Meta model advises skipping the current base setup.":"Train after enough resolved setups. Direction still comes only from the base engine.")
+  const d=currentMetaDecision(),m=metaEnsembleV2?.models?metaEnsembleV2:metaLabelState;$("metaAction").textContent=d.action;$("metaAction").className=d.action==="TRADE"?"good":d.action==="SKIP"?"bad":"neutral";$("metaProb").textContent=Number.isFinite(d.p)?(d.p*100).toFixed(0)+"%":"—";$("metaAuc").textContent=Number.isFinite(m?.metrics?.auc)?m.metrics.auc.toFixed(3):"—";$("metaSkill").textContent=Number.isFinite(m?.metrics?.skill)?(m.metrics.skill*100).toFixed(1)+"%":"—";$("metaN").textContent=m?`${m.trainN||0}/${m.testN||0}`:"—";$("metaState").textContent=d.state||m?.state||"LEARNING";$("metaNote").textContent=metaEnsembleV2?.models?(d.action==="TRADE"?"Ensemble v2 supports TRADE after strict OOS and disagreement gates.":`Ensemble v2 says SKIP · ${Number.isFinite(d.disagreement)?(d.disagreement*100).toFixed(1)+" pp disagreement · ":""}direction still comes only from the base engine.`):(d.action==="TRADE"?"Meta model supports taking the current base setup.":d.action==="SKIP"?"Meta model advises skipping the current base setup.":"Train after enough resolved setups. Direction still comes only from the base engine.");
+  {const pt=metaEnsembleV2?.models?"":mlPoartaText(metaLabelState?.metrics);if(pt)$("metaNote").textContent+=" "+pt}/* v100.269: poarta și încercările modelului meta */
 }
 
 function weightedCalibration(rows,halfLife=60){
@@ -2401,11 +2445,19 @@ function renderTrueTradeFlow(){
 }
 
 function restoreObservedLiquidations(){if(appSettings().privacySessionOnly)return;try{const a=JSON.parse(localStorage.getItem(LIQ_HISTORY_KEY)||"[]");if(Array.isArray(a))liqEvents=[...a,...liqEvents].sort((a,b)=>a.ts-b.ts).slice(-2500)}catch{}}
-function persistObservedLiquidations(){
-  if(appSettings().privacySessionOnly)return;try{localStorage.setItem(LIQ_HISTORY_KEY,JSON.stringify(liqEvents.filter(x=>x.ts>=Date.now()-7*86400000).slice(-2500)))}catch{}
+/* v100.269 (ideile auditului 29.10): fluxul !forceOrder@arr rămânea deschis pe orice pagină după prima analiză crypto și la FIECARE mesaj
+   scria ~300 KB în localStorage (sincron) și redesena banda + harta. Acum curge doar cât se vede pagina care îl arată (Context Intelligence -
+   banda, Decision Core - harta) și cu fila vizibilă; localStorage se scrie cel mult o dată la 30 s, iar oprirea scrie ce a rămas. */
+var liqLsScrisLa=0,liqLsMurdar=false;
+function persistObservedLiquidations(force=false){
+  if(appSettings().privacySessionOnly)return;const acum=Date.now();if(force||acum-liqLsScrisLa>=30000){liqLsScrisLa=acum;liqLsMurdar=false;try{localStorage.setItem(LIQ_HISTORY_KEY,JSON.stringify(liqEvents.filter(x=>x.ts>=acum-7*86400000).slice(-2500)))}catch{}}else liqLsMurdar=true;
   if(Date.now()-lastLiqDbArchiveTs>30000){lastLiqDbArchiveTs=Date.now();localDbPutMany("liquidations",liqEvents.slice(-250),x=>`${x.ts}|${x.symbol}|${x.price}|${x.side}`,x=>x.ts).catch(()=>{})}
 }
-function ensureLiquidationTape(){if(assetClass()!=="CRYPTO")return;if(liqSocket&&[0,1].includes(liqSocket.readyState))return;startLiquidationTape()}
+function ensureLiquidationTape(){if(assetClass()!=="CRYPTO")return;if(!liqPaginaVizibila())return;/* v100.269: după analiză (pe Acasă) nu mai pornește - doar pe pagina lui */if(liqSocket&&[0,1].includes(liqSocket.readyState))return;startLiquidationTape()}
+function liqPaginaVizibila(){if(typeof document!=="undefined"&&document.hidden)return false;return ["intel","decisioncore"].some(id=>!!$(id)?.classList?.contains("on"))}
+/* v100.269: chemată de navTo (după show) și la visibilitychange - pe pagina lui pornește fluxul, altundeva îl oprește */
+function liqUrmeazaPagina(){if(liqPaginaVizibila())ensureLiquidationTape();else if(liqSocket)stopLiquidationTape("doarme")}
+document.addEventListener("visibilitychange",()=>{try{liqUrmeazaPagina()}catch(_){}});
 function observedLiquidationHeatmap(){
   const sym=norm($("symbol").value),rows=liqEvents.filter(x=>x.symbol===sym&&x.ts>=Date.now()-7*86400000);if(!rows.length)return {rows:[],bins:[],long:0,short:0};
   const lo=Math.min(...rows.map(x=>x.price)),hi=Math.max(...rows.map(x=>x.price)),binsN=16,step=(hi-lo||Math.max(1,lo*.002))/binsN,bins=Array.from({length:binsN},(_,i)=>({lo:lo+i*step,hi:lo+(i+1)*step,long:0,short:0,total:0,count:0}));
@@ -2434,10 +2486,10 @@ function saveCurrentModelVersion(){
 }
 function activateModelVersion(id){
   const x=modelVersions().find(v=>v.id===id);if(!x)return;const model=modelFromParams(x.params);if(!model)return;
-  activeModelVersionId=id;if(appSettings().privacySessionOnly)privacySessionState.activeModelId=id;else localStorage.setItem(ACTIVE_MODEL_VERSION_KEY,String(id));if(x.type==="META")metaLabelState={model,state:x.state||"RESTORED",metrics:x.metrics||{},fingerprint:x.fingerprint,trainN:0,testN:0};else mlShadow={model,state:x.state||"RESTORED",auc:x.metrics?.auc,brier:x.metrics?.brier,skill:x.metrics?.skill,acc:x.metrics?.acc,trainN:0,testN:0};renderModelVersions();renderMetaLabel();renderMlLens();renderMasterVerdict();toast("Research model version activated. Base engine unchanged.","good")
+  activeModelVersionId=id;if(appSettings().privacySessionOnly)privacySessionState.activeModelId=id;else localStorage.setItem(ACTIVE_MODEL_VERSION_KEY,String(id));/* v100.269: o versiune salvată pe poarta veche nu revine USABLE */if(x.type==="META")metaLabelState={model,state:mlStareSubPoartaNoua(x.state||"RESTORED",x.metrics),metrics:x.metrics||{},fingerprint:x.fingerprint,trainN:0,testN:0};else mlShadow={model,state:mlStareSubPoartaNoua(x.state||"RESTORED",x.metrics),metrics:x.metrics||{},auc:x.metrics?.auc,brier:x.metrics?.brier,skill:x.metrics?.skill,acc:x.metrics?.acc,trainN:0,testN:0};renderModelVersions();renderMetaLabel();renderMlLens();renderMasterVerdict();toast("Research model version activated. Base engine unchanged.","good")
 }
 function restoreActiveModelVersion(){
-  const id=+(appSettings().privacySessionOnly?privacySessionState.activeModelId:localStorage.getItem(ACTIVE_MODEL_VERSION_KEY));if(!id)return false;const x=modelVersions().find(v=>v.id===id);if(!x?.params)return false;const model=modelFromParams(x.params);if(!model)return false;activeModelVersionId=id;if(x.type==="META")metaLabelState={model,state:x.state||"RESTORED",metrics:x.metrics||{},fingerprint:x.fingerprint,trainN:0,testN:0};else mlShadow={model,state:x.state||"RESTORED",auc:x.metrics?.auc,brier:x.metrics?.brier,skill:x.metrics?.skill,acc:x.metrics?.acc,trainN:0,testN:0};return true
+  const id=+(appSettings().privacySessionOnly?privacySessionState.activeModelId:localStorage.getItem(ACTIVE_MODEL_VERSION_KEY));if(!id)return false;const x=modelVersions().find(v=>v.id===id);if(!x?.params)return false;const model=modelFromParams(x.params);if(!model)return false;activeModelVersionId=id;/* v100.269: o versiune salvată pe poarta veche nu revine USABLE */if(x.type==="META")metaLabelState={model,state:mlStareSubPoartaNoua(x.state||"RESTORED",x.metrics),metrics:x.metrics||{},fingerprint:x.fingerprint,trainN:0,testN:0};else mlShadow={model,state:mlStareSubPoartaNoua(x.state||"RESTORED",x.metrics),metrics:x.metrics||{},auc:x.metrics?.auc,brier:x.metrics?.brier,skill:x.metrics?.skill,acc:x.metrics?.acc,trainN:0,testN:0};return true
 }
 function renderModelVersions(){
   const a=modelVersions();$("modelVersionN").textContent=a.length;$("modelVersionActive").textContent=activeModelVersionId?String(activeModelVersionId).slice(-6):"CURRENT";$("modelFingerprint").textContent=researchDatasetFingerprint();$("modelShadowState").textContent=mlShadow?.state||"—";$("modelMetaState").textContent=metaEnsembleV2?.state||metaLabelState?.state||"—";
@@ -2454,6 +2506,22 @@ function masterDataQuality(){
   window.__dataQualityMatrix={score:q,base,source,mtf,mtfCoverage,identity,flow,flowDetail,cvd:cvdQ,context:ctxFresh,model:modelState,corporateActionGuard:stockGuard||null,freshMs:fresh,ts:now};return q
 }
 
+/* v100.269 (ideile auditului 29.10): O SINGURĂ listă de module cu ponderile lor, citită și de Verdict Center și de Master Verdict
+   (înainte același modul avea două ponderi: baza 0,12 / 0,26, regimul 0,055 / 0,14, calibrarea 0,05 / 0,12).
+   IPOTEZE, nevalidate: nicio pondere de aici nu e măsurată pe rezultate. Sunt cele din Master (el dă verdictul final, care deci nu se mișcă);
+   modulele care există doar în Verdict Center își păstrează raportul de până acum față de motorul de bază (vechea pondere ×0,26/0,12).
+   fam = familia din Master (plafoanele familiilor rămân în renderMasterVerdict). inBaza = deja numărat în motorul de bază (sm.long/short:
+   trend, momentum, volum, structură, MTF, Ichimoku, divergența) sau în alt modul din listă ⇒ pondere 0, nu mai votează a doua oară; rămâne la vedere.
+   Regimul v2 își ia direcția tot din trend+momentum, dar stă în poarta EDGE_WEAK a lui Master (proba v100267-b) ⇒ rămâne, de decis separat. */
+var MOTOR_PONDERI={
+  base:{w:.26,fam:"TECH"},regime:{w:.14,fam:"TECH"},setup:{w:.09,fam:"TECH"},structure:{w:.06,fam:"TECH"},
+  calibration:{w:.12,fam:"MODEL"},meta:{w:.14,fam:"MODEL"},governed:{w:.07,fam:"MODEL"},
+  flow:{w:.12,fam:"FLOW"},liquidations:{w:.06,fam:"FLOW"},histCvd:{w:.07,fam:"FLOW"},
+  context:{w:.04,fam:"CONTEXT"},breadth:{w:.06,fam:"CONTEXT"},onchain:{w:.04,fam:"CONTEXT"},options:{w:.025,fam:"CONTEXT"},
+  mlV2:{w:.13},empirical:{w:.076},segment:{w:.061},micro:{w:.069},predLiq:{w:.054},futures:{w:.039},fearGreed:{w:.026},cmf:{w:.039},mfi:{w:.033},volumeProfile:{w:.043},
+  trend:{w:0,inBaza:"base"},momentum:{w:0,inBaza:"base"},volume:{w:0,inBaza:"base"},structureComposite:{w:0,inBaza:"base"},mtf:{w:0,inBaza:"base"},rsi:{w:0,inBaza:"base"},macd:{w:0,inBaza:"base"},supertrend:{w:0,inBaza:"base"},
+  ichimoku:{w:0,inBaza:"base"},vwap:{w:0,inBaza:"base"},breakout:{w:0,inBaza:"base"},divergence:{w:0,inBaza:"base"},regimeV65:{w:0,inBaza:"base"},structureV65:{w:0,inBaza:"base"},crossAssetV65:{w:0,inBaza:"Cross-market context și Market Breadth Pro"}
+};
 function vcBiasLabel(bias,available=true){
   if(!available||!Number.isFinite(bias))return "NEUTRAL";
   return bias>=.15?"BULLISH":bias<=-.15?"BEARISH":"NEUTRAL"
@@ -2475,27 +2543,30 @@ function buildVerdictCenterSnapshot(){
   const st=window.__radarState,ss=window.__signalState;if(!st||!ss)return {modules:[],agreement:NaN,coverage:0,consensus:"NO DATA",conviction:0,counts:{bullish:0,bearish:0,neutral:0,blocker:0,hard:0,warn:0},families:{},ts:Date.now()};
   const q=st.q||{},dir=ss.tm?.direction==="LONG"?1:ss.tm?.direction==="SHORT"?-1:0,mods=[],add=x=>mods.push(x),crypto=assetClass()==="CRYPTO",reg=regimeV2State||vcSafe(()=>renderRegimeV2()),meta=currentMetaDecision(),cal=calibrationV2State||vcSafe(()=>renderCalibrationV2()),gov=vcSafe(()=>governedComponents()),emp=vcSafe(()=>empiricalLens()),sq=vcSafe(()=>setupQualityCurrent()),heat=vcSafe(()=>observedLiquidationHeatmap(),{rows:[]}),structure=window.__structureV38||{},flow=decisionStateMatches(trueFlowState,{source:false,maxAge:10*60*1000})?trueFlowState:null,micro=decisionStateMatches(window.__microState,{source:false,maxAge:5*60*1000})?window.__microState:null,ext=externalIntelState||{},econ=ext.calendar?.summary,onchain=decisionStateMatches(ext.onchain,{source:false,maxAge:15*60*1000})?ext.onchain:null,predObj=decisionStateMatches(ext.predLiq,{source:false,maxAge:15*60*1000})?ext.predLiq:null,pred=predObj?.summary,opt=decisionStateMatches(ext.options,{source:false,maxAge:15*60*1000})?ext.options:null,hcvd=decisionStateMatches(ext.histCvd,{source:false,maxAge:15*60*1000})?ext.histCvd:null,context=decisionStateMatches(window.__intelContext,{source:false,maxAge:10*60*1000})?vcSafe(()=>contextScoreFrom(window.__intelContext.global,window.__intelContext.macro)):NaN,quality=masterDataQuality();
 
+  /* v100.269 (ideile auditului 29.10): ponderile vin din MOTOR_PONDERI (aceleași ca în Master); o parte a motorului de bază (RSI, MACD, Supertrend…)
+     rămâne în tabel cu valoarea și culoarea ei, dar nu mai votează a doua oară - nici în consens, nici în acord */
+  const MP=MOTOR_PONDERI,pw=(k,o={})=>({...o,weight:MP[k].w}),dub=(name,family,bias,value,note,k,o={})=>vcItem(name,family,bias,value,`${note} · ${MP[k].inBaza==="base"?"inclus deja în motorul de bază":"deja numărat în "+MP[k].inBaza}: nu mai votează a doua oară`,{...o,weight:MP[k].w,nondirectional:true,available:o.available!==false&&Number.isFinite(bias)});
   const baseBias=Number.isFinite(+ss.sm?.long)&&Number.isFinite(+ss.sm?.short)?clamp((+ss.sm.long- +ss.sm.short)/100,-1,1):dir;
-  add(vcItem("Base signal engine","Technical",baseBias,`${ss.tm?.direction||"WAIT"} · L ${(+ss.sm?.long||0).toFixed(0)} / S ${(+ss.sm?.short||0).toFixed(0)}`,"Primary directional engine",{weight:.12}));
-  add(vcItem("Trend composite","Technical",vcScoreBias(q.trendScore),Number.isFinite(+q.trendScore)?(+q.trendScore).toFixed(0)+"/100":"—","EMA20/50/200 + Supertrend + DMI composite",{weight:.055}));
-  add(vcItem("Momentum composite","Technical",vcScoreBias(q.momScore),Number.isFinite(+q.momScore)?(+q.momScore).toFixed(0)+"/100":"—","RSI + MACD + ROC + Stoch RSI composite",{weight:.045}));
-  add(vcItem("Volume / VWAP composite","Technical",(q.volScore==null?NaN:vcScoreBias(q.volScore)),q.volScore!=null&&Number.isFinite(+q.volScore)?(+q.volScore).toFixed(0)+"/100":"—","Relative volume plus VWAP position",{weight:.03}));
-  add(vcItem("Structure composite","Technical",vcScoreBias(q.structureScore),Number.isFinite(+q.structureScore)?(+q.structureScore).toFixed(0)+"/100":"—","SMC/structure score and breakout adjustment",{weight:.045}));
-  add(vcItem("Multi-timeframe composite","Technical",vcScoreBias(ss.mc?.avg),Number.isFinite(+ss.mc?.avg)?`${(+ss.mc.avg).toFixed(0)}/100 · ${ss.mc.comp||""}`:"—","Weighted 15m/1h/4h/1d context",{weight:.06}));
-  add(vcItem("RSI","Technical",Number.isFinite(+q.rsi)?clamp((+q.rsi-50)/25,-1,1):NaN,Number.isFinite(+q.rsi)?(+q.rsi).toFixed(1):"—","Directional around 50; overbought/oversold is not treated as a hard reversal",{weight:.018}));
-  add(vcItem("MACD histogram","Technical",vcBoolBias(q.macd),q.macd===true?"POSITIVE":q.macd===false?"NEGATIVE":"—","Sign of MACD histogram",{weight:.02}));
-  add(vcItem("Supertrend","Technical",vcTextBias(q.supertrend,["BULL"],["BEAR"]),q.supertrend||"—","Current Supertrend state",{weight:.025}));
-  add(vcItem("Ichimoku","Technical",vcTextBias(q.ichimoku,["BULL"],["BEAR"]),q.ichimoku||"—","Current cloud state",{weight:.018}));
-  add(vcItem("VWAP position","Technical",Number.isFinite(+q.price)&&typeof q.vwapAbove==="boolean"?(q.vwapAbove?.45:-.45):NaN,q.vwapAbove===true?"ABOVE":q.vwapAbove===false?"BELOW":"—","Price versus rolling VWAP",{weight:.015}));
-  add(vcItem("Breakout","Technical",vcTextBias(q.breakout,["UP"],["DOWN"]),q.breakout||"NONE","Breakout relative to recent range",{weight:.022}));
-  add(vcItem("CMF","Technical",q.cmf!=null&&Number.isFinite(+q.cmf)?clamp(+q.cmf/.25,-1,1):NaN,q.cmf!=null&&Number.isFinite(+q.cmf)?(+q.cmf).toFixed(3):"—","Chaikin Money Flow",{weight:.018}));
-  add(vcItem("MFI","Technical",q.mfi!=null&&Number.isFinite(+q.mfi)?clamp((+q.mfi-50)/25,-1,1):NaN,q.mfi!=null&&Number.isFinite(+q.mfi)?(+q.mfi).toFixed(1):"—","Money Flow Index around 50",{weight:.015}));
-  add(vcItem("RSI divergence","Technical",vcTextBias(q.divergence,["BULL"],["BEAR"]),q.divergence||"NONE","Detected RSI divergence",{weight:.018}));
+  add(vcItem("Base signal engine","Technical",baseBias,`${ss.tm?.direction||"WAIT"} · L ${(+ss.sm?.long||0).toFixed(0)} / S ${(+ss.sm?.short||0).toFixed(0)}`,"Primary directional engine",pw("base")));
+  add(dub("Trend composite","Technical",vcScoreBias(q.trendScore),Number.isFinite(+q.trendScore)?(+q.trendScore).toFixed(0)+"/100":"—","EMA20/50/200 + Supertrend + DMI composite","trend"));
+  add(dub("Momentum composite","Technical",vcScoreBias(q.momScore),Number.isFinite(+q.momScore)?(+q.momScore).toFixed(0)+"/100":"—","RSI + MACD + ROC + Stoch RSI composite","momentum"));
+  add(dub("Volume / VWAP composite","Technical",(q.volScore==null?NaN:vcScoreBias(q.volScore)),q.volScore!=null&&Number.isFinite(+q.volScore)?(+q.volScore).toFixed(0)+"/100":"—","Relative volume plus VWAP position","volume"));
+  add(dub("Structure composite","Technical",vcScoreBias(q.structureScore),Number.isFinite(+q.structureScore)?(+q.structureScore).toFixed(0)+"/100":"—","SMC/structure score and breakout adjustment","structureComposite"));
+  add(dub("Multi-timeframe composite","Technical",vcScoreBias(ss.mc?.avg),Number.isFinite(+ss.mc?.avg)?`${(+ss.mc.avg).toFixed(0)}/100 · ${ss.mc.comp||""}`:"—","Weighted 15m/1h/4h/1d context","mtf"));
+  add(dub("RSI","Technical",Number.isFinite(+q.rsi)?clamp((+q.rsi-50)/25,-1,1):NaN,Number.isFinite(+q.rsi)?(+q.rsi).toFixed(1):"—","Directional around 50; overbought/oversold is not treated as a hard reversal","rsi"));
+  add(dub("MACD histogram","Technical",vcBoolBias(q.macd),q.macd===true?"POSITIVE":q.macd===false?"NEGATIVE":"—","Sign of MACD histogram","macd"));
+  add(dub("Supertrend","Technical",vcTextBias(q.supertrend,["BULL"],["BEAR"]),q.supertrend||"—","Current Supertrend state","supertrend"));
+  add(dub("Ichimoku","Technical",vcTextBias(q.ichimoku,["BULL"],["BEAR"]),q.ichimoku||"—","Current cloud state","ichimoku"));
+  add(dub("VWAP position","Technical",Number.isFinite(+q.price)&&typeof q.vwapAbove==="boolean"?(q.vwapAbove?.45:-.45):NaN,q.vwapAbove===true?"ABOVE":q.vwapAbove===false?"BELOW":"—","Price versus rolling VWAP","vwap"));
+  add(dub("Breakout","Technical",vcTextBias(q.breakout,["UP"],["DOWN"]),q.breakout||"NONE","Breakout relative to recent range","breakout"));
+  add(vcItem("CMF","Technical",q.cmf!=null&&Number.isFinite(+q.cmf)?clamp(+q.cmf/.25,-1,1):NaN,q.cmf!=null&&Number.isFinite(+q.cmf)?(+q.cmf).toFixed(3):"—","Chaikin Money Flow",pw("cmf")));
+  add(vcItem("MFI","Technical",q.mfi!=null&&Number.isFinite(+q.mfi)?clamp((+q.mfi-50)/25,-1,1):NaN,q.mfi!=null&&Number.isFinite(+q.mfi)?(+q.mfi).toFixed(1):"—","Money Flow Index around 50",pw("mfi")));
+  add(dub("RSI divergence","Technical",vcTextBias(q.divergence,["BULL"],["BEAR"]),q.divergence||"NONE","Detected RSI divergence","divergence"));
 
   const vp=vcSafe(()=>volumeProfile(st.j),null);
   let vpBias=NaN,vpVal="—";
   if(vp&&Number.isFinite(+q.price)){vpBias=q.price>vp.vah?.55:q.price<vp.val?-.55:0;vpVal=`P ${num(q.price)} · VA ${num(vp.val)}–${num(vp.vah)} · POC ${num(vp.poc)}`}
-  add(vcItem("Volume profile location","Technical",vpBias,vpVal,"Price versus reconstructed value area",{weight:.02,available:!!vp}));
+  add(vcItem("Volume profile location","Technical",vpBias,vpVal,"Price versus reconstructed value area",pw("volumeProfile",{available:!!vp})));
   add(vcStatusItem("ADX trend strength","Technical",Number.isFinite(+q.adx)?(+q.adx).toFixed(1):"—","Direction-neutral trend-strength diagnostic",{available:Number.isFinite(+q.adx)}));
   add(vcStatusItem("Volatility regime","Technical",Number.isFinite(+q.atrPct)?`${(+q.atrPct).toFixed(2)}% ATR · RVp ${Number.isFinite(+q.rvPercentile)?(+q.rvPercentile).toFixed(0):"—"}`:"—","Direction-neutral volatility context",{available:Number.isFinite(+q.atrPct)}));
   const v53=window.__volatilityIntel||volatilityIntelligenceState;
@@ -2503,36 +2574,37 @@ function buildVerdictCenterSnapshot(){
   add(vcStatusItem("IV / RV volatility premium","Context",v53?.implied?.available?`${v53.implied.premium} · ${Number.isFinite(+v53.implied.ratio)?(+v53.implied.ratio).toFixed(2)+"×":"—"}`:"N/A","Direction-neutral options volatility premium; not a LONG/SHORT vote",{severity:v53?.implied?.available&&Number.isFinite(+v53.implied.ratio)&&+v53.implied.ratio>=1.75?"WARN":null,available:!!v53?.implied?.available}));
 
   const regBias=reg?.probs?clamp((+reg.probs.TREND_UP||0)-(+reg.probs.TREND_DOWN||0),-1,1):NaN;
-  add(vcItem("Regime Engine v2","Models",regBias,reg?`${reg.state} · ${(reg.confidence*100).toFixed(0)}%`:"—","Probabilistic market-state engine",{weight:.055,available:!!reg}));
+  add(vcItem("Regime Engine v2","Models",regBias,reg?`${reg.state} · ${(reg.confidence*100).toFixed(0)}%`:"—","Probabilistic market-state engine",pw("regime",{available:!!reg})));
   /* v100.267 (auditul 29.10): p e null sub 30 de rezultate - fără „+”, care făcea din null un 0 „disponibil” */
   const calBias=Number.isFinite(cal?.p)&&dir?dir*((cal.p-.5)*2):NaN;
-  add(vcItem("Calibration v2","Models",calBias,Number.isFinite(cal?.p)?`${(cal.p*100).toFixed(1)}%${Number.isFinite(cal.n)?" · N"+cal.n:""} · ${cal.state||""}`:"—","Calibrated probability of current base direction",{weight:.05,available:Number.isFinite(cal?.p)}));
+  add(vcItem("Calibration v2","Models",calBias,Number.isFinite(cal?.p)?`${(cal.p*100).toFixed(1)}%${Number.isFinite(cal.n)?" · N"+cal.n:""} · ${cal.state||""}`:"—","Calibrated probability of current base direction",pw("calibration",{available:Number.isFinite(cal?.p)})));
   const metaUsable=String(meta?.state||"").startsWith("USABLE"),metaBias=Number.isFinite(+meta?.p)&&dir?dir*((+meta.p-.5)*2):NaN;
-  add(vcItem("Meta-label TRADE/SKIP","Models",metaBias,Number.isFinite(+meta?.p)?`${meta.action} · ${(+meta.p*100).toFixed(1)}%`:(meta?.action||"—"),`State ${meta?.state||"N/A"}`,{weight:.055,available:Number.isFinite(+meta?.p)}));
+  add(vcItem("Meta-label TRADE/SKIP","Models",metaBias,Number.isFinite(+meta?.p)?`${meta.action} · ${(+meta.p*100).toFixed(1)}%`:(meta?.action||"—"),`State ${meta?.state||"N/A"}`,pw("meta",{available:Number.isFinite(+meta?.p)})));
   const mv2=metaEnsembleV2?.models?vcSafe(()=>ensembleCurrentPrediction()):null,mv2Bias=Number.isFinite(+mv2?.p)&&dir?dir*((+mv2.p-.5)*2):NaN;
-  add(vcItem("ML Ensemble v2","Models",mv2Bias,mv2?`${mv2.action} · ${(+mv2.p*100).toFixed(1)}% · ${Number.isFinite(+mv2.disagreement)?(+mv2.disagreement*100).toFixed(1)+"pp":"—"}`:"—",mv2?.state||"No trained ensemble",{weight:.06,available:Number.isFinite(+mv2?.p)}));
+  add(vcItem("ML Ensemble v2","Models",mv2Bias,mv2?`${mv2.action} · ${(+mv2.p*100).toFixed(1)}% · ${Number.isFinite(+mv2.disagreement)?(+mv2.disagreement*100).toFixed(1)+"pp":"—"}`:"—",mv2?.state||"No trained ensemble",pw("mlV2",{available:Number.isFinite(+mv2?.p)})));
   const govBias=Number.isFinite(+gov?.ensemble)&&dir?dir*((+gov.ensemble-.5)*2):NaN;
-  add(vcItem("Governed ML ensemble","Models",govBias,Number.isFinite(+gov?.ensemble)?`${(+gov.ensemble*100).toFixed(1)}%`:"—","Frozen/governed research ensemble",{weight:.045,available:Number.isFinite(+gov?.ensemble)}));
+  add(vcItem("Governed ML ensemble","Models",govBias,Number.isFinite(+gov?.ensemble)?`${(+gov.ensemble*100).toFixed(1)}%`:"—","Frozen/governed research ensemble",pw("governed",{available:Number.isFinite(+gov?.ensemble)})));
   const empBias=Number.isFinite(+emp?.cal)&&dir?dir*((+emp.cal-.5)*2):NaN;
-  add(vcItem("Empirical similar outcomes","Models",empBias,Number.isFinite(+emp?.cal)?`${(+emp.cal*100).toFixed(1)}% · N${emp.n}`:"—","Shrunk hit rate for comparable confidence history",{weight:.035,available:Number.isFinite(+emp?.cal)&&(+emp.n||0)>=10}));
+  add(vcItem("Empirical similar outcomes","Models",empBias,Number.isFinite(+emp?.cal)?`${(+emp.cal*100).toFixed(1)}% · N${emp.n}`:"—","Shrunk hit rate for comparable confidence history",pw("empirical",{available:Number.isFinite(+emp?.cal)&&(+emp.n||0)>=10})));
   const seg=vcSafe(()=>segmentReliability(st.symbol,st.tf,st.mode,q.regime),null),segBias=Number.isFinite(+seg?.shrunkHit)&&dir?dir*((+seg.shrunkHit-.5)*2):NaN;
-  add(vcItem("Segment reliability","Models",segBias,Number.isFinite(+seg?.shrunkHit)?`${(+seg.shrunkHit*100).toFixed(1)}% · N${seg.n}`:"—","Hierarchical reliability for symbol/TF/mode/regime",{weight:.028,available:Number.isFinite(+seg?.shrunkHit)}));
+  add(vcItem("Segment reliability","Models",segBias,Number.isFinite(+seg?.shrunkHit)?`${(+seg.shrunkHit*100).toFixed(1)}% · N${seg.n}`:"—","Hierarchical reliability for symbol/TF/mode/regime",pw("segment",{available:Number.isFinite(+seg?.shrunkHit)})));
   const drift=driftSnapshot?.state||"NO TEST";
   add(vcStatusItem("Model/data drift","Models",drift,drift==="DRIFT"?"Detected distribution/performance drift":"Current drift monitor state",{severity:drift==="DRIFT"?"WARN":null,available:drift!=="NO TEST"}));
 
-  add(vcItem("True recent trade-flow CVD","Flow",flow&&!flow.error&&Number.isFinite(+flow.delta)?clamp(+flow.delta/35,-1,1):NaN,flow&&!flow.error?`${flow.state} · ${flow.delta>=0?"+":""}${(+flow.delta).toFixed(1)}%`:"—","Binance aggregate-trade taker flow",{weight:.055,available:!!flow&&!flow.error&&Number.isFinite(+flow.delta)}));
-  add(vcItem("Historical CVD","Flow",hcvd?.available&&Number.isFinite(+hcvd.summary?.deltaPct)?clamp(+hcvd.summary.deltaPct/15,-1,1):NaN,hcvd?.available?`${hcvd.summary?.state||"—"} · ${Number.isFinite(+hcvd.coverage)?(+hcvd.coverage*100).toFixed(0)+"% coverage":"—"}`:"—","Provider historical taker buy/sell window",{weight:.06,available:!!hcvd?.available&&Number.isFinite(+hcvd.summary?.deltaPct)}));
-  add(vcItem("Pionex microstructure","Flow",crypto&&Number.isFinite(+micro?.composite?.score)?clamp(+micro.composite.score/60,-1,1):NaN,crypto&&micro?.composite?`${micro.composite.bias} · ${(+micro.composite.score).toFixed(1)}`:"—","Recent trade/depth microstructure composite",{weight:.032,available:crypto&&Number.isFinite(+micro?.composite?.score)}));
+  add(vcItem("True recent trade-flow CVD","Flow",flow&&!flow.error&&Number.isFinite(+flow.delta)?clamp(+flow.delta/35,-1,1):NaN,flow&&!flow.error?`${flow.state} · ${flow.delta>=0?"+":""}${(+flow.delta).toFixed(1)}%`:"—","Binance aggregate-trade taker flow",pw("flow",{available:!!flow&&!flow.error&&Number.isFinite(+flow.delta)})));
+  add(vcItem("Historical CVD","Flow",hcvd?.available&&Number.isFinite(+hcvd.summary?.deltaPct)?clamp(+hcvd.summary.deltaPct/15,-1,1):NaN,hcvd?.available?`${hcvd.summary?.state||"—"} · ${Number.isFinite(+hcvd.coverage)?(+hcvd.coverage*100).toFixed(0)+"% coverage":"—"}`:"—","Provider historical taker buy/sell window",pw("histCvd",{available:!!hcvd?.available&&Number.isFinite(+hcvd.summary?.deltaPct)})));
+  add(vcItem("Pionex microstructure","Flow",crypto&&Number.isFinite(+micro?.composite?.score)?clamp(+micro.composite.score/60,-1,1):NaN,crypto&&micro?.composite?`${micro.composite.bias} · ${(+micro.composite.score).toFixed(1)}`:"—","Recent trade/depth microstructure composite",pw("micro",{available:crypto&&Number.isFinite(+micro?.composite?.score)})));
   const liqBias=heat?.rows?.length&&(+heat.short+ +heat.long)>0?clamp((+heat.short- +heat.long)/(+heat.short+ +heat.long),-1,1):NaN;
-  add(vcItem("Observed liquidation tape","Flow",liqBias,heat?.rows?.length?`Long ${compact(heat.long)} · Short ${compact(heat.short)}`:"—","Observed Binance liquidation events; short liquidations map positive",{weight:.022,available:!!heat?.rows?.length}));
-  add(vcItem("Predictive liquidation map","Flow",pred?.available&&Number.isFinite(+pred.imbalance)?clamp(+pred.imbalance,-1,1):NaN,pred?.available?`${pred.state} · peak ${pred.peak?num(pred.peak.price):"—"}`:"—","Provider-model liquidity-density imbalance",{weight:.025,available:!!pred?.available&&Number.isFinite(+pred.imbalance)}));
+  add(vcItem("Observed liquidation tape","Flow",liqBias,heat?.rows?.length?`Long ${compact(heat.long)} · Short ${compact(heat.short)}`:"—","Observed Binance liquidation events; short liquidations map positive",pw("liquidations",{available:!!heat?.rows?.length})));
+  add(vcItem("Predictive liquidation map","Flow",pred?.available&&Number.isFinite(+pred.imbalance)?clamp(+pred.imbalance,-1,1):NaN,pred?.available?`${pred.state} · peak ${pred.peak?num(pred.peak.price):"—"}`:"—","Provider-model liquidity-density imbalance",pw("predLiq",{available:!!pred?.available&&Number.isFinite(+pred.imbalance)})));
 
-  add(vcItem("Cross-market context","Context",Number.isFinite(+context)?vcScoreBias(context):NaN,Number.isFinite(+context)?(+context).toFixed(0)+"/100":"—","Existing QQQ/SPY/IWM/TLT/GLD / global context score",{weight:.027,available:Number.isFinite(+context)}));
-  const breadth64=window.__marketBreadthV64,breadth64Ok=!!breadth64&&Date.now()-(+breadth64.ts||0)<20*60*1000&&Number.isFinite(+breadth64.score);add(vcItem("Market Breadth Pro","Context",breadth64Ok?vcScoreBias(+breadth64.score):NaN,breadth64Ok?`${breadth64.state} · ${(+breadth64.score).toFixed(0)}/100 · ${breadth64.n}/${breadth64.total}`:"—",breadth64Ok?`${breadth64.universe} · ${breadth64.divergence||"NONE"}`:"Breadth snapshot unavailable",{weight:.045,available:breadth64Ok}));
+  add(vcItem("Cross-market context","Context",Number.isFinite(+context)?vcScoreBias(context):NaN,Number.isFinite(+context)?(+context).toFixed(0)+"/100":"—","Existing QQQ/SPY/IWM/TLT/GLD / global context score",pw("context",{available:Number.isFinite(+context)})));
+  const breadth64=window.__marketBreadthV64,breadth64Ok=!!breadth64&&Date.now()-(+breadth64.ts||0)<20*60*1000&&Number.isFinite(+breadth64.score);add(vcItem("Market Breadth Pro","Context",breadth64Ok?vcScoreBias(+breadth64.score):NaN,breadth64Ok?`${breadth64.state} · ${(+breadth64.score).toFixed(0)}/100 · ${breadth64.n}/${breadth64.total}`:"—",breadth64Ok?`${breadth64.universe} · ${breadth64.divergence||"NONE"}`:"Breadth snapshot unavailable",pw("breadth",{available:breadth64Ok})));
   const d65=vcSafe(()=>v65DecisionSuite(false),null);if(d65){
-    add(vcItem("Regime Intelligence v65","Models",d65.regime.bias,`${d65.regime.state} · ${d65.regime.score.toFixed(0)}/100`,d65.regime.detail,{weight:.018,available:true}));
-    add(vcItem("Liquidity / Structure v65","Technical",d65.structure.bias,`${d65.structure.state} · ${d65.structure.score.toFixed(0)}/100`,d65.structure.detail,{weight:.018,available:true}));
-    add(vcItem("Cross-Asset Confirmation v65","Context",d65.crossAsset.bias,`${d65.crossAsset.state} · ${d65.crossAsset.score.toFixed(0)}/100`,d65.crossAsset.detail,{weight:.015,available:true}));
+    /* v100.269: regimul v65 (scorurile pe TF-uri = MTF + scorul tehnic), structura v65 (structureScore + BOS/sweep/FVG, deja în el) și cross-asset v65 (media contextului și a lățimii) sunt dubluri */
+    add(dub("Regime Intelligence v65","Models",d65.regime.bias,`${d65.regime.state} · ${d65.regime.score.toFixed(0)}/100`,d65.regime.detail,"regimeV65"));
+    add(dub("Liquidity / Structure v65","Technical",d65.structure.bias,`${d65.structure.state} · ${d65.structure.score.toFixed(0)}/100`,d65.structure.detail,"structureV65"));
+    add(dub("Cross-Asset Confirmation v65","Context",d65.crossAsset.bias,`${d65.crossAsset.state} · ${d65.crossAsset.score.toFixed(0)}/100`,d65.crossAsset.detail,"crossAssetV65"));
     add(vcStatusItem("Conflict Resolver v65","Risk / execution",`${d65.conflict.state} · ${d65.conflict.score.toFixed(0)}/100`,d65.conflict.detail,{severity:d65.conflict.severity==="BLOCK"?"BLOCK":d65.conflict.severity==="WARN"?"WARN":null,available:true}));
     add(vcStatusItem("Adaptive Entry v65","Risk / execution",d65.entry.state,d65.entry.action,{severity:d65.entry.severity==="BLOCK"?"BLOCK":null,available:true}));
     add(vcStatusItem("Dynamic Exit v65","Risk / execution",d65.exit.state,d65.exit.action,{available:true}));
@@ -2544,19 +2616,19 @@ function buildVerdictCenterSnapshot(){
     add(vcStatusItem("Kill Switch v65","Risk / execution",d65.killSwitch.state,d65.killSwitch.detail,{severity:d65.killSwitch.state==="NO NEW TRADES"?"BLOCK":d65.killSwitch.state==="CAUTION"?"WARN":null,available:true}));
     const e66=vcSafe(()=>v66EdgeValidationSuite(false),null);if(e66){add(vcStatusItem("Edge Validation v66","Models",`${e66.state} · ${e66.quality.score}/100`,e66.quality.detail,{severity:e66.hardBlock?"BLOCK":e66.quality.score<55?"WARN":null,available:true}));add(vcStatusItem("Setup DNA v66","Models",`${e66.dna.state} · N${e66.dna.current?.n||0}`,e66.dna.detail,{severity:e66.dna.state==="BLACKLIST"?"WARN":null,available:true}));add(vcStatusItem("Edge Decay v66","Models",e66.decay.state,e66.decay.detail,{severity:e66.decay.state==="SEVERE"?"BLOCK":e66.decay.state==="DRIFT"?"WARN":null,available:true}));add(vcStatusItem("Data Sufficiency v66","Risk / execution",`${e66.sufficiency.state} · ${e66.sufficiency.score}/100`,e66.sufficiency.detail,{severity:e66.sufficiency.state==="LOW"?"WARN":null,available:true}));}
   }
-  add(vcItem("On-chain context","Context",crypto&&Number.isFinite(+onchain?.contextScore)?vcScoreBias(onchain.contextScore):NaN,crypto&&Number.isFinite(+onchain?.contextScore)?`${(+onchain.contextScore).toFixed(0)}/100 · ${onchain.whales?.available?"network + flows":"network"}`:"—","Coin Metrics network plus optional attributed exchange flows",{weight:.032,available:crypto&&Number.isFinite(+onchain?.contextScore)}));
-  add(vcItem("Options context","Context",crypto&&opt?.available&&Number.isFinite(+opt.context?.score)?vcScoreBias(opt.context.score):NaN,crypto&&opt?.available?`${opt.context?.state||"BALANCED"} · PCR ${Number.isFinite(+opt.putCallOiRatio)?(+opt.putCallOiRatio).toFixed(2):"—"}`:"—","Deribit OI/IV/skew proxy context",{weight:.02,available:crypto&&!!opt?.available&&Number.isFinite(+opt.context?.score)}));
+  add(vcItem("On-chain context","Context",crypto&&Number.isFinite(+onchain?.contextScore)?vcScoreBias(onchain.contextScore):NaN,crypto&&Number.isFinite(+onchain?.contextScore)?`${(+onchain.contextScore).toFixed(0)}/100 · ${onchain.whales?.available?"network + flows":"network"}`:"—","Coin Metrics network plus optional attributed exchange flows",pw("onchain",{available:crypto&&Number.isFinite(+onchain?.contextScore)})));
+  add(vcItem("Options context","Context",crypto&&opt?.available&&Number.isFinite(+opt.context?.score)?vcScoreBias(opt.context.score):NaN,crypto&&opt?.available?`${opt.context?.state||"BALANCED"} · PCR ${Number.isFinite(+opt.putCallOiRatio)?(+opt.putCallOiRatio).toFixed(2):"—"}`:"—","Deribit OI/IV/skew proxy context",pw("options",{available:crypto&&!!opt?.available&&Number.isFinite(+opt.context?.score)})));
   const deriv=window.__derivativesState?.context||"N/A",derivBias=vcTextBias(deriv,["CONTRARIAN +","BULL"],["CROWDED","BEAR"]);
-  add(vcItem("Futures positioning","Context",crypto&&deriv!=="N/A"?derivBias:NaN,crypto?deriv:"N/A","Funding/OI derivatives context",{weight:.018,available:crypto&&deriv!=="N/A"}));
+  add(vcItem("Futures positioning","Context",crypto&&deriv!=="N/A"?derivBias:NaN,crypto?deriv:"N/A","Funding/OI derivatives context",pw("futures",{available:crypto&&deriv!=="N/A"})));
   const fgText=$("fearGreed")?.textContent||"",fgNum=parseFloat(fgText);
-  add(vcItem("Fear & Greed","Context",crypto&&Number.isFinite(fgNum)?clamp((fgNum-50)/50,-1,1):NaN,crypto&&fgText?fgText:"—","External sentiment indicator; low weight",{weight:.012,available:crypto&&Number.isFinite(fgNum)}));
+  add(vcItem("Fear & Greed","Context",crypto&&Number.isFinite(fgNum)?clamp((fgNum-50)/50,-1,1):NaN,crypto&&fgText?fgText:"—","External sentiment indicator; low weight",pw("fearGreed",{available:crypto&&Number.isFinite(fgNum)})));
   const news=window.__intelNews,newsSev=+news?.high>0?"WARN":null;
   add(vcStatusItem("News / event radar","Context",news?`${news.risk||"N/A"} · high ${+news.high||0}`:"N/A",newsSev?"High-risk news events detected":"No high-risk news blocker",{severity:newsSev,available:!!news}));
   const econSev=econ?.risk==="BLACKOUT"?"BLOCK":econ?.risk==="HIGH"||econ?.risk==="ELEVATED"?"WARN":null;
   add(vcStatusItem("Economic calendar","Context",econ?.available?`${econ.risk}${Number.isFinite(+econ.mins)?" · "+extMinsText(econ.mins):""}`:(ext.calendar?.configured===false?"CONFIGURE":"N/A"),econ?.next?.event||"Macro event-risk window",{severity:econSev,available:!!econ?.available}));
 
   const sweep=structure?.sweep,swBias=sweep&&Number.isFinite(+sweep.score)?(String(sweep.type||"").startsWith("SELL-SIDE")?+1:String(sweep.type||"").startsWith("BUY-SIDE")?-1:0)*(+sweep.score/100):NaN;
-  add(vcItem("Liquidity sweep confirmation","Technical",swBias,sweep?`${sweep.type} · ${(+sweep.score||0).toFixed(0)}`:"—","Sell-side sweep/reclaim maps bullish; buy-side maps bearish",{weight:.035,available:!!sweep&&Number.isFinite(+sweep.score)}));
+  add(vcItem("Liquidity sweep confirmation","Technical",swBias,sweep?`${sweep.type} · ${(+sweep.score||0).toFixed(0)}`:"—","Sell-side sweep/reclaim maps bullish; buy-side maps bearish",pw("structure",{available:!!sweep&&Number.isFinite(+sweep.score)})));
   add(vcStatusItem("Premium / Discount","Technical",structure?.premiumDiscount?.zone||q.liquidity?.premium||"—","Structure location context; displayed without assuming automatic mean reversion",{available:!!(structure?.premiumDiscount?.zone||q.liquidity?.premium)}));
   add(vcStatusItem("Nearest FVG","Technical",structure?.nearestFvg?`${structure.nearestFvg.type||""} · ${structure.nearestFvg.status||""}`:"—","Fair-value-gap lifecycle context",{available:!!structure?.nearestFvg}));
 
@@ -2650,22 +2722,23 @@ function renderMasterVerdict(){
   const st=window.__radarState,ss=window.__signalState;if(!st||!ss){$("masterVerdict").textContent="WAIT";const vc=renderVerdictCenter();renderVerdictExplainer({verdict:"WAIT",dir:0,quality:masterDataQuality(),gates:[],vc});return}
   const dir=ss.tm.direction==="LONG"?1:ss.tm.direction==="SHORT"?-1:0,conf=Math.max(ss.sm.long,ss.sm.short)/100,reg=regimeV2State||renderRegimeV2(),meta=currentMetaDecision(),cal=calibrationV2State||renderCalibrationV2(),flow=decisionStateMatches(trueFlowState,{source:false,maxAge:10*60*1000})?trueFlowState:null,heat=observedLiquidationHeatmap(),sq=setupQualityCurrent(),budget=window.__portfolioRisk?.preTrade?.gate?.state||portfolioBudgetSummary(window.__portfolioRisk?.clusters||[]).state,quality=masterDataQuality(),gov=governedComponents(),context=decisionStateMatches(window.__intelContext,{source:false,maxAge:10*60*1000})?contextScoreFrom(window.__intelContext.global,window.__intelContext.macro):NaN,structure=window.__structureV38,life=strategyLifecycle(),guard=riskGuard(),ext=externalIntelState||{},econ=ext.calendar?.summary,onchain=decisionStateMatches(ext.onchain,{source:false,maxAge:15*60*1000})?ext.onchain:null,predObj=decisionStateMatches(ext.predLiq,{source:false,maxAge:15*60*1000})?ext.predLiq:null,predLiq=predObj?.summary,opt=decisionStateMatches(ext.options,{source:false,maxAge:15*60*1000})?ext.options:null,histCvd=decisionStateMatches(ext.histCvd,{source:false,maxAge:15*60*1000})?ext.histCvd:null,volIntel=decisionStateMatches(window.__volatilityIntel,{tf:true,maxAge:15*60*1000})?window.__volatilityIntel:null,breadth=window.__marketBreadthV64&&Date.now()-(+window.__marketBreadthV64.ts||0)<20*60*1000?window.__marketBreadthV64:null,parts=[],pos=[],risks=[];
   const decision65=v65DecisionSuite(false),edge66=v66EdgeValidationSuite(false),ops67=typeof v67OperationsSnapshot==="function"?v67OperationsSnapshot(false):null;
-  const add=(name,v,w,good,bad)=>{if(Number.isFinite(v)){parts.push({name,v,w});if(dir&&Math.abs(v)>=.15)(v*dir>0?pos:risks).push(v*dir>0?good:bad)}};   /* v100.267 (revizia 29.10): fără direcție (WAIT) nu există „aligned/opposed” - valorile absolute (context, lățime, regim, flux) intrau toate la riscuri */
-  add("base",dir*conf,.26,"Base engine aligned","Base engine weak/opposed");
-  if(reg)add("regime",(reg.probs.TREND_UP-reg.probs.TREND_DOWN),.14,"Regime supports direction","Regime opposes direction");
-  if(Number.isFinite(cal?.p))add("calibration",dir*(cal.p-.5)*2,.12,"Calibration supports setup","Calibration is weak");   /* v100.267 (auditul 29.10): fără calibrare (sub 30 de rezultate, p null) nu intră - înainte încrederea brută urca familia MODEL la +0,44 */
-  if(Number.isFinite(meta.p)&&String(meta.state||"").startsWith("USABLE"))add("meta",dir*(meta.p-.5)*2,.14,"Meta-label TRADE evidence","Meta-label SKIP pressure");
-  if(flow&&!flow.error)add("flow",clamp(flow.delta/35,-1,1),.12,"True trade-flow aligned","True trade-flow opposed");
-  if(heat.rows.length){const lv=heat.short+heat.long?clamp((heat.short-heat.long)/(heat.short+heat.long),-1,1):0;add("liquidations",lv,.06,"Observed liquidations aligned","Observed liquidations opposed")}
-  if(sq){const v=dir*((sq.overall-50)/50);add("setup",v,.09,"Setup quality strong","Setup quality weak");if(sq.blocker&&sq.blocker!=="None")risks.push(sq.blocker)}
-  if(Number.isFinite(gov?.ensemble))add("governed",dir*(gov.ensemble-.5)*2,.07,"Governed ML supports setup","Governed ML is weak");
+  /* v100.269 (ideile auditului 29.10): ponderea și familia fiecărui modul vin din MOTOR_PONDERI (aceeași listă ca Verdict Center) */
+  const add=(name,v,good,bad)=>{const w=MOTOR_PONDERI[name].w;if(Number.isFinite(v)){parts.push({name,v,w});if(dir&&Math.abs(v)>=.15)(v*dir>0?pos:risks).push(v*dir>0?good:bad)}};   /* v100.267 (revizia 29.10): fără direcție (WAIT) nu există „aligned/opposed” - valorile absolute (context, lățime, regim, flux) intrau toate la riscuri */
+  add("base",dir*conf,"Base engine aligned","Base engine weak/opposed");
+  if(reg)add("regime",(reg.probs.TREND_UP-reg.probs.TREND_DOWN),"Regime supports direction","Regime opposes direction");
+  if(Number.isFinite(cal?.p))add("calibration",dir*(cal.p-.5)*2,"Calibration supports setup","Calibration is weak");   /* v100.267 (auditul 29.10): fără calibrare (sub 30 de rezultate, p null) nu intră - înainte încrederea brută urca familia MODEL la +0,44 */
+  if(Number.isFinite(meta.p)&&String(meta.state||"").startsWith("USABLE"))add("meta",dir*(meta.p-.5)*2,"Meta-label TRADE evidence","Meta-label SKIP pressure");
+  if(flow&&!flow.error)add("flow",clamp(flow.delta/35,-1,1),"True trade-flow aligned","True trade-flow opposed");
+  if(heat.rows.length){const lv=heat.short+heat.long?clamp((heat.short-heat.long)/(heat.short+heat.long),-1,1):0;add("liquidations",lv,"Observed liquidations aligned","Observed liquidations opposed")}
+  if(sq){const v=dir*((sq.overall-50)/50);add("setup",v,"Setup quality strong","Setup quality weak");if(sq.blocker&&sq.blocker!=="None")risks.push(sq.blocker)}
+  if(Number.isFinite(gov?.ensemble))add("governed",dir*(gov.ensemble-.5)*2,"Governed ML supports setup","Governed ML is weak");
   /* v100.267 (auditul 29.10): contextul (risk-on) și lățimea sunt direcționale în sine (peste 50 = susțin urcarea), ca on-chain; cu dir* erau inversate pe SHORT (lățimea 85 îl făcea „cel mai short”) */
-  if(Number.isFinite(context))add("context",((context-50)/50),.04,"Cross-market context aligned","Cross-market context opposed");
-  if(breadth&&Number.isFinite(+breadth.score))add("breadth",((+breadth.score-50)/50),.06,"Market breadth confirms participation","Market breadth opposes the setup");
-  if(assetClass()==="CRYPTO"&&Number.isFinite(onchain?.contextScore))add("onchain",((onchain.contextScore-50)/50),.04,"On-chain activity/flows support upside context","On-chain activity/flows lean defensive");
-  if(assetClass()==="CRYPTO"&&histCvd?.available&&Number.isFinite(histCvd?.summary?.deltaPct)&&(+histCvd.coverage||0)>=.75)add("histCvd",clamp(histCvd.summary.deltaPct/15,-1,1),.07,"Historical taker CVD aligned","Historical taker CVD opposed");
-  if(assetClass()==="CRYPTO"&&opt?.available&&Number.isFinite(opt?.context?.score))add("options",((opt.context.score-50)/50),.025,"Options context supports upside","Options market shows downside hedge demand");
-  if(structure?.sweep&&Number.isFinite(+structure.sweep.score)){const aligned=(dir>0&&String(structure.sweep.type).startsWith("SELL-SIDE"))||(dir<0&&String(structure.sweep.type).startsWith("BUY-SIDE"));add("structure",dir*(aligned?1:-1)*(+structure.sweep.score/100),.06,"Liquidity sweep confirms setup","Liquidity sweep opposes setup")}
+  if(Number.isFinite(context))add("context",((context-50)/50),"Cross-market context aligned","Cross-market context opposed");
+  if(breadth&&Number.isFinite(+breadth.score))add("breadth",((+breadth.score-50)/50),"Market breadth confirms participation","Market breadth opposes the setup");
+  if(assetClass()==="CRYPTO"&&Number.isFinite(onchain?.contextScore))add("onchain",((onchain.contextScore-50)/50),"On-chain activity/flows support upside context","On-chain activity/flows lean defensive");
+  if(assetClass()==="CRYPTO"&&histCvd?.available&&Number.isFinite(histCvd?.summary?.deltaPct)&&(+histCvd.coverage||0)>=.75)add("histCvd",clamp(histCvd.summary.deltaPct/15,-1,1),"Historical taker CVD aligned","Historical taker CVD opposed");
+  if(assetClass()==="CRYPTO"&&opt?.available&&Number.isFinite(opt?.context?.score))add("options",((opt.context.score-50)/50),"Options context supports upside","Options market shows downside hedge demand");
+  if(structure?.sweep&&Number.isFinite(+structure.sweep.score)){const aligned=(dir>0&&String(structure.sweep.type).startsWith("SELL-SIDE"))||(dir<0&&String(structure.sweep.type).startsWith("BUY-SIDE"));add("structure",dir*(aligned?1:-1)*(+structure.sweep.score/100),"Liquidity sweep confirms setup","Liquidity sweep opposes setup")}
   if(life?.state==="RETIRED")risks.push("Strategy lifecycle RETIRED");else if(life?.state==="PROMOTED")pos.push("Strategy lifecycle PROMOTED");
   if(guard?.state==="BLOCK"||guard?.mult===0)risks.push("Risk Guard BLOCK");
   if(driftSnapshot?.state==="DRIFT")risks.push("Model/data drift detected");
@@ -2704,7 +2777,7 @@ function renderMasterVerdict(){
   else if(volIntel?.regime==="EXPANSION")risks.push("Volatility expansion");
   else if(volIntel?.regime==="NORMAL")pos.push("Volatility regime normal");
   else if(volIntel?.regime==="COMPRESSION")pos.push("Volatility compressed · breakout watch not yet triggered");
-  const familyOf=name=>({base:"TECH",regime:"TECH",setup:"TECH",structure:"TECH",calibration:"MODEL",meta:"MODEL",governed:"MODEL",flow:"FLOW",liquidations:"FLOW",histCvd:"FLOW",context:"CONTEXT",breadth:"CONTEXT",onchain:"CONTEXT",options:"CONTEXT"}[name]||"OTHER"),familyCaps={TECH:.32,MODEL:.28,FLOW:.22,CONTEXT:.18},familyRows={};for(const x of parts)(familyRows[familyOf(x.name)]??=[]).push(x);
+  const familyOf=name=>MOTOR_PONDERI[name]?.fam||"OTHER",familyCaps={TECH:.32,MODEL:.28,FLOW:.22,CONTEXT:.18},familyRows={};for(const x of parts)(familyRows[familyOf(x.name)]??=[]).push(x);
   const familyScores=[];for(const [family,cap] of Object.entries(familyCaps)){const a=familyRows[family]||[],ws=a.reduce((z,x)=>z+x.w,0);if(ws)familyScores.push({family,cap,v:a.reduce((z,x)=>z+x.v*x.w,0)/ws,n:a.length})}const familyCapSum=familyScores.reduce((a,x)=>a+x.cap,0)||1,signed=familyScores.reduce((a,x)=>a+x.v*x.cap,0)/familyCapSum,score=50+50*signed,evidence=parts.filter(x=>Math.abs(x.v)>=.15&&x.v*dir>0).length+"/"+parts.length;window.__masterFamilyScores=familyScores;
   const metaUsable=String(meta.state||"").startsWith("USABLE"),gates=[],gate=(code,why,unlock)=>gates.push({code,why,unlock});
   if(!dir)gate("BASE_WAIT","Motorul de bază este WAIT.","Motorul de bază trebuie să confirme LONG sau SHORT.");
@@ -2819,6 +2892,19 @@ async function localDbTrimType(type,cutoff,maxN){
     const db=await localDbOpen();await new Promise((resolve,reject)=>{const tx=db.transaction("records","readwrite"),st=tx.objectStore("records");for(const x of remove)st.delete(x.key);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)});return remove.length
   }catch{return 0}
 }
+/* v100.269 (ideile auditului 29.10): retenție cu cursorul pe indexul typeTs, cele mai vechi întâi - fără să încarce în memorie zeci de mii de
+   înregistrări (localDbTrimType citește până la 50.000). Șterge ce e mai vechi de `cutoff` și ce trece de `maxN`; întoarce câte a șters. */
+async function localDbStergeVechi(type,cutoff,maxN){
+  if(!localDbSupported())return 0;
+  try{
+    const db=await localDbOpen();return await new Promise((resolve,reject)=>{
+      const tx=db.transaction("records","readwrite"),idx=tx.objectStore("records").index("typeTs"),range=IDBKeyRange.bound([type,0],[type,Number.MAX_SAFE_INTEGER]),cnt=idx.count(range);let sterse=0;
+      cnt.onsuccess=()=>{let peste=Math.max(0,(+cnt.result||0)-Math.max(0,+maxN||0));const req=idx.openCursor(range,"next");
+        req.onsuccess=()=>{const c=req.result;if(!c)return;if((+c.value?.ts||0)<cutoff||peste>0){c.delete();sterse++;if(peste>0)peste--;c.continue()}};req.onerror=()=>reject(req.error)};
+      cnt.onerror=()=>reject(cnt.error);tx.oncomplete=()=>resolve(sterse);tx.onerror=()=>reject(tx.error)
+    })
+  }catch{return 0}
+}
 function archiveSignalRows(rows){return localDbPutMany("signals",rows,x=>x.id||`${x.ts}|${x.symbol}|${x.tf}|${x.direction}`,x=>x.ts)}
 function archivePaperRows(rows){return localDbPutMany("paper",rows,x=>x.id||`${x.created||x.ts}|${x.symbol}`,x=>x.created||x.ts||Date.now())}
 function archiveExperimentRows(rows){return localDbPutMany("experiments",rows,x=>x.id,x=>x.created||x.id)}
@@ -2828,7 +2914,7 @@ async function hydrateLiquidationArchive(){
     const since=Date.now()-7*86400000,rows=(await localDbRecords("liquidations",since,25000)).map(x=>x.data).filter(x=>x&&Number.isFinite(+x.ts));
     if(!rows.length)return {loaded:0};
     const m=new Map();for(const x of [...liqEvents,...rows]){const k=`${+x.ts}|${x.symbol||""}|${x.side||""}|${+x.price||0}|${+x.qty||+x.notional||0}`;m.set(k,x)}
-    liqEvents=[...m.values()].filter(x=>+x.ts>=since).sort((a,b)=>+a.ts-+b.ts).slice(-20000);persistObservedLiquidations();return {loaded:rows.length,total:liqEvents.length}
+    liqEvents=[...m.values()].filter(x=>+x.ts>=since).sort((a,b)=>+a.ts-+b.ts).slice(-20000);persistObservedLiquidations(true);return {loaded:rows.length,total:liqEvents.length}
   }catch{return {loaded:0,total:liqEvents?.length||0}}
 }
 async function migrateLocalDataV54(){
@@ -3071,6 +3157,7 @@ function clasaPentruPagina(id){return Object.prototype.hasOwnProperty.call(PAGIN
 function navTo(id,load=false){
  {var clasaPg=clasaPentruPagina(id);if(clasaPg&&typeof assetClass==="function"&&assetClass()!==clasaPg)setAssetClass(clasaPg)}
  show(id);
+ if(typeof liqUrmeazaPagina==="function")liqUrmeazaPagina();/* v100.269 (ideile auditului 29.10): fluxul de lichidări curge doar pe Context Intelligence / Decision Core */
  if(id==="alerts")alerteLocaleCitite();
  // v91.6: pagina deschisa se tine minte - la reincarcare / actualizarea aplicatiei se revine tot aici
  try{localStorage.setItem(PAGINA_CURENTA_KEY,id)}catch(_){}
@@ -3709,12 +3796,16 @@ function smcState(h,l,c,v,volOk=true){
  let score=50;if(bosUp)score+=24;if(bosDown)score-=24;if(sweepLow)score+=16;if(sweepHigh)score-=16;if(fvg==="BULL")score+=8;if(fvg==="BEAR")score-=8;if(trap&&bosUp)score-=10;if(trap&&bosDown)score+=10;
  return {bos:bosUp?"BOS UP":bosDown?"BOS DOWN":"NONE",sweep:sweepLow?"SWEEP LOW":sweepHigh?"SWEEP HIGH":trap?"LOW-VOL BREAK":"NONE",fvg,trap,score:Math.max(0,Math.min(100,score)),prevHigh:ph,prevLow:pl}
 }
-function profileParams(mode,atrPct,adx){
+// v100.269 (ideile auditului 29.10): ATR% „mare” față de istoricul monedei pe intervalul ei - percentila ATR%-ului de acum în ultimele 160 de
+// bare (aceeași fereastră ca rollingRvPercentile, același pctRank), mare = peste percentila 80. Pragul fix ATR% ≥ 3 era atins în 90% din
+// bare pe 1d și niciodată pe 15m/1h. Sub 60 de bare cu ATR: istoric scurt - nu se spune „mare” (regimul rămâne RANGE, profilul obișnuit).
+function atrPctMare(atr,c,i,look=160){const a=[];for(let k=Math.max(0,i-look+1);k<=i;k++){const v=atr[k]/c[k]*100;if(Number.isFinite(v)&&v>0)a.push(v)}const cur=atr[i]/c[i]*100;if(a.length<60||!Number.isFinite(cur)||!(cur>0))return {percentila:null,mare:false,istoricScurt:true,n:a.length};const p=pctRank(a,cur);return {percentila:p,mare:p>=80,istoricScurt:false,n:a.length}}
+function profileParams(mode,atrMare,adx){
  if(mode==="scalp")return {st:2.0,breakout:12,signal:66};
  if(mode==="swing")return {st:3.2,breakout:30,signal:64};
  if(mode==="intraday")return {st:2.6,breakout:20,signal:65};
  if(adx>=27)return {st:2.8,breakout:22,signal:64};
- if(atrPct>=3)return {st:3.0,breakout:18,signal:67};
+ if(atrMare)return {st:3.0,breakout:18,signal:67};   /* v100.269: ATR% peste percentila 80 a monedei (atrPctMare), nu ATR% ≥ 3 */
  return {st:2.4,breakout:18,signal:66};
 }
 
@@ -3816,7 +3907,7 @@ function calc(j,mode="auto"){
  const lipsaVwap=volLipsaIn(j,i-49,i),lipsaMfi=volLipsaIn(j,i-13,i),lipsaCmf=volLipsaIn(j,i-19,i),lipsaVr=volLipsaIn(j,i-19,i),lipsaObv=volLipsaIn(j,i-19,i),lipsaSmc=volLipsaIn(j,i-20,i);
  let e20=ema(c,20),e50=ema(c,50),e200=ema(c,200),rr=RSI(c),m12=ema(c,12),m26=ema(c,26),m=m12.map((x,z)=>x-m26[z]),sig=ema(m,9),hist=m.map((x,z)=>x-sig[z]);
  let atr=ATR(hi,lo,c,14),dm=DMI(hi,lo,c,14),stoch=stochRSI(rr,14),ma20=sma(c,20),sd20=stddev(c,20),vwap=rollingVWAP(hi,lo,c,v,50),mfiArr=MFI(hi,lo,c,v,14),cmfArr=CMF(hi,lo,c,v,20),obvArr=OBV(c,v),ichi=ichimoku(hi,lo,c),divergence=rsiDivergence(c,rr),levels=levelLadder(hi,lo,c,50);
- let atrPct=atr[i]/c[i]*100,p=profileParams(mode,atrPct,dm.adx[i]),st=superTrend(hi,lo,c,atr,14,p.st),smc=smcState(hi,lo,c,v,!lipsaSmc),structure2=swingStructure(hi,lo,c,3);
+ let atrPct=atr[i]/c[i]*100,atrRang=atrPctMare(atr,c,i),p=profileParams(mode,atrRang.mare,dm.adx[i]),st=superTrend(hi,lo,c,atr,14,p.st),smc=smcState(hi,lo,c,v,!lipsaSmc),structure2=swingStructure(hi,lo,c,3);
  let deltaFlow=candleDeltaProxy(j),ttm=ttmSqueeze(hi,lo,c,20),chop=choppinessIndex(hi,lo,c,14),efficiency=efficiencyRatio(c,20),hurst=hurstExponent(c,80),rv=rollingRvPercentile(c,20,160),parkVol=parkinsonVol(hi,lo,20),gkVol=garmanKlassVol(j,20),vwapBands=weightedVwapBand(j,50),calendarVwaps={day:calendarVwap(j,"day"),week:calendarVwap(j,"week"),month:calendarVwap(j,"month")};
  let vm=v.slice(-20).reduce((a,b)=>a+b,0)/Math.min(20,v.length),vr=v[i]/(vm||1),roc10=(c[i]/c[Math.max(0,i-10)]-1)*100;
  let upper=ma20[i]+2*sd20[i],lower=ma20[i]-2*sd20[i],bbpos=(c[i]-lower)/Math.max(upper-lower,1e-12)*100;
@@ -3827,7 +3918,7 @@ function calc(j,mode="auto"){
  let momScore=50;momScore+=rr[i]>=55?10:rr[i]<=45?-10:0;momScore+=hist[i]>0?13:-13;momScore+=roc10>0?10:-10;momScore+=stoch[i]>55?7:stoch[i]<45?-7:0;momScore=Math.max(0,Math.min(100,momScore));
  let volScore=null;if(!lipsaVr&&!lipsaVwap){volScore=50;if(vr>=1.5)volScore+=c[i]>=c[i-1]?24:-24;else if(vr>=1.1)volScore+=c[i]>=c[i-1]?12:-12;if(c[i]>vwap[i])volScore+=8;else volScore-=8;volScore=Math.max(0,Math.min(100,volScore))}
  let structureScore=smc.score;if(bo==="UP")structureScore=Math.min(100,structureScore+12);if(bo==="DOWN")structureScore=Math.max(0,structureScore-12);
- let regime=dm.adx[i]>=25?(trendScore>=55?"TREND BULL":"TREND BEAR"):(atrPct>=3?"VOLATILE RANGE":"RANGE"),liquidity=liquidityMap(j,atr[i]);
+ let regime=dm.adx[i]>=25?(trendScore>=55?"TREND BULL":"TREND BEAR"):(atrRang.mare?"VOLATILE RANGE":"RANGE"),liquidity=liquidityMap(j,atr[i]);   /* v100.269: ATR% față de istoricul monedei (atrPctMare) */
  let w=mode==="scalp"?[.25,.32,.18,.25]:mode==="swing"?[.42,.20,.12,.26]:[.34,.27,.15,.24];
  if(mode==="auto"&&regime==="RANGE")w=[.22,.28,.20,.30];
  let score=volScore===null?(trendScore*w[0]+momScore*w[1]+structureScore*w[3])/(w[0]+w[1]+w[3]):trendScore*w[0]+momScore*w[1]+volScore*w[2]+structureScore*w[3];
@@ -3839,7 +3930,7 @@ function calc(j,mode="auto"){
   price:c[i],score,signal,quality,confluence,regime,trendScore,momScore,volScore,structureScore,structure2,
   rsi:rr[i],stoch:stoch[i],mfi:lipsaMfi?null:mfiArr[i],cmf:lipsaCmf?null:cmfArr[i],obvSlope:lipsaObv?null:obvArr[i]-obvArr[Math.max(0,i-20)],ichimoku:ichi.state,divergence,vr:lipsaVr?null:vr,volumLipsa:areVolLipsa(j),ema:e20[i]>e50[i]&&e50[i]>e200[i],emaDir:e20[i]>e50[i]?"UP":"DOWN",macd:hist[i]>0,
   adx:dm.adx[i],pdi:dm.pdi[i],mdi:dm.mdi[i],supertrend:st.trend[i]>0?"BULL":"BEAR",bbpos,vwapAbove:lipsaVwap?null:c[i]>=vwap[i],levels,
-  atr:atr[i],atrPct,e20Now:e20[i],e50Now:e50[i],e200Now:e200[i],sup:Math.min(...lo.slice(-50)),res:Math.max(...hi.slice(-50)),ver,breakout:bo,prevHi,prevLo,smc,
+  atr:atr[i],atrPct,atrPctPercentila:atrRang.percentila,atrIstoricScurt:atrRang.istoricScurt,e20Now:e20[i],e50Now:e50[i],e200Now:e200[i],sup:Math.min(...lo.slice(-50)),res:Math.max(...hi.slice(-50)),ver,breakout:bo,prevHi,prevLo,smc,
   deltaFlow,ttm,chop,efficiency,hurst,rv20:rv.value,rvPercentile:rv.percentile,parkVol,gkVol,vwapBands,calendarVwaps,liquidity,
   candles:j.slice(-160),closes:c.slice(-160),e20:e20.slice(-160),e50:e50.slice(-160)
  }
@@ -3955,6 +4046,11 @@ function mtfComposite(m){
  return {avg,rawAvg,bull,bear,neutral,comp,confidence,coverage,coveragePct:Math.round(coverage*100),available:(m||[]).length,expected,missing:m?.missing||[],usable:coverage>=minCoverage}
 }
 
+/* v100.269 (ideile auditului 29.10): O SINGURĂ definiție LONG/SHORT pentru analiza curentă. Înainte erau patru (scorul tehnic q.signal,
+   motorul de aici, MTF-ul în planul de invalidare, Master); pe date vii scorul tehnic și motorul difereau în 5–7% din bare.
+   Capul paginii, cartela motorului, planul de invalidare, Verdict Center și Master citesc rezultatul ei (sm.direction = tm.direction).
+   q.signal rămâne doar pentru reluarea istorică și scannerul istoric, unde nu există MTF. */
+function directieUnica(long,short,minConf){const edge=Math.abs(long-short),best=Math.max(long,short);return best>=minConf&&edge>=8?(long>short?"LONG":"SHORT"):"WAIT"}
 function signalModel(q,hs,mc){
   // v74.6: kNN are pondere 0 in scor (nedovedit: 48,8% directie pe mers aleator).
   // Se pune 50 = neutru, ca pragurile si scala scorului sa ramana aceleasi.
@@ -3970,8 +4066,8 @@ function signalModel(q,hs,mc){
   if(q.smc.trap&&q.breakout==="UP")long-=5;
   if(q.smc.trap&&q.breakout==="DOWN")short-=5;
   long=Math.max(0,Math.min(100,long));short=Math.max(0,Math.min(100,short));
-  const edge=Math.abs(long-short),best=Math.max(long,short);
-  let minConf=(typeof appSettings==="function"?appSettings().signalMin:64);let direction=best>=minConf&&edge>=8?(long>short?"LONG":"SHORT"):"WAIT";
+  const edge=Math.abs(long-short);
+  let minConf=(typeof appSettings==="function"?appSettings().signalMin:64);let direction=directieUnica(long,short,minConf);
   return {long,short,edge,direction}
 }
 function buildTradeMap(q,sm){
@@ -4274,13 +4370,15 @@ async function analyze(save,fallbackTried=false,srcFortat=null){
 
   let bo=$("breakout");bo.textContent=q.breakout==="UP"?"▲ Breakout":q.breakout==="DOWN"?"▼ Breakdown":"În canal";bo.className=q.breakout==="UP"?"good":q.breakout==="DOWN"?"bad":"neutral";
 
-  $("signal").textContent=q.signal;$("signal").className="value "+(q.signal==="LONG"?"good":q.signal==="SHORT"?"bad":"neutral");$("enginefill").style.width=q.score+"%";$("quality").textContent=`Confluență ${q.confluence.toFixed(0)}/100 · calitate ${q.quality} · scor ${q.score.toFixed(0)}/100`;
+  /* v100.269 (ideile auditului 29.10): cartela spune direcția motorului (directieUnica), ca în capul paginii - nu q.signal, care diferea în 5–7% din bare */
+  $("signal").textContent=ss.sm.direction;$("signal").className="value "+(ss.sm.direction==="LONG"?"good":ss.sm.direction==="SHORT"?"bad":"neutral");$("enginefill").style.width=q.score+"%";$("quality").textContent=`Confluență ${q.confluence.toFixed(0)}/100 · calitate ${q.quality} · scor ${q.score.toFixed(0)}/100`;
   $("regime").textContent=q.regime;$("trendScore").textContent=q.trendScore.toFixed(0)+"/100";$("momScore").textContent=q.momScore.toFixed(0)+"/100";$("smcScore").textContent=q.structureScore.toFixed(0)+"/100";
   $("bos").textContent=q.smc.bos;$("sweep").textContent=q.smc.sweep;$("fvg").textContent=q.smc.fvg;$("volumeSignal").textContent=q.vr==null?"—":q.vr>=1.5?"PUTERNIC":q.vr>=1.1?"CONFIRMĂ":"SLAB";
   let htxt=[];for(const [lab,h] of [["1",hs.h1],["4",hs.h4],["12",hs.h12]])if(h)htxt.push(`${lab}c ${h.up.toFixed(0)}%↑ ±${Number.isFinite(+h.banda)?h.banda.toFixed(0):"?"}`);$("knnset").textContent=htxt.length?htxt.join(" · ")+" · nedovedit":"N/A";
   $("engineNotes").textContent=`Profil ${mode.toUpperCase()} · ${q.regime}. Trend ${q.trendScore.toFixed(0)}, momentum ${q.momScore.toFixed(0)}, volum ${q.volScore==null?"— (lipsește, scos din scor)":q.volScore.toFixed(0)}, structură ${q.structureScore.toFixed(0)}. Filtrul de liquidity trap este ${q.smc.trap?"ACTIV":"inactiv"}. Confidence LONG/SHORT este calculat separat în tab-ul Signals.`;
 
-  let dir=mc.comp==="BULLISH"?1:mc.comp==="BEARISH"?-1:0,baseStop=Math.max(q.atr*1.8,q.price*.004),inv,tar,trail,txt,risk;
+  /* v100.269: planul de invalidare urmează direcția motorului (directieUnica), nu MTF-ul (mc.comp): cu motorul LONG și MTF-ul BEARISH punea invalidarea deasupra prețului */
+  let dir=ss.sm.direction==="LONG"?1:ss.sm.direction==="SHORT"?-1:0,baseStop=Math.max(q.atr*1.8,q.price*.004),inv,tar,trail,txt,risk;
   if(dir>0){inv=Math.max(q.sup,q.price-baseStop);let r=q.price-inv;tar=q.price+r*2.0;trail=q.price-q.atr*1.5;txt="Confluență bullish: trend, momentum, structură și MTF sunt combinate. Confirmarea ideală este volum peste medie și lipsa unui liquidity trap."}
   else if(dir<0){inv=Math.min(q.res,q.price+baseStop);let r=inv-q.price;tar=Math.max(0,q.price-r*2.0);trail=q.price+q.atr*1.5;txt="Confluență bearish: motorul optimizează separat direcția short și penalizează breakout-urile fără volum sau sweep-urile adverse."}
   else{inv=q.sup;tar=q.res;trail=q.price;txt="Engine-ul nu are suficientă confluență direcțională. Zona support/resistance este mai relevantă decât forțarea unei intrări."}
@@ -5110,6 +5208,30 @@ async function grAduLumanari(simbol){
   var fz=null;try{var fr=await getJSON("/api/market?type=pionex_funding&symbol="+encodeURIComponent(simbol));var F=typeof GridSim!=="undefined"?GridSim.rataFunding(fr&&fr.data&&fr.data.rates,Date.now()):null;fz=F&&isFinite(F.rataZi)?F.rataZi:null}catch(e){fz=null}
   return {r15:r15,r4:r4||[],r1:r1||[],r5:r5||[],r60:r60||[],fundingZi:fz};
 }
+/* v100.269 (ideile auditului 29.10): barele de 1 h pe ~6 luni pentru proba fișei la H ≥ 2 (pe ~1 lună de 15 minute testul avea 5 / 3 ferestre
+   independente, deci PORNEȘTE era imposibil). Întâi KV-ul colectorului (ore:SIMBOL, fără cereri la Pionex), lipit cu pagina nouă de 60M adusă deja
+   (r60); dacă nu ajunge ~5 luni în urmă, paginile Pionex 60M în urmă (endTime, 500 pe pagină, cel mult 8 în plus, cu pauză - ca profilul din colector),
+   o dată pe monedă cât stă pagina deschisă (grOre ține cel mult 6 monede). Fără ele fișa rămâne pe 15 minute. */
+var grOre={};
+async function grOreFisa(simbol,r60){
+  var ZI=86400000,acum=Date.now(),max=183*24+48,destul=acum-150*ZI,dorit=acum-180*ZI;
+  var t0=function(v){var x=Infinity;(v||[]).forEach(function(r){var t=Number(Array.isArray(r)?r[0]:r&&r.time);if(isFinite(t)&&t<x)x=t});return x};
+  var v=grOre[simbol]||[];
+  if(!(t0(v)<=destul)){
+    try{var k=await getJSON("/api/istoric-bot?action=ore&simbol="+encodeURIComponent(simbol));if(k&&k.ore&&Array.isArray(k.ore.b))v=GridCalcul.imbinaRanduri(v,k.ore.b,max)}catch(e){}
+    v=GridCalcul.imbinaRanduri(v,r60||[],max);
+    for(var p=0;p<8&&!(t0(v)<=dorit);p++){
+      var end=t0(v),r=null;
+      try{await grPauza(350);r=grRanduri(await getJSON("/api/market?type=pionex_klines&symbol="+encodeURIComponent(simbol)+"&interval=60M&limit=500"+(isFinite(end)?"&endTime="+(end-1):"")))}catch(e){r=null}
+      if(!r||!r.length)break;
+      v=GridCalcul.imbinaRanduri(v,r,max);
+      if(r.length<500)break;
+    }
+  }
+  v=GridCalcul.imbinaRanduri(v,r60||[],max);
+  var ks=Object.keys(grOre);if(!grOre[simbol]&&ks.length>=6)delete grOre[ks[0]];
+  grOre[simbol]=v;return v;
+}
 function grTextEroare(e){
   var local=/^(127\.0\.0\.1|localhost)$/.test(location.hostname);
   // limita serverului (45 cereri Pionex/minut) sau racirea Pionex: spus pe romaneste, cu reincercare
@@ -5134,7 +5256,8 @@ async function gridCalculeaza(fortat){
     await grPlanUltim();try{await grFranaAdu()}catch(e){}   // v100.103 (I-536): pragul lui, înaintea ferestrelor   // v100.16: planul tau cel mai nou, pentru gridul dupa plan
     var d=grStare.date,info=grStare.monede&&grStare.monede[simbol];
     if(grStare.monede&&!info)throw Error(simbol.replace(/_USDT_PERP$/,"")+" nu există ca PERP pe Pionex.");
-    var f=GridProba.fisa({simbol:simbol,pret:GridCalcul.pretCurent(d.r15),b15:GridCalcul.bare(d.r15),b4h:GridCalcul.bare(d.r4),b1d:GridCalcul.bare(d.r1),
+    var o1h=grStare.H>=2?await grOreFisa(simbol,d.r60):null;   /* v100.269 (ideile auditului 29.10): la 2–3 zile proba fișei pe ~6 luni de bare de 1 h */
+    var f=GridProba.fisa({simbol:simbol,pret:GridCalcul.pretCurent(d.r15),b15:GridCalcul.bare(d.r15),b4h:GridCalcul.bare(d.r4),b1d:GridCalcul.bare(d.r1),b1h:o1h?GridCalcul.bare(o1h):null,
       suma:suma,fundingZi:d.fundingZi,H:grStare.H,dir:grStare.dir,levier:lev?Math.round(lev):null,minNotional:info?Number(info.minNotional):null,minSize:info?Number(info.minSizeLimit):null});
     if(f.eroare){grStare.fisa=null;grStare.eroare=f.eroare}else{f.info=info||null;grStare.fisa=f}
     // v100.58: gridul ingust calculat aici (~31 de zile) - folosit doar cand colectorul n-are rezultat pentru moneda
@@ -6055,7 +6178,7 @@ function renderGrid(){
     +'<li>Stop-urile de mai sus stau dincolo de marginile gridului la 1/8 din lățimea lui (la gridul rar, cât o grilă dacă grila e mai mare), înaintea lichidării. La gridul des „o grilă” ar fi doar 0,30%: stopul l-ar scoate la prima fluctuație (pe 8 monede × 3 direcții, gridul des ieșea pe plus pe istoric în 9 din 24 de cazuri; cu 1/8 din lățime și comisionul real, în 21).</li>'
     +grLinisteTine(f)
     +'<li>Când alertele Radarului anunță «gata liniștea», aș închide botul: după mișcare gridul iese cel mai rău.</li>'
-    +(rg&&rg.r4h!=null&&rg.r24h!=null?'<li>Acum: mișcarea pe 4h e '+rg.r4h.toFixed(1).replace(".",",")+'× cea obișnuită, pe 24h '+rg.r24h.toFixed(1).replace(".",",")+'×; peste 1,5× înseamnă mișcare.</li>':"")
+    +(rg&&rg.r4h!=null&&rg.r24h!=null?'<li>Acum: mișcarea pe 4h e '+rg.r4h.toFixed(1).replace(".",",")+'× cea obișnuită, pe 24h '+rg.r24h.toFixed(1).replace(".",",")+'×; mișcare mare = pe 24 h peste 9 zile din 10 ale monedei (~1 zi din 10).</li>':"")   /* v100.269: definiția unică (GridCalcul.miscareMare), nu 1,5× */
     +'</ul><p class="grNota">Nu e o promisiune: e un calcul și proba lui pe istoricul monedei. Gridul a ieșit în medie pe minus când l-am măsurat pe 30 de monede; ce s-a dovedit e să nu-l pornești după mișcare.</p></div>';
   box.innerHTML=h;grPliazaPeTelefon(box);grVerdictScroll();   /* v100.92 (I-519) */
   grProbDeseneaza(f);   // v100.47
@@ -6169,7 +6292,8 @@ async function tbAduFisaBot(b){
     // refoloseste lumanarile aduse de fereastra Grid pentru aceeasi moneda (sub 10 min): 8 cereri Pionex mai putin
     var d=grStare.date&&grStare.simbol===simbol&&Date.now()-grStare.la<10*60000?grStare.date:await grAduLumanari(simbol),info=grStare.monede&&grStare.monede[simbol];
     if(!(grStare.date&&grStare.simbol===simbol)){grStare.date=d;grStare.simbol=simbol;grStare.la=Date.now()}
-    var f=GridProba.fisa({simbol:simbol,pret:GridCalcul.pretCurent(d.r15),b15:GridCalcul.bare(d.r15),b4h:GridCalcul.bare(d.r4),b1d:GridCalcul.bare(d.r1),
+    var o1h=await grOreFisa(simbol,d.r60);   /* v100.269 (ideile auditului 29.10): H = 2 ⇒ proba fișei pe ~6 luni de bare de 1 h */
+    var f=GridProba.fisa({simbol:simbol,pret:GridCalcul.pretCurent(d.r15),b15:GridCalcul.bare(d.r15),b4h:GridCalcul.bare(d.r4),b1d:GridCalcul.bare(d.r1),b1h:o1h?GridCalcul.bare(o1h):null,
       suma:botiNr(b.investit)||100,fundingZi:d.fundingZi,H:2,dir:null,levier:null,minNotional:info?Number(info.minNotional):null,minSize:info?Number(info.minSizeLimit):null});
     tbFisa={botId:b.id,la:Date.now(),inLucru:false,fisa:f.eroare?null:f,eroare:f.eroare||null,
       b15:GridCalcul.bare(d.r15),pret:GridCalcul.pretCurent(d.r15),amp:TabloExtra.miscareZi(GridCalcul.bare(d.r4))};   // v100.16: pentru gridul dupa plan
@@ -7120,7 +7244,8 @@ function tbDeseneazaCitire(o,b){var loc=[$("tbCitire"),$("tbCitireMobil")].filte
   if(!ind&&ex.indicatori)out.push(rd(ex.indicatori));
   if(!fund){if(ex.estimare)out.push(rd(ex.estimare));busolaRanduri()}
   // v100.139: Monte Carlo pe botul tău, primul rând - cu drumul spre Simulatorul grid (botul deja ales acolo)
-  var mc=vM;if(mc)out.unshift('<div class="tbCitR '+mc.stare+' tbCitMc"><span class="tbCitIc" aria-hidden="true">🎰</span><div><b>'+escapeHtml(mc.ce)+':</b> <span class="tbCitTx">'+escapeHtml(mc.text)+'</span>'+(mc.nota?'<span class="tbSub tbMcNota">'+escapeHtml(mc.nota)+'</span>':'')+' <button type="button" class="tbIntBtn tbMcBtn" data-action-click="gsDeschideBot()">'+escapeHtml(mc.buton)+'</button></div></div>');
+  /* v100.269 (29.10, el: „un contor … gen 1-0, să fie vizibil”): scorul Monte Carlo (dreptate – greșit) stă primul în rând */
+  var mc=vM;if(mc)out.unshift('<div class="tbCitR '+mc.stare+' tbCitMc"><span class="tbCitIc" aria-hidden="true">🎰</span><div>'+tbMcScorHtml(mc.scor,b.id)+'<b>'+escapeHtml(mc.ce)+':</b> <span class="tbCitTx">'+escapeHtml(mc.text)+'</span>'+(mc.nota?'<span class="tbSub tbMcNota">'+escapeHtml(mc.nota)+'</span>':'')+tbMcScurtHtml(mc.scurt)+' <button type="button" class="tbIntBtn tbMcBtn" data-action-click="gsDeschideBot()">'+escapeHtml(mc.buton)+'</button></div></div>');
   /* v100.149 (I-577): bilanțul jurnalului vocilor (KV, adus o dată la 10 min) sub frază - cine a avut dreptate în ultimele 30 de zile */
   var vb=voci?tbVociBilant():null;
   scrie('<p class="tbCitScurt">'+escapeHtml(c.peScurt.charAt(0).toUpperCase()+c.peScurt.slice(1))+'</p>'+(voci?'<p class="tbCitVoci '+voci.nivel+'">'+escapeHtml(voci.text)+(vb?'<span class="tbSub tbMcNota">'+escapeHtml(vb)+'</span>':'')+'</p>':'')+out.join(""))}
@@ -7335,7 +7460,7 @@ async function tbMcTick(){var b=tbStare.routeOk===false?null:tbStare.bot;if(!b||
   var v=kv&&kv.boti&&kv.boti[String(b.id)],ultima=v?Number(v.ultima)||0:0;
   if(v&&v.text&&Date.now()-ultima<TB_MC_KV_PROASPAT_MS&&ultima>=tbMc.cheieLa){
     var nou=!acelasi||tbMc.sursa!=="colector"||tbMc.kvUltima!==v.ultima;tbMc.botId=String(b.id);tbMc.cheie=k;tbMc.cheieLa=0;
-    if(nou){tbMc.sursa="colector";tbMc.randSursa="colector";tbMc.kvUltima=v.ultima;tbMc.rand={stare:v.stare||"info",text:v.text,cat:v.cat||null,regim:v.regim||null};   /* v100.149 (I-579) */tbMc.eroare=null;tbMc.la=v.ultima;tbMc.randLa=v.ultima;tbMc.urmatorul=v.ultima+TB_MC_MS;tbMcDeseneaza()}
+    if(nou){tbMc.sursa="colector";tbMc.randSursa="colector";tbMc.kvUltima=v.ultima;tbMc.rand={stare:v.stare||"info",text:v.text,cat:v.cat||null,regim:v.regim||null,scurt:v.scurt||null};   /* v100.149 (I-579) */tbMc.eroare=null;tbMc.la=v.ultima;tbMc.randLa=v.ultima;tbMc.urmatorul=v.ultima+TB_MC_MS;tbMcDeseneaza()}
     return}
   if(acelasi&&tbMc.sursa!=="colector"&&k===tbMc.cheie&&Date.now()-tbMc.la<TB_MC_MS)return;
   return tbMcPorneste(b,k)}
@@ -7354,13 +7479,47 @@ async function tbMcPorneste(b,k){
     if(oprit)note.push("bot oprit - socotit ca bot nou cu setările lui");
     if(!(b.brut&&b.brut.buOrderData&&Number(b.brut.buOrderData.row)>1))note.push("număr de grile necunoscut, am pus 20");   /* revizia (10) */
     await new Promise(function(r){setTimeout(r,30)});   /* „socotesc…” apare înainte de calcul */
-    var rez=await tbMcSimuleaza(tbMc.b15,st,{plan:plan,pornitLa:pornitLa,stPrefix:pornitLa?st:null,n:500,seed:12,orizonturi:[1,7],zile:14});
-    if(rez.eroare&&pornitLa){var motiv=String(rez.eroare).split(/[.:]/)[0];rez=await tbMcSimuleaza(tbMc.b15,st,{plan:plan,pornitLa:null,n:500,seed:12,orizonturi:[1,7],zile:14});if(!rez.eroare)note.push("ca bot pornit acum ("+motiv+")")}   /* revizia (6): motivul adevărat */
-    tbMc.rez=rez;tbMc.st=st;tbMc.plan=plan;tbMc.rand=GridSim.verdictScurt(rez,st,plan,b);if(note.length)tbMc.rand.text=note.join(" · ")+": "+tbMc.rand.text;tbMc.randLa=Date.now();tbMc.randSursa="pagina";ok=true;
+    var rez=await tbMcSimuleaza(tbMc.b15,st,{plan:plan,pornitLa:pornitLa,stPrefix:pornitLa?st:null,n:500,seed:12,orizonturi:[1/24,4/24,1,7],zile:14});
+    if(rez.eroare&&pornitLa){var motiv=String(rez.eroare).split(/[.:]/)[0];rez=await tbMcSimuleaza(tbMc.b15,st,{plan:plan,pornitLa:null,n:500,seed:12,orizonturi:[1/24,4/24,1,7],zile:14});if(!rez.eroare)note.push("ca bot pornit acum ("+motiv+")")}   /* revizia (6): motivul adevărat */
+    tbMc.rez=rez;tbMc.st=st;tbMc.plan=plan;tbMc.rand=GridSim.verdictScurt(rez,st,plan,b);tbMc.rand.scurt=GridSim.riscScurt?GridSim.riscScurt(rez):null;   /* v100.269 (auditul MC): riscul pe 1 h / 4 h / o zi */if(note.length)tbMc.rand.text=note.join(" · ")+": "+tbMc.rand.text;tbMc.randLa=Date.now();tbMc.randSursa="pagina";ok=true;
   }catch(e){tbMc.eroare=textEroare(e)}   /* revizia (9): verdictul vechi rămâne pe ecran, cu ora lui */
   finally{tbMc.inLucru=false;tbMc.la=ok?Date.now():Date.now()-TB_MC_MS+TB_MC_REINCERCARE_MS;tbMc.urmatorul=tbMc.la+TB_MC_MS}   /* picat ⇒ reîncercare în 2 minute */
   tbMcDeseneaza()}
 function tbMcDeseneaza(){if(tbStare.citireO&&tbStare.bot){try{tbDeseneazaCitire(tbStare.citireO,tbStare.bot)}catch(e){}}}
+// v100.269 (29.10, el: „în pagina botului la Monte Carlo vreau să pui un contor care să numere de câte ori a avut dreptate sau nu, gen 1-0”):
+// scorul verdictelor Monte Carlo pe TOȚI boții tăi (din jurnalul colectorului, din 15.10) + botul de acum. Regula: șansa peste 50% = „pe plus”,
+// sub 50% = „pe minus”; dreptate când botul a ieșit așa (la 7 zile sau la închidere). Cuvintele de sub cifre vin din intervalul pe ZILE.
+function tbMcScorHtml(s,botId){
+  if(!s||typeof s!=="object")return "";
+  var d=Number(s.d)||0,g=Number(s.g)||0,a=Number(s.a)||0;if(!d&&!g&&!a)return "";
+  var C=function(n,sg,pl){return TextRo.cate(n,sg,pl)},z1=function(x){return (Math.round(x*1000)/10).toFixed(1).replace(".",",")};
+  var par=[];
+  var ori=function(n){return n===1?"o dată":"de "+C(n,"dată","ori")};
+  if(d+g)par.push((d?"a avut dreptate "+ori(d):"încă n-a avut dreptate")+", "+(g?"s-a înșelat "+ori(g):"încă nu s-a înșelat")+" · "+z1(d/(d+g))+"%");
+  var zile=Number(s.zile)||0;
+  /* auditul Monte Carlo (29.10): etalonul e regula fixă „mereu pe plus” (pe datele lui ar fi nimerit mai bine decât Monte Carlo), nu banul; și unde s-a judecat */
+  var arePlus=Number.isFinite(s.plus)&&d+g>0,areDif=Number.isFinite(s.difJos)&&Number.isFinite(s.difSus);
+  if(arePlus)par.push("„mereu pe plus” ar fi nimerit "+s.plus+" – "+(d+g-s.plus));
+  if(d+g&&Number.isFinite(s.laInchidere))par.push(s.laInchidere*2>d+g?"judecate la închiderea botului (mediana după "+(Number.isFinite(s.oreMediana)?String(Math.round(s.oreMediana*10)/10).replace(".",","):"?")+" h), nu la 7 zile":"judecate la 7 zile sau la închidere");
+  if(d+g)par.push(zile<10?"încă puține zile ("+zile+") ca să trag o concluzie":areDif?(s.difJos>0?"pe zilele de până acum nimerește mai des decât „mereu pe plus”":s.difSus<0?"pe zilele de până acum nimerește mai rar decât „mereu pe plus”":"încă nu bate „mereu pe plus”"):Number.isFinite(s.icJos)&&s.icJos>0.5?"pe zilele de până acum nimerește mai des decât o aruncare de ban":Number.isFinite(s.icSus)&&s.icSus<0.5?"pe zilele de până acum nimerește mai rar decât o aruncare de ban":"încă nu se deosebește de o aruncare de ban");
+  if(a)par.push(C(a,"verdict","verdicte")+" așteaptă");
+  var pb=s.peBot&&botId!=null?s.peBot[String(botId)]:null;
+  if(pb)par.push("pe botul ăsta: "+(Number(pb.d)||0)+" – "+(Number(pb.g)||0)+(pb.a?" ("+(Number(pb.a)||0)+" așteaptă)":""));
+  return '<div class="tbMcScor" role="status" title="Monte Carlo: verdictul („pe plus” peste 50%, „pe minus” sub 50%) comparat cu ce a făcut botul la 7 zile sau la închidere"><span class="tbMcScorEt">Scorul Monte Carlo</span> <b class="tbMcScorCifre">'+d+' – '+g+'</b> <span class="tbSub tbMcScorTx">'+escapeHtml(par.join(" · "))+'</span></div>';
+}
+// v100.269 (auditul Monte Carlo 29.10, el: „să dea verdicte și pe perioade mai scurte”): boții lui trăiesc în mediană 0,5 h, iar pe 1 h / 4 h /
+// o zi „pe plus X%” nu spune mai mult decât media - șansa stopului, a lichidării și pierderea din cele mai proaste 5% sunt calibrate în medie.
+// Deci pe termen scurt rândul spune RISCUL, nu câștigul. sc = GridSim.riscScurt(rez) / din colector: [{ ore, pStop, pLich, p5 }].
+function tbMcScurtHtml(sc){
+  if(!Array.isArray(sc)||!sc.length)return "";
+  var z1=function(x){return (Math.round(x*1000)/10).toFixed(1).replace(".",",")},usd=function(x){return (x<0?"−":"")+Math.abs(x).toFixed(1).replace(".",",")+" USDT"};
+  var et={1:"în 1 h",4:"în 4 h",24:"într-o zi"},st=sc.filter(function(x){return x&&et[x.ore]&&Number.isFinite(x.pStop)}).map(function(x){return et[x.ore]+": "+z1(x.pStop)+"%"});
+  var zi=sc.filter(function(x){return x&&x.ore===24})[0],par=[];
+  if(st.length)par.push("stopul atins "+st.join(" · "));
+  if(zi&&Number.isFinite(zi.p5))par.push("cele mai proaste 5% într-o zi: "+usd(zi.p5));
+  if(zi&&Number.isFinite(zi.pLich))par.push("lichidare într-o zi: "+z1(zi.pLich)+"%");
+  return par.length?'<span class="tbSub tbMcScurt">Pe termen scurt (riscul, nu câștigul): '+escapeHtml(par.join(" · "))+'</span>':"";
+}
 function tbMcRand(b){
   if(!b||String(tbMc.botId)!==String(b.id))return null;
   var hm=function(t){var d=new Date(t);return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")};
@@ -7374,7 +7533,7 @@ function tbMcRand(b){
   var RG_ST={miscare:"mai agitată",liniste:"mai calmă","nu-stiu":"nimic neobișnuit"},rgo=tbMc.rand.regim;
   var rg=rgo&&rgo.nevalidat===false&&!rgo.eroare&&rgo.text?" · în regimul de acum ("+(RG_ST[rgo.stare]||rgo.stare)+", "+TextRo.cate(rgo.zile,"zi de bare","zile de bare")+"): "+rgo.text:"";   /* revizia: starea pe înțeles */
   var cal=typeof GridSim!=="undefined"&&GridSim.textCalibrareMc&&typeof tbMcKv!=="undefined"&&tbMcKv&&tbMcKv.d?GridSim.textCalibrareMc(tbMcKv.d.calibrare):"";   /* v100.201 (B1): verdictul verificat pe ce a urmat */
-  return {ce:"Monte Carlo",stare:tbMc.rand.stare,text:tbMc.rand.text+rg,buton:buton,nota:"șanse pe drumuri ca ultimele 14 zile, nu o predicție"+(tbMc.eroare?" · din "+hm(tbMc.randLa||tbMc.la)+"; acum n-a mers: "+tbMc.eroare+" · reîncerc "+hm(tbMc.urmatorul):cand.replace(/^ — /," · "))+(tbMc.inLucru?" · socotesc din nou…":"")+(cal?" · "+cal:"")}}
+  return {ce:"Monte Carlo",stare:tbMc.rand.stare,text:tbMc.rand.text+rg,buton:buton,nota:"șanse pe drumuri ca ultimele 14 zile, nu o predicție"+(tbMc.eroare?" · din "+hm(tbMc.randLa||tbMc.la)+"; acum n-a mers: "+tbMc.eroare+" · reîncerc "+hm(tbMc.urmatorul):cand.replace(/^ — /," · "))+(tbMc.inLucru?" · socotesc din nou…":"")+(cal?" · "+cal:""),scurt:tbMc.rand.scurt||null,scor:typeof tbMcKv!=="undefined"&&tbMcKv&&tbMcKv.d&&tbMcKv.d.calibrare?tbMcKv.d.calibrare.scor:null}}
 // v100.138: LIVE - antetul citirii poartă ceasul și prețul la fiecare tic; rândurile se recitesc cel mult o dată pe secundă (EMA / RSI / ADX
 // pe lumânările graficului, cu prețul viu), fără să redeseneze graficul
 var tbCitLiveLa=0,tbCitLiveEroare=false;
@@ -7965,12 +8124,13 @@ async function refreshV66EdgeValidation(force=false){if(force){await evaluateRes
 // v67 · Production Trading Operations Pro
 const V67_OPS_KEY="opsControlV67",V67_INCIDENT_KEY="opsIncidentsV67",V67_LEDGER_KEY="opsSignalLedgerV67",V67_RECOVERY_KEY="opsRecoveryV67";
 let v67OpsTimer=null,v67OpsInitialized=false,v67LastState="BOOTING",v67LastReconcile=null;
+var v67UltimaRulare=0,v67RetentieLa=0;/* v100.269 (ideile auditului 29.10): ceasul paznicului și al retenției automate - `var`, se citesc din setInterval */
 function v67Now(){return Date.now()}
 function v67OpsSettings(){return {...{watchdogMs:30000,heartbeatStaleMs:90000,wsStaleMs:60000,providerStaleMs:20*60000,duplicateWindowMs:15*60000},...v60StoreGet(V67_OPS_KEY,{})}}
 function v67SignalFingerprintFrom(x){const round=n=>Number.isFinite(+n)?(+n).toPrecision(8):"NA";return [x.market||"?",x.source||"?",String(x.symbol||"").toUpperCase(),x.tf||"?",x.direction||"?",round(x.entry),round(x.stop)].join("|")}
 function v67DedupCheck(ledger,fingerprint,now=v67Now(),windowMs=15*60000,activeFingerprints=[]){const recent=(ledger||[]).filter(x=>x&&x.fp===fingerprint&&now-(+x.ts||0)<=windowMs),active=(activeFingerprints||[]).includes(fingerprint);return {blocked:active||recent.length>0,active,recent:recent.length,reason:active?"ACTIVE_DUPLICATE":recent.length?"COOLDOWN_DUPLICATE":"CLEAR"}}
 function v67ReconcileArrays(paper=[],shadow=[]){const dedupe=a=>{const seen=new Set(),out=[],dups=[];for(const x of a||[]){const id=String(x?.id??"");if(!id||seen.has(id)){dups.push(x);continue}seen.add(id);out.push(x)}return {out,dups}};const p=dedupe(paper),s=dedupe(shadow),paperFp=[],shadowFp=[];for(const x of p.out){if(typeof paperOrderActive==="function"?paperOrderActive(x):!["CLOSED","CANCELLED","STOP","TP3","TIME STOP"].includes(x?.status))paperFp.push(v67SignalFingerprintFrom({market:x.market,source:x.source,symbol:x.symbol,tf:x.tf,direction:x.direction,entry:x.plannedEntry??x.entry,stop:x.stop}))}for(const x of s.out)if(x?.status==="ACTIVE")shadowFp.push(v67SignalFingerprintFrom({market:x.market,source:x.source,symbol:x.symbol,tf:x.tf,direction:x.direction,entry:x.plannedEntry??x.actualEntry,stop:x.stop}));const activeDup=(paperFp.length-new Set(paperFp).size)+(shadowFp.length-new Set(shadowFp).size);return {paper:p.out,shadow:s.out,paperDupIds:p.dups.length,shadowDupIds:s.dups.length,activeDuplicateFingerprints:Math.max(0,activeDup),changed:p.dups.length+s.dups.length>0}}
-function v67OpsScore(checks=[]){let score=100,hard=false,warn=false,reasons=[];for(const c of checks){if(c.ok)continue;const sev=c.severity||"WARN",pen=Number.isFinite(+c.penalty)?+c.penalty:(sev==="HARD"?40:15);score-=pen;reasons.push(c.label||c.code||"Operational issue");if(sev==="HARD")hard=true;else warn=true}score=Math.max(0,Math.min(100,score));const state=hard?(score<25?"EMERGENCY":"SAFE MODE"):warn||score<85?"DEGRADED":"NORMAL";return {score:Math.round(score),state,hardBlock:hard,reasons}}
+function v67OpsScore(checks=[]){let score=100,hard=false,warn=false,reasons=[],nemasurate=[],okN=0;/* v100.269: NEMĂSURAT - fără penalizare, fără blocare, dar nici numărat ca OK */for(const c of checks){if(c.nemasurat||c.ok===null){nemasurate.push(c.code||"?");continue}if(c.ok){okN++;continue}const sev=c.severity||"WARN",pen=Number.isFinite(+c.penalty)?+c.penalty:(sev==="HARD"?40:15);score-=pen;reasons.push(c.label||c.code||"Operational issue");if(sev==="HARD")hard=true;else warn=true}score=Math.max(0,Math.min(100,score));const state=hard?(score<25?"EMERGENCY":"SAFE MODE"):warn||score<85?"DEGRADED":"NORMAL";return {score:Math.round(score),state,hardBlock:hard,reasons,nemasurate,okN}}
 function v67Incident(severity,code,message,data=null){const now=v67Now(),a=v60StoreGet(V67_INCIDENT_KEY,[]),last=a[0];if(last&&last.code===code&&last.message===message&&now-(+last.ts||0)<60000)return last;const row={id:`${now}-${code}`,ts:now,severity,code,message,data,ack:false};a.unshift(row);v60StoreSet(V67_INCIDENT_KEY,a.slice(0,200));if(localDbSupported()&&!appSettings().privacySessionOnly)localDbPutRecord("ops_incidents_v67",row.id,row,row.ts).catch(()=>{});return row}
 function v67Incidents(){return v60StoreGet(V67_INCIDENT_KEY,[])}
 function v67ManualState(){return v60StoreGet(V67_OPS_KEY,{}).manualPause||false}
@@ -7985,15 +8145,23 @@ function v67RecoverySnapshot(){const snap={ts:v67Now(),bootId:window.__v67BootId
 function v67RunReconcile(fix=true){const p=paperTrades(),s=shadowTradesV60(),r=v67ReconcileArrays(p,s);if(fix&&r.changed){setPaperTrades(r.paper);setShadowTradesV60(r.shadow);v67Incident("WARN","STATE_RECONCILED",`Removed duplicate IDs · Paper ${r.paperDupIds} · Shadow ${r.shadowDupIds}`,r)}if(r.activeDuplicateFingerprints>0)v67Incident("HARD","ACTIVE_DUPLICATE_SIGNAL",`${r.activeDuplicateFingerprints} duplicate active Paper fingerprints detected`,r);v67LastReconcile={ts:v67Now(),...r};renderV67Operations(false);return v67LastReconcile}
 function v67HeartbeatAge(ts){return Number.isFinite(+ts)?Math.max(0,v67Now()-+ts):Infinity}
 function v67OperationsSnapshot(persist=false){const now=v67Now(),cfg=v67OpsSettings(),prior=v60StoreGet("opsHeartbeatV67",null),provider=window.__providerHealthV62||null,rec=v67LastReconcile||v67ReconcileArrays(paperTrades(),shadowTradesV60()),kill=window.__decisionIntelV65?.killSwitch||null,online=typeof navigator==="undefined"?true:navigator.onLine!==false,crypto=typeof assetClass==="function"&&assetClass()==="CRYPTO",wsRequired=crypto&&!!window.__radarState,lastTick=typeof lastWsTick!=="undefined"?+lastWsTick||0:0,checks=[];
- const add=(code,ok,severity,label,penalty)=>checks.push({code,ok:!!ok,severity,label,penalty});add("MANUAL",!v67ManualState(),"HARD",v67OpsSettings().pauseReason||"Manual operations pause",55);add("ONLINE",online,"HARD","Browser/network offline",45);add("WS",!wsRequired||!lastTick||now-lastTick<=cfg.wsStaleMs,"WARN","Live websocket stale",15);add("PROVIDER",!provider||provider.state==="NEÎNCERCAT"||((+provider.score||0)>=75&&now-(+provider.ts||now)<=cfg.providerStaleMs),provider&&provider.state!=="NEÎNCERCAT"&&(+provider.score||0)<50?"HARD":"WARN",provider?.state==="NEÎNCERCAT"?"Provider health NEÎNCERCAT (nicio analiză încă)":provider?`Provider health ${(+provider.score||0).toFixed(0)}/100 or stale`:"Provider health not checked",provider&&provider.state!=="NEÎNCERCAT"?25:8);add("KILL",!kill||kill.state!=="NO NEW TRADES","HARD","Capital Preservation kill switch active",50);add("DUP",(+rec.activeDuplicateFingerprints||0)===0,"HARD","Duplicate active signal state",50);add("IDB",localDbSupported(),"WARN","IndexedDB unavailable",8);
+ /* v100.269 (ideile auditului 29.10): ok=null = NEMĂSURAT (fără flux live de așteptat / furnizorii neverificați) - nu mai trece drept „OK” */
+ const add=(code,ok,severity,label,penalty)=>checks.push({code,ok:ok===null?null:!!ok,nemasurat:ok===null,severity,label,penalty});add("MANUAL",!v67ManualState(),"HARD",v67OpsSettings().pauseReason||"Manual operations pause",55);add("ONLINE",online,"HARD","Browser/network offline",45);add("WS",!wsRequired||!lastTick?null:now-lastTick<=cfg.wsStaleMs,"WARN","Live websocket stale",15);add("PROVIDER",!provider||provider.state==="NEÎNCERCAT"?null:((+provider.score||0)>=75&&now-(+provider.ts||now)<=cfg.providerStaleMs),provider&&provider.state!=="NEÎNCERCAT"&&(+provider.score||0)<50?"HARD":"WARN",provider?.state==="NEÎNCERCAT"?"Provider health NEÎNCERCAT (nicio analiză încă)":provider?`Provider health ${(+provider.score||0).toFixed(0)}/100 or stale`:"Provider health not checked",provider&&provider.state!=="NEÎNCERCAT"?25:8);add("KILL",!kill||kill.state!=="NO NEW TRADES","HARD","Capital Preservation kill switch active",50);add("DUP",(+rec.activeDuplicateFingerprints||0)===0,"HARD","Duplicate active signal state",50);add("IDB",localDbSupported(),"WARN","IndexedDB unavailable",8);
  const scored=v67OpsScore(checks),hb={ts:now,bootId:window.__v67BootId||"",state:scored.state,score:scored.score,paperActive:paperTrades().filter(x=>{paperMigrateTrade(x);return paperOrderActive(x)}).length,shadowActive:shadowTradesV60().filter(x=>x.status==="ACTIVE").length};const recovery=v60StoreGet("opsRecoveryStatusV67",{state:"CLEAN",detail:"No recovery action required."}),out={...scored,ts:now,checks,heartbeat:hb,priorHeartbeat:prior,recovery,reconcile:rec,manualPause:v67ManualState(),incidentCount:v67Incidents().filter(x=>!x.ack).length};window.__opsV67=out;if(persist){v60StoreSet("opsHeartbeatV67",hb);v67RecoverySnapshot();if(localDbSupported()&&!appSettings().privacySessionOnly)localDbPutRecord("ops_heartbeat_v67",String(Math.floor(now/60000)),out,now).catch(()=>{})}return out}
 function v67EntryAllowed(kind,direction){const ops=v67OperationsSnapshot(false);if(ops.hardBlock){toast(`${kind} blocked by Operations v67 · ${ops.state}: ${ops.reasons[0]||"unsafe runtime"}`,"bad");return false}const d=v67DuplicateSignalGate(kind,direction);if(d.blocked){v67Incident("WARN","DUPLICATE_SIGNAL_BLOCK",`${kind} duplicate blocked · ${d.reason}`,{fp:d.fp});toast(`${kind} duplicate blocked · ${d.reason}`,"warn");return false}return true}
 function v67RecoverAfterRestart(){const prev=v60StoreGet(V67_RECOVERY_KEY,null),now=v67Now();let status={state:"CLEAN",detail:"No prior active simulation state."};if(prev&&(prev.paper?.length||prev.shadow?.length)){const age=now-(+prev.ts||0);status={state:age<24*3600000?"RECONCILED":"STALE SNAPSHOT",detail:`Prior snapshot age ${Math.round(age/1000)}s · Paper ${prev.paper?.length||0} · Shadow ${prev.shadow?.length||0}`};const r=v67RunReconcile(true);status.reconcile=r;if(age<24*3600000&&typeof navigator!=="undefined"&&navigator.onLine!==false){setTimeout(()=>{refreshPaper().catch(()=>{});refreshShadowLive(true).catch(()=>{})},1200)}v67Incident("WARN","RESTART_RECOVERY",status.detail,status)}v60StoreSet("opsRecoveryStatusV67",status);return status}
-function v67OpsToolHtml(c){const state=c.ok?"OK":c.severity==="HARD"?"BLOCK":"WARN",cls=c.ok?"good":c.severity==="HARD"?"bad":"warn";return `<div class="decisionTool ${cls}"><div class="decisionToolHead"><b>${escapeHtml(c.code)}</b><span class="decisionToolState">${state}</span></div><div class="decisionToolDetail">${escapeHtml(c.ok?"Operational check passed.":c.label||"Issue")}</div><div class="decisionToolAction">${c.ok?"No action required.":c.severity==="HARD"?"New Paper/Shadow entries blocked until cleared.":"Monitor / refresh before sizing up."}</div></div>`}
+function v67OpsToolHtml(c){const nem=!!c.nemasurat||c.ok===null/* v100.269: a treia stare, gri */,state=nem?"NEVERIFICAT":c.ok?"OK":c.severity==="HARD"?"BLOCK":"WARN",cls=nem?"mutedInfo":c.ok?"good":c.severity==="HARD"?"bad":"warn";return `<div class="decisionTool ${cls}"><div class="decisionToolHead"><b>${escapeHtml(c.code)}</b><span class="decisionToolState">${state}</span></div><div class="decisionToolDetail">${escapeHtml(nem?"încă nemăsurat":c.ok?"Operational check passed.":c.label||"Issue")}</div><div class="decisionToolAction">${nem?"Fără penalizare și fără blocare până la prima măsurătoare.":c.ok?"No action required.":c.severity==="HARD"?"New Paper/Shadow entries blocked until cleared.":"Monitor / refresh before sizing up."}</div></div>`}
 function v67IncidentMarkup(rows){return rows.length?`<div class="edgeCalRow head"><span>Time</span><span>Severity</span><span>Code</span><span>Message</span></div>`+rows.slice(0,12).map(x=>`<div class="edgeCalRow ${x.severity==="HARD"?"bad":x.severity==="WARN"?"warn":""}"><span>${new Date(+x.ts||0).toLocaleTimeString("ro-RO")}</span><b>${escapeHtml(x.severity)}</b><span>${escapeHtml(x.code)}</span><span>${escapeHtml(x.message)}</span></div>`).join(""):`<div class="emptyState">Niciun incident de operare.</div>`}
-function renderV67Operations(persist=false){const x=v67OperationsSnapshot(persist),has=!!window.__radarState,cls=x.hardBlock?"bad":x.state==="DEGRADED"?"neutral":"good",hbAge=x.priorHeartbeat?Math.round(v67HeartbeatAge(x.priorHeartbeat.ts)/1000):0,summary=`${x.state} · ${x.reasons.length?x.reasons.join(" · "):"runtime checks clear"}`;for(const id of ["v67DashState","v67DecisionState"]){if($(id)){$(id).textContent=x.state;$(id).className="decisionOsState "+cls}}for(const id of ["v67DashSummary","v67DecisionSummary"])if($(id))$(id).textContent=summary;for(const id of ["v67DashScore","v67DecisionScore","v67HealthScore"])if($(id))$(id).textContent=`${x.score}/100`;for(const id of ["v67DashHeartbeat","v67DecisionHeartbeat","v67HealthHeartbeat"])if($(id))$(id).textContent=x.priorHeartbeat?`${hbAge}s ago`:`NEW`;for(const id of ["v67DashRecovery","v67DecisionRecovery","v67HealthRecovery"])if($(id))$(id).textContent=x.recovery?.state||"CLEAN";for(const id of ["v67DashIncidents","v67DecisionIncidents"])if($(id))$(id).textContent=x.incidentCount;if($("v67HealthWatchdog"))$("v67HealthWatchdog").textContent=x.state;if($("v67HealthStatus"))$("v67HealthStatus").textContent=`${x.state} · ${x.score}/100 · ${new Date(x.ts).toLocaleTimeString("ro-RO")}`;const tools=x.checks.map(v67OpsToolHtml).join("");if($("v67DashGrid"))$("v67DashGrid").innerHTML=tools;if($("v67DecisionGrid"))$("v67DecisionGrid").innerHTML=tools;if($("v67HealthTable"))$("v67HealthTable").innerHTML=tools;if($("v67DecisionIncidentsTable"))$("v67DecisionIncidentsTable").innerHTML=v67IncidentMarkup(v67Incidents());if($("v67IncidentTable"))$("v67IncidentTable").innerHTML=v67IncidentMarkup(v67Incidents());if($("v67DecisionReconcile")){const r=x.reconcile||{};$("v67DecisionReconcile").innerHTML=`<div class="edgeCalRow"><span>Paper duplicate IDs</span><b>${r.paperDupIds||0}</b><span>Shadow duplicate IDs</span><b>${r.shadowDupIds||0}</b></div><div class="edgeCalRow"><span>Active duplicate fingerprints</span><b>${r.activeDuplicateFingerprints||0}</b><span>Last reconcile</span><b>${v67LastReconcile?new Date(v67LastReconcile.ts).toLocaleTimeString("ro-RO"):"—"}</b></div>`}if($("masterOpsV67")){$("masterOpsV67").textContent=`${x.state} · ${x.score}/100`;$ ("masterOpsV67").className=x.hardBlock?"bad":x.state==="DEGRADED"?"neutral":"good"}return x}
-function refreshV67Operations(persist=true){const prev=v67LastState,x=renderV67Operations(persist);v67LastState=x.state;if(prev!=="BOOTING"&&prev!==x.state){const sev=x.hardBlock?"HARD":x.state==="DEGRADED"?"WARN":"INFO";v67Incident(sev,"OPS_STATE_CHANGE",`${prev} → ${x.state}`,{score:x.score,reasons:x.reasons});/* v100.196 (auditul P5): fără addAlert - laboratorul pliat băga „Operations SAFE MODE” (și notificări de sistem) în centrul de alerte al boților; incidentul rămâne în panoul v67 */}return x}
-function initV67Operations(){if(v67OpsInitialized)return;v67OpsInitialized=true;window.__v67BootId=`${v67Now()}-${Math.random().toString(36).slice(2,8)}`;v67RecoverAfterRestart();refreshV67Operations(true);const cfg=v67OpsSettings();v67OpsTimer=setInterval(()=>refreshV67Operations(true),Math.max(10000,+cfg.watchdogMs||30000));if(typeof window!=="undefined"){window.addEventListener("online",()=>refreshV67Operations(true));window.addEventListener("offline",()=>{v67Incident("HARD","NETWORK_OFFLINE","Browser reported offline");refreshV67Operations(true)});window.addEventListener("pagehide",()=>{v67RecoverySnapshot();const hb=v60StoreGet("opsHeartbeatV67",{});hb.cleanPagehideTs=v67Now();v60StoreSet("opsHeartbeatV67",hb)});document?.addEventListener?.("visibilitychange",()=>{if(document.visibilityState==="visible")refreshV67Operations(true)})}}
+function renderV67Operations(persist=false){const x=v67OperationsSnapshot(persist),has=!!window.__radarState,cls=x.hardBlock?"bad":x.state==="DEGRADED"?"neutral":"good",hbAge=x.priorHeartbeat?Math.round(v67HeartbeatAge(x.priorHeartbeat.ts)/1000):0,nem=x.nemasurate||[]/* v100.269: ce n-a fost măsurat se spune, nu se ascunde sub „clear” */,summary=`${x.state} · ${x.reasons.length?x.reasons.join(" · "):nem.length?"ce s-a măsurat e în regulă":"runtime checks clear"}${nem.length?" · încă nemăsurat: "+nem.join(", "):""}`,scorTxt=`${x.score}/100`+(nem.length?" · "+TextRo.cate(nem.length,"nemăsurată","nemăsurate"):"");for(const id of ["v67DashState","v67DecisionState"]){if($(id)){$(id).textContent=x.state;$(id).className="decisionOsState "+cls}}for(const id of ["v67DashSummary","v67DecisionSummary"])if($(id))$(id).textContent=summary;for(const id of ["v67DashScore","v67DecisionScore","v67HealthScore"])if($(id))$(id).textContent=scorTxt;for(const id of ["v67DashHeartbeat","v67DecisionHeartbeat","v67HealthHeartbeat"])if($(id))$(id).textContent=x.priorHeartbeat?`${hbAge}s ago`:`NEW`;for(const id of ["v67DashRecovery","v67DecisionRecovery","v67HealthRecovery"])if($(id))$(id).textContent=x.recovery?.state||"CLEAN";for(const id of ["v67DashIncidents","v67DecisionIncidents"])if($(id))$(id).textContent=x.incidentCount;if($("v67HealthWatchdog"))$("v67HealthWatchdog").textContent=x.state;if($("v67HealthStatus"))$("v67HealthStatus").textContent=`${x.state} · ${scorTxt} ·${new Date(x.ts).toLocaleTimeString("ro-RO")}`;const tools=x.checks.map(v67OpsToolHtml).join("");if($("v67DashGrid"))$("v67DashGrid").innerHTML=tools;if($("v67DecisionGrid"))$("v67DecisionGrid").innerHTML=tools;if($("v67HealthTable"))$("v67HealthTable").innerHTML=tools;if($("v67DecisionIncidentsTable"))$("v67DecisionIncidentsTable").innerHTML=v67IncidentMarkup(v67Incidents());if($("v67IncidentTable"))$("v67IncidentTable").innerHTML=v67IncidentMarkup(v67Incidents());if($("v67DecisionReconcile")){const r=x.reconcile||{};$("v67DecisionReconcile").innerHTML=`<div class="edgeCalRow"><span>Paper duplicate IDs</span><b>${r.paperDupIds||0}</b><span>Shadow duplicate IDs</span><b>${r.shadowDupIds||0}</b></div><div class="edgeCalRow"><span>Active duplicate fingerprints</span><b>${r.activeDuplicateFingerprints||0}</b><span>Last reconcile</span><b>${v67LastReconcile?new Date(v67LastReconcile.ts).toLocaleTimeString("ro-RO"):"—"}</b></div>`}if($("masterOpsV67")){$("masterOpsV67").textContent=`${x.state} · ${scorTxt}`;$ ("masterOpsV67").className=x.hardBlock?"bad":x.state==="DEGRADED"?"neutral":"good"}return x}
+function refreshV67Operations(persist=true){if(persist)v67UltimaRulare=v67Now();const prev=v67LastState,x=renderV67Operations(persist);v67LastState=x.state;if(prev!=="BOOTING"&&prev!==x.state){const sev=x.hardBlock?"HARD":x.state==="DEGRADED"?"WARN":"INFO";v67Incident(sev,"OPS_STATE_CHANGE",`${prev} → ${x.state}`,{score:x.score,reasons:x.reasons});/* v100.196 (auditul P5): fără addAlert - laboratorul pliat băga „Operations SAFE MODE” (și notificări de sistem) în centrul de alerte al boților; incidentul rămâne în panoul v67 */}return x}
+/* v100.269 (ideile auditului 29.10): paznicul rula la 30 s pe ORICE pagină și scria ~1,3 KB pe minut în localStorage și IndexedDB
+   (~22 MB pe lună, curățat doar din buton). Acum: la fiecare tic doar cât panoul lui se vede (Starea aplicației, Decision Center,
+   „Operațiunile” deschis pe Acasă), altfel cel mult o dată la 5 min; bătăile mai vechi de 7 zile (sau peste 3.000) se șterg singure.
+   Poarta de intrare (v67EntryAllowed) își face oricum măsurătoarea ei proaspătă - nu depinde de ceasul ăsta. */
+function v67PaginaVizibila(){if(typeof document!=="undefined"&&document.hidden)return false;const on=id=>!!$(id)?.classList?.contains("on");return on("health")||on("decision")||(on("dash")&&!!$("acPl-operatiuni")?.open)}
+function v67PaznicTic(){const acum=v67Now();v67RetentieAuto(acum);if(!v67PaginaVizibila()&&acum-v67UltimaRulare<300000)return false;refreshV67Operations(true);return true}
+function v67RetentieAuto(acum=v67Now()){if(acum-v67RetentieLa<6*3600000)return null;v67RetentieLa=acum;if(!localDbSupported()||appSettings().privacySessionOnly)return null;return localDbStergeVechi("ops_heartbeat_v67",acum-7*86400000,3000).catch(()=>0)}
+function initV67Operations(){if(v67OpsInitialized)return;v67OpsInitialized=true;window.__v67BootId=`${v67Now()}-${Math.random().toString(36).slice(2,8)}`;v67RecoverAfterRestart();refreshV67Operations(true);const cfg=v67OpsSettings();v67OpsTimer=setInterval(()=>v67PaznicTic(),Math.max(10000,+cfg.watchdogMs||30000));if(typeof window!=="undefined"){window.addEventListener("online",()=>refreshV67Operations(true));window.addEventListener("offline",()=>{v67Incident("HARD","NETWORK_OFFLINE","Browser reported offline");refreshV67Operations(true)});window.addEventListener("pagehide",()=>{v67RecoverySnapshot();const hb=v60StoreGet("opsHeartbeatV67",{});hb.cleanPagehideTs=v67Now();v60StoreSet("opsHeartbeatV67",hb)});document?.addEventListener?.("visibilitychange",()=>{if(document.visibilityState==="visible")refreshV67Operations(true)})}}
 
 // v100.196 (auditul app 🔵12): desenele laboratorului vechi (pliat) după primul ecran - pornirea pe telefon nu le mai așteaptă
 function pornesteLaboratorulVechi(){renderPaper();renderValidation();renderForwardLab();renderProfitReadiness(false);renderReplayLab();renderEdgePro();renderV65DecisionOS(false);renderV66EdgeValidation(false);renderDailyDesk();renderModelVersions();renderObservedLiquidationHeatmap()}

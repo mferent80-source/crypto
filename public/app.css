@@ -3150,6 +3150,13 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
 #deriv .fTabel th,#deriv .fTabel td{padding:5px 8px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
 #deriv .fTabel th:first-child,#deriv .fTabel td:first-child{text-align:left}
 #deriv .fTabel th{color:var(--muted);font-weight:600}
+/* v100.269 (29.10, el: „un contor … gen 1-0, să fie vizibil”): scorul Monte Carlo în rândul lui din pagina botului - cifrele mari, textul în cerneala obișnuită */
+#tabloubot .tbMcScor{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;margin:0 0 6px}
+#tabloubot .tbMcScorEt{font-size:12px;font-weight:700;color:var(--muted)}
+#tabloubot .tbMcScorCifre{font-size:22px;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums;color:var(--text)}
+#tabloubot .tbMcScorTx{flex:1 1 100%;min-width:0;overflow-wrap:anywhere;font-size:12px;line-height:1.35}
+#tabloubot .tbCitMc>div{min-width:0}
+#tabloubot .tbMcScurt{display:block;margin-top:2px;line-height:1.35;overflow-wrap:anywhere}
 @media (max-width:640px){.sugPandaTab thead{display:table-header-group}.sugPandaTab{display:table}.sugPandaTab tbody{display:table-row-group}.sugPandaTab tr{display:table-row}.sugPandaTab td,.sugPandaTab th{display:table-cell}}
 /* v100.224: pe paginile de zi rămân alertele, banda botului și versiunea. Cipurile de cercetare revin la analiza monedei și în laborator. */
 body.peAcasa:not(.acMonedaDeschisa) .topLeft,body.peTablou .topLeft,body.peT212 .topLeft,body.peJurnal .topLeft,body.peGrid .topLeft,body.pePaginaNoua .topLeft,

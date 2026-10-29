@@ -104,22 +104,27 @@ var Alerte = (function () {
     // fixeaza pierderea din directie. Deci alerta informeaza, nu porunceste. Pe bare de 4h,
     // 1,5x percentila 75 e depasit de zgomot pur in ~8% din bare (masurat de audit: ~2
     // mesaje/zi pe bot); de aceea pragul e 2x, iese sub 1,5x si se repeta cel mult o data pe zi.
+    // v100.269 (ideile auditului 29.10): o singură definiție - intră când regimul zice „mișcare mare” (GridCalcul.miscareMare: pe 24 h peste
+    // percentila 90 a monedei, ~1 zi din 10) și iese abia când mișcarea pe 24 h coboară sub percentila 75 (histerezis, nu alt „mare”).
+    // Înainte avea pragul ei (maximul 4 h / 24 h peste 2 ×, ieșire sub 1,5 ×). Măsurat pe bare de 15 min (proba-v100269-p): nu sună mai des.
     if (ctx && ctx.regim && ctx.regim.r4h != null && ctx.regim.r24h != null) {
-      var rg = ctx.regim, rmax = Math.max(rg.r4h, rg.r24h), inAlerta = fost("miscare") !== "ok";
-      var misc = inAlerta ? rmax >= 1.5 : rmax > 2.0;
+      var rg = ctx.regim, inAlerta = fost("miscare") !== "ok", pr = rg.mare ? nr(rg.mare.pct) : null;
+      var misc = !!rg.miscare || (inAlerta && pr !== null && pr >= 75);
       var x = function (v) { return v.toFixed(1).replace(".", ","); };
-      var dB = String(b.directie || "").toLowerCase(), cuB = misc && rg.sens && (dB === "long" || dB === "short") && (dB === "long") === (rg.sens === "urca");
-      // v100.70 (revizia pachetului 3, I6): in titlu cifra care a declansat (maximul, cu fereastra lui); cealalta fereastra pe randul 1
-      var m4 = rg.r4h >= rg.r24h, xT = m4 ? x(rg.r4h) + "× pe 4 h" : x(rg.r24h) + "× pe 24 h", xA = m4 ? "Pe 24 h e " + x(rg.r24h) + "×" : "Pe 4 h e " + x(rg.r4h) + "×";
+      // în histerezis regimul nu mai dă sensul (doar „mare” îl are) - îl ia din mișcarea pe 24 h
+      var sensM = rg.sens || (misc && nr(rg.s24h) ? (rg.s24h > 0 ? "urca" : "coboara") : null), rata = rg.mare && rg.mare.rata ? rg.mare.rata : "~1 zi din 10";
+      var dB = String(b.directie || "").toLowerCase(), cuB = misc && sensM && (dB === "long" || dB === "short") && (dB === "long") === (sensM === "urca");
+      // v100.70 (revizia pachetului 3, I6): in titlu cifra care a declansat - v100.269: cea pe 24 h (definitia); cealalta fereastra pe randul 1
+      var xT = x(rg.r24h) + "× pe 24 h", xA = "Pe 4 h e " + x(rg.r4h) + "×";
       // v100.67: titlul ca sfatul („mișcare mare contra botului”) - un rand in „Ce ai de făcut acum”, si la botul neutru; actiunea = a sfatului
       out.miscare = cuB
         ? { nivel: "info", titlu: nume + ": mișcare mare cu botul, " + xT,
             mesaj: msg(xA + " obișnuitul, în direcția botului: grilele încasează pe drum.", actiuneCuBotul(b, dB, ctx ? nr(ctx.pretZero) : null)) }
         : misc
-        ? { nivel: "atentie", titlu: nume + ": mișcare mare" + (rg.sens && (dB === "long" || dB === "short") ? " contra botului" : "") + ", " + xT,
-            mesaj: msg(xA + " obișnuitul; dovedit: un grid pornit după o mișcare iese cel mai rău, iar închis acum îți fixezi pierderea din direcție.",
+        ? { nivel: "atentie", titlu: nume + ": mișcare mare" + (sensM && (dB === "long" || dB === "short") ? " contra botului" : "") + ", " + xT,
+            mesaj: msg(xA + " obișnuitul, pe 24 h peste 9 zile din 10 (" + rata + "); un grid pornit după mișcare iese cel mai rău, iar închis acum îți fixezi pierderea.",
               "N-aș adăuga bani și n-aș porni alt grid aici până la liniște; pe ăsta l-aș lăsa cât lichidarea e peste 15%.") }
-        : { nivel: "ok", titlu: nume + ": liniște din nou (" + x(rmax) + "× obișnuitul)", mesaj: "" };
+        : { nivel: "ok", titlu: nume + ": liniște din nou (" + x(rg.r24h) + "× obișnuitul pe 24 h)", mesaj: "" };
     }
 
     // v81: planul LUI (prag pe plus / pe minus / afara din grid N ore), judecat de TabloExtra.planStare

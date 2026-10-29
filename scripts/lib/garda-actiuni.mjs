@@ -46,6 +46,9 @@ export function situatiiActiuni(pune) {
   po("poarta: rezultate peste 8 zile, media pe minus, plafonul atins, fuga de risc", { stare: stU, plan: { stop: 20 }, rezultateZile: 8, medie: -0.0045, dejaPct: 0.211, simbol: "MU", regim: { macro: "riskoff" } });
   po("poarta: Market Breadth SUA risk-off", { stare: stU, plan: { stop: 20 }, regim: { mb: { stare: "rau" } } });
   po("poarta: datele vechi", { stare: stU, plan: { stop: 20 }, zileLipsa: 30 });
+  /* v100.269 (ideile auditului 29.10): cotația din afara ședinței deja sub stop */
+  po("poarta: pre-market sub stop", { stare: stU, plan: { stop: 20 }, extins: { pret: 19.4, faza: "pre" } });
+  po("poarta: după închidere sub stop", { stare: stU, plan: { stop: 20 }, extins: { pret: 19.4, faza: "dupa" } });
   pn("poarta: data rezultatelor necunoscută, ce ai deja sub plafon, regim prudent", { stare: stU, plan: { stop: 20 }, rezultateZile: null, dejaPct: 0.109, simbol: "MU", regim: { macro: "prudent" } });
   pn("poarta: regim necunoscut", { stare: stU, plan: { stop: 20 }, regim: {} });
 
@@ -68,6 +71,9 @@ export function situatiiActiuni(pune) {
   Object.keys(AS.TEXT).forEach((k) => pune("greșeala: " + k, "actiuni", "greseli." + k, { t: AS.TEXT[k] }, [["t", "titlu"]]));
   const rp = AS.reguliPersonale(inchise.map((t, i) => Object.assign({}, t, { rezultat: i % 4 === 0 ? -80 : 30 })), "Europe/Bucharest");
   (rp.reguli || []).slice(0, 3).forEach((g, i) => pune("regulile tale: " + g.grupa, "actiuni", "reguliPersonale" + (i + 1), g, [["text", "deCe"]]));
+  /* v100.269 (ideile auditului 29.10): toate grupele (reguli, de urmărit, restul) au același text; plus nota testului */
+  (rp.grupe || []).forEach((g, i) => pune("regulile tale (toate grupele): " + g.grupa, "actiuni", "reguliPersonale.grupa" + (i + 1), g, [["text", "deCe"]]));
+  pune("regulile tale: nota testului", "actiuni", "notaReguli", { t: AS.notaReguli(rp) }, [["t", "deCe"]]);
 
   // alertele planului si frana (Discord)
   const AL = [["titlu", "alertaTitlu"], ["mesaj", "alertaMesaj"]];

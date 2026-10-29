@@ -7,7 +7,8 @@ var Acasa = (function () {
   function nr(x) { var v = typeof x === "string" && x.trim() ? Number(x) : x; return typeof v === "number" && isFinite(v) ? v : null; }
   // v100.268 (29.10, el: „Cele din macro.js”): pragurile pieței vin din Macro.PRAGURI (un singur loc); fără macro.js încărcat (probele vechi)
   // aceleași valori - proba v100268 le compară cu cele din Macro
-  function praguri() { return typeof Macro !== "undefined" && Macro.PRAGURI ? Macro.PRAGURI : { vix: [12, 18, 25, 30], btc: [0.6, 0.2, -0.2] }; }
+  // v100.269 (ideile auditului 29.10): + latime (cota Nasdaq 100 peste media de 50), aceeași în Scorul zilei
+  function praguri() { var p = typeof Macro !== "undefined" && Macro.PRAGURI ? Macro.PRAGURI : null; return { vix: p && p.vix || [12, 18, 25, 30], btc: p && p.btc || [0.6, 0.2, -0.2], latime: p && p.latime || [0.4, 0.6] }; }
   function textCorelatie(r) {
     var p = praguri().btc, rt = (r < -0.005 ? "−" : "") + Math.abs(r).toFixed(2).replace(".", ",");   // v100.72: minusul „−”
     return r > p[0] ? "BTC urmează bursa acum (" + rt + "): o scădere a Nasdaq trage și crypto."
@@ -145,7 +146,10 @@ var Acasa = (function () {
     if (vix !== null && vix >= 30) return { nivel: "frica", eticheta: "🔴 FRICĂ PE BURSĂ", titlu: "VIX e la " + vix.toFixed(1).replace(".", ",") + ": bursa e în panică.", text: "Peste 30, mișcările sunt mari în ambele sensuri.", faCe: "N-aș cumpăra acum; aș aștepta ca VIX să coboare sub 25." };
     if (sens === "jos") return { nivel: "scade", eticheta: "🔴 BURSA SCADE", titlu: "Nasdaq e în trend de coborâre.", text: "Prețul e sub mediile de 50 și 200 de zile" + (vx ? ", " + vx : "") + "." + (partNd ? partNd.replace("Doar ", "") : ""), faCe: "N-aș cumpăra contra trendului; aș ține doar ce are stopul pus." };
     if (sens === "lateral") return { nivel: "lateral", eticheta: "🟡 LATERAL", titlu: "Nasdaq n-are o direcție clară.", text: (vx ? vx + ". " : "") + partNd.trim(), faCe: "Aș cumpăra doar ce e deja pe trend, cu stop; restul aș aștepta." };
-    if (cota !== null && cota < 0.6) return { nivel: "ingusta", eticheta: "🟡 URCARE ÎNGUSTĂ", titlu: "Indicele urcă" + (vix !== null && vix < praguri().vix[1] ? " liniștit" : "") + ", dar doar o parte din acțiuni îl urmează.", text: "Nasdaq 100 în trend de urcare" + (vx ? ", " + vx : "") + ". Doar " + nd.e50 + " din " + cate(nd.n, "acțiune", "acțiuni") + " sunt peste media de 50 de zile.", faCe: "Aș cumpăra doar ce e deja pe trend, ca ideile de azi; n-aș prinde acțiunile de sub media de 200." };
+    // v100.269 (ideile auditului 29.10): pragurile lățimii din Macro.PRAGURI.latime - sub 0,4 ÎNGUSTĂ, 0,4–0,6 MIXTĂ (cum zice și Scorul zilei);
+    // codul nivelului rămâne „ingusta” pentru amândouă (alerta „vremii” și cardul îl citesc), treapta e în `latime`
+    var pl = praguri().latime;
+    if (cota !== null && cota < pl[1]) return { nivel: "ingusta", latime: cota < pl[0] ? "ingusta" : "mixta", eticheta: cota < pl[0] ? "🟡 URCARE ÎNGUSTĂ" : "🟡 URCARE MIXTĂ", titlu: "Indicele urcă" + (vix !== null && vix < praguri().vix[1] ? " liniștit" : "") + ", dar doar o parte din acțiuni îl urmează.", text: "Nasdaq 100 în trend de urcare" + (vx ? ", " + vx : "") + ". Doar " + nd.e50 + " din " + cate(nd.n, "acțiune", "acțiuni") + " sunt peste media de 50 de zile.", faCe: "Aș cumpăra doar ce e deja pe trend, ca ideile de azi; n-aș prinde acțiunile de sub media de 200." };
     return { nivel: "larga", eticheta: "🟢 URCARE LARGĂ", titlu: "Bursa urcă, și o urmează majoritatea acțiunilor.", text: "Nasdaq 100 în trend de urcare" + (vx ? ", " + vx : "") + "." + (nd && nd.n ? " " + nd.e50 + " din " + cate(nd.n, "acțiune", "acțiuni") + " sunt peste media de 50 de zile." : ""), faCe: "Aș cumpăra ideile pe trend, mereu cu stop: mediul e bun." };
   }
   // corelatia randamentelor zilnice BTC - Nasdaq pe ultimele n zile COMUNE (bursa n-are weekend)

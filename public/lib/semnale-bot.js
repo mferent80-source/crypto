@@ -199,7 +199,9 @@ var SemnaleBot = (function () {
     var rg = f && f.regim;
     if (rg && (nr(rg.r4h) !== null || nr(rg.r24h) !== null)) {
       var r4 = nr(rg.r4h), r24 = nr(rg.r24h), sf = sensFata(b, rg);
+      // v100.269 (ideile auditului 29.10): textul spune și pragul definiției comune („mișcare mare” = pe 24 h peste 9 zile din 10, ~1 zi din 10)
       out.push({ cod: "miscare", titlu: "Mișcarea", text: (r4 !== null ? X(r4) + " pe 4 h" : "") + (r24 !== null ? (r4 !== null ? ", " : "") + X(r24) + " pe 24 h" : "") + " față de obișnuitul monedei. "
+        + "Pragul: pe 24 h peste 9 zile din 10 ale ei (" + (rg.mare && rg.mare.rata ? rg.mare.rata : "~1 zi din 10") + "). "
         + (rg.miscare ? "Mișcare mare" + (sf === "cu" ? ", cu botul (grilele încasează, poziția scade)" : sf === "contra" ? ", împotriva botului (n-aș adăuga bani, aș urmări lichidarea)" : "") + "; n-aș îndesi gridul acum, ci după ce se liniștește."
           : "Liniște: gridul lucrează; n-aș adăuga bani pe urcare și n-aș schimba nimic pe zgomot.") });
     } else out.push({ cod: "miscare", titlu: "Mișcarea", text: "O socotesc odată cu fișa: mișcarea pe 4 h și 24 h față de obișnuitul monedei." });
@@ -445,8 +447,11 @@ var SemnaleBot = (function () {
     var d = f && f.directie;
     if (d && (dir === "long" || dir === "short") && (d.tarie === "tare" || d.tarie === "mediu") && ((dir === "long" && d.dir === "short") || (dir === "short" && d.dir === "long")))
       c.push({ nivel: "atentie", cod: "trend", motiv: "trendul e împotriva botului (" + d.dir + ", " + d.tarie + ")", faCe: textTrend(d.tarie, fisaOpreste(f)) });   // revizia Opus a 2b (7): aceeasi voce cu sfatul, dupa tarie; v100.259: și cu regimul
-    var sf = f && f.regim ? sensFata(b, f.regim) : null, xMis = f && f.regim ? X(Math.max(f.regim.r4h || 0, f.regim.r24h || 0)) : "";
-    if (f && f.regim && f.regim.miscare && sf !== "cu") c.push({ nivel: "atentie", cod: "miscare", motiv: "mișcare mare" + (sf === "contra" ? " împotriva botului" : "") + " (" + xMis + " față de obișnuit)", faCe: "N-aș adăuga bani acum; l-aș lăsa cât lichidarea e departe." });
+    // v100.269 (ideile auditului 29.10): cifra e cea pe 24 h (definiția comună GridCalcul.miscareMare), nu maximul cu 4 h; „de ce” spune cât de des se aprinde
+    var sf = f && f.regim ? sensFata(b, f.regim) : null, xMis = f && f.regim ? X(nr(f.regim.r24h) !== null ? f.regim.r24h : (f.regim.r4h || 0)) : "";
+    var rataMis = f && f.regim && f.regim.mare && f.regim.mare.rata ? f.regim.mare.rata : "~1 zi din 10";
+    if (f && f.regim && f.regim.miscare && sf !== "cu") c.push({ nivel: "atentie", cod: "miscare", motiv: "mișcare mare" + (sf === "contra" ? " împotriva botului" : "") + " (" + xMis + " obișnuitul pe 24 h)", faCe: "N-aș adăuga bani acum; l-aș lăsa cât lichidarea e departe.",
+      deCe: "Pe 24 h se mișcă mai mult decât în 9 zile din 10 ale ei: semnul se aprinde " + rataMis + "." });
     // v100.92 (I-523): Busola - „mai agitată” intră în verdict DOAR când bilanțul pazei (I-512, pe date noi) e „dovedit”, cu cifra lui (x.busola =
     // Busola.pentruVerdict); „pe dos” / „n-am aflat” / „prea puține” ⇒ nimic; niciodată IEȘI de la Busola singură. Ipoteză: se judecă în socoteală (cod „busola”)
     var bz = x.busola, bl = bz && bz.bilant, Pp = function (d) { return (d < 0 ? "−" : "+") + Math.abs(d * 100).toFixed(2).replace(".", ",") + " pp"; };

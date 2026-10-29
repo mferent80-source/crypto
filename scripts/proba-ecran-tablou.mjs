@@ -1378,14 +1378,15 @@ async function main() {
           const ops = v67OperationsSnapshot(false);
           const prov = (ops.checks || []).find(x => x.code === "PROVIDER");
           return { stare: snap.state, scor: snap.score, ecran: document.getElementById('providerHealthScore')?.textContent,
-            ops: ops.state, prov: prov && { ok: prov.ok, sev: prov.severity, label: prov.label } };
+            ops: ops.state, prov: prov && { ok: prov.ok, nemasurat: prov.nemasurat, sev: prov.severity, label: prov.label } };
         } finally { window.__radarState = stare; dataFresh.rest = rest; lastWsTick = ws; delete window.__proba.rute["provider-health"]; }
       })()`);
       assert.equal(r.stare, "NEÎNCERCAT");
       assert.strictEqual(r.scor, null, `scorul trimis mai departe: ${r.scor}`);
       assert.ok(!/^0\/100/.test(String(r.ecran)), `ecranul scrie ${r.ecran}`);
       assert.ok(r.prov && r.prov.sev !== "HARD", `watchdog-ul trateaza NEINCERCAT ca HARD: ${JSON.stringify(r.prov)}`);
-      assert.equal(r.prov.ok, true, "neincercat nu e o verificare picata - la fel ca pe ecran");
+      /* v100.269 (ideile auditului 29.10): neîncercat = a treia stare, NEMĂSURAT (ok null) - nici picată, nici numărată ca OK */
+      assert.ok(r.prov.ok === null && r.prov.nemasurat === true, "neincercat trebuie sa fie NEMASURAT (nici picata, nici OK): " + JSON.stringify(r.prov));
       assert.ok(!/SAFE MODE|EMERGENCY/.test(r.ops), `watchdog: ${r.ops}`);
       assert.match(String(r.prov.label), /NE[ÎI]NCERCAT|not checked/i, `watchdog-ul nu spune ce spune ecranul: ${r.prov.label}`);
     });

@@ -11,7 +11,7 @@
 var ActiuniSemnale = (function () {
   "use strict";
   var G = typeof GridCalcul !== "undefined" ? GridCalcul : globalThis.GridCalcul;
-  var ZI = 86400000, ZILE_52 = 252, ZILE_7 = 5, PRAG_MISCARE = 1.5, PLAFON = 0.20;
+  var ZI = 86400000, ZILE_52 = 252, ZILE_7 = 5, PLAFON = 0.20;   // v100.269: fără PRAG_MISCARE - „mișcare mare” vine din GridCalcul.miscareMare
   function P(x, z) { return x === null || x === undefined || !isFinite(x) ? "—" : (x > 0 ? "+" : x < 0 ? "−" : "") + Math.abs(x * 100).toFixed(z === undefined ? 1 : z).replace(".", ",") + "%"; }
   function L(x) { return x === null || x === undefined || !isFinite(x) ? "—" : (x > 0 ? "+" : x < 0 ? "−" : "") + Math.abs(Math.round(x)).toLocaleString("ro-RO") + " lei"; }
   // v100.69 (sfaturile concise, pachetul 4): pretul unei actiuni, o singura forma (si pagina T212 o foloseste, prin t212Usd) - „$29.50”,
@@ -40,8 +40,10 @@ var ActiuniSemnale = (function () {
     var pret = pretAcum > 0 ? pretAcum : n ? b[n - 1].c : null;
     var r = n ? G.regimPeBare(b, 1, 5) : null, miscare = null;
     if (r) {
-      var k = r.r4h !== null && r.r4h > PRAG_MISCARE ? 1 : 5, ref = b[n - 1 - k];
-      miscare = { r1z: r.r4h, r5z: r.r24h, mare: !!r.miscare, sens: ref ? (b[n - 1].c >= ref.c ? "sus" : "jos") : null };
+      // v100.269 (ideile auditului 29.10): „mare” = definiția comună (GridCalcul.miscareMare): ziua de azi peste percentila 90 a zilelor ei
+      // (~1 zi din 10), nu „1 zi SAU 5 zile peste 1,5 × P75” (23% din zile); r1z / r5z rămân de arătat, sensul e al zilei de azi
+      var mm = G.miscareMare(b, { k: 1 }), ref = b[n - 2];
+      miscare = { r1z: r.r4h, r5z: r.r24h, mare: mm.mare === true, sens: ref ? (b[n - 1].c >= ref.c ? "sus" : "jos") : null, rata: mm.rata };
     }
     var max52 = n ? maxH(b, ZILE_52) : null, max7z = n ? maxH(b, ZILE_7) : null, min52 = n ? minL(b, ZILE_52) : null;
     return { pret: pret, trend: trend(b), miscare: miscare, max52: max52, min52: min52, max7z: max7z,
@@ -174,7 +176,7 @@ var ActiuniSemnale = (function () {
     var rosu = [], galben = [], note = [];
     if (s.trend.dir === "jos") rosu.push("trendul pe zilnice e în jos — pentru acțiuni cumperi doar long, deci aștepți întoarcerea");
     else if (s.trend.dir === "lateral") galben.push("trendul pe zilnice nu e clar în sus");
-    if (s.miscare && s.miscare.mare) galben.push("mișcare mult peste cea obișnuită azi sau săptămâna asta: nu cumpăra după ea");
+    if (s.miscare && s.miscare.mare) galben.push("azi s-a mișcat mai mult decât în 9 zile din 10 ale ei (se întâmplă ~1 zi din 10): nu cumpăra după mișcare");   // v100.269: definiția comună
     if (s.distMax7z !== null && s.distMax7z > -0.02) galben.push("prețul e lângă maximul pe 7 zile (" + P(s.distMax7z) + ")");
     var p = o.plan || {};
     if (!o.faraPlan && !(p.stop > 0 || p.trailPct > 0)) galben.push("n-ai scris un plan de ieșire (stop sau −X% de la maxim)");
@@ -188,6 +190,10 @@ var ActiuniSemnale = (function () {
     var sim = o.simbol || "ea";
     if (o.dejaPct > 0 && o.dejaPct >= PLAFON - 1e-9) galben.push("ai deja " + pc1(o.dejaPct) + " din cont în " + sim + ": plafonul de 20% pe o acțiune e atins, n-aș adăuga");
     else if (o.dejaPct > 0) note.push("ai deja " + pc1(o.dejaPct) + " din cont în " + sim + ": cumpărarea nouă se socotește așa încât totalul să rămână sub 20%");
+    // v100.269 (ideile auditului 29.10): cu bursa închisă, cotația din afara ședinței (o.extins = { pret, faza: "pre" | "dupa", stop? }) deja sub
+    // stop ⇒ la deschidere stopul s-ar atinge pe loc. Doar un motiv în plus; pragurile verdictului rămân aceleași. Fără cotație: ca înainte
+    var ex = o.extins, stopEx = ex ? (ex.stop > 0 ? ex.stop : p.stop > 0 ? p.stop : null) : null;
+    if (ex && ex.pret > 0 && stopEx && ex.pret <= stopEx) galben.push("prețul " + (ex.faza === "dupa" ? "de după închidere" : "de pre-market") + " e deja sub stop (" + usd(ex.pret) + ", stopul " + usd(stopEx) + "): la deschidere s-ar atinge pe loc");
     // 🟡3: regimul pieței
     var rg = o.regim !== undefined ? regimPoarta(o.regim) : null;
     if (rg && rg.cod === "blocat") galben.push(rg.motiv); else if (rg && rg.motiv) note.push(rg.motiv);
@@ -547,29 +553,113 @@ var ActiuniSemnale = (function () {
   }
 
   // ---------------- v87: regulile tale (din jurnalul de actiuni) ----------------
+  // v100.269 (ideile auditului 29.10): formatterele Intl se fac o singură dată pe fus (unul nou la fiecare trade, de două ori, la fiecare desen)
+  var FMT_ORA = {}, FMT_ZI = {}, FMT_NY = null;
   function oraRo(t, tz) {
-    try { return Number(new Intl.DateTimeFormat("en-GB", { timeZone: tz || "Europe/Bucharest", hour: "2-digit", hourCycle: "h23" }).format(new Date(t))); } catch (e) { return new Date(t).getUTCHours() + 3; }
+    try { var z = tz || "Europe/Bucharest", f = FMT_ORA[z] || (FMT_ORA[z] = new Intl.DateTimeFormat("en-GB", { timeZone: z, hour: "2-digit", hourCycle: "h23" })); return Number(f.format(new Date(t))); } catch (e) { return new Date(t).getUTCHours() + 3; }
   }
   function ziRo(t, tz) {
-    try { return new Intl.DateTimeFormat("ro-RO", { timeZone: tz || "Europe/Bucharest", weekday: "long" }).format(new Date(t)); } catch (e) { return ""; }
+    try { var z = tz || "Europe/Bucharest", f = FMT_ZI[z] || (FMT_ZI[z] = new Intl.DateTimeFormat("ro-RO", { timeZone: z, weekday: "long" })); return f.format(new Date(t)); } catch (e) { return ""; }
   }
-  function reguliPersonale(inchise, tz) {
+  // v100.269: ziua ȘEDINȚEI americane pe care o prinde cumpărarea - ora New York + 8 h (după 16:00 ⇒ ședința de mâine, pre-market-ul ⇒ ziua lui),
+  // sâmbăta / duminica ⇒ lunea. Trade-urile aceleiași ședințe se mișcă împreună (piața zilei), deci ședința e unitatea testului, nu trade-ul
+  function ziSedinta(t) {
+    var z;
+    try {
+      var o = {}; FMT_NY = FMT_NY || new Intl.DateTimeFormat("en-GB", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" });
+      FMT_NY.formatToParts(new Date(t + 8 * 3600000)).forEach(function (x) { o[x.type] = x.value; }); z = o.year + "-" + o.month + "-" + o.day;
+    } catch (e) { z = new Date(t + 4 * 3600000).toISOString().slice(0, 10); }
+    var d = Date.parse(z + "T12:00:00Z"), w = new Date(d).getUTCDay();
+    return w === 6 ? new Date(d + 2 * ZI).toISOString().slice(0, 10) : w === 0 ? new Date(d + ZI).toISOString().slice(0, 10) : z;
+  }
+  function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; var t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  function samanta(s) { var h = 269; for (var i = 0; i < s.length; i++) h = Math.imul(h, 31) + s.charCodeAt(i) | 0; return h; }   // din numele grupei: o grupă nouă nu le mută pe celelalte
+  // câte câștigătoare cad în grupă când k trade-uri din n (w câștigătoare) se aleg la întâmplare (hipergeometric, fără înlocuire)
+  function hiper(n, w, k, rnd) {
+    if (w === 0) return 0; if (w === n) return k;
+    var inv = k > n - k, kk = inv ? n - k : k, x = 0, wr = w, ramas = n;
+    for (var i = 0; i < kk; i++) { if (rnd() * ramas < wr) { x++; wr--; } ramas--; }
+    return inv ? w - x : x;
+  }
+  // v100.269: rata pe plus a grupei față de rest, permutare pe două niveluri ca Verdicte.compara - în ședințele cu ambele feluri etichetele se
+  // amestecă între trade-urile ședinței; ședințele cu un singur fel își schimbă eticheta ÎNTRE ELE (ședința întreagă e unitatea). Două părți.
+  // zile = [{ n, w, k, kw }]: trade-uri, câștigătoare, din grupă, câștigătoare din grupă
+  function pRataPeZile(zile, R, seed) {
+    var N = 0, W = 0, n1 = 0, w1 = 0, mixt = [], unice = [], gU = 0, kM = 0;
+    zile.forEach(function (d) { N += d.n; W += d.w; n1 += d.k; w1 += d.kw; if (d.k > 0 && d.k < d.n) { mixt.push(d); kM += d.k; } else { unice.push(d); if (d.k === d.n) gU++; } });
+    if (!n1 || n1 === N) return null;
+    var dif = w1 / n1 - (W - w1) / (N - n1), U = unice.length;
+    if (!mixt.length && (gU === 0 || gU === U)) return { p: 1, dif: dif };
+    var rnd = mulberry32(seed), idx = [], inv = gU > U - gU, g = inv ? U - gU : gU, nU = 0, wU = 0, peste = 0;
+    for (var i = 0; i < U; i++) { idx.push(i); nU += unice[i].n; wU += unice[i].w; }
+    for (var r = 0; r < R; r++) {
+      var x = 0, sn = 0, sw = 0;
+      for (var q = 0; q < mixt.length; q++) x += hiper(mixt[q].n, mixt[q].w, mixt[q].k, rnd);
+      for (var j = 0; j < g; j++) { var m = j + Math.floor(rnd() * (U - j)), t = idx[j]; idx[j] = idx[m]; idx[m] = t; sn += unice[idx[j]].n; sw += unice[idx[j]].w; }   // Fisher–Yates parțial
+      if (inv) { sn = nU - sn; sw = wU - sw; }
+      var n1p = kM + sn; x += sw;
+      if (n1p > 0 && n1p < N && Math.abs(x / n1p - (W - x) / (N - n1p)) >= Math.abs(dif) - 1e-12) peste++;
+    }
+    return { p: (peste + 1) / (R + 1), dif: dif };
+  }
+  // aceeași regulă ca Verdicte.registru (BH + „rămâne” = trece corecția ȘI e regulă), pentru când verdicte.js nu e încărcat (colectorul, probele vechi)
+  function bhLocal(teste, q) {
+    var l = teste.map(function (t, i) { return { i: i, p: t.p }; }).sort(function (a, b) { return a.p - b.p; }), m = l.length, k = -1, tr = {};
+    l.forEach(function (x, j) { if (x.p <= (j + 1) / m * q) k = j; });
+    for (var j = 0; j <= k; j++) tr[l[j].i] = true;
+    return teste.map(function (t, i) { return Object.assign({}, t, { treceBh: !!tr[i], ramane: !!tr[i] && t.regula === true, m: m, prag: k >= 0 ? (k + 1) / m * q : 0 }); });
+  }
+  // v100.269 (ideile auditului 29.10): până acum o grupă de ≥ 30 de trade-uri cu 5 puncte sub medie și totalul pe minus era „regulă” - fără test,
+  // fără corecție, pe ~15 grupe; pe trade-uri fără niciun efect măcar una apărea în 66–93% din rulări. Regula, fixată ÎNAINTE de cifre: fiecare
+  // grupă cu ≥ 30 de trade-uri și ≥ 30 în rest = test de permutare pe ȘEDINȚE (rata pe plus față de rest, două părți, R = 2.000, mulberry32 cu
+  // sămânța din numele grupei ⇒ același rezultat la reîncărcare), corecția Benjamini–Hochberg (5%) pe TOATE grupele testate (Verdicte.registru).
+  // Regulă = trece corecția ȘI e mai rea (pragul vechi: 5 puncte sub rata generală, totalul pe minus). Doar pragul vechi = „de urmărit
+  // (nedovedit)”, fără sfat. Simularea de mărime sub H0: scripts/sim-v100269-reguli-h0.mjs. o.R = câte permutări (probele).
+  var REGULI_MEMO = { k: null, v: null };   // același jurnal ⇒ același răspuns, fără permutările refăcute la fiecare desen
+  function reguliPersonale(inchise, tz, o) {
+    o = o || {};
     var l = (Array.isArray(inchise) ? inchise : []).filter(function (t) { return t && isFinite(t.rezultat) && t.pornit > 0; });
-    if (l.length < 60) return { suficient: false, n: l.length, lipsa: 60 - l.length, reguli: [] };
-    var plus = l.filter(function (t) { return t.rezultat > 0; }).length, rata = plus / l.length, grupe = {};
-    function ad(k, t) { (grupe[k] = grupe[k] || []).push(t); }
-    l.forEach(function (t) {
+    if (l.length < 60) return { suficient: false, n: l.length, lipsa: 60 - l.length, reguli: [], deUrmarit: [] };
+    var R = o.R > 0 ? Math.round(o.R) : 2000, sr = 0, sp = 0;
+    l.forEach(function (t) { sr += t.rezultat; sp += t.pornit % 1e9; });
+    var cheie = [l.length, sr, sp, tz || "", R, typeof Verdicte !== "undefined"].join("|");
+    if (REGULI_MEMO.k === cheie) return REGULI_MEMO.v;
+    var plus = l.filter(function (t) { return t.rezultat > 0; }).length, rata = plus / l.length, grupe = {}, zi = [], zIdx = {}, nZile = 0;
+    function ad(k, i) { (grupe[k] = grupe[k] || []).push(i); }
+    l.forEach(function (t, i) {
+      var z = ziSedinta(t.pornit); if (zIdx[z] === undefined) zIdx[z] = nZile++; zi.push(zIdx[z]);
       var h = oraRo(t.pornit, tz);
-      ad(h >= 23 || h < 11 ? "cumpărate noaptea (după 23 sau înainte de 11), în afara orelor" : h < 16 ? "cumpărate între 11 și 16:30, înainte de deschidere" : h < 18 ? "cumpărate în prima oră și jumătate după deschidere" : "cumpărate după 18", t);
-      if (t.extCumparare) ad("cumpărate în afara orelor de bursă", t);
-      ad("cumpărate " + ziRo(t.pornit, tz), t);
-      var c = t.cost || 0; ad(c < 1000 ? "sub 1.000 de lei" : c < 3000 ? "de 1.000–3.000 de lei" : c < 6000 ? "de 3.000–6.000 de lei" : "de peste 6.000 de lei", t);
+      ad(h >= 23 || h < 11 ? "cumpărate noaptea (după 23 sau înainte de 11), în afara orelor" : h < 16 ? "cumpărate între 11 și 16:30, înainte de deschidere" : h < 18 ? "cumpărate în prima oră și jumătate după deschidere" : "cumpărate după 18", i);
+      if (t.extCumparare) ad("cumpărate în afara orelor de bursă", i);
+      ad("cumpărate " + ziRo(t.pornit, tz), i);
+      var c = t.cost || 0; ad(c < 1000 ? "sub 1.000 de lei" : c < 3000 ? "de 1.000–3.000 de lei" : c < 6000 ? "de 3.000–6.000 de lei" : "de peste 6.000 de lei", i);
     });
-    var reguli = Object.keys(grupe).map(function (k) {
-      var g = grupe[k], p = g.filter(function (t) { return t.rezultat > 0; }).length, tot = 0; g.forEach(function (t) { tot += t.rezultat; });
-      return { grupa: k, n: g.length, pePlus: p / g.length, total: tot, text: "Trade-urile " + k + ": " + p + " din " + g.length + " pe plus (" + Math.round(p / g.length * 100) + "%, față de " + Math.round(rata * 100) + "% în general), total " + L(tot) + "." };
-    }).filter(function (g) { return g.n >= 30 && g.n < l.length && g.total < 0 && g.pePlus < rata - 0.05; }).sort(function (a, b) { return a.total - b.total; });
-    return { suficient: true, n: l.length, rata: rata, reguli: reguli };
+    var toate = Object.keys(grupe).map(function (k) {
+      var g = grupe[k], p = 0, tot = 0, inG = {}; g.forEach(function (i) { inG[i] = 1; tot += l[i].rezultat; if (l[i].rezultat > 0) p++; });
+      var n = g.length, rest = l.length - n, restPlus = rest ? (plus - p) / rest : null;
+      var x = { grupa: k, n: n, pePlus: p / n, restPlus: restPlus, total: tot, p: null, testat: false, treceBh: false,
+        candidat: n >= 30 && n < l.length && tot < 0 && p / n < rata - 0.05,
+        text: "Trade-urile " + k + ": " + p + " din " + n + " pe plus (" + pc1(p / n) + (restPlus === null ? "" : ", față de " + pc1(restPlus) + " la celelalte") + "), total " + L(tot) + "." };
+      if (n >= 30 && rest >= 30) {
+        var d = []; for (var q = 0; q < nZile; q++) d.push({ n: 0, w: 0, k: 0, kw: 0 });
+        l.forEach(function (t, i) { var e = d[zi[i]], c = t.rezultat > 0 ? 1 : 0; e.n++; e.w += c; if (inG[i]) { e.k++; e.kw += c; } });
+        var r = pRataPeZile(d, R, samanta(k)); if (r) { x.p = r.p; x.testat = true; }
+      }
+      return x;
+    });
+    var testate = toate.filter(function (x) { return x.testat; });
+    var alte = testate.map(function (x) { return { sursa: "Regulile tale · acțiuni", afirmatie: "trade-urile " + x.grupa + " ies mai rău decât restul", p: x.p, pMin: 1 / (R + 1), dif: x.pePlus - x.restPlus, felul: "regula-t212", regula: x.candidat }; });
+    var reg = typeof Verdicte !== "undefined" && Verdicte && Verdicte.registru ? Verdicte.registru({ calibrare: [], alte: alte, q: 0.05 }) : bhLocal(alte, 0.05);
+    testate.forEach(function (x, i) { x.treceBh = !!reg[i].treceBh; x.prag = reg[i].prag; x.regula = !!reg[i].ramane; });
+    var dupaTotal = function (a, b) { return a.total - b.total; };
+    var v = { suficient: true, n: l.length, rata: rata, zile: nZile, teste: testate.length, R: R, grupe: toate,
+      reguli: toate.filter(function (x) { return x.regula; }).sort(dupaTotal), deUrmarit: toate.filter(function (x) { return x.candidat && !x.regula; }).sort(dupaTotal) };
+    REGULI_MEMO = { k: cheie, v: v };
+    return v;
+  }
+  // v100.269: nota de sub „Regulile tale” - cum se hotărăște ce e regulă (o frază, ≤ 160)
+  function notaReguli(r) {
+    return r && r.suficient ? "Fiecare grupă e testată pe zile de bursă (trade-urile din aceeași zi se mișcă împreună), cu corecția pentru toate cele " + cate(r.teste || 0, "grupă", "grupe") + " testate." : "";
   }
 
   // Alertele planului pentru colector: doar pragurile scrise de EL. Cheia e pe zi (ora Romaniei nu conteaza
@@ -661,6 +751,6 @@ var ActiuniSemnale = (function () {
   }
   // „Regulile tale”: grupa cea mai scumpa
   function facReguli(grupa) { return "Aș evita deocamdată trade-urile " + grupa + "."; }
-  return { unitateBare: unitateBare, inchisaInainte: inchisaInainte, zileLipsa: zileLipsa, regimPoarta: regimPoarta, PLAFON: PLAFON, usd: usd, facPoarta: facPoarta, facStop: facStop, sfatStop: sfatStop, facPoartaIstoric: facPoartaIstoric, facReguli: facReguli, stopPoarta: stopPoarta, cheieSituatie: cheieSituatie, situatiiCaAsta: situatiiCaAsta, textSituatie: textSituatie, trailPozitie: trailPozitie, alegeTrail: alegeTrail, maxDupaCumparare: maxDupaCumparare, cuStopUrcator: cuStopUrcator, cumparariInJos: cumparariInJos, alertaFrana: alertaFrana, cuStop: cuStop, rezumatStop: rezumatStop, reguliPersonale: reguliPersonale, atr: atr, niveluri: niveluri, marime: marime, planulMeu: planulMeu, laCumparare: laCumparare, raportSaptamana: raportSaptamana, alertePlan: alertePlan, stare: stare, semafor: semafor, greseli: greseli, rezumatJurnal: rezumatJurnal, poarta: poarta, portofoliu: portofoliu, beta: beta, TEXT: TEXT };
+  return { unitateBare: unitateBare, inchisaInainte: inchisaInainte, zileLipsa: zileLipsa, regimPoarta: regimPoarta, PLAFON: PLAFON, usd: usd, facPoarta: facPoarta, facStop: facStop, sfatStop: sfatStop, facPoartaIstoric: facPoartaIstoric, facReguli: facReguli, notaReguli: notaReguli, stopPoarta: stopPoarta, cheieSituatie: cheieSituatie, situatiiCaAsta: situatiiCaAsta, textSituatie: textSituatie, trailPozitie: trailPozitie, alegeTrail: alegeTrail, maxDupaCumparare: maxDupaCumparare, cuStopUrcator: cuStopUrcator, cumparariInJos: cumparariInJos, alertaFrana: alertaFrana, cuStop: cuStop, rezumatStop: rezumatStop, reguliPersonale: reguliPersonale, atr: atr, niveluri: niveluri, marime: marime, planulMeu: planulMeu, laCumparare: laCumparare, raportSaptamana: raportSaptamana, alertePlan: alertePlan, stare: stare, semafor: semafor, greseli: greseli, rezumatJurnal: rezumatJurnal, poarta: poarta, portofoliu: portofoliu, beta: beta, TEXT: TEXT };
 })();
 if (typeof globalThis !== "undefined") globalThis.ActiuniSemnale = ActiuniSemnale;

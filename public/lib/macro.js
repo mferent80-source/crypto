@@ -44,7 +44,9 @@
   // v100.268 (29.10, el: „Cele din macro.js”): pragurile pieței dintr-un SINGUR loc - cadranul VIX și cardul BTC–bursă de pe Acasă și alerta
   // „vremii” le iau de aici (pe aceeași pagină VIX 18–20 era „liniște” pe cadran și „prudență” aici; r 0,47 era „nu-l trage” pe card și
   // „parțial legate” aici). Peste 30 „panică” (era „stres”), ca verdictul bursei de pe Acasă.
-  const PRAGURI = { vix: [12, 18, 25, 30], btc: [0.6, 0.2, -0.2] };
+  // v100.269 (ideile auditului 29.10): latime = cota Nasdaq 100 peste media de 50 - sub 0,4 îngustă, 0,4–0,6 mixtă, de la 0,6 largă (verdictul
+  // bursei de pe Acasă zicea „URCARE ÎNGUSTĂ” până la 0,6, iar Scorul zilei „mixtă” între 0,4 și 0,6, pe aceeași pagină)
+  const PRAGURI = { vix: [12, 18, 25, 30], btc: [0.6, 0.2, -0.2], latime: [0.4, 0.6] };
   function vixTreapta(v) {
     const p = PRAGURI.vix;
     return v < p[0] ? { scor: 1, text: "liniște prea mare (atenție la întoarcere)" } : v < p[1] ? { scor: 2, text: "calm" } : v < p[2] ? { scor: -1, text: "prudență" } : v < p[3] ? { scor: -2, text: "frică" } : { scor: -3, text: "panică" };

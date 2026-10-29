@@ -107,6 +107,59 @@ var TabloBot = (function () {
     return s / tr.length;
   }
 
+  // v100.269 (ideile auditului 29.10): pragurile eficienței și ale oscilației, judecate față de istoricul MONEDEI pe 5 min (lumânările primite,
+  // ~100 = ~8 ore), nu cu cifre fixe. Măsurat de audit: ER < 0,30 era adevărat 91–95% din timp, > 0,60 niciodată, iar ATR/treaptă < 1 în
+  // 53–100% ⇒ rândurile stăteau mereu aprinse și nu mai spuneau nimic. Acum: zigzag = ER-ul de acum sub percentila 20 a ferestrelor de 48
+  // din istoric (și sub 0,30); trend = peste percentila 80 (sau peste 0,60 - un trend curat e trend oricum); oscilația „a scăzut” = ATR sub
+  // percentila 20 a ATR-urilor lui ȘI sub o treaptă. Sub 30 de ferestre / ATR-uri: „istoric-scurt”, nu un verdict (proba-v100269-p).
+  var PERC_JOS = 20, PERC_SUS = 80, ISTORIC_MIN = 30;
+  // percentila valorii în listă, egalitățile la jumătate (o serie constantă stă la 50, nu la 100)
+  function rangPct(lista, v) {
+    var sub = 0, eg = 0;
+    for (var i = 0; i < lista.length; i++) { if (lista[i] < v) sub++; else if (lista[i] === v) eg++; }
+    return lista.length ? 100 * (sub + eg / 2) / lista.length : null;
+  }
+  function valPct(lista, p) {
+    var s = lista.slice().sort(function (a, b) { return a - b; }), i = (s.length - 1) * p / 100, lo = Math.floor(i), hi = Math.ceil(i);
+    return s[lo] + (s[hi] - s[lo]) * (i - lo);
+  }
+  function doua(x) { return Math.round(x * 100) / 100; }
+  function judecaEficienta(ef, inchideri) {
+    var o = { valoare: ef.valoare, semn: ef.semn, prag: { trend: 0.60, zigzag: 0.30 }, percentila: null, ferestre: 0, eticheta: null,
+      stare: ef.valoare === null ? "nu-se-poate" : "bine" };
+    if (ef.valoare === null) return o;
+    var ist = [];
+    for (var e = 48; e <= inchideri.length; e++) { var x = eficienta(inchideri.slice(e - 48, e)).valoare; if (x !== null) ist.push(x); }
+    o.ferestre = ist.length;
+    if (ist.length < ISTORIC_MIN) {
+      // un trend curat rămâne trend și pe istoric scurt (garda PAZESTE nu se pierde); „zigzag” cere percentila
+      o.stare = ef.valoare > 0.60 ? "trend" : "istoric-scurt";
+      o.eticheta = cate(ist.length, "fereastră", "ferestre") + " din " + ISTORIC_MIN;
+      return o;
+    }
+    var r = rangPct(ist, ef.valoare);
+    o.percentila = Math.round(r);
+    o.prag = { trend: doua(Math.min(0.60, valPct(ist, PERC_SUS))), zigzag: doua(Math.min(0.30, valPct(ist, PERC_JOS))) };
+    o.stare = r >= PERC_SUS || ef.valoare > 0.60 ? "trend" : r <= PERC_JOS && ef.valoare < 0.30 ? "zigzag" : "bine";
+    o.eticheta = "percentila " + o.percentila + " a monedei";
+    return o;
+  }
+  function judecaAmplitudine(lumanari, amp, treapta) {
+    var ratie = amp / treapta, o = { valoare: ratie, prag: 1.0, percentila: null, eticheta: null, stare: ratie < 1.0 ? "rau" : "bine" };
+    var ist = [];
+    for (var e = 15; e <= lumanari.length; e++) { var a = atr(lumanari.slice(Math.max(0, e - 15), e), 14); if (a !== null) ist.push(a); }
+    if (ist.length < ISTORIC_MIN) {
+      if (ratie < 1.0) { o.stare = "istoric-scurt"; o.eticheta = cate(ist.length, "ATR", "ATR-uri") + " din " + ISTORIC_MIN; }
+      return o;
+    }
+    var r = rangPct(ist, amp);
+    o.percentila = Math.round(r);
+    o.prag = doua(Math.min(1.0, valPct(ist, PERC_JOS) / treapta));
+    o.stare = ratie < 1.0 && r <= PERC_JOS ? "rau" : "bine";
+    o.eticheta = "ATR la percentila " + o.percentila + " a monedei";
+    return o;
+  }
+
   // De cate minute e pretul CONTINUU in banda de margine (<15% sau >85%),
   // numarat inapoi din `acum` pe istoricul retinut. Se opreste la prima
   // intrare care nu mai e la margine (fie "bine", fie "afara" de tot) - o
@@ -163,8 +216,7 @@ var TabloBot = (function () {
       istoricMin: !istoric.length ? 0 : (tPrimaMostra !== null && tPrimaMostra > 0 ? (acum - tPrimaMostra) / 60000 : null),
       pretPerp: pretPerp,
       pretSpot: pretSpot,
-      eficienta: { valoare: ef.valoare, semn: ef.semn, prag: { trend: 0.60, zigzag: 0.30 },
-                   stare: ef.valoare === null ? "nu-se-poate" : ef.valoare > 0.60 ? "trend" : ef.valoare < 0.30 ? "zigzag" : "bine" },
+      eficienta: judecaEficienta(ef, inchideri),   // v100.269: față de istoricul monedei (percentilele 20 / 80), nu 0,30 / 0,60 fixe
       pozitieInterval: NECUNOSCUT, ritmPerechi: NECUNOSCUT, amplitudine: NECUNOSCUT,
       lichidare: NECUNOSCUT, comision: NECUNOSCUT,
       basis: NECUNOSCUT, directieBot: 0,
@@ -209,8 +261,7 @@ var TabloBot = (function () {
       if (linii && linii > 1) {
         // v100.38: row = linii Pionex -> linii − 1 intervale
         var treapta = (sus - jos) / (linii - 1), amp = atr(lumanari, 14);
-        if (amp !== null) m.amplitudine = { valoare: amp / treapta, prag: 1.0,
-          stare: amp / treapta < 1.0 ? "rau" : "bine" };
+        if (amp !== null) m.amplitudine = judecaAmplitudine(lumanari, amp, treapta);   // v100.269: sub o treaptă ȘI sub percentila 20 a ATR-ului ei
       }
     }
 
@@ -361,11 +412,14 @@ var TabloBot = (function () {
     // din interval cere doar pretul si capetele. Iesirea IN FAVOARE e verde
     // (OPORTUNITATE) - asteapta dupa NEDOVEDIT.
     var directie = m.eficienta.semn, eficientaDovedita = m.lumanari >= 48, oportunitate = null;
+    // v100.269 (ideile auditului 29.10): declanșatorul arată pragul cu care s-a judecat (percentila monedei), cu rezerva celor vechi
+    var pe = m.eficienta.prag || {}, pragTrend = typeof pe.trend === "number" ? pe.trend : 0.60, pragZigzag = typeof pe.zigzag === "number" ? pe.zigzag : 0.30;
+    var pragAmp = m.amplitudine && typeof m.amplitudine.prag === "number" ? m.amplitudine.prag : 1.0;
     if (mod === "DIRECTIONAL") {
       if (eficientaDovedita && m.eficienta.stare === "trend" && m.directieBot && directie && directie !== m.directieBot) {
         return { nivel: "PAZESTE", titlu: "Trendul s-a întors împotriva ta",
           ceFac: "Mișcarea e hotărâtă, dar în sens invers poziției tale.",
-          declansator: d("eficienta", m.eficienta.valoare, 0.60) };
+          declansator: d("eficienta", m.eficienta.valoare, pragTrend) };
       }
       if (m.pozitieInterval.stare === "afara") {
         var pragIesit = m.pozitieInterval.valoare > 100 ? 100 : 0;
@@ -396,7 +450,7 @@ var TabloBot = (function () {
       if (eficientaDovedita && m.eficienta.stare === "trend" && m.pozitieInterval.stare === "margine") {
         return { nivel: "PAZESTE", titlu: "Trend, cu prețul la margine",
           ceFac: "Grid-ul e pe cale să rămână în urmă.",
-          declansator: d("eficienta", m.eficienta.valoare, 0.60) };
+          declansator: d("eficienta", m.eficienta.valoare, pragTrend) };
       }
     }
 
@@ -459,12 +513,12 @@ var TabloBot = (function () {
     if (mod === "DIRECTIONAL" && m.eficienta.stare === "zigzag") {
       return { nivel: "REGLEAZA", titlu: "Piața nu merge nicăieri",
         ceFac: "Plătești comisioane într-un interval, deși pariezi pe direcție.",
-        declansator: d("eficienta", m.eficienta.valoare, 0.30) };
+        declansator: d("eficienta", m.eficienta.valoare, pragZigzag) };
     }
     if (m.amplitudine.stare === "rau") {
       return { nivel: "REGLEAZA", titlu: "Oscilația a scăzut sub o treaptă",
         ceFac: "Botul nu mai prinde perechi, dar comisioanele curg.",
-        declansator: d("amplitudine", m.amplitudine.valoare, 1.0) };
+        declansator: d("amplitudine", m.amplitudine.valoare, pragAmp) };
     }
     if (m.comision.stare === "rau") {
       // Cazul fara raport (brut <= 0): mesajul "peste jumatate" ar minti -

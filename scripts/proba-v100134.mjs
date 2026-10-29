@@ -182,7 +182,8 @@ await test("(e2) gsDirectieSt: schimbarea direcției mută stopul și TP-ul pe p
 });
 await test("(e3) verdictul: rândul mare cu culoarea, marja, cifrele, histograma, „Ce aș face eu”, nota, orizontul", () => {
   const h = G.gsVerdictHtml(stare({ rez: REZ(), plan: null }));   // fără plan: p5 −9,2 ar declanșa „nu se potrivește cu planul” (−6,5)
-  assert.match(h, /<div class="gsVerdict good"><b>CÂȘTIGĂ în 58% din drumuri · PIERDE în 42%<\/b><span class="t212Mic">±4 puncte · incertitudinea pe zile \(cu fiecare grupă de zile scoasă pe rând\), nu doar din numărul drumurilor<\/span><\/div>/);
+  // v100.269 (ideile auditului 29.10): marja pe zile e analitică (fiecare zi distinctă = o observație, fără tendință), nu jackknife pe grupe - textul spune asta
+  assert.match(h, /<div class="gsVerdict good"><b>CÂȘTIGĂ în 58% din drumuri · PIERDE în 42%<\/b><span class="t212Mic">±4 puncte · incertitudinea pe zile: fiecare zi distinctă din istoric e o observație, fără partea pe care drumurile o scot oricum \(tendința\); nu doar din numărul drumurilor<\/span><\/div>/);
   assert.match(h, /pe 7 zile/); assert.match(h, /de obicei \+1,8 USDT · cele mai proaste 5%: −9,2 USDT · cele mai bune 5%: \+8,3 USDT/);
   assert.match(h, /<svg class="mcsHist"/); assert.match(h, /👉 <b>Ce aș face eu:<\/b> Aș porni: câștigă în 58%/); assert.match(h, /istoria monedei reluată/);
   assert.match(G.gsVerdictHtml(stare({ rez: REZ(), oriz: 3, plan: null })), /pe 14 zile[\s\S]*Istoricul e scurt/);
@@ -285,7 +286,7 @@ await test("(R4/R5/R6) ecranul: histograma stilată și pe #gsPagina; Copiază /
   for (const f of ["gsCopiazaCod", "gsOriz", "gsMod", "gsDinCod"]) assert.match(functie(E, f), /gsCiteste\(true\)/, f);
   assert.match(functie(E, "gsCopiazaCod"), /GridSim\.inCod\(/);
   assert.match(functie(E, "gsCiteste"), /nu e un număr/); assert.match(functie(E, "gsCiteste"), /e gol/);
-  assert.match(G.gsVerdictHtml(stare({ rez: REZ(), plan: null })), /<span class="t212Mic">±4 puncte · incertitudinea pe zile \(cu fiecare grupă de zile scoasă pe rând\), nu doar din numărul drumurilor<\/span>/);
+  assert.match(G.gsVerdictHtml(stare({ rez: REZ(), plan: null })), /<span class="t212Mic">±4 puncte · incertitudinea pe zile: fiecare zi distinctă din istoric e o observație, fără partea pe care drumurile o scot oricum \(tendința\); nu doar din numărul drumurilor<\/span>/);   // v100.269: textul marjei analitice
   assert.match(G.gsHtml(stare({ rez: REZ(), st: Object.assign({}, STP, { stop: { jos: 0.4 } }) })), /Stopul \(0,4000\) stă în grid/);   // audit 19.10: fără majuscule, cu partea de grid care moare (ca Tabloul)
   assert.match(G.gsRiscuriHtml(stare({ rez: REZ() })), /funding \(cost fix presupus\)/);
 });

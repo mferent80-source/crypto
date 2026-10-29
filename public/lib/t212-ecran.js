@@ -899,6 +899,17 @@ function t212PretInchis(tk, randuri, acum) {
   var et = zu === sb.zi ? "închiderea de azi" : zu === ieri ? "închiderea de ieri" : "închiderea din " + zu.slice(8, 10) + "." + zu.slice(5, 7);
   return { eticheta: et, avertisment: "Bursa e închisă: prețul de aici e " + et + " (barele zilnice n-au pre-market), nu cel de acum. La deschidere prețul poate sări peste stop, iar stopul se execută la primul preț de după salt." };
 }
+// v100.269 (ideile auditului 29.10): cu bursa închisă, ultima cotație din afara ședinței - barele de 5 minute cu prepost=1 (aceeași rută ca
+// Sugestiile, Yahoo), începute după închiderea ultimei ședințe încheiate și până acum. faza „pre” = ziua următoare (pre-market), „dupa” =
+// aceeași zi (după închidere). null = nicio bară de după închidere ⇒ Poarta rămâne pe închidere, ca până acum
+function t212PretExtins(tk, randuri, inchidere, acum) {
+  if (typeof CalendarBursa === "undefined" || !CalendarBursa.ultimaZiInchisa || !(inchidere > 0)) return null;
+  var zi = CalendarBursa.ultimaZiInchisa(acum, tk), fin = CalendarBursa.inchidereLa(zi, tk), u = null;
+  (Array.isArray(randuri) ? randuri : []).forEach(function (x) { var t = Number(x && x.time), c = Number(x && x.close); if (t >= fin && t <= acum && c > 0 && (!u || t > u.t)) u = { t: t, c: c }; });
+  if (!u) return null;
+  var faza = CalendarBursa.ziLocala(u.t, tk) === zi ? "dupa" : "pre", fata = u.c / inchidere - 1;
+  return { pret: u.c, t: u.t, faza: faza, fata: fata, text: (faza === "pre" ? "pre-market " : "după închidere ") + t212Usd(u.c) + " (" + t212Pct(fata) + " față de închidere)" };
+}
 // Poarta de intrare: "vreau sa cumpar X" -> cumpar / astept / nu acum
 async function t212Poarta() {
   var campS = function () { return String(($("t212PSimbol") && $("t212PSimbol").value) || "").toUpperCase().replace(/[^A-Z0-9.]/g, "").slice(0, 12); };
@@ -922,6 +933,12 @@ async function t212Poarta() {
     var bare = GridCalcul.bareBursa(b && b.randuri || [], Date.now()), pret = GridCalcul.pretCurent(b && b.randuri || []);
     var inchisa = t212PretInchis(tk, b && b.randuri || [], Date.now());   /* v100.267 (auditul 29.10): „închiderea de ieri”, nu „acum” */
     var st = ActiuniSemnale.stare(bare, pret), ore = null, niv = ActiuniSemnale.niveluri(bare, pret, {});
+    // v100.269 (ideile auditului 29.10): bursa închisă ⇒ și cotația din afara ședinței (o cerere în plus, ruta existentă); lipsa ei nu oprește Poarta
+    var extins = null;
+    if (inchisa) {
+      try { var b5 = await getJSON("/api/t212?action=preturi&interval=5m&ticker=" + encodeURIComponent(tk) + "&prepost=1"); extins = t212PretExtins(tk, b5 && b5.randuri, st.pret, Date.now()); } catch (e5) { extins = null; }
+      if (depasit()) return;
+    }
     var j = t212Jurnal();
     if (j) j.p.inchise.forEach(function (t) { if (T212.simbol(t.ticker) === (b.simbol || s) && t.rezultat < 0) { var o = (Date.now() - t.inchis) / 3600000; if (ore === null || o < ore) ore = o; } });
     var cc = t212.cont && t212.cont.cash, tot = cc && cc.total, liber = cc && cc.free !== null && cc.free !== undefined && isFinite(Number(cc.free)) ? Number(cc.free) : null;
@@ -936,7 +953,8 @@ async function t212Poarta() {
     var deja = t212DejaLei(tk);
     var rp = t212RegimPt();
     var v = ActiuniSemnale.poarta({ stare: st, plan: planPoarta, vandutPeMinusAcumOre: ore, rezultateZile: zR, medie: niv.nivel === "ok" && niv.proba ? niv.proba.medie : undefined,
-      dejaPct: tot > 0 && deja > 0 ? deja / tot : 0, simbol: b.simbol || s, regim: rp, zileLipsa: ActiuniSemnale.zileLipsa(st.ultima, Date.now(), tk) });
+      dejaPct: tot > 0 && deja > 0 ? deja / tot : 0, simbol: b.simbol || s, regim: rp, zileLipsa: ActiuniSemnale.zileLipsa(st.ultima, Date.now(), tk),
+      extins: extins ? { pret: extins.pret, faza: extins.faza, stop: plan.stop > 0 ? plan.stop : niv.nivel === "ok" && niv.stop > 0 ? niv.stop : null } : undefined });   /* v100.269: stopul tău, altfel cel calculat */
     if (rp.viu && v && v.note) v.note.push("regimul e citirea de acum: colectorul nu l-a publicat în ultimele 2 ore");
     if (v && v.note) { var fzCit = t212FrazaCitire(); if (fzCit) v.note.push(fzCit); }
     // v100.222 (I-722): verdele care nu încape în banii liberi, e plin sau e blocat devine AȘTEAPTĂ înainte de jurnal
@@ -953,7 +971,7 @@ async function t212Poarta() {
     /* revizia 29.10: biletul se publică în t212.poarta abia după ultima așteptare (știrile) - publicat înainte, un desen al paginii din timpul
        așteptării arăta biletul vechi pe jumătate (fără profil și probabilități) peste „aduc prețurile…” al clicului nou */
     var bilet = { simbol: b.simbol || s, ticker: tk, st: st, niv: niv, bare: bare, bareZi: GridCalcul.bareBursa(b && b.randuri || [], Date.now()), planScris: !!(plan.stop || plan.trailPct), planMeu: pm, v: v, tot: tot,
-      liber: liber, deja: deja, sursa: sursa, rezultate: rez.data, rezultateStiut: rez.stiut, gasitDupaNume: !!(b && b.gasitDupaNume), inchisa: inchisa };
+      liber: liber, deja: deja, sursa: sursa, rezultate: rez.data, rezultateStiut: rez.stiut, gasitDupaNume: !!(b && b.gasitDupaNume), inchisa: inchisa, extins: extins };
     // v89: biletul - ce spune istoricul tau despre situatii asemanatoare, rezultatele (aduse deja, mai sus), stirile
     // v100.267 (auditul 29.10): știrile întârziate ale unui bilet vechi nu se mai lipesc pe biletul nou (t212.poarta e deja al altui clic)
     var sp = null; try { sp = await getJSON("/api/stiri?action=actiune&ticker=" + encodeURIComponent(tk)); } catch (e) { sp = null; }
@@ -1215,7 +1233,7 @@ function t212RenderPoarta() {
   var fac = ActiuniSemnale.facPoarta(p.v.nivel, t212MarimePoarta(p), { faraMarime: t212FaraMarime(p), motivPlan: planMotiv, faraSuma: fara, regimNedovedit: t212RegimNedovedit() });   // v100.71 (I4): functie pura, generata si masurata de garda
   var zu = st.ultima ? new Date(st.ultima).toISOString() : "";
   t212CuRaport(out, true);
-  out.innerHTML = '<div class="t212Verdict ' + n[1] + '"><b>' + n[0] + ' · ' + escapeHtml(p.simbol) + '</b><span class="tbSub">' + escapeHtml(p.inchisa ? p.inchisa.eticheta : "acum") + ' ' + t212Usd(st.pret) + (zu ? ' · ultima zi închisă ' + zu.slice(8, 10) + '.' + zu.slice(5, 7) : '') + ' · trend ' + escapeHtml(st.trend.dir) + ' · față de maximul pe 7 zile ' + t212Pct(st.distMax7z) + ' · pe 52 săpt. ' + t212Pct(st.distMax52) + '</span></div>'
+  out.innerHTML = '<div class="t212Verdict ' + n[1] + '"><b>' + n[0] + ' · ' + escapeHtml(p.simbol) + '</b><span class="tbSub">' + escapeHtml(p.inchisa ? p.inchisa.eticheta : "acum") + ' ' + t212Usd(st.pret) + (p.extins ? ' · ' + escapeHtml(p.extins.text) : '') + (zu ? ' · ultima zi închisă ' + zu.slice(8, 10) + '.' + zu.slice(5, 7) : '') + ' · trend ' + escapeHtml(st.trend.dir) + ' · față de maximul pe 7 zile ' + t212Pct(st.distMax7z) + ' · pe 52 săpt. ' + t212Pct(st.distMax52) + '</span></div>'
     + '<p class="t212Fac t212FacPoarta">👉 <b>Ce aș face eu:</b> ' + escapeHtml(fac) + '</p>'
     + t212LinieCal()
     + (p.v.motive.length ? '<ul class="t212Motive">' + p.v.motive.map(function (m) { return '<li>' + escapeHtml(m) + '</li>'; }).join("") + '</ul>' : '<p class="good">Nimic de obiectat.</p>')
@@ -1440,12 +1458,16 @@ function t212CopiazaDeclaratia() {
   try { navigator.clipboard.writeText(txt).then(ok, function () { window.prompt("Copiază textul:", txt); }); } catch (e) { window.prompt("Copiază textul:", txt); }
 }
 // v87: regulile tale, invatate din jurnalul de actiuni
+// v100.269 (ideile auditului 29.10): regulă = doar grupa care trece testul pe zile și corecția pe toate grupele (sfatul vine doar din ea);
+// grupele care doar arată mai rău stau la „De urmărit (nedovedit)”, fără sfat - pe trade-uri fără efect apăreau ca „reguli” în 66–93% din rulări
 function t212ReguliBloc(l) {
-  var r = ActiuniSemnale.reguliPersonale(l, "Europe/Bucharest");
-  return '<div class="tbBloc"><div class="tbBlocCap"><h4>🧭 Regulile tale (învățate din jurnal)</h4><span class="tbSub">grupe de cel puțin 30 de trade-uri care ies clar mai rău decât restul</span></div>'
+  var r = ActiuniSemnale.reguliPersonale(l, "Europe/Bucharest"), urm = r.deUrmarit || [];
+  return '<div class="tbBloc"><div class="tbBlocCap"><h4>🧭 Regulile tale (învățate din jurnal)</h4><span class="tbSub">grupe de cel puțin 30 de trade-uri care ies clar mai rău decât restul, peste noroc</span></div>'
     + (!r.suficient ? '<p class="tbSub">' + t212Cate(r.n, "trade", "trade-uri") + ': mai trebuie ' + r.lipsa + '.</p>'
-      : r.reguli.length ? '<ul class="grLista">' + r.reguli.slice(0, 5).map(function (x) { return '<li class="bad">' + escapeHtml(x.text) + '</li>'; }).join("") + '</ul><p class="tbFac">👉 <b>Ce aș face eu:</b> ' + escapeHtml(ActiuniSemnale.facReguli(r.reguli[0].grupa)) + '</p>'
-      : '<p class="good">Pe ' + t212Cate(r.n, "trade", "trade-uri") + ' nu văd o grupă care să iasă clar mai rău decât restul.</p>') + '</div>';
+      : (r.reguli.length ? '<ul class="grLista">' + r.reguli.slice(0, 5).map(function (x) { return '<li class="bad">' + escapeHtml(x.text) + '</li>'; }).join("") + '</ul><p class="tbFac">👉 <b>Ce aș face eu:</b> ' + escapeHtml(ActiuniSemnale.facReguli(r.reguli[0].grupa)) + '</p>'
+        : '<p class="good">Pe ' + t212Cate(r.n, "trade", "trade-uri") + ' nu văd o grupă care să iasă clar mai rău decât restul.</p>')
+      + (urm.length ? '<p class="tbSub">De urmărit (nedovedit: pe zile, diferența poate fi noroc):</p><ul class="grLista">' + urm.slice(0, 3).map(function (x) { return '<li class="warn">' + escapeHtml(x.text) + '</li>'; }).join("") + '</ul>' : '')
+      + '<p class="tbSub">' + escapeHtml(ActiuniSemnale.notaReguli(r)) + '</p>') + '</div>';
 }
 
 // 🍒 "Daca ascultai de Radar" pe actiuni: verdictul portii la ora fiecarei cumparari (colectorul de acasa)
