@@ -147,20 +147,21 @@ await test("2b nici bot-orders refuzat (lacătul Pionex 429 / parola) nu mișcă
   await L.tura(T0); assert.equal(L.b.turaGataLa, T0, "boții citiți ⇒ turaGataLa = acum");
 });
 
-await test("2c după 15 ture fără server: anunțul trece prin trimiteAlerta (nu direct pe Discord), netrimis ⇒ reîncercat, apoi repetat la 3 h", async () => {
+/* revizia 29.10: refuzat de Discord, anunțul e DEJA în coada de pe disc (trimiteAlerta) - o reîncercare la fiecare tură punea câte o dublură */
+await test("2c după 15 ture fără server: anunțul trece prin trimiteAlerta (nu direct pe Discord), refuzat ⇒ fără dubluri pe tură, repetat la 3 h", async () => {
   const T0 = Date.parse("2026-10-28T16:00:00Z"), L = lumeTura(async () => { throw RECONECTARE(); });
   for (let i = 0; i < 14; i++) await L.tura(T0 + i * MIN);
   assert.equal(oprite(L.b).length, 0, "anunț înainte de 15 eșecuri");
   L.b.anuntOk = false; await L.tura(T0 + 14 * MIN);
   assert.deepEqual(L.b.directe, [], "anunțul „serverul nu mai răspunde” a plecat DIRECT pe Discord (fără coadă, fără KV, rezultatul ignorat)");
   assert.equal(oprite(L.b).length, 1, "la a 15-a tură trebuia anunțul prin drumul alertelor");
-  L.b.anuntOk = true; await L.tura(T0 + 16 * MIN);
-  assert.equal(oprite(L.b).length, 2, "netrimis la a 15-a ⇒ reîncercat la tura următoare");
-  await L.tura(T0 + 20 * MIN); await L.tura(T0 + 2 * ORA);
-  assert.equal(oprite(L.b).length, 2, "repetat înainte de 3 h");
-  await L.tura(T0 + 16 * MIN + 3 * ORA);
-  assert.equal(oprite(L.b).length, 3, "cât ține căderea anunțul se repetă la 3 h");
-  const min = Number((oprite(L.b)[2].mesaj.match(/~(\d+)/) || [])[1]);
+  await L.tura(T0 + 16 * MIN); await L.tura(T0 + 20 * MIN);
+  assert.equal(oprite(L.b).length, 1, "refuzat la a 15-a ⇒ e deja în coada de pe disc; reîncercat la fiecare tură s-ar fi dublat în coadă");
+  L.b.anuntOk = true; await L.tura(T0 + 2 * ORA);
+  assert.equal(oprite(L.b).length, 1, "repetat înainte de 3 h");
+  await L.tura(T0 + 14 * MIN + 3 * ORA);
+  assert.equal(oprite(L.b).length, 2, "cât ține căderea anunțul se repetă la 3 h");
+  const min = Number((oprite(L.b)[1].mesaj.match(/~(\d+)/) || [])[1]);
   assert.ok(min >= 180, "al doilea anunț spune de cât timp tace serverul (~" + min + " min)");
   assert.deepEqual(L.b.directe, []);
 });
@@ -176,6 +177,14 @@ await test("2d revenirea serverului: „răspunde din nou” prin trimiteAlerta 
   assert.equal(L.b.turaGataLa, T0 + 20 * MIN); assert.equal(L.b.esecuri, 0);
   await L.tura(T0 + 21 * MIN);
   assert.equal(L.b.anunturi.filter((x) => x.titlu === TITLU_REVENIT).length, 1, "revenirea spusă de două ori");
+});
+
+await test("2g revenirea refuzată de Discord (deja în coadă) nu se mai spune la tura următoare - fără dubluri", async () => {
+  const T0 = Date.parse("2026-10-28T16:00:00Z");
+  let jos = true; const L = lumeTura(async (cale) => { if (jos) throw RECONECTARE(); return cale === "/api/bot-orders" ? { bots: [] } : null; });
+  for (let i = 0; i < 15; i++) await L.tura(T0 + i * MIN);
+  jos = false; L.b.anuntOk = false; await L.tura(T0 + 20 * MIN); await L.tura(T0 + 21 * MIN); await L.tura(T0 + 22 * MIN);
+  assert.equal(L.b.anunturi.filter((x) => x.titlu === TITLU_REVENIT).length, 1, "revenirea refuzată s-a pus din nou în coadă la fiecare tură");
 });
 
 await test("2e lanțul până la paznic: 40 min fără server ⇒ poza poartă turaLa vechi ⇒ paznicul spune „alertele botului stau”", async () => {

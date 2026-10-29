@@ -499,7 +499,8 @@ async function tura() {
     // v100.259 (punctul 4): după anunțul „serverul nu răspunde”, revenirea se spune o dată
     // v100.267 (auditul 29.10): tot prin trimiteAlerta (după coada veche, cu KV), cât timp căderea anunțată e ținută minte (pe disc, și peste o repornire)
     if (esecuri >= MAX_ESECURI) jurnal("serverul răspunde din nou");
-    { const mo = meta(); if (S.serverRevenitPas(mo).tip === "revenit" && (await anuntaMesaj(MesajeColector.serverRevenit()))) mo.serverOpritAnuntat = 0; }
+    // încercarea contează (ca la cădere, mai jos): pe Discord, refuzat ⇒ stă în coada de pe disc și pleacă în ordine; reîncercat la fiecare tură doar s-ar fi dublat
+    { const mo = meta(); if (S.serverRevenitPas(mo).tip === "revenit") { await anuntaMesaj(MesajeColector.serverRevenit()); mo.serverOpritAnuntat = 0; } }
     esecuri = 0;
   }
   catch (e) {
@@ -511,7 +512,9 @@ async function tura() {
       // v100.267 (auditul 29.10): anunțul prin trimiteAlerta (KV picat ⇒ coada KV; Discord picat ⇒ coada de pe disc), repetat la 3 h cât ține
       // căderea; înainte: un singur trimiteDiscord direct, cu rezultatul ignorat - un Discord picat în minutul 15 însemna tăcere până la revenire
       const mo = meta(), so = S.serverOpritPas(mo, { esecuri, acum });
-      if (so.tip === "oprit" && (await anuntaMesaj(MesajeColector.serverOprit(so.minute)))) mo.serverOpritAnuntat = acum;
+      // ora anunțului se notează după ÎNCERCARE, nu doar după succes: cu Discord căzut mesajul e deja în coada de pe disc (pleacă la revenire,
+      // înaintea celor noi); o reîncercare la fiecare tură ar fi pus în coadă câte o dublură pe tură (revizia 29.10)
+      if (so.tip === "oprit") { await anuntaMesaj(MesajeColector.serverOprit(so.minute)); mo.serverOpritAnuntat = acum; }
       try { scrieStare(); } catch {} }
     else {
       jurnal("bot-orders", e.status, e.message);
