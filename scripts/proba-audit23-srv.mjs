@@ -142,7 +142,9 @@ await test("(4) colectorul: fără process.exit pe ramura „serverul nu răspun
   assert.ok(!/trimiteDiscord\(MesajeColector\.server/.test(c), "anunțul serverului pleacă iar direct pe Discord");
   assert.match(c, /setTimeout\(bucla, S\.pasDupaEsecuri\(esecuri, PAS_MS\)\);/);
   assert.match(c, /if \(esecuri >= MAX_ESECURI\) jurnal\("serverul răspunde din nou"\);/);
-  assert.match(c, /S\.serverRevenitPas\(mo\)\.tip === "revenit" && \(await anuntaMesaj\(MesajeColector\.serverRevenit\(\)\)\)/);
+  /* v100.267 (revizia 29.10): încercarea contează - refuzat de Discord, mesajul e deja în coada de pe disc (fără dubluri pe tură) */
+  assert.match(c, /S\.serverRevenitPas\(mo\)\.tip === "revenit"\) \{ await anuntaMesaj\(MesajeColector\.serverRevenit\(\)\); mo\.serverOpritAnuntat = 0; \}/);
+  assert.match(c, /if \(so\.tip === "oprit"\) \{ await anuntaMesaj\(MesajeColector\.serverOprit\(so\.minute\)\); mo\.serverOpritAnuntat = acum; \}/);
 });
 await test("(4) mesajele: „serverul nu răspunde” nu mai spune că s-a oprit colectorul; „serverul răspunde din nou” (info, ≤ 60)", () => {
   const a = MC.serverOprit(15); assert.ok(!/colectorul s-a oprit/.test(a.mesaj)); assert.match(a.mesaj, /reia singur/); assert.match(a.mesaj, /PORNESTE-CRYPTO-RADAR\.bat/);

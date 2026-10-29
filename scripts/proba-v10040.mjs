@@ -169,7 +169,7 @@ await test("🟡 poza: botii poarta ora CITIRII lor (nu „acum” peste boti ve
 
 await test("🟡 serverul mort: colectorul spune pe Discord (si asteapta); T212 cazut: alerta dupa 30 min (nu tacere)", () => {
   // v100.259 (auditul 23.10, punctul 4): colectorul NU mai iese dupa 15 min fara server (nu-l mai repornea nimeni) - anunta si asteapta
-  const i = colector.indexOf('jurnal("serverul nu mai răspunde - anunț și aștept, cu pauze tot mai lungi")'), bucata = colector.slice(i, i + 900);
+  const i = colector.indexOf('jurnal("serverul nu mai răspunde - anunț și aștept, cu pauze tot mai lungi")'), bucata = colector.slice(i, i + 1400);   /* v100.267: +500 - comentariul reviziei (fără dubluri în coadă) a mutat apelul mai jos */
   // v100.267 (auditul 29.10): anunțul pleacă pe drumul alertelor (anuntaMesaj ⇒ trimiteAlerta: KV + Discord, cu coada), nu direct pe Discord
   assert.ok(i > 0 && /anuntaMesaj\(MesajeColector\.serverOprit\(/.test(bucata), "anuntul pe Discord");   /* v100.66: mesajul vine din scripts/lib/mesaje-colector.mjs */
   assert.ok(!/process\.exit/.test(bucata.slice(0, bucata.indexOf("\n    else {"))), "v100.259: colectorul nu mai iese");
