@@ -111,19 +111,53 @@ export async function onRequestGet({request,env}){
   if(type!=="futures")return new Response(JSON.stringify({error:"Spot data is fetched directly by the browser"}),{status:400,headers:H});
   // futures trage 5 cereri Binance pe fiecare apel: fara autentificare, oricine putea folosi serverul ca proxy.
   {const auth=await requireApiAuth(request,env,"market-futures",60);if(!auth.ok)return authErrorResponse(auth,H)}
-  const symbol=(u.searchParams.get("symbol")||"BTCUSDT").toUpperCase().replace(/[^A-Z0-9]/g,"");
-  let funding=null,openInterest=null,longShort=null,oiHist5m=null,fundingHist=null;
-  // Binance refuza cererile venite de pe Cloudflare (403 masurat 22.09). Pana acum
-  // fiecare apel avea catch GOL, deci valorile se intorceau null in tacere si pe
-  // ecran apareau casute goale. Acum motivul calatoreste cu raspunsul.
-  const probleme={};
-  const incearca=async(nume,fn)=>{try{await fn()}catch(e){probleme[nume]=String(e&&e.message||e).slice(0,140)}};
-  await incearca("funding",async()=>{const x=await j(`${FUT}/fapi/v1/premiumIndex?symbol=${symbol}`);funding=Number(x.lastFundingRate)});
-  await incearca("openInterest",async()=>{const x=await j(`${FUT}/fapi/v1/openInterest?symbol=${symbol}`);openInterest=Number(x.openInterest)});
-  await incearca("longShort",async()=>{const x=await j(`${FUT}/futures/data/globalLongShortAccountRatio?symbol=${symbol}&period=1h&limit=1`);if(x?.length)longShort=Number(x[0].longShortRatio)});
-  await incearca("oiHist5m",async()=>{oiHist5m=await j(`${FUT}/futures/data/openInterestHist?symbol=${symbol}&period=5m&limit=289`)});
-  await incearca("fundingHist",async()=>{fundingHist=await j(`${FUT}/fapi/v1/fundingRate?symbol=${symbol}&limit=30`)});
-  const raspuns={funding,openInterest,longShort,oiHist5m,fundingHist};
-  if(Object.keys(probleme).length)raspuns.probleme=probleme;
+  const cerut=(u.searchParams.get("symbol")||"BTCUSDT").toUpperCase().replace(/[^A-Z0-9]/g,"");
+  // v100.264: moneda fără contract perpetuu pe Binance (ținută minte 6 h) nu mai bate Binance de 5 ori la fiecare analiză
+  if((faraContractPana.get(cerut)||0)>Date.now())return ok({funding:null,openInterest:null,longShort:null,oiHist5m:null,fundingHist:null,simbol:simbolInMii(cerut),faraContract:true});
+  let symbol=simbolInMii(cerut),r=await cereFutures(symbol);
+  // v100.264: „Invalid symbol” ⇒ poate stă în mii pe Binance (o listare nouă, ca 1000PEPE) - se caută o dată în lista contractelor
+  if(r.invalid){const alt=await gasesteInMii(cerut);if(alt&&alt!==symbol){symbol=alt;r=await cereFutures(alt)}}
+  if(r.invalid){faraContractPana.set(cerut,Date.now()+6*3600000);return ok({funding:null,openInterest:null,longShort:null,oiHist5m:null,fundingHist:null,simbol:symbol,faraContract:true,probleme:r.probleme})}
+  const raspuns={funding:r.funding,openInterest:r.openInterest,longShort:r.longShort,oiHist5m:r.oiHist5m,fundingHist:r.fundingHist,
+    simbol:symbol,markPrice:r.markPrice,indexPrice:r.indexPrice,nextFundingTime:r.nextFundingTime,fundingIntervalHours:intervalFunding(r.fundingHist),
+    oiUsd:r.openInterest!=null&&r.markPrice>0?r.openInterest*r.markPrice:null,lsIst:r.lsIst};
+  if(Object.keys(r.probleme).length)raspuns.probleme=r.probleme;
   return ok(raspuns);
+}
+// v100.264 (29.10): pe Binance unele monede stau în mii (1000PEPEUSDT) sau în milioane (1000000MOGUSDT, 1MBABYDOGEUSDT).
+// Harta fixă acoperă ce era listat pe 29.10; o listare nouă se găsește din /fapi/v1/ticker/price (ținută minte 6 h).
+const IN_MII={PEPE:"1000PEPE",SHIB:"1000SHIB",BONK:"1000BONK",FLOKI:"1000FLOKI",LUNC:"1000LUNC",XEC:"1000XEC",SATS:"1000SATS",RATS:"1000RATS",CAT:"1000CAT",CHEEMS:"1000CHEEMS",WHY:"1000WHY",MOG:"1000000MOG",BABYDOGE:"1MBABYDOGE"};
+const faraContractPana=new Map();let listaFut=null,listaFutLa=0;
+function simbolInMii(s){const b=s.replace(/USDT$/,"");return s.endsWith("USDT")&&IN_MII[b]?IN_MII[b]+"USDT":s}
+async function gasesteInMii(cerut){
+  if(!cerut.endsWith("USDT"))return null;
+  if(!listaFut||Date.now()-listaFutLa>6*3600000){try{const x=await j(`${FUT}/fapi/v1/ticker/price`);if(Array.isArray(x)){listaFut=new Set(x.map(t=>String(t&&t.symbol||"")));listaFutLa=Date.now()}}catch{return null}}
+  if(!listaFut)return null;
+  const b=cerut.replace(/USDT$/,"");return ["1000","1000000","1M","10000","100000"].map(p=>p+b+"USDT").find(s=>listaFut.has(s))||null
+}
+// intervalul de plată (ore) din orele ultimelor plăți - cel mai mic din ultimele 3 diferențe (ca FuturesCitire.interval din pagină)
+function intervalFunding(h){
+  if(!Array.isArray(h)||h.length<2)return null;let min=null;
+  for(let i=h.length-1;i>0&&i>=h.length-3;i--){const a=Number(h[i-1]?.fundingTime),b=Number(h[i]?.fundingTime);if(Number.isFinite(a)&&Number.isFinite(b)&&b>a&&(min===null||b-a<min))min=b-a}
+  const ore=min===null?null:Math.round(min/3600000);return ore>=1&&ore<=24?ore:null
+}
+// Binance refuza cererile venite de pe Cloudflare (403 masurat 22.09). Pana acum
+// fiecare apel avea catch GOL, deci valorile se intorceau null in tacere si pe
+// ecran apareau casute goale. Acum motivul calatoreste cu raspunsul.
+// v100.264: cele cinci cereri pleacă DEODATĂ (înainte una după alta: de 5 ori așteptarea, până la 5 × 8 s);
+// raportul long/short vine cu ~500 h de istoric (pagina îl judecă față de moneda lui); premiumIndex dă și markPrice / ora plății.
+async function cereFutures(symbol){
+  const r={funding:null,openInterest:null,longShort:null,oiHist5m:null,fundingHist:null,markPrice:null,indexPrice:null,nextFundingTime:null,lsIst:null,probleme:{}};
+  const incearca=async(nume,fn)=>{try{await fn()}catch(e){r.probleme[nume]=String(e&&e.message||e).slice(0,140)}};
+  const numar=v=>{const x=Number(v);return v!=null&&v!==""&&Number.isFinite(x)?x:null};
+  await Promise.all([
+    incearca("funding",async()=>{const x=await j(`${FUT}/fapi/v1/premiumIndex?symbol=${symbol}`);r.funding=Number(x.lastFundingRate);r.markPrice=numar(x.markPrice);r.indexPrice=numar(x.indexPrice);r.nextFundingTime=numar(x.nextFundingTime)}),
+    incearca("openInterest",async()=>{const x=await j(`${FUT}/fapi/v1/openInterest?symbol=${symbol}`);r.openInterest=Number(x.openInterest)}),
+    incearca("longShort",async()=>{const x=await j(`${FUT}/futures/data/globalLongShortAccountRatio?symbol=${symbol}&period=1h&limit=500`);if(Array.isArray(x)&&x.length){r.longShort=Number(x[x.length-1].longShortRatio);r.lsIst=x.map(t=>[numar(t&&t.timestamp),numar(t&&t.longShortRatio)]).filter(t=>t[1]!==null)}}),
+    incearca("oiHist5m",async()=>{r.oiHist5m=await j(`${FUT}/futures/data/openInterestHist?symbol=${symbol}&period=5m&limit=289`)}),
+    incearca("fundingHist",async()=>{r.fundingHist=await j(`${FUT}/fapi/v1/fundingRate?symbol=${symbol}&limit=30`)})
+  ]);
+  const invalid=m=>/HTTP 400\b.*Invalid symbol/i.test(String(m||""));
+  r.invalid=invalid(r.probleme.funding)&&invalid(r.probleme.openInterest);
+  return r
 }

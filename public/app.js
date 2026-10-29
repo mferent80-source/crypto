@@ -4193,7 +4193,9 @@ function pctTextRo(v){return pctText(v).replace(".",",")}
 // audit 19.10: funding-ul cu 4 zecimale (e o rată, nu un rezultat), cu virgula și „−”
 function fundingRo(fr){if(fr==null||!Number.isFinite(+fr))return "N/A";const s=(Math.abs(+fr)*100).toFixed(4);return (+fr<0&&Number(s)!==0?"−":"")+s.replace(".",",")+"%"}
 function oiChangeAt(hist,barsBack){if(!hist||hist.length<2)return null;let last=hist[hist.length-1],idx=Math.max(0,hist.length-1-barsBack),old=hist[idx],lv=Number(last.sumOpenInterest||last.sumOpenInterestValue||0),ov=Number(old.sumOpenInterest||old.sumOpenInterestValue||0);return ov>0?(lv/ov-1)*100:null}
-function fundingSummary(hist){if(!hist||!hist.length)return {avg24:null,avg3d:null,pct:null};const a=hist.map(x=>Number(x.fundingRate)).filter(Number.isFinite),avg=n=>{let z=a.slice(-n);return z.length?z.reduce((x,y)=>x+y,0)/z.length:null},cur=a[a.length-1];return {avg24:avg(3),avg3d:avg(9),pct:Number.isFinite(cur)?pctRank(a,cur):null}}
+// v100.264: mediile pe ORE (fundingTime în ultimele 24 h / 72 h), nu pe ultimele 3 / 9 plăți - la 4 h (464 din 814 contracte Binance), 3 plăți erau 12 h.
+// Fereastra neacoperită de istoric (30 de plăți la o oră = 30 h) dă null, nu o medie pe mai puțin. Fără fundingTime: ca înainte.
+function fundingSummary(hist){if(!hist||!hist.length)return {avg24:null,avg3d:null,pct:null};const a=hist.map(x=>Number(x.fundingRate)).filter(Number.isFinite),t=hist.map(x=>Number(x&&x.fundingTime)),tz=t[t.length-1],cuOre=a.length===hist.length&&t.every(Number.isFinite),avg=z=>z.length?z.reduce((x,y)=>x+y,0)/z.length:null,peOre=h=>t[0]<=tz-h*3600000?avg(a.filter((_,i)=>t[i]>tz-h*3600000)):null,cur=a[a.length-1];return {avg24:cuOre?peOre(24):avg(a.slice(-3)),avg3d:cuOre?peOre(72):avg(a.slice(-9)),pct:Number.isFinite(cur)?pctRank(a,cur):null}}
 function renderOiFundingMatrix(q,deriv){
  const d=deriv.oiDeltas||{},fs=deriv.fundingStats||{};$("oi15m").textContent=pctTextRo(d.m15);$("oi1h").textContent=pctTextRo(d.h1);$("oi4h").textContent=pctTextRo(d.h4);$("oi24h").textContent=pctTextRo(d.h24);
  let pchg=window.__radarState&&window.__radarState.tick?Number(window.__radarState.tick.priceChangePercent):null,oi=d.h24,ctx="N/A";if(Number.isFinite(pchg)&&Number.isFinite(oi))ctx=pchg>=0&&oi>=0?"LONG BUILDUP":pchg<0&&oi>=0?"SHORT BUILDUP":pchg>=0&&oi<0?"SHORT COVERING":"LONG UNWINDING";
@@ -4323,43 +4325,78 @@ async function backtestCurrent(){
  }catch(e){box.textContent="Backtest indisponibil: "+e.message}
 }
 // audit 23.10: simbolul de futures Binance pentru monedele cotate în mii (1000PEPEUSDT, 1000SHIBUSDT…); restul rămân cum sunt
-function simBinanceFut(s){s=String(s||"").toUpperCase();const b=s.replace(/USDT$/,"");return /^(PEPE|SHIB|BONK|FLOKI|LUNC|XEC|SATS|RATS|CAT|CHEEMS|WHY)$/.test(b)?"1000"+b+"USDT":s}
+// v100.264: + MOG (1000000MOGUSDT) și BABYDOGE (1MBABYDOGEUSDT), ca harta serverului (functions/api/market.js, IN_MII) - aici doar pentru rezerva din browser
+function simBinanceFut(s){s=String(s||"").toUpperCase();const b=s.replace(/USDT$/,""),m={MOG:"1000000MOG",BABYDOGE:"1MBABYDOGE"};return m[b]?m[b]+"USDT":/^(PEPE|SHIB|BONK|FLOKI|LUNC|XEC|SATS|RATS|CAT|CHEEMS|WHY)$/.test(b)?"1000"+b+"USDT":s}
+// v100.264 (29.10, el: „crypto radar pagina futures, audit complet din toate direcțiile, îmbunătățire și optimizare”):
+//  · un răspuns vechi (altă monedă, mai lent) nu mai scrie peste cel nou - jetonul window.__derivSeq;
+//  · aceeași monedă: cererea în zbor se împarte, sub 30 s se refolosește (starea se pune înapoi - invalidateDecisionContext o golește
+//    la schimbarea intervalului); derivatives(true) = „↻ Reîmprospătează”. Fără parametru declarat: proba audit 23.10 rescrie antetul funcției fără parametri;
+//  · intervalul de funding real, raportul long/short față de istoria monedei, OI în USD, cine plătește și cât - FuturesCitire (lib/futures-citire.js);
+//  · „fără contract pe Binance” nu mai cere rezerva din browser; prospețimea se bifează doar cu date.
+// Codurile contextului (CROWDED / CONTRARIAN + / BALANCED / null) rămân în stare pentru verdict și Flux; pe pagină se scriu în română.
 async function derivatives(){
- if(assetClass()==="STOCKS"){$("ftext").textContent="Crypto futures context is not mixed into US stock signals.";for(const id of ["funding","oi","lsratio","fcontext","fundingBias","crowdingRisk","oiContext"])if($(id))$(id).textContent="N/A";window.__derivativesState={};return}
- let sym=norm($("symbol").value);$("ftext").textContent="Se încarcă date futures…";
+ const fortat=arguments[0]===true,F=FuturesCitire,W=window;
+ if(assetClass()==="STOCKS"){$("ftext").textContent="Contextul futures crypto nu intră în semnalele acțiunilor US.";for(const id of ["funding","oi","lsratio","fcontext","fundingBias","crowdingRisk","oiContext"])if($(id))$(id).textContent="N/A";for(const id of ["fundingSub","oiSub","lsSub","fcontextSub","fundingMed","oiPret24","fMeta"])if($(id))$(id).textContent="—";window.__derivativesState={};return}
+ let sym=norm($("symbol").value);
+ const c=W.__derivCache;
+ if(!fortat&&c&&c.sym===sym){if(c.p)return c.p;if(c.stare&&Date.now()-c.la<30000){W.__derivativesState=c.stare;if(W.__radarState&&W.__radarState.q){updateFlowWindow(W.__radarState.q);renderLiquidationProxy(W.__radarState.q,c.stare);renderQuantFlow(W.__radarState.q,c.stare)}return}}
+ const seq=W.__derivSeq=(W.__derivSeq||0)+1,p=(async()=>{
+ $("ftext").textContent="Se încarcă date futures…";
  let d=null,histOI=null,fundingHist=null,motivFutures="";
  try{d=await getJSON(`/api/market?type=futures&symbol=${encodeURIComponent(sym)}`);histOI=d&&d.oiHist5m||null;fundingHist=d&&d.fundingHist||null}
  catch(e){motivFutures=/AUTH_RATE_LIMITED/.test(String(e.message||""))||e.status===429&&/AUTH_/.test(String(e.message||""))?"Prea multe parole greșite de pe acest calculator - așteaptă un minut și verifică parola din Setări (⚙).":eroareDeParola(e.message,e.status)?"Serverul cere parola aplicației pentru futures - pune-o în Setări (⚙).":"Serverul nu a dat futures ("+textEroare(e)+")."}
- if(!d||[d.funding,d.openInterest,d.longShort].every(x=>x==null)){
+ if(seq!==W.__derivSeq)return null;
+ const dServer=d;
+ if(!(d&&d.faraContract)&&(!d||[d.funding,d.openInterest,d.longShort].every(x=>x==null))){
    try{
-    const sym=simBinanceFut(norm($("symbol").value));   // audit 23.10: pe Binance futures PEPE e 1000PEPEUSDT (PEPEUSDT dădea 400)
+    const fsym=simBinanceFut(sym);   // audit 23.10: pe Binance futures PEPE e 1000PEPEUSDT (PEPEUSDT dădea 400); v100.264: simbolul de la pornire, nu cel din casetă acum
     let [fr,oi,ls,oih,fh]=await Promise.all([
-      getJSON(`https://fapi.binance.com/fapi/v1/premiumIndex?symbol=${encodeURIComponent(sym)}`).catch(()=>null),
-      getJSON(`https://fapi.binance.com/fapi/v1/openInterest?symbol=${encodeURIComponent(sym)}`).catch(()=>null),
-      getJSON(`https://fapi.binance.com/futures/data/globalLongShortAccountRatio?symbol=${encodeURIComponent(sym)}&period=1h&limit=1`).catch(()=>null),
-      getJSON(`https://fapi.binance.com/futures/data/openInterestHist?symbol=${encodeURIComponent(sym)}&period=5m&limit=289`).catch(()=>null),
-      getJSON(`https://fapi.binance.com/fapi/v1/fundingRate?symbol=${encodeURIComponent(sym)}&limit=30`).catch(()=>null)
+      getJSON(`https://fapi.binance.com/fapi/v1/premiumIndex?symbol=${encodeURIComponent(fsym)}`).catch(()=>null),
+      getJSON(`https://fapi.binance.com/fapi/v1/openInterest?symbol=${encodeURIComponent(fsym)}`).catch(()=>null),
+      getJSON(`https://fapi.binance.com/futures/data/globalLongShortAccountRatio?symbol=${encodeURIComponent(fsym)}&period=1h&limit=500`).catch(()=>null),
+      getJSON(`https://fapi.binance.com/futures/data/openInterestHist?symbol=${encodeURIComponent(fsym)}&period=5m&limit=289`).catch(()=>null),
+      getJSON(`https://fapi.binance.com/fapi/v1/fundingRate?symbol=${encodeURIComponent(fsym)}&limit=30`).catch(()=>null)
     ]);
-    d={funding:fr?Number(fr.lastFundingRate):null,openInterest:oi?Number(oi.openInterest):null,longShort:ls&&ls.length?Number(ls[0].longShortRatio):null};
+    d={funding:fr?Number(fr.lastFundingRate):null,openInterest:oi?Number(oi.openInterest):null,longShort:Array.isArray(ls)&&ls.length?Number(ls[ls.length-1].longShortRatio):null,simbol:fsym,markPrice:fr?Number(fr.markPrice):null,nextFundingTime:fr?Number(fr.nextFundingTime):null,lsIst:Array.isArray(ls)?ls.map(x=>[Number(x.timestamp),Number(x.longShortRatio)]):null};
     histOI=oih;fundingHist=fh;
    }catch{}
  }
- let fr=d&&d.funding!=null?Number(d.funding):null,oi=d&&d.openInterest!=null?Number(d.openInterest):null,ls=d&&d.longShort!=null?Number(d.longShort):null;
+ if(seq!==W.__derivSeq)return null;
+ const fin=v=>v!=null&&v!==""&&Number.isFinite(+v)?+v:null,ore=fin(d&&d.fundingIntervalHours)||F.interval(fundingHist);
+ let fr=fin(d&&d.funding),oi=fin(d&&d.openInterest),ls=fin(d&&d.longShort);
+ const ag=F.aglomerare({funding:fr,ore,ls,lsIst:d&&Array.isArray(d.lsIst)?d.lsIst:null}),op=F.oiPret(histOI);
  let oiDeltas={m15:oiChangeAt(histOI,3),h1:oiChangeAt(histOI,12),h4:oiChangeAt(histOI,48),h24:oiChangeAt(histOI,288)},oiTrend=Number.isFinite(oiDeltas.h1)?pctText(oiDeltas.h1):"N/A",fundingStats=fundingSummary(fundingHist);
+ const simbolF=String(d&&d.simbol||sym),baza=simbolF.replace(/USDT$/,""),mark=fin(d&&d.markPrice),oiUsd=fin(d&&d.oiUsd)??(oi!=null&&mark>0?oi*mark:null),areDate=fr!=null||oi!=null||ls!=null,med=x=>x==null?"—":fundingRo(x);
+ $("fMeta").textContent=simbolF+" · Binance USDⓈ-M · "+(areDate?"luat la "+new Date().toLocaleTimeString("ro-RO"):"fără date");
  $("funding").textContent=fundingRo(fr);   // audit 19.10: virgula, ca OI
- $("oi").textContent=oi==null?"N/A":compact(oi);
+ $("fundingSub").textContent=F.subFunding({funding:fr,ore,urmatoarea:d&&d.nextFundingTime,acum:Date.now()});
+ $("oi").textContent=oiUsd!=null?compact(oiUsd)+" USD":oi==null?"N/A":compact(oi)+" "+baza;   // v100.264: OI în USD (bucățile stau dedesubt)
+ $("oiSub").textContent=F.subOi({oi,baza,oiDeltas});
  $("lsratio").textContent=ls==null?"N/A":Number(ls).toFixed(2).replace(".",",");
- let crowd=0;if(fr!=null){if(fr>.0003)crowd--;else if(fr<-.0003)crowd++}if(ls!=null){if(ls>1.5)crowd--;else if(ls<.67)crowd++}
+ $("lsSub").textContent=F.subLs({ls,lsPct:ag.lsPct,mediana:ag.mediana,zile:ag.zile});
  /* audit 23.10: let context=crowd>0?"CONTRARIAN +":crowd<0?"CROWDED":"BALANCED" — fără funding și fără L/S ieșea BALANCED galben, din nimic. Acum fără semnal: „— fără date”, iar starea nu poartă context. */
- let context=fr==null&&ls==null?null:crowd>0?"CONTRARIAN +":crowd<0?"CROWDED":"BALANCED";
- $("fcontext").textContent=context==null?"— fără date":context;$("fcontext").className="value "+(context==null?"muted":context==="CONTRARIAN +"?"good":context==="CROWDED"?"bad":"neutral");
- $("fundingBias").textContent=fr==null?"N/A":fr>.0003?"longurile înghesuite":fr<-.0003?"shorturile înghesuite":"echilibrat";   /* audit 23.10: în română */
- $("crowdingRisk").textContent=ls==null?"N/A":ls>1.5||ls<.67?"Ridicat":"Normal";
- $("oiContext").textContent=oi==null?"N/A":"OI "+compact(oi)+(oiTrend!=="N/A"?" · "+oiTrend.replace(".",","):"");
+ /* v100.264: crowd = funding (>0,0003 / <−0,0003) + L/S (>1,5 / <0,67) - pragul fix pe raport ieșea „aglomerat” în 100% din ore pe ETH, SOL, XRP, DOGE…;
+    funding-ul se aduce acum la 8 h, raportul se judecă față de istoria monedei (votează doar la p99 / p1 din ~500 h: ~11% din ore, măsurat 29.10),
+    iar două voturi opuse se spun „În conflict”. */
+ const context=ag.context;
+ $("fcontext").textContent=F.eticheta(context,ag.conflict);$("fcontext").className="value "+(context==null?"muted":ag.conflict?"neutral":context==="CONTRARIAN +"?"good":context==="CROWDED"?"bad":"neutral");
+ $("fcontextSub").textContent=F.subContext(ag);
+ $("fundingBias").textContent=F.biasFunding(ag.fr8);   /* audit 23.10: în română; v100.264: pe 8 h */
+ $("crowdingRisk").textContent=ls==null?"N/A":ag.lsPct==null?"fără istoric":(ag.lsVot?"Ridicat":"Normal")+" · p"+F.pr(ag.lsPct);
+ $("oiContext").textContent=oi==null?"N/A":"OI "+compact(oi)+" "+baza+(oiTrend!=="N/A"?" · "+oiTrend.replace(".",","):"");   // v100.264: cu unitatea (bucăți de monedă, nu USD)
+ $("fundingMed").textContent=fundingStats&&(fundingStats.avg24!=null||fundingStats.avg3d!=null)?"24 h: "+med(fundingStats.avg24)+" · 3 zile: "+med(fundingStats.avg3d)+(ore?" (pe plata de "+ore+" h)":""):"—";
+ $("oiPret24").textContent=F.subOiPret(op);
  let longPct=ls==null?null:(ls/(1+ls))*100, shortPct=ls==null?null:(100-(ls/(1+ls))*100);
- window.__derivativesState={funding:fr,oi,ls,context,longPct,shortPct,oiTrend,oiDeltas,fundingStats};markFresh("futures");
- if(window.__radarState&&window.__radarState.q){updateFlowWindow(window.__radarState.q);renderLiquidationProxy(window.__radarState.q,window.__derivativesState);renderQuantFlow(window.__radarState.q,window.__derivativesState)}
- $("ftext").textContent=(fr==null&&oi==null&&ls==null)?("Datele futures sunt indisponibile momentan; analiza spot rămâne complet funcțională."+(motivFutures?" "+motivFutures:"")):"Funding, OI și long/short oferă context pentru crowding și presiunea poziționării, dar nu sunt semnal suficient singure.";
+ const stare={funding:fr,oi,ls,context,longPct,shortPct,oiTrend,oiDeltas,fundingStats,fundingIntervalHours:ore,fr8:ag.fr8,lsPct:ag.lsPct,conflict:ag.conflict,oiUsd,simbol:simbolF,la:Date.now()};
+ W.__derivativesState=stare;if(areDate)markFresh("futures");
+ if(W.__radarState&&W.__radarState.q){updateFlowWindow(W.__radarState.q);renderLiquidationProxy(W.__radarState.q,stare);renderQuantFlow(W.__radarState.q,stare)}
+ $("ftext").textContent=areDate?F.fraza({funding:fr,ore,oiPret:op,ls,lsPct:ag.lsPct}):d&&d.faraContract?F.motiv(d):("Datele futures lipsesc acum; analiza spot rămâne completă. "+(motivFutures||F.motiv(dServer))).trim();
+ return areDate?stare:null;
+ })();
+ W.__derivCache={sym,p,la:0,stare:null};
+ const stare=await p;
+ if(W.__derivCache&&W.__derivCache.p===p)W.__derivCache={sym,p:null,la:stare?Date.now():0,stare};
+ return stare;
 }
 let scannerRows=[];
 function renderScan(){

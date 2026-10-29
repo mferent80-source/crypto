@@ -116,7 +116,9 @@ function ruleazaDerivatives(raspuns) {
     simBinanceFut: APP.includes("function simBinanceFut(") ? new Function("return " + APP.match(/function simBinanceFut\([^\n]*/)[0])() : (s) => s,
     getJSON: async (u) => { cerute.push(u); if (u.startsWith("/api/")) return raspuns; throw new Error("400"); },
     oiChangeAt: () => NaN, pctText: (x) => String(x), fundingSummary: () => null, fundingRo: (x) => x == null ? "N/A" : String(x), compact: (x) => String(x),
-    eroareDeParola: () => false, textEroare: (e) => String(e && e.message), updateFlowWindow() {}, renderLiquidationProxy() {}, renderQuantFlow() {} };
+    eroareDeParola: () => false, textEroare: (e) => String(e && e.message), updateFlowWindow() {}, renderLiquidationProxy() {}, renderQuantFlow() {},
+    // v100.264: citirea cifrelor futures stă în lib/futures-citire.js (intervalul real, raportul față de moneda lui) - cutia îl primește ca pagina
+    FuturesCitire: new Function(fs.readFileSync(path.join(RAD, "public", "lib", "futures-citire.js"), "utf8") + "; return FuturesCitire;")() };
   $("symbol").value = "PEPEUSDT";
   const f = new Function(...Object.keys(deps), "return (" + src + ")")(...Object.values(deps));
   return f().then(() => ({ el, cerute, st: deps.window.__derivativesState }));
@@ -137,7 +139,9 @@ await test("4b rezerva Binance cere simbolul de futures 1000PEPEUSDT (PEPE, SHIB
 });
 await test("4c cu un semnal (funding) contextul rămâne socotit ca înainte", async () => {
   const r = await ruleazaDerivatives({ funding: 0.0005, openInterest: null, longShort: null });
-  assert.equal(r.el.fcontext.textContent, "CROWDED");
+  // v100.264: codul rămâne CROWDED în stare (verdictul îl citește), pe ecran se scrie în română
+  assert.equal(r.st.context, "CROWDED");
+  assert.equal(r.el.fcontext.textContent, "Longurile înghesuite");
 });
 
 // ---------------------------------------------------------------- 5. banda botului: culoarea după efectul pe bot

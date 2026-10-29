@@ -3128,6 +3128,17 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
   #t212 .t212CuRaport #t212PoartaRez>.t212ProfilPoarta{break-inside:auto}
   #t212 .t212CuRaport #t212PoartaRez>.t212ProfilPoarta>*{break-inside:avoid}
 }
+/* v100.264 (29.10.2026, pagina Futures): sub fiecare cifră un rând mic - cine plătește și cât pe zi, OI în bucăți, raportul față de moneda lui,
+   de ce e contextul așa; deasupra frazei, moneda și ora datelor cu „↻ Reîmprospătează”. Cifra mare rămâne singura care strigă. */
+#deriv .fSub{font-size:12.5px;line-height:1.4;color:var(--muted);margin-top:5px;font-variant-numeric:tabular-nums}
+#deriv .fMeta{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 12px;margin:4px 0 8px;font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+#deriv .fMeta button{min-height:32px;padding:4px 10px}
+@media (max-width:640px){#deriv .fMeta button{min-height:44px}}
+/* v100.264: cele trei cartele cu cifre (funding, OI, long/short) stau pe un rând peste 760 px (4 + 4 + 4 din 12), nu două + una singură cu gaură
+   alături; contextul ia rândul întreg. Pe telefon (grila de 2) fiecare cartelă ia rândul, ca rândul mic de sub cifră să se citească. */
+#deriv .grid>.card:has(#funding),#deriv .grid>.card:has(#oi),#deriv .grid>.card:has(#lsratio){grid-column:span 4}
+#deriv .grid>.card:has(#fcontext){grid-column:1/-1}
+@media (max-width:760px){#deriv .grid>.card:has(#funding),#deriv .grid>.card:has(#oi),#deriv .grid>.card:has(#lsratio){grid-column:1/-1}}
 @media (max-width:640px){.sugPandaTab thead{display:table-header-group}.sugPandaTab{display:table}.sugPandaTab tbody{display:table-row-group}.sugPandaTab tr{display:table-row}.sugPandaTab td,.sugPandaTab th{display:table-cell}}
 /* v100.224: pe paginile de zi rămân alertele, banda botului și versiunea. Cipurile de cercetare revin la analiza monedei și în laborator. */
 body.peAcasa:not(.acMonedaDeschisa) .topLeft,body.peTablou .topLeft,body.peT212 .topLeft,body.peJurnal .topLeft,body.peGrid .topLeft,body.pePaginaNoua .topLeft,
