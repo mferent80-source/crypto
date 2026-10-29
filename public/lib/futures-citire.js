@@ -126,7 +126,7 @@ var FuturesCitire = (function () {
     o = o || {};
     var f = nr(o.funding); if (f === null) return "—";
     var ore = nr(o.ore), c = cost1000(f, ore), parti = [];
-    parti.push(ore ? "la " + ore + " h" : "intervalul nu se știe (socotit la 8 h)");
+    parti.push(ore ? "la " + ore + " h" + (o.sursa === "binance" ? " (Binance)" : "") : "intervalul nu se știe (socotit la 8 h)");   // v100.265 (F2): sursa intervalului
     parti.push(f > 0 ? "longurile plătesc" : f < 0 ? "shorturile plătesc" : "nimeni nu plătește");
     if (f !== 0) parti.push("≈ " + num(Math.abs(c), 1) + " USDT pe zi la o poziție de 1.000 USDT");
     var t = nr(o.urmatoarea), acum = nr(o.acum) || Date.now();
@@ -224,7 +224,109 @@ var FuturesCitire = (function () {
     return null;
   }
 
-  return { alertaLs: alertaLs, alertaFunding: alertaFunding, partiaProxy: partiaProxy, inVerdict: inVerdict, interval: interval, pe8h: pe8h, cost1000: cost1000, percentila: percentila, mediana: mediana, aglomerare: aglomerare, oiPret: oiPret,
+  // ---------------- ideile F1–F5 (v100.265, 29.10, el: „fa ideile”) - informație de context, NU intră în votul „înghesuit”
+  // F5 prima futures față de spot (markPrice / indexPrice), în puncte de bază: prima pozitivă trage funding-ul în sus
+  function prima(mark, index) { var m = nr(mark), i = nr(index); return m > 0 && i > 0 ? (m / i - 1) * 10000 : null; }
+  function primaText(b) { b = nr(b); return b === null ? "—" : semn(b, 1) + " bp"; }
+  function subPrima(b) {
+    b = nr(b); if (b === null) return "—";
+    if (Math.abs(b) < 1) return "la paritate cu spotul (sub 1 bp)";
+    return b > 0 ? "futures mai scump decât spotul: trage funding-ul în sus (plătesc longurile)" : "futures mai ieftin decât spotul: trage funding-ul în jos (plătesc shorturile)";
+  }
+  // F1 funding-ul Pionex (acolo stau boții) - px = GridSim.rataFunding(rates, acum): {rata, intervalOre, rataZi, zile, veche}
+  function pionexText(px) { return px && nr(px.rata) !== null ? rataSemn(px.rata) : "—"; }
+  function subPionex(px, binF8) {
+    if (!px || nr(px.rata) === null || !(nr(px.intervalOre) > 0)) return "Pionex nu are perpetuu pe moneda asta (sau nu a răspuns)";
+    var f = nr(px.rata), ore = nr(px.intervalOre), parti = ["la " + num(ore, ore % 1 ? 1 : 0) + " h"];
+    parti.push(f > 0 ? "longurile plătesc" : f < 0 ? "shorturile plătesc" : "nimeni nu plătește");
+    if (f !== 0) parti.push("≈ " + num(Math.abs(cost1000(f, ore)), 1) + " USDT pe zi la o poziție de 1.000 USDT");
+    if (nr(px.rataZi) !== null && nr(px.zile) > 0) parti.push("media pe " + cate(Math.max(1, Math.round(px.zile)), "zi", "zile") + ": ≈ " + num(px.rataZi * 1000, 1) + " USDT pe zi");
+    if (px.veche) parti.push("ultima plată e veche");
+    var b = nr(binF8);
+    if (b !== null) parti.push("Binance: " + rataSemn(b) + " la 8 h, Pionex: " + rataSemn(f * 8 / ore) + " la 8 h" + (b * f < 0 ? " - semn opus" : ""));
+    return parti.join(" · ");
+  }
+  // F4 conturile mari (top traders, pe POZIȚII) față de toate conturile + cumpărătorii agresivi (taker) pe ultimele 24 h
+  function baniMari(o) {
+    o = o || {};
+    var top = nr(o.topLs), ls = nr(o.ls), tk = Array.isArray(o.takerIst) ? o.takerIst.filter(function (r) { return Array.isArray(r) && nr(r[1]) !== null && nr(r[2]) !== null; }) : [];
+    if (top === null && tk.length < 24) return null;
+    var b = { longTop: top === null ? null : top / (1 + top) * 100, longToti: ls === null ? null : ls / (1 + ls) * 100, topPct: top === null ? null : percentila(o.topIst, top), cump24: null, takerPct: null, divergenta: "" };
+    if (b.longTop !== null && b.longToti !== null) {
+      var d = Math.round(b.longTop) - Math.round(b.longToti), pp = (d > 0 ? "+" : d < 0 ? "−" : "±") + Math.abs(d) + " pp";
+      b.divergenta = d >= 10 ? "conturile mari sunt mai long decât mulțimea (" + pp + ")" : d <= -10 ? "conturile mari sunt mai short decât mulțimea (" + pp + ")" : "conturile mari și mulțimea stau la fel (" + pp + ")";
+    }
+    if (tk.length >= 24) {
+      var cota = function (z) { var c = 0, t = 0; for (var k = z - 23; k <= z; k++) { c += nr(tk[k][1]); t += nr(tk[k][1]) + nr(tk[k][2]); } return t > 0 ? c / t * 100 : null; };
+      var toate = []; for (var i = 23; i < tk.length; i++) { var x = cota(i); if (x !== null) toate.push(x); }
+      b.cump24 = cota(tk.length - 1); b.takerPct = b.cump24 === null ? null : percentila(toate, b.cump24);
+    }
+    return b;
+  }
+  function baniMariText(b) { return b && b.longTop !== null ? Math.round(b.longTop) + "% long" : "—"; }
+  function subBaniMari(b) {
+    if (!b) return "fără date de la conturile mari";
+    var parti = [];
+    if (b.longToti !== null) parti.push("toate conturile: " + Math.round(b.longToti) + "% long");
+    if (b.divergenta) parti.push(b.divergenta);
+    if (b.topPct !== null) parti.push("conturile mari: p" + pr(b.topPct) + " pentru moneda asta");
+    if (b.cump24 !== null) parti.push("cumpărători agresivi în 24 h: " + Math.round(b.cump24) + "% din volum" + (b.takerPct !== null ? " (p" + pr(b.takerPct) + ")" : ""));
+    return parti.join(" · ") || "—";
+  }
+  // F3 istoria pe ~21 de zile: raportul long/short cu p1 / p99 (pragurile votului) și funding-ul pe plăți. Două panouri, fiecare cu scara lui
+  // (nu două axe pe același grafic). Culori validate cu dataviz pe fondul #1A242E: #BE7F22 / #5B8FC7, ΔE 21,6 la daltonism; poziția
+  // deasupra / dedesubtul lui zero e a doua codare. Linia raportului e în cerneala textului (o singură serie).
+  var C_LONG = "#BE7F22", C_SHORT = "#5B8FC7", C_INK = "#E6EDF3", C_MUT = "#9FB3C4", C_SURF = "#1A242E";
+  function zi(t) { return new Date(t).toLocaleDateString("ro-RO", { day: "2-digit", month: "2-digit" }); }
+  function ora(t) { return new Date(t).toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" }); }
+  function grafic(o) {
+    o = o || {};
+    var ist = (Array.isArray(o.lsIst) ? o.lsIst : []).map(function (r) { return [nr(r && r[0]), nr(r && r[1])]; }).filter(function (r) { return r[0] !== null && r[1] !== null; });
+    var fh = (Array.isArray(o.fundingHist) ? o.fundingHist : []).map(function (r) { return [nr(r && r.fundingTime), nr(r && r.fundingRate)]; }).filter(function (r) { return r[0] !== null && r[1] !== null; }).sort(function (a, b) { return a[0] - b[0]; });
+    if (ist.length < 2 && !fh.length) return "";
+    // revizia pozei (29.10): lățimea desenului = lățimea cartelei (320–640), ca textul de 11 px să rămână 11 px pe telefon
+    var W = Math.round(Math.max(320, Math.min(640, nr(o.lat) || 640))), X0 = 8, X1 = W - 80, s = [], aria = [];
+    var fx = function (i, n) { return X0 + (n > 1 ? i / (n - 1) : 0.5) * (X1 - X0); }, f1 = function (x) { return Math.round(x * 10) / 10; };
+    if (ist.length >= 2) {
+      var v = ist.map(function (r) { return r[1]; }), srt = v.slice().sort(function (a, b) { return a - b; }), n = v.length;
+      var p1 = srt[Math.round(0.01 * (n - 1))], p99 = srt[Math.round(0.99 * (n - 1))], acum = nr(o.ls) !== null ? nr(o.ls) : v[n - 1];
+      var lo = Math.min(srt[0], acum), hi = Math.max(srt[n - 1], acum), pad = (hi - lo) * 0.08 || 0.05; lo -= pad; hi += pad;
+      var fy = function (y) { return f1(26 + (1 - (y - lo) / (hi - lo)) * 104); };
+      s.push('<text x="' + X0 + '" y="14" fill="' + C_MUT + '" font-size="12">Raportul long/short (conturi), ultimele ' + cate(Math.max(1, Math.round(n / 24)), "zi", "zile") + "</text>");
+      s.push('<line x1="' + X0 + '" x2="' + X1 + '" y1="' + fy(p99) + '" y2="' + fy(p99) + '" stroke="' + C_MUT + '" stroke-width="1" stroke-dasharray="4 4"/>');
+      s.push('<line x1="' + X0 + '" x2="' + X1 + '" y1="' + fy(p1) + '" y2="' + fy(p1) + '" stroke="' + C_MUT + '" stroke-width="1" stroke-dasharray="4 4"/>');
+      s.push('<text x="' + (X1 + 6) + '" y="' + (fy(p99) + 4) + '" fill="' + C_MUT + '" font-size="11">p99 ' + num(p99, 2) + "</text>");
+      s.push('<text x="' + (X1 + 6) + '" y="' + (fy(p1) + 4) + '" fill="' + C_MUT + '" font-size="11">p1 ' + num(p1, 2) + "</text>");
+      s.push('<polyline fill="none" stroke="' + C_INK + '" stroke-width="2" stroke-linejoin="round" points="' + v.map(function (y, i) { return f1(fx(i, n)) + "," + fy(y); }).join(" ") + '"/>');
+      var pas = Math.max(1, Math.ceil(n / 84));
+      for (var i = 0; i < n; i += pas) s.push('<circle cx="' + f1(fx(i, n)) + '" cy="' + fy(v[i]) + '" r="7" fill="transparent"><title>' + zi(ist[i][0]) + " " + ora(ist[i][0]) + " · raport " + num(v[i], 2) + "</title></circle>");
+      // „acum” lângă linia p99 sau sus de tot se scrie SUB punct (în poza COTI eticheta călca pe linia punctată)
+      // regula pe ETICHETĂ, nu pe punct: textul deasupra ocupă ya−18…ya−6; dacă atinge linia p99 (sau iese sus), coboară sub punct
+      var xa = f1(fx(n - 1, n)), ya = fy(acum), dy = ya - fy(p99), yEt = (dy > -4 && dy < 24) || ya < 34 ? ya + 16 : ya - 8;
+      s.push('<circle cx="' + xa + '" cy="' + ya + '" r="4" fill="' + C_INK + '" stroke="' + C_SURF + '" stroke-width="2"><title>acum · raport ' + num(acum, 2) + "</title></circle>");
+      s.push('<text x="' + (xa - 8) + '" y="' + yEt + '" fill="' + C_INK + '" font-size="11" text-anchor="end" paint-order="stroke" stroke="' + C_SURF + '" stroke-width="3">acum ' + num(acum, 2) + "</text>");
+      s.push('<text x="' + X0 + '" y="146" fill="' + C_MUT + '" font-size="11">' + zi(ist[0][0]) + '</text><text x="' + X1 + '" y="146" fill="' + C_MUT + '" font-size="11" text-anchor="end">' + zi(ist[n - 1][0]) + "</text>");
+      aria.push("Raportul long/short pe ultimele " + cate(Math.max(1, Math.round(n / 24)), "zi", "zile") + ", între p1 " + num(p1, 2) + " și p99 " + num(p99, 2) + "; acum " + num(acum, 2) + ".");
+    }
+    if (fh.length) {
+      var m = fh.length, mx = Math.max.apply(null, fh.map(function (r) { return Math.abs(r[1]); })) || 1, y0 = 196, bw = Math.max(2, (X1 - X0) / m * 0.6), nL = 0, nS = 0;
+      s.push('<text x="' + X0 + '" y="166" fill="' + C_MUT + '" font-size="12">Funding pe plăți (ultimele ' + m + ")</text>");
+      s.push('<line x1="' + X0 + '" x2="' + X1 + '" y1="' + y0 + '" y2="' + y0 + '" stroke="' + C_MUT + '" stroke-width="1"/>');
+      fh.forEach(function (r, k) {
+        var h = Math.max(1, Math.abs(r[1]) / mx * 22), x = f1(X0 + (k + 0.5) * (X1 - X0) / m - bw / 2), poz = r[1] >= 0, c = r[1] > 0 ? C_LONG : r[1] < 0 ? C_SHORT : C_MUT;
+        if (r[1] > 0) nL++; else if (r[1] < 0) nS++;
+        s.push('<rect class="fBara" x="' + x + '" y="' + f1(poz ? y0 - h : y0) + '" width="' + f1(bw) + '" height="' + f1(h) + '" rx="1" fill="' + c + '"><title>' + zi(r[0]) + " " + ora(r[0]) + " · " + rataSemn(r[1]) + (r[1] > 0 ? " · plătesc longurile" : r[1] < 0 ? " · plătesc shorturile" : "") + "</title></rect>");
+      });
+      s.push('<rect x="' + X0 + '" y="226" width="10" height="10" rx="1" fill="' + C_LONG + '"/><text x="' + (X0 + 14) + '" y="235" fill="' + C_INK + '" font-size="11">plătesc longurile</text>');
+      s.push('<rect x="' + (X0 + 130) + '" y="226" width="10" height="10" rx="1" fill="' + C_SHORT + '"/><text x="' + (X0 + 144) + '" y="235" fill="' + C_INK + '" font-size="11">plătesc shorturile</text>');
+      aria.push("Funding pe ultimele " + m + " plăți: " + nL + " plătite de longuri, " + nS + " de shorturi.");
+    }
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + W + ' 242" role="img" aria-label="' + aria.join(" ") + '">' + s.join("") + "</svg>";
+  }
+
+  return { prima: prima, primaText: primaText, subPrima: subPrima, pionexText: pionexText, subPionex: subPionex, baniMari: baniMari, baniMariText: baniMariText,
+    subBaniMari: subBaniMari, grafic: grafic,
+    alertaLs: alertaLs, alertaFunding: alertaFunding, partiaProxy: partiaProxy, inVerdict: inVerdict, interval: interval, pe8h: pe8h, cost1000: cost1000, percentila: percentila, mediana: mediana, aglomerare: aglomerare, oiPret: oiPret,
     eticheta: eticheta, motiv: motiv, subFunding: subFunding, subOi: subOi, subLs: subLs, biasFunding: biasFunding, subContext: subContext,
     subOiPret: subOiPret, fraza: fraza, pr: pr, PRAG8: PRAG8 };
 })();

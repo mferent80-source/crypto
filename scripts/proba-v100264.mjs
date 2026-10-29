@@ -179,7 +179,8 @@ await test("2b câmpurile noi: simbolul, markPrice, ora plății, intervalul 4 h
 await test("2c PEPE se cere direct ca 1000PEPEUSDT (și MOG = 1000000MOG, BABYDOGE = 1MBABYDOGE)", async () => {
   for (const [s, b] of [["PEPEUSDT", "1000PEPEUSDT"], ["MOGUSDT", "1000000MOGUSDT"], ["BABYDOGEUSDT", "1MBABYDOGEUSDT"]]) {
     const r = await server(coti, { simbol: s });
-    const bin = r.cerute.filter((u) => /fapi\.binance\.com\/(fapi|futures)/.test(u) && !/ticker\/price/.test(u));
+    // v100.265: lista oficială a intervalelor (/fapi/v1/fundingInfo) e o cerere fără simbol, ca ticker/price
+    const bin = r.cerute.filter((u) => /fapi\.binance\.com\/(fapi|futures)/.test(u) && !/ticker\/price|fundingInfo/.test(u));
     assert.ok(bin.length >= 5, s + ": " + bin.length);
     for (const u of bin) assert.match(u, new RegExp("symbol=" + b + "&|symbol=" + b + "$"), u);
     assert.equal(r.corp.simbol, b);
@@ -285,17 +286,20 @@ await test("3i o excepție în desenare nu blochează moneda: următoarea cerere
   const c = cutie(serverCoti, { arunca: { id: "oiPret24", n: 1 } });
   await assert.rejects(c.f());
   await c.f();
-  assert.equal(c.cerute.length, 2, c.cerute.join(" "));
+  // v100.265: pagina cere și funding-ul Pionex ⇒ se numără doar cererile futures
+  assert.equal(c.cerute.filter((u) => /type=futures/.test(u)).length, 2, c.cerute.join(" "));
   assert.match(c.el.ftext.textContent, /Context, nu semnal/);
 });
 await test("3c aceeași monedă în 30 s: o singură cerere; în zbor: tot una; „↻” (true) cere din nou", async () => {
   const c = cutie(serverCoti);
   await Promise.all([c.f(), c.f()]);
-  assert.equal(c.cerute.length, 1, c.cerute.join(" "));
+  // v100.265: pagina cere și funding-ul Pionex ⇒ se numără doar cererile futures
+  const fut = () => c.cerute.filter((u) => /type=futures/.test(u)).length;
+  assert.equal(fut(), 1, c.cerute.join(" "));
   await c.f();
-  assert.equal(c.cerute.length, 1);
+  assert.equal(fut(), 1);
   await c.f(true);
-  assert.equal(c.cerute.length, 2);
+  assert.equal(fut(), 2);
 });
 await test("3d fără contract: nicio cerere directă la Binance, fraza spune de ce, prospețimea nu se bifează", async () => {
   const c = cutie({ funding: null, openInterest: null, longShort: null, faraContract: true, simbol: "XYZUSDT" }, { simbol: "XYZUSDT" });

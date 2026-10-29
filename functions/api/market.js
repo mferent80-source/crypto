@@ -120,8 +120,11 @@ export async function onRequestGet({request,env}){
   if(r.invalid){const alt=await gasesteInMii(cerut);if(alt&&alt!==symbol){symbol=alt;r=await cereFutures(alt)}}
   if(r.invalid){if(faraContractPana.size>500)for(const [k,t] of faraContractPana)if(t<=Date.now())faraContractPana.delete(k);faraContractPana.set(cerut,Date.now()+6*3600000);return ok({funding:null,openInterest:null,longShort:null,oiHist5m:null,fundingHist:null,simbol:symbol,faraContract:true,probleme:r.probleme})}
   const raspuns={funding:r.funding,openInterest:r.openInterest,longShort:r.longShort,oiHist5m:r.oiHist5m,fundingHist:r.fundingHist,
-    simbol:symbol,markPrice:r.markPrice,indexPrice:r.indexPrice,nextFundingTime:r.nextFundingTime,fundingIntervalHours:intervalFunding(r.fundingHist),
-    oiUsd:r.openInterest!=null&&r.markPrice>0?r.openInterest*r.markPrice:null,lsIst:r.lsIst};
+    simbol:symbol,markPrice:r.markPrice,indexPrice:r.indexPrice,nextFundingTime:r.nextFundingTime,
+    // v100.265 (F2): intervalul OFICIAL (/fapi/v1/fundingInfo) bate cel din plăți - după o schimbare de interval, plățile vechi mint câteva ore
+    fundingIntervalHours:r.oreOficial||intervalFunding(r.fundingHist),fundingIntervalSursa:r.oreOficial?"binance":intervalFunding(r.fundingHist)?"plati":null,
+    oiUsd:r.openInterest!=null&&r.markPrice>0?r.openInterest*r.markPrice:null,lsIst:r.lsIst,
+    topLs:r.topLs,topIst:r.topIst,takerIst:r.takerIst};   // v100.265 (F4): conturile mari pe poziții + cumpărătorii agresivi, ~500 h
   if(Object.keys(r.probleme).length)raspuns.probleme=r.probleme;
   return ok(raspuns);
 }
@@ -129,6 +132,14 @@ export async function onRequestGet({request,env}){
 // Harta fixă acoperă ce era listat pe 29.10; o listare nouă se găsește din /fapi/v1/ticker/price (ținută minte 6 h).
 const IN_MII={PEPE:"1000PEPE",SHIB:"1000SHIB",BONK:"1000BONK",FLOKI:"1000FLOKI",LUNC:"1000LUNC",XEC:"1000XEC",SATS:"1000SATS",RATS:"1000RATS",CAT:"1000CAT",CHEEMS:"1000CHEEMS",WHY:"1000WHY",MOG:"1000000MOG",BABYDOGE:"1MBABYDOGE"};
 const faraContractPana=new Map();let listaFut=null,listaFutLa=0;
+// v100.265 (F2): lista oficială a intervalelor de funding (simbol → ore), cerută o dată la 6 h; un refuz nu e o problemă a datelor
+let infoFut=null,infoFutLa=0;
+async function oreOficiale(symbol){
+  if(!infoFut||Date.now()-infoFutLa>6*3600000){
+    try{const x=await j(`${FUT}/fapi/v1/fundingInfo`);if(Array.isArray(x)){infoFut=new Map(x.map(t=>[String(t&&t.symbol||""),Number(t&&t.fundingIntervalHours)]));infoFutLa=Date.now()}}catch{return null}
+  }
+  const o=infoFut&&infoFut.get(symbol);return o>=1&&o<=24?o:null
+}
 function simbolInMii(s){const b=s.replace(/USDT$/,"");return s.endsWith("USDT")&&IN_MII[b]?IN_MII[b]+"USDT":s}
 async function gasesteInMii(cerut){
   if(!cerut.endsWith("USDT"))return null;
@@ -148,7 +159,7 @@ function intervalFunding(h){
 // v100.264: cele cinci cereri pleacă DEODATĂ (înainte una după alta: de 5 ori așteptarea, până la 5 × 8 s);
 // raportul long/short vine cu ~500 h de istoric (pagina îl judecă față de moneda lui); premiumIndex dă și markPrice / ora plății.
 async function cereFutures(symbol){
-  const r={funding:null,openInterest:null,longShort:null,oiHist5m:null,fundingHist:null,markPrice:null,indexPrice:null,nextFundingTime:null,lsIst:null,probleme:{}};
+  const r={funding:null,openInterest:null,longShort:null,oiHist5m:null,fundingHist:null,markPrice:null,indexPrice:null,nextFundingTime:null,lsIst:null,topLs:null,topIst:null,takerIst:null,oreOficial:null,probleme:{}};
   const incearca=async(nume,fn)=>{try{await fn()}catch(e){r.probleme[nume]=String(e&&e.message||e).slice(0,140)}};
   const numar=v=>{const x=Number(v);return v!=null&&v!==""&&Number.isFinite(x)?x:null};
   await Promise.all([
@@ -156,7 +167,11 @@ async function cereFutures(symbol){
     incearca("openInterest",async()=>{const x=await j(`${FUT}/fapi/v1/openInterest?symbol=${symbol}`);r.openInterest=Number(x.openInterest)}),
     incearca("longShort",async()=>{const x=await j(`${FUT}/futures/data/globalLongShortAccountRatio?symbol=${symbol}&period=1h&limit=500`);if(Array.isArray(x)&&x.length){r.longShort=Number(x[x.length-1].longShortRatio);r.lsIst=x.map(t=>[numar(t&&t.timestamp),numar(t&&t.longShortRatio)]).filter(t=>t[1]!==null)}}),
     incearca("oiHist5m",async()=>{r.oiHist5m=await j(`${FUT}/futures/data/openInterestHist?symbol=${symbol}&period=5m&limit=289`)}),
-    incearca("fundingHist",async()=>{r.fundingHist=await j(`${FUT}/fapi/v1/fundingRate?symbol=${symbol}&limit=30`)})
+    incearca("fundingHist",async()=>{r.fundingHist=await j(`${FUT}/fapi/v1/fundingRate?symbol=${symbol}&limit=30`)}),
+    // v100.265 (F4): conturile mari pe POZIȚII și cumpărătorii agresivi (taker) - informație, nu intră în votul „înghesuit”
+    incearca("topLs",async()=>{const x=await j(`${FUT}/futures/data/topLongShortPositionRatio?symbol=${symbol}&period=1h&limit=500`);if(Array.isArray(x)&&x.length){r.topLs=Number(x[x.length-1].longShortRatio);r.topIst=x.map(t=>[numar(t&&t.timestamp),numar(t&&t.longShortRatio)]).filter(t=>t[1]!==null)}}),
+    incearca("taker",async()=>{const x=await j(`${FUT}/futures/data/takerlongshortRatio?symbol=${symbol}&period=1h&limit=500`);if(Array.isArray(x))r.takerIst=x.map(t=>[numar(t&&t.timestamp),numar(t&&t.buyVol),numar(t&&t.sellVol)]).filter(t=>t[1]!==null&&t[2]!==null)}),
+    oreOficiale(symbol).then(o=>{r.oreOficial=o},()=>{})
   ]);
   const invalid=m=>/HTTP 400\b.*Invalid symbol/i.test(String(m||""));
   r.invalid=invalid(r.probleme.funding)&&invalid(r.probleme.openInterest);

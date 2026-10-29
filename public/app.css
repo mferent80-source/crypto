@@ -3139,6 +3139,11 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
 #deriv .grid>.card:has(#funding),#deriv .grid>.card:has(#oi),#deriv .grid>.card:has(#lsratio){grid-column:span 4}
 #deriv .grid>.card:has(#fcontext){grid-column:1/-1}
 @media (max-width:760px){#deriv .grid>.card:has(#funding),#deriv .grid>.card:has(#oi),#deriv .grid>.card:has(#lsratio){grid-column:1/-1}}
+/* v100.265 (29.10, el: „fa ideile” - F1, F4, F5): încă trei cartele cu cifre (funding-ul Pionex, prima futures/spot, conturile mari) pe un rând
+   peste 760 px, pe rândul lor pe telefon; F3: istoria desenată pe toată lățimea, fără să crească peste 260 px */
+#deriv .grid>.card.fCifra{grid-column:span 4}
+@media (max-width:760px){#deriv .grid>.card.fCifra{grid-column:1/-1}}
+#deriv .fIstoric svg{display:block;width:100%;height:auto;max-height:260px;margin-top:6px}
 @media (max-width:640px){.sugPandaTab thead{display:table-header-group}.sugPandaTab{display:table}.sugPandaTab tbody{display:table-row-group}.sugPandaTab tr{display:table-row}.sugPandaTab td,.sugPandaTab th{display:table-cell}}
 /* v100.224: pe paginile de zi rămân alertele, banda botului și versiunea. Cipurile de cercetare revin la analiza monedei și în laborator. */
 body.peAcasa:not(.acMonedaDeschisa) .topLeft,body.peTablou .topLeft,body.peT212 .topLeft,body.peJurnal .topLeft,body.peGrid .topLeft,body.pePaginaNoua .topLeft,

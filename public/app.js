@@ -4340,7 +4340,7 @@ function simBinanceFut(s){s=String(s||"").toUpperCase();const b=s.replace(/USDT$
 // Codurile contextului (CROWDED / CONTRARIAN + / BALANCED / null) rămân în stare pentru verdict și Flux; pe pagină se scriu în română.
 async function derivatives(){
  const fortat=arguments[0]===true,F=FuturesCitire,W=window;
- if(assetClass()==="STOCKS"){W.__derivSeq=(W.__derivSeq||0)+1;W.__derivCache=null;$("ftext").textContent="Contextul futures crypto nu intră în semnalele acțiunilor US.";for(const id of ["funding","oi","lsratio","fcontext","fundingBias","crowdingRisk","oiContext"])if($(id))$(id).textContent="N/A";for(const id of ["fundingSub","oiSub","lsSub","fcontextSub","fundingMed","oiPret24","fMeta"])if($(id))$(id).textContent="—";window.__derivativesState={};return}
+ if(assetClass()==="STOCKS"){W.__derivSeq=(W.__derivSeq||0)+1;W.__derivCache=null;$("ftext").textContent="Contextul futures crypto nu intră în semnalele acțiunilor US.";for(const id of ["funding","oi","lsratio","fcontext","fundingBias","crowdingRisk","oiContext"])if($(id))$(id).textContent="N/A";for(const id of ["fundingSub","oiSub","lsSub","fcontextSub","fundingMed","oiPret24","fMeta","pxFunding","pxSub","fPrima","fPrimaSub","fTop","fTopSub"])if($(id))$(id).textContent="—";if($("fIstoric"))$("fIstoric").innerHTML="";window.__derivativesState={};return}
  let sym=norm($("symbol").value);
  const c=W.__derivCache;
  if(!fortat&&c&&c.sym===sym){if(c.p)return c.p;if(c.stare&&Date.now()-c.la<30000){W.__derivativesState=c.stare;if(W.__radarState&&W.__radarState.q){updateFlowWindow(W.__radarState.q);renderLiquidationProxy(W.__radarState.q,c.stare);renderQuantFlow(W.__radarState.q,c.stare)}return}}
@@ -4348,6 +4348,8 @@ async function derivatives(){
  // revizia 29.10: analyze() schimbă caseta și golește starea înainte să cheme derivatives() ⇒ jetonul singur nu ajunge; se cer și moneda, și clasa
  const vechi=()=>seq!==W.__derivSeq||norm($("symbol").value)!==sym||assetClass()!=="CRYPTO";
  $("ftext").textContent="Se încarcă date futures…";
+ // v100.265 (F1): funding-ul Pionex (acolo stau boții) se cere în paralel, pe moneda de bază (PEPE ⇒ PEPE_USDT_PERP, nu 1000PEPE)
+ const pxP=getJSON(`/api/market?type=pionex_funding&symbol=${encodeURIComponent(sym.replace(/USDT$/,"")+"_USDT_PERP")}`).catch(()=>null);
  let d=null,histOI=null,fundingHist=null,motivFutures="";
  try{d=await getJSON(`/api/market?type=futures&symbol=${encodeURIComponent(sym)}`);histOI=d&&d.oiHist5m||null;fundingHist=d&&d.fundingHist||null}
  catch(e){motivFutures=/AUTH_RATE_LIMITED/.test(String(e.message||""))||e.status===429&&/AUTH_/.test(String(e.message||""))?"Prea multe parole greșite de pe acest calculator - așteaptă un minut și verifică parola din Setări (⚙).":eroareDeParola(e.message,e.status)?"Serverul cere parola aplicației pentru futures - pune-o în Setări (⚙).":"Serverul nu a dat futures ("+textEroare(e)+")."}
@@ -4368,6 +4370,7 @@ async function derivatives(){
    }catch{}
  }
  if(vechi())return null;
+ const pxR=await pxP;if(vechi())return null;
  const fin=v=>v!=null&&v!==""&&Number.isFinite(+v)?+v:null,ore=fin(d&&d.fundingIntervalHours)||F.interval(fundingHist);
  let fr=fin(d&&d.funding),oi=fin(d&&d.openInterest),ls=fin(d&&d.longShort);
  const ag=F.aglomerare({funding:fr,ore,ls,lsIst:d&&Array.isArray(d.lsIst)?d.lsIst:null}),op=F.oiPret(histOI);
@@ -4375,7 +4378,7 @@ async function derivatives(){
  const simbolF=String(d&&d.simbol||sym),baza=simbolF.replace(/USDT$/,""),mark=fin(d&&d.markPrice),oiUsd=fin(d&&d.oiUsd)??(oi!=null&&mark>0?oi*mark:null),areDate=fr!=null||oi!=null||ls!=null,med=x=>x==null?"—":fundingRo(x);
  $("fMeta").textContent=simbolF+" · Binance USDⓈ-M · "+(areDate?"luat la "+new Date().toLocaleTimeString("ro-RO"):"fără date");
  $("funding").textContent=fundingRo(fr);   // audit 19.10: virgula, ca OI
- $("fundingSub").textContent=F.subFunding({funding:fr,ore,urmatoarea:d&&d.nextFundingTime,acum:Date.now()});
+ $("fundingSub").textContent=F.subFunding({funding:fr,ore,sursa:d&&d.fundingIntervalSursa,urmatoarea:d&&d.nextFundingTime,acum:Date.now()});
  $("oi").textContent=oiUsd!=null?compact(oiUsd)+" USD":oi==null?"N/A":compact(oi)+" "+baza;   // v100.264: OI în USD (bucățile stau dedesubt)
  $("oiSub").textContent=F.subOi({oi,baza,oiDeltas});
  $("lsratio").textContent=ls==null?"N/A":Number(ls).toFixed(2).replace(".",",");
@@ -4392,8 +4395,15 @@ async function derivatives(){
  $("oiContext").textContent=oi==null?"N/A":"OI "+compact(oi)+" "+baza+(oiTrend!=="N/A"?" · "+oiTrend.replace(".",","):"");   // v100.264: cu unitatea (bucăți de monedă, nu USD)
  $("fundingMed").textContent=fundingStats&&(fundingStats.avg24!=null||fundingStats.avg3d!=null)?"24 h: "+med(fundingStats.avg24)+" · 3 zile: "+med(fundingStats.avg3d)+(ore?" (pe plata de "+ore+" h)":""):"—";
  $("oiPret24").textContent=F.subOiPret(op);
+ /* v100.265 (ideile F1, F3–F5): Pionex lângă Binance, prima futures/spot, conturile mari + cumpărătorii agresivi, istoria desenată.
+    Toate sunt informație: votul „înghesuit” (context) rămâne doar funding Binance la 8 h + raportul conturilor la p99 / p1. */
+ const px=typeof GridSim!=="undefined"&&pxR&&pxR.data?GridSim.rataFunding(pxR.data.rates,Date.now()):null,primaBp=F.prima(d&&d.markPrice,d&&d.indexPrice),bm=F.baniMari({ls,topLs:d&&d.topLs,topIst:d&&d.topIst,takerIst:d&&d.takerIst});
+ $("pxFunding").textContent=F.pionexText(px);$("pxSub").textContent=F.subPionex(px,ag.fr8);
+ $("fPrima").textContent=F.primaText(primaBp);$("fPrimaSub").textContent=F.subPrima(primaBp);
+ $("fTop").textContent=F.baniMariText(bm);$("fTopSub").textContent=F.subBaniMari(bm);
+ $("fIstoric").innerHTML=F.grafic({lsIst:d&&d.lsIst,fundingHist,ls,lat:$("fIstoric").clientWidth});   // lățimea cartelei: textul rămâne 11 px și pe telefon
  let longPct=ls==null?null:(ls/(1+ls))*100, shortPct=ls==null?null:(100-(ls/(1+ls))*100);
- const stare={funding:fr,oi,ls,context,longPct,shortPct,oiTrend,oiDeltas,fundingStats,fundingIntervalHours:ore,fr8:ag.fr8,lsPct:ag.lsPct,lsVot:ag.lsVot,conflict:ag.conflict,oiUsd,simbol:simbolF,la:Date.now()};
+ const stare={funding:fr,oi,ls,context,longPct,shortPct,oiTrend,oiDeltas,fundingStats,fundingIntervalHours:ore,fr8:ag.fr8,lsPct:ag.lsPct,lsVot:ag.lsVot,conflict:ag.conflict,oiUsd,simbol:simbolF,la:Date.now(),pionex:px?{rata:px.rata,ore:px.intervalOre,rataZi:px.rataZi}:null,primaBp,topPct:bm?bm.topPct:null};
  W.__derivativesState=stare;if(areDate)markFresh("futures");
  if(W.__radarState&&W.__radarState.q){updateFlowWindow(W.__radarState.q);renderLiquidationProxy(W.__radarState.q,stare);renderQuantFlow(W.__radarState.q,stare)}
  $("ftext").textContent=areDate?F.fraza({funding:fr,ore,oiPret:op,ls,lsPct:ag.lsPct,lsMax:ag.lsMax,lsMin:ag.lsMin}):d&&d.faraContract?F.motiv(d):("Datele futures lipsesc acum; analiza spot rămâne completă. "+(motivFutures||F.motiv(dServer))).trim();
