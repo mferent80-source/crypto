@@ -404,7 +404,11 @@ function t212ConsHtml(p) {
     + '</div>';
 }
 function t212PregatesteP(x, pond) {
+  // v100.267 (auditul 29.10): pence față de lire (×100) la Londra - barele Yahoo trec în unitatea prețului T212 ÎNAINTE de stop și semafor;
+  // se scriu înapoi în t212.bare, de unde le citesc și maximul de după cumpărare, graficul și rețeaua; factorul stă pe ele (nota rămâne la fiecare desen)
+  var un = ActiuniSemnale.unitateBare(t212.bare[x.ticker], x.currentPrice); if (un.factor !== 1) { t212.bare[x.ticker] = un.bare; un.bare.unitateT212 = un.factor; }
   var p = t212Pozitie(x), b = t212.bare[p.ticker] || [];
+  p.unitate = b.unitateT212 || null;
   p.st = ActiuniSemnale.stare(b, p.pret); p.sem = ActiuniSemnale.semafor(p, p.st);
   // v88: stopul care urca pentru pozitii e cel putin -15% de la maxim (proba pe trade-urile lui, "Cat te-ar fi salvat stopul")
   // v100.52: sau coborarea obisnuita pe 5 zile din profilul actiunii, DOAR daca pe trade-urile tale a iesit cel putin la fel
@@ -838,7 +842,8 @@ function t212RandPozitie(p) {
     + '</tr>';
   // detaliul
   var info = [tr !== "fara-date" ? "trend " + tr + " (" + p.st.trend.tarie + ")" : "", p.st.distMax52 !== null ? "față de maximul pe 52 săpt. " + t212Pct(p.st.distMax52) : "", p.maxDupaCumparare ? "de la maximul de după cumpărare " + t212Pct(p.pret / p.maxDupaCumparare - 1) : "", t212.beta[p.ticker] ? "beta " + t212.beta[p.ticker].toFixed(2).replace(".", ",") : "", p.fxPpl && Math.abs(p.fxPpl) >= 1 ? "din rezultat, cursul dolar/leu: " + t212Lei(p.fxPpl) : "",
-    t212.dupaNume && t212.dupaNume[p.ticker] ? "⚠️ prețurile zilnice sunt găsite după numele firmei (" + (t212.simbolPret[p.ticker] || "alt simbol") + "): verifică în Trading 212 că e aceeași firmă" : ""].filter(Boolean).join(" · ");   /* v100.196 (🔵2) */
+    t212.dupaNume && t212.dupaNume[p.ticker] ? "⚠️ prețurile zilnice sunt găsite după numele firmei (" + (t212.simbolPret[p.ticker] || "alt simbol") + "): verifică în Trading 212 că e aceeași firmă" : "",
+    p.unitate ? "⚠️ prețurile zilnice veneau în " + (p.unitate === 100 ? "lire, iar Trading 212 dă pence" : "pence, iar Trading 212 dă lire") + ": le-am adus la unitatea din Trading 212 înainte de stop" : ""].filter(Boolean).join(" · ");   /* v100.196 (🔵2); v100.267 (auditul 29.10): nota de unitate */
   // v100.54: o singura voce - Consilierul pozitiei (verdict, ce as face, bani, 3 motive, de ce, decizii, restul pliat); fara el, ca inainte
   var stanga = '<div>' + (p.cons ? t212ConsHtml(p) : '<h5>De ce ' + niv[0] + '</h5>' + (p.sem.motive.length ? '<ul class="t212Motive">' + p.sem.motive.map(function (m) { return '<li>' + escapeHtml(m) + '</li>'; }).join("") + '</ul>' : '')
     + '<p class="t212Fac">' + escapeHtml(p.sem.ceAsFace) + '</p>' + t212SfaturiHtml(p.sfaturi))
@@ -884,9 +889,24 @@ async function t212PuneToate() {
   toast(ok === tk.length ? ok + " planuri salvate cu prețurile calculate · colectorul te anunță" : "Am salvat " + ok + " din " + tk.length + " planuri; reîncearcă pentru restul", ok === tk.length ? "good" : "bad");
 }
 
+// v100.267 (auditul 29.10): barele zilnice n-au pre-market - cu bursa simbolului închisă, „acum $X” era ultima închidere (înainte de deschidere:
+// cea de ieri), iar la deschidere prețul poate sări peste stop. null = bursa deschisă, fără calendar sau fără bare: eticheta rămâne „acum”
+function t212PretInchis(tk, randuri, acum) {
+  if (typeof CalendarBursa === "undefined" || !CalendarBursa.stare) return null;
+  var sb = CalendarBursa.stare(acum, tk); if (sb.deschisa) return null;
+  var v = GridCalcul.bareToate(randuri || []).filter(function (x) { return x.t <= acum; }); if (!v.length) return null;   /* rândul din care vine prețul (pretCurent), nu bareBursa */
+  var zu = new Date(v[v.length - 1].t).toISOString().slice(0, 10), ieri = new Date(Date.parse(sb.zi + "T12:00:00Z") - 86400000).toISOString().slice(0, 10);
+  var et = zu === sb.zi ? "închiderea de azi" : zu === ieri ? "închiderea de ieri" : "închiderea din " + zu.slice(8, 10) + "." + zu.slice(5, 7);
+  return { eticheta: et, avertisment: "Bursa e închisă: prețul de aici e " + et + " (barele zilnice n-au pre-market), nu cel de acum. La deschidere prețul poate sări peste stop, iar stopul se execută la primul preț de după salt." };
+}
 // Poarta de intrare: "vreau sa cumpar X" -> cumpar / astept / nu acum
 async function t212Poarta() {
-  var s = String(($("t212PSimbol") && $("t212PSimbol").value) || "").toUpperCase().replace(/[^A-Z0-9.]/g, "").slice(0, 12), out = $("t212PoartaRez");
+  var campS = function () { return String(($("t212PSimbol") && $("t212PSimbol").value) || "").toUpperCase().replace(/[^A-Z0-9.]/g, "").slice(0, 12); };
+  var s = campS(), out = $("t212PoartaRez");
+  // v100.267 (auditul 29.10): jetonul cererii (ca window.__derivSeq) - la două clicuri rapide pe „Bilet” răspunsul vechi (5 așteptări) scria peste
+  // cel nou și intra în jurnalul verdictelor; după fiecare așteptare se iese dacă a venit alt clic. Doar jetonul, nu și câmpul: un simbol tastat
+  // fără clic lăsa „aduc prețurile…” pe ecran la nesfârșit; biletul poartă oricum numele simbolului lui (revizia 29.10)
+  var seq = t212.poartaSeq = (t212.poartaSeq || 0) + 1, depasit = function () { return seq !== t212.poartaSeq; };
   if (!s) { if (out) out.innerHTML = '<p class="tbSub">Scrie simbolul (de exemplu ASTS).</p>'; return; }
   if (out) out.innerHTML = '<p class="tbSub">aduc prețurile zilnice pentru ' + escapeHtml(s) + '…</p>';
   // v100.196 (🟡7): de unde vine simbolul (Trend 12 luni în probă ⇒ fără mărime) - doar pentru simbolul cerut, o singură dată
@@ -897,8 +917,10 @@ async function t212Poarta() {
   pm.scris = !!(pm.intrare || pm.tinta || pm.riscPct || plan.stop || plan.trailPct);
   try {
     var b = await getJSON("/api/t212?action=preturi&interval=1d&ticker=" + encodeURIComponent(tk));
+    if (depasit()) return;   /* v100.267 (auditul 29.10): alt clic între timp */
     // v100.175 (auditul Opus, M15): GridCalcul.bare aruncă MEREU ultima bară - seara și în weekend aceea e o zi închisă (vinerea) ⇒ bareBursa
     var bare = GridCalcul.bareBursa(b && b.randuri || [], Date.now()), pret = GridCalcul.pretCurent(b && b.randuri || []);
+    var inchisa = t212PretInchis(tk, b && b.randuri || [], Date.now());   /* v100.267 (auditul 29.10): „închiderea de ieri”, nu „acum” */
     var st = ActiuniSemnale.stare(bare, pret), ore = null, niv = ActiuniSemnale.niveluri(bare, pret, {});
     var j = t212Jurnal();
     if (j) j.p.inchise.forEach(function (t) { if (T212.simbol(t.ticker) === (b.simbol || s) && t.rezultat < 0) { var o = (Date.now() - t.inchis) / 3600000; if (ore === null || o < ore) ore = o; } });
@@ -908,7 +930,9 @@ async function t212Poarta() {
     // v100.196 (auditul sever 14.10): verdictul vede și data rezultatelor (adusă ÎNAINTE de el, 🔴2), ce ai deja în ea (🔴1), media pe istoricul
     // ei (🟡2), regimul pieței (🟡3) și vârsta barelor (🟡5) - înainte data rezultatelor venea DUPĂ verdict și ajungea doar în bilet
     var rez = await t212RezultatePt(tk), zR = rez.data ? Math.ceil((Date.parse(rez.data + "T12:00:00Z") - Date.now()) / 86400000) : null;
+    if (depasit()) return;
     await t212RegimAdu();
+    if (depasit()) return;   /* v100.267: înainte de jurnalul verdictelor - doar biletul cerut ultimul intră acolo */
     var deja = t212DejaLei(tk);
     var rp = t212RegimPt();
     var v = ActiuniSemnale.poarta({ stare: st, plan: planPoarta, vandutPeMinusAcumOre: ore, rezultateZile: zR, medie: niv.nivel === "ok" && niv.proba ? niv.proba.medie : undefined,
@@ -925,10 +949,14 @@ async function t212Poarta() {
     // v100.177 (jurnalul verdictelor): verdictul Porții intră în jurnal cu prețul de acum (judecat după 5 și 20 de zile de bursă) - v100.196: ACELAȘI verdict ca pe ecran
     try { if (v && v.nivel && v.nivel !== "fara-date" && typeof verdictTrimite === "function") verdictTrimite({ s: "poarta-t212", k: tk, n: v.nivel, p: st.pret }); } catch (eV) {}
     await t212ContSiCalibrare();
+    if (depasit()) return;
     t212.poarta = { simbol: b.simbol || s, ticker: tk, st: st, niv: niv, bare: bare, bareZi: GridCalcul.bareBursa(b && b.randuri || [], Date.now()), planScris: !!(plan.stop || plan.trailPct), planMeu: pm, v: v, tot: tot,
-      liber: liber, deja: deja, sursa: sursa, rezultate: rez.data, rezultateStiut: rez.stiut, gasitDupaNume: !!(b && b.gasitDupaNume) };
+      liber: liber, deja: deja, sursa: sursa, rezultate: rez.data, rezultateStiut: rez.stiut, gasitDupaNume: !!(b && b.gasitDupaNume), inchisa: inchisa };
     // v89: biletul - ce spune istoricul tau despre situatii asemanatoare, rezultatele (aduse deja, mai sus), stirile
-    try { var sp = await getJSON("/api/stiri?action=actiune&ticker=" + encodeURIComponent(tk)); t212.poarta.stiri = sp && sp.stiri || []; } catch (e) { t212.poarta.stiri = []; }
+    // v100.267 (auditul 29.10): știrile întârziate ale unui bilet vechi nu se mai lipesc pe biletul nou (t212.poarta e deja al altui clic)
+    var sp = null; try { sp = await getJSON("/api/stiri?action=actiune&ticker=" + encodeURIComponent(tk)); } catch (e) { sp = null; }
+    if (depasit()) return;
+    t212.poarta.stiri = sp && sp.stiri || [];
     // v100.55 (actiunile T212, pachetul 4): profilul si probabilitatile actiunii propuse, din barele aduse deja (merge si pe o actiune noua
     // pentru tine) + „in situatii ca asta” din trade-urile tale. Avertizeaza, nu schimba verdictul portii (revizia 01.10: try propriu -
     // o eroare aici lasa verdictul in picioare, fara randurile noi)
@@ -941,7 +969,7 @@ async function t212Poarta() {
       t212.poarta.prob = typeof Probabilitati !== "undefined" && p4ok(P) ? Probabilitati.randActiune(Probabilitati.pentruActiune(bare, { pret: baza4, stop: P.stopP.stop, tinta: pm.tinta > baza4 ? pm.tinta : n4.tinta, acum: Date.now() }), t212Calibrare(), { rezultateZile: zc4 !== null && zc4 >= 0 ? Math.round(zc4 * 5 / 7) : null, evenimente: P.prof && P.prof.evenimente }) : [];
       P.sit = j ? ActiuniSemnale.situatiiCaAsta(j.p.inchise, t212.cf || {}, ActiuniSemnale.cheieSituatie(st), tk) : null;
     } catch (e4) { t212.poarta.prof = null; t212.poarta.prob = []; t212.poarta.sit = null; t212.poarta.stopP = null; }
-  } catch (e) { t212.poarta = { simbol: s, eroare: t212Eroare(e) }; }
+  } catch (e) { if (depasit()) return; t212.poarta = { simbol: s, eroare: t212Eroare(e) }; }   /* v100.267: nici eroarea unui bilet vechi */
   t212RenderPoarta();
 }
 function p4ok(p) { return !!(p.niv && p.niv.nivel === "ok" && p.stopP && p.stopP.stop > 0); }
@@ -1185,11 +1213,12 @@ function t212RenderPoarta() {
   var fac = ActiuniSemnale.facPoarta(p.v.nivel, t212MarimePoarta(p), { faraMarime: t212FaraMarime(p), motivPlan: planMotiv, faraSuma: fara, regimNedovedit: t212RegimNedovedit() });   // v100.71 (I4): functie pura, generata si masurata de garda
   var zu = st.ultima ? new Date(st.ultima).toISOString() : "";
   t212CuRaport(out, true);
-  out.innerHTML = '<div class="t212Verdict ' + n[1] + '"><b>' + n[0] + ' · ' + escapeHtml(p.simbol) + '</b><span class="tbSub">acum ' + t212Usd(st.pret) + (zu ? ' · ultima zi închisă ' + zu.slice(8, 10) + '.' + zu.slice(5, 7) : '') + ' · trend ' + escapeHtml(st.trend.dir) + ' · față de maximul pe 7 zile ' + t212Pct(st.distMax7z) + ' · pe 52 săpt. ' + t212Pct(st.distMax52) + '</span></div>'
+  out.innerHTML = '<div class="t212Verdict ' + n[1] + '"><b>' + n[0] + ' · ' + escapeHtml(p.simbol) + '</b><span class="tbSub">' + escapeHtml(p.inchisa ? p.inchisa.eticheta : "acum") + ' ' + t212Usd(st.pret) + (zu ? ' · ultima zi închisă ' + zu.slice(8, 10) + '.' + zu.slice(5, 7) : '') + ' · trend ' + escapeHtml(st.trend.dir) + ' · față de maximul pe 7 zile ' + t212Pct(st.distMax7z) + ' · pe 52 săpt. ' + t212Pct(st.distMax52) + '</span></div>'
     + '<p class="t212Fac t212FacPoarta">👉 <b>Ce aș face eu:</b> ' + escapeHtml(fac) + '</p>'
     + t212LinieCal()
     + (p.v.motive.length ? '<ul class="t212Motive">' + p.v.motive.map(function (m) { return '<li>' + escapeHtml(m) + '</li>'; }).join("") + '</ul>' : '<p class="good">Nimic de obiectat.</p>')
     + (p.v.note || []).map(function (x) { return '<p class="tbWarn">⚠️ ' + escapeHtml(x) + '</p>'; }).join("")   /* v100.196: spuse, fără să schimbe verdictul */
+    + (p.inchisa ? '<p class="tbWarn">⚠️ ' + escapeHtml(p.inchisa.avertisment) + '</p>' : '')   /* v100.267 (auditul 29.10): bursa închisă ⇒ saltul de la deschidere */
     + (p.gasitDupaNume ? '<p class="tbWarn">⚠️ Prețurile sunt găsite după NUMELE firmei, nu după simbol: verifică în Trading 212 că e aceeași firmă.</p>' : '')
     + (t212FaraMarime(p) ? '<p class="tbWarn">⚠️ Vine din Trend 12 luni, care e în probă: verdictul e al Porții, dar nu dau o sumă până nu zice bilanțul robotului „probat”.</p>' : '')
     + t212PreturiPoarta(p)

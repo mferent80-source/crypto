@@ -319,25 +319,31 @@ var GridProba = (function () {
     // Sub H0 (mers aleator, 300 de monede, H = 1) fișa zicea PORNEȘTE în 52, iar MC o contrazicea în 49 (stopul atins în > 50% din drumuri / pierde
     // în > 50%); cu agitație grupată 41 din 41. PORNEȘTE coboară la AȘTEAPTĂ când MC zice „N-aș porni” / „Nu se potrivește”, stopul e în zgomot
     // sau pierde în majoritatea drumurilor. o.mc = Simulatorul (GridSim) dat de chemător; fără el, cel global; o.faraMc = fără (carnetul, contrafactualul).
+    // v100.267 (auditul 29.10): MC pe orizontul FIȘEI (H zile), nu pe 7 - la 7 zile stopul unei setări făcute pentru 1–3 zile era atins în
+    // 16 din 18 cazuri (6 monede × H 1–3), deci orice PORNEȘTE cădea; contrazicerea = verdictul simulării, nu „pierde” > 50% brut
     var GSx = o.faraMc || o.mc === false ? null : o.mc && typeof o.mc.simuleaza === "function" ? o.mc : typeof GridSim !== "undefined" && GridSim && GridSim.simuleaza ? GridSim : null;
     if (GSx && f.setare) {
-      f.mc = mcPeSetare(GSx, o.b15, f.setare, o.suma > 0 ? o.suma : 100, pr.funding);
+      f.mc = mcPeSetare(GSx, o.b15, f.setare, o.suma > 0 ? o.suma : 100, pr.funding, o.H);
       if (f.verdict && f.verdict.nivel === "porneste" && f.mc && f.mc.contrazice) f.verdict = { nivel: "asteapta", motive: [f.mc.motiv].concat(f.verdict.motive || []) };
     }
     return f;
   }
-  // v100.259: Monte Carlo pe 7 zile pe setarea fișei - stopul doar pe partea pierderii (long jos, short sus, neutru amândouă), ieșirea pe partea
+  // v100.259: Monte Carlo pe setarea fișei - stopul doar pe partea pierderii (long jos, short sus, neutru amândouă), ieșirea pe partea
   // câștigului e ținta (la long, stopul de deasupra gridului nu e o pierdere)
-  function mcPeSetare(GSx, b15, s, suma, F) {
+  // v100.267 (auditul 29.10): pe H zile (orizontul fișei); contrazice doar verdictul simulării: „N-aș porni / Nu se potrivește”, stopul în
+  // zgomot pe H zile, pierderea CONFIRMATĂ (rauConfirmat, marja pe zile inclusă) - „pierde” > 50% neconfirmat e o aruncare de ban, nu un NU
+  function mcPeSetare(GSx, b15, s, suma, F, H) {
     try {
+      var zh = Number(H) > 0 ? Number(H) : null;
+      if (!zh) return { eroare: "fără orizontul fișei", contrazice: false };
       var dir = s.dir, sp = s.stop || {}, st = { jos: s.jos, sus: s.sus, grile: s.grile, levier: s.levier, dir: dir, suma: suma, fundingZi: F ? F.rataZi : FUNDING_PRESUPUS, fundingCost: F ? F.presupus : true,
         stop: dir === "long" ? { jos: sp.jos } : dir === "short" ? { sus: sp.sus } : { jos: sp.jos, sus: sp.sus }, tp: dir === "long" ? sp.sus : dir === "short" ? sp.jos : null };
-      var rez = GSx.simuleaza(b15, st, { n: 300, seed: 12, zile: 7, orizonturi: [7] });
+      var rez = GSx.simuleaza(b15, st, { n: 300, seed: 12, zile: zh, orizonturi: [zh] });
       if (!rez || rez.eroare || !rez.orizonturi || !rez.orizonturi[0]) return { eroare: rez && rez.eroare ? String(rez.eroare) : "fără rezultat", contrazice: false };
       var z = rez.orizonturi[0], v = GSx.verdict ? GSx.verdict(rez, st, null, 0, null) : null, fc = v ? String(v.faCe || "").split(/[.:]/)[0].trim() : "";
-      var nuP = /^(N-aș porni|Nu se potrivește)/.test(fc), zg = z.pStop > 0.5, pi = z.pPierde > 0.5, pr0 = function (x) { return Math.round(x * 100) + "%"; };
-      var motiv = "Monte Carlo pe 7 zile, aceeași setare: " + (nuP ? "«" + fc + "»" : [zg ? "stopul atins în " + pr0(z.pStop) + " din drumuri" : null, pi ? "pierde în " + pr0(z.pPierde) : null].filter(Boolean).join(", ")) + ", deci nu zic PORNEȘTE";
-      return { n: 300, zile: 7, pStop: z.pStop, pPierde: z.pPierde, pCastig: z.pCastig, pLich: z.pLich, p50: z.p50, faCe: fc, contrazice: nuP || zg || pi, motiv: motiv };
+      var nuP = /^(N-aș porni|Nu se potrivește)/.test(fc), zg = z.pStop > 0.5, rau = !!(v && v.rauConfirmat === true), pr0 = function (x) { return Math.round(x * 100) + "%"; };
+      var motiv = "Monte Carlo pe " + cate(zh, "zi", "zile") + ", aceeași setare: " + (nuP ? "«" + fc + "»" : [zg ? "stopul atins în " + pr0(z.pStop) + " din drumuri" : null, rau ? "pierde în " + pr0(z.pPierde) + " din drumuri" : null].filter(Boolean).join(", ")) + ", deci nu zic PORNEȘTE";
+      return { n: 300, zile: zh, pStop: z.pStop, pPierde: z.pPierde, pCastig: z.pCastig, pLich: z.pLich, p50: z.p50, faCe: fc, rauConfirmat: rau, contrazice: nuP || zg || rau, motiv: motiv };
     } catch (e) { return { eroare: String(e && e.message || e), contrazice: false }; }
   }
   // pe zi = PERECHI incheiate pe fereastra / zilele ferestrei (nu umpleri: cele de pornire umflau cifra la gridurile dese)

@@ -361,11 +361,16 @@ await test("(5) fără Monte Carlo (faraMc) fișa zice PORNEȘTE pe moneda asta 
   assert.equal(fisa5({ faraMc: true }).mc, undefined);
 });
 await test("(5) cu Monte Carlo pe aceeași setare: stopul atins în > 50% / pierde în > 50% ⇒ AȘTEAPTĂ, cu cifrele în motiv", () => {
-  const f = fisa5({ mc: GS });
-  assert.ok(f.mc && f.mc.n === 300 && f.mc.zile === 7, JSON.stringify(f.mc));
+  // v100.267 (auditul 29.10): MC rulează pe orizontul fișei (H = 1 aici), nu pe 7 zile; pe barele astea MC pe o zi e de acord, deci
+  // contrazicerea se probează cu un Simulator care dă stopul în zgomot pe H zile (pierderea neconfirmată nu mai contrazice: proba v100.267-c)
+  const g = fisa5({ mc: GS });
+  assert.ok(g.mc && g.mc.n === 300 && g.mc.zile === 1, JSON.stringify(g.mc));
+  const MOCK = { simuleaza: (b, st, o) => ({ orizonturi: [{ zile: o.zile, pStop: 0.6, pPierde: 0.4, pCastig: 0.6, pLich: 0, p50: 0.5 }] }), verdict: () => ({ faCe: "Stopul e în zgomot: atins în 60% din drumuri în 1 zi.", rauConfirmat: false }) };
+  const f = fisa5({ mc: MOCK });
+  assert.ok(f.mc && f.mc.n === 300 && f.mc.zile === 1, JSON.stringify(f.mc));
   assert.ok(f.mc.pStop > 0.5 || f.mc.pPierde > 0.5, "premisa: MC contrazice (" + f.mc.pStop + " / " + f.mc.pPierde + ")");
   assert.equal(f.verdict.nivel, "asteapta");
-  assert.match(f.verdict.motive[0], /^Monte Carlo pe 7 zile, aceeași setare: /);
+  assert.match(f.verdict.motive[0], /^Monte Carlo pe 1 zi, aceeași setare: /);
   assert.ok(f.verdict.motive[0].length <= 160, f.verdict.motive[0]);
 });
 await test("(5) Monte Carlo de acord ⇒ PORNEȘTE rămâne; stopul pe partea pierderii, ieșirea pe partea câștigului e ținta", () => {

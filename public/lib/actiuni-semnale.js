@@ -445,6 +445,15 @@ var ActiuniSemnale = (function () {
     if (!bar || !(t.pretCumparare > 0)) return true;
     var r = bar.c / t.pretCumparare; return r >= 0.7 && r <= 1.43;
   }
+  // v100.267 (auditul 29.10): la Londra T212 poate da prețul în pence, iar Yahoo în lire (VUSA.L: 109,84) sau invers. Raportul preț T212 /
+  // ultima bară ~100 sau ~0,01 (banda ±30% a lui pretPotrivit) ⇒ barele trec în unitatea prețului T212 (stopul se pune în T212); altfel
+  // rămân neatinse - o cădere sau o săritură mare dintr-o zi nu e o schimbare de unitate
+  function unitateBare(bare, pret) {
+    var b = Array.isArray(bare) ? bare : [], u = b.length ? b[b.length - 1] : null, r = u && u.c > 0 && pret > 0 ? pret / u.c : null, f = 1;
+    if (r !== null) { if (r / 100 >= 0.7 && r / 100 <= 1.43) f = 100; else if (r * 100 >= 0.7 && r * 100 <= 1.43) f = 0.01; }
+    if (f === 1) return { factor: 1, bare: bare };
+    return { factor: f, bare: b.map(function (x) { var y = {}; for (var k in x) y[k] = x[k]; y.o = x.o * f; y.h = x.h * f; y.l = x.l * f; y.c = x.c * f; return y; }) };
+  }
   function cuStop(t, bare, praguri) {
     var out = {}, b = Array.isArray(bare) ? bare : [], intr = t && t.pretCumparare;
     if (b.length && t && !pretPotrivit(t, b)) return out;
@@ -648,6 +657,6 @@ var ActiuniSemnale = (function () {
   }
   // „Regulile tale”: grupa cea mai scumpa
   function facReguli(grupa) { return "Aș evita deocamdată trade-urile " + grupa + "."; }
-  return { inchisaInainte: inchisaInainte, zileLipsa: zileLipsa, regimPoarta: regimPoarta, PLAFON: PLAFON, usd: usd, facPoarta: facPoarta, facStop: facStop, sfatStop: sfatStop, facPoartaIstoric: facPoartaIstoric, facReguli: facReguli, stopPoarta: stopPoarta, cheieSituatie: cheieSituatie, situatiiCaAsta: situatiiCaAsta, textSituatie: textSituatie, trailPozitie: trailPozitie, alegeTrail: alegeTrail, maxDupaCumparare: maxDupaCumparare, cuStopUrcator: cuStopUrcator, cumparariInJos: cumparariInJos, alertaFrana: alertaFrana, cuStop: cuStop, rezumatStop: rezumatStop, reguliPersonale: reguliPersonale, atr: atr, niveluri: niveluri, marime: marime, planulMeu: planulMeu, laCumparare: laCumparare, raportSaptamana: raportSaptamana, alertePlan: alertePlan, stare: stare, semafor: semafor, greseli: greseli, rezumatJurnal: rezumatJurnal, poarta: poarta, portofoliu: portofoliu, beta: beta, TEXT: TEXT };
+  return { unitateBare: unitateBare, inchisaInainte: inchisaInainte, zileLipsa: zileLipsa, regimPoarta: regimPoarta, PLAFON: PLAFON, usd: usd, facPoarta: facPoarta, facStop: facStop, sfatStop: sfatStop, facPoartaIstoric: facPoartaIstoric, facReguli: facReguli, stopPoarta: stopPoarta, cheieSituatie: cheieSituatie, situatiiCaAsta: situatiiCaAsta, textSituatie: textSituatie, trailPozitie: trailPozitie, alegeTrail: alegeTrail, maxDupaCumparare: maxDupaCumparare, cuStopUrcator: cuStopUrcator, cumparariInJos: cumparariInJos, alertaFrana: alertaFrana, cuStop: cuStop, rezumatStop: rezumatStop, reguliPersonale: reguliPersonale, atr: atr, niveluri: niveluri, marime: marime, planulMeu: planulMeu, laCumparare: laCumparare, raportSaptamana: raportSaptamana, alertePlan: alertePlan, stare: stare, semafor: semafor, greseli: greseli, rezumatJurnal: rezumatJurnal, poarta: poarta, portofoliu: portofoliu, beta: beta, TEXT: TEXT };
 })();
 if (typeof globalThis !== "undefined") globalThis.ActiuniSemnale = ActiuniSemnale;

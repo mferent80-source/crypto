@@ -429,7 +429,7 @@ async function semnaleBot(b, ctx, acum) {
   const s = TabloBot.simboluri(b.baza, b.quote, b.simbolPionex).pionex;
   const r15 = await lumanari15M(s);
   const b4 = GridCalcul.bare(d.k4), b1 = GridCalcul.agrega(b4, 86400000);
-  const fisa = GridProba.fisa({ simbol: s, pret: GridCalcul.pretCurent(r15), b15: GridCalcul.bare(r15), b4h: b4, b1d: b1.slice(0, -1), suma: Number(b.investit) || 100, fundingZi: d.funding && d.funding.rataZi, H: 2, dir: null, levier: null, minNotional: null, mc: GridSim });   // v100.259: fișa poartă Monte Carlo pe 7 zile (GridSim e local aici)
+  const fisa = GridProba.fisa({ simbol: s, pret: GridCalcul.pretCurent(r15), b15: GridCalcul.bare(r15), b4h: b4, b1d: b1.slice(0, -1), suma: Number(b.investit) || 100, fundingZi: d.funding && d.funding.rataZi, H: 2, dir: null, levier: null, minNotional: null, mc: GridSim });   // v100.259: fișa poartă Monte Carlo (GridSim e local aici); v100.267 (auditul 29.10): pe orizontul fișei, H = 2 zile
   const f = fisa && !fisa.eroare ? fisa : null;
   let regimBtc = null; try { regimBtc = GridCalcul.regim(GridCalcul.bare(await lumanari15M("BTC_USDT_PERP"))); } catch (e) { jurnal("regim BTC", e.message); }
   let fut = null; try { fut = await cere("/api/market?type=futures&symbol=" + encodeURIComponent(TabloBot.simboluri(b.baza, b.quote, b.simbolPionex).binance)); } catch (e) { fut = null; }

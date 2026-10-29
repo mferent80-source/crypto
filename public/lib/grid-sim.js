@@ -320,7 +320,8 @@ var GridSim = (function () {
       if (o.plan && o.plan.dejaAtins && pl) faCe += " Dar planul tău e deja atins (" + (o.plan.dejaAtins === "plus" ? "+" + nrRo(pl.plus, 1) + "): încasează" : "−" + nrRo(pl.minus, 1) + "): ieși") + ", cum ți-ai propus.";
     }
     var dinZile = o.zileDistincte > 0 ? ", din ~" + cate(o.zileDistincte, "zi distinctă", "zile distincte") + " de istoric" : "";
-    return { rand: rand, marja: (mj > 0 ? "±" + cate(mj, "punct", "puncte") : "sub ±1 punct") + dinZile, culoare: confirmat ? "good" : rauConfirmat ? "bad" : "mijl", confirmat: confirmat, sub: sub, faCe: faCe, deAici: !!d,
+    /* v100.267 (auditul 29.10): rauConfirmat pe nume - fișa gridului îl citește ca să nu coboare PORNEȘTE pe o aruncare de ban */
+    return { rand: rand, marja: (mj > 0 ? "±" + cate(mj, "punct", "puncte") : "sub ±1 punct") + dinZile, culoare: confirmat ? "good" : rauConfirmat ? "bad" : "mijl", confirmat: confirmat, rauConfirmat: rauConfirmat, sub: sub, faCe: faCe, deAici: !!d,
       nota: "Pe istoria monedei reluată, fără tendința perioadei; o criză mai rea decât orice a avut nu apare în drumuri. Umplerile sunt estimate pe bare, nu pe ordinele reale." };
   }
   // v100.139 (el, 08.10: „Monte Carlo cu un scan automat pe bot la 15 min” în Tablou): rândul SCURT - verdictul pe 7 zile (CÂȘTIGĂ / PIERDE,
