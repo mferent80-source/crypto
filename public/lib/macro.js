@@ -41,6 +41,18 @@
     let n = 0, da = 0, db = 0; for (let i = 0; i < a.length; i++) { n += (a[i] - ma) * (b[i] - mb); da += (a[i] - ma) ** 2; db += (b[i] - mb) ** 2; }
     return da > 0 && db > 0 ? n / Math.sqrt(da * db) : null;
   }
+  // v100.268 (29.10, el: „Cele din macro.js”): pragurile pieței dintr-un SINGUR loc - cadranul VIX și cardul BTC–bursă de pe Acasă și alerta
+  // „vremii” le iau de aici (pe aceeași pagină VIX 18–20 era „liniște” pe cadran și „prudență” aici; r 0,47 era „nu-l trage” pe card și
+  // „parțial legate” aici). Peste 30 „panică” (era „stres”), ca verdictul bursei de pe Acasă.
+  const PRAGURI = { vix: [12, 18, 25, 30], btc: [0.6, 0.2, -0.2] };
+  function vixTreapta(v) {
+    const p = PRAGURI.vix;
+    return v < p[0] ? { scor: 1, text: "liniște prea mare (atenție la întoarcere)" } : v < p[1] ? { scor: 2, text: "calm" } : v < p[2] ? { scor: -1, text: "prudență" } : v < p[3] ? { scor: -2, text: "frică" } : { scor: -3, text: "panică" };
+  }
+  function legaturaBtc(r) {
+    const p = PRAGURI.btc;
+    return r > p[0] ? { scor: 1, text: "merg împreună (BTC = activ de risc)" } : r > p[1] ? { scor: 0, text: "parțial legate" } : r > p[2] ? { scor: -1, text: "decuplate" } : { scor: -2, text: "în sens opus" };
+  }
   function treaptaDin(s) { for (const t of TREPTE) if (s >= t.min) return t; return TREPTE[TREPTE.length - 1]; }
 
   // d = { vix, tnx, dxy, spy, btc (bare), fg: {valoare} }
@@ -49,7 +61,7 @@
     const vixB = bare(d.vix), tnxB = bare(d.tnx), dxyB = bare(d.dxy), spyB = bare(d.spy), btcB = bare(d.btc), semne = [];
     const vix = vixB.length ? vixB[vixB.length - 1].c : null;
     semne.push(!fin(vix) ? { cod: "vix", ce: "VIX · frica bursei", ok: false, scor: 0, valoare: "—", text: "lipsește" }
-      : Object.assign({ cod: "vix", ce: "VIX · frica bursei", ok: true, valoare: nr(vix, 1), v: vix }, vix < 12 ? { scor: 1, text: "liniște prea mare (atenție la întoarcere)" } : vix < 18 ? { scor: 2, text: "calm" } : vix < 25 ? { scor: -1, text: "prudență" } : vix < 30 ? { scor: -2, text: "frică" } : { scor: -3, text: "stres" }));
+      : Object.assign({ cod: "vix", ce: "VIX · frica bursei", ok: true, valoare: nr(vix, 1), v: vix }, vixTreapta(vix)));
     const bp = tnxB.length > LUNA ? (tnxB[tnxB.length - 1].c - tnxB[tnxB.length - 1 - LUNA].c) * 100 : null;
     semne.push(!fin(bp) ? { cod: "dobanda", ce: "Dobânda SUA 10 ani", ok: false, scor: 0, valoare: "—", text: "lipsește" }
       : Object.assign({ cod: "dobanda", ce: "Dobânda SUA 10 ani", ok: true, valoare: sg(Math.round(bp), 0) + " pb într-o lună", v: bp }, bp < -25 ? { scor: -2, text: "scade tare (teamă de recesiune)" } : bp < -10 ? { scor: -1, text: "scade" } : bp > 25 ? { scor: -1, text: "urcă tare (dobânzi mai mari)" } : bp > 10 ? { scor: 0, text: "urcă puțin" } : { scor: 1, text: "stabilă" }));
@@ -58,7 +70,7 @@
       : Object.assign({ cod: "dolar", ce: "Dolarul (DXY)", ok: true, valoare: sg(dx, 1) + "% într-o lună", v: dx }, dx > 1.5 ? { scor: -1, text: "în creștere (apasă pe risc)" } : dx < -1.5 ? { scor: 1, text: "în scădere (ajută riscul)" } : { scor: 0, text: "plat" }));
     const rho = spyB.length && btcB.length ? legatura(spyB, btcB) : null;
     semne.push(!fin(rho) ? { cod: "btcSp", ce: "BTC față de S&P", ok: false, scor: 0, valoare: "—", text: "lipsește" }
-      : Object.assign({ cod: "btcSp", ce: "BTC față de S&P", ok: true, valoare: "legătura " + (rho < 0 ? "−" : "") + nr(rho, 2) + " pe 30 de zile", v: rho }, rho > 0.6 ? { scor: 1, text: "merg împreună (BTC = activ de risc)" } : rho > 0.2 ? { scor: 0, text: "parțial legate" } : rho > -0.2 ? { scor: -1, text: "decuplate" } : { scor: -2, text: "în sens opus" }));
+      : Object.assign({ cod: "btcSp", ce: "BTC față de S&P", ok: true, valoare: "legătura " + (rho < 0 ? "−" : "") + nr(rho, 2) + " pe 30 de zile", v: rho }, legaturaBtc(rho)));
     // v100.255: 0 și 100 rămân pe scară; în afara ei scorul e 0 și semnul nu e valid
     const fgRaw = d.fg && fin(Number(d.fg.valoare)) ? Number(d.fg.valoare) : null;
     const fgOk = fgRaw !== null && fgRaw >= 0 && fgRaw <= 100;
@@ -187,5 +199,5 @@
         ". N-aș porni boți noi și n-aș cumpăra chiar acum: la anunț prețul poate sări în ambele direcții." };
   }
 
-  global.Macro = { TREPTE, bare, scor, treaptaDin, histerezis, mesajRegim, textCitire, htmlCard, linieCalibrare, regimNedovedit, evenimenteCurand, mesajEveniment };
+  global.Macro = { TREPTE, PRAGURI, vixTreapta, legaturaBtc, bare, scor, treaptaDin, histerezis, mesajRegim, textCitire, htmlCard, linieCalibrare, regimNedovedit, evenimenteCurand, mesajEveniment };
 })(typeof window !== "undefined" ? window : globalThis);

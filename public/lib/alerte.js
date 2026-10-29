@@ -532,8 +532,11 @@ var Alerte = (function () {
     });
     var r = o.corelatie ? nr(o.corelatie.r) : null;
     if (r !== null) {
-      var cur = n.cor ? n.cor.stare : null, tinta = r >= 0.5 ? "urmeaza" : r < 0.3 ? "separat" : cur;
-      if (init || !n.cor) n.cor = { stare: r >= 0.5 ? "urmeaza" : "separat", cand: null };
+      // v100.268 (29.10, el: „Cele din macro.js”): aceleași trepte ca macro și cardul Acasă - „urmează” peste 0,6, „pe drumul lui” de la 0,2 în jos;
+      // între ele („parțial legate”) starea nu se schimbă (histerezis; înainte 0,5 / 0,3)
+      var pb = typeof Macro !== "undefined" && Macro.PRAGURI ? Macro.PRAGURI.btc : [0.6, 0.2, -0.2];
+      var cur = n.cor ? n.cor.stare : null, tinta = r > pb[0] ? "urmeaza" : r <= pb[1] ? "separat" : cur;
+      if (init || !n.cor) n.cor = { stare: r > pb[0] ? "urmeaza" : "separat", cand: null };
       else if (tinta === n.cor.stare) n.cor.cand = null;
       else if (n.cor.cand === tinta) {
         mesaje.push({ cheie: "vreme-corelatie", nivel: "info", titlu: tinta === "urmeaza" ? "BTC urmează bursa acum (" + r.toFixed(2).replace(".", ",") + ")" : "BTC merge din nou pe drumul lui (" + r.toFixed(2).replace(".", ",") + ")",

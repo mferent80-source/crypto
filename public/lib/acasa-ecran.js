@@ -459,12 +459,15 @@ function acasaDeseneaza() {
       + (ndxL && ndxL.mag7.length ? '<div class="acLin"><span>Cele 7 mari</span><b>' + escapeHtml(ndxL.mag7Text) + '</b></div><div class="acMag">' + ndxL.mag7.map(function (x) { return '<span>' + escapeHtml(x.s) + ' <b class="' + (x.ch >= 0 ? "good" : "bad") + '">' + acPct(x.ch, 1) + '</b></span>'; }).join("") + '</div>' : '')
       : '<p class="acMut">' + escapeHtml(d.piataErr ? "Bursele n-au venit: " + d.piataErr : "Aduc bursele…") + '</p>');
   // VIX = frica bursei
-  var vcls = vixU == null ? "acMut" : vixU < 20 ? "good" : vixU < 30 ? "warn" : "bad", vnume = vixU == null ? "" : vixU < 15 ? "liniște mare" : vixU < 20 ? "liniște" : vixU < 30 ? "teamă" : "panică";
+  // v100.268 (29.10, el: „Cele din macro.js”): treapta din Macro.vixTreapta - aceeași ca rândul VIX din scorul macro (înainte „liniște” verde până la 20,
+  // iar macro zicea „prudență” de la 18)
+  var vt = vixU == null || typeof Macro === "undefined" || !Macro.vixTreapta ? null : Macro.vixTreapta(vixU);
+  var vcls = !vt ? "acMut" : vt.scor >= 2 ? "good" : vt.scor >= -1 ? "warn" : "bad", vnume = !vt ? "" : vt.text.split(" (")[0];
   var v31 = serie(vixB, 31), vmin = v31.length ? Math.min.apply(null, v31) : null, vmax = v31.length ? Math.max.apply(null, v31) : null;
   $("acVix").innerHTML = '<div class="acCap"><h4>VIX · frica bursei</h4><span class="acSub">zilnic</span></div>'
     + acCadran(vixU, vixU == null ? null : (vixU - 10) / 30, "#26A96C", "#E0524A", "10", "40", "VIX " + (vixU == null ? "fără date" : vixU.toFixed(1).replace(".", ",") + ", " + vnume))
     + '<div class="acFgv"><b class="' + vcls + '">' + (vixU == null ? "—" : acNr(vixU, 2)) + '</b> ' + escapeHtml(vnume) + acIeri(sc, "vix", 1, true) + '</div>' + acSpark(v31, "#9FB3C4")
-    + (vmin != null ? '<p class="acEt">' + v31.length + ' de zile: între ' + acNr(vmin, 1) + ' și ' + acNr(vmax, 1) + '; sub 20 bursa e liniștită, peste 30 e panică.</p>' : '');
+    + (vmin != null ? '<p class="acEt">' + v31.length + ' de zile: între ' + acNr(vmin, 1) + ' și ' + acNr(vmax, 1) + '; sub 18 e calm, 18–25 prudență, 25–30 frică, peste 30 panică.</p>' : '');
   // largimea Nasdaq 100
   var lb = function (et, n, tot, slab) { var pc = tot ? Math.round(n / tot * 100) : null; return '<div class="acLb"><span>' + et + '</span><i><b class="' + (pc != null && pc < (slab || 50) ? "w" : "") + '" style="width:' + (pc || 0) + '%"></b></i><em>' + (pc == null ? "—" : pc + "%") + '</em></div>'; };
   // ziua de BURSA a cifrelor (ultima inchidere a indicelui), nu ziua in care a rulat colectorul
