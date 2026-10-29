@@ -95,8 +95,11 @@ await test("1e fără privit în viitor: barele de 1 h de după ultima bară de 
   assert.equal(a.proba.barePeZi, 24);
   assert.deepEqual(b.setare, a.setare); assert.deepEqual(b.verdict, a.verdict); assert.deepEqual(b.stat, a.stat);
 });
-await test("1f H = 1 rămâne pe 15 minute; la H = 2 cu doar ~20 de zile de 1 h (nu aduc mai multe ferestre) tot pe 15 minute", () => {
-  assert.equal(fisaDe(RW, 1, { b1h: RW.b1h, faraMc: true }).proba.barePeZi, 96);
+/* v100.270 (el, 29.10: „Da, și la 1 zi”): și H = 1 trece pe barele de 1 h (~60 de ferestre independente față de ~10 pe 15 minute), cu aceeași cerință t */
+await test("1f H = 1 trece și el pe barele de 1 h (cu cerința t); la H = 2 cu doar ~20 de zile de 1 h (nu aduc mai multe ferestre) tot pe 15 minute", () => {
+  const f1 = fisaDe(RW, 1, { b1h: RW.b1h, faraMc: true });
+  assert.equal(f1.proba.barePeZi, 24, "H = 1 a rămas pe 15 minute");
+  assert.equal(fisaDe(RW, 1, { faraMc: true }).proba.barePeZi, 96, "H = 1 fără barele de 1 h: pe 15 minute, ca înainte");
   assert.equal(fisaDe(RW, 2, { b1h: RW.b1h.slice(-480), faraMc: true }).proba.barePeZi, 96);
   assert.equal(fisaDe(RW, 2, { faraMc: true }).proba.barePeZi, 96, "fără barele de 1 h, ca înainte");
 });
@@ -108,6 +111,13 @@ await test("1g PORNEȘTE e posibil la H = 2 și H = 3 pe o monedă cu avantaj (o
     const vechi = fisaDe(OSC, H, { faraMc: true });
     assert.notEqual(vechi.verdict.nivel, "porneste", "pe 15 minute (5 / 3 ferestre) n-ar fi trebuit");
   }
+});
+await test("1g' și la H = 1: pe moneda cu avantaj (oscilează) PORNEȘTE rămâne posibil pe barele de 1 h; pe mersul aleator, nu", () => {
+  const f = fisaDe(OSC, 1, { b1h: OSC.b1h });
+  assert.equal(f.proba.barePeZi, 24);
+  assert.equal(f.verdict.nivel, "porneste", "H = 1 pe moneda cu avantaj: " + f.verdict.nivel + " · " + f.verdict.motive.join(" | "));
+  const r = fisaDe(RW, 1, { b1h: RW.b1h });
+  assert.notEqual(r.verdict.nivel, "porneste", "pe mers aleator H = 1 a zis PORNEȘTE: " + r.verdict.motive.join(" | "));
 });
 await test("1h media pe ferestrele de test care nu se suprapun trebuie să se vadă peste zero (t ≥ 1,65) la proba pe 1 h - motivul, cu o zecimală", () => {
   const st = { antren: { mediana: 0.01, lichidari: 0 }, test: { mediana: 0.004, medie: 0.002, lichidari: 0, ind: { n: 30, medie: 0.002, abatere: 0.03, t: 0.37 } } };
@@ -171,7 +181,7 @@ await test("1k app.js: ambele GridProba.fisa( primesc b1h la H ≥ 2 (grOreFisa)
   const apeluri = APP.split("GridProba.fisa(").slice(1).map((x) => x.slice(0, 600));
   assert.equal(apeluri.length, 2);
   for (const a of apeluri) assert.match(a, /b1h:/, "un apel al fișei fără b1h: " + a.slice(0, 200));
-  assert.match(APP, /grStare\.H>=2\?await grOreFisa\(simbol,d\.r60\)/);
+  assert.match(APP, /grStare\.H>=1\?await grOreFisa\(simbol,d\.r60\)/, "pagina Grid dă barele de 1 h și la H = 1");   /* v100.269b: și la 1 zi */
   const c = COL.split("GridProba.fisa(").slice(1).map((x) => x.slice(0, 500));
   assert.equal(c.length, 1); assert.match(c[0], /b1h/);
   assert.match(COL, /b1h = GridCalcul\.bare\(JSON\.parse\(fs\.readFileSync\(fisOre\(s\), "utf8"\)\)\)/);

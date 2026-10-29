@@ -8,6 +8,8 @@
 // Rezultatele (29.10, pe codul v100.269), 300 de monede pe fiecare proces - PORNEȘTE pe date fără avantaj (fără MC / cu MC):
 //   volatilitate constantă: H = 1 (15 min, neschimbat) 25,3% / 25,3% · H = 2 nou 1,0% / 1,0% · H = 3 nou 1,3% / 1,3% · H = 2–3 pe 15 min 0%
 //   agitație grupată:       H = 1 16,3% / 16,3% · H = 2 nou 0,7% / 0,3% · H = 3 nou 1,0% / 1,0%
+// v100.270 (29.10, 120 de monede, H = 1 trecut și el pe 1 h): H = 1 de azi 21,7% / 20,0% ⇒ regula nouă 1,7% / 0,0% (constantă / grupată);
+//   H = 2 nou 1,7% / 0,0%, H = 3 nou 0,8% / 0,0%
 //   aceeași regulă pe 1 h FĂRĂ cerința t ≥ 1,65: H = 2 12,3% / 6,7%, H = 3 18,3% / 12,0% (const. / grupată) - de aici cerința t (grid-calcul.js, verdict)
 import fs from "node:fs";
 import os from "node:os";
@@ -43,7 +45,7 @@ if (!isMainThread) {
     for (const H of Hs) {
       const o = { simbol: "SINT", pret, b15: m.b15, b4h: m.b4h, b1d: m.b1d, suma: 100, fundingZi: null, H, dir: null, levier: null, minNotional: null };
       // „vechi” = fără barele de 1 h (cum era până acum la orice H); „nou” = cu ele (la H = 1 regula nouă nu le folosește)
-      for (const fel of H === 1 ? ["vechi"] : ["vechi", "nou"]) {
+      for (const fel of ["vechi", "nou"]) {
         const f = GP.fisa(fel === "nou" ? Object.assign({ b1h: m.b1h }, o) : o);
         rez[H + fel] = f.eroare ? { eroare: f.eroare } : { mc: f.verdict.nivel, faraMc: nivelFaraMc(f), bare: f.proba.barePeZi || 96, ind: f.proba.ferestre.testIndependente };
       }
@@ -64,7 +66,7 @@ await Promise.all(Array.from({ length: fire }, (_, k) => new Promise((gata, rau)
 const wilson = (k, n) => { const z = 1.96, p = k / n, d = 1 + z * z / n, c = p + z * z / (2 * n), m = z * Math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)); return [Math.max(0, (c - m) / d), Math.min(1, (c + m) / d)]; };
 const pr = (k, n) => { const w = wilson(k, n); return `${k}/${n} = ${(k / n * 100).toFixed(1).replace(".", ",")}% (95%: ${(w[0] * 100).toFixed(1).replace(".", ",")}–${(w[1] * 100).toFixed(1).replace(".", ",")}%)`; };
 console.log(`\nSUB H0 · ${N} monede sintetice (${grupat ? "agitație grupată" : "volatilitate constantă"}), 183 de zile, fără avantaj · rădăcina ${rad}\n`);
-for (const H of Hs) for (const fel of H === 1 ? ["vechi"] : ["vechi", "nou"]) {
+for (const H of Hs) for (const fel of ["vechi", "nou"]) {
   const l = toate.map((r) => r[H + fel]).filter((x) => x && !x.eroare), k = l.filter((x) => x.mc === "porneste").length, k0 = l.filter((x) => x.faraMc === "porneste").length;
   const ind = l.map((x) => x.ind).sort((a, b) => a - b), bare = [...new Set(l.map((x) => x.bare))].join("/");
   console.log(`H = ${H} ${fel === "nou" ? "regula NOUĂ (1 h)" : "de azi (15 min)"}: PORNEȘTE fără Monte Carlo ${pr(k0, l.length)} · cu Monte Carlo ${pr(k, l.length)} · ferestre independente de test (mediana) ${ind[ind.length >> 1]} · bare/zi ${bare}`);

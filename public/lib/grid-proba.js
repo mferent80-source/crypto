@@ -278,7 +278,9 @@ var GridProba = (function () {
   // v100.269 (ideile auditului 29.10): barele de 1 h ale fișei - doar cele ÎNCHISE până la capătul ultimei bare de 15M (fișa refăcută în trecut nu vede
   // ce a urmat); null când nu aduc mai multe ferestre independente de test decât cele de 15M (se știe din lungimi, nu din rezultate)
   function bareOraFisa(o) {
-    if (!(o.H >= 2) || !Array.isArray(o.b1h) || !o.b15 || !o.b15.length) return null;
+    // v100.270 (el, 29.10: „Da, și la 1 zi”): și H = 1 - pe 15 minute avea ~10 ferestre de test și zicea PORNEȘTE sub H0 în 21,7% / 20,0%
+    // (120 de monede, constantă / grupată); pe 1 h ~61 de ferestre + cerința t: 1,7% / 0,0% (scripts/sim-h0-v100269.mjs)
+    if (!(o.H >= 1) || !Array.isArray(o.b1h) || !o.b15 || !o.b15.length) return null;
     var tF = o.b15[o.b15.length - 1].t + 900000, b = o.b1h.filter(function (x) { return x && x.t + 3600000 <= tF; });
     // revizia independentă (29.10): KV-ul `ore:` nu expiră și fișierul de pe disc poate fi vechi ⇒ doar bucata CONTINUĂ de la capăt (fără goluri
     // peste 2 h), iar ultima ei bară la cel mult 2 h de capătul barelor de 15M; altfel fișa judeca pe altă perioadă sau peste o gaură de 79 de zile

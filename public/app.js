@@ -5256,7 +5256,7 @@ async function gridCalculeaza(fortat){
     await grPlanUltim();try{await grFranaAdu()}catch(e){}   // v100.103 (I-536): pragul lui, înaintea ferestrelor   // v100.16: planul tau cel mai nou, pentru gridul dupa plan
     var d=grStare.date,info=grStare.monede&&grStare.monede[simbol];
     if(grStare.monede&&!info)throw Error(simbol.replace(/_USDT_PERP$/,"")+" nu există ca PERP pe Pionex.");
-    var o1h=grStare.H>=2?await grOreFisa(simbol,d.r60):null;   /* v100.269 (ideile auditului 29.10): la 2–3 zile proba fișei pe ~6 luni de bare de 1 h */
+    var o1h=grStare.H>=1?await grOreFisa(simbol,d.r60):null;   /* v100.270 (el: „Da, și la 1 zi”): și la 1 zi pe barele de 1 h, cu cerința t (H0: 21,7% ⇒ 1,7%) */   /* v100.269 (ideile auditului 29.10): la 2–3 zile proba fișei pe ~6 luni de bare de 1 h */
     var f=GridProba.fisa({simbol:simbol,pret:GridCalcul.pretCurent(d.r15),b15:GridCalcul.bare(d.r15),b4h:GridCalcul.bare(d.r4),b1d:GridCalcul.bare(d.r1),b1h:o1h?GridCalcul.bare(o1h):null,
       suma:suma,fundingZi:d.fundingZi,H:grStare.H,dir:grStare.dir,levier:lev?Math.round(lev):null,minNotional:info?Number(info.minNotional):null,minSize:info?Number(info.minSizeLimit):null});
     if(f.eroare){grStare.fisa=null;grStare.eroare=f.eroare}else{f.info=info||null;grStare.fisa=f}
