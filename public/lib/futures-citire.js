@@ -201,7 +201,30 @@ var FuturesCitire = (function () {
     return t.join(" ");
   }
 
-  return { interval: interval, pe8h: pe8h, cost1000: cost1000, percentila: percentila, mediana: mediana, aglomerare: aglomerare, oiPret: oiPret,
+  // Consumatorii aceleiași stări (29.10, el: „Da, în aceeași livrare”): alertele, proxy-ul de lichidări și verdictul citesc aceleași
+  // reguli ca pagina - înainte aveau pragurile lor (L/S 1,5 și 1,35, funding brut pe plată), aprinse mereu pe ETH, SOL, XRP…
+  var PRAG_ALERTA8 = 0.0005;   // pragul vechi al alertei (0,05%), acum pe 8 h
+  function rataSemn(f) { f = nr(f); return f === null ? "—" : (f < 0 && Number((Math.abs(f) * 100).toFixed(4)) !== 0 ? "−" : "") + rata(f); }
+  function alertaLs(s) {
+    if (!s || nr(s.ls) === null || !s.lsVot) return null;
+    return { titlu: "Long/Short la extrem", text: "Raport " + num(s.ls, 2) + " · p" + pr(s.lsPct) + " din istoria monedei · " + (s.lsVot < 0 ? "longurile înghesuite" : "shorturile înghesuite") };
+  }
+  function alertaFunding(s) {
+    if (!s) return null;
+    var f = nr(s.funding), f8 = nr(s.fr8) !== null ? nr(s.fr8) : f, ore = nr(s.fundingIntervalHours);
+    if (f === null || f8 === null || Math.abs(f8) <= PRAG_ALERTA8) return null;
+    return { titlu: "Funding la extrem", text: rataSemn(f) + (ore ? " la " + ore + " h" : "") + " (" + rataSemn(f8) + " la 8 h) · " + (f > 0 ? "longurile plătesc" : "shorturile plătesc") };
+  }
+  // partea pe care stă riscul de lichidare în proxy: longuri înghesuite ⇒ jos, shorturi înghesuite ⇒ sus
+  function partiaProxy(context) { return context === "CROWDED" ? "DOWN" : context === "CONTRARIAN +" ? "UP" : "BALANCED"; }
+  // în verdict, contextul se citește pe direcția setup-ului: longurile înghesuite susțin un short și sunt risc pentru un long
+  function inVerdict(context, dir) {
+    if (context === "CROWDED") return dir < 0 ? { parte: "pos", text: "Futures: longurile înghesuite susțin short-ul" } : { parte: "risks", text: "Futures: longurile înghesuite (risc pentru long)" };
+    if (context === "CONTRARIAN +") return dir < 0 ? { parte: "risks", text: "Futures: shorturile înghesuite (risc pentru short)" } : { parte: "pos", text: "Futures: shorturile înghesuite susțin long-ul" };
+    return null;
+  }
+
+  return { alertaLs: alertaLs, alertaFunding: alertaFunding, partiaProxy: partiaProxy, inVerdict: inVerdict, interval: interval, pe8h: pe8h, cost1000: cost1000, percentila: percentila, mediana: mediana, aglomerare: aglomerare, oiPret: oiPret,
     eticheta: eticheta, motiv: motiv, subFunding: subFunding, subOi: subOi, subLs: subLs, biasFunding: biasFunding, subContext: subContext,
     subOiPret: subOiPret, fraza: fraza, pr: pr, PRAG8: PRAG8 };
 })();

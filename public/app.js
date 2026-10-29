@@ -260,8 +260,10 @@ function renderVolatility(q,j){
  $("volExpansion").textContent=v.expansion;$("volExpansion").className=v.expansion==="HIGH"?"bad":v.expansion==="MEDIUM"?"neutral":"good";return v
 }
 function renderLiquidationProxy(q,deriv){
- const px=q.price,a=q.atr,levels=[-3,-2,-1,0,1,2,3],fund=deriv?.funding||0,ls=deriv?.ls||1,oiCh=parseFloat(deriv?.oiTrend)||0;
- let hotSide=(fund>.0003||ls>1.35)?"DOWN":(fund<-.0003||ls<.75)?"UP":"BALANCED";
+ const px=q.price,a=q.atr,levels=[-3,-2,-1,0,1,2,3],oiCh=parseFloat(deriv?.oiTrend)||0;
+ /* v100.264: let hotSide=(fund>.0003||ls>1.35)?"DOWN":(fund<-.0003||ls<.75)?"UP":"BALANCED" — 1,35 ținea ETH, SOL, XRP mereu pe „LONG LIQUIDATION RISK”.
+    Acum partea vine din contextul paginii Futures (funding la 8 h, raportul față de istoria monedei). */
+ let hotSide=FuturesCitire.partiaProxy(deriv?.context);
  $("proxyMap").innerHTML=levels.map(n=>{let price=px+n*a*1.25,cls="cool";if((hotSide==="DOWN"&&n<0)||(hotSide==="UP"&&n>0))cls=Math.abs(n)<=2?"hot":"mid";else if(n===0)cls="mid";return `<div class="proxyLvl ${cls}">${n===0?"SPOT":(n>0?"+":"")+n+" ATR"}<br><b>${num(price)}</b></div>`}).join("");
  let bias=hotSide==="DOWN"?"LONG LIQUIDATION RISK":hotSide==="UP"?"SHORT SQUEEZE RISK":"BALANCED";if(Math.abs(oiCh)>=3)bias+=" · OI EXPANSION";$("proxyBias").textContent=bias;$("proxyBias").className=hotSide==="DOWN"?"bad":hotSide==="UP"?"good":"neutral"
 }
@@ -2664,8 +2666,8 @@ function renderMasterVerdict(){
   if(driftSnapshot?.state==="DRIFT")risks.push("Model/data drift detected");
   if(window.__intelNews?.high>0)risks.push(`High-risk news events ${window.__intelNews.high}`);
   else if(window.__intelNews?.risk==="LOW")pos.push("News event risk low");
-  if(window.__derivativesState?.context==="CROWDED")risks.push("Futures positioning crowded");
-  else if(window.__derivativesState?.context==="CONTRARIAN +")pos.push("Contrarian futures context");
+  /* v100.264: înainte CROWDED ⇒ risc și CONTRARIAN + ⇒ plus, orice direcție - la un short, longurile înghesuite apăreau ca risc */
+  {const fv=FuturesCitire.inVerdict(window.__derivativesState?.context,dir);if(fv)(fv.parte==="pos"?pos:risks).push(fv.text)}
   if(metaEnsembleV2?.models){
     const mv2=ensembleCurrentPrediction(),cfg=metaEnsembleV2.config||ensembleV2Config();
     if(mv2.state==="USABLE ENSEMBLE"&&mv2.disagreement<=cfg.maxDisagreement)pos.push("ML Ensemble v2 OOS gate passed");
@@ -3008,8 +3010,10 @@ function checkAlerts(q,sm,deriv){
  }
  if(st.alerts.signal&&sm&&Math.max(sm.long,sm.short)>=st.signalMin&&sm.direction!=="WAIT")addAlert("signal","Strong "+sm.direction+ " setup",`${coin(norm($("symbol").value))} confidence ${Math.max(sm.long,sm.short).toFixed(0)}/100`,"good");
  if(deriv){
-   if(st.alerts.ls&&deriv.ls!=null&&(deriv.ls>1.5||deriv.ls<.67))addAlert("ls","Extreme Long/Short",`Ratio ${deriv.ls.toFixed(2)} · ${deriv.ls>1.5?"longs crowded":"shorts crowded"}`,"high");
-   if(st.alerts.funding&&deriv.funding!=null&&Math.abs(deriv.funding)>.0005)addAlert("funding","Funding extreme",`${fundingRo(deriv.funding)} funding`,"high");
+   /* v100.264: înainte L/S > 1,5 sau < 0,67 fix (sărea la fiecare analiză pe ETH, SOL, XRP…) și funding brut > 0,05% pe plată.
+      Acum aceleași reguli ca pagina Futures: raportul la extrem față de moneda lui (p99 / p1), funding-ul adus la 8 h. */
+   {const a=FuturesCitire.alertaLs(deriv);if(st.alerts.ls&&a)addAlert("ls",a.titlu,a.text,"high")}
+   {const a=FuturesCitire.alertaFunding(deriv);if(st.alerts.funding&&a)addAlert("funding",a.titlu,a.text,"high")}
    if(st.alerts.oi&&deriv.oiTrend&&deriv.oiTrend!=="N/A"&&Math.abs(parseFloat(deriv.oiTrend))>=3)addAlert("oi","OI expansion",`${deriv.oiTrend} over recent samples`,"warn")
  }
 }
@@ -4389,7 +4393,7 @@ async function derivatives(){
  $("fundingMed").textContent=fundingStats&&(fundingStats.avg24!=null||fundingStats.avg3d!=null)?"24 h: "+med(fundingStats.avg24)+" · 3 zile: "+med(fundingStats.avg3d)+(ore?" (pe plata de "+ore+" h)":""):"—";
  $("oiPret24").textContent=F.subOiPret(op);
  let longPct=ls==null?null:(ls/(1+ls))*100, shortPct=ls==null?null:(100-(ls/(1+ls))*100);
- const stare={funding:fr,oi,ls,context,longPct,shortPct,oiTrend,oiDeltas,fundingStats,fundingIntervalHours:ore,fr8:ag.fr8,lsPct:ag.lsPct,conflict:ag.conflict,oiUsd,simbol:simbolF,la:Date.now()};
+ const stare={funding:fr,oi,ls,context,longPct,shortPct,oiTrend,oiDeltas,fundingStats,fundingIntervalHours:ore,fr8:ag.fr8,lsPct:ag.lsPct,lsVot:ag.lsVot,conflict:ag.conflict,oiUsd,simbol:simbolF,la:Date.now()};
  W.__derivativesState=stare;if(areDate)markFresh("futures");
  if(W.__radarState&&W.__radarState.q){updateFlowWindow(W.__radarState.q);renderLiquidationProxy(W.__radarState.q,stare);renderQuantFlow(W.__radarState.q,stare)}
  $("ftext").textContent=areDate?F.fraza({funding:fr,ore,oiPret:op,ls,lsPct:ag.lsPct,lsMax:ag.lsMax,lsMin:ag.lsMin}):d&&d.faraContract?F.motiv(d):("Datele futures lipsesc acum; analiza spot rămâne completă. "+(motivFutures||F.motiv(dServer))).trim();
@@ -4595,7 +4599,7 @@ const V63_COST_KEY="liveCostV63";
 function v63CostSettings(){return {...{instrument:"AUTO",borrowAnnualPct:8,locate:"UNKNOWN",fundingIntervalHours:8,holdHours:24},...v60StoreGet(V63_COST_KEY,{})}}
 function v63ResolvedInstrument(cfg=v63CostSettings()){if(cfg.instrument&&cfg.instrument!=="AUTO")return cfg.instrument;return assetClass()==="STOCKS"?"STOCK":"SPOT"}
 function saveV63CostSettings(){const x={instrument:$('v63Instrument')?.value||'AUTO',borrowAnnualPct:Math.max(0,Math.min(500,+$('v63BorrowPct')?.value||0)),locate:$('v63Locate')?.value||'UNKNOWN',fundingIntervalHours:Math.max(1,Math.min(24,+$('v63FundingHours')?.value||8)),holdHours:Math.max(.25,Math.min(720,+$('v63HoldHours')?.value||24))};v60StoreSet(V63_COST_KEY,x);renderV63LiveExecution();return x}
-function v63CostInputSnapshot(direction){const s=v63CostSettings(),instrument=v63ResolvedInstrument(s),fundingRate=Number.isFinite(+window.__derivativesState?.funding)?+window.__derivativesState.funding:null;return {instrument,borrowAnnualPct:+s.borrowAnnualPct||0,locate:s.locate||'UNKNOWN',fundingIntervalHours:+s.fundingIntervalHours||8,fundingRate,direction}}
+function v63CostInputSnapshot(direction){const s=v63CostSettings(),instrument=v63ResolvedInstrument(s),fundingRate=Number.isFinite(+window.__derivativesState?.funding)?+window.__derivativesState.funding:null;return {instrument,borrowAnnualPct:+s.borrowAnnualPct||0,locate:s.locate||'UNKNOWN',fundingIntervalHours:/* v100.264: intervalul măsurat al aceleiași rate (COTI 4 h), setarea rămâne rezerva */+window.__derivativesState?.fundingIntervalHours>0?+window.__derivativesState.fundingIntervalHours:(+s.fundingIntervalHours||8),fundingRate,direction}}
 function v63CarryCostR(input,holdingHours,entry,stop){const x=input||{},hours=Math.max(0,+holdingHours||0),riskPct=entry>0?Math.abs(entry-stop)/entry:NaN;if(!(riskPct>0))return 0;let carryPct=0;if(x.instrument==='PERP'&&Number.isFinite(+x.fundingRate)){const intervals=hours/Math.max(1,+x.fundingIntervalHours||8),signed=(x.direction==='LONG'?1:-1)*(+x.fundingRate);carryPct+=signed*intervals}if(x.instrument==='STOCK'&&x.direction==='SHORT')carryPct+=(Math.max(0,+x.borrowAnnualPct||0)/100)*(hours/(365*24));return carryPct/riskPct}
 function v63TradeCarryCostR(t,holdingHours){const x=t?.v63CostInput||v63CostInputSnapshot(t?.direction||'LONG');return v63CarryCostR(x,holdingHours,+t?.actualEntry||0,+t?.stop||0)}
 function v63CarryFraction(input,holdingHours){const x=input||{},hours=Math.max(0,+holdingHours||0);let f=0;if(x.instrument==='PERP'&&Number.isFinite(+x.fundingRate)){const intervals=hours/Math.max(1,+x.fundingIntervalHours||8);f+=(x.direction==='LONG'?1:-1)*(+x.fundingRate)*intervals}if(x.instrument==='STOCK'&&x.direction==='SHORT')f+=(Math.max(0,+x.borrowAnnualPct||0)/100)*(hours/(365*24));return f}

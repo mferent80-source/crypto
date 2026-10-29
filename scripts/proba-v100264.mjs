@@ -242,6 +242,8 @@ await test("3a pagina: moneda și ora, cine plătește la 4 h, OI în USD, rapor
   assert.equal(c.win.__derivativesState.context, "CONTRARIAN +");
   assert.equal(c.el.fcontext.textContent, "Shorturile înghesuite");
   assert.equal(c.win.__derivativesState.fundingIntervalHours, 4);
+  // starea poartă și votul raportului și rata la 8 h - alertele (FuturesCitire.alertaLs / alertaFunding) le citesc de aici
+  assert.equal(c.win.__derivativesState.lsVot, 0); assert.ok(Math.abs(c.win.__derivativesState.fr8 - -0.00034534) < 1e-12);
   assert.match(c.el.ftext.textContent, /Context, nu semnal/);
   assert.match(c.el.oiContext.textContent, /^OI .+ COTI/);   // bucățile au unitate
   assert.doesNotMatch(Object.values(c.el).map((x) => x.textContent).join(" "), /NaN|undefined|CROWDED|CONTRARIAN|BALANCED/);
@@ -313,6 +315,76 @@ await test("3f fundingSummary pe ORE, nu pe ultimele 3 / 9 plăți: la 4 h, „2
   assert.ok(Math.abs(fs2(h).avg24 - 0.0003) < 1e-12, String(fs2(h).avg24));
   const vechi = Array.from({ length: 10 }, () => ({ fundingRate: "0.0001" }));   // fără fundingTime: ca înainte
   assert.ok(Math.abs(fs2(vechi).avg24 - 0.0001) < 1e-12);
+});
+
+// ---------------------------------------------------------------- 5. consumatorii aceleiași stări (el, 29.10: „Da, în aceeași livrare”)
+const ethIst = istoric(500, (i) => 2.5 + (i % 100) / 100);
+await test("5a alerta Long/Short sare doar la extrem (p99 / p1), nu la 1,5 fix; textul în română", () => {
+  const F = incarcaFC();
+  const a = F.alertaLs({ ls: 3.56, lsVot: -1, lsPct: 100 });
+  assert.equal(a.titlu, "Long/Short la extrem"); assert.match(a.text, /longurile înghesuite/); assert.match(a.text, /p100/);
+  assert.equal(F.alertaLs({ ls: 3.0, lsVot: 0, lsPct: 51 }), null); assert.equal(F.alertaLs({}), null); assert.equal(F.alertaLs(null), null);
+});
+await test("5b alerta de funding pe rata adusă la 8 h (−0,03% la 4 h = −0,06% la 8 h sare; 0,04% la 8 h nu)", () => {
+  const F = incarcaFC();
+  const a = F.alertaFunding({ funding: -0.0003, fundingIntervalHours: 4, fr8: -0.0006 });
+  assert.equal(a.titlu, "Funding la extrem"); assert.match(a.text, /la 4 h/); assert.match(a.text, /−0,0600% la 8 h/);
+  assert.equal(F.alertaFunding({ funding: 0.0004, fr8: 0.0004 }), null); assert.equal(F.alertaFunding({}), null);
+});
+await test("5c checkAlerts: ETH cu raportul obișnuit (3,0) nu mai dă „Long/Short la extrem”; cu lsVot dă", () => {
+  const ruleaza = (deriv) => {
+    const alerte = [];
+    const deps = { appSettings: () => ({ nearPct: 1, signalMin: 101, alerts: { sr: false, signal: false, ls: true, funding: true, oi: true } }), addAlert: (k, t, x) => alerte.push([k, t, x]),
+      coin: (s) => s, norm: (s) => s, $: () => ({ value: "ETH" }), num: String, fundingRo: new Function("return " + fnApp("fundingRo"))(), FuturesCitire: incarcaFC() };
+    // după checkAlerts nu urmează „\nfunction ” (vine alt cod) ⇒ blocul până la „}” pe rândul lui
+    const i = APP.indexOf("\nfunction checkAlerts(") + 1, bloc = APP.slice(i, APP.indexOf("\n}\n", i) + 2);
+    new Function(...Object.keys(deps), "return (" + bloc + ")")(...Object.values(deps))({ price: 1, levels: {} }, null, deriv);
+    return alerte;
+  };
+  assert.deepEqual(ruleaza({ ls: 3.0, lsVot: 0, lsPct: 51, funding: 0.00004, fr8: 0.00004, oiTrend: "+0.20%" }), []);
+  const x = ruleaza({ ls: 3.56, lsVot: -1, lsPct: 100, funding: 0.00004, fr8: 0.00004, oiTrend: "N/A" });
+  assert.equal(x.length, 1); assert.equal(x[0][0], "ls"); assert.equal(x[0][1], "Long/Short la extrem");
+});
+await test("5d proxy-ul de lichidări ia partea din contextul paginii: ETH 3,0 echilibrat ⇒ BALANCED (înainte: LONG LIQUIDATION RISK de la 1,35)", () => {
+  const ruleaza = (deriv) => {
+    const el = {}; const $ = (id) => (el[id] = el[id] || { textContent: "", className: "", innerHTML: "" });
+    new Function("$", "num", "FuturesCitire", "return (" + fnApp("renderLiquidationProxy") + ")")($, String, incarcaFC())({ price: 100, atr: 1 }, deriv);
+    return el.proxyBias.textContent;
+  };
+  assert.equal(ruleaza({ context: "BALANCED", ls: 3.0, funding: 0.0001, oiTrend: "+0.10%" }), "BALANCED");
+  assert.equal(ruleaza({ context: "CROWDED", ls: 3.6, funding: 0.0001, oiTrend: "+0.10%" }), "LONG LIQUIDATION RISK");
+  assert.equal(ruleaza({ context: "CONTRARIAN +", ls: 0.5, funding: -0.0005, oiTrend: "+4.00%" }), "SHORT SQUEEZE RISK · OI EXPANSION");
+  assert.equal(ruleaza({}), "BALANCED");
+});
+await test("5e costul v63 ia intervalul măsurat al funding-ului (COTI 4 h), setarea rămâne rezerva", () => {
+  const ruleaza = (stare) => new Function("v63CostSettings", "v63ResolvedInstrument", "window", "return (" + fnApp("v63CostInputSnapshot") + ")")(
+    () => ({ instrument: "AUTO", borrowAnnualPct: 8, locate: "UNKNOWN", fundingIntervalHours: 8, holdHours: 24 }), () => "PERP", { __derivativesState: stare })("LONG");
+  assert.equal(ruleaza({ funding: -0.0001, fundingIntervalHours: 4 }).fundingIntervalHours, 4);
+  assert.equal(ruleaza({ funding: -0.0001 }).fundingIntervalHours, 8);
+  assert.equal(ruleaza({}).fundingIntervalHours, 8);
+});
+await test("5f verdictul: contextul futures pe direcție (longuri înghesuite susțin un short, sunt risc pentru un long)", () => {
+  const F = incarcaFC();
+  assert.equal(F.inVerdict("CROWDED", -1).parte, "pos"); assert.equal(F.inVerdict("CROWDED", 1).parte, "risks"); assert.equal(F.inVerdict("CROWDED", 0).parte, "risks");
+  assert.equal(F.inVerdict("CONTRARIAN +", -1).parte, "risks"); assert.equal(F.inVerdict("CONTRARIAN +", 1).parte, "pos");
+  assert.equal(F.inVerdict("BALANCED", 1), null); assert.equal(F.inVerdict(null, 1), null);
+  const mv = fnApp("renderMasterVerdict");
+  assert.match(mv, /FuturesCitire\.inVerdict\(window\.__derivativesState\?\.context,dir\)/);
+  assert.doesNotMatch(mv, /risks\.push\("Futures positioning crowded"\)/);
+});
+await test("5g aglomerarea boților: funding adus la 8 h cu intervalul scris; raportul față de istoria monedei (fără istorie: regula veche)", async () => {
+  await import("./lib/text-ro-global.mjs");
+  const S = new Function("GridCalcul", citeste("public", "lib", "semnale-bot.js") + "; return SemnaleBot;")({});
+  const oiSus = [{ sumOpenInterest: 100 }, { sumOpenInterest: 120 }];
+  // ETH, bot long: raportul 3,0 e obișnuit pentru ETH ⇒ doar OI ⇒ un singur semn ⇒ nimic (înainte: 3,0 ≥ 1,5 ⇒ două semne)
+  assert.equal(S.aglomerare({ funding: 0.00004, fundingIntervalHours: 8, longShort: 3.0, lsIst: ethIst, oiHist5m: oiSus }, "long"), null);
+  // același, raportul la vârf ⇒ două semne
+  assert.ok(S.aglomerare({ funding: 0.00004, fundingIntervalHours: 8, longShort: 3.6, lsIst: ethIst, oiHist5m: oiSus }, "long"));
+  // COTI la 4 h, bot short: −0,02% la 4 h = −0,04% la 8 h ⇒ semn, scris „/4 h”
+  const c = S.aglomerare({ funding: -0.0002, fundingIntervalHours: 4, longShort: 0.5, lsIst: istoric(500, (i) => 0.9 + (i % 50) / 100), oiHist5m: [] }, "short");
+  assert.ok(c, "COTI short fără semne"); assert.match(c.dovezi, /\/4 h/); assert.doesNotMatch(c.dovezi, /\/8 h/);
+  // fără istoria raportului (server vechi): regula veche, neschimbată (garda textelor)
+  assert.equal(S.aglomerare({ funding: 0.0006, longShort: 2.1, oiHist5m: oiSus }, "long").semne, 3);
 });
 
 // ---------------------------------------------------------------- 4. HTML, CSS, sw, versiunea

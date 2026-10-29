@@ -334,9 +334,19 @@ var SemnaleBot = (function () {
       if (a > 0 && z !== null) oi = z / a - 1;
     }
     var semn = dir === "long" ? 1 : -1, c = [];
-    if (f !== null && semn * f >= 0.0003) c.push("funding " + TextRo.pct(f * 100, 3) + "/8 h (" + TextRo.num(Math.abs(f) / 0.0001, 0) + "× obișnuitul)");
+    // v100.264 (29.10): rata adusă la 8 h înainte de prag și textul cu intervalul real - 464 din 814 contracte Binance plătesc la 4 h
+    // (COTI printre ele), iar „/8 h” se scria pe o rată de 4 h. Fără interval (server vechi): 8 h, ca înainte.
+    var oreF = nr(fut.fundingIntervalHours), ore8 = oreF && oreF > 0 ? oreF : 8, f8 = f === null ? null : f * 8 / ore8;
+    if (f8 !== null && semn * f8 >= 0.0003) c.push("funding " + TextRo.pct(f * 100, 3) + "/" + ore8 + " h (" + TextRo.num(Math.abs(f8) / 0.0001, 0) + "× obișnuitul)");
     if (oi !== null && oi >= 0.15) c.push("open interest +" + P(oi) + " în ultimele ore");   /* revizia Opus M5: fereastra ramane */
-    if (ls !== null && (dir === "long" ? ls >= 1.5 : ls <= 1 / 1.5)) c.push("long/short " + TextRo.num(ls, 2));
+    // v100.264: raportul conturilor față de istoria MONEDEI (p99 / p1 din ~500 h, ca pagina Futures - FuturesCitire): 1,5 fix ieșea
+    // „înghesuit” în 100% din ore pe ETH, SOL, XRP… Fără istorie (server vechi, garda textelor): regula veche, neschimbată.
+    var ist = Array.isArray(fut.lsIst) ? fut.lsIst.map(function (r) { return nr(Array.isArray(r) ? r[1] : r); }).filter(function (x) { return x !== null; }) : [];
+    if (ls !== null && ist.length >= 50) {
+      var sub = 0; for (var k = 0; k < ist.length; k++) if (ist[k] <= ls) sub++;
+      var pLs = 100 * sub / ist.length;
+      if (dir === "long" ? pLs >= 99 : pLs <= 1) c.push("long/short " + TextRo.num(ls, 2) + " (p" + (pLs >= 50 ? Math.floor(pLs) : Math.ceil(pLs)) + " pentru moneda asta)");
+    } else if (ls !== null && (dir === "long" ? ls >= 1.5 : ls <= 1 / 1.5)) c.push("long/short " + TextRo.num(ls, 2));
     if (c.length < 2) return null;
     return { nivel: c.length >= 3 ? "atentie" : "info", oiSchimb: oi, semne: c.length, dovezi: c.join(", "), text: "Mulțimea e înghesuită pe " + dir + ", ca botul: " + c.join(", ") + "; risc de curățare bruscă în sens opus." };
   }
