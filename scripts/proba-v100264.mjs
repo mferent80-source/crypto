@@ -11,6 +11,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { pandaInainteaCozii } from "./lib/panda-ultima.mjs";
+import "./lib/text-ro-global.mjs";   // proba v100.61 (RF4): orice probă care încarcă semnale-bot.js încarcă întâi TextRo
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8").replace(/\r\n/g, "\n");
@@ -373,7 +374,6 @@ await test("5f verdictul: contextul futures pe direcție (longuri înghesuite su
   assert.doesNotMatch(mv, /risks\.push\("Futures positioning crowded"\)/);
 });
 await test("5g aglomerarea boților: funding adus la 8 h cu intervalul scris; raportul față de istoria monedei (fără istorie: regula veche)", async () => {
-  await import("./lib/text-ro-global.mjs");
   const S = new Function("GridCalcul", citeste("public", "lib", "semnale-bot.js") + "; return SemnaleBot;")({});
   const oiSus = [{ sumOpenInterest: 100 }, { sumOpenInterest: 120 }];
   // ETH, bot long: raportul 3,0 e obișnuit pentru ETH ⇒ doar OI ⇒ un singur semn ⇒ nimic (înainte: 3,0 ≥ 1,5 ⇒ două semne)
