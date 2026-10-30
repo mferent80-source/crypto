@@ -107,11 +107,13 @@ await test("o zecimală fără „−0,0”; nicio zi cu frână se spune pe fa�
   assert.doesNotMatch(z.text, /−0,0/);
 });
 
-await test("versiunile: v100.275 în aplicație, v101.149 în colector", () => {
-  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.275"/);
-  assert.match(citeste("BUILD_INFO.json"), /"version": "v100\.275"/);
-  assert.match(citeste("public", "index.html"), /content="v100\.275" name="app-version"/);
-  assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.149"/);
+// v100.276: de la v100.275 / v101.149 în sus (ca probele vechi), nu exact
+await test("versiunile: de la v100.275 în aplicație, de la v101.149 în colector", () => {
+  const app = Number(citeste("functions", "_shared", "versiune.js").match(/VERSIUNE = "v100\.(\d+)"/)[1]);
+  assert.ok(app >= 275, String(app));
+  assert.match(citeste("BUILD_INFO.json"), new RegExp('"version": "v100\\.' + app + '"'));
+  assert.match(citeste("public", "index.html"), new RegExp('content="v100\\.' + app + '" name="app-version"'));
+  assert.ok(Number(citeste("scripts", "colector.mjs").match(/const VERSIUNE_COLECTOR = "v101\.(\d+)"/)[1]) >= 149);
 });
 
 console.log(picate ? `\n${picate} PICA din ${teste}\n` : `\ntoate ${teste} ok\n`);

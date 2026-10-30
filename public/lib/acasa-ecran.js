@@ -34,7 +34,7 @@ async function acasaPorneste(fortat) {
   var pas = async function (k, fn) { try { d[k] = await fn(); d[k + "Err"] = null; d[k + "La"] = Date.now(); } catch (e) { d[k + "Err"] = typeof textEroare === "function" ? textEroare(e) : String(e && e.message || e); } acasaDeseneaza(); };
   try {
     await Promise.all([
-      pas("clasament", async function () { var c = await getJSON("/api/istoric-bot?action=clasament"); return c && c.clasament || null; }),
+      pas("clasament", async function () { var c = await getJSON("/api/istoric-bot?action=clasament"); d.clasamentStare = c && c.stare || null; return c && c.clasament || null; }),   /* v100.276: + de ce lipsește */
       pas("sugestii", function () { return getJSON("/api/istoric-bot?action=sugestii"); }),   // v100.85 (reveniri + short)
       pas("piata", function () { return getJSON("/api/stiri?action=piata"); }),
       pas("tickers", async function () { var t = await getJSON("/api/market?type=pionex_tickers&market=PERP"); return t && t.data && t.data.tickers || null; }),
@@ -407,7 +407,7 @@ function acasaDeseneaza() {
   if ($("acBursaCand")) $("acBursaCand").textContent = deschis ? "bursa e deschisă · ultimele cifre de azi" : "închiderea de " + (ultZi || "ieri") + " · bursa se redeschide în zilele lucrătoare la " + acOraRedeschidere(acum);   /* v100.272: ora din CalendarBursa */
 
   // 1. doua verdicte alaturate
-  var v = Acasa.vreme({ clasament: cl, btc: { miscare: btcMis }, fg: fgI.acum });
+  var v = Acasa.vreme({ clasament: cl, btc: { miscare: btcMis }, fg: fgI.acum, stare: d.clasamentStare });
   // v100.199 (15.10, el: „de ce nu citește piața la deschidere” ⇒ „repară”): fără parola aplicației pe dispozitiv, serverul
   // refuză tot (401 AUTH_REQUIRED), iar cardurile scriau „Clasamentul n-a venit încă. Îl face colectorul o dată pe oră” — fals.
   // Acum spun pe față de ce nu se citește piața și unde se pune parola (aceeași regulă ca Tabloul: eroareDeParola).

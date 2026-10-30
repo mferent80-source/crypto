@@ -20,11 +20,28 @@ var Acasa = (function () {
   function randuri(prefix, bucati, sep, max) { var out = [], cur = prefix, gol = true; bucati.forEach(function (b) { if (!gol && (cur + sep + b).length > max) { out.push(cur); cur = "   " + b; } else { cur += (gol ? "" : sep) + b; gol = false; } }); out.push(cur); return out; }
   function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }   // v100.75: rezerva cu regula întreagă
 
-  // o = { clasament: {evita, candidati, faraDate, dir: {long, neutru, short}}, btc: {miscare}, fg: numar }
+  // v100.276 (30.10, el: „ok fă idei” - ideea 1 după v100.275): când clasamentul lipsește și colectorul a raportat ture picate, cardul spune
+  // DE CE (pe 29–30.10 a scris „n-a venit încă” o zi întreagă, cât serverul îl refuza). st = { esecuri, deLa, motiv, la } din action=clasament.
+  function oraScurta(t) {
+    var n = Number(t); if (!(n > 0)) return "";
+    try {
+      var p = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Bucharest", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(new Date(n)), o = {};
+      for (var i = 0; i < p.length; i++) o[p[i].type] = p[i].value;
+      return o.day + "." + o.month + " " + o.hour + ":" + o.minute;
+    } catch (e) { return ""; }
+  }
+  function clasamentLipsa(st) {
+    var n = st && nr(st.esecuri);
+    if (!(n > 0)) return null;
+    var de = oraScurta(st.deLa), motiv = st.motiv ? String(st.motiv).replace(/[.\s]+$/, "") : "";
+    return { titlu: "Clasamentul pieței nu ajunge pe server.",
+      text: "Colectorul a încercat " + (n === 1 ? "o dată" : "de " + cate(n, "dată", "ori") + " la rând") + (de ? ", de la " + de : "") + ", fără succes" + (motiv ? ": " + motiv : "") + ". Reîncearcă singur la 10 minute." };
+  }
+  // o = { clasament: {evita, candidati, faraDate, dir: {long, neutru, short}}, btc: {miscare}, fg: numar, stare: starea turelor (opțional) }
   function vreme(o) {
     o = o || {};
     var c = o.clasament, ev = c ? nr(c.evita) : null, ca = c ? nr(c.candidati) : null;
-    if (ev === null || ca === null || ev + ca <= 0) return { nivel: "fara-date", eticheta: "FĂRĂ DATE", titlu: "Clasamentul pieței n-a venit încă.", text: "Îl face colectorul de acasă o dată pe oră, pe primele 100 de monede după volum.", faCe: "" };
+    if (ev === null || ca === null || ev + ca <= 0) { var ls = clasamentLipsa(o.stare); return { nivel: "fara-date", eticheta: "FĂRĂ DATE", titlu: ls ? ls.titlu : "Clasamentul pieței n-a venit încă.", text: ls ? ls.text : "Îl face colectorul de acasă o dată pe oră, pe primele 100 de monede după volum.", faCe: "" }; }
     var n = ev + ca, cota = ev / n, btcMis = !!(o.btc && o.btc.miscare), fg = fgValid(o.fg);   // v100.259: 0–100, ca regimul macro
     var d = c.dir || {}, lo = nr(d.long) || 0, sh = nr(d.short) || 0, tot = lo + sh + (nr(d.neutru) || 0);
     var sens = tot > 0 && lo / tot >= 0.6 ? "urca" : tot > 0 && sh / tot >= 0.6 ? "coboara" : "imp";
@@ -491,6 +508,6 @@ var Acasa = (function () {
     return o;
   }
 
-  return { textCorelatie: textCorelatie, SECTOR: SECTOR, sectoare: sectoare, ziuaTa: ziuaTa, raportSaptamana: raportSaptamana, socotealaAlerte: socotealaAlerte, miscareTipica: miscareTipica, fundingPiata: fundingPiata, fundingAtentie: fundingAtentie, schimbari: schimbari, vreme: vreme, miscari: miscari, fg: fg, fgValid: fgValid, largime: largime, ro: ro, rezumatActiune: rezumatActiune, largimeNdx: largimeNdx, vremeBursa: vremeBursa, corelatie: corelatie, calendar: calendar, MAG7: MAG7, franaVerb: franaVerb, frazaPauza: frazaPauza, masuraFranei: masuraFranei, unesteZileFrana: unesteZileFrana };
+  return { clasamentLipsa: clasamentLipsa, textCorelatie: textCorelatie, SECTOR: SECTOR, sectoare: sectoare, ziuaTa: ziuaTa, raportSaptamana: raportSaptamana, socotealaAlerte: socotealaAlerte, miscareTipica: miscareTipica, fundingPiata: fundingPiata, fundingAtentie: fundingAtentie, schimbari: schimbari, vreme: vreme, miscari: miscari, fg: fg, fgValid: fgValid, largime: largime, ro: ro, rezumatActiune: rezumatActiune, largimeNdx: largimeNdx, vremeBursa: vremeBursa, corelatie: corelatie, calendar: calendar, MAG7: MAG7, franaVerb: franaVerb, frazaPauza: frazaPauza, masuraFranei: masuraFranei, unesteZileFrana: unesteZileFrana };
 })();
 if (typeof globalThis !== "undefined") globalThis.Acasa = Acasa;

@@ -39,13 +39,16 @@ export async function turaClasament(d) {
   const rz = d.GridClasament.rezumat({ la: Date.now(), monede });
   if (!monede.length || rz.faraDate > monede.length * 0.2) {
     d.jurnal("clasament NEURCAT:", rz.faraDate, "fara date din", monede.length);
-    return { urcat: false, monede, rz, durataS: Math.round((Date.now() - t0) / 1000) };
+    return { urcat: false, motiv: "prea multe monede fără date: " + rz.faraDate + " din " + monede.length, monede, rz, durataS: Math.round((Date.now() - t0) / 1000) };   /* v101.150: motivul merge în starea turelor */
   }
   // v101.149 (30.10, el: „piața azi nu arată nimic”): din v101.145 regimul poartă și `mare` (~200 de semne pe monedă) ⇒ 100 de monede
   // treceau de plafonul de 64 KB al rutei (413 „Corp prea mare” la fiecare tură, Acasă „FĂRĂ DATE”). Se trimit doar câmpurile pe care
   // ruta le păstrează (functions/api/istoric-bot.js, action=clasament); `monede` întoarse rămân întregi.
-  const r = await d.trimite("/api/istoric-bot?action=clasament", { la: Date.now(), monede: monede.map(deTrimis) });
+  const corp = { la: Date.now(), monede: monede.map(deTrimis) };
+  // v101.150 (ideea 2 după v100.275): mărimea corpului în jurnal - o creștere se vede înainte să treacă de plafon
+  const marime = (JSON.stringify(corp).length / 1024).toFixed(1).replace(".", ",") + " KB";
+  const r = await d.trimite("/api/istoric-bot?action=clasament", corp);
   const urcat = !!(r && r.ok);
-  d.jurnal("clasament:", cate(monede.length, "monedă", "monede"), "in", Math.round((Date.now() - t0) / 1000) + " s;", rz.evita, "de evitat,", cate(rz.candidati, "candidat", "candidați") + ",", rz.faraDate, "fara date;", urcat ? "urcat" : "NEURCAT");
-  return { urcat, monede, rz, durataS: Math.round((Date.now() - t0) / 1000) };
+  d.jurnal("clasament:", cate(monede.length, "monedă", "monede"), "in", Math.round((Date.now() - t0) / 1000) + " s;", rz.evita, "de evitat,", cate(rz.candidati, "candidat", "candidați") + ",", rz.faraDate, "fara date;", marime + ";", urcat ? "urcat" : "NEURCAT");
+  return { urcat, motiv: urcat ? null : "serverul n-a confirmat primirea", marime, monede, rz, durataS: Math.round((Date.now() - t0) / 1000) };
 }

@@ -7,7 +7,8 @@
 import {requireApiAuth,authErrorResponse,sameOrigin} from "../_shared/auth.js";
 import {uneste,FORMA_ARHIVA,ARHIVA_MAX} from "../_shared/boti-arhiva.js";
 import {peCheie} from "../_shared/serializare.js";   // audit 19.10: get+put pe rand, pe cheie
-import {citesteCorp} from "../_shared/corp-limitat.js";   // v100.272 (ideile auditului 29.10): plafonul corpului ÎNAINTE de citirea întreagă
+import {citesteCorp} from "../_shared/corp-limitat.js";
+import {plafonIstoricBot} from "../_shared/plafon-corp.js";   // v100.272 (ideile auditului 29.10): plafonul corpului ÎNAINTE de citirea întreagă
 
 const H={"content-type":"application/json","cache-control":"no-store"};
 const json=(o,s=200)=>new Response(JSON.stringify(o),{status:s,headers:H});
@@ -73,7 +74,7 @@ export async function onRequestGet({request,env}){
     if(la&&nr(u.searchParams.get("la"))===la)return json({la,complet,forma,n:boti.length,neschimbat:true});
     return json({la,complet,forma,n:boti.length,boti})}
   // v79 F3: clasamentul "pe care monede pornesc grid acum?", scris de colector o data pe ora
-  if(action==="clasament"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("clasament")||"null")}catch{c=null}return json({clasament:c})}
+  if(action==="clasament"){let c=null,st=null;try{c=JSON.parse(await env.ISTORIC.get("clasament")||"null")}catch{c=null}try{st=JSON.parse(await env.ISTORIC.get("clasament:stare")||"null")}catch{st=null}return json({clasament:c,stare:st})}   /* v100.276: + starea turelor (de ce lipsește) */
   // v79.1: alertele colectorului (fara ntfy) - cele mai noi primele
   if(action==="raport"){let r=null;try{r=JSON.parse(await env.ISTORIC.get("raport")||"null")}catch{r=null}return json({raport:r})}
   // v100.266 (F7): rezumatul probei futures pe date noi (scris de colector o dată pe oră) - pentru cartela de pe pagina Futures
@@ -176,7 +177,7 @@ export async function onRequestPost({request,env}){
   const auth=await requireApiAuth(request,env,action==="alerte"?"istoric-alerte":"istoric-write",30,150);if(!auth.ok)return authErrorResponse(auth,H);
   if(!sameOrigin(request))return json({error:"Origin rejected"},403);
   if(!env.ISTORIC?.put)return faraKv();
-  const cit=await citesteCorp(request,(action==="cazuri"?1048576:action==="retea"?524288:action==="arbori"?2097152:action==="ore"?524288:action==="scan"||action==="botiInchisi"?393216:action==="ingustUrmarire"?524288:action==="risc"||action==="carnet"||action==="latime"?262144:action==="cont"?1048576:action==="verdicteCalibrare"?262144:action==="universSua"?1048576:action==="sectoareTop"||action==="trend12"?262144:action==="disciplinaBanda"?524288:65536));if(cit.prea)return json({error:"Corp prea mare"},413);const text=cit.text;
+  const cit=await citesteCorp(request,plafonIstoricBot(action));   /* v100.276: plafonul din functions/_shared/plafon-corp.js (același tabel îl citește colectorul) */ if(cit.prea)return json({error:"Corp prea mare"},413);const text=cit.text;
   let corp;try{corp=JSON.parse(text)}catch{return json({error:"JSON invalid"},400)}
   // v100.104 (I-538): o ofertă de ferestre de la fișă - curățată; aceeași monedă + același moment = una singură; se țin ultimele 60
   if(action==="ferestre"){
@@ -281,6 +282,14 @@ export async function onRequestPost({request,env}){
     // expira dupa 6 ore: un clasament de ieri nu trebuie sa arate ca unul de azi
     await env.ISTORIC.put("clasament",JSON.stringify({la,monede:curate}),{expirationTtl:6*3600});
     return json({ok:true,monede:curate.length});
+  }
+  // v100.276 (ideile 1–2 după v100.275): starea turelor de clasament ale colectorului - câte au picat la rând, de când, de ce. Doar numere și
+  // un motiv scurt; ține 7 zile. Pagina spune motivul în loc de „n-a venit încă”.
+  if(action==="clasamentStare"){
+    const z=corp&&corp.stare;if(!z||typeof z!=="object")return json({error:"Lipseste stare"},400);
+    const st={esecuri:Math.max(0,Math.round(nr(z.esecuri)||0)),deLa:nr(z.deLa),motiv:typeof z.motiv==="string"?z.motiv.slice(0,160):null,okLa:nr(z.okLa),la:nr(z.la)};
+    await env.ISTORIC.put("clasament:stare",JSON.stringify(st),{expirationTtl:7*86400});
+    return json({ok:true});
   }
   if(action==="raportPiata"){
     const la=nr(corp&&corp.la),linii=corp&&Array.isArray(corp.linii)?corp.linii.slice(0,40).map(x=>typeof x==="string"?x.slice(0,1000):"").filter(Boolean):null;
