@@ -157,7 +157,7 @@ await test("I4: „piață la fel” doar cu acoperire - spune la cati din N vec
 await test("I3/I5/I6/I7: cheia fisei cuprinde lichidarea si stopurile; cazurile cu amanare si limita; poarta ia starea din blocul 🎲; titlul cursei cu preturile fisei", () => {
   const app = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8"), col = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8"), srv = fs.readFileSync(path.join(RAD, "functions", "api", "istoric-bot.js"), "utf8");
   assert.match(app, /ch=\[f\.simbol,grStare\.la,dir,st\.jos,st\.sus,JSON\.stringify\(st\.lichidare\|\|null\),JSON\.stringify\(st\.stop\|\|null\)\]/);
-  assert.match(col, /cazuriEsec/); assert.match(col, /profilStare\.lista/); assert.match(srv, /action==="cazuri"\?1048576/);
+  assert.match(col, /cazuriEsec/); assert.match(col, /profilStare\.lista/); assert.match(srv, /citesteCorp\(request,plafonIstoricBot\(action\)\)/); assert.match(fs.readFileSync(new URL("../functions/_shared/plafon-corp.js", import.meta.url), "utf8"), /cazuri: 1048576/);   /* v100.276: limita în tabelul comun */
   assert.match(app, /grProb\.rez&&grProb\.simbol===f\.simbol\?grProb\.rez\.stare:Probabilitati\.stareDinRegim\(f\.regim\)/);
   assert.match(app, /Prețul de câștig al fișei \("\+/); assert.ok(!/Marginea de câștig înaintea stopului fișei/.test(app));
 });

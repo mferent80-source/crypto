@@ -110,7 +110,7 @@ await test("jurnalul verdictelor cunoaște sursa trend-12-1 (pagina + serverul),
   assert.match(api, /"top-sector","trend-12-1"[,\]]/, "serverul acceptă sursa");
   assert.match(api, /action==="trend12"\)\{let v=null;try\{v=JSON\.parse\(await env\.ISTORIC\.get\("sugestii:trend12"\)/, "GET trend12");
   assert.match(api, /action==="trend12"\)\{if\(!\(nr\(corp&&corp\.la\)>0\)/, "PUT trend12 cu verificare");
-  assert.match(api, /action==="sectoareTop"\|\|action==="trend12"\?262144/, "limita de mărime");
+  assert.match(fs.readFileSync(new URL("../functions/_shared/plafon-corp.js", import.meta.url), "utf8"), /sectoareTop: 262144, trend12: 262144/, "limita de mărime");   /* v100.276: în tabelul comun */
 });
 await test("colectorul rulează tura Trend o dată pe tură, cu fetch/trimite/jurnal; versiunile sunt la zi (v100.190 / v101.111)", () => {
   const c = citeste("scripts", "colector.mjs");

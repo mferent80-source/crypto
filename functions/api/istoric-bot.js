@@ -7,8 +7,8 @@
 import {requireApiAuth,authErrorResponse,sameOrigin} from "../_shared/auth.js";
 import {uneste,FORMA_ARHIVA,ARHIVA_MAX} from "../_shared/boti-arhiva.js";
 import {peCheie} from "../_shared/serializare.js";   // audit 19.10: get+put pe rand, pe cheie
-import {citesteCorp} from "../_shared/corp-limitat.js";
-import {plafonIstoricBot} from "../_shared/plafon-corp.js";   // v100.272 (ideile auditului 29.10): plafonul corpului ÎNAINTE de citirea întreagă
+import {citesteCorp} from "../_shared/corp-limitat.js";   // v100.272 (ideile auditului 29.10): plafonul corpului ÎNAINTE de citirea întreagă
+import {plafonIstoricBot} from "../_shared/plafon-corp.js";   // v100.276: plafonul pe acțiune, același tabel ca în colector
 
 const H={"content-type":"application/json","cache-control":"no-store"};
 const json=(o,s=200)=>new Response(JSON.stringify(o),{status:s,headers:H});
