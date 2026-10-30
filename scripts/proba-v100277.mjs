@@ -95,7 +95,7 @@ await test("(2) cardul: azi / 7 zile / 7 dinainte cu o zecimală, ultimul închi
   assert.match(u, /\|Ultimul închis: BEAMX long 3× \|· a ținut 1,1 h · [^|]+\|\+1,2 USDT\|/);
   assert.equal(f.acUsd(0.04), "0,0 USDT"); assert.equal(f.acUsd(-0.04), "0,0 USDT"); assert.equal(f.acUsd(-0), "0,0 USDT"); assert.equal(f.acUsd(-1.86), "−1,9 USDT");
   // legat în card: rândurile de până acum rămân (activii, „Prețul în grid”, „Mediul lui”, „Față de ieri”) + blocurile noi
-  assert.match(ae, /hb \+= acBotiStatHtml\(typeof contTot !== "undefined" \? contTot\.inchise : null, Date\.now\(\)\);/);
+  assert.match(ae, /hb \+= acBotiStatHtml\(typeof contTot === "undefined" \|\| !contTot\.inchise \? null : contTot\.inchiseOk \? contTot\.inchise : false, Date\.now\(\)\);/);   /* v100.278: picat ≠ zero boți */
   assert.match(ae, /Niciun bot pornit acum\.<\/p>' \+ acUltimInchis\(/);
   assert.match(ae, /<span>Prețul în grid<\/span>/); assert.match(ae, /<span>Mediul lui<\/span>/);
   assert.match(ae, /Față de ieri dimineață' \+ \(zt\.inchiseDupa \?/);
@@ -104,7 +104,7 @@ await test("(2) cardul: azi / 7 zile / 7 dinainte cu o zecimală, ultimul închi
 await test("(3) boții închiși: reîmprospătați la 5 min; o citire picată păstrează lista avută", () => {
   const b = te.slice(te.indexOf("v100.277 (el: „față de ieri pare blocat”)"), te.indexOf('if (Date.now() - contTot.clasamentLa'));
   assert.match(b, /\(!contTot\.inchise \|\| Date\.now\(\) - \(contTot\.inchiseLa \|\| 0\) > 5 \* 60000\)/);
-  assert.match(b, /if \(bi\) \{ contTot\.inchise = JurnalTrade\.din\(bi\);/);
+  assert.match(b, /if \(bi\) \{ contTot\.inchise = JurnalTrade\.din\(bi\);/);   /* v100.278: + inchiseOk */
   assert.match(b, /catch \(e\) \{ if \(!contTot\.inchise\) \{ contTot\.inchise = \[\];/);
   assert.doesNotMatch(te, /if \(!contTot\.inchise && typeof JurnalTrade/);
 });
@@ -122,12 +122,13 @@ await test("(4) poza de dimineață: colectorul pune `la`, ruta o păstrează", 
   assert.equal(l[0].la, la); assert.deepEqual(l[0].botiPeId, { "2580": 13.56 });
 });
 
-await test("versiunile: v100.277 în aplicație, v101.151 în colector", () => {
-  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.277"/);
-  assert.match(citeste("BUILD_INFO.json"), /"version": "v100\.277"/);
-  assert.match(citeste("public", "index.html"), /id="healthAppVersion">v100\.277</);
-  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-277/);
-  assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.151"/);
+// v100.278: de la v100.277 / v101.151 în sus (ca probele vechi), nu exact
+await test("versiunile: de la v100.277 în aplicație, de la v101.151 în colector", () => {
+  const app = Number(citeste("functions", "_shared", "versiune.js").match(/VERSIUNE = "v100\.(\d+)"/)[1]);
+  assert.ok(app >= 277, String(app));
+  assert.match(citeste("public", "index.html"), new RegExp('id="healthAppVersion">v100\\.' + app + "<"));
+  assert.match(citeste("public", "sw.js"), new RegExp("crypto-radar-v100-" + app));
+  assert.ok(Number(citeste("scripts", "colector.mjs").match(/const VERSIUNE_COLECTOR = "v101\.(\d+)"/)[1]) >= 151);
 });
 
 console.log(picate ? `\n${picate} PICA din ${teste}\n` : `\ntoate ${teste} ok\n`);
