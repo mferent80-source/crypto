@@ -9,7 +9,8 @@ $jurnal = Join-Path $rad 'data\pornire-la-logare.log'
 function scrie($t) { "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') $t" | Out-File -Append -Encoding utf8 $jurnal }
 Set-Location $rad
 scrie 'logare: pornesc lansatorul'
-$ascultaDeja = Get-NetTCPConnection -LocalPort 8788 -State Listen -ErrorAction SilentlyContinue
+# v100.275 (30.10): ascultă = intrarea cu 0.0.0.0:0 / :::0 la distanță, nu -State Listen (tabela TCP a dat stări greșite cât serverul asculta)
+$ascultaDeja = Get-NetTCPConnection -LocalPort 8788 -ErrorAction SilentlyContinue | Where-Object { $_.RemotePort -eq 0 -and ([string]$_.RemoteAddress -eq '0.0.0.0' -or [string]$_.RemoteAddress -eq '::') }
 if (-not $ascultaDeja) { Start-Process cmd -ArgumentList '/c', ('"' + (Join-Path $rad 'PORNESTE-CRYPTO-RADAR.bat') + '"') -WorkingDirectory $rad } else { scrie 'serverul 8788 asculta deja - nu pornesc alt lansator' }
 $gata = $false
 for ($i = 0; $i -lt 48; $i++) {
