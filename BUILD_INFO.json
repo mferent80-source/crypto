@@ -1,11 +1,12 @@
 {
-  "version": "v100.279",
-  "badge": "v100.279 · BOȚII TĂI · 7 ZILE",
+  "version": "v100.280",
+  "badge": "v100.280 · FRÂNA ZILEI",
   "engineContract": "54.1",
   "dataSchema": 54,
   "baseRelease": "v77.4 · TABLOUL BOTULUI",
   "releaseType": "valul de reparatii din revizia finala pe ansamblu: marginStatus/riskStatus citite, telefon, scurgere WS/ceas la iesire prin tab-uri, ATR adevarat, pret viu, istoric fara pret inghetat, sortare dupa timp, comision nemasurabil, durata la margine",
   "features": {
+    "frana280": "Ideile analizei comportamentale (30.10.2026, el: „fă tot”): (1) frâna contului cu pragul „boți porniți azi” (implicit 7, schimbabil în Grid → Poarta; ruta config îl păstrează, opțional) - alerta pe Discord e cea a frânei, o dată pe zi; contorul zilei pe Acasă („Frâna zilei”: boți porniți / pe minus la rând / azi / 7 zile, pe pragurile lui); frâna pe istorie numără și boții încă deschiși; (2) treapta timpurie a alertei de bandă (colector v101.152): primul prag din tabelul lui cu sub jumătate întoarse (azi 6 h), o dată pe episod, înaintea regulii de 12 h - Disciplina.regulaDin / alertaBanda; (3) „Grilele au prins / poziția a dat” pe 7 zile în Boții tăi. Proba v100280.",
     "boti279": "Boții tăi, cele 5 idei de după v100.278 (30.10.2026, el: „super, fă toate”): (1) suma și „USDT” legate cu spațiu care nu se rupe; (2) pe 7 zile, unde ai pierdut / unde ai câștigat pe monede (primele 3, cu numărul de boți); (3) sub 15 min față de 15 min sau mai mult (pragul fixat dinainte; „7 zile nu sunt o dovadă”); (4) comisioanele și funding-ul pe 7 zile și rezultatul fără ele; (5) netul pe ultimele 14 zile - bare pe plus / pe minus față de zero (SVG), cea mai proastă / cea mai bună zi și tabelul zilelor. Tot pe net, descriptiv. Proba v100279.",
     "boti278": "Boții tăi, după poza de telefon a lui v100.277 (30.10.2026): o citire picată a boților închiși lăsa lista goală, iar cardul scria „Niciun bot închis azi / în 7 zile” - fals. Acum `inchiseOk` deosebește lista citită de cea picată; picată ⇒ „N-am putut aduce boții închiși; reîncerc în 30 de secunde” și reîncercarea vine în 30 s, nu în 5 min. Proba v100278.",
     "boti277": "Boții tăi (30.10.2026, el: „față de ieri pare blocat, aș pune mai multe date acolo, statistici”): „Față de ieri dimineață” adaugă boții porniți și închiși după poza de ieri (lipseau cu totul; poza ține acum și ora ei, colector v101.151); cardul arată ultimul bot închis când nu e niciunul pornit, ziua de azi (câți, pe plus / pe minus, net, cel mai bun / slab, durata tipică) și ultimele 7 zile față de cele 7 dinainte - pe net, descriptiv; lista boților închiși se reîmprospătează la 5 min (înainte o dată pe deschidere). Proba v100277.",

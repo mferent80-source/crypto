@@ -257,6 +257,9 @@ export function situatiiAlerte(pune) {
   // v100.70 (revizia pachetului 3, I3): frana din Obiceiuri.frana REAL - textul ei repeta titlul si actiunea; mesajul se face din cifre
   const OBf = globalThis.Obiceiuri;
   co("frâna contului: pragul pe zi", "frana", MC.frana(OBf.frana({ trades: [{ inchis: T0 - 2 * ORA, net: -12.05 }, { inchis: T0 - 3 * ORA, net: -12.05 }], acum: T0 })));
+  // v100.280: frâna cu pragul „boți porniți azi” (al 7-lea bot) și treapta timpurie a benzii
+  co("frâna contului: 7 boți porniți azi", "frana", MC.frana(OBf.frana({ trades: Array.from({ length: 7 }, (_, i) => ({ pornit: T0 - (8 - i) * ORA, inchis: T0 - (7 - i) * ORA + 1800000, net: i % 2 ? 1.2 : -0.4 })), acum: T0 })));
+  co("botul afară din grilă: treapta timpurie", "afaraDinBandaDevreme", MC.afaraDinBandaDevreme("PARTI", 6.2, { h: 6, n: 54, intoarse: 0.41 }, { h: 12, n: 43, intoarse: 0.28 }));
   co("frâna contului: zi + 7 zile + 3 la rând", "frana", MC.frana(OBf.frana({ trades: [{ inchis: T0 - 1 * ORA, net: -9 }, { inchis: T0 - 2 * ORA, net: -8 }, { inchis: T0 - 3 * ORA, net: -7.5 }, { inchis: T0 - 3 * ZI, net: -40 }], acum: T0 })));
   co("alertele sunt legate", "legat", MC.legat());
   co("raportul de duminică (titlul)", "raport", { titlu: MC.raport("2026-09-27", ["—"]).titlu });

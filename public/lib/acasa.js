@@ -362,14 +362,16 @@ var Acasa = (function () {
   }
   // (4) comisioanele și funding-ul (negative = plătite): cât din rezultat s-a dus pe ele; „fără ele” = realizatul brut Pionex (net − costuri)
   function botiCosturi(inchise, deLa, panaLa) {
-    var o = { n: 0, comisioane: 0, funding: 0, costuri: 0, net: 0, faraCosturi: null, lipsa: 0 };
+    var o = { n: 0, comisioane: 0, funding: 0, costuri: 0, net: 0, faraCosturi: null, lipsa: 0, grile: 0, pozitie: 0, nGrile: 0 };
     inFereastra(inchise, deLa, panaLa).forEach(function (t) {
-      var c = nr(t.comisioane), f = nr(t.funding);
+      var c = nr(t.comisioane), f = nr(t.funding), g = nr(t.grile), q = nr(t.pozitie);
       o.n++; o.net += netTrade(t);
+      if (g !== null && q !== null) { o.grile += g; o.pozitie += q; o.nGrile++; }   /* v100.280: ce au prins grilele, ce a dat poziția (realizatul = grile + poziție) */
       if (c === null && f === null) { o.lipsa++; return; }
       o.comisioane += c || 0; o.funding += f || 0;
     });
     o.comisioane = Math.round(o.comisioane * 100) / 100; o.funding = Math.round(o.funding * 100) / 100; o.net = Math.round(o.net * 100) / 100;
+    o.grile = Math.round(o.grile * 100) / 100; o.pozitie = Math.round(o.pozitie * 100) / 100;
     o.costuri = Math.round((o.comisioane + o.funding) * 100) / 100;
     o.faraCosturi = o.n ? Math.round((o.net - o.costuri) * 100) / 100 : null;
     return o;

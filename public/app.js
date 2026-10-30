@@ -5509,9 +5509,9 @@ function grPoartaHtml(f){
     +(function(fp){return '<p class="tbFac">👉 <b>Ce aș face eu:</b> '+escapeHtml(fp.fac)+'</p>'+(fp.nota?'<p class="tbSub">'+escapeHtml(fp.nota)+'</p>':'')})(Obiceiuri.facPoarta(p.rez))   /* v100.72 (pachetul 5): acțiunea din Obiceiuri.facPoarta (păzită de gardă) */
     +'<button type="button" class="actionGhost" data-action-click="gridJurnalAdauga()">📒 Am pornit botul în Pionex (notează-l)</button>'}
   // v100.43 (I-468): pragurile franei contului, la vedere si schimbabile (o setare fara buton nu exista)
-  var gfr=typeof grFrana!=="undefined"?grFrana:{},fp=gfr.praguri||(typeof Obiceiuri!=="undefined"?Obiceiuri.praguriFrana(null):{zi:20,sapt:60,rand:3});
-  h+='<div class="grFrana"><span class="tbEt2">🛑 Frâna contului — sună când pierzi azi / pe 7 zile / boți pe minus la rând</span><div class="grPoartaForm">'
-    +'<label><span class="tbEt2">pe zi, USDT</span><input id="grFranaZi" inputmode="decimal" value="'+fp.zi+'"></label><label><span class="tbEt2">pe 7 zile, USDT</span><input id="grFranaSapt" inputmode="decimal" value="'+fp.sapt+'"></label><label><span class="tbEt2">la rând</span><input id="grFranaRand" inputmode="numeric" value="'+fp.rand+'"></label>'
+  var gfr=typeof grFrana!=="undefined"?grFrana:{},fp=gfr.praguri||(typeof Obiceiuri!=="undefined"?Obiceiuri.praguriFrana(null):{zi:20,sapt:60,rand:3,boti:7});
+  h+='<div class="grFrana"><span class="tbEt2">🛑 Frâna contului — sună când pierzi azi / pe 7 zile / boți pe minus la rând / prea mulți boți porniți azi</span><div class="grPoartaForm">'
+    +'<label><span class="tbEt2">pe zi, USDT</span><input id="grFranaZi" inputmode="decimal" value="'+fp.zi+'"></label><label><span class="tbEt2">pe 7 zile, USDT</span><input id="grFranaSapt" inputmode="decimal" value="'+fp.sapt+'"></label><label><span class="tbEt2">la rând</span><input id="grFranaRand" inputmode="numeric" value="'+fp.rand+'"></label><label><span class="tbEt2">boți pe zi</span><input id="grFranaBoti" inputmode="numeric" value="'+fp.boti+'"></label>'
     +'<button type="button" class="actionGhost" data-action-click="grFranaSalveaza()">Salvează pragurile</button></div>'
     +(gfr.istoric?'<p class="tbSub">'+escapeHtml(/^Pe istoria ta,/.test(gfr.istoric.text)?gfr.istoric.text.replace(/^Pe istoria ta,/,"Pe istoria ta din "+new Date().getUTCFullYear()+","):String(gfr.istoric.text).replace(/\.$/,"")+" (în "+new Date().getUTCFullYear()+").")+'</p>':'')+'</div>';
   // v100.103 (I-536): pragul meu, o dată pentru toți boții (o setare fără buton nu există)
@@ -5647,8 +5647,8 @@ function grPragDinIstorie(){
 function grPragVal(k){var id={pierdere:"grPragPierdere",tinta:"grPragTinta",afaraOre:"grPragOre"}[k],el=id?$(id):null;if(el&&String(el.value).trim())return ' value="'+escapeHtml(String(el.value).trim())+'"';
   var p=typeof grFrana!=="undefined"&&grFrana.prag;return p&&p[k]!=null?' value="'+escapeHtml(String(p[k]).replace(".",","))+'"':''}
 async function grFranaSalveaza(){
-  var v=function(id){var x=$(id);return x?Number(String(x.value).replace(",",".")):NaN},p={zi:v("grFranaZi"),sapt:v("grFranaSapt"),rand:Math.round(v("grFranaRand"))};
-  if(!(p.zi>0&&p.sapt>0&&p.rand>0)){toast("Scrie trei numere pozitive: pe zi, pe 7 zile, câți la rând","bad");return}
+  var v=function(id){var x=$(id);return x?Number(String(x.value).replace(",",".")):NaN},p={zi:v("grFranaZi"),sapt:v("grFranaSapt"),rand:Math.round(v("grFranaRand")),boti:Math.round(v("grFranaBoti"))};
+  if(!(p.zi>0&&p.sapt>0&&p.rand>0&&p.boti>0)){toast("Scrie patru numere pozitive: pe zi, pe 7 zile, câți la rând, câți boți pe zi","bad");return}
   try{var r=await apiFetch("/api/istoric-bot?action=config",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({frana:p})});if(!r.ok)throw Error("HTTP "+r.status);grFrana.la=0;toast("Pragurile frânei sunt salvate (le folosește și colectorul pentru alertă)","good");gridPoarta()}catch(e){toast("Nu s-au salvat pragurile: "+textEroare(e),"bad")}
 }
 // v100.101 (el: „să nu se mai întâmple situația de azi”): în poartă, gridul pe care îl pornești (jos, sus, levier, sumă) față de planul din „Ies dacă

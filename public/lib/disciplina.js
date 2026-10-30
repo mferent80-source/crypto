@@ -16,6 +16,21 @@ var Disciplina = (function () {
   function pctNet(t) { var n = nr(t && t.net), p = nr(t && t.pus); return n !== null && p > 0 ? n / p : nr(t && t.pctNet) !== null ? nr(t.pctNet) : nr(t && t.pct); }
   function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
 
+  // v100.280: o regulă din tabelul benzii - primul prag (cu cel puțin `min` cazuri) după care sub `prag` dintre boți s-au întors în 24 h.
+  // Aceeași construcție pentru regula de închidere (30%) și pentru treapta timpurie a alertei (50%), din același tabel al lui.
+  function regulaDin(tabel, prag, min) {
+    var l = Array.isArray(tabel) ? tabel : [];
+    for (var i = 0; i < l.length; i++) { var x = l[i]; if (x && x.n >= (min || 30) && x.intoarse !== null && x.intoarse !== undefined && x.intoarse < prag) return x; }
+    return null;
+  }
+  // v100.280: ce alertă de bandă se cuvine acum unui episod (ms afară, treapta timpurie dv, regula r, starea s = { anuntat, devreme }):
+  // „regula” o dată la r.h; „devreme” o dată la dv.h, doar dacă dv vine înaintea regulii și regula n-a sosit încă; altfel nimic
+  function alertaBanda(msAfara, dv, r, s) {
+    s = s || {};
+    if (r && !s.anuntat && msAfara >= r.h * ORA) return "regula";
+    if (dv && (!r || dv.h < r.h) && !s.anuntat && !s.devreme && msAfara >= dv.h * ORA) return "devreme";
+    return null;
+  }
   // ---------------- 1. ieșirea din bandă ----------------
   // pentru fiecare bot închis (JurnalTrade.din: jos, sus, dir, pornit, inchis, pct) și barele de 1 h ale monedei: prima ieșire a prețului din
   // bandă; pentru fiecare prag de ore în care a STAT afară continuu: s-a întors în bandă în următoarele 24 h? cât a mers prețul în continuare
@@ -51,7 +66,7 @@ var Disciplina = (function () {
     });
     var tabel = praguri.map(function (h) { var R = rez[h], w = wilson(R.intoarse, R.n); return { h: h, n: R.n, boti: R.boti, intoarse: R.n ? R.intoarse / R.n : null, intoarseLo: w ? w[0] : null, intoarseHi: w ? w[1] : null, miscareImpotriva: R.miscari.length ? mediana(R.miscari) : null, netMedian: R.net.length ? mediana(R.net) : null }; });
     // regula: primul prag (cu cel puțin 30 de cazuri) după care mai puțin de 30 % dintre boți s-au întors în bandă în 24 h
-    var regula = null; for (var i2 = 0; i2 < tabel.length; i2++) { var x = tabel[i2]; if (x.n >= (o.min || 30) && x.intoarse !== null && x.intoarse < (o.prag || 0.3)) { regula = x; break; } }
+    var regula = regulaDin(tabel, o.prag || 0.3, o.min || 30);   /* v100.280: aceeași construcție, într-un singur loc */
     var grupe = Object.keys(bucket).map(function (k) { return { grupa: k, n: bucket[k].length, netMedian: bucket[k].length ? mediana(bucket[k]) : null }; });
     return { tabel: tabel, regula: regula, grupe: grupe, oreAfaraPe: oreAfaraPe };
   }
@@ -133,5 +148,5 @@ var Disciplina = (function () {
     return o.teza || o.invalidare || o.orizont ? o : null;
   }
 
-  return { PRAGURI_ORE: PRAGURI_ORE, REGULI: REGULI, iesiriBanda: iesiriBanda, garzi: garzi, lectia: lectia, verifica: verifica, curataTeza: curataTeza, cate: cate, wilson: wilson, pctNet: pctNet };
+  return { PRAGURI_ORE: PRAGURI_ORE, REGULI: REGULI, regulaDin: regulaDin, alertaBanda: alertaBanda, iesiriBanda: iesiriBanda, garzi: garzi, lectia: lectia, verifica: verifica, curataTeza: curataTeza, cate: cate, wilson: wilson, pctNet: pctNet };
 })();

@@ -158,11 +158,13 @@ await test("CSS: blocul nou lângă celelalte reguli ale Acasă, ÎNAINTEA cozii
   assert.doesNotMatch(css, /\r/, "fără CR rătăcit (citit normalizat)");
 });
 
-await test("versiunea v100.279", () => {
-  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.279"/);
-  assert.match(citeste("BUILD_INFO.json"), /"version": "v100\.279"/);
-  assert.match(citeste("public", "index.html"), /id="healthAppVersion">v100\.279</);
-  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-279/);
+// v100.280: de la v100.279 în sus (ca probele vechi), nu exact
+await test("versiunea de la v100.279", () => {
+  const app = Number(citeste("functions", "_shared", "versiune.js").match(/VERSIUNE = "v100\.(\d+)"/)[1]);
+  assert.ok(app >= 279, String(app));
+  assert.match(citeste("BUILD_INFO.json"), new RegExp('"version": "v100\\.' + app + '"'));
+  assert.match(citeste("public", "index.html"), new RegExp('id="healthAppVersion">v100\\.' + app + "<"));
+  assert.match(citeste("public", "sw.js"), new RegExp("crypto-radar-v100-" + app));
 });
 
 console.log(picate ? `\n${picate} PICA din ${teste}\n` : `\ntoate ${teste} ok\n`);

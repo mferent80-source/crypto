@@ -42,7 +42,8 @@ async function acasaPorneste(fortat) {
       pas("cont", async function () { if (typeof contTotAsigura === "function") await contTotAsigura(); return true; }),
       pas("scor", function () { return typeof scPorneste === "function" ? scPorneste() : null; }),   // v100.217: scorul sezonului (boții din Jurnal + configurația de acasă)
       pas("contRaport", function () { return getJSON("/api/istoric-bot?action=cont"); }),   // v100.231: raportul pe tot contul (cheia „cont” e deja contTotAsigura)
-      pas("contZile", function () { return getJSON("/api/istoric-bot?action=contZile"); }),   // v100.234: zilele din KV, ca măsura să aibă poza și într-un browser nou
+      pas("contZile", function () { return getJSON("/api/istoric-bot?action=contZile"); }),
+      pas("franaCfg", async function () { var c = await getJSON("/api/istoric-bot?action=config"); return c && c.config && c.config.frana || null; }),   /* v100.280: pragurile frânei tale, pentru contorul zilei */   // v100.234: zilele din KV, ca măsura să aibă poza și într-un browser nou
       // v93: Nasdaq 100 (colectorul, la 8 dimineata), calendarul saptamanii, stirile
       pas("ndx", function () { return getJSON("/api/t212?action=ndx"); }),
       pas("calendar", function () { return getJSON("/api/stiri?action=calendar"); }),
@@ -400,6 +401,14 @@ function acUltimInchis(t) {
   var cand = new Date(t.inchis).toLocaleString("ro-RO", { weekday: "short", hour: "2-digit", minute: "2-digit" });
   return '<div class="acLin"><span>Ultimul închis: ' + escapeHtml(acNumeTrade(t)) + ' <span class="acMut">· a ținut ' + escapeHtml(Acasa.durataScurta((t.inchis - t.pornit) / 60000)) + " · " + escapeHtml(cand) + '</span></span><b class="' + acClsUsd(t.net) + '">' + acUsd(t.net) + "</b></div>";
 }
+// v100.280 (el, 30.10: „fă tot” - analiza comportamentală): contorul zilei pe pragurile frânei TALE (Grid → Poarta) - boți porniți azi,
+// pe minus la rând, pierderea zilei și pe 7 zile. Aceeași frână ca alerta de pe Discord; avertizează, nu blochează („pragul e un privilegiu”).
+function acFranaZileiHtml(inchise, boti, praguri, acum) {
+  if (typeof Obiceiuri === "undefined" || !Obiceiuri.frana || !Array.isArray(inchise)) return "";
+  var f = Obiceiuri.frana({ trades: inchise, deschise: Array.isArray(boti) ? boti : [], acum: acum, praguri: praguri }), P = f.praguri, nrP = function (x) { return String(x).replace(".", ","); };
+  return '<div class="acLin"><span>Frâna zilei <span class="acMut">· pragurile tale</span></span><b class="' + (f.activa ? "bad" : "") + '">' + f.pornitiAzi + " din " + escapeHtml(acCate(P.boti, "bot", "boți")) + " · " + f.rand + " din " + P.rand + " la rând</b></div>"
+    + '<p class="acMut acLinSub">Azi ' + escapeHtml(acSemn(f.netZi)) + " din −" + nrP(P.zi) + " · pe 7 zile " + escapeHtml(acSemn(f.netSapt)) + " din −" + nrP(P.sapt) + "\u00a0USDT" + (f.activa ? ". Trasă: n-aș mai porni boți azi." : ".") + "</p>";
+}
 // inchise: lista citită / false = citirea a picat (v100.278: nu „niciun bot”) / null = încă nu s-a citit
 function acBotiStatHtml(inchise, acum) {
   if (inchise === false) return '<p class="acMut">N-am putut aduce boții închiși; reîncerc în 30 de secunde.</p>';
@@ -426,6 +435,8 @@ function acBotiStatHtml(inchise, acum) {
 // v100.279 (30.10, el: „super, fă toate” - ideile 2–4 de după v100.278): din ce s-a format rezultatul celor 7 zile
 function acBoti7Html(st) {
   var h = "", co = st.costuri, mo = st.monede, sl = st.scurti;
+  // v100.280 (ideea 3): ce au prins grilele și ce a dat poziția (realizatul = grile + poziție; netul = realizatul + comisioane + funding)
+  if (co && co.nGrile) h += '<div class="acLin"><span>Grilele au prins <span class="acMut">· poziția a dat ' + escapeHtml(acUsd(co.pozitie)) + (co.nGrile < co.n ? " · fără grile la " + escapeHtml(acCate(co.n - co.nGrile, "bot", "boți")) : "") + '</span></span><b class="' + acClsUsd(co.grile) + '">' + acUsd(co.grile) + "</b></div>";
   // (4) comisioanele și funding-ul, pe un rând: cât s-a dus pe ele și ce rămânea fără ele
   if (co && co.n && co.lipsa < co.n) h += '<div class="acLin"><span>Comisioane și funding <span class="acMut">· fără ele ' + escapeHtml(acUsd(co.faraCosturi)) + (co.lipsa ? " · lipsesc la " + escapeHtml(acCate(co.lipsa, "bot", "boți")) : "") + '</span></span><b class="' + acClsUsd(co.costuri) + '">' + acUsd(co.costuri) + "</b></div>";
   // (2) pe monede, simetric: unde ai pierdut și unde ai câștigat (primele 3 din fiecare parte, cu numărul de boți)
@@ -650,6 +661,7 @@ function acasaDeseneaza() {
   var botiPeId = {}; act.forEach(function (b) { var v2 = Number(b.profitTotal); if (b.id && isFinite(v2)) botiPeId[String(b.id)] = v2; });
   var zt = Acasa.ziuaTa({ botiTotal: act.length ? act.reduce(function (s2, b) { var v2 = Number(b.profitTotal); return s2 + (isFinite(v2) ? v2 : 0); }, 0) : null, botiPeId: botiPeId, t212Total: ct ? Number(ct.total) : null }, pc.instantanee || [], fz, typeof contTot !== "undefined" ? contTot.inchise : null);   // v100.40: pe bot
   if (zt && zt.boti !== null) hb += '<div class="acLin acZi"><span>Față de ieri dimineață' + (zt.inchiseDupa ? ' <span class="acMut">· cu ' + escapeHtml(acCate(zt.inchiseDupa, "bot închis", "boți închiși")) + ' de atunci</span>' : '') + '</span><b class="' + (zt.boti >= 0 ? "good" : "bad") + '">' + (zt.boti >= 0 ? "+" : "−") + Math.abs(zt.boti).toFixed(1).replace(".", ",") + '\u00a0USDT</b></div>';   /* v100.196: rezultatele cu O SINGURĂ zecimală */
+  hb += acFranaZileiHtml(typeof contTot !== "undefined" && contTot.inchiseOk ? contTot.inchise : null, act, d.franaCfg, Date.now());   /* v100.280: contorul zilei */
   hb += acBotiStatHtml(typeof contTot === "undefined" || !contTot.inchise ? null : contTot.inchiseOk ? contTot.inchise : false, Date.now());   /* v100.277: azi + 7 zile, pe net; v100.278: picat ≠ zero boți */
   $("acBoti").innerHTML = hb + '<button class="acBtn" type="button" data-action-click="navTo(\'tabloubot\',true)">Deschide Tabloul</button>';
 

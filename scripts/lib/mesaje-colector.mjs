@@ -152,7 +152,8 @@ export const perechiOra = (nume, n, usdt) => ({ nivel: "info", titlu: "✅ " + n
 // v100.70 (revizia pachetului 3, I3): din OBIECTUL Obiceiuri.frana - textul lui are deja titlul, actiunea si sumele cu punct (pe Discord
 // ieseau de doua ori); aici: pragurile depasite, cu virgula, intr-o fraza. Un text vechi (string) ramane primit, fara titlu si actiune.
 const DEP = { zi: (f) => "azi " + U2(f.netZi) + " (pragul tău: −" + V(f.praguri.zi) + ")", sapt: (f) => "pe 7 zile " + U2(f.netSapt) + " (pragul: −" + V(f.praguri.sapt) + ")",
-  rand: (f) => cate(f.rand, "bot închis", "boți închiși") + " pe minus la rând (pragul: " + f.praguri.rand + ")" };
+  rand: (f) => cate(f.rand, "bot închis", "boți închiși") + " pe minus la rând (pragul: " + f.praguri.rand + ")",
+  boti: (f) => cate(f.pornitiAzi, "bot pornit", "boți porniți") + " azi (pragul: " + f.praguri.boti + ")" };   /* v100.280 */
 // v100.175 (revizia v100.173): arhiva boților nu vine de ore ⇒ frâna nu poate judeca; tăcerea ar părea „totul e bine”
 export const franaFaraArhiva = (ore) => ({ nivel: "atentie", titlu: "Frâna contului nu poate judeca", mesaj: msg("Arhiva boților închiși nu vine de " + cate(Math.max(1, Math.round(ore)), "oră", "ore") + ", deci nu știu cât ai pierdut azi și pe 7 zile.", "Până revine, aș număra singur pierderile de azi înainte să pornesc un bot nou.") });
 // v100.176 (contul întreg, reconcilierea cu brokerii): abaterile dintre ce știe Radarul și ce raportează T212 / Pionex
@@ -168,6 +169,11 @@ const pc0 = (x) => (x >= 0 ? "+" : "−") + Math.abs(x * 100).toFixed(1).replace
 export const afaraDinBanda = (nume, ore, r) => ({ nivel: "atentie", titlu: (nume + ": afară din bandă de " + cate(Math.round(ore), "oră", "ore")).slice(0, 60),
   // audit 19.10 (6): intervalul Wilson 95% și cazurile lângă procent; mișcarea e mediana, nu „în medie”
   mesaj: msg("Din boții tăi închiși, după " + r.h + " h afară doar " + Math.round(r.intoarse * 100) + "% s-au mai întors în 24 h" + (r.intoarseLo != null && r.intoarseHi != null ? " (interval 95%: " + Math.round(r.intoarseLo * 100) + "–" + Math.round(r.intoarseHi * 100) + "%" + (r.n > 0 ? ", " + cate(r.n, "caz", "cazuri") : "") + ")" : "") + (r.miscareImpotriva !== null && r.miscareImpotriva !== undefined ? ", iar prețul a mers încă " + pc0(r.miscareImpotriva) + " împotrivă (mediana)" : "") + ".", "Aș închide botul sau i-aș muta banda acum, nu aș mai aștepta.") });
+// v100.280 (el, 30.10: „fă tot” - analiza comportamentală): treapta timpurie a benzii - primul prag (≥ 30 de cazuri) după care sub jumătate
+// dintre boții lui s-au mai întors (dv); regula de închidere rămâne r (sub 30%). Pe istoria lui, boții ținuți peste 6 h au făcut 56% din pierdere.
+export const afaraDinBandaDevreme = (nume, ore, dv, r) => ({ nivel: "atentie", titlu: (nume + ": de " + cate(Math.round(ore), "oră", "ore") + " afară din grilă").slice(0, 60),
+  mesaj: msg("Din boții tăi închiși, după " + dv.h + " h afară doar " + Math.round(dv.intoarse * 100) + "% s-au mai întors în 24 h" + (dv.n > 0 ? " (" + cate(dv.n, "caz", "cazuri") + ")" : "") + (r ? "; după " + r.h + " h, " + Math.round(r.intoarse * 100) + "%" : "") + ".",
+    "Aș hotărî acum, nu " + (r ? "la " + r.h + " h" : "mai târziu") + ": îl închid sau îi mut banda.") });
 export const garda = (g) => ({ nivel: "atentie", titlu: ("Gardă încălcată: " + g.titlu).slice(0, 60), mesaj: msg((g.detaliu ? g.detaliu + ". " : "") + "Garda vine din " + (g.sursa || "datele tale") + ".", "Aș readuce contul sub prag înainte de orice poziție nouă.") });
 export const lectiaSaptamanii = (l, ver) => {
   const top = (l.top || []).map((d, i) => (i + 1) + ". " + d.ce + ": −" + Math.round(d.cost).toLocaleString("ro-RO") + " lei - " + d.motive.map((m) => m.text).join("; ")).join("\n");
