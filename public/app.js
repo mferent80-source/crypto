@@ -6399,7 +6399,7 @@ async function tbAduFisaBot(b){
     var o1h=await grOreFisa(simbol,d.r60);   /* v100.269 (ideile auditului 29.10): H = 2 ⇒ proba fișei pe ~6 luni de bare de 1 h */
     var f=GridProba.fisa({simbol:simbol,pret:GridCalcul.pretCurent(d.r15),b15:GridCalcul.bare(d.r15),b4h:GridCalcul.bare(d.r4),b1d:GridCalcul.bare(d.r1),b1h:o1h?GridCalcul.bare(o1h):null,
       suma:botiNr(b.investit)||100,fundingZi:d.fundingZi,H:2,dir:null,levier:null,minNotional:info?Number(info.minNotional):null,minSize:info?Number(info.minSizeLimit):null});
-    tbFisa={botId:b.id,la:Date.now(),inLucru:false,fisa:f.eroare?null:f,eroare:f.eroare||null,
+    tbFisa={botId:b.id,la:Date.now(),inLucru:false,fisa:f.eroare?null:f,eroare:f.eroare||null,istoric15:d.istoric15||null,   /* v100.274: istoricul de 15 min al fișei, spus în Tablou */
       b15:GridCalcul.bare(d.r15),pret:GridCalcul.pretCurent(d.r15),amp:TabloExtra.miscareZi(GridCalcul.bare(d.r4))};   // v100.16: pentru gridul dupa plan
   }catch(e){tbFisa={botId:b.id,la:Date.now(),inLucru:false,fisa:null,eroare:grTextEroare(e)}}
   if(tbPanouVizibil()&&tbStare.bot&&tbStare.bot.id===b.id){tbDeseneazaExtra(tbStare.bot);tbDeseneazaSemafor(tbStare.bot);if(typeof renderTabloSfaturi==="function")renderTabloSfaturi()}
@@ -6830,7 +6830,8 @@ function tbDeseneazaExtra(b){
     var c=TabloExtra.comparaCuFisa(b,f);
     el.innerHTML='<table class="tbCmp"><thead><tr><th></th><th>botul tău</th><th>fișa de azi</th></tr></thead><tbody>'+c.randuri.map(function(r){return '<tr><th>'+escapeHtml(r.et)+'</th><td>'+escapeHtml(r.bot)+'</td><td>'+escapeHtml(r.et==="Verdictul de azi"?((GR_NIVEL[r.fisa]||[r.fisa])[0]):r.fisa)+'</td></tr>'}).join("")+'</tbody></table>'
       +(c.semnale.length?'<ul class="tbSemnale">'+c.semnale.map(function(x){return '<li>'+escapeHtml(x)+'</li>'}).join("")+'</ul>':'<p class="tbSub">Setările botului se potrivesc cu fișa de azi.</p>')
-      +'<p class="tbSub">Nu schimba botul doar pentru că diferă: fișa e pentru un bot NOU pornit acum. Deschide fereastra Grid pentru toată proba.</p>';
+      +'<p class="tbSub">Nu schimba botul doar pentru că diferă: fișa e pentru un bot NOU pornit acum. Deschide fereastra Grid pentru toată proba.</p>'
+      +(function(){var t=typeof mcsIstoricScurt==="function"&&tbFisa.istoric15?mcsIstoricScurt(tbFisa.istoric15,"fișa e pe atât"):"";return t?'<p class="tbWarn grIstoricScurt">⚠️ '+escapeHtml(t+(tbFisa.istoric15.motiv==="pagina"?" Reîncerc la următoarea reîmprospătare.":""))+'</p>':""})();   /* v100.274: ca fișa Grid */
     if($("tbFisaBotSub"))$("tbFisaBotSub").textContent="fișa calculată la "+new Date(tbFisa.la).toLocaleTimeString("ro-RO",{hour:"2-digit",minute:"2-digit"})+" · suma botului";
   }
   // 2) pe zi  3) la inchidere  4) liniste + laborator  5) jurnal
@@ -7585,6 +7586,10 @@ async function tbMcTick(){var b=tbStare.routeOk===false?null:tbStare.bot;if(!b||
     return}
   if(acelasi&&tbMc.sursa!=="colector"&&k===tbMc.cheie&&Date.now()-tbMc.la<TB_MC_MS)return;
   return tbMcPorneste(b,k)}
+/* v100.274: memoria comună a lumânărilor de 15 min (grLum15, a fișei Grid și a paginii Monte Carlo, cheia monedă_USDT_PERP): barele întregi ținute
+   minte intră ca „vechi” pe pagina botului (o pagină Pionex nouă în loc de 6), iar cele aduse întregi aici rămân celorlalte; acțiunile (cu punct) nu */
+function tbMcBareTinute(sim){return sim&&String(sim).indexOf(".")<0&&typeof grBare15Tinute==="function"?grBare15Tinute(sim+"_USDT_PERP"):null}
+function tbMcTineBare(sim,c){if(sim&&String(sim).indexOf(".")<0&&c&&c.intreg===true&&Array.isArray(c.b15)&&c.b15.length&&typeof grTine15==="function")grTine15(sim+"_USDT_PERP",c.b15)}
 async function tbMcPorneste(b,k){
   if(typeof GridSim==="undefined"||typeof mcsAduCoin!=="function")return;
   tbMc.inLucru=true;tbMc.eroare=null;if(String(tbMc.botId)!==String(b.id)){tbMc.rand=null;tbMc.rez=null;tbMc.randLa=0}tbMc.botId=String(b.id);tbMc.cheie=k||tbMcCheie(b);tbMc.sursa="pagina";tbMcDeseneaza();
@@ -7593,7 +7598,7 @@ async function tbMcPorneste(b,k){
     if(!(Number(b.gridJos)>0&&Number(b.gridSus)>Number(b.gridJos)))throw new Error("botul n-are gridul citit (jos / sus)");
     var sim=mcsSimbolBot(b),s=TabloBot.simboluri(b.baza,b.quote,b.simbolPionex).pionex;
     /* v100.271 (ideile auditului 29.10): aceeași monedă cu barele aduse întregi ⇒ doar ultima pagină, lipită de ele (aceleași bare), și fără barele zilnice (aici nu se folosesc): ~2 cereri la 15 minute în loc de 8 */
-    if(tbMc.b15Sim!==sim||Date.now()-tbMc.b15La>TB_MC_MS){var c=await mcsAduCoin(sim,{fara1D:true,vechi:tbMc.b15Sim===sim&&tbMc.b15Intreg?tbMc.b15:null});if(!c||!c.b15||!c.b15.length)throw new Error("Pionex n-a dat lumânările de 15 minute pentru "+sim);tbMc.b15=c.b15;tbMc.b15La=Date.now();tbMc.b15Sim=sim;tbMc.b15Intreg=c.intreg===true;tbMc.funding=c.fundingInfo||null}
+    if(tbMc.b15Sim!==sim||Date.now()-tbMc.b15La>TB_MC_MS){var c=await mcsAduCoin(sim,{fara1D:true,vechi:tbMc.b15Sim===sim&&tbMc.b15Intreg?tbMc.b15:tbMcBareTinute(sim)});if(!c||!c.b15||!c.b15.length)throw new Error("Pionex n-a dat lumânările de 15 minute pentru "+sim);tbMc.b15=c.b15;tbMc.b15La=Date.now();tbMc.b15Sim=sim;tbMc.b15Intreg=c.intreg===true;tbMcTineBare(sim,c);tbMc.funding=c.fundingInfo||null}
     if(!tbStare.bot||String(tbStare.bot.id)!==String(b.id))return;   /* alt bot ales cât aduceam lumânările */
     var d=GridSim.setariDinBot(b),fi=tbMc.funding||(tbStare.funding&&tbStare.funding.sim===s?tbStare.funding.info:null)||null;   /* revizia (7): funding-ul MONEDEI botului */
     var st=Object.assign({},d.st,{suma:d.st.suma||50,fundingZi:fi?fi.rataZi:0.0003,fundingCost:!fi}),plan=tbPlan.botId===b.id&&tbPlan.plan&&!tbPlan.plan.proba?tbPlan.plan:null;   /* revizia (8): planul de probă nu intră */

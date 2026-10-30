@@ -51,7 +51,7 @@ await test("1b pagina botului: ambele socotiri (botul reluat și „ca bot porni
   ctx.mcsAduCoin = async () => ({ b15: B, b1: [], fundingInfo: { rataZi: 0.0002 } }); ctx.mcsSimbolBot = () => "PONS"; ctx.tbPanouVizibil = () => true; ctx.textEroare = (e) => String(e && e.message || e);
   ctx.TabloBot = { simboluri: () => ({ pionex: "PONS_USDT_PERP" }) }; ctx.getJSON = async () => ({ mcVerdict: null }); ctx.tbPlan = { botId: null, plan: null }; ctx.tbDeseneazaCitire = () => {};
   ctx.tbStare = { routeOk: true, bot: bot({ pornitLa: B[0].t - 3 * ZI }), citireO: null, funding: null };   // pornit înaintea barelor ⇒ a doua socotire, ca bot nou
-  const src = APP.match(/var tbMcWorker=null[^\n]*\n/)[0] + APP.match(/var TB_MC_MS=15\*60000[^\n]*\n/)[0] + "var tbMcKv={la:0,d:null,inLucru:null};\n" + ["tbMcWorkerAsteptare", "tbMcSimuleaza", "tbMcDinKv", "tbMcCheie", "tbMcTick", "tbMcPorneste", "tbMcDeseneaza", "tbMcRand"].map((n) => functie(APP, n)).join("\n");
+  const src = APP.match(/var tbMcWorker=null[^\n]*\n/)[0] + APP.match(/var TB_MC_MS=15\*60000[^\n]*\n/)[0] + "var tbMcKv={la:0,d:null,inLucru:null};\n" + ["tbMcWorkerAsteptare", "tbMcSimuleaza", "tbMcDinKv", "tbMcCheie", "tbMcTick", "tbMcBareTinute", "tbMcTineBare", "tbMcPorneste", "tbMcDeseneaza", "tbMcRand"].map((n) => functie(APP, n)).join("\n");
   vm.createContext(ctx); vm.runInContext(src, ctx);
   await ctx.tbMcTick(); for (let i = 0; i < 200 && ctx.tbMc.inLucru; i++) await new Promise((r) => setTimeout(r, 50));
   assert.equal(j.length, 2, "două socotiri: " + JSON.stringify(j)); assert.match(ctx.tbMc.rand.text, /ca bot pornit acum/);
@@ -195,7 +195,7 @@ await test("3d pagina botului într-o oră (socotește singură, colectorul tace
   Object.assign(ctx, { GridSim: GS, TextRo: globalThis.TextRo, mcsSimbolBot: () => "PONS", tbPanouVizibil: () => true, textEroare: (e) => String(e && e.message || e), TabloBot: { simboluri: () => ({ pionex: "PONS_USDT_PERP" }) }, tbPlan: { botId: null, plan: null }, tbDeseneazaCitire: () => {} });
   const b0 = (await ctx.mcsAduCoin("PONS")).b15, Pn = b0[b0.length - 1].c; pf.contor.m15 = pf.contor.d1 = pf.contor.funding = 0;
   ctx.tbStare = { routeOk: true, bot: bot({ gridJos: Pn * 0.9, gridSus: Pn * 1.1, opritorPierdere: Pn * 0.85, pornitLa: b0[b0.length - 8].t }), citireO: null, funding: null };
-  const src = APP.match(/var tbMcWorker=null[^\n]*\n/)[0] + APP.match(/var TB_MC_MS=15\*60000[^\n]*\n/)[0] + "var tbMcKv={la:0,d:null,inLucru:null};\n" + ["tbMcWorkerAsteptare", "tbMcSimuleaza", "tbMcDinKv", "tbMcCheie", "tbMcTick", "tbMcPorneste", "tbMcDeseneaza", "tbMcRand"].map((n) => functie(APP, n)).join("\n");
+  const src = APP.match(/var tbMcWorker=null[^\n]*\n/)[0] + APP.match(/var TB_MC_MS=15\*60000[^\n]*\n/)[0] + "var tbMcKv={la:0,d:null,inLucru:null};\n" + ["tbMcWorkerAsteptare", "tbMcSimuleaza", "tbMcDinKv", "tbMcCheie", "tbMcTick", "tbMcBareTinute", "tbMcTineBare", "tbMcPorneste", "tbMcDeseneaza", "tbMcRand"].map((n) => functie(APP, n)).join("\n");
   vm.runInContext(src, ctx);
   for (let k = 0; k < 4; k++) {
     if (k) ceas.now += 15 * 60000 + 1000;
@@ -222,7 +222,7 @@ await test("3f pagina botului: aducerea întreagă tăiată de o eroare nu se li
   let simCerut = "PONS"; Object.assign(ctx, { GridSim: GS, TextRo: globalThis.TextRo, mcsSimbolBot: () => simCerut, tbPanouVizibil: () => true, textEroare: (e) => String(e && e.message || e), TabloBot: { simboluri: () => ({ pionex: simCerut + "_USDT_PERP" }) }, tbPlan: { botId: null, plan: null }, tbDeseneazaCitire: () => {} });
   const b0 = (await ctx.mcsAduCoin("PONS")).b15, Pn = b0[b0.length - 1].c;
   ctx.tbStare = { routeOk: true, bot: bot({ gridJos: Pn * 0.9, gridSus: Pn * 1.1, opritorPierdere: Pn * 0.85, pornitLa: null }), citireO: null, funding: null };
-  const src = APP.match(/var tbMcWorker=null[^\n]*\n/)[0] + APP.match(/var TB_MC_MS=15\*60000[^\n]*\n/)[0] + "var tbMcKv={la:0,d:null,inLucru:null};\n" + ["tbMcWorkerAsteptare", "tbMcSimuleaza", "tbMcDinKv", "tbMcCheie", "tbMcTick", "tbMcPorneste", "tbMcDeseneaza", "tbMcRand"].map((n) => functie(APP, n)).join("\n");
+  const src = APP.match(/var tbMcWorker=null[^\n]*\n/)[0] + APP.match(/var TB_MC_MS=15\*60000[^\n]*\n/)[0] + "var tbMcKv={la:0,d:null,inLucru:null};\n" + ["tbMcWorkerAsteptare", "tbMcSimuleaza", "tbMcDinKv", "tbMcCheie", "tbMcTick", "tbMcBareTinute", "tbMcTineBare", "tbMcPorneste", "tbMcDeseneaza", "tbMcRand"].map((n) => functie(APP, n)).join("\n");
   vm.runInContext(src, ctx);
   const tic = async () => { await ctx.tbMcTick(); for (let i = 0; i < 200 && ctx.tbMc.inLucru; i++) await new Promise((r) => setTimeout(r, 30)); };
   let n15 = 0; pf.f.pica = (u) => /interval=15M/.test(u) && ++n15 === 3; pf.contor.m15 = 0; await tic(); pf.f.pica = null;

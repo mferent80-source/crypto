@@ -123,7 +123,7 @@ await test("2d. „Regulile tale”: 16:10 la noi (09:10 NY) e ÎNAINTE de desch
   const n = (re) => { const g = r.grupe.find((x) => re.test(x.grupa)); return g ? g.n : 0; };
   assert.equal(n(/înainte de deschidere/), 25, "„înainte de deschidere”: " + n(/înainte de deschidere/));
   assert.equal(n(/prima oră și jumătate după deschidere/), 15, "„prima oră și jumătate”: " + n(/prima oră și jumătate/));
-  assert.equal(n(/după 18$/), 30, "„după 18” (după prima oră și jumătate de bursă): " + n(/după 18$/));
+  assert.equal(n(/după 18 \(17 în săptămânile cu decalaj de oră\)$/), 30, "„după 18” (după prima oră și jumătate de bursă): " + n(/după 18 \(17 în săptămânile cu decalaj de oră\)$/));   // v100.274: eticheta cu pragul din săptămânile cu decalaj
 });
 
 // =============== 3. moneda acțiunii ===============

@@ -669,7 +669,7 @@ var ActiuniSemnale = (function () {
     l.forEach(function (t, i) {
       var z = ziSedinta(t.pornit); if (zIdx[z] === undefined) zIdx[z] = nZile++; zi.push(zIdx[z]);
       var h = oraRo(t.pornit, tz), mNy = minutNy(t.pornit);   /* v100.272: deschiderea din CalendarBursa (9:30 NY), la minut */
-      ad(h >= 23 || h < 11 ? "cumpărate noaptea (după 23 sau înainte de 11), în afara orelor" : mNy < DESCHIDERE_NY ? "cumpărate între 11 și 16:30, înainte de deschidere" : mNy < DESCHIDERE_NY + 90 ? "cumpărate în prima oră și jumătate după deschidere" : "cumpărate după 18", i);
+      ad(h >= 23 || h < 11 ? "cumpărate noaptea (după 23 sau înainte de 11), în afara orelor" : mNy < DESCHIDERE_NY ? "cumpărate între 11 și 16:30 (15:30 în săptămânile cu decalaj de oră), înainte de deschidere" : mNy < DESCHIDERE_NY + 90 ? "cumpărate în prima oră și jumătate după deschidere" : "cumpărate după 18 (17 în săptămânile cu decalaj de oră)", i);   /* v100.274: grupa e pe ora bursei; eticheta spune și pragul din săptămânile cu decalaj */
       if (t.extCumparare) ad("cumpărate în afara orelor de bursă", i);
       ad("cumpărate " + ziRo(t.pornit, tz), i);
       var c = t.cost || 0; ad(c < 1000 ? "sub 1.000 de lei" : c < 3000 ? "de 1.000–3.000 de lei" : c < 6000 ? "de 3.000–6.000 de lei" : "de peste 6.000 de lei", i);

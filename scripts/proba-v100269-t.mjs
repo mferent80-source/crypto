@@ -59,7 +59,7 @@ await test("1c un efect ADEVĂRAT (cumpărate după 18 ies cu 2 puncte mai prost
   const g = r.reguli.find((x) => /după 18/.test(x.grupa));
   assert.ok(g, "regula reală lipsește: " + JSON.stringify(r.reguli.concat(r.deUrmarit || []).map((x) => x.grupa + " p " + x.p)));
   assert.ok(g.p <= 0.01 && g.treceBh === true, JSON.stringify(g));
-  assert.match(g.text, /^Trade-urile cumpărate după 18: \d+ din \d+ pe plus \(\d+,\d%, față de \d+,\d% la celelalte\), total −[\d.]+ lei\.$/, g.text);
+  assert.match(g.text, /^Trade-urile cumpărate după 18 \(17 în săptămânile cu decalaj de oră\): \d+ din \d+ pe plus \(\d+,\d%, față de \d+,\d% la celelalte\), total −[\d.]+ lei\.$/, g.text);
   assert.equal(AS.facReguli(r.reguli[0].grupa), "Aș evita deocamdată trade-urile " + r.reguli[0].grupa + ".");
   assert.ok(r.teste >= 5 && r.teste <= 20, "câte grupe testate: " + r.teste);
 });
@@ -136,8 +136,8 @@ await test("1f ecranul: regulile doar cele care trec; ce nu trece stă la „De 
   const nota = /<p class="tbSub">Fiecare grupă e testată pe zile de bursă \(trade-urile din aceeași zi se mișcă împreună\), cu corecția pentru toate cele \d+ (de )?grupe testate\.<\/p>/;
   assert.match(h, nota, "nota metodei lipsește");
   const h2 = P.c.t212ReguliBloc(jurnalH0(400, 4242, { efect: (t, c) => (c.oraRo >= 18 ? -0.02 : 0) }));
-  assert.match(h2, /<li class="bad">Trade-urile cumpărate după 18:/);
-  assert.match(h2, /Ce aș face eu:<\/b> Aș evita deocamdată trade-urile cumpărate după 18\./);
+  assert.match(h2, /<li class="bad">Trade-urile cumpărate după 18 \(17 în săptămânile cu decalaj de oră\):/);
+  assert.match(h2, /Ce aș face eu:<\/b> Aș evita deocamdată trade-urile cumpărate după 18 \(17 în săptămânile cu decalaj de oră\)\./);   // v100.274: eticheta cu pragul din săptămânile cu decalaj
   assert.match(h2, nota, "nota metodei lipsește lângă regulă");
 });
 
