@@ -21,7 +21,7 @@ console.log("\nV100.278 · PICAT ≠ ZERO · proba\n");
 const ae = lib("acasa-ecran.js"), te = lib("t212-ecran.js");
 const esc = (x) => String(x).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const card = new Function("Acasa", "escapeHtml", "acCate", ae.slice(ae.indexOf("function acUsd("), ae.indexOf("function acasaDeseneaza() {")) + "; return { acBotiStatHtml };")(AC, esc, (n, s, p) => globalThis.TextRo.cate(n, s, p));
-const text = (h) => h.replace(/<[^>]+>/g, "|").replace(/\|+/g, "|");
+const text = (h) => h.replace(/<[^>]+>/g, "|").replace(/\|+/g, "|").replace(/\u00a0/g, " ");   /* v100.279: spațiu care nu se rupe între sumă și „USDT” */
 // argumentul din card, exact cum îl calculează acasaDeseneaza
 const argCard = new Function("contTot", "return " + ae.match(/hb \+= acBotiStatHtml\(([^;]+), Date\.now\(\)\);/)[1] + ";");
 
@@ -61,10 +61,12 @@ await test("încă necitită ⇒ „Aduc…”; ultimul închis doar din lista c
   assert.match(ae, /acUltimInchis\(typeof contTot !== "undefined" && contTot\.inchiseOk \?/);
 });
 
-await test("versiunea v100.278", () => {
-  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.278"/);
-  assert.match(citeste("public", "index.html"), /id="healthAppVersion">v100\.278</);
-  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-278/);
+// v100.279: de la v100.278 în sus (ca probele vechi), nu exact
+await test("versiunea de la v100.278", () => {
+  const app = Number(citeste("functions", "_shared", "versiune.js").match(/VERSIUNE = "v100\.(\d+)"/)[1]);
+  assert.ok(app >= 278, String(app));
+  assert.match(citeste("public", "index.html"), new RegExp('id="healthAppVersion">v100\\.' + app + "<"));
+  assert.match(citeste("public", "sw.js"), new RegExp("crypto-radar-v100-" + app));
 });
 
 console.log(picate ? `\n${picate} PICA din ${teste}\n` : `\ntoate ${teste} ok\n`);

@@ -390,7 +390,9 @@ function acMasuraLin() {
 // v100.277 (30.10, el: „boții tăi - față de ieri pare blocat, aș pune mai multe date, statistici”): el pornește ~8 boți pe zi, mulți ținuți
 // minute; cardul arăta doar boții activi (des „Niciun bot pornit acum”). Acum: ultimul închis, ziua de azi și ultimele 7 zile (cu cele 7
 // dinainte), toate pe NET (după comisioane și funding, ca Tabloul). Descriu ce s-a întâmplat, nu prezic.
-function acUsd(v) { var x = Math.round(Number(v) * 10) / 10; return isFinite(x) ? (x > 0 ? "+" : x < 0 ? "−" : "") + Math.abs(x).toFixed(1).replace(".", ",") + " USDT" : "—"; }   /* rotunjit întâi: fără „+0,0” / „−0,0” */
+// v100.279 (ideea 1): între sumă și „USDT” un spațiu care nu se rupe - pe telefon „−682,0” rămânea pe un rând și „USDT” pe următorul
+function acUsd(v) { var t = acSemn(v); return t === "—" ? t : t + "\u00a0USDT"; }
+function acSemn(v) { var x = Math.round(Number(v) * 10) / 10; return isFinite(x) ? (x > 0 ? "+" : x < 0 ? "−" : "") + Math.abs(x).toFixed(1).replace(".", ",") : "—"; }   /* rotunjit întâi: fără „+0,0” / „−0,0” */
 function acClsUsd(v) { var x = Number(v); return !isFinite(x) || Math.abs(x) < 0.05 ? "" : x > 0 ? "good" : "bad"; }
 function acNumeTrade(t) { return String(t && t.moneda || "?") + (t && t.dir ? " " + t.dir : "") + (t && t.levier ? " " + t.levier + "×" : ""); }
 function acUltimInchis(t) {
@@ -408,7 +410,7 @@ function acBotiStatHtml(inchise, acum) {
   if (!a || !a.n) h += '<p class="acMut">Niciun bot închis azi.</p>';
   else {
     h += '<div class="acLin"><span>' + escapeHtml(cifre(a)) + '</span><b class="' + acClsUsd(a.net) + '">' + acUsd(a.net) + "</b></div>";
-    if (a.n > 1) h += '<div class="acLin"><span>Cel mai bun · cel mai slab</span><b>' + escapeHtml(a.bun.moneda + " " + acUsd(a.bun.net).replace(" USDT", "") + " · " + a.slab.moneda + " " + acUsd(a.slab.net).replace(" USDT", "")) + "</b></div>";
+    if (a.n > 1) h += '<div class="acLin"><span>Cel mai bun · cel mai slab</span><b>' + escapeHtml(a.bun.moneda + "\u00a0" + acSemn(a.bun.net) + " · " + a.slab.moneda + "\u00a0" + acSemn(a.slab.net)) + "</b></div>";
     h += '<div class="acLin"><span>Cât țin de obicei</span><b>' + escapeHtml(Acasa.durataScurta(a.durataMin)) + "</b></div>";
   }
   h += '<div class="acEt" style="margin-top:6px">Ultimele 7 zile</div>';
@@ -416,8 +418,66 @@ function acBotiStatHtml(inchise, acum) {
   else {
     h += '<div class="acLin"><span>' + escapeHtml(cifre(s7)) + '</span><b class="' + acClsUsd(s7.net) + '">' + acUsd(s7.net) + "</b></div>";
     if (p7.n) h += '<div class="acLin"><span>Cele 7 zile dinainte <span class="acMut">· ' + escapeHtml(acCate(p7.n, "bot", "boți")) + '</span></span><b class="' + acClsUsd(p7.net) + '">' + acUsd(p7.net) + "</b></div>";
+    h += acBoti7Html(st);   /* v100.279: comisioanele, monedele, scurți / lungi */
   }
+  h += acZileHtml(st.zile);   /* v100.279: netul pe zile, 14 */
   return h + '<p class="acMut">Ce s-a întâmplat, nu ce urmează' + (s7.n && s7.n < 30 ? "; prea puțini boți ca să tragi concluzii" : "") + ".</p>";
+}
+// v100.279 (30.10, el: „super, fă toate” - ideile 2–4 de după v100.278): din ce s-a format rezultatul celor 7 zile
+function acBoti7Html(st) {
+  var h = "", co = st.costuri, mo = st.monede, sl = st.scurti;
+  // (4) comisioanele și funding-ul, pe un rând: cât s-a dus pe ele și ce rămânea fără ele
+  if (co && co.n && co.lipsa < co.n) h += '<div class="acLin"><span>Comisioane și funding <span class="acMut">· fără ele ' + escapeHtml(acUsd(co.faraCosturi)) + (co.lipsa ? " · lipsesc la " + escapeHtml(acCate(co.lipsa, "bot", "boți")) : "") + '</span></span><b class="' + acClsUsd(co.costuri) + '">' + acUsd(co.costuri) + "</b></div>";
+  // (2) pe monede, simetric: unde ai pierdut și unde ai câștigat (primele 3 din fiecare parte, cu numărul de boți)
+  var lista = function (l) { return l.slice(0, 3).map(function (x, i) { return x.moneda + "\u00a0" + acSemn(x.net) + "\u00a0(" + (i ? x.n : acCate(x.n, "bot", "boți")) + ")"; }).join(" · "); };
+  var suma = function (l) { return l.slice(0, 3).reduce(function (s, x) { return s + x.net; }, 0); };
+  var parte = function (titlu, l) {
+    if (!l.length) return "";
+    return '<div class="acLin"><span>' + titlu + (l.length > 3 ? ' <span class="acMut">· primele 3 din ' + l.length + "</span>" : "") + '</span><b class="' + acClsUsd(suma(l)) + '">' + acUsd(suma(l)) + "</b></div>"
+      + '<p class="acMut acLinSub">' + escapeHtml(lista(l)) + "</p>";
+  };
+  if (mo) h += parte("Unde ai pierdut", mo.slabe) + parte("Unde ai câștigat", mo.bune);
+  // (3) scurți față de lungi, cu pragul fixat dinainte; descriptiv - pe 7 zile nu e o dovadă
+  if (sl && sl.scurti.n + sl.lungi.n) {
+    var rand = function (et, x) { return x.n ? '<div class="acLin"><span>' + escapeHtml(et) + ' <span class="acMut">· ' + escapeHtml(acCate(x.n, "bot", "boți") + ", " + x.plus + " pe plus · " + acSemn(x.peBot) + " pe bot") + '</span></span><b class="' + acClsUsd(x.net) + '">' + acUsd(x.net) + "</b></div>" : ""; };
+    h += rand("Sub " + sl.prag + " min", sl.scurti) + rand(sl.prag + " min sau mai mult", sl.lungi)
+      + '<p class="acMut acLinSub">Pragul de ' + sl.prag + " min e fixat dinainte. 7 zile nu sunt o dovadă: boții aceleiași zile se mișcă împreună.</p>";
+  }
+  return h;
+}
+// (5) netul pe fiecare din ultimele 14 zile: bare pe plus / pe minus față de linia zero (SVG în card). Semnul îl poartă poziția
+// (sus / jos), culoarea doar îl repetă (verdele / roșul aplicației; la daltonism perechea nu ajunge singură - de aceea poziția și
+// cifrele cu semn); cea mai proastă / cea mai bună zi scrise sub grafic; fiecare zi în tabelul pliat de dedesubt (pe telefon nu e hover).
+function acZiScurta(z) { return z ? z.slice(8, 10) + "." + z.slice(5, 7) : ""; }
+function acZileSvg(zile) {
+  var W = 320, H = 92, SUS = 8, JOS = 74, XS = 24, n = zile.length;
+  var v = zile.map(function (z) { return z.n ? z.net : 0; }), vmax = Math.max(0, Math.max.apply(null, v)), vmin = Math.min(0, Math.min.apply(null, v)), span = vmax - vmin;
+  var lat = (W - XS) / n, bw = Math.max(4, Math.min(14, Math.round(lat * 0.6))), y0 = span > 0 ? SUS + (JOS - SUS) * vmax / span : (SUS + JOS) / 2, f = function (x) { return Math.round(x * 10) / 10; };
+  var g = zile.map(function (z, i) {
+    var cx = XS + lat * (i + 0.5), x = f(cx - bw / 2), h = span > 0 ? Math.abs(z.net) / span * (JOS - SUS) : 0, bara = "";
+    if (z.n && z.net !== 0) {
+      h = Math.max(1, h); var r = f(Math.min(4, bw / 2, h)), x2 = f(x + bw);
+      if (z.net > 0) { var t = f(y0 - h); bara = "M" + x + "," + f(y0) + "V" + f(t + r) + "A" + r + "," + r + " 0 0 1 " + f(x + r) + "," + t + "H" + f(x2 - r) + "A" + r + "," + r + " 0 0 1 " + x2 + "," + f(t + r) + "V" + f(y0) + "Z"; }
+      else { var b = f(y0 + h); bara = "M" + x + "," + f(y0) + "V" + f(b - r) + "A" + r + "," + r + " 0 0 0 " + f(x + r) + "," + b + "H" + f(x2 - r) + "A" + r + "," + r + " 0 0 0 " + x2 + "," + f(b - r) + "V" + f(y0) + "Z"; }
+    }
+    var titlu = (z.azi ? "azi (până acum)" : acZiScurta(z.zi)) + " · " + (z.n ? acCate(z.n, "bot închis", "boți închiși") + " · " + acUsd(z.net) : "niciun bot închis");
+    return '<g class="zZi"><title>' + escapeHtml(titlu) + '</title><rect class="zHit" x="' + f(XS + lat * i) + '" y="' + (SUS - 4) + '" width="' + f(lat) + '" height="' + (JOS - SUS + 8) + '"/>'
+      + (bara ? '<path class="zBar ' + (z.net > 0 ? "zPlus" : "zMinus") + '" d="' + bara + '"/>' : "") + "</g>";
+  }).join("");
+  var buna = zile.filter(function (z) { return z.n && z.net > 0; }).sort(function (a, b) { return b.net - a.net; })[0], rea = zile.filter(function (z) { return z.n && z.net < 0; }).sort(function (a, b) { return a.net - b.net; })[0];
+  var eticheta = "Rezultatul net pe zi, ultimele " + acCate(n, "zi", "zile") + (rea ? "; cea mai proastă: " + acZiScurta(rea.zi) + " " + acUsd(rea.net) : "") + (buna ? "; cea mai bună: " + acZiScurta(buna.zi) + " " + acUsd(buna.net) : "");
+  return '<svg class="acZile" viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="' + escapeHtml(eticheta) + '">'
+    + '<line class="zAx" x1="' + XS + '" y1="' + f(y0) + '" x2="' + W + '" y2="' + f(y0) + '"/><text x="' + (XS - 5) + '" y="' + f(y0 + 3.5) + '" text-anchor="end">0</text>'
+    + g + '<text x="' + XS + '" y="' + (H - 3) + '">' + escapeHtml(acZiScurta(zile[0].zi)) + '</text><text x="' + W + '" y="' + (H - 3) + '" text-anchor="end">azi</text></svg>';
+}
+function acZileHtml(zile) {
+  if (!Array.isArray(zile) || !zile.some(function (z) { return z.n; })) return "";
+  var buna = zile.filter(function (z) { return z.n && z.net > 0; }).sort(function (a, b) { return b.net - a.net; })[0], rea = zile.filter(function (z) { return z.n && z.net < 0; }).sort(function (a, b) { return a.net - b.net; })[0];
+  var cap = [rea ? "cea mai proastă zi " + acZiScurta(rea.zi) + " " + acUsd(rea.net) : "", buna ? "cea mai bună " + acZiScurta(buna.zi) + " " + acUsd(buna.net) : ""].filter(Boolean).join(" · ");
+  var rand = zile.slice().reverse().map(function (z) { return "<tr><td>" + escapeHtml(z.azi ? "azi" : acZiScurta(z.zi)) + "</td><td>" + (z.n || "—") + '</td><td class="' + (z.n ? acClsUsd(z.net) : "") + '">' + (z.n ? acUsd(z.net) : "—") + "</td></tr>"; }).join("");
+  return '<div class="acEt" style="margin-top:6px">Pe zile · ultimele ' + zile.length + "</div>" + acZileSvg(zile)
+    + (cap ? '<p class="acMut acLinSub">' + escapeHtml(cap.charAt(0).toUpperCase() + cap.slice(1)) + ".</p>" : "")
+    + '<details class="acZileTab"><summary>Fiecare zi</summary><table><thead><tr><th>Ziua</th><th>Boți</th><th>Net</th></tr></thead><tbody>' + rand + "</tbody></table></details>";
 }
 function acasaDeseneaza() {
   if (!$("acasa") || typeof Acasa === "undefined") return;
@@ -578,7 +638,7 @@ function acasaDeseneaza() {
     var nume = String(b.baza || "").replace(/\.PERP$/, ""), tot = Number(b.profitTotal), pr = Number(b.pretCurent), jo = Number(b.gridJos), su = Number(b.gridSus);
     var inGrid = su > jo && pr > 0 && isFinite(pr) ? Math.round((pr - jo) / (su - jo) * 100) : null, panaJos = jo > 0 && pr > 0 ? (pr / jo - 1) * 100 : null;
     var ent = d.clasament ? (d.clasament.monede || []).filter(function (x) { return String(x.simbol).replace(/_USDT_PERP$/, "") === nume; })[0] : null, rg = !ent && d.regimBoti ? d.regimBoti[nume] : null, m2 = ent ? ent.stare === "evita" : rg ? !!rg.miscare : null;
-    hb += '<div class="acLin"><span>' + escapeHtml(nume + " " + (b.directie || "") + (b.levier ? " " + b.levier + "×" : "")) + '</span><b class="' + (tot >= 0 ? "good" : "bad") + '">' + (isFinite(tot) ? (tot >= 0 ? "+" : "−") + Math.abs(tot).toFixed(1).replace(".", ",") + " USDT" : "—") + '</b></div>'
+    hb += '<div class="acLin"><span>' + escapeHtml(nume + " " + (b.directie || "") + (b.levier ? " " + b.levier + "×" : "")) + '</span><b class="' + (tot >= 0 ? "good" : "bad") + '">' + (isFinite(tot) ? (tot >= 0 ? "+" : "−") + Math.abs(tot).toFixed(1).replace(".", ",") + "\u00a0USDT" : "—") + '</b></div>'
       + '<div class="acLin"><span>Prețul în grid</span><b>' + (inGrid == null ? "—" : inGrid + "%" + (panaJos != null && panaJos >= 0 ? " · " + panaJos.toFixed(1).replace(".", ",") + "% până jos" : " · sub grid")) + '</b></div>'
       + '<div class="acLin"><span>Mediul lui</span><b class="' + (m2 === null ? "acMut" : m2 ? "bad" : "good") + '">' + (m2 === null ? "fără date" : (m2 ? "mișcare" : "liniște") + (rg ? " · " + (rg.r24h != null ? rg.r24h.toFixed(1).replace(".", ",") + "× pe 24 h" : (rg.r4h || 0).toFixed(1).replace(".", ",") + "× pe 4 h") : "")) + '</b></div>'   /* v100.272: cifra pe 24 h, ca „Mișcarea” BTC */
       + acPandaLin(b);
@@ -589,7 +649,7 @@ function acasaDeseneaza() {
   var ct = typeof t212 !== "undefined" && t212.cont && t212.cont.cash;
   var botiPeId = {}; act.forEach(function (b) { var v2 = Number(b.profitTotal); if (b.id && isFinite(v2)) botiPeId[String(b.id)] = v2; });
   var zt = Acasa.ziuaTa({ botiTotal: act.length ? act.reduce(function (s2, b) { var v2 = Number(b.profitTotal); return s2 + (isFinite(v2) ? v2 : 0); }, 0) : null, botiPeId: botiPeId, t212Total: ct ? Number(ct.total) : null }, pc.instantanee || [], fz, typeof contTot !== "undefined" ? contTot.inchise : null);   // v100.40: pe bot
-  if (zt && zt.boti !== null) hb += '<div class="acLin acZi"><span>Față de ieri dimineață' + (zt.inchiseDupa ? ' <span class="acMut">· cu ' + escapeHtml(acCate(zt.inchiseDupa, "bot închis", "boți închiși")) + ' de atunci</span>' : '') + '</span><b class="' + (zt.boti >= 0 ? "good" : "bad") + '">' + (zt.boti >= 0 ? "+" : "−") + Math.abs(zt.boti).toFixed(1).replace(".", ",") + ' USDT</b></div>';   /* v100.196: rezultatele cu O SINGURĂ zecimală */
+  if (zt && zt.boti !== null) hb += '<div class="acLin acZi"><span>Față de ieri dimineață' + (zt.inchiseDupa ? ' <span class="acMut">· cu ' + escapeHtml(acCate(zt.inchiseDupa, "bot închis", "boți închiși")) + ' de atunci</span>' : '') + '</span><b class="' + (zt.boti >= 0 ? "good" : "bad") + '">' + (zt.boti >= 0 ? "+" : "−") + Math.abs(zt.boti).toFixed(1).replace(".", ",") + '\u00a0USDT</b></div>';   /* v100.196: rezultatele cu O SINGURĂ zecimală */
   hb += acBotiStatHtml(typeof contTot === "undefined" || !contTot.inchise ? null : contTot.inchiseOk ? contTot.inchise : false, Date.now());   /* v100.277: azi + 7 zile, pe net; v100.278: picat ≠ zero boți */
   $("acBoti").innerHTML = hb + '<button class="acBtn" type="button" data-action-click="navTo(\'tabloubot\',true)">Deschide Tabloul</button>';
 

@@ -311,8 +311,10 @@ var Acasa = (function () {
   // comisioane și funding, ca Tabloul și Jurnalul), netul, cel mai bun / cel mai slab, durata tipică (mediana: duratele lui sunt foarte
   // strâmbe, 1 min … 13 h). Descrie ce s-a întâmplat; nu prezice nimic. inchise: JurnalTrade.din(...) - {id, moneda, dir, levier, pornit, inchis, net}
   function netTrade(t) { return t ? nr(t.net !== undefined && t.net !== null ? t.net : t.rezultat) : null; }
+  // boții închiși în (deLa, panaLa], cu rezultat cunoscut - aceeași fereastră pentru toate socotelile de mai jos
+  function inFereastra(inchise, deLa, panaLa) { return (Array.isArray(inchise) ? inchise : []).filter(function (t) { var ti = t ? nr(t.inchis) : null; return ti !== null && ti > deLa && ti <= panaLa && netTrade(t) !== null; }); }
   function perioadaBoti(inchise, deLa, panaLa) {
-    var l = (Array.isArray(inchise) ? inchise : []).filter(function (t) { var ti = t ? nr(t.inchis) : null; return ti !== null && ti > deLa && ti <= panaLa && netTrade(t) !== null; });
+    var l = inFereastra(inchise, deLa, panaLa);
     var o = { n: l.length, plus: 0, minus: 0, net: 0, bun: null, slab: null, durataMin: null };
     if (!l.length) return o;
     var dur = [];
@@ -331,7 +333,60 @@ var Acasa = (function () {
     if (m) { var u = Date.UTC(+m[1], +m[2] - 1, +m[3], 0), n9 = ora9Ro(z); zi0 = n9 !== null ? n9 - 9 * 3600000 : u; }
     var l = Array.isArray(inchise) ? inchise : [], ult = null;
     l.forEach(function (t) { var ti = t ? nr(t.inchis) : null; if (ti !== null && ti <= a && netTrade(t) !== null && (!ult || ti > ult.inchis)) ult = t; });
-    return { azi: zi0 !== null ? perioadaBoti(l, zi0, a) : null, sapt: perioadaBoti(l, a - 7 * 86400000, a), saptAnt: perioadaBoti(l, a - 14 * 86400000, a - 7 * 86400000), ultim: ult };
+    var d7 = a - 7 * 86400000;
+    return { azi: zi0 !== null ? perioadaBoti(l, zi0, a) : null, sapt: perioadaBoti(l, d7, a), saptAnt: perioadaBoti(l, a - 14 * 86400000, d7), ultim: ult,
+      monede: botiPeMonede(l, d7, a), scurti: botiScurtiLungi(l, d7, a, PRAG_SCURT_MIN), costuri: botiCosturi(l, d7, a), zile: botiPeZile(l, a, 14) };   /* v100.279 */
+  }
+  // v100.279 (30.10, el: „super, fă toate” - ideile de după v100.278): din ce s-a format rezultatul celor 7 zile. Tot pe NET, tot descriptiv.
+  // (2) pe monede: unde ai pierdut / unde ai câștigat (pe 26–30.10 BULLA a făcut singură −431,5 din −682,0 - 41 de boți)
+  function botiPeMonede(inchise, deLa, panaLa) {
+    var pe = {};
+    inFereastra(inchise, deLa, panaLa).forEach(function (t) { var m = String(t.moneda || "?"), x = pe[m] || (pe[m] = { moneda: m, n: 0, net: 0 }); x.n++; x.net += netTrade(t); });
+    var l = Object.keys(pe).map(function (k) { pe[k].net = Math.round(pe[k].net * 100) / 100; return pe[k]; });
+    return { monede: l.length, slabe: l.filter(function (x) { return x.net < 0; }).sort(function (a, b) { return a.net - b.net; }), bune: l.filter(function (x) { return x.net > 0; }).sort(function (a, b) { return b.net - a.net; }) };
+  }
+  // (3) boții scurți față de cei lungi. Pragul de 15 min e FIXAT înainte de a vedea datele (ideea din 30.10 îl numea deja) - nu se mută după rezultat.
+  var PRAG_SCURT_MIN = 15;
+  function botiScurtiLungi(inchise, deLa, panaLa, pragMin) {
+    var p = nr(pragMin) || PRAG_SCURT_MIN, g = function () { return { n: 0, plus: 0, minus: 0, net: 0, peBot: null }; }, o = { prag: p, scurti: g(), lungi: g(), faraDurata: 0, zile: 0 }, zile = {};
+    inFereastra(inchise, deLa, panaLa).forEach(function (t) {
+      var p0 = nr(t.pornit), v = netTrade(t);
+      if (p0 === null || t.inchis < p0) { o.faraDurata++; return; }
+      var x = (t.inchis - p0) / 60000 < p ? o.scurti : o.lungi;
+      x.n++; x.net += v; if (v > 0) x.plus++; else if (v < 0) x.minus++;
+      zile[ziBucMs(t.inchis)] = 1;
+    });
+    [o.scurti, o.lungi].forEach(function (x) { x.net = Math.round(x.net * 100) / 100; x.peBot = x.n ? Math.round(x.net / x.n * 100) / 100 : null; });
+    o.zile = Object.keys(zile).length;
+    return o;
+  }
+  // (4) comisioanele și funding-ul (negative = plătite): cât din rezultat s-a dus pe ele; „fără ele” = realizatul brut Pionex (net − costuri)
+  function botiCosturi(inchise, deLa, panaLa) {
+    var o = { n: 0, comisioane: 0, funding: 0, costuri: 0, net: 0, faraCosturi: null, lipsa: 0 };
+    inFereastra(inchise, deLa, panaLa).forEach(function (t) {
+      var c = nr(t.comisioane), f = nr(t.funding);
+      o.n++; o.net += netTrade(t);
+      if (c === null && f === null) { o.lipsa++; return; }
+      o.comisioane += c || 0; o.funding += f || 0;
+    });
+    o.comisioane = Math.round(o.comisioane * 100) / 100; o.funding = Math.round(o.funding * 100) / 100; o.net = Math.round(o.net * 100) / 100;
+    o.costuri = Math.round((o.comisioane + o.funding) * 100) / 100;
+    o.faraCosturi = o.n ? Math.round((o.net - o.costuri) * 100) / 100 : null;
+    return o;
+  }
+  // (5) netul pe fiecare zi a României, ultimele n (cea mai veche prima, azi ultima - azi e până acum); zilele fără boți rămân, cu n 0
+  function zileInapoi(zi, k) { var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(zi || "")); return m ? new Date(Date.UTC(+m[1], +m[2] - 1, +m[3] - k)).toISOString().slice(0, 10) : null; }
+  function botiPeZile(inchise, acum, nZile) {
+    var a = nr(acum) || Date.now(), n = nr(nZile) || 14, azi = ziBucMs(a), pe = {}, out = [];
+    if (!azi) return out;
+    var prima = zileInapoi(azi, n - 1);
+    (Array.isArray(inchise) ? inchise : []).forEach(function (t) {
+      var ti = t ? nr(t.inchis) : null, v = netTrade(t); if (ti === null || ti > a || v === null) return;
+      var z = ziBucMs(ti); if (!z || z < prima || z > azi) return;
+      var x = pe[z] || (pe[z] = { n: 0, net: 0 }); x.n++; x.net += v;
+    });
+    for (var k = n - 1; k >= 0; k--) { var z = zileInapoi(azi, k), x = pe[z]; out.push({ zi: z, n: x ? x.n : 0, net: x ? Math.round(x.net * 100) / 100 : 0, azi: k === 0 }); }
+    return out;
   }
   // „3 min”, „65 min” → „1,1 h”, „13 h” (o zecimală sub 10 h)
   function durataScurta(min) {
@@ -559,6 +614,6 @@ var Acasa = (function () {
     return o;
   }
 
-  return { perioadaBoti: perioadaBoti, botiStatistici: botiStatistici, durataScurta: durataScurta, ora9Ro: ora9Ro, clasamentLipsa: clasamentLipsa, textCorelatie: textCorelatie, SECTOR: SECTOR, sectoare: sectoare, ziuaTa: ziuaTa, raportSaptamana: raportSaptamana, socotealaAlerte: socotealaAlerte, miscareTipica: miscareTipica, fundingPiata: fundingPiata, fundingAtentie: fundingAtentie, schimbari: schimbari, vreme: vreme, miscari: miscari, fg: fg, fgValid: fgValid, largime: largime, ro: ro, rezumatActiune: rezumatActiune, largimeNdx: largimeNdx, vremeBursa: vremeBursa, corelatie: corelatie, calendar: calendar, MAG7: MAG7, franaVerb: franaVerb, frazaPauza: frazaPauza, masuraFranei: masuraFranei, unesteZileFrana: unesteZileFrana };
+  return { botiPeMonede: botiPeMonede, botiScurtiLungi: botiScurtiLungi, botiCosturi: botiCosturi, botiPeZile: botiPeZile, PRAG_SCURT_MIN: PRAG_SCURT_MIN, perioadaBoti: perioadaBoti, botiStatistici: botiStatistici, durataScurta: durataScurta, ora9Ro: ora9Ro, clasamentLipsa: clasamentLipsa, textCorelatie: textCorelatie, SECTOR: SECTOR, sectoare: sectoare, ziuaTa: ziuaTa, raportSaptamana: raportSaptamana, socotealaAlerte: socotealaAlerte, miscareTipica: miscareTipica, fundingPiata: fundingPiata, fundingAtentie: fundingAtentie, schimbari: schimbari, vreme: vreme, miscari: miscari, fg: fg, fgValid: fgValid, largime: largime, ro: ro, rezumatActiune: rezumatActiune, largimeNdx: largimeNdx, vremeBursa: vremeBursa, corelatie: corelatie, calendar: calendar, MAG7: MAG7, franaVerb: franaVerb, frazaPauza: frazaPauza, masuraFranei: masuraFranei, unesteZileFrana: unesteZileFrana };
 })();
 if (typeof globalThis !== "undefined") globalThis.Acasa = Acasa;

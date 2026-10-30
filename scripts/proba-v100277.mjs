@@ -81,7 +81,7 @@ await test("(2) cardul: azi / 7 zile / 7 dinainte cu o zecimală, ultimul închi
   const esc = (x) => String(x).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   const acCate = (n, sg, pl) => globalThis.TextRo.cate(n, sg, pl);
   const f = new Function("Acasa", "escapeHtml", "acCate", cod + "; return { acBotiStatHtml, acUltimInchis, acUsd };")(AC, esc, acCate);
-  const h = f.acBotiStatHtml(L, ACUM).replace(/<[^>]+>/g, "|").replace(/\|+/g, "|");
+  const h = f.acBotiStatHtml(L, ACUM).replace(/<[^>]+>/g, "|").replace(/\|+/g, "|").replace(/\u00a0/g, " ");   /* v100.279: suma și „USDT” legate cu spațiu care nu se rupe */
   assert.match(h, /\|Azi\|4 boți închiși · 3 pe plus, 1 pe minus\|\+3,2 USDT\|/);
   assert.match(h, /\|Cel mai bun · cel mai slab\|PARTI \+21,8 · PARTI −24,8\|/);
   assert.match(h, /\|Cât țin de obicei\|24 min\|/);
@@ -91,9 +91,9 @@ await test("(2) cardul: azi / 7 zile / 7 dinainte cu o zecimală, ultimul închi
   assert.doesNotMatch(h, /\d,\d\d\b/, "o singură zecimală");
   assert.match(f.acBotiStatHtml(null, ACUM), /Aduc boții închiși…/);
   assert.match(f.acBotiStatHtml([], ACUM), /Niciun bot închis azi\..*Niciun bot închis în 7 zile\./);
-  const u = f.acUltimInchis(L[2]).replace(/<[^>]+>/g, "|").replace(/\|+/g, "|");
+  const u = f.acUltimInchis(L[2]).replace(/<[^>]+>/g, "|").replace(/\|+/g, "|").replace(/\u00a0/g, " ");
   assert.match(u, /\|Ultimul închis: BEAMX long 3× \|· a ținut 1,1 h · [^|]+\|\+1,2 USDT\|/);
-  assert.equal(f.acUsd(0.04), "0,0 USDT"); assert.equal(f.acUsd(-0.04), "0,0 USDT"); assert.equal(f.acUsd(-0), "0,0 USDT"); assert.equal(f.acUsd(-1.86), "−1,9 USDT");
+  assert.equal(f.acUsd(0.04), "0,0\u00a0USDT"); assert.equal(f.acUsd(-0.04), "0,0\u00a0USDT"); assert.equal(f.acUsd(-0), "0,0\u00a0USDT"); assert.equal(f.acUsd(-1.86), "−1,9\u00a0USDT");   /* v100.279: spațiu care nu se rupe */
   // legat în card: rândurile de până acum rămân (activii, „Prețul în grid”, „Mediul lui”, „Față de ieri”) + blocurile noi
   assert.match(ae, /hb \+= acBotiStatHtml\(typeof contTot === "undefined" \|\| !contTot\.inchise \? null : contTot\.inchiseOk \? contTot\.inchise : false, Date\.now\(\)\);/);   /* v100.278: picat ≠ zero boți */
   assert.match(ae, /Niciun bot pornit acum\.<\/p>' \+ acUltimInchis\(/);
