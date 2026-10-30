@@ -132,7 +132,7 @@ await test("(B) calendar: doar US (1–5 caractere, fără punct), doar cu estim
   ] }));
   const a = await (await API.onRequestGet({ request: cerere("action=calendar&zile=14"), env: env(ist) })).json();
   assert.deepEqual(a.items.map((x) => [x.s, x.data, x.ora, x.epsEst]), [["JPM", "2026-10-14", "bmo", 4.9], ["ISRG", "2026-10-20", "amc", 2.64]]);
-  assert.equal(a.zile, 14); assert.ok(cereri[0].includes("finnhub.io/api/v1/calendar/earnings?from=")); assert.ok(cereri[0].includes("token=" + CHEIE));
+  assert.equal(a.zile, 14); assert.ok(cereri[0].includes("finnhub.io/api/v1/calendar/earnings?from=")); assert.ok(!cereri[0].includes(CHEIE), "v100.272: cheia Finnhub nu mai stă în URL (e în antetul X-Finnhub-Token - proba-v100272-s, 7a)");
   const n = cereri.length; await API.onRequestGet({ request: cerere("action=calendar&zile=14"), env: env(ist) }); assert.equal(cereri.length, n, "din cache");
 });
 await test("(B) calendar: zile în afara 7/14/30 ⇒ 14; Finnhub 429 ⇒ 502 cu motivul (nu listă goală tăcută)", async () => {

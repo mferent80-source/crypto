@@ -63,7 +63,7 @@ import { vociBot, schimbareVoci, judecaVoci, ferestreRegim, noteazaMc, judecaMc,
 import { titluDimineata } from "./lib/dimineata-titlu.mjs";   // v101.62 (I-526): rândul-verdict din capul rezumatului de dimineață
 import { alcatuieste as pentruBusola, intrariRetea, trimiteBusolei, cheiaBotilorBusola, secretScriereBusola, inchisiProaspeti } from "./lib/pentru-busola.mjs";   // v101.60 (I-515 + I-498): fișierul local pentru Busola
 /* v101.132 (20.10, el: „fa idei”): candidatul neconfirmat pleacă lângă regimul ținut, nu în locul lui */
-const VERSIUNE_COLECTOR = "v101.146";   /* v101.146 (29.10): Monte Carlo pe 7 zile, regimul o dată pe oră, jurnalul riscului pe 1 h / 4 h / 1 zi */   /* v101.145 (29.10): scorul și riscul scurt Monte Carlo în KV, baza egală la închidere, fișa pe bare de 1 h, „mișcare mare” unică, alertele planului */   /* v101.144 (29.10): alerta „vremii” BTC–bursă pe pragurile din Macro.PRAGURI (urmează peste 0,6, pe drumul lui de la 0,2 în jos) */   /* v101.143 (29.10, auditul aplicației): pulsul paznicului doar cu boții citiți, anunțul căderii serverului prin drumul alertelor, coada veche înaintea mesajelor noi */   /* v101.142 (29.10, el: „fa ideile”): F6 alerta „funding-ul s-a întors” (alerte.js) + F7 proba futures pe date noi (lib/futures-proba.mjs) */   /* v101.141 (23.10, „hai să facem tot”): alertele pe 7 zile, stopurile T212 cu vârstă, poza mai rară, nu iese fără server, semnalul de ieșire, CMG_CA, pornește doar din dosarul principal, fișa cu Monte Carlo, poarta gridului pe bani. Procesul pornit rămâne pe build-ul cu care a pornit până îl repornești */   /* v101.140 (23.10, auditul „absolut tot”): „mută gridul” fără setări când fișa zice NU / piața în mișcare; PORNEȘTE cere media pe test peste zero. Procesul pornit rămâne pe build-ul cu care a pornit până îl repornești */   /* v101.139 (23.10, el: „fa idei”): la short, Consilierul vorbește despre marginea de sus; pe Discord, moneda instrumentului rămâne cea a lui (GBp, £), fără conversie. Procesul pornit rămâne pe build-ul cu care a pornit până îl repornești */   /* v101.138 (23.10, el: „fa idei”): pe Discord, sub prețul 10, bucățile ies întregi; de la 10 rămân două zecimale. Procesul pornit rămâne pe build-ul cu care a pornit până îl repornești */   /* v101.137 (23.10, el: „fa tot”): prețul 0 nu intră în seria de 30 și nu pornește „în afara gridului”; procesul pornit rămâne pe versiunea veche până îl repornești */   /* v101.136 (21.10, el: „code și design”): cont:zile ține semnul funding-ului, long sau short, doar când pauza și evenimentul s-au citit */   /* v101.135 (21.10, el: „fa tot”): cont:zile ține și la, o dată pe zi, doar când pauza și evenimentul s-au citit */   /* v101.134 (21.10, el: „amprenta”): gura care invită aude semnul funding-ului deja măsurat */   /* v101.133 (21.10, el: „fa idei”): cont:zile ține pauza, VaR-ul și evenimentul, o dată pe zi */   /* v101.131 (20.10, el: „regimul macro mereu actualizat”): citirea picată sau parțială eliberează la_macro, tura următoare reia */   /* v101.130 (20.10, el: „fa idei”): dimineața primește regimul macro ținut dacă e proaspăt (≤ 2 h); bara zilnică EU se scoate până la închiderea bursei ei */   /* v101.129 (19.10, auditul scorului): turaScor la 10 minute (rula la fiecare minut), țintele ridicate anunțate iar */   /* v101.128 (19.10): scorul sezonului și pentru Trading 212 (pauza, țintele), nimic cât sezonul e oprit */   /* v101.127 (19.10, scorul sezonului, ideea 2): pe Discord pauza la N pierderi la rând și țintele atinse (turaScor, după arhiva boților) */   /* v101.126 (19.10, auditul din toate direcțiile): alerta „nu mai pot judeca lichidarea”, contrafactualul fără roată, timeout ≠ server oprit, hărțile curățate */   /* v101.125 (17.10): pentru-busola.json duce și episoadele alertelor + martorii (Busola le judecă la date fixe) */   /* v101.124 (17.10): pentru-busola.json duce și banii Pionex ai botului (grile, comisioane, funding, suma pusă) — Busola: „unde pleacă banii” */   /* v101.123 (16.10): omul mort — Busola n-a mai măsurat ⇒ Discord, pragul după programul ei */   /* v101.122 (16.10, auditul Busolei): distanța până la lichidare pe botul deschis în pentru-busola.json */   /* v101.121 (15.10, Busola I-636): boții merg și DIRECT în Busola (POST la worker-ul ei, după fiecare scriere a pentru-busola.json) */   /* v101.120 (15.10): profitul de acum al botului deschis în pentru-busola.json */   /* v101.119 (15.10): prețul de acum al botului în pentru-busola.json */   /* v101.118 (15.10, „fă tot” B1): verdictul Monte Carlo pe boți verificat pe ce a urmat (Brier, cutiile) */   /* v101.117 (15.10): intervalul gridului (jos/sus) + tipul botului în pentru-busola.json, pentru „IEȘIT DIN GRID” din Busola „Acum” */   /* v101.116 (14.10 noaptea, „repară și fă tot”): auditul sever reparat pe toate zonele */   /* v101.115 (14.10 seara, „repară toate”): coșurile judecate pe zi, bilanțul Trend cu t și abaterea */   /* v101.114 (14.10): Scorul zilei din „Piața azi” în jurnalul verdictelor */   // v101.113 (14.10, „fă tot”): rigla Trend peste SPY + 20/60 z, proba PAZNIC–lățime zilnic, rândul Trend în raportul de duminică; v101.112: saltul într-o zi din robot ajunge în Sugestii; v101.111 (el 14.10: „integrează cum ai zis”): tura Trend 12 luni, tura-trend.mjs; v101.110 (el 13.10: „fă idei”): bilanțul judecă și la 24 h + episoadele (ultimele 30) trimise cu starea pazei, pentru pagina Alerts; v101.109 v101.109 (el 13.10: „fă idei”): bilanțul cu martor și pe alertele Busolei (invers, vocile, BTC) + trimis cu starea pazei, ca Tabloul să-l arate; v101.108 v101.108 (el 13.10: „fă idei”): alerta „contra” spune lichidarea în zile obișnuite + bilanțul ei (episoade vs martor, la 72 h) în raportul de duminică; v101.107 (el 13.10: „fă idei”): paza boților anunță botul CONTRA direcției monedei din pândă (o dată pe episod, cel mult la 24 h); v101.106 v101.106 (disciplina): statistica ieșirii din bandă zilnic, alerta pe viu, gărzile și lecția săptămânii în tura contului; v101.105 (factori și sectoare): universul SUA din screenerul Nasdaq, topul pe sectoare o dată pe zi, DVOL la o oră, factorii / atribuirea / MAE / volatilitatea în raportul contului; v101.104 (revizia contului întreg): monedele T212, fitilurile crizelor, pauza după eșec, loturile verdictelor, cursorul completării pe pagină; v101.103 (contul întreg + jurnalul verdictelor): riscul agregat, crizele, reconcilierea, randamentul, execuția, verdictele cu corecția pentru teste multiple, completarea istoricului T212; v101.102 (contul întreg, prima formă); v101.101 (reparațiile rămase): calendarul burselor, coada Discord pe niveluri, poza în trepte, frâna fără arhivă, cursul BNR, arhiva după 2 pagini știute; v101.100 (revizia reparațiilor): socoteala deblocată, lista goală nu mai e „dispărut”, arhiva completă cerută, macro publicat la fiecare citire; v101.99 (auditul Opus): botul „dispărut” confirmat 3 ture, arhiva cerută la raport/frână/socoteală, simbolurile goale nu se țin minte, cursul doar din SUA; v101.98: regimul macro ținut se trimite acasă (Dashboard = Discord)
+const VERSIUNE_COLECTOR = "v101.147";   /* v101.147 (30.10): restul auditului - starea alertelor scrisă amânat, Discord fără dubluri, proba futures, lichidarea întâi, motivul închiderii în arhivă */   /* v101.146 (29.10): Monte Carlo pe 7 zile, regimul o dată pe oră, jurnalul riscului pe 1 h / 4 h / 1 zi */   /* v101.145 (29.10): scorul și riscul scurt Monte Carlo în KV, baza egală la închidere, fișa pe bare de 1 h, „mișcare mare” unică, alertele planului */   /* v101.144 (29.10): alerta „vremii” BTC–bursă pe pragurile din Macro.PRAGURI (urmează peste 0,6, pe drumul lui de la 0,2 în jos) */   /* v101.143 (29.10, auditul aplicației): pulsul paznicului doar cu boții citiți, anunțul căderii serverului prin drumul alertelor, coada veche înaintea mesajelor noi */   /* v101.142 (29.10, el: „fa ideile”): F6 alerta „funding-ul s-a întors” (alerte.js) + F7 proba futures pe date noi (lib/futures-proba.mjs) */   /* v101.141 (23.10, „hai să facem tot”): alertele pe 7 zile, stopurile T212 cu vârstă, poza mai rară, nu iese fără server, semnalul de ieșire, CMG_CA, pornește doar din dosarul principal, fișa cu Monte Carlo, poarta gridului pe bani. Procesul pornit rămâne pe build-ul cu care a pornit până îl repornești */   /* v101.140 (23.10, auditul „absolut tot”): „mută gridul” fără setări când fișa zice NU / piața în mișcare; PORNEȘTE cere media pe test peste zero. Procesul pornit rămâne pe build-ul cu care a pornit până îl repornești */   /* v101.139 (23.10, el: „fa idei”): la short, Consilierul vorbește despre marginea de sus; pe Discord, moneda instrumentului rămâne cea a lui (GBp, £), fără conversie. Procesul pornit rămâne pe build-ul cu care a pornit până îl repornești */   /* v101.138 (23.10, el: „fa idei”): pe Discord, sub prețul 10, bucățile ies întregi; de la 10 rămân două zecimale. Procesul pornit rămâne pe build-ul cu care a pornit până îl repornești */   /* v101.137 (23.10, el: „fa tot”): prețul 0 nu intră în seria de 30 și nu pornește „în afara gridului”; procesul pornit rămâne pe versiunea veche până îl repornești */   /* v101.136 (21.10, el: „code și design”): cont:zile ține semnul funding-ului, long sau short, doar când pauza și evenimentul s-au citit */   /* v101.135 (21.10, el: „fa tot”): cont:zile ține și la, o dată pe zi, doar când pauza și evenimentul s-au citit */   /* v101.134 (21.10, el: „amprenta”): gura care invită aude semnul funding-ului deja măsurat */   /* v101.133 (21.10, el: „fa idei”): cont:zile ține pauza, VaR-ul și evenimentul, o dată pe zi */   /* v101.131 (20.10, el: „regimul macro mereu actualizat”): citirea picată sau parțială eliberează la_macro, tura următoare reia */   /* v101.130 (20.10, el: „fa idei”): dimineața primește regimul macro ținut dacă e proaspăt (≤ 2 h); bara zilnică EU se scoate până la închiderea bursei ei */   /* v101.129 (19.10, auditul scorului): turaScor la 10 minute (rula la fiecare minut), țintele ridicate anunțate iar */   /* v101.128 (19.10): scorul sezonului și pentru Trading 212 (pauza, țintele), nimic cât sezonul e oprit */   /* v101.127 (19.10, scorul sezonului, ideea 2): pe Discord pauza la N pierderi la rând și țintele atinse (turaScor, după arhiva boților) */   /* v101.126 (19.10, auditul din toate direcțiile): alerta „nu mai pot judeca lichidarea”, contrafactualul fără roată, timeout ≠ server oprit, hărțile curățate */   /* v101.125 (17.10): pentru-busola.json duce și episoadele alertelor + martorii (Busola le judecă la date fixe) */   /* v101.124 (17.10): pentru-busola.json duce și banii Pionex ai botului (grile, comisioane, funding, suma pusă) — Busola: „unde pleacă banii” */   /* v101.123 (16.10): omul mort — Busola n-a mai măsurat ⇒ Discord, pragul după programul ei */   /* v101.122 (16.10, auditul Busolei): distanța până la lichidare pe botul deschis în pentru-busola.json */   /* v101.121 (15.10, Busola I-636): boții merg și DIRECT în Busola (POST la worker-ul ei, după fiecare scriere a pentru-busola.json) */   /* v101.120 (15.10): profitul de acum al botului deschis în pentru-busola.json */   /* v101.119 (15.10): prețul de acum al botului în pentru-busola.json */   /* v101.118 (15.10, „fă tot” B1): verdictul Monte Carlo pe boți verificat pe ce a urmat (Brier, cutiile) */   /* v101.117 (15.10): intervalul gridului (jos/sus) + tipul botului în pentru-busola.json, pentru „IEȘIT DIN GRID” din Busola „Acum” */   /* v101.116 (14.10 noaptea, „repară și fă tot”): auditul sever reparat pe toate zonele */   /* v101.115 (14.10 seara, „repară toate”): coșurile judecate pe zi, bilanțul Trend cu t și abaterea */   /* v101.114 (14.10): Scorul zilei din „Piața azi” în jurnalul verdictelor */   // v101.113 (14.10, „fă tot”): rigla Trend peste SPY + 20/60 z, proba PAZNIC–lățime zilnic, rândul Trend în raportul de duminică; v101.112: saltul într-o zi din robot ajunge în Sugestii; v101.111 (el 14.10: „integrează cum ai zis”): tura Trend 12 luni, tura-trend.mjs; v101.110 (el 13.10: „fă idei”): bilanțul judecă și la 24 h + episoadele (ultimele 30) trimise cu starea pazei, pentru pagina Alerts; v101.109 v101.109 (el 13.10: „fă idei”): bilanțul cu martor și pe alertele Busolei (invers, vocile, BTC) + trimis cu starea pazei, ca Tabloul să-l arate; v101.108 v101.108 (el 13.10: „fă idei”): alerta „contra” spune lichidarea în zile obișnuite + bilanțul ei (episoade vs martor, la 72 h) în raportul de duminică; v101.107 (el 13.10: „fă idei”): paza boților anunță botul CONTRA direcției monedei din pândă (o dată pe episod, cel mult la 24 h); v101.106 v101.106 (disciplina): statistica ieșirii din bandă zilnic, alerta pe viu, gărzile și lecția săptămânii în tura contului; v101.105 (factori și sectoare): universul SUA din screenerul Nasdaq, topul pe sectoare o dată pe zi, DVOL la o oră, factorii / atribuirea / MAE / volatilitatea în raportul contului; v101.104 (revizia contului întreg): monedele T212, fitilurile crizelor, pauza după eșec, loturile verdictelor, cursorul completării pe pagină; v101.103 (contul întreg + jurnalul verdictelor): riscul agregat, crizele, reconcilierea, randamentul, execuția, verdictele cu corecția pentru teste multiple, completarea istoricului T212; v101.102 (contul întreg, prima formă); v101.101 (reparațiile rămase): calendarul burselor, coada Discord pe niveluri, poza în trepte, frâna fără arhivă, cursul BNR, arhiva după 2 pagini știute; v101.100 (revizia reparațiilor): socoteala deblocată, lista goală nu mai e „dispărut”, arhiva completă cerută, macro publicat la fiecare citire; v101.99 (auditul Opus): botul „dispărut” confirmat 3 ture, arhiva cerută la raport/frână/socoteală, simbolurile goale nu se țin minte, cursul doar din SUA; v101.98: regimul macro ținut se trimite acasă (Dashboard = Discord)
 // v101.97 (revizia Opus): alerta de regim macro confirmată + cel mult o dată la 3 ore
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -116,12 +116,19 @@ if (!DOAR_INCARCA) try {
   // v101.140 (auditul 23.10): colectorul pornit de sarcina S4U stă în sesiunea 0 ⇒ din sesiunea lui kill(…, 0) dă EPERM = rulează, nu „a murit”
 } catch (e) { if (pidVerificat && e && e.code === "EPERM") { jurnal("mai rulează un colector (PID " + pidVerificat + "), în altă sesiune - ies"); process.exit(0); } }
 const bate = () => { if (DOAR_INCARCA) return; try { fs.writeFileSync(PID, process.pid + " " + Date.now()); } catch {} };
-function iesiLaSemnal() { if (DOAR_INCARCA) return; if (S.verificaSemnal(fs, SEMNAL_IESIRE, PORNIT_LA) === "iesi") { jurnal("semnal de ieșire (data\\colector-iesi.semnal, de la livrare) - ies curat, sarcina „Crypto Radar pornire” mă pornește din nou"); try { scrieStare(); } catch {} process.exit(0); } }
+// v100.272 (revizia independentă): semnalul văzut în mijlocul turei ⇒ ieșirea la capătul ei (bucla cheamă iesiLaSemnal după tură), cel mult
+// S.IESIRE_MAX_MS după semnal; var: citite din ceasul de 10 s, fără TDZ
+var turaInCurs = false, iesireCerutaLa = 0;
+function iesiLaSemnal() { if (DOAR_INCARCA) return; const semnal = S.verificaSemnal(fs, SEMNAL_IESIRE, PORNIT_LA) === "iesi", dec = S.decizieIesire({ semnal, turaInCurs, cerutaLa: iesireCerutaLa, acum: Date.now() });
+  if (!semnal) iesireCerutaLa = 0;
+  if (dec === "asteapta") { if (!iesireCerutaLa) { iesireCerutaLa = Date.now(); jurnal("semnal de ieșire (de la livrare) - ies la capătul turei, cel mult peste " + Math.round(S.IESIRE_MAX_MS / 1000) + " s"); } return; }
+  if (dec === "iesi") { jurnal("semnal de ieșire (data\\colector-iesi.semnal, de la livrare) - ies curat, sarcina „Crypto Radar pornire” mă pornește din nou"); golesteStarea(); process.exit(0); } }   /* v100.272: starea amânată scrisă pe loc, înainte de repornire */
 bate();
 const curataPid = () => { if (DOAR_INCARCA) return; try { if (Number(fs.readFileSync(PID, "utf8").split(/\s+/)[0]) === process.pid) fs.unlinkSync(PID); } catch {} };
 process.on("exit", curataPid);
 process.on("SIGINT", () => process.exit(0));
 process.on("SIGTERM", () => process.exit(0));
+process.on("SIGHUP", () => process.exit(0));   // v100.272 (ideile auditului 29.10): consola închisă (Windows) ⇒ ieșire curată, cu starea scrisă (process.on("exit"))
 
 function citesteVars() {
   const f = path.join(RAD, ".dev.vars");
@@ -277,18 +284,29 @@ function salveazaCoada() { try { const t = taieCoada(coadaDiscord, 200); if (t.t
 // alertele CRITICE se mai încearcă 24 h (înainte: renunțat tăcut la 12 h, ca la info); ce intră în coadă cât se golește rămâne la coadă
 // v100.267 (auditul 29.10): lângă steag, PROMISIUNEA golirii în curs - cine vine cât se golește (trimiteAlerta) o așteaptă, nu primește „gata”
 // pe loc și nu se strecoară printre mesajele cozii
-let golireDiscord = false, golireDiscordP = null;
+// v100.272 (ideile auditului 29.10): discordPauzaPana = Discord a cerut pauză (429, retry_after) - până atunci nicio cerere: mesajele noi intră la
+// coadă, în ordine, iar golirea așteaptă; înainte fiecare mesaj și fiecare tură băteau din nou la ușă
+let golireDiscord = false, golireDiscordP = null, discordPauzaPana = 0;
 async function golesteCoada() {
   if (golireDiscord) return golireDiscordP;
   if (CANAL !== "discord" || !coadaDiscord.length) return;
   golireDiscord = true;
   golireDiscordP = (async () => {
     try {
-      const acum = Date.now(), lot = coadaDiscord.slice();
+      const acum = Date.now(), lot = coadaDiscord.slice(); let marcat = false;
+      // v100.272: trimiterea fără confirmare (timeout, conexiune ruptă) poate să fi ajuns - webhook-ul n-are nonce, nu se poate verifica ⇒
+      // reîncercată (o alertă pierdută e mai rea decât una dublă), cu „poate e o dublură” în titlu; un 429 oprește golirea până la retry_after
       const r = await S.golesteCoadaPas(lot, { acum, maxMs: (x) => (x.m && x.m.nivel === "critic" ? 24 : 12) * 3600000,
-        trimite: (x) => trimiteDiscord({ ...x.m, titlu: MesajeColector.intarziat(x.m.titlu, Math.round((acum - x.t) / 60000)) }, { fetch, webhook: DISCORD_WEBHOOK, jurnal }) });
+        trimite: async (x) => {
+          if (Date.now() < discordPauzaPana) return false;
+          let info = null; const titlu = MesajeColector.intarziat(x.m.titlu, Math.round((acum - x.t) / 60000));
+          const ok = await trimiteDiscord({ ...x.m, titlu: x.nesigur ? S.cuPoateDublura(titlu) : titlu }, { fetch, webhook: DISCORD_WEBHOOK, jurnal, laRezultat: (z) => { info = z; } });
+          if (!ok && info && info.reiaDupaMs > 0) discordPauzaPana = Date.now() + info.reiaDupaMs;
+          if (!ok && info && info.nesigur && !x.nesigur) { x.nesigur = Date.now(); marcat = true; }
+          return ok;
+        } });
       for (const x of r.renuntate) jurnal("coada discord: renunț (" + (x.m && x.m.nivel === "critic" ? "critică, peste 24 h" : "peste 12 h") + ")", x.m && x.m.titlu);
-      if (r.ramase.length !== lot.length) { coadaDiscord = r.ramase.concat(coadaDiscord.filter((x) => !lot.includes(x))); salveazaCoada(); }
+      if (r.ramase.length !== lot.length || marcat) { coadaDiscord = r.ramase.concat(coadaDiscord.filter((x) => !lot.includes(x))); salveazaCoada(); }
     } finally { golireDiscord = false; }
   })();
   return golireDiscordP;
@@ -331,8 +349,13 @@ async function trimiteAlerta(m, bot, cheie) {
     // din coadă, abia la 20:04:39, cu 224 min întârziere); golirea în curs e așteptată. O coadă care tot nu pleacă nu ține mesajul nou pe loc:
     // el încearcă direct, iar refuzat intră la coadă DUPĂ cele vechi
     if (coadaDiscord.length || golireDiscord) await golesteCoada().catch((e) => jurnal("coada discord", e.message));
-    const ok = await trimiteDiscord(m, { fetch, webhook: DISCORD_WEBHOOK, jurnal });
-    if (!ok) { coadaDiscord.push({ t: Date.now(), m: { nivel: m.nivel, titlu: m.titlu, mesaj: m.mesaj || "" } }); salveazaCoada(); }
+    // v100.272 (ideile auditului 29.10): în pauza cerută de Discord (429) mesajul nou merge direct la coadă, după cele vechi; refuzat cu
+    // retry_after ⇒ pauza; trimis fără confirmare (poate a ajuns) ⇒ la coadă cu semnul „nesigur”
+    let info = null; const pauza = Date.now() < discordPauzaPana;
+    const ok = pauza ? false : await trimiteDiscord(m, { fetch, webhook: DISCORD_WEBHOOK, jurnal, laRezultat: (z) => { info = z; } });
+    if (pauza) jurnal("discord: în pauza cerută de Discord (429), la coadă", m.titlu);
+    if (!ok && info && info.reiaDupaMs > 0) discordPauzaPana = Date.now() + info.reiaDupaMs;
+    if (!ok) { coadaDiscord.push(Object.assign({ t: Date.now(), m: { nivel: m.nivel, titlu: m.titlu, mesaj: m.mesaj || "" } }, info && info.nesigur ? { nesigur: Date.now() } : {})); salveazaCoada(); }
     if (!inKv && ok) { coadaKv.push({ t: alertaKv.t, m: alertaKv }); salveazaCoadaKv(); }
     return inKv || ok;
   }
@@ -355,7 +378,17 @@ async function ntfy(m) {
 const STARE_FIS = path.join(DATA, "alerte-stare.json");
 let stareAlerte = {}; try { stareAlerte = JSON.parse(fs.readFileSync(STARE_FIS, "utf8")); } catch {}
 // v100.40: scris atomic (tmp + rename) - 5 ture scriu starea; un fisier taiat la jumatate retrimitea toate alertele
-function scrieStare() { try { scrieAtomic(STARE_FIS, stareAlerte); } catch (e) { jurnal("starea alertelor nescrisa", e.message); } }
+// v100.272 (ideile auditului 29.10, felia 5): starea (~500 KB) se rescria la FIECARE scrieStare() - zeci pe minut, ~3–4 GB pe zi pe SSD. Acum
+// scrieStare() doar o marchează; scrierea pleacă cel mult o dată la 10 s (S.scriereAmanata) și doar dacă s-a schimbat ceva; la ieșire
+// (process.exit, SIGINT / SIGTERM / SIGHUP, excepție, semnalul livrării) golesteStarea() scrie pe loc. O cădere de curent pierde cel mult 10 s.
+// stareScrisa / stareScriere sunt var: golirea de la ieșire le citește (înregistrată abia sub ele, deci fără TDZ)
+const STARE_SCRIERE_MS = 10000;
+var stareScrisa = null;
+function scrieStareAcum() { try { const t = JSON.stringify(stareAlerte); if (t === stareScrisa) return true; scrieAtomic(STARE_FIS, stareAlerte); stareScrisa = t; return true; } catch (e) { jurnal("starea alertelor nescrisa", e.message); return false; } }
+var stareScriere = S.scriereAmanata({ scrie: scrieStareAcum, dupaMs: STARE_SCRIERE_MS });
+function scrieStare() { if (stareScriere) stareScriere.marcheaza(); else scrieStareAcum(); }
+function golesteStarea() { try { if (stareScriere) stareScriere.goleste(); } catch {} try { scrieStareAcum(); } catch {} }   /* v100.272 (revizia): și NEMARCATĂ (lichidareIntai schimbă starea înainte de marcaj); scrieStareAcum sare peste JSON identic */
+process.on("exit", golesteStarea);
 // v101.86 (el 07.10, „pagina alerts să fie în două”): jurnalul alertelor de AZI pentru poza paginii alerts - separat de lista de 100
 // din KV-ul Radarului, unde grilele împing alertele de dimineață afară (07.10: la 14:48 lista începea de la 08:41)
 const ALERTE_ZI_FIS = path.join(DATA, "alerte-zi.json");
@@ -450,7 +483,7 @@ async function semnaleBot(b, ctx, acum) {
     const prof = profileMoneda.get(s) || null, b15 = GridCalcul.bare(r15), dirC = String(b.directie || "").toLowerCase();
     x.concret = SemnaleBot.acumConcret({ bot: b, fisa: f, zero: TabloExtra.dacaInchizi(b), costuri: x.costuri, plan: ctx.plan || null, pragMargine: ProfilMoneda.praguriMargine(prof), pragStop: ProfilMoneda.pragStop(prof, dirC), acum,
       cifre: (pr) => TabloExtra.cifreActiuni(b, { protectie: pr, b15 }) });
-    x.sfaturi = Sfaturi.sfaturi(Sfaturi.intrare({ bot: b, k4: d.k4, fata4h: d.fata4h, dir4h: d.dir4h, funding: fut && fut.funding != null ? Number(fut.funding) : null, fundingHist: fut && Array.isArray(fut.fundingHist) ? fut.fundingHist : null, fisa: f, rezumat: d.rez ? Directie.rezumat(d.rez, b.directie) : null, acum }));   // v101.74 (I-541)
+    x.sfaturi = Sfaturi.sfaturi(Sfaturi.intrare({ bot: b, k4: d.k4, fata4h: d.fata4h, dir4h: d.dir4h, funding: fut && fut.funding != null ? Number(fut.funding) : null, fundingHist: fut && Array.isArray(fut.fundingHist) ? fut.fundingHist : null, fundingPionex: d.funding && Number.isFinite(Number(d.funding.rataZi)) ? d.funding : null /* v100.272: ratele Pionex (ce plătește botul), ca în Tablou; Binance rămâne reper */,fisa: f, rezumat: d.rez ? Directie.rezumat(d.rez, b.directie) : null, acum }));   // v101.74 (I-541)
     x.cons = Consiliu.alcatuieste({ sm: x.semafor, concret: x.concret, sfaturi: x.sfaturi, socoteala: socotealaUltima, busola: x.busola, regim: f && f.regim ? { miscare: !!f.regim.miscare } : null, laJos: TabloExtra.totalCuGridLa(b, Number(b.gridJos)), laSus: TabloExtra.totalCuGridLa(b, Number(b.gridSus)), sus: Number(b.gridSus),
       opritor: SemnaleBot.pretStopEcran(b), opritorProc: SemnaleBot.etichetaStopProc(b), opreste: TabloBot.opreste(b.brut, acum, b.pretCurent), btc: x.btc && x.btc.text ? x.btc.text : null,   // v100.222 (I-721)
       perechi: Perechi.raport(b.ordinePerechi, b.pornitLa, acum, perechiEst && perechiEst[b.id] || null, { urme: perechiEst && perechiEst[b.id] && perechiEst[b.id].urme, factor: perechiCor[s] && perechiCor[s].factor, inGrid: Number(b.pretCurent) >= Number(b.gridJos) && Number(b.pretCurent) <= Number(b.gridSus) }) });   // v101.30 (I-477)
@@ -490,6 +523,24 @@ let esecuri = 0;
 let ultimiiBoti = [], ultimiiBotiLa = 0; const pret30 = {}, pret30La = {}; let turaNr = 0;   // audit 19.10: pret30La = cand a fost atins (curatarea la 2 zile)
 // v101.116 (auditul sever, C1): ora ultimei ture a alertelor TERMINATE (fără excepție) - pulsul pozei și condiția bătăii la paznic (var: citit din ceasul pozei)
 var turaGataLa = 0;
+// v100.272 (ideile auditului 29.10, felia 5): lichidarea judecată la începutul turei, pe toți boții, înaintea îmbogățirii (S.lichidareIntaiPas:
+// doar cheile lich / status / opritor din alerte.js, care cer botul și starea lor). Aceeași regulă de sărit ca în bucla mare (botul oprit e judecat
+// o dată); alerta care n-a plecat ⇒ starea ei revine, tura următoare o reîncearcă. Întoarce id-urile judecate - bucla mare nu le mai trimite.
+async function lichidareIntai(boti, acum) {
+  const facut = new Set();
+  for (const b of boti) {
+    if (!b || !b.id) continue;
+    if (b.activ === false && !(stareAlerte[b.id] && stareAlerte[b.id].activ && stareAlerte[b.id].activ.nivel === "ok")) continue;
+    const inainte = stareAlerte[b.id] || {};
+    let r; try { r = S.lichidareIntaiPas(Alerte, b, inainte, acum); } catch (e) { jurnal("lichidare întâi", b.id, e.message); continue; }
+    stareAlerte[b.id] = r.stare; facut.add(String(b.id));
+    for (const msg of r.mesaje) {
+      let ok = false; try { ok = await trimiteAlerta(msg, b.id, msg.cheie); } catch (e) { jurnal("lichidare întâi", b.id, e.message); }
+      if (!ok) { if (inainte[msg.cheie]) stareAlerte[b.id][msg.cheie] = inainte[msg.cheie]; else delete stareAlerte[b.id][msg.cheie]; }
+    }
+  }
+  return facut;
+}
 async function tura() {
   const acum = Date.now();
   turaNr++;
@@ -540,6 +591,9 @@ async function tura() {
   const boti = Array.isArray(d && d.bots) ? d.bots : [];
   ultimiiBoti = boti; ultimiiBotiLa = Date.now();   // v100.40: ora citirii - poza nu mai stampileaza boti vechi cu „acum”
   for (const b of boti) if (b && b.id && Number.isFinite(Number(b.pretCurent)) && Number(b.pretCurent) > 0) { const r = pret30[b.id] || (pret30[b.id] = []); r.push(Number(b.pretCurent)); if (r.length > 30) r.shift(); pret30La[b.id] = acum; }
+  // v100.272 (ideile auditului 29.10, felia 5): riscul de lichidare al TUTUROR boților, judecat ÎNTÂI - înainte venea abia după îmbogățirea
+  // fiecărui bot dinainte (direcția, funding-ul, BTC, planul, semnalele: zeci de cereri Pionex); aceleași mesaje, în aceeași tură
+  let lichIntai = new Set(); try { lichIntai = (await lichidareIntai(boti, acum)) || new Set(); } catch (e) { jurnal("lichidare întâi", e.message); }
   // v101.67 (el, 05.10: „±1% la ce dețin”, B): fiecare bot activ - 1% fata de pretul ultimei alerte; referinta pe disc (rezista la repornire)
   {
     const ref = m.pasBoti || (m.pasBoti = {}), vii = {};
@@ -707,6 +761,7 @@ async function tura() {
     const inainte = stareAlerte[b.id] || {};
     ctx.taci = socotealaTaci;   // v100.43 (I-466): sfaturile care nu bat hazardul raman doar in Radar
     const r = Alerte.evalueaza(b, ctx, inainte, acum);
+    if (lichIntai.has(String(b.id))) S.faraCheileIntai(r, inainte);   // v100.272: lichidarea judecată (și trimisă) la începutul turei
     stareAlerte[b.id] = r.stare;
     // v91.11 (4): grila atinsa / pereche incheiata - contorii se muta abia dupa ce mesajul a plecat
     try {
@@ -757,19 +812,21 @@ async function tura() {
 // Rezultatul merge in KV (istoric-bot?action=clasament); fereastra Grid il arata.
 const CLASAMENT_MS = Number(process.env.COLECTOR_CLASAMENT_MS) || 3600000, CLASAMENT_TOP = 100;
 // v101.142 (F7, 29.10, el: „fa ideile”): proba futures pe date noi - o dată pe ORA DIN CEAS (un rând pe monedă pe oră), 20 de monede + boții
-const FUTURES_PROBA_MS = 3600000;
+const FUTURES_PROBA_MS = 3600000, FUTURES_PROBA_REIA_MS = 10 * 60000;   /* v100.272: după un eșec, următoarea încercare abia peste 10 min */
 // `ritm` e un let declarat MAI JOS ⇒ citit la prima tură, nu la pornire (TDZ - capcana „let de modul citit la pornire”)
-let futuresProbaOra = null, futuresProbaInLucru = false;
+// v100.272 (ideile auditului 29.10, felia 5): o excepție (de ex. fișierul jurnalului ținut deschis la rename) nu nota nimic ⇒ tura se relua la
+// FIECARE minut, cu ~21 de cereri; acum ora încercării picate se ține minte (futuresProbaReiaLa) și se reia abia peste 10 min, în aceeași oră
+let futuresProbaOra = null, futuresProbaInLucru = false, futuresProbaReiaLa = 0;
 async function turaFuturesProbaColector() {
   const oraAcum = Math.floor(Date.now() / FUTURES_PROBA_MS);
   if (futuresProbaOra === null) futuresProbaOra = Math.floor((Number(ritm.futuresProba) || 0) / FUTURES_PROBA_MS);
-  if (futuresProbaInLucru || oraAcum === futuresProbaOra) return;
+  if (futuresProbaInLucru || oraAcum === futuresProbaOra || Date.now() < futuresProbaReiaLa) return;
   futuresProbaInLucru = true;
   try {
     const r = await turaFuturesProba({ F: FuturesCitire, cere, trimite, jurnal, fisier: path.join(DATA, "futures-jurnal.jsonl"), acum: Date.now(), univers: FuturesCitire.univers(ultimiiBoti || []) });
     futuresProbaOra = oraAcum; tineRitm("futuresProba", Date.now());
     jurnal("futures proba", cate(r.randuri, "rând nou", "rânduri noi") + ", " + cate(r.total, "rând", "rânduri") + " în jurnal");
-  } catch (e) { jurnal("futures proba ESEC", e.message); }
+  } catch (e) { futuresProbaReiaLa = Date.now() + FUTURES_PROBA_REIA_MS; jurnal("futures proba ESEC", e.message, "- reiau peste 10 min"); }
   futuresProbaInLucru = false;
 }
 // v100.40 (audit 30.09): ritmurile turelor scumpe (clasament, laborator) tinute minte peste reporniri - pe 30.09 laboratorul
@@ -2012,9 +2069,15 @@ function pornireArboriDe(modele, btc) {
     return r;
   };
 }
+// v100.272 (ideile auditului 29.10, felia 5): antrenorii (procese separate, până la 50 / 35 de minute) se opresc când iese colectorul (semnal,
+// livrare, excepție) - nu rămân să scrie modele în urma lui. Pe Windows libuv îi oprea oricum (job object, verificat 30.10); acum explicit și în jurnal
+const antrenori = S.registruCopii();
+function opresteAntrenorii() { try { const o = antrenori.opresteToti(); if (o.length) jurnal("antrenorii opriți la ieșirea colectorului: " + o.join(", ")); } catch {} }
+process.on("exit", opresteAntrenorii);
 function pornesteAntrenorul() {
   return new Promise((gata) => {
     const t0 = Date.now(), c = spawn(process.execPath, [path.join(RAD, "retea", "antreneaza.mjs"), "--buget-min", "45"], { cwd: RAD, stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
+    antrenori.adauga(c, "rețeaua");
     try { os.setPriority(c.pid, os.constants.priority.PRIORITY_BELOW_NORMAL); } catch {}
     const rand = (x) => String(x).split(/\r?\n/).filter(Boolean).forEach((l) => jurnal("retea:", l.slice(0, 300)));
     c.stdout.on("data", rand); c.stderr.on("data", rand);
@@ -2027,6 +2090,7 @@ function pornesteAntrenorul() {
 function pornesteAntrenorArbori() {
   return new Promise((gata) => {
     const t0 = Date.now(), c = spawn(process.execPath, [path.join(RAD, "retea", "antreneaza-arbori.mjs"), "--buget-min", "30"], { cwd: RAD, stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
+    antrenori.adauga(c, "arborii");
     try { os.setPriority(c.pid, os.constants.priority.PRIORITY_BELOW_NORMAL); } catch {}
     const rand = (x) => String(x).split(/\r?\n/).filter(Boolean).forEach((l) => jurnal("arbori:", l.slice(0, 300)));
     c.stdout.on("data", rand); c.stderr.on("data", rand);
@@ -2472,7 +2536,8 @@ async function bucla() {
   iesiLaSemnal();   // v100.259 (punctul 17)
   // v100.267 (auditul 29.10): pulsul (turaGataLa ⇒ turaLa din poză + bătaia la paznic) se mișcă DOAR cu boții citiți; înainte se mișca și când
   // citirea pica (tura prindea eroarea și ieșea normal), iar paznicul nu putea spune „bucla alertelor stă” cu serverul :8788 mort
-  try { if (await tura()) turaGataLa = Date.now(); } catch (e) { jurnal("tură", e.message); }
+  turaInCurs = true; try { if (await tura()) turaGataLa = Date.now(); } catch (e) { jurnal("tură", e.message); } finally { turaInCurs = false; }
+  iesiLaSemnal();   // v100.272 (revizia): semnalul venit în tură ⇒ ieșirea acum, la capătul ei (nu cu o alertă în zbor)
   // v98.2 (audit 28.09, #1): planurile si poza cer amandoua pozitiile T212 - una dupa alta, nu deodata (serverul leaga oricum
   // cererile identice in zbor; asa nici cele diferite nu se calca in aceeasi secunda)
   turaPlanuriT212().catch((e) => jurnal("planuri t212", e.message)).then(() => turaPoza()).catch((e) => jurnal("poza", e.message));

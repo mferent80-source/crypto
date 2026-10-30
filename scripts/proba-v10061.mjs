@@ -211,9 +211,10 @@ await test("R10 (poza 390 px): serverul pastreaza din semnalele colectorului si 
   const r = await mod.onRequestPost({ request: cer("POST", "action=semnale", { bot: "2394", log: [], acum: { la: T0, btc, aglomerare: ag, afaraOre: 0 } }), env });
   assert.equal(r.status, 200, await r.clone().text());
   const g = await (await mod.onRequestGet({ request: cer("GET", "action=semnale&bot=2394"), env })).json(), a = g.semnale.acum;
-  assert.equal(a.btc.r, 3.6); assert.equal(a.aglomerare.semne, 3); assert.match(a.aglomerare.dovezi, /open interest \+20,0% în ultimele ore/);
+  /* v100.272: cifra BTC e cea pe 24 h (definiția comună a „mișcării mari”), nu maximul cu cea pe 4 h */
+  assert.equal(a.btc.r, 1.2); assert.equal(a.aglomerare.semne, 3); assert.match(a.aglomerare.dovezi, /open interest \+20,0% în ultimele ore/);
   const k = S.semafor({ bot: CRV({ distantaLichidarePct: 40 }), fisa, btc: a.btc }).componente.find((x) => x.cod === "btc");
-  assert.equal(k.motiv, "BTC în mișcare (3,6× față de obișnuit), moneda încă nu");
+  assert.equal(k.motiv, "BTC în mișcare (1,2× obișnuitul pe 24 h), moneda încă nu");
 });
 await test("F2 (proba de ecran, piata in miscare): varianta ingusta respinsa devreme spune tot pe cate zile - fisa nu mai scrie „pe undefined de zile”", () => {
   const GP = new Function("GridCalcul", fs.readFileSync(path.join(RAD, "public", "lib", "grid-proba.js"), "utf8") + "; return GridProba;")(globalThis.GridCalcul);

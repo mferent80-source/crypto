@@ -34,7 +34,7 @@ await test("mutaGridul: pretul in ultimele 10% ale intervalului sau afara >= 2 h
 
 await test("btcAvertizare: BTC in miscare, moneda inca linistita -> atentie; amandoua in miscare sau BTC linistit -> null", () => {
   const a = S.btcAvertizare({ r4h: 2.1, r24h: 1.2, miscare: true }, { r4h: 0.8, r24h: 0.9, miscare: false });
-  assert.ok(a); assert.equal(a.nivel, "atentie"); assert.match(a.text, /2,1×/);
+  assert.ok(a); assert.equal(a.nivel, "atentie"); assert.match(a.text, /1,2× obișnuitul lui pe 24 h/);   /* v100.272: cifra pe 24 h (definiția comună), nu maximul cu 4 h */
   assert.equal(S.btcAvertizare({ r4h: 2.1, r24h: 1, miscare: true }, { miscare: true, r4h: 2, r24h: 1 }), null);
   assert.equal(S.btcAvertizare({ r4h: 1, r24h: 1, miscare: false }, { miscare: false, r4h: 1, r24h: 1 }), null);
   assert.equal(S.btcAvertizare(null, null), null);

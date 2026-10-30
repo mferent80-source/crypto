@@ -51,9 +51,11 @@ await test("interval fără lumânări / prea puține ⇒ rândul spune de ce, n
 
 const app = citeste("public", "app.js");
 await test("pagina aduce în plus 5 min și 1 oră (500 de bare), cu pauza între cereri (Pionex numără)", () => {
-  const f = app.slice(app.indexOf("async function grAduLumanari("), app.indexOf("function grTextEroare("));
+  /* v100.272: aducerea e pe două fire - grAdu15 (15 min, cu memoria pe monedă) și grAduRest (4 h, 1 zi, 5 min, 1 h, funding); grAduLumanari le adună */
+  const f = app.slice(app.indexOf("var grLum15="), app.indexOf("function grTextEroare("));
   assert.match(f, /interval=5M&limit=500/); assert.match(f, /interval=60M&limit=500/);
-  assert.match(f, /return \{r15:r15,r4:r4\|\|\[\],r1:r1\|\|\[\],r5:r5\|\|\[\],r60:r60\|\|\[\],fundingZi:fz\}/);
+  assert.match(f, /return \{r4:r4\|\|\[\],r1:r1\|\|\[\],r5:r5\|\|\[\],r60:r60\|\|\[\],fundingZi:fz\}/);
+  assert.match(f, /return \{r15:a\.r15,r4:x\.r4,r1:x\.r1,r5:x\.r5,r60:x\.r60,fundingZi:x\.fundingZi,istoric15:a\.istoric15\}/);
 });
 await test("după calcul, sub „Direcția”: blocul „Trendul pe intervale” din Directie.peIntervale pe gridul fișei", () => {
   const r = app.slice(app.indexOf("function renderGrid("), app.indexOf("function renderGrid(") + 9000);

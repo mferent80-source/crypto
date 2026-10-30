@@ -201,13 +201,14 @@ await test("P5 insigna „necitite”: deschiderea paginii Alerte marchează cit
 // ---------------------------------------------------------------------------------------------------------------------------
 await test("🟡2/3 rezultatele din Tablou: o zecimală și virgula (KPI total, % din investiți, din grid, lichidarea, săptămâna, portofoliul)", () => {
   const k = fnSursa(APP, "tbDeseneazaKpi");
+  const kl = fnSursa(APP, "tbKpiLichDeseneaza");   /* v100.272: KPI-ul „Lichidare” s-a mutat aici (pe prețul viu, la fiecare tranzacție) */
   assert.ok(!/tot\.toFixed\(2\)|inv\.toFixed\(2\)|gp\.toFixed\(2\)|tbFormateazaSemn\(100\*tot\/inv,2\)/.test(k), "KPI-ul are încă 2 zecimale");
-  assert.ok(!/Math\.abs\(dist\)\.toFixed\(1\)\+"%"/.test(k), "lichidarea KPI cu punct");
+  assert.ok(!/Math\.abs\(dist\)\.toFixed\(1\)\+"%"/.test(kl), "lichidarea KPI cu punct");
   assert.match(k, /var s1=function\(v\)\{var x=TextRo\.num\(v,1\);return v>0&&x!=="0,0"\?"\+"\+x:x\}/); assert.match(k, /pune\("tbKpiTotal",tot===null\?"—":s1\(tot\)/);
   const c = ctx({}); vm.runInContext(citeste("public", "lib", "text-ro.js") + "\n" + fnSursa(APP, "botiBan").replace(/^/, "function botiNr(v){const n=Number(v);return v==null||v===''||!isFinite(n)?null:n}\n"), c);
   assert.equal(vm.runInContext("botiBan(12.345)", c), "+12,3 USDT"); assert.equal(vm.runInContext("botiBan(-0.04)", c), "0,0 USDT"); assert.equal(vm.runInContext("botiBan(-21.31)", c), "−21,3 USDT");
   assert.equal(vm.runInContext("botiBan(100,2,false)", c), "100,00 USDT", "suma investită (o valoare, nu un rezultat) rămâne la ban");
-  assert.match(k, /TextRo\.pct\(Math\.abs\(dist\),1\)/);
+  assert.match(kl, /TextRo\.pct\(Math\.abs\(dist\),1\)/);
   assert.ok(!/Math\.abs\(x\.grile\)\.toFixed\(2\)/.test(APP), "săptămâna (grilele pe zi) cu 2 zecimale");
   assert.ok(!/var U=function\(v\)\{return \(v>=0\?"\+":"−"\)\+Math\.abs\(v\)\.toFixed\(2\)\+" USDT"\}/.test(APP), "portofoliul cu punct și 2 zecimale");
 });

@@ -23,7 +23,12 @@ var Scan = (function () {
     var tr = 0, n = 0;
     for (var j = b.length - 14; j < b.length; j++) { var x = b[j], a = b[j - 1]; tr += Math.max(x.h - x.l, Math.abs(x.h - a.c), Math.abs(x.l - a.c)); n++; }
     var vz = b.slice(-20).filter(function (x) { return nr(x.v) !== null; });
+    // v100.272 (ideile auditului 29.10): „mișcare neobișnuită” = mișcarea mare comună (GridCalcul.miscareMare pe bare zilnice: ziua de azi peste
+    // percentila 90 a zilelor ei, ~1 zi din 10), ca alertele boților și ale acțiunilor; `mis` (× o zi obișnuită) rămâne de arătat. Istoricul =
+    // aceleași 90 de zile ca „o zi obișnuită” de mai sus (pe tot istoricul, istoricRetete din colector ar fi luat de 2 ori mai mult)
+    var GC = typeof GridCalcul !== "undefined" ? GridCalcul : null, mm = GC && GC.miscareMare ? GC.miscareMare(b.slice(-91), { k: 1 }) : null;
     return {
+      mare: mm && typeof mm.mare === "boolean" ? mm.mare : undefined,
       p: u, ch: r2(ch), ch7: r2((u / c[c.length - 8] - 1) * 100), ch30: c.length > 31 ? r2((u / c[c.length - 31] - 1) * 100) : null,
       e20: u > ema(c.slice(-120), 20), e50: u > ema(c.slice(-200), 50), e200: c.length >= 200 ? u > ema(c, 200) : null,
       rsi: Math.round(rsi(c) * 10) / 10, mis: p75 > 0 ? r2(Math.abs(ch / 100) / p75) : null,
@@ -60,8 +65,9 @@ var Scan = (function () {
       e: "RSI sub 35 (vândut peste măsură) la ceva care pe termen lung e încă pe creștere. Riscant: uneori scade mai departe. Se intră doar cu stop." },
     { k: "spargere", t: "🚀 Spargere", sub: "peste maximul pe 20 zile", f: function (x) { return !!x.sparge; },
       e: "Prețul de închidere a trecut peste cel mai mare preț din ultimele 20 de zile. Spargerile merg cel mai bine când și piața e pe urcare." },
-    { k: "miscare", t: "⚡ Mișcare neobișnuită", sub: "≥2× obișnuitul și ≥3%", f: function (x) { return nr(x.mis) !== null && x.mis >= 2 && Math.abs(x.ch) >= 3; },
-      e: "Aceeași regulă ca alertele pe Discord: azi s-a mișcat de cel puțin două ori mai mult ca de obicei și minimum 3%. De verificat de ce, înainte de orice." }
+    // v100.272 (ideile auditului 29.10): definiția comună (x.mare, din rezumat); rezumatul vechi, fără ea (din KV până la tura nouă) - regula veche
+    { k: "miscare", t: "⚡ Mișcare neobișnuită", sub: "peste 9 zile din 10 ale ei", f: function (x) { return typeof x.mare === "boolean" ? x.mare : nr(x.mis) !== null && x.mis >= 2 && Math.abs(x.ch) >= 3; },
+      e: "Aceeași regulă ca alertele pe Discord: azi s-a mișcat mai mult decât în 9 zile din 10 ale ei (se aprinde cam 1 zi din 10, mai des când piața se agită). De verificat de ce, înainte de orice." }
   ];
   function retete(x) { return RETETE.slice(1).filter(function (r) { return r.f(x); }).map(function (r) { return r.k; }); }
 

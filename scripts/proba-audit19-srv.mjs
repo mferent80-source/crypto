@@ -373,7 +373,8 @@ await test("(8) livreaza: după aducerea principalului repornește colectorul (o
   assert.ok(iAdus > 0 && iRep > iAdus, "repornirea trebuie să vină după aducerea principalului");
   // v100.258: oprirea decisă de decizieRepornire (doar linia colectorului ⇒ opreste); în sesiunea 0 (EPERM) nu oprește și nu pornește
   assert.match(s, /if \(linie && eLiniaColectorului\(linie\)\) return \{ opreste: true, porneste: true, motiv: "al-meu" \};/);
-  assert.match(s, /if \(d\.opreste\) \{ ps\(`Stop-Process -Id \$\{pid\} -Force/);
+  /* v100.272: oprirea forțată a rămas, dar abia după semnalul de ieșire (opresteCurat) - starea alertelor scrisă amânat se scrie la ieșirea curată */
+  assert.match(s, /if \(d\.opreste\) \{[^\n]*\n[^\n]*opresteCurat\(\{[^\n]*\n\s*forteaza: \(\) => \{ ps\(`Stop-Process -Id \$\{pid\} -Force/);
   assert.match(s, /Start-Process -FilePath node -ArgumentList 'scripts\\\\colector\.mjs' -WorkingDirectory/);
   assert.match(s, /-WindowStyle Hidden -PassThru/);
   assert.match(s, /asteaptaMs\(20000\)/);

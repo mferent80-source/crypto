@@ -218,3 +218,71 @@ export function preturiPerpPas(m, { probleme, boti, acum }) {
   if (st.ture >= PRAG_TURE_PERP && !st.anuntat) { st.nume = nume; return { tip: "orb", nume, minute, motiv }; }
   return { tip: null, nume, minute, motiv };
 }
+
+// v100.272 (revizia independentă): ieșirea la semnalul livrării. Între ture: pe loc. În tură: la capătul ei - nu cu o alertă în zbor (starea
+// ei s-ar scrie „trimisă” fără să fi plecat) -, dar cel mult IESIRE_MAX_MS după semnal (semnalul se vede în ≤ 10 s, iar livrarea așteaptă
+// ieșirea 90 s). Semnalul retras (livrarea a renunțat și l-a șters) ⇒ rămâne pornit: altfel nu l-ar mai porni nimeni.
+export const IESIRE_MAX_MS = 60000;
+export function decizieIesire({ semnal, turaInCurs, cerutaLa, acum }) {
+  if (!semnal) return "nimic";
+  if (!turaInCurs) return "iesi";
+  return cerutaLa && acum - cerutaLa >= IESIRE_MAX_MS ? "iesi" : "asteapta";
+}
+
+// v100.272 (ideile auditului 29.10, felia 5): scrierea AMÂNATĂ a unui fișier mare de stare (data/alerte-stare.json, ~500 KB, rescris la fiecare
+// scrieStare() - zeci pe minut, ~3–4 GB pe zi pe SSD). marcheaza() doar notează; scrie() pleacă cel mult o dată la dupaMs: ceasul pornește la
+// PRIMA marcare și nu se mută la următoarele (altfel apelurile continue ar amâna scrierea la nesfârșit) ⇒ o schimbare stă nescrisă cel mult
+// dupaMs. goleste() scrie pe loc ce e marcat (ieșirea). scrie() întoarce false la eșec ⇒ rămâne marcat, se reia la ceasul următor. ceas injectat (probe).
+export function scriereAmanata({ scrie, dupaMs = 10000, ceas = { setTimeout: (f, ms) => setTimeout(f, ms), clearTimeout: (t) => clearTimeout(t) } } = {}) {
+  let murdar = false, t = null;
+  const arma = () => {
+    if (t !== null) return;
+    t = ceas.setTimeout(() => { t = null; goleste(); }, dupaMs);
+    if (t && typeof t.unref === "function") t.unref();
+  };
+  const goleste = () => {
+    if (t !== null) { ceas.clearTimeout(t); t = null; }
+    if (!murdar) return false;
+    murdar = false;
+    let ok = false; try { ok = scrie() !== false; } catch { ok = false; }
+    if (!ok) { murdar = true; arma(); }
+    return ok;
+  };
+  return { marcheaza() { murdar = true; arma(); }, goleste, murdar: () => murdar };
+}
+
+// v100.272 (felia 5): procesele-copil ale colectorului (antrenorii rețelei și ai arborilor) se opresc explicit când iese colectorul. Pe Windows
+// libuv îi ține într-un job care îi oprește oricum odată cu părintele (verificat 30.10: copilul moare la process.exit al părintelui); pe alt
+// sistem ar rămâne orfani. adauga(c, nume): copilul iese singur din registru la `exit`; opresteToti(): sincron (merge din process.on("exit")),
+// întoarce numele celor opriți.
+export function registruCopii() {
+  const vii = new Map();
+  return {
+    adauga(c, nume) { if (!c) return c; vii.set(c, String(nume || "copil")); try { c.on("exit", () => { vii.delete(c); }); } catch {} return c; },
+    vii: () => [...vii.values()],
+    opresteToti() { const oprite = []; for (const [c, nume] of vii) { try { c.kill(); oprite.push(nume); } catch {} } vii.clear(); return oprite; },
+  };
+}
+
+// v100.272 (felia 5): riscul de lichidare judecat ÎNTÂI, imediat după citirea listei boților - înainte, al k-lea bot își aștepta rândul după
+// îmbogățirea celor dinainte (direcția, funding-ul, BTC, planul, semnalele: zeci de cereri Pionex, lente). Cheile din alerte.js care cer DOAR
+// botul și starea lor de data trecută: distanța / prețul de lichidare (lich), starea marjei la Pionex (status), stopul stins lângă lichidare
+// (opritor). Aceleași reguli (Alerte.evalueaza), deci aceleași mesaje; din rezultat se iau doar cheile astea, restul stării rămâne neatins.
+export const CHEI_LICHIDARE = ["lich", "status", "opritor"];
+export function lichidareIntaiPas(Alerte, b, stare, acum, chei = CHEI_LICHIDARE) {
+  const st = stare || {}, r = Alerte.evalueaza(b, {}, st, acum), nou = Object.assign({}, st);
+  for (const k of chei) { if (Object.prototype.hasOwnProperty.call(r.stare, k)) nou[k] = r.stare[k]; else delete nou[k]; }
+  return { mesaje: r.mesaje.filter((m) => m && chei.includes(m.cheie)), stare: nou };
+}
+// bucla mare, pe un bot judecat deja la început: cheile lichidării rămân cum le-a lăsat judecata de la început (inclusiv revenirea unei alerte
+// nepecate, reîncercată tura următoare) și nu se trimit a doua oară în aceeași tură. r = rezultatul Alerte.evalueaza (modificat pe loc).
+export function faraCheileIntai(r, stare, chei = CHEI_LICHIDARE) {
+  const st = stare || {};
+  for (const k of chei) { if (Object.prototype.hasOwnProperty.call(st, k)) r.stare[k] = st[k]; else delete r.stare[k]; }
+  r.mesaje = r.mesaje.filter((m) => !(m && chei.includes(m.cheie)));
+  return r;
+}
+
+// v100.272 (felia 5): Discord n-a confirmat trimiterea (timeout, conexiune ruptă după trimitere) - webhook-ul n-are nonce și un mesaj nu se poate
+// căuta fără id-ul lui ⇒ se reîncearcă (o alertă pierdută e mai rea decât una dublă), cu semnul pe titlu: „(întârziat 3 min · poate e o dublură)”
+export function cuPoateDublura(titlu) { const t = String(titlu || ""); return /\)$/.test(t) ? t.replace(/\)$/, " · poate e o dublură)") : t + " (poate e o dublură)"; }

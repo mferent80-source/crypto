@@ -80,7 +80,9 @@ async function acasaPorneste(fortat) {
       var zi = new Date().toISOString().slice(0, 10); if (d.rezultate && d.rezultate.zi === zi) return d.rezultate;
       var poz = await getJSON("/api/t212?action=pozitii"), l = (Array.isArray(poz) ? poz : poz && (poz.items || poz.pozitii) || []).map(function (x) { return x && x.ticker; }).filter(function (t) { return /_US_EQ$/.test(String(t)); });
       var o = { zi: zi, l: [] };
-      for (var i = 0; i < l.length && i < 12; i++) { try { var r = await getJSON("/api/t212?action=rezultate&ticker=" + encodeURIComponent(l[i])); if (r && r.data) o.l.push({ simbol: r.simbol || l[i].split("_")[0], data: r.data, sigur: !!r.sigur }); } catch (e) {} }
+      /* v100.272 (ideile auditului 29.10): cele până la 12 date câte 4 deodată (erau una după alta); o eroare lasă doar locul ei gol */
+      var rz = await ActiuniSemnale.inParalel(l.slice(0, 12), 4, function (tk) { return getJSON("/api/t212?action=rezultate&ticker=" + encodeURIComponent(tk)); });
+      rz.forEach(function (r, i) { if (r && r.data) o.l.push({ simbol: r.simbol || l[i].split("_")[0], data: r.data, sigur: !!r.sigur }); });
       o.l.sort(function (a, b) { return a.data < b.data ? -1 : 1; });
       return o;
     });
@@ -107,7 +109,7 @@ function acClasamentSumar(c) {
   var m = c && Array.isArray(c.monede) ? c.monede : null; if (!m) return null;
   var o = { evita: 0, candidati: 0, faraDate: 0, dir: { long: 0, neutru: 0, short: 0 }, deEvitat: [], buni: [] };
   m.forEach(function (x) { if (x.stare === "evita") { o.evita++; o.deEvitat.push(x); } else if (x.stare === "candidat") { o.candidati++; o.buni.push(x); } else o.faraDate++; if (o.dir[x.dir] != null) o.dir[x.dir]++; });
-  o.deEvitat.sort(function (a, b) { var ra = a.regim ? Math.max(a.regim.r4h || 0, a.regim.r24h || 0) : 0, rb = b.regim ? Math.max(b.regim.r4h || 0, b.regim.r24h || 0) : 0; return rb - ra; });
+  o.deEvitat.sort(function (a, b) { var ra = a.regim ? a.regim.r24h || 0 : 0, rb = b.regim ? b.regim.r24h || 0 : 0; return rb - ra; });   /* v100.272: după mișcarea pe 24 h (definiția comună), nu după maximul 4 h / 24 h */
   o.buni.sort(function (a, b) { return (b.scor || 0) - (a.scor || 0); });
   return o;
 }
@@ -402,7 +404,7 @@ function acasaDeseneaza() {
   var faraServer = acFaraServer(d), bunLa = d.clasamentLa || 0;
   if ($("acCand")) $("acCand").textContent = acum.toLocaleDateString("ro-RO", { weekday: "long", day: "numeric", month: "long" }) + " · actualizat " + (bunLa ? new Date(bunLa).toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" }) : "acum…") + (faraServer ? " · serverul de acasă nu răspunde acum" : "");
   var deschis = acBursaDeschisa(acum), ultZi = qqq && qqq.length ? new Date(qqq[qqq.length - 1].t).toLocaleDateString("ro-RO", { weekday: "long" }) : "";
-  if ($("acBursaCand")) $("acBursaCand").textContent = deschis ? "bursa e deschisă · ultimele cifre de azi" : "închiderea de " + (ultZi || "ieri") + " · bursa se redeschide în zilele lucrătoare la 16:30";
+  if ($("acBursaCand")) $("acBursaCand").textContent = deschis ? "bursa e deschisă · ultimele cifre de azi" : "închiderea de " + (ultZi || "ieri") + " · bursa se redeschide în zilele lucrătoare la " + acOraRedeschidere(acum);   /* v100.272: ora din CalendarBursa */
 
   // 1. doua verdicte alaturate
   var v = Acasa.vreme({ clasament: cl, btc: { miscare: btcMis }, fg: fgI.acum });
@@ -431,7 +433,7 @@ function acasaDeseneaza() {
     + '<div class="acVal">' + (tb ? acNr(tb.p) : "—") + ' <span class="' + (tb && tb.ch >= 0 ? "good" : "bad") + '" style="font-size:14px">' + (tb ? acPct(tb.ch) : "") + '</span></div>'
     + acSpark(inch(d.btc4h).slice(-120), "#26A96C")
     + '<div class="acLin"><span>Direcția</span><b>1 zi ' + (AC_DIR[btc.dir1d] || "—") + ' · 4h ' + (AC_DIR[btc.dir4h] || "—") + '</b></div>'
-    + '<div class="acLin"><span>Mișcarea</span><b class="' + (btc.regim ? (btcMis ? "bad" : "good") : "acMut") + '">' + (btc.regim ? (btcMis ? "mișcare" : "liniște") + " · " + Math.max(btc.regim.r4h || 0, btc.regim.r24h || 0).toFixed(1).replace(".", ",") + "×" : "—") + '</b></div>'
+    + '<div class="acLin"><span>Mișcarea</span><b class="' + (btc.regim ? (btcMis ? "bad" : "good") : "acMut") + '">' + (btc.regim ? (btcMis ? "mișcare" : "liniște") + " · " + (btc.regim.r24h != null ? btc.regim.r24h.toFixed(1).replace(".", ",") + "× pe 24 h" : (btc.regim.r4h || 0).toFixed(1).replace(".", ",") + "× pe 4 h") : "—") + '</b></div>'   /* v100.272 (ideile auditului 29.10): cifra pe 24 h a definiției comune, nu maximul cu 4 h */
     + '<div class="acLin"><span>Dominanța BTC</span><b>' + (isFinite(dom) && dom > 0 ? dom.toFixed(1).replace(".", ",") + "%" : "—") + '</b></div>'
     + '<div class="acLin"><span>ETH</span><b>' + (te ? acNr(te.p) + ' <span class="' + (te.ch >= 0 ? "good" : "bad") + '">' + acPct(te.ch) + '</span>' : "—") + '</b></div>';
   // frica / lacomia crypto
@@ -546,7 +548,7 @@ function acasaDeseneaza() {
     var ent = d.clasament ? (d.clasament.monede || []).filter(function (x) { return String(x.simbol).replace(/_USDT_PERP$/, "") === nume; })[0] : null, rg = !ent && d.regimBoti ? d.regimBoti[nume] : null, m2 = ent ? ent.stare === "evita" : rg ? !!rg.miscare : null;
     hb += '<div class="acLin"><span>' + escapeHtml(nume + " " + (b.directie || "") + (b.levier ? " " + b.levier + "×" : "")) + '</span><b class="' + (tot >= 0 ? "good" : "bad") + '">' + (isFinite(tot) ? (tot >= 0 ? "+" : "−") + Math.abs(tot).toFixed(1).replace(".", ",") + " USDT" : "—") + '</b></div>'
       + '<div class="acLin"><span>Prețul în grid</span><b>' + (inGrid == null ? "—" : inGrid + "%" + (panaJos != null && panaJos >= 0 ? " · " + panaJos.toFixed(1).replace(".", ",") + "% până jos" : " · sub grid")) + '</b></div>'
-      + '<div class="acLin"><span>Mediul lui</span><b class="' + (m2 === null ? "acMut" : m2 ? "bad" : "good") + '">' + (m2 === null ? "fără date" : (m2 ? "mișcare" : "liniște") + (rg ? " · " + Math.max(rg.r4h || 0, rg.r24h || 0).toFixed(1).replace(".", ",") + "×" : "")) + '</b></div>'
+      + '<div class="acLin"><span>Mediul lui</span><b class="' + (m2 === null ? "acMut" : m2 ? "bad" : "good") + '">' + (m2 === null ? "fără date" : (m2 ? "mișcare" : "liniște") + (rg ? " · " + (rg.r24h != null ? rg.r24h.toFixed(1).replace(".", ",") + "× pe 24 h" : (rg.r4h || 0).toFixed(1).replace(".", ",") + "× pe 4 h") : "")) + '</b></div>'   /* v100.272: cifra pe 24 h, ca „Mișcarea” BTC */
       + acPandaLin(b);
   });
   if (typeof tbStare !== "undefined" && tbStare.citireGoala) hb += '<p class="acMut">Citirea a venit goală: țin boții de dinainte.</p>';
@@ -583,9 +585,20 @@ function acasaDeseneaza() {
   acasaRezumate(larg);
 }
 // bursa din SUA (ora New York): luni-vineri 9:30-16:00
+// v100.272 (ideile auditului 29.10): din CalendarBursa - sărbătorile NYSE (Thanksgiving, 4 iulie…) nu mai par zile cu bursa deschisă
 function acBursaDeschisa(d) {
+  if (typeof CalendarBursa !== "undefined") { try { return CalendarBursa.stare(d, "SPY_US_EQ").deschisa; } catch (e) {} }
   try { var o = {}; new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(d).forEach(function (x) { o[x.type] = x.value; });
     var m = Number(o.hour) * 60 + Number(o.minute); return ["Sat", "Sun"].indexOf(o.weekday) < 0 && m >= 570 && m < 960; } catch (e) { return false; }
+}
+// v100.272 (ideile auditului 29.10): ora (la noi) a următoarei deschideri NYSE, din CalendarBursa - când România și SUA schimbă ora la date
+// diferite (2–3 săptămâni pe an) deschiderea e la 15:30, nu la 16:30; sărbătorile NYSE se sar. Fără calendar: 16:30, ca înainte.
+function acOraRedeschidere(acum) {
+  try {
+    var CB = CalendarBursa, B = CB.BURSE.NYSE, st = CB.stare(acum, "SPY_US_EQ"), zi = st.zi;
+    if (!(st.ziDeBursa && st.minut < B.deschide)) { var t = Date.parse(zi + "T12:00:00Z"); do { t += 86400000; zi = new Date(t).toISOString().slice(0, 10); } while (!CB.eZiDeBursa(zi, "NYSE")); }
+    return new Intl.DateTimeFormat("ro-RO", { timeZone: "Europe/Bucharest", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(CB.inchidereLa(zi, "SPY_US_EQ") - (B.inchide - B.deschide) * 60000));
+  } catch (e) { return "16:30"; }
 }
 // rezumatele pe un rand ale grupurilor pliate, din cifrele pe care modulele le scriu deja in pagina
 function acasaRezumate(larg) {

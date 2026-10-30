@@ -20,6 +20,10 @@ export function compactBot(b,forma=FORMA_ARHIVA){
   if(!id||!(porn>0)||!(inch>0))return null;
   const d=b.buOrderData&&typeof b.buOrderData==="object"?b.buOrderData:{},o={};
   for(const k of CAMPURI_ARHIVA){const v=val(d[k]);if(v!==null&&v!=="")o[k]=v}
+  // v100.272 (ideile auditului 29.10, felia 5): + motivul închiderii (loss_stop, user_cancel…), curățat ca în bot-orders (motivInchidere): doar
+  // litere și _, cel mult 30 - de el depinde verificarea riscului pe termen scurt (judecaScurtLaInchidere). Fără FORMA nouă: boții deja arhivați
+  // rămân fără el (refacerea ar cere toată istoria de la Pionex, ~230 de pagini); cei închiși de acum încolo îl au, iar unirea îl păstrează
+  const mot=typeof d.reasonBy==="string"?d.reasonBy.replace(/[^a-z_]/gi,"").slice(0,30):"";if(mot)o.reasonBy=mot;
   return {strategyId:id,base:String(b.base||"").slice(0,32),buOrderType:String(b.buOrderType||"").slice(0,24),createTime:porn,closeTime:inch,forma:Number(forma)||1,buOrderData:o};
 }
 

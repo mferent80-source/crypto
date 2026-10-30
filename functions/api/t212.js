@@ -11,6 +11,7 @@
 // Verificat pe contul lui (25.09): istoricul vine ca items[{order, fill}], pagini cu nextPagePath.
 import {requireApiAuth,authErrorResponse,sameOrigin} from "../_shared/auth.js";
 import { candidati } from "../_shared/simboluri.js";
+import { citesteCorp } from "../_shared/corp-limitat.js";   // v100.272 (ideile auditului 29.10): plafonul corpului ÎNAINTE de citirea întreagă
 import { peCheie } from "../_shared/serializare.js";   // v100.259 (auditul 23.10, punctul 7): citește-modifică-scrie pe rând, pe cheie
 
 const H = { "content-type": "application/json", "cache-control": "no-store" };
@@ -123,7 +124,8 @@ export function ziTd(d) {
 }
 const TD_INTERVAL = { "5m": "5min", "15m": "15min", "30m": "30min", "1h": "1h", "4h": "4h", "1d": "1day" };
 async function twelve(env, simbol, interval) {
-  const r = await fetch(`https://api.twelvedata.com/time_series?symbol=${encodeURIComponent(simbol)}&interval=${TD_INTERVAL[interval] || "1day"}&outputsize=500&order=asc&timezone=UTC&apikey=${encodeURIComponent(env.TWELVE_DATA_API_KEY)}`, { signal: AbortSignal.timeout(10000) });
+  // v100.272 (ideile auditului 29.10): cheia în antetul Authorization: apikey … (Twelve Data îl acceptă; stocks.js îl folosește deja), nu în URL
+  const r = await fetch(`https://api.twelvedata.com/time_series?symbol=${encodeURIComponent(simbol)}&interval=${TD_INTERVAL[interval] || "1day"}&outputsize=500&order=asc&timezone=UTC`, { signal: AbortSignal.timeout(10000), headers: { accept: "application/json", Authorization: "apikey " + env.TWELVE_DATA_API_KEY } });
   let j = null; try { j = await r.json(); } catch {}
   if (!r.ok || !j || !Array.isArray(j.values)) return null;
   const out = j.values.map((v) => ({ time: String(v.datetime).length <= 10 ? ziTd(v.datetime) : Date.parse(String(v.datetime).replace(" ", "T") + "Z"), open: Number(v.open), high: Number(v.high), low: Number(v.low), close: Number(v.close), volume: v.volume == null ? null : Number(v.volume) }))
@@ -164,6 +166,14 @@ function curataUmplere(x) {
     // v100.176: jurnalul de execuție (tipul ordinului, ora la care l-ai dat, prețul limită / de stop)
     tip: /^(MARKET|LIMIT|STOP|STOP_LIMIT)$/.test(String(x.tip || "")) ? x.tip : null, creat: nr(x.creat), limita: nr(x.limita), stopPret: nr(x.stopPret) };
 }
+// v100.272 (ideile auditului 29.10): t212:umpleri și t212:ordine creșteau fără capăt spre limita de 25 MB a unei valori KV (peste ea put-ul
+// pică și istoricul îngheață). O umplere curățată are ~350 de octeți (cel mult ~650, cu numele lung) ⇒ 30.000 ≤ ~19,5 MB; un id de ordin
+// ≤ 43 de octeți ⇒ 100.000 ≤ ~4,3 MB. Peste plafon ies cele mai VECHI (umplerile după oră; ordinele după id, care la T212 crește).
+export const T212_KV_MAX = { umpleri: 30000, ordine: 100000 };
+function taieOrdine(l, max) {
+  if (l.length <= max) return l;
+  return l.slice().sort((a, b) => a.length - b.length || (a < b ? -1 : a > b ? 1 : 0)).slice(-max);
+}
 async function citesteKv(env, k, implicit) { try { const v = JSON.parse((await env.ISTORIC.get(k)) || "null"); return v === null ? implicit : v; } catch { return implicit; } }
 const faraKv = () => json({ error: "ISTORIC_DOAR_ACASA", detail: "Istoricul complet Trading 212 se strânge doar pe serverul de acasă (PORNESTE-CRYPTO-RADAR.bat), de colector." }, 503);
 
@@ -183,7 +193,7 @@ export async function onRequestPost({ request, env }) {
   if (!env.ISTORIC?.put) return faraKv();
   const act = new URL(request.url).searchParams.get("action");
   if (act !== "istoric" && act !== "cf" && act !== "idei" && act !== "lista" && act !== "sfaturi" && act !== "ndx" && act !== "sugestii" && act !== "premarket" && act !== "saltPozitii" && act !== "saltPoz" && act !== "salt" && act !== "saltRezumat") return json({ error: "Acțiune necunoscută" }, 400);
-  const text = await request.text(); if (text.length > 262144) return json({ error: "Corp prea mare" }, 413);
+  const cit = await citesteCorp(request, 262144); if (cit.prea) return json({ error: "Corp prea mare" }, 413); const text = cit.text;
   let corp; try { corp = JSON.parse(text); } catch { return json({ error: "JSON invalid" }, 400); }
   if (act === "idei") {
     // v90: ideile de cumparare ale zilei (colectorul) + istoricul lor, ca sa se poata URMARI cum ies (o data pe zi pe simbol)
@@ -319,15 +329,16 @@ export async function onRequestPost({ request, env }) {
   ordine.forEach((o) => vazute.add(o));
   const umpleri = await citesteKv(env, "t212:umpleri", []), dupaId = new Map((Array.isArray(umpleri) ? umpleri : []).map((x) => [x.id, x]));
   (Array.isArray(corp && corp.umpleri) ? corp.umpleri : []).slice(0, 200).forEach((x) => { const c = curataUmplere(x); if (c) dupaId.set(c.id, c); });
-  const lista = [...dupaId.values()].sort((a, b) => a.t - b.t);
-  await env.ISTORIC.put("t212:ordine", JSON.stringify([...vazute]));
+  const noi = vazute.size - inainte;   // v100.272: numărate înainte de plafon (colectorul se oprește din coborât la 0 noi)
+  const lista = [...dupaId.values()].sort((a, b) => a.t - b.t).slice(-T212_KV_MAX.umpleri);   /* v100.272: cele mai noi T212_KV_MAX.umpleri */
+  await env.ISTORIC.put("t212:ordine", JSON.stringify(taieOrdine([...vazute], T212_KV_MAX.ordine)));
   await env.ISTORIC.put("t212:umpleri", JSON.stringify(lista));
   const s = corp && corp.stare;
   if (s && typeof s === "object") {
     const cur = typeof s.cursorVechi === "string" && /^\d{1,20}$/.test(s.cursorVechi) ? s.cursorVechi : null;
     await env.ISTORIC.put("t212:stare", JSON.stringify({ cursorVechi: cur, complet: s.complet === true, la: Date.now() }));
   }
-  return json({ ok: true, noi: vazute.size - inainte, umpleri: lista.length });
+  return json({ ok: true, noi, umpleri: lista.length });
   });
 }
 

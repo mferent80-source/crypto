@@ -50,7 +50,8 @@ await test("I-466 judecaLaInchidere: IESI/ATENTIE au dreptate daca iesind atunci
 
 await test("I-466 socotealaToti: pe TOTI botii, cu marja de incredere; <10 judecate „încă nu știm”; >=30 fara avantaj si fara bani -> tace (nu lichidare/plan)", () => {
   assert.equal(typeof SB.socotealaToti, "function");
-  const mk = (cod, nivel, k, n, bani) => Array.from({ length: n }, (_, i) => ({ t: T0 + i, cod, nivel, total: 0, totalDupa: i < k ? -bani : bani, dreptate: i < k }));
+  /* v100.272: socoteala e pe ZILE (unitatea independentă) - intrările câte una pe zi; în aceeași milisecundă ar fi o singură zi („încă nu știm”) */
+  const mk = (cod, nivel, k, n, bani) => Array.from({ length: n }, (_, i) => ({ t: T0 + i * 86400000, cod, nivel, total: 0, totalDupa: i < k ? -bani : bani, dreptate: i < k }));
   const s = SB.socotealaToti([mk("muta", "atentie", 12, 32, 1), mk("btc", "atentie", 3, 5, 1), mk("costuri", "atentie", 28, 32, 1), mk("lichidare", "iesi", 5, 40, 1)]);
   assert.equal(s.btc.stare, "necunoscut"); assert.match(SB.textIncredere(s.btc), /încă nu știm \(5 judecate\)/);
   assert.equal(s.muta.stare, "tace", "12 din 32 si bani pe minus"); assert.equal(s.muta.judecate, 32);

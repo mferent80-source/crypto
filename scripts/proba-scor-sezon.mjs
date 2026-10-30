@@ -119,12 +119,12 @@ await test("html: cifrele mari, ținta, seria, trecutul, „sub 10” - cu escap
   const h = S.html(s, { id: "acScor" });
   assert.ok(/Scorul tău pe Pionex/.test(h) && /sezonul din 19\.10/.test(h), "titlul cu data sezonului");
   assert.ok(h.includes(">1<") && h.includes(">2<") === false, "win 1");
-  assert.ok(/50 %/.test(h), "rata 50 %");
+  assert.ok(/50,0%/.test(h), "rata 50,0%");   // v100.272: procentul cu o zecimală, lipit (era „50 %”)
   assert.ok(/−2,8 USDT/.test(h), "netul cu O zecimală: " + (h.match(/[−+][\d,]+ USDT/g) || []).join(" "));
   assert.ok(/1 pe minus/.test(h), "seria");
-  assert.ok(/ținta 55 %/.test(h), "ținta lângă rată");
+  assert.ok(/ținta 55,0%/.test(h), "ținta lângă rată");   // v100.272: „55,0%” (era „55 %”)
   assert.ok(/încă nu înseamnă nimic/.test(h), "sub 10");
-  assert.ok(/Înainte de 19\.10/.test(h) && /60 %/.test(h) && /10 boți/.test(h) && /−14,0 USDT/.test(h), "trecutul");
+  assert.ok(/Înainte de 19\.10/.test(h) && /60,0%/.test(h) && /10 boți/.test(h) && /−14,0 USDT/.test(h), "trecutul");   // v100.272: „60,0%”
   assert.ok(/41 de zile/.test(h), "zilele rămase");
   assert.ok(!h.includes("<b>X</b>"), "escape");
   assert.ok(/data-action-click="scorFormular\(this\.value\)"/.test(h) && /value="acScor"/.test(h), "butonul Obiectiv ✎ cu id-ul cardului");
@@ -231,7 +231,7 @@ await test("ideea 1 - htmlIstoric: gol cu un singur sezon; altfel tabelul cu cel
   assert.ok(/Sezoanele tale/.test(h) && /scIstAcum/.test(h), "tabelul");
   assert.ok(h.indexOf("sezonul de acum") < h.indexOf("29.09.2026"), "cel de acum primul; vechiul 29.09.2026 → 18.10.2026: " + h.slice(0, 400));
   assert.ok(/29\.09\.2026 → 18\.10\.2026/.test(h) && /19\.10\.2026 → acum/.test(h), "perioadele");
-  assert.ok(/\+3,0 USDT/.test(h) && /−1,0 USDT/.test(h) && /50 %/.test(h), "cifrele");
+  assert.ok(/\+3,0 USDT/.test(h) && /−1,0 USDT/.test(h) && /50,0%/.test(h), "cifrele");   // v100.272: „50,0%” (era „50 %”)
   assert.ok(/data-et="net:"/.test(h), "etichetele pentru telefon");
 });
 
@@ -270,7 +270,7 @@ await test("ideea 2 - mesajele colectorului (scorPauza / scorTinta) + legarea î
   assert.ok(/0 win \/ 3 loss/.test(p.mesaj) && /−3,3 USDT/.test(p.mesaj) && /19\.10/.test(p.mesaj) && /👉/.test(p.mesaj), p.mesaj);
   const l = []; for (let i = 0; i < 12; i++) l.push(t(10 + i, START + (i + 1) * ORA, i < 7 ? 9 : -2));
   const s2 = S.calc(l, CFG, ACUM), r = MC.scorTinta(s2, "rata"), n = MC.scorTinta(s2, "net");
-  assert.equal(r.nivel, "info"); assert.ok(/58 %/.test(r.titlu) && r.titlu.length <= 60, r.titlu); assert.ok(/ținta 55 %/.test(r.mesaj), r.mesaj);
+  assert.equal(r.nivel, "info"); assert.ok(/58,3%/.test(r.titlu) && r.titlu.length <= 60, r.titlu); assert.ok(/ținta 55,0%/.test(r.mesaj), r.mesaj);   // v100.272: o zecimală, lipit (era „58 %”), ca pe pagină
   assert.ok(/\+53,0 USDT/.test(n.titlu) && /ținta \+50 USDT/.test(n.mesaj), n.titlu + " | " + n.mesaj);
   const C = citeste("scripts", "colector.mjs"), G = citeste("scripts", "lib", "garda-alerte.mjs");
   assert.ok(/VERSIUNE_COLECTOR = "v101\.(12[7-9]|1[3-9]\d|[2-9]\d\d)"/.test(C), "colectorul ≥ v101.127");

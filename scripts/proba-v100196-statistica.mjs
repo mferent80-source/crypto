@@ -308,7 +308,8 @@ await test("🔵8 laboratorul: ferestrele independente se numără pe TIMP (20 d
 });
 await test("🔵7 variantele de noapte: mesajul spune din câte variante s-a ales (alegerea e în eșantion)", () => {
   const src = citeste("scripts", "lib", "tura-variante-noapte.mjs");
-  assert.match(src, /aleasă dintre " \+ cate\(rowsV\.length, "variantă", "variante"\)/); assert.match(src, /cea mai bună dintre " \+ cate\(/);
+  /* v100.272: numărul fără botul tău (ca textul propunerii) și verificarea pe alte drumuri în loc de „cea mai bună dintre N încercări” */
+  assert.match(src, /aleasă dintre " \+ cate\(rowsV\.length - 1, "variantă", "variante"\)/); assert.match(src, /apoi verificată pe alte drumuri/);
 });
 await test("🔵4 coșurile: același preț în aceeași oră (SNDK / SNDK1) intră o singură dată în ziua lui", () => {
   const ev = []; for (let d = 0; d < 14; d++) { ev.push({ s: "idei", k: "SNDK_US_EQ", n: "cumpar", t: T0 + d * 30 * ZI, h: 5, r: 0.05, val: 0.05, p: 100 }); ev.push({ s: "idei", k: "SNDK1_US_EQ", n: "cumpar", t: T0 + d * 30 * ZI + 1000, h: 5, r: 0.05, val: 0.05, p: 100 }); ev.push({ s: "idei", k: "MU", n: "cumpar", t: T0 + d * 30 * ZI + 2000, h: 5, r: -0.01, val: -0.01, p: 80 }); }

@@ -11,6 +11,7 @@ var SALT_NIVEL = { tine: ["ȚINE", "t212Pill-tine"], atentie: ["ATENȚIE", "t212
 // beta față de indicele pieței simbolului (prin ETF-uri: serverul nu primește indicii cu „^”); fără indice ⇒ beta 1, ca la T212
 var SALT_INDICE = { EUR: { sim: "EXS1.DE", nume: "DAX" }, USD: { sim: "QQQ", nume: "Nasdaq" } };
 function saltEsc(s) { return typeof escapeHtml === "function" ? escapeHtml(s) : String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+function saltArg(s) { return saltEsc(String(s == null ? "" : s).replace(/[\\'"]/g, "\\$&")); }   /* v100.272: argument text într-o acțiune din atribut - întâi escaparea șirului JS, apoi cea HTML (ca argActiune din app.js) */
 function saltBani1(v) { var n = Number(v); return isFinite(n) ? n.toLocaleString("ro-RO", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : "—"; }   // rezultatele: o zecimală
 function saltBani(v) { var n = Number(v); return isFinite(n) ? n.toLocaleString("ro-RO", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—"; }
 function saltP1(x) { var n = Number(x); if (x == null || !isFinite(n)) return "—"; var r = Math.round(n * 1000) / 10; return (r > 0 ? "+" : r < 0 ? "−" : "") + Math.abs(r).toFixed(1).replace(".", ",") + "%"; }
@@ -70,10 +71,10 @@ function saltTodoHtml(R) {
     var c = r.a && r.a.cons; if (!c || (c.nivel !== "iesi" && c.nivel !== "atentie")) return;
     var bani = r.rez !== null ? saltSuma1(r.rez) : saltSuma1(r.rezM, r.m);
     todo.push({ c: c.nivel === "iesi" ? "r" : "g", t: saltSim(r.p.simbol) + ": " + saltInMoneda(c.titlu, r.m) + (r.pct !== null ? "; ești pe " + saltP1(r.pct) + " în EUR" : ""),
-      s: saltInMoneda(c.faCe || "", r.m) + " · dacă vinzi acum: " + bani, b: '<button type="button" class="t212BtnLinie" data-action-click="saltVezi(\'' + saltEsc(r.p.isin) + '\')">Vezi ' + saltEsc(saltSim(r.p.simbol)) + '</button>' });
+      s: saltInMoneda(c.faCe || "", r.m) + " · dacă vinzi acum: " + bani, b: '<button type="button" class="t212BtnLinie" data-action-click="saltVezi(\'' + saltArg(r.p.isin) + '\')">Vezi ' + saltEsc(saltSim(r.p.simbol)) + '</button>' });
   });
   R.l.filter(function (r) { return r.pond > 0.2; }).forEach(function (r) { todo.push({ c: "g", t: saltSim(r.p.simbol) + " e " + Math.round(r.pond * 100) + "% din ce ai la Salt", s: "Peste plafonul de 20%: o zi proastă a ei e ziua proastă a contului.", b: "" }); });
-  R.l.filter(function (r) { return !r.p.de; }).forEach(function (r) { todo.push({ c: "n", t: saltSim(r.p.simbol) + ": fără data cumpărării", s: "Stopul care urcă pornește de la prețul de azi: scrie data (Editează) ca să urce de la maximul de după cumpărare.", b: '<button type="button" class="t212BtnLinie" data-action-click="saltEditeaza(\'' + saltEsc(r.p.isin) + '\')">Editează</button>' }); });
+  R.l.filter(function (r) { return !r.p.de; }).forEach(function (r) { todo.push({ c: "n", t: saltSim(r.p.simbol) + ": fără data cumpărării", s: "Stopul care urcă pornește de la prețul de azi: scrie data (Editează) ca să urce de la maximul de după cumpărare.", b: '<button type="button" class="t212BtnLinie" data-action-click="saltEditeaza(\'' + saltArg(r.p.isin) + '\')">Editează</button>' }); });
   var RT = { r: 0, g: 1, n: 2 }; todo.sort(function (a, b) { return RT[a.c] - RT[b.c]; });
   return '<section class="t212Todo" aria-label="Ce ai de făcut acum"><div class="t212TodoCap"><h4>Ce ai de făcut acum</h4><span class="tbSub">în ordinea urgenței</span></div>'
     + (todo.length ? todo.map(function (x) { return '<div class="t212TodoRand"><span class="t212Dunga ' + x.c + '"></span><div><b>' + saltEsc(x.t) + '</b><p>' + saltEsc(x.s) + '</p></div>' + x.b + '</div>'; }).join("")
@@ -87,7 +88,7 @@ function saltIdeeRand(x, d) {
     + '<td class="i-ist"><span class="t212Mic">pe istoricul ei, în starea asta: ' + (x.pePlusProba != null ? Math.round(x.pePlusProba * 100) + "% pe plus, " : "") + saltEsc(saltP1(x.scor)) + ' în medie' + (x.nProba ? " (" + saltCate(x.nProba, "zi", "zile") + ")" : "") + '</span>'
     + (x.prob && x.prob.tinta5 != null && x.prob.stop1 != null ? '<span class="t212Mic">🎲 ținta înaintea stopului în 5 zile: ' + Math.round(x.prob.tinta5 * 100) + '% · stopul mâine: ' + Math.round(x.prob.stop1 * 100) + '%</span>' : '')
     + (x.prof && x.prof.dist > 0 ? '<span class="t212Mic' + (x.prof.strans ? ' bad' : '') + '">📐 coborârea obișnuită pe 5 zile −' + (x.prof.dist * 100).toFixed(1).replace(".", ",") + '%' + (x.prof.strans ? ' · stopul ideii e mai strâns: te poate scoate pe o mișcare normală' : ' · stopul e în afara ei') + '</span>' : '')
-    + '</td><td class="i-bilet"><button type="button" class="t212BtnLinie" aria-expanded="' + !!b + '" data-action-click="saltBilet(\'' + saltEsc(x.simbol) + '\')">Biletul</button></td></tr>';
+    + '</td><td class="i-bilet"><button type="button" class="t212BtnLinie" aria-expanded="' + !!b + '" data-action-click="saltBilet(\'' + saltArg(x.simbol) + '\')">Biletul</button></td></tr>';
   return rand + (b ? '<tr class="saltBiletR"><td colspan="7">' + (b.html || '<p class="tbSub">aduc cursul…</p>') + '</td></tr>' : '');
 }
 // biletul: la riscul ales (EUR), câte bucăți - riscul pe bucată e intrare − stop, în moneda bursei; fx = 1 EUR în moneda bursei
@@ -145,7 +146,7 @@ function saltPozRandHtml(r, d) {
     return '<tr class="t212Rand">' + cap + '<td colspan="6" class="tbSub" style="text-align:left">' + saltEsc(mes) + '</td></tr>';
   }
   var c = a.cons || {}, n = a.niv, pr = r.pret, tr = a.st && a.st.trend && a.st.trend.dir, atins = n && pr < n.stopPozitie;
-  var rand = '<tr class="t212Rand" id="saltR-' + isin + '" tabindex="0" aria-expanded="' + des + '" data-action-click="saltComuta(\'' + isin + '\')">' + cap
+  var rand = '<tr class="t212Rand" id="saltR-' + isin + '" tabindex="0" aria-expanded="' + des + '" data-action-click="saltComuta(\'' + saltArg(p.isin) + '\')">' + cap
     + '<td class="c-acum">' + saltPret(pr, m) + (m !== "EUR" && r.fx ? '<span class="t212Mic">≈ ' + saltBani(pr / r.fx) + ' EUR</span>' : '') + '</td>'
     + '<td class="c-rez"><b class="' + saltCls(r.rez !== null ? r.rez : r.rezM) + '">' + (r.rez !== null ? saltSuma1(r.rez) : saltSuma1(r.rezM, m)) + '</b><span class="t212Mic">' + (r.pct !== null ? saltP1(r.pct) + " în EUR · " : "") + 'preț ' + saltP1(pr / a.p.pretMediu - 1) + '</span></td>'
     + '<td class="c-stop" data-et="Stop">' + (n ? '<span class="' + (atins ? "bad" : "") + '">' + saltPret(n.stopPozitie, m) + '</span><span class="t212Mic">' + (atins ? "DEPĂȘIT" : saltP1(n.stopPozitie / pr - 1) + " de acum") + '</span>'
@@ -167,7 +168,7 @@ function saltPozRandHtml(r, d) {
     + (c.faCe ? '<p class="t212Fac">👉 <b>Ce aș face eu:</b> ' + saltEsc(saltInMoneda(c.faCe, m)) + '<span class="t212Mic">dacă vinzi acum: ' + saltEsc(r.rez !== null ? saltSuma1(r.rez) : saltSuma1(r.rezM, m)) + (restBani ? " · " + saltEsc(restBani) : "") + '</span></p>' : '')
     + '<p class="tbSub">' + saltEsc(qty + " · plătit " + saltBani(p.pretMediu) + " " + (p.plata === "EUR" ? "EUR" : saltMon(m)) + " pe bucată" + (de ? " pe " + de : "") + (p.plata === "EUR" && m && m !== "EUR" ? " (= " + saltBani(a.p.pretMediu) + " " + saltMon(m) + (de ? " la cursul din ziua cumpărării" : " la cursul de azi") + (r.fx ? "; azi 1 EUR = " + (r.fx / (m === "GBp" ? 100 : 1)).toFixed(4).replace(".", ",") + " " + (m === "GBp" ? "GBP" : m) : "") + ")" : "")) + '</p>'
     + (!p.de ? '<p class="tbSub">Fără data cumpărării, stopul care urcă pornește de la prețul de azi: scrie data ca să urce de la maximul de după cumpărare.</p>' : '')
-    + '<p class="saltDetBut">' + (typeof mcsPozButon === "function" ? mcsPozButon(p.simbol, pr, a.p.pretMediu, n ? n.stopPozitie : null) + ' ' : '') + '<button type="button" class="t212BtnLinie" data-action-click="saltEditeaza(\'' + isin + '\')">Editează</button> <button type="button" class="t212BtnLinie" data-action-click="saltSterge(\'' + isin + '\')"' + (d.incarcate ? '' : ' disabled') + '>Șterge poziția</button></p>'
+    + '<p class="saltDetBut">' + (typeof mcsPozButon === "function" ? mcsPozButon(p.simbol, pr, a.p.pretMediu, n ? n.stopPozitie : null) + ' ' : '') + '<button type="button" class="t212BtnLinie" data-action-click="saltEditeaza(\'' + saltArg(p.isin) + '\')">Editează</button> <button type="button" class="t212BtnLinie" data-action-click="saltSterge(\'' + saltArg(p.isin) + '\')"' + (d.incarcate ? '' : ' disabled') + '>Șterge poziția</button></p>'
     + '</div></td></tr>';
   return rand + det;
 }

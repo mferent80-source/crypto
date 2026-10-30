@@ -306,6 +306,11 @@ var GridSim = (function () {
     // audit 19.10 (4): simetric cu „Aș porni / Aș ține” - „Aș opri / N-aș porni” cere ca și marginea de SUS a incertitudinii reale (pe zile) să
     // rămână sub 50% (P + marja < 50); altfel e o aruncare de ban: n-am aflat că pierde („nu s-a dovedit” ≠ „s-a dovedit că nu”), iar felul
     // „aș opri” nu se anunță pe Discord (tura-monte-carlo-bot.mjs îl citește din primul cuvânt)
+    // v100.272 (ideile auditului 29.10, verificat): asimetria rămasă e VOITĂ. Marja (zgomotul pe zile) e simetrică; reluarea istoricului real stă
+    // doar la „Aș porni” fiindcă repară o abatere ÎNTR-O SINGURĂ PARTE: drumurile fără tendință scot tocmai mișcarea care strică gridul, deci
+    // simularea îl vede mai bun decât e (pe barele reale zicea „Aș porni” în 103 din 108 porniri). O medie reală pe plus lângă „N-aș porni” vine
+    // din tendința perioadei, pe care simularea intenționat n-o prelungește; iar greșelile costă diferit: un „Aș porni” fals pierde bani, un
+    // „N-aș porni” fals doar o ocazie (aruncarea de ban zice și ea „suma mică”). Fișa citește rauConfirmat ca poartă de siguranță - n-o slăbesc.
     var rauConfirmat = P <= 45 && !(mj > 0 && P + mj >= 50);
     if (rel) sub += " · pe istoria reală, pornit în fiecare zi: în medie " + bani1(rel.media) + ", pe plus în " + pr(rel.pPlus) + " (" + cate(rel.n, "pornire", "porniri") + ", ~" + cate(rel.independente, "fereastră independentă", "ferestre independente") + ")";
     if (meu && rez.acum.oprit) faCe = "Reluarea arată botul " + (rez.acum.oprit === "lichidat" ? "LICHIDAT" : "OPRIT") + " pe drumul real: setările de aici nu se potrivesc cu botul tău din Pionex (stopul sau gridul diferă) - verifică-le înainte să te iei după cifre.";

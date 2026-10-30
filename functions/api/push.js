@@ -1,4 +1,7 @@
 import {requireApiAuth,authErrorResponse,sameOrigin as strictSameOrigin} from "../_shared/auth.js";
+import {citesteCorp} from "../_shared/corp-limitat.js";
+// v100.272 (ideile auditului 29.10): corpul (o abonare push, ~0,5 KB) cu plafon - înainte se citea oricât de mare
+const CORP_MAX=16384;
 const H={"content-type":"application/json","cache-control":"no-store"};
 const json=(x,status=200)=>new Response(JSON.stringify(x),{status,headers:H});
 const enc=new TextEncoder();
@@ -25,7 +28,8 @@ export async function onRequestPost({request,env}){
   if(!strictSameOrigin(request))return json({saved:false,error:"Origin rejected"},403);
   if(!env.PUSH_SUBSCRIPTIONS)return json({saved:false,error:"Missing PUSH_SUBSCRIPTIONS KV binding"},503);
   try{
-    const body=await request.json();
+    const cit=await citesteCorp(request,CORP_MAX);if(cit.prea)return json({saved:false,error:"Corp prea mare"},413);
+    const body=JSON.parse(cit.text);
     if(action==="subscribe"){
       if(!body?.endpoint||!body?.keys?.p256dh||!body?.keys?.auth)return json({saved:false,error:"Invalid PushSubscription"},400);
       const k=await keyFor(body.endpoint);

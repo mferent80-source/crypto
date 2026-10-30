@@ -84,6 +84,7 @@ await test("(2d) „ce aș face eu”: o variantă mai bună pe mijloc dar mai r
   const r1 = [baza, { nume: "levier mai mare", st: {}, g: g(3, -5, 0.5), drum: { maiBun: 0.3, maiRau: 0.6, egal: 0.1 } }];
   assert.match(G.mcsVariantaBuna(r1), /Păstrează-l așa/);
   const r2 = [baza, { nume: "levier mai mare", st: {}, g: g(3, -5, 0.5), drum: { maiBun: 0.7, maiRau: 0.2, egal: 0.1 } }];
+  r2[1].verif = { n: 2000, baza: baza.g, g: r2[1].g, drum: r2[1].drum };   // v100.272: verificat pe drumuri noi, aici cu aceleași cifre (testul e despre regula alegerii)
   assert.match(G.mcsVariantaBuna(r2), /Aș încerca „levier mai mare”.*mai bună decât a ta în 70% din drumuri/);
 });
 await test("(2e) două variante bune cu mijlocul la fel în limita pragului ⇒ câștigă cea mai bună drum cu drum (PONS 07.10: ½ grile 99% vs levier mai mic 72%)", () => {
@@ -91,13 +92,17 @@ await test("(2e) două variante bune cu mijlocul la fel în limita pragului ⇒ 
   const baza = { nume: "așa cum e", st: { suma: 47.83 }, g: g(-5.8, -9.2, 0.28) };
   const lev = { nume: "levier mai mic", st: {}, g: g(-3.9, -6.1, 0.28), drum: { maiBun: 0.72, maiRau: 0.28, egal: 0 } };
   const gr = { nume: "jumătate din grile", st: {}, g: g(-4.2, -8.8, 0.32), drum: { maiBun: 0.99, maiRau: 0.01, egal: 0 } };
+  /* v100.272: câștigătorul se verifică pe drumuri noi înainte de „Aș încerca” - aici cu aceleași cifre (testul e despre regula alegerii) */
+  const vf = (x) => Object.assign(x, { verif: { n: 2000, baza: baza.g, g: x.g, drum: x.drum } });
+  [lev, gr].forEach(vf);
   assert.match(G.mcsVariantaBuna([baza, lev, gr]), /Aș încerca „jumătate din grile”/);
-  const lev2 = Object.assign({}, lev, { g: g(-2.5, -6.1, 0.28) });   // mijlocul mai bun cu peste prag ⇒ rămâne mijlocul
+  const lev2 = vf(Object.assign({}, lev, { g: g(-2.5, -6.1, 0.28) }));   // mijlocul mai bun cu peste prag ⇒ rămâne mijlocul
   assert.match(G.mcsVariantaBuna([baza, lev2, gr]), /Aș încerca „levier mai mic”/);
   // revizia (R6): fără alunecare din aproape în aproape - toate se compară cu cea mai bună pe mijloc, nu cu ultima aleasă
   const a = { nume: "A", st: {}, g: g(-2.0, -6, 0.3), drum: { maiBun: 0.6, maiRau: 0.4, egal: 0 } };
   const b2 = { nume: "B", st: {}, g: g(-2.8, -6, 0.3), drum: { maiBun: 0.7, maiRau: 0.3, egal: 0 } };
   const c = { nume: "C", st: {}, g: g(-3.6, -6, 0.3), drum: { maiBun: 0.8, maiRau: 0.2, egal: 0 } };
+  [a, b2, c].forEach(vf);
   assert.match(G.mcsVariantaBuna([baza, a, b2, c]), /Aș încerca „B”/, "C e la 1,6 USDT de A (peste prag): nu");
 });
 await test("(2f) recentele vechi (doar text) iau felul scurtăturii cu același simbol; felurile diferite ⇒ scurtătura rămâne la vedere (revizia R2)", () => {

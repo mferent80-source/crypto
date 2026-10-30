@@ -7,6 +7,7 @@
 import {requireApiAuth,authErrorResponse,sameOrigin} from "../_shared/auth.js";
 import {uneste,FORMA_ARHIVA,ARHIVA_MAX} from "../_shared/boti-arhiva.js";
 import {peCheie} from "../_shared/serializare.js";   // audit 19.10: get+put pe rand, pe cheie
+import {citesteCorp} from "../_shared/corp-limitat.js";   // v100.272 (ideile auditului 29.10): plafonul corpului ÎNAINTE de citirea întreagă
 
 const H={"content-type":"application/json","cache-control":"no-store"};
 const json=(o,s=200)=>new Response(JSON.stringify(o),{status:s,headers:H});
@@ -51,6 +52,9 @@ function curata(x){
 async function citesteLista(env,bot){try{const v=JSON.parse(await env.ISTORIC.get("ist:"+bot)||"[]");return Array.isArray(v)?v:[]}catch{return []}}
 async function citesteConfig(env){try{return JSON.parse(await env.ISTORIC.get("config")||"null")}catch{return null}}
 // v100.175 (auditul Opus, M20): lista KV dă cel mult 1000 de chei pe pagină ⇒ se urmează cursorul (ca la deciziiBoti)
+// v100.272 (ideile auditului 29.10): ultimulPlan / planuri citeau fiecare cheie „plan:” (un get pe bot, sute la fiecare cerere). Planul scris de acum
+// vine în metadatele din listă; doar cheile scrise înainte (fără metadate) se mai citesc una câte una.
+async function planDinCheie(env,k){const m=k&&k.metadata;if(m&&typeof m==="object"&&nr(m.la)>0)return m;try{return JSON.parse(await env.ISTORIC.get(k.name)||"null")}catch{return null}}
 async function toateCheile(env,prefix){const out=[];let cursor=null;do{const l=await env.ISTORIC.list(cursor?{prefix,cursor}:{prefix});for(const k of (l&&l.keys)||[])out.push(k);cursor=l&&!l.list_complete&&l.cursor?l.cursor:null}while(cursor&&out.length<20000);return out}
 // v100.196 (auditul sever, statistica 🟡2): testele bilanțurilor (ADX, becuri) pentru registrul Benjamini–Hochberg - înainte serverul le arunca
 // și registrul avea doar verdictele + obiceiurile. Curățate: nume ≤ 120, p și diferența numere sau null, verdictul text scurt.
@@ -142,11 +146,11 @@ export async function onRequestGet({request,env}){
   if(action==="voci"){let l=[];try{l=JSON.parse(await env.ISTORIC.get("voci")||"[]")}catch{l=[]}return json({voci:Array.isArray(l)?l:[]})}   // v100.149 (I-577): jurnalul vocilor
   // v97.6: ultimul plan scris pe un bot Pionex (nu T212, nu proba), pentru propunerea la botul nou pornit fara plan
   // v100.104 (I-537): toate planurile scrise (fără cele de probă și fără T212) - pentru pragul propus din istoria lui
-  if(action==="planuri"){const out=[];try{for(const k of await toateCheile(env,"plan:")){const id=k.name.slice(5);if(/^t212-/.test(id))continue;let p=null;try{p=JSON.parse(await env.ISTORIC.get(k.name)||"null")}catch{p=null}if(!p||p.proba||!(nr(p.plus)>0||nr(p.minus)>0))continue;out.push({bot:id,plan:{plus:nr(p.plus),minus:nr(p.minus),afaraOre:nr(p.afaraOre)}});if(out.length>=300)break}}catch{}return json({planuri:out})}
+  if(action==="planuri"){const out=[];try{for(const k of await toateCheile(env,"plan:")){const id=k.name.slice(5);if(/^t212-/.test(id))continue;const p=await planDinCheie(env,k);if(!p||p.proba||!(nr(p.plus)>0||nr(p.minus)>0))continue;out.push({bot:id,plan:{plus:nr(p.plus),minus:nr(p.minus),afaraOre:nr(p.afaraOre)}});if(out.length>=300)break}}catch{}return json({planuri:out})}
   // v100.104 (I-538): ferestrele ÎNGUST / LARG arătate de fișă (ultimele 60) - pentru jurnal pe orice aparat și pentru colector
   if(action==="ferestre"){let l=[];try{l=JSON.parse(await env.ISTORIC.get("ferestre")||"[]")}catch{l=[]}return json({ferestre:Array.isArray(l)?l:[]})}
   if(action==="ultimulPlan"){let bun=null;try{for(const k of await toateCheile(env,"plan:")){const id=k.name.slice(5);if(/^t212-/.test(id))continue;
-      let p=null;try{p=JSON.parse(await env.ISTORIC.get(k.name)||"null")}catch{p=null}if(!p||p.proba||!(p.plus>0||p.minus>0))continue;if(!bun||(p.la||0)>(bun.plan.la||0))bun={bot:id,plan:p}}}catch{bun=null}
+      const p=await planDinCheie(env,k);if(!p||p.proba||!(p.plus>0||p.minus>0))continue;if(!bun||(p.la||0)>(bun.plan.la||0))bun={bot:id,plan:p}}}catch{bun=null}
     return json(bun||{bot:null,plan:null})}
   // v94: funding-ul pe toata piata + pozele zilnice ale pietei (Home: "ce s-a schimbat de ieri"), de la colector
   if(action==="piata"){let f=null,l=[],so=null,mc=null;try{f=JSON.parse(await env.ISTORIC.get("piata:funding")||"null")}catch{f=null}try{l=JSON.parse(await env.ISTORIC.get("piata:instantanee")||"[]")}catch{l=[]}try{so=JSON.parse(await env.ISTORIC.get("piata:socoteala")||"null")}catch{so=null}try{mc=JSON.parse(await env.ISTORIC.get("piata:macro")||"null")}catch{mc=null}return json({funding:f,instantanee:Array.isArray(l)?l:[],socoteala:so,macro:mc})}
@@ -172,7 +176,7 @@ export async function onRequestPost({request,env}){
   const auth=await requireApiAuth(request,env,action==="alerte"?"istoric-alerte":"istoric-write",30,150);if(!auth.ok)return authErrorResponse(auth,H);
   if(!sameOrigin(request))return json({error:"Origin rejected"},403);
   if(!env.ISTORIC?.put)return faraKv();
-  const text=await request.text();if(text.length>(action==="cazuri"?1048576:action==="retea"?524288:action==="arbori"?2097152:action==="ore"?524288:action==="scan"||action==="botiInchisi"?393216:action==="ingustUrmarire"?524288:action==="risc"||action==="carnet"||action==="latime"?262144:action==="cont"?1048576:action==="verdicteCalibrare"?262144:action==="universSua"?1048576:action==="sectoareTop"||action==="trend12"?262144:action==="disciplinaBanda"?524288:65536))return json({error:"Corp prea mare"},413);
+  const cit=await citesteCorp(request,(action==="cazuri"?1048576:action==="retea"?524288:action==="arbori"?2097152:action==="ore"?524288:action==="scan"||action==="botiInchisi"?393216:action==="ingustUrmarire"?524288:action==="risc"||action==="carnet"||action==="latime"?262144:action==="cont"?1048576:action==="verdicteCalibrare"?262144:action==="universSua"?1048576:action==="sectoareTop"||action==="trend12"?262144:action==="disciplinaBanda"?524288:65536));if(cit.prea)return json({error:"Corp prea mare"},413);const text=cit.text;
   let corp;try{corp=JSON.parse(text)}catch{return json({error:"JSON invalid"},400)}
   // v100.104 (I-538): o ofertă de ferestre de la fișă - curățată; aceeași monedă + același moment = una singură; se țin ultimele 60
   if(action==="ferestre"){
@@ -326,7 +330,7 @@ export async function onRequestPost({request,env}){
   if(action==="plan"){
     const bot=idBot(corp&&corp.bot);if(!bot)return json({error:"Lipseste bot"},400);
     const p=corp&&corp.plan;
-    if(p===null){await env.ISTORIC.put("plan:"+bot,"null");return json({ok:true,plan:null})}
+    if(p===null){if(env.ISTORIC.delete)await env.ISTORIC.delete("plan:"+bot);else await env.ISTORIC.put("plan:"+bot,"null");return json({ok:true,plan:null})}   // v100.272: planul șters nu mai lasă o cheie „null” în urmă
     const poz=v=>{const x=nr(v);return x!==null&&x>0&&x<1e7?x:null};
     // v85: pe actiunile T212 (bot = "t212-<TICKER>") planul are stop, tinta si "ies la -X% de la maxim"
     const tr=poz(p&&p.trailPct);
@@ -338,7 +342,8 @@ export async function onRequestPost({request,env}){
       if(tz||inv||plan.orizont)await peCheie("kv:teze:t212",async()=>{let l=[];try{l=JSON.parse(await env.ISTORIC.get("teze:t212")||"[]")}catch{l=[]}if(!Array.isArray(l))l=[];l.push({tk:bot.slice(5),t:Date.now(),teza:tz||null,invalidare:inv||null,orizont:plan.orizont||null});await env.ISTORIC.put("teze:t212",JSON.stringify(l.slice(-2000)))})}
     // v88: planul pus de o PROBA de ecran ramane marcat, ca sa nu declanseze alerte reale (colectorul il sare)
     if(p&&p.proba===true)plan.proba=true;
-    await env.ISTORIC.put("plan:"+bot,JSON.stringify(plan));
+    // v100.272: pe boții Pionex planul (doar numere, < 200 de octeți) stă și în metadatele cheii ⇒ ultimulPlan / planuri îl iau din listă
+    await env.ISTORIC.put("plan:"+bot,JSON.stringify(plan),/^t212-/.test(bot)?undefined:{metadata:plan});
     return json({ok:true,plan});
   }
   // v100.47 (pachetul 2b): barele de 1 h ale monedei (colectorul, noaptea) - fisa Grid socoteste pe ele probabilitatile gridului propus

@@ -209,7 +209,7 @@ await test("(R5) 🔵8: „Cum s-a verificat” pe piața paginii - pe crypto do
 });
 await test("(R6) 🔵9/🔵10/🔵11: poarta judecă pe barele ÎNCHISE (bareBursa, nu bare care aruncă mereu ultima); QQQ se readuce la „Reîncarcă”; pauza vine și după un ticker picat", () => {
   const e = citeste("public", "lib", "t212-ecran.js"), tr = citeste("scripts", "lib", "tura-retea.mjs");
-  assert.ok(e.includes("bareZi: GridCalcul.bareBursa(b && b.randuri || [], Date.now())") && e.includes("p.bareZi, p.prob,"), "poarta pe bareZi");
+  assert.ok(e.includes("bareZi: GridCalcul.bareBursa(b && b.randuri || [], Date.now(), tk)") && e.includes("p.bareZi, p.prob,"), "poarta pe bareZi");   /* v100.272: + simbolul (bara în formare pe bursa lui) */
   assert.ok(e.includes("if (!t212.bare.QQQ_US_EQ || forta)"), "QQQ la Reîncarcă");
   assert.ok(/catch \(e\) \{ d\.jurnal\("zile: " \+ t, e\.message\); \}\s*await d\.pauza\(1500\);/.test(tr), "pauza după catch");
 });

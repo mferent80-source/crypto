@@ -298,10 +298,11 @@ var SemnaleBot = (function () {
       sp && f ? "propus: " + cate(sp.grile + 1, "grilă", "grile") + " la " + P(sp.pas) + " pas" : f ? null : "propunerea vine cu fișa"].filter(Boolean).join(" · ") + ".";
     if (rg && (nr(rg.r4h) !== null || nr(rg.r24h) !== null)) {
       var sf0 = sensFata(b, rg), r40 = nr(rg.r4h), r240 = nr(rg.r24h), li = nr(b.distantaLichidarePct);
-      mi0.mare = r40 !== null ? X(r40) : X(r240); mi0.mic = r40 !== null ? "pe 4 h față de obișnuit" : "pe 24 h față de obișnuit";
+      // v100.272 (ideile auditului 29.10): cifra mare e cea pe 24 h (definiția comună GridCalcul.miscareMare, ca eticheta de lângă ea), cea pe 4 h în rând
+      mi0.mare = r240 !== null ? X(r240) : X(r40); mi0.mic = r240 !== null ? "pe 24 h față de obișnuit" : "pe 4 h față de obișnuit";
       mi0.tag = rg.miscare ? (sf0 === "contra" ? { t: "împotriva botului", c: "bad" } : sf0 === "cu" ? { t: "cu botul", c: "good" } : { t: "mișcare mare", c: "warn" }) : { t: "liniște", c: "good" };
-      // v100.61: o fraza - multiplul pe 24 h, apoi actiunea (fara al doilea „.”)
-      mi0.act = (r40 !== null && r240 !== null ? X(r240) + " pe 24 h: " : "") + (rg.miscare ? (sf0 === "contra" ? "n-aș adăuga bani; aș urmări lichidarea" + (li !== null ? " (" + TextRo.pct(Math.abs(li)) + " până la ea)" : "") + "." : sf0 === "cu" ? "n-aș adăuga bani, grilele încasează și poziția scade." : "n-aș îndesi gridul până nu vine liniștea.") : (poz !== null && (poz < 0 || poz > 1) ? "n-aș adăuga bani; prețul e în afara gridului, botul stă până revine sau până muți gridul." : "n-aș schimba nimic pe zgomot și n-aș adăuga bani pe urcare."));
+      // v100.61: o fraza - multiplul pe 24 h, apoi actiunea (fara al doilea „.”) - v100.272: cel pe 4 h, cifra mare fiind cea pe 24 h
+      mi0.act = (r40 !== null && r240 !== null ? X(r40) + " pe 4 h: " : "") + (rg.miscare ? (sf0 === "contra" ? "n-aș adăuga bani; aș urmări lichidarea" + (li !== null ? " (" + TextRo.pct(Math.abs(li)) + " până la ea)" : "") + "." : sf0 === "cu" ? "n-aș adăuga bani, grilele încasează și poziția scade." : "n-aș îndesi gridul până nu vine liniștea.") : (poz !== null && (poz < 0 || poz > 1) ? "n-aș adăuga bani; prețul e în afara gridului, botul stă până revine sau până muți gridul." : "n-aș schimba nimic pe zgomot și n-aș adăuga bani pe urcare."));
       mi0.act = mi0.act.charAt(0).toUpperCase() + mi0.act.slice(1);
     } else { mi0.mare = "—"; mi0.mic = "o socotesc"; mi0.tag = { t: "socotesc", c: "mut" }; mi0.act = "O socotesc odată cu fișa."; }
     // v100.43 (I-467): banii pe masa langa stop - cel mai rau caz inainte/dupa si ce cedezi
@@ -324,8 +325,9 @@ var SemnaleBot = (function () {
 
   function btcAvertizare(btc, moneda) {
     if (!btc || !btc.miscare || !moneda || moneda.miscare) return null;
-    var r = Math.max(nr(btc.r4h) || 0, nr(btc.r24h) || 0);
-    return { nivel: "atentie", r: r, text: "BTC în mișcare (" + X(r) + " față de obișnuitul lui), moneda botului încă liniștită; altcoinii urmează des BTC." };
+    // v100.272 (ideile auditului 29.10): cifra pe 24 h (definiția comună a „mișcării mari”), nu maximul cu cea pe 4 h
+    var r = nr(btc.r24h) !== null ? nr(btc.r24h) : nr(btc.r4h) || 0;
+    return { nivel: "atentie", r: r, text: "BTC în mișcare (" + X(r) + " obișnuitul lui pe 24 h), moneda botului încă liniștită; altcoinii urmează des BTC." };
   }
 
   function aglomerare(fut, dir) {
@@ -464,7 +466,7 @@ var SemnaleBot = (function () {
     if (x.muta) c.push({ nivel: "atentie", cod: "muta", motiv: x.muta.motiv, parte: x.muta.parte || null, faCe: x.muta.asteapta ? "N-aș muta gridul acum: " + x.muta.motivNu + "; aștept să se liniștească." : "Aș muta gridul: închid botul și pornesc cu setările din cartela Gridul.", deCe: x.muta.deCe || "", sursa: x.muta.sursa || null });
     if (x.costuri && x.costuri.netZi !== null && x.costuri.netZi !== undefined && x.costuri.netZi < 0) c.push({ nivel: "atentie", cod: "costuri", motiv: "costurile pe zi depășesc grilele: " + TextRo.usdt(x.costuri.netZi, TextRo.zecMici(x.costuri.netZi)) + " net/zi", faCe: "Aș lua levier mai mic sau grile mai rare la următorul bot." });
     var rB = x.btc ? nr(x.btc.r) : null;
-    if (x.btc) c.push({ nivel: "atentie", cod: "btc", motiv: "BTC în mișcare" + (rB !== null ? " (" + X(rB) + " față de obișnuit)" : "") + ", moneda încă nu", faCe: "N-aș adăuga bani până nu se vede încotro trage BTC.", deCe: "Altcoinii urmează des BTC." });
+    if (x.btc) c.push({ nivel: "atentie", cod: "btc", motiv: "BTC în mișcare" + (rB !== null ? " (" + X(rB) + " obișnuitul pe 24 h)" : "") + ", moneda încă nu",   /* v100.272: cifra pe 24 h */ faCe: "N-aș adăuga bani până nu se vede încotro trage BTC.", deCe: "Altcoinii urmează des BTC." });
     var ag = x.aglomerare, nS = ag ? nr(ag.semne) : null;
     if (ag && ag.nivel === "atentie") c.push({ nivel: "atentie", cod: "aglomerare", motiv: "mulțimea e înghesuită pe partea botului" + (nS !== null ? " (" + nS + " semne)" : ""), faCe: "Aș strânge riscul: aș adăuga marjă sau aș închide o parte.",
       deCe: ag.dovezi ? "Semnele: " + ag.dovezi + "; risc de curățare bruscă în sens opus." : ag.text || "" });
@@ -560,32 +562,74 @@ var SemnaleBot = (function () {
       return o;
     });
   }
-  // I-466: socoteala pe TOTI botii (loguri = jurnalele de semnale ale fiecarui bot), cu intervalul Wilson.
-  //   necunoscut - sub 10 judecate („încă nu știm”) · ajuta - marginea de jos a intervalului peste 50%
-  //   tace - cel putin 30 judecate, fara avantaj dovedit (marginea de jos <= 50%) SI fara bani salvati (el: „tace pe Discord, rămâne în Radar”)
+  // I-466: socoteala pe TOTI botii (loguri = jurnalele de semnale ale fiecarui bot).
+  // v100.272 (ideile auditului 29.10): pe ZILE, față de RATA DE BAZĂ. Înainte: pe intrări (10 boți în aceeași zi proastă = 10 „dovezi”) și față de
+  // 50% (când totalul scade în 24 h după ~45% din semnale, un „Ține-l” la întâmplare are dreptate în ~55%). Simularea de mărime sub H0 pe structura
+  // reală a jurnalelor (183 de boți, 515 judecăți, 35 de zile): „merită ascultat” fals la cel puțin un sfat în 36–90% din rulări (la „Ține-l” 20–57%).
+  // Acum, cu ipoteza și pragul de dinainte de date:
+  //   ziua = unitatea: pe fiecare zi, partea de intrări ale sfatului care au avut dreptate (y_d);
+  //   reperul = rata de bază: cât de des scade totalul în 24 h după CELELALTE sfaturi, pe fiecare zi, mediat pe toate zilele (la „ține” - cât de des NU scade);
+  //   testul: media pe zile a lui y_d − reper, test t unilateral (varianța măsurată pe zile, cel puțin cea binomială a zilei), p la 5% cu
+  //   corecția Benjamini–Hochberg pe sfaturile cu cel puțin 10 zile. Sub H0, pe structura jurnalelor reale (rezultate trase din nou, cu piața
+  //   comună pe zi): pe un sfat 3,7–6,3% „se vede” fals, cu BH 1,1–3,5% din rulări au vreun sfat fals; în probă, testul 4d (scripts/proba-v100272-b.mjs).
+  //   necunoscut - sub 10 zile („încă nu știm”) · ajuta - se vede peste reper (după BH)
+  //   tace - cel puțin 30 de judecate, fără avantaj care să se vadă SI fara bani salvati (el: „tace pe Discord, rămâne în Radar”)
   //   nesigur - restul. Lichidarea, planul LUI si podeaua nu tac niciodata (siguranta si hotararile lui).
-  var NU_TACE = { lichidare: 1, plan: 1, podea: 1 };
+  var NU_TACE = { lichidare: 1, plan: 1, podea: 1 }, ZILE_MIN = 10, Q_BH = 0.05, ZI_MS = 86400000;
+  // funcția de repartiție normală (Abramowitz–Stegun 7.1.26, eroare < 1,5e-7) și t → z (Wallace), pentru p-ul testului pe zile
+  function fiNormal(z) { var a = Math.abs(z) / Math.SQRT2, t = 1 / (1 + 0.3275911 * a), y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-a * a); return z >= 0 ? 0.5 * (1 + y) : 0.5 * (1 - y); }
+  function peZile(toate) {
+    var jud = toate.filter(function (e) { return e && (e.dreptate === true || e.dreptate === false) && nr(e.t) !== null; }), pz = {}, peCod = {};
+    jud.forEach(function (e) {
+      var d = Math.floor(nr(e.t) / ZI_MS), s = stai(e), scade = s ? !e.dreptate : e.dreptate;
+      var x = pz[d] || (pz[d] = {}), c = x[e.cod] || (x[e.cod] = { n: 0, s: 0 }); c.n++; if (scade) c.s++;
+      var k = peCod[e.cod] || (peCod[e.cod] = {}), z = k[d] || (k[d] = { n: 0, k: 0, st: 0 }); z.n++; if (e.dreptate) z.k++; if (s) z.st++;
+    });
+    // cât de des scade totalul, pe zile, după semnalele ALTOR sfaturi (cel judecat nu-și face singur reperul)
+    function baza(fara) { var s = 0, n = 0; Object.keys(pz).forEach(function (d) { var a = 0, b = 0; Object.keys(pz[d]).forEach(function (k) { if (k !== fara) { a += pz[d][k].s; b += pz[d][k].n; } }); if (b) { s += a / b; n++; } }); return n ? s / n : null; }
+    var toti = baza(null), out = {};
+    Object.keys(peCod).forEach(function (k) {
+      var p0 = baza(k); if (p0 === null) p0 = toti; if (p0 === null) return;
+      var Z = Object.keys(peCod[k]).map(function (d) { return peCod[k][d]; }), n = Z.length;
+      var y = Z.map(function (z) { return z.k / z.n; }), rf = Z.map(function (z) { return (z.st * (1 - p0) + (z.n - z.st) * p0) / z.n; });
+      var D = y.map(function (v, i) { return v - rf[i]; }), md = D.reduce(function (a, v) { return a + v; }, 0) / n;
+      var s2 = n > 1 ? D.reduce(function (a, v) { return a + (v - md) * (v - md); }, 0) / (n - 1) : 0, pod = Z.reduce(function (a, z, i) { return a + rf[i] * (1 - rf[i]) / z.n; }, 0) / n;
+      var se = Math.sqrt(Math.max(s2, pod) / n), t = se > 0 ? md / se : 0, nu = Math.max(1, n - 1), zs = t * (1 - 1 / (4 * nu)) / Math.sqrt(1 + t * t / (2 * nu));
+      var sy = y.reduce(function (a, v) { return a + v; }, 0);
+      out[k] = { zile: n, rataZile: sy / n, reper: rf.reduce(function (a, v) { return a + v; }, 0) / n, p: 1 - fiNormal(zs), icZile: G.wilson(sy, n) };
+    });
+    return out;
+  }
   var NUME_SFAT = { tine: "„Ține-l”", "cu-botul": "„Mișcarea e cu botul”", podea: "„Ținta devine podea”", lichidare: "Lichidarea aproape", plan: "Planul tău", busola: "Busola: după agitație gridul pierde mai mult",
     trend: "Trendul împotriva botului", miscare: "Mișcare mare", "ia-profit": "„Încasează acum”", muta: "„Mută gridul”", costuri: "„Costurile mănâncă grilele”",
     btc: "„BTC în mișcare”", aglomerare: "„Mulțimea înghesuită”" };
   function socotealaToti(loguri) {
     var toate = [];
     (Array.isArray(loguri) ? loguri : []).forEach(function (l) { if (Array.isArray(l)) toate = toate.concat(l); });
-    var r = socoteala(toate);
+    var r = socoteala(toate), z = peZile(toate);
+    // v100.272: Benjamini–Hochberg pe sfaturile cu destule zile - „se vede” doar cele care trec după corecție
+    var elig = Object.keys(z).filter(function (k) { return z[k].zile >= ZILE_MIN && r[k]; }).sort(function (a, c) { return z[a].p - z[c].p; }), m = elig.length, kmax = -1;
+    elig.forEach(function (k, i) { if (z[k].p <= Q_BH * (i + 1) / m) kmax = i; });
+    var seVede = {}; elig.forEach(function (k, i) { if (i <= kmax) seVede[k] = true; });
     Object.keys(r).forEach(function (k) {
-      var x = r[k], ic = x.judecate ? G.wilson(x.corecte, x.judecate) : [0, 1];
-      x.ic = ic; x.nume = NUME_SFAT[k] || k;
-      x.stare = x.judecate < 10 ? "necunoscut" : ic[0] > 0.5 ? "ajuta" : (x.judecate >= 30 && ic[0] <= 0.5 && x.bani <= 0 && !NU_TACE[k]) ? "tace" : "nesigur";
+      var x = r[k], zk = z[k] || { zile: 0, rataZile: null, reper: null, p: null, icZile: [0, 1] };
+      x.zile = zk.zile; x.rataZile = zk.rataZile; x.reper = zk.reper; x.p = zk.p === null ? null : Math.round(zk.p * 10000) / 10000;
+      x.ic = zk.icZile; x.nume = NUME_SFAT[k] || k;
+      x.stare = x.zile < ZILE_MIN ? "necunoscut" : seVede[k] ? "ajuta" : (x.judecate >= 30 && x.bani <= 0 && !NU_TACE[k]) ? "tace" : "nesigur";
     });
     return r;
   }
   function tacute(soc) { var o = {}; Object.keys(soc || {}).forEach(function (k) { if (soc[k] && soc[k].stare === "tace") o[k] = true; }); return o; }
+  // v100.272 (ideile auditului 29.10): cu zilele și rata de bază (socoteala nouă are x.zile / x.rataZile / x.reper); forma veche (fără ele, din KV
+  // până la tura nouă a colectorului) se scrie ca înainte
   function textIncredere(x) {
     if (!x) return "încă nu știm (niciun caz)";
-    if (x.stare === "necunoscut") return "încă nu știm (" + cate(x.judecate, "judecat", "judecate") + ")";
+    var nou = nr(x.zile) !== null && nr(x.reper) !== null, pz = function (v) { return TextRo.pct(v * 100, 1); };
+    if (x.stare === "necunoscut") return "încă nu știm (" + cate(x.judecate, "judecat", "judecate") + ")" + (nou ? ", pe " + cate(x.zile, "zi", "zile") + "; judec de la " + cate(ZILE_MIN, "zi", "zile") : "");
     var s = "a avut dreptate " + x.corecte + " din " + x.judecate + " (" + Math.round(100 * x.corecte / x.judecate) + "%)";
+    if (nou) s += "; pe " + cate(x.zile, "zi", "zile") + ", " + pz(x.rataZile) + " față de " + pz(x.reper) + " de obicei";
     if (x.baniN) s += ", " + (x.bani >= 0 ? "~+" : "~−") + Math.abs(x.bani).toFixed(1).replace(".", ",") + " USDT dacă-l urmai de fiecare dată";
-    if (x.stare === "tace") s += " · nu-l trimit pe Discord: nu se descurcă mai bine decât întâmplarea";   /* v100.106: era „tăcut pe Discord (nu bate hazardul)” */
+    if (x.stare === "tace") s += nou ? " · nu-l trimit pe Discord: nu se vede peste rata de bază și urmat n-ar fi salvat bani" : " · nu-l trimit pe Discord: nu se descurcă mai bine decât întâmplarea";   /* v100.106: era „tăcut pe Discord (nu bate hazardul)” */
     return s;
   }
 

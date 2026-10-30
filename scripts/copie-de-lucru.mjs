@@ -112,6 +112,20 @@ const asteaptaMs = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4))
 // altă sesiune, ESRCH = a ieșit), apoi `schtasks /run /tn "Crypto Radar pornire"` (sarcina lui, fără UAC) pornește colectorul nou; se verifică
 // PID-ul nou din data\colector.pid și versiunea din data\pentru-busola.json (scrisă la prima tură, mai nouă decât repornirea).
 // Logica e pură: dependențele vin în `d` (probele le dau false; depSemnal le dă pe cele adevărate). Întoarce { ok, motiv, pid }.
+// v100.272 (integrarea auditului 29.10): și colectorul din ACEEAȘI sesiune primește întâi semnalul de ieșire - Stop-Process -Force nu lasă
+// process.on("exit") să ruleze, iar starea alertelor se scrie acum amânat (≤ 10 s) ⇒ se pierdea ⇒ o alertă putea pleca de două ori după livrare.
+// Forțat doar dacă nu iese în OPRIRE_CURATA_MS: semnalul se vede în ≤ 10 s, iar colectorul iese la capătul turei, cel mult după 60 s
+// (IESIRE_MAX_MS din sanatate-colector.mjs). Semnalul se șterge mereu, ca cel nou să nu-l găsească. Pură, ca mai sus.
+export const OPRIRE_CURATA_MS = 80000;
+export function opresteCurat(d) {
+  d.scrieSemnal();
+  const t0 = d.acum();
+  while (d.eViu(d.pid) && d.acum() - t0 < OPRIRE_CURATA_MS) d.asteaptaMs(1000);
+  const curat = !d.eViu(d.pid);
+  if (!curat) d.forteaza();
+  d.stergeSemnal();
+  return { curat };
+}
 export function repornestePrinSemnal(d) {
   const pana = (cond, ms, pas) => { const t0 = d.acum(); for (;;) { if (cond()) return true; if (d.acum() - t0 >= ms) return false; d.asteaptaMs(pas); } };
   d.scrieSemnal();
@@ -156,7 +170,11 @@ function repornesteColectorul(rad) {
       + "\n  Codul nou intră în colector la următoarea repornire a lui (repornirea PC-ului / logarea, sau Stop-Process ca administrator, apoi schtasks /run /tn \"Crypto Radar pornire\").");
     return false;
   }
-  if (d.opreste) { ps(`Stop-Process -Id ${pid} -Force -ErrorAction SilentlyContinue`); scrie(`Am oprit colectorul vechi (PID ${pid}).`); asteaptaMs(2000); }
+  if (d.opreste) {   // v100.272: întâi semnalul (iese curat, scrie starea alertelor), forțat doar dacă nu iese
+    const ds = depSemnal(rad, pid), o = opresteCurat({ pid, acum: ds.acum, asteaptaMs, scrieSemnal: ds.scrieSemnal, stergeSemnal: ds.stergeSemnal, eViu: ds.eViu,
+      forteaza: () => { ps(`Stop-Process -Id ${pid} -Force -ErrorAction SilentlyContinue`); asteaptaMs(2000); } });
+    scrie(o.curat ? `Colectorul vechi (PID ${pid}) a ieșit curat la semnal (starea alertelor scrisă).` : `Am oprit colectorul vechi (PID ${pid}): n-a ieșit la semnal în ${OPRIRE_CURATA_MS / 1000} s.`);
+  }
   else scrie(d.motiv === "fara-pid" ? "data\\colector.pid lipsește — colectorul nu rula; îl pornesc." : `PID-ul ${pid} din data\\colector.pid nu e colectorul (${d.motiv === "alt-program" ? "alt program" : "nu rulează"}) — nu-l opresc.`);
   const nou = Number(ps(`(Start-Process -FilePath node -ArgumentList 'scripts\\colector.mjs' -WorkingDirectory '${rad.replace(/'/g, "''")}' -WindowStyle Hidden -PassThru).Id`));
   if (!(nou > 0)) { scrie("⚠ colectorul NU a pornit (Start-Process n-a dat un PID) — pornește-l: PORNESTE-CRYPTO-RADAR.bat."); return false; }

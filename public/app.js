@@ -1516,7 +1516,8 @@ function updateScannerUi(){
   if($("oppScanBtn"))$("oppScanBtn").textContent=stocks?"Scan Nasdaq":"Scan Pionex";
 }
 function stockRowFromSeries(symbol,rows){
-  if(!rows||rows.length<60)return null;const q=calc(rows,$("mode")?.value||"auto"),last=rows[rows.length-1],prev=rows[rows.length-2],price=+last[4],change=prev&&+prev[4]?((price/+prev[4])-1)*100:0,turnover=botiNr(last[5])===null?null:price*+last[5];
+  /* v100.272 (ideile auditului 29.10): scorul pe bare închise (ziua în curs nu intră, ca în analiză); prețul și schimbarea zilei rămân pe bara vie */
+  if(!rows||rows.length<60)return null;const q=calc(bareInchise(rows,"1d",Date.now(),"TWELVEDATA"),$("mode")?.value||"auto"),last=rows[rows.length-1],prev=rows[rows.length-2],price=+last[4],change=prev&&+prev[4]?((price/+prev[4])-1)*100:0,turnover=botiNr(last[5])===null?null:price*+last[5];
   return {c:symbol,stockSymbol:symbol,avg:q.score,dir:q.ver,conf:q.confluence,adx:q.adx,regime:q.regime,turnover,change,source:"TWELVEDATA",trend:q.trendScore,mom:q.momScore,structure:q.structureScore,volume:q.volScore,chop:q.chop,efficiency:q.efficiency,hurst:q.hurst,rvPercentile:q.rvPercentile}
 }
 async function runNasdaqScan(depth="FAST"){
@@ -1930,6 +1931,9 @@ async function loadIntelNews(force=false){
 function dinN(arata,total){return total>arata?'<p class="tbSub">primele '+arata+' din '+total+'</p>':""}/* v100.196 (auditul app 🔵6): o listă tăiată spune cât s-a tăiat */
 function simbolSigur(s){s=String(s??"");return /^[A-Za-z0-9._-]{1,40}$/.test(s)?s:""}/* v100.196: simbolul din argumentul unei acțiuni (data-action-click) - doar litere, cifre, . _ - */
 function escapeHtml(x){return String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+/* v100.272 (ideile auditului 29.10): un text pus ca argument ('…') într-o acțiune din atribut - întâi escaparea șirului JS (\ ' "), apoi cea HTML.
+   escapeHtml singur nu ajunge: browserul decodează atributul înapoi, iar un apostrof din text închidea ghilimelele și lipea o a doua acțiune. */
+function argActiune(x){return escapeHtml(String(x??"").replace(/[\\'"]/g,"\\$&"))}
 function safeActionToken(x,max=32){return String(x??"").replace(/[^A-Za-z0-9._-]/g,"").slice(0,max)}
 
 function liqSelectedSymbol(){return norm($("symbol").value)}
@@ -2645,7 +2649,10 @@ function buildVerdictCenterSnapshot(){
 
   const rr=ss.tm?.direction!=="WAIT"&&Number.isFinite(+ss.tm?.entryLow)&&Number.isFinite(+ss.tm?.entryHigh)&&Number.isFinite(+ss.tm?.stop)&&Number.isFinite(+ss.tm?.tp2)?Math.abs(ss.tm.tp2-(ss.tm.entryLow+ss.tm.entryHigh)/2)/Math.max(1e-12,Math.abs((ss.tm.entryLow+ss.tm.entryHigh)/2-ss.tm.stop)):NaN;
   add(vcStatusItem("Setup quality","Risk / execution",sq?`${sq.grade} · ${(+sq.overall).toFixed(0)}/100`:"—",sq?.blocker&&sq.blocker!=="None"?sq.blocker:"Current setup-quality gate",{severity:sq?.blocker&&sq.blocker!=="None"?"WARN":null,available:!!sq}));
-  add(vcStatusItem("Risk / reward","Risk / execution",Number.isFinite(rr)?`TP2 ${rr.toFixed(2)}R`:"—","Current trade-map reward/risk",{severity:Number.isFinite(rr)&&rr<1.2?"WARN":null,available:Number.isFinite(rr)}));
+  /* v100.272 (ideile auditului 29.10): buildTradeMap pune TP2 la 1,8 × distanța până la stop ⇒ raportul iese 1,8 prin construcție și „< 1,2” nu se putea
+     aprinde niciodată. Rândul spune asta, fără avertismentul mort; cifra și avertismentul rămân pentru o hartă construită altfel (raport ≠ tm.rr2). */
+  const rrConstr=Number.isFinite(rr)&&Number.isFinite(+ss.tm?.rr2)&&+ss.tm.rr2>0&&Math.abs(rr-ss.tm.rr2)<1e-6;
+  add(vcStatusItem("Risk / reward","Risk / execution",rrConstr?`TP2 ${(+ss.tm.rr2).toFixed(1).replace(".",",")}R · prin construcție`:Number.isFinite(rr)?`TP2 ${rr.toFixed(2)}R`:"—",rrConstr?`Ținta TP2 e pusă la ${(+ss.tm.rr2).toFixed(1).replace(".",",")} × distanța până la stop: raportul e fix, nu măsoară piața (de aceea nu avertizează)`:"Current trade-map reward/risk",{severity:!rrConstr&&Number.isFinite(rr)&&rr<1.2?"WARN":null,available:Number.isFinite(rr)}));
   const guard=vcSafe(()=>riskGuard(),null);
   add(vcStatusItem("Risk Guard","Risk / execution",guard?`${guard.state||""} · ${Number.isFinite(+guard.mult)?(+guard.mult).toFixed(2)+"×":""}`:"—",guard?.reason||"Risk guard state",{severity:guard&&(guard.state==="BLOCK"||+guard.mult===0)?"BLOCK":null,available:!!guard}));
   const budget=window.__portfolioRisk?.preTrade?.gate?.state||vcSafe(()=>portfolioBudgetSummary(window.__portfolioRisk?.clusters||[]).state,"PASS");
@@ -2827,7 +2834,26 @@ const COMMANDS=[
   ["Piața azi","dash"],["Edge Validation Pro","edgepro"],["Scanner","scan"],["Replay & Historical Scanner","replaylab"],["Decision Core","decisioncore"],["Profit Readiness","profitready"],["Volatility Intelligence","volatilitylab"],["Local Data & Reports","localdata"],["Research ML","researchml"],["Portfolio Intelligence","portfolio"],["Market Profile","profilelab"],["Structure & Sessions","structurelab"],["Context Intelligence","intel"],["Paper Trading v3","paper"],["Starea aplicației","health"],["Setări","settings"]
 ];
 function toggleCommandPalette(force){const p=$("commandPalette"),on=force==null?!p.classList.contains("on"):!!force;p.classList.toggle("on",on);if(on){dialogReturnFocus=document.activeElement;$("commandInput").value="";renderCommandPalette();setTimeout(()=>$("commandInput").focus(),0)}else restoreDialogFocus()}
-function renderCommandPalette(){const q=($("commandInput")?.value||"").toLowerCase(),rows=COMMANDS.filter(x=>x[0].toLowerCase().includes(q));$("commandItems").innerHTML=rows.map(([n,id,act])=>`<div class="cmdItem" data-action-click="toggleCommandPalette(false);${act||`navTo(&#x27;${id}&#x27;,${["scan","replaylab","decisioncore","volatilitylab","localdata","portfolio","profilelab","structurelab","intel"].includes(id)})`}">${n}</div>`).join("")}
+/* v100.272 (ideile auditului 29.10): comenzile paletei sunt opțiuni ARIA (listbox / option, câmpul e combobox), se ating cu Tab, au id; prima e evidențiată (Enter din câmp o pornește) */
+function renderCommandPalette(){const q=($("commandInput")?.value||"").toLowerCase(),rows=COMMANDS.filter(x=>x[0].toLowerCase().includes(q));$("commandItems").innerHTML=rows.map(([n,id,act],i)=>`<div class="cmdItem" role="option" tabindex="0" id="cmdOpt${i}" aria-selected="${i?"false":"true"}" data-action-click="toggleCommandPalette(false);${act||`navTo(&#x27;${id}&#x27;,${["scan","replaylab","decisioncore","volatilitylab","localdata","portfolio","profilelab","structurelab","intel"].includes(id)})`}">${n}</div>`).join("");const inp=$("commandInput");if(inp){if(rows.length)inp.setAttribute("aria-activedescendant","cmdOpt0");else inp.removeAttribute("aria-activedescendant")}}
+/* v100.272: paleta din tastatură - săgețile și Home / End mută focusul între comenzi (săgeata sus de pe prima duce în câmp), Enter (sau Spațiu pe o comandă)
+   o pornește, Enter în câmp pornește comanda evidențiată, Escape închide și întoarce focusul. Cât e deschisă, tastele scurte ale paginii (a, s, /) nu pornesc;
+   o literă apăsată pe o comandă se duce în căutare. Întoarce true când paleta e deschisă (tasta e a ei). */
+function cmdPaletaTaste(e){
+ const p=$("commandPalette");if(!p||!p.classList.contains("on"))return false;
+ const inp=$("commandInput"),it=[...($("commandItems")?.querySelectorAll(".cmdItem")||[])],i=it.indexOf(e.target),k=e.key;
+ if(k==="Escape"){e.preventDefault();toggleCommandPalette(false);return true}
+ if(k==="ArrowDown"||k==="ArrowUp"||k==="Home"||k==="End"){
+  e.preventDefault();if(!it.length)return true;
+  const n=k==="Home"?0:k==="End"?it.length-1:k==="ArrowDown"?Math.min(it.length-1,i+1):i-1;
+  if(n<0){inp?.focus();return true}
+  cmdPaletaActiv(it[n]);it[n].focus();return true
+ }
+ if(k==="Enter"||(k===" "&&i>=0)){const x=i>=0?it[i]:(it.find(y=>y.getAttribute("aria-selected")==="true")||it[0]);e.preventDefault();x?.click();return true}
+ if(i>=0&&k&&k.length===1&&!e.ctrlKey&&!e.metaKey&&!e.altKey)inp?.focus();
+ return true
+}
+function cmdPaletaActiv(x){for(const y of $("commandItems")?.querySelectorAll(".cmdItem")||[])y.setAttribute("aria-selected",y===x?"true":"false");const inp=$("commandInput");if(inp&&x&&x.id)inp.setAttribute("aria-activedescendant",x.id)}
 
 const LOCAL_DB_NAME="CryptoRadarResearch";
 const LOCAL_DB_VERSION=54;
@@ -3130,7 +3156,8 @@ async function loadMarketOverview(force=false){
  for(let i=0;i<coins.length;i+=4){
    const b=coins.slice(i,i+4);
    const r=await Promise.all(b.map(async c=>{try{
-     const sym=stocks?c:c+"USDT",[tk,k]=await Promise.all([analysisTicker(sym,src),analysisKlines(sym,stocks?"1d":"4h",260,src)]),q=calc(k,$("mode").value);
+     /* v100.272 (ideile auditului 29.10): scorul plăcii pe bare închise și pe tot atâtea bare câte ia analyze() (750) = scorul analizei pe 4 h (1d la acțiuni); prețul rămâne cel viu */
+     const tfMo=stocks?"1d":"4h",sym=stocks?c:c+"USDT",[tk,k]=await Promise.all([analysisTicker(sym,src),analysisKlines(sym,tfMo,750,src)]),q=calc(bareInchise(k,tfMo,Date.now(),src),$("mode").value);
      return {c,price:+tk.lastPrice||q.price,ch:+tk.priceChangePercent,score:q.score,regime:q.regime,ver:q.ver,adx:q.adx}
    }catch{return null}}));
    rows.push(...r.filter(Boolean))
@@ -3140,7 +3167,7 @@ async function loadMarketOverview(force=false){
 function renderMarketOverview(){
  const rows=marketCache.rows,box=$("marketOverview");if(!box)return;
  const suffix=assetClass()==="STOCKS"?" · USD":"/USDT";
- box.innerHTML=rows.length?rows.map(x=>`<div class="marketTile" data-action-click="pick(&#x27;${escapeHtml(x.c)}&#x27;)"><div class="coinName">${escapeHtml(x.c)}${suffix}</div><div class="marketPrice">${num(x.price)}</div><div class="${x.ch>=0?"good":"bad"}">${TextRo.pctSemn(x.ch,1)}</div><div class="marketMeta"><span>${x.regime}</span><span>Score ${x.score.toFixed(0)}</span><span>ADX ${x.adx.toFixed(0)}</span></div></div>`).join(""):'<div class="emptyState">Market data unavailable.</div>';
+ box.innerHTML=rows.length?rows.map(x=>`<div class="marketTile" data-action-click="pick(&#x27;${argActiune(x.c)}&#x27;)"><div class="coinName">${escapeHtml(x.c)}${suffix}</div><div class="marketPrice">${num(x.price)}</div><div class="${x.ch>=0?"good":"bad"}">${TextRo.pctSemn(x.ch,1)}</div><div class="marketMeta"><span>${x.regime}</span><span>Score ${x.score.toFixed(0)}</span><span>ADX ${x.adx.toFixed(0)}</span></div></div>`).join(""):'<div class="emptyState">Market data unavailable.</div>';
  let bull=rows.filter(x=>x.ver==="BULLISH").length,bear=rows.filter(x=>x.ver==="BEARISH").length,neu=rows.length-bull-bear,avg=rows.length?rows.reduce((a,x)=>a+x.ch,0)/rows.length:0;
  $("breadthBull").textContent=bull;$("breadthBear").textContent=bear;$("breadthNeutral").textContent=neu;$("breadth24").textContent=TextRo.pctSemn(avg,1)
 }
@@ -3558,14 +3585,18 @@ function scannerStatsFrom4h(rows,item){
   return {turnover:turnover||(+item.turnover||0),change}
 }
 async function pionexScanFast(item){
-  const mode=$("mode")?$("mode").value:"auto",j=await pionexUniverseBinanceKlines(item,"4h",320);
+  /* v100.272 (ideile auditului 29.10): scorul pe bare ÎNCHISE și pe tot atâtea bare câte ia analyze() (750), ca lista să arate scorul analizei.
+     Înainte bara în formare (pe 4 h: mediana 3,8 / p90 15,6 puncte, verdict schimbat în 17,9% din cazuri) și 320 de bare îl mutau și se repicta.
+     Rulajul și schimbarea din rând rămân pe barele vii (scannerStatsFrom4h). */
+  const mode=$("mode")?$("mode").value:"auto",j=await pionexUniverseBinanceKlines(item,"4h",750);
   if(!j||j.length<80)throw Error("Insufficient Binance history");
-  const q=calc(j,mode),ms=scannerStatsFrom4h(j,item);
+  const q=calc(bareInchise(j,"4h",Date.now(),"BINANCE"),mode),ms=scannerStatsFrom4h(j,item);
   return {c:item.base,pionexSymbol:item.symbol,avg:q.score,dir:q.ver,conf:q.confluence,adx:q.adx,regime:q.regime,turnover:ms.turnover,change:ms.change,source:"BINANCE",universeSource:item.universeSource||"PIONEX",trend:q.trendScore,mom:q.momScore,structure:q.structureScore,volume:q.volScore,chop:q.chop,efficiency:q.efficiency,hurst:q.hurst,rvPercentile:q.rvPercentile}
 }
 async function pionexScanDeep(item){
   const mode=$("mode")?$("mode").value:"auto",tfs=["15m","1h","4h","1d"],raw={};
-  const m=(await Promise.all(tfs.map(async tf=>{try{const rows=await pionexUniverseBinanceKlines(item,tf,300);raw[tf]=rows;return {tf,...calc(rows,mode)}}catch{return null}}))).filter(Boolean);
+  /* v100.272: pe bare închise, ca analysisMtfData (Weighted Multi-TF din analiză) - același număr de bare (300) pe fiecare interval */
+  const m=(await Promise.all(tfs.map(async tf=>{try{const rows=await pionexUniverseBinanceKlines(item,tf,300);raw[tf]=rows;return {tf,...calc(bareInchise(rows,tf,Date.now(),"BINANCE"),mode)}}catch{return null}}))).filter(Boolean);
   if(!m.length)throw Error("Binance n-are lumânări pentru moneda asta de pe Pionex");
   const mc=mtfComposite(m),anchor=m.find(x=>x.tf==="4h")||m[0],ms=scannerStatsFrom4h(raw["4h"]||[],item);
   return {c:item.base,pionexSymbol:item.symbol,avg:mc.avg,dir:mc.comp,conf:anchor.confluence,adx:anchor.adx,regime:anchor.regime,turnover:ms.turnover,change:ms.change,source:"BINANCE",universeSource:item.universeSource||"PIONEX",trend:anchor.trendScore,mom:anchor.momScore,structure:anchor.structureScore,volume:anchor.volScore,chop:anchor.chop,efficiency:anchor.efficiency,hurst:anchor.hurst,rvPercentile:anchor.rvPercentile}
@@ -4446,7 +4477,11 @@ async function backtestCurrent(){
   for(const th of thresholds){let st=statsR(wfTrade(points,th,cfg,0,split));if(st.n>=20&&(!bestTrain||st.avg>bestTrain.avg)){best=th;bestTrain=st}}
   let oos=statsR(wfTrade(points,best,cfg,split,points.length)),all=statsR(wfTrade(points,best,cfg,0,points.length));
   if(!all.n){box.textContent="Nu sunt suficiente tranzacții pentru acest profil.";return}
-  box.innerHTML=`<div class="row"><span>Selected threshold · train only</span><b>${best}</b></div><div class="row"><span>Total cost-aware trades</span><b>${all.n}</b></div><div class="row"><span>Net expectancy</span><b>${all.avg.toFixed(2)} R</b></div><div class="row"><span>Net profit factor</span><b>${all.pf.toFixed(2)}</b></div><div class="row"><span>Max drawdown</span><b>${all.dd.toFixed(2)} R</b></div><div class="row"><span>OOS trades · last 40%</span><b>${oos.n}</b></div><div class="row"><span>OOS net expectancy</span><b>${oos.n?oos.avg.toFixed(2)+" R":"—"}</b></div><div class="row"><span>OOS profit factor</span><b>${oos.n?oos.pf.toFixed(2):"—"}</b></div><p class="note">Expanding-window heuristic. Threshold is selected only on the first 60%; the final 40% is evaluated without retuning. Includes configured fees/slippage. Intrabar stop/target conflicts use conservative stop-first resolution.</p>`;
+  /* v100.272 (ideile auditului 29.10): întâi partea NEVĂZUTĂ (ultimii 40%, fără reglaj). Sus stăteau expectanța, PF-ul și DD-ul pe TOT eșantionul,
+     inclusiv pe cei 60% pe care s-a ales pragul (optimiste prin construcție). Sub 30 de tranzacții OOS cifrele poartă „insuficient”.
+     Tot eșantionul rămâne, sub ea, cu aceleași cifre, marcat „include partea de alegere”. */
+  const insuf=oos.n<30?" · insuficient (sub 30)":"",alegere=" · include partea de alegere";
+  box.innerHTML=`<div class="row"><span>OOS trades · last 40% (partea nevăzută)</span><b>${oos.n}${insuf}</b></div><div class="row"><span>OOS net expectancy</span><b>${oos.n?oos.avg.toFixed(2)+" R":"—"}${insuf}</b></div><div class="row"><span>OOS profit factor</span><b>${oos.n?oos.pf.toFixed(2):"—"}${insuf}</b></div><div class="row"><span>OOS max drawdown</span><b>${oos.n?oos.dd.toFixed(2)+" R":"—"}${insuf}</b></div><div class="row"><span>Selected threshold · train only</span><b>${best}</b></div><div class="row"><span>Total cost-aware trades${alegere}</span><b>${all.n}</b></div><div class="row"><span>Net expectancy${alegere}</span><b>${all.avg.toFixed(2)} R</b></div><div class="row"><span>Net profit factor${alegere}</span><b>${all.pf.toFixed(2)}</b></div><div class="row"><span>Max drawdown${alegere}</span><b>${all.dd.toFixed(2)} R</b></div><p class="note">Expanding-window heuristic. Threshold is selected only on the first 60%; the final 40% is evaluated without retuning. Includes configured fees/slippage. Intrabar stop/target conflicts use conservative stop-first resolution.</p>`;
  }catch(e){box.textContent="Backtest indisponibil: "+e.message}
 }
 // audit 23.10: simbolul de futures Binance pentru monedele cotate în mii (1000PEPEUSDT, 1000SHIBUSDT…); restul rămân cum sunt
@@ -5129,7 +5164,7 @@ function tbDeschideWs(simbol){
     soc.onmessage=function(ev){
       try{
         var d=JSON.parse(ev.data);tbStare.pretSpot=Number(d.p);tbStare.pretSpotLa=Date.now();
-        var tpE=$("tbPret"),tdE=$("tbDetalii");if(tpE&&tbStare.wsSimbol===simbol&&(!tdE||tdE.open)&&tpE.textContent!=="spot "+d.p)tpE.textContent="spot "+d.p;   // audit 23.10: doar cu „Măsurile” deschise și doar când s-a schimbat (era rescris la fiecare tranzacție, ascuns)
+        var tpE=$("tbPret"),tdE=$("tbDetalii");if(tpE&&tbStare.wsSimbol===simbol&&(!tdE||tdE.open)&&tpE.textContent!=="spot Binance "+d.p)tpE.textContent="spot Binance "+d.p;   /* v100.272: sursa spotului spusă */   // audit 23.10: doar cu „Măsurile” deschise și doar când s-a schimbat (era rescris la fiecare tranzacție, ascuns)
       }catch(e){}
     };
     soc.onerror=function(){try{soc.close()}catch(e){}};
@@ -5199,26 +5234,65 @@ function porneGrid(){
 }
 function grPauza(ms){return new Promise(function(r){setTimeout(r,ms)})}
 function grRanduri(k){return k&&k.data&&Array.isArray(k.data.klines)?k.data.klines:null}
-async function grAduLumanari(simbol){
-  var baza="/api/market?type=pionex_klines&symbol="+encodeURIComponent(simbol);
-  var r15=[],end=null;
+/* v100.272 (ideile auditului 29.10): o singură memorie a lumânărilor de 15 minute pe monedă (grLum15). Fișa (la 5 min), fișa botului din Tablou
+   (la 10 min) și Monte Carlo pe bot (tbMc, prin mcsAduCoin) aduceau fiecare toate cele 6 pagini (~18 cereri Pionex pe monedă în loc de ~9). Acum
+   barele ținute minte pe moneda asta (ale fișei sau, mai noi, cele aduse întregi de Monte Carlo pe bot) + o singură pagină nouă lipită de ele;
+   gaură, ultima bară mai veche de ~5 zile sau nimic ținut minte ⇒ cele 6 pagini, ca înainte. Restul cererilor (4 h, 1 zi, 5 min, 1 h, funding)
+   pleacă pe un al doilea fir, în paralel cu paginile de 15 min, abia după prima pagină reușită: cel mult 2 deodată (poarta serverului le
+   rânduiește oricum), aceleași cereri ca înainte; cu prima pagină refuzată nu pleacă nimic în plus. O pagină picată după prima nu mai trece
+   neștiută: istoric15 = { zile, motiv } (renderGrid o spune). grLum15 ține cel mult 6 monede. */
+var grLum15={};
+function grTimp15(r){var t=Number(Array.isArray(r)?r[0]:r&&r.time);return Number.isFinite(t)?t:null}
+/* barele aduse întregi de Monte Carlo pe bot (mcsAduCoin) pe aceeași monedă - doar citite, în forma lumânărilor Pionex */
+function grBareTbMc(simbol){
+  try{if(typeof tbMc==="undefined"||!tbMc||!tbMc.b15Intreg||!Array.isArray(tbMc.b15)||!tbMc.b15.length||String(tbMc.b15Sim||"")+"_USDT_PERP"!==simbol)return null;
+    return tbMc.b15.map(function(b){return {time:b.t,open:b.o,high:b.h,low:b.l,close:b.c,volume:b.v}})}catch(e){return null}
+}
+/* memoria fișei pentru alții (pagina Monte Carlo pe coin, ca „vechi” la mcsAduCoin): barele ÎNCHISE, doar întregi și cu ultima bară de cel mult ~5 zile */
+function grBare15Tinute(simbol){var m=grLum15[simbol],acum=Date.now();if(!m||!m.intreg||!m.r||!m.r.length||acum-grTimp15(m.r[m.r.length-1])>=480*900000)return null;return GridCalcul.bareToate(m.r).filter(function(b){return b.t+900000<=acum})}   /* închise = sfertul de oră s-a terminat (memoria poate avea și bara în formare) */
+/* barele întregi aduse de alții (mcsAduCoin) ⇒ memoria fișei, ca lumânări Pionex (închise; pagina nouă adaugă bara în formare) */
+function grTine15(simbol,bare){if(!simbol||!Array.isArray(bare)||!bare.length)return;var ks=Object.keys(grLum15);if(!grLum15[simbol]&&ks.length>=6)delete grLum15[ks[0]];grLum15[simbol]={r:bare.slice(-3000).map(function(b){return {time:b.t,open:b.o,high:b.h,low:b.l,close:b.c,volume:b.v}}),la:Date.now(),intreg:true}}
+async function grAdu15(simbol,baza,dupaPrima){
+  var MAX=3000,m=grLum15[simbol],vechi=m&&m.intreg&&m.r&&m.r.length?m.r:null,tb=grBareTbMc(simbol);
+  if(tb&&(!vechi||grTimp15(tb[tb.length-1])>grTimp15(vechi[vechi.length-1])))vechi=tb;
+  var gata=function(r,intreg){var z=GridCalcul.bare(r).length/96,ks=Object.keys(grLum15);if(!grLum15[simbol]&&ks.length>=6)delete grLum15[ks[0]];grLum15[simbol]={r:r,la:Date.now(),intreg:intreg};return {r15:r,istoric15:{zile:z,motiv:!intreg?"pagina":z<30?"nou":null}}};
+  if(vechi&&Date.now()-grTimp15(vechi[vechi.length-1])<480*900000){
+    var k=await getJSON(baza+"&interval=15M&limit=500"),r=grRanduri(k);
+    if(!r)throw Error((k&&(k.error||k.detail||k.message||k.code))||"Pionex nu a dat lumânări");
+    dupaPrima();
+    var t0=Infinity;r.forEach(function(x){var t=grTimp15(x);if(t!==null&&t<t0)t0=t});
+    if(r.length&&t0<=grTimp15(vechi[vechi.length-1])+900000)return gata(GridCalcul.imbinaRanduri(vechi,r,MAX),true);
+    /* gaură: pagina nu se leagă de barele ținute minte ⇒ toate paginile, ca înainte (prima e aceeași cerere: din cache-ul serverului) */
+  }
+  var r15=[],end=null,intreg=true;
   for(var p=0;p<6;p++){
-    var k=await getJSON(baza+"&interval=15M&limit=500"+(end?"&endTime="+end:""));
-    var r=grRanduri(k);
-    if(!r){if(p===0)throw Error((k&&(k.error||k.detail||k.message||k.code))||"Pionex nu a dat lumânări");break}
-    r15=r15.concat(r);
-    var t=r.map(function(x){return Number(x&&x.time)}).filter(Number.isFinite);
-    if(r.length<500||!t.length)break;
+    var k2=null;try{k2=await getJSON(baza+"&interval=15M&limit=500"+(end?"&endTime="+end:""))}catch(e){if(p===0)throw e;intreg=false;break}
+    var rr=grRanduri(k2);
+    if(!rr){if(p===0)throw Error((k2&&(k2.error||k2.detail||k2.message||k2.code))||"Pionex nu a dat lumânări");intreg=false;break}
+    if(p===0)dupaPrima();
+    r15=r15.concat(rr);
+    var t=rr.map(function(x){return Number(x&&x.time)}).filter(Number.isFinite);
+    if(rr.length<500||!t.length)break;
     end=Math.min.apply(null,t)-1;
     await grPauza(350);
   }
+  return gata(GridCalcul.imbinaRanduri([],r15,MAX),intreg);
+}
+async function grAduRest(simbol,baza){
   var r4=grRanduri(await getJSON(baza+"&interval=4H&limit=300"));await grPauza(350);
   var r1=grRanduri(await getJSON(baza+"&interval=1D&limit=200"));await grPauza(350);
   /* v100.204 (el, 16.10: „să afișeze explicit trendul pe 5/15/1h/4h/1zi”): 5 min și 1 oră, doar pentru „Trendul pe intervale”; picate ⇒ rândul spune „fără lumânări” */
   var r5=null,r60=null;try{r5=grRanduri(await getJSON(baza+"&interval=5M&limit=500"));await grPauza(350);r60=grRanduri(await getJSON(baza+"&interval=60M&limit=500"))}catch(e){}
   /* v100.196 (B4): rata de funding a monedei (Pionex), pentru fișă și gridul îngust; fără ea se folosește costul presupus */
   var fz=null;try{var fr=await getJSON("/api/market?type=pionex_funding&symbol="+encodeURIComponent(simbol));var F=typeof GridSim!=="undefined"?GridSim.rataFunding(fr&&fr.data&&fr.data.rates,Date.now()):null;fz=F&&isFinite(F.rataZi)?F.rataZi:null}catch(e){fz=null}
-  return {r15:r15,r4:r4||[],r1:r1||[],r5:r5||[],r60:r60||[],fundingZi:fz};
+  return {r4:r4||[],r1:r1||[],r5:r5||[],r60:r60||[],fundingZi:fz};
+}
+async function grAduLumanari(simbol){
+  var baza="/api/market?type=pionex_klines&symbol="+encodeURIComponent(simbol),fir2=null;
+  var porneste=function(){if(!fir2){fir2=grAduRest(simbol,baza);fir2.catch(function(){})}};   /* prinsă aici; eroarea ei iese la await, mai jos */
+  var a=await grAdu15(simbol,baza,porneste);porneste();
+  var x=await fir2;
+  return {r15:a.r15,r4:x.r4,r1:x.r1,r5:x.r5,r60:x.r60,fundingZi:x.fundingZi,istoric15:a.istoric15};
 }
 /* v100.269 (ideile auditului 29.10): barele de 1 h pe ~6 luni pentru proba fișei la H ≥ 2 (pe ~1 lună de 15 minute testul avea 5 / 3 ferestre
    independente, deci PORNEȘTE era imposibil). Întâi KV-ul colectorului (ore:SIMBOL, fără cereri la Pionex), lipit cu pagina nouă de 60M adusă deja
@@ -5306,7 +5380,7 @@ function gridCopiaza(v,sari){
   v=String(v==null?"":v);if(!v)return;
   // v100.111 (I-549): din fereastra de sărit, prima copiere a fișei spune o dată de ce n-aș porni-o
   var cs=String(sari)+"|"+(grStare.simbol||""),av=!!sari&&grStare.sariAvertizat!==cs;
-  var gata=function(){if(av)grStare.sariAvertizat=cs;toast(av?"Copiat: "+v+" · atenție, e fereastra peste care aș sări (stopul vine în peste jumătate din porniri)":"Copiat: "+v,av?"warn":"good")};
+  var gata=function(){if(av)grStare.sariAvertizat=cs;toast(av?"Copiat: "+v+" · atenție, e fereastra peste care aș sări (stopul vine în peste jumătate din ferestrele probei)":"Copiat: "+v,av?"warn":"good")};
   if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(v).then(gata,function(){toast("Nu am putut copia; scrie de mână: "+v,"bad")});
   else toast("Scrie de mână: "+v,"bad");
 }
@@ -5868,9 +5942,11 @@ document.addEventListener("change",function(e){var t=e.target;if(t&&t.classList&
 // (toata istoria, stransa de colector). Pe pagina publicata arhiva lipseste (503) -> doar prima pagina, spus pe fata (jtNotaPionex).
 var jtArhiva={la:null,boti:null,complet:false,sursa:null};
 async function jtAduBoti(){
+  /* v100.272 (ideile auditului 29.10): arhiva de acasă pleacă odată cu prima pagină Pionex (nu depinde de ea; e KV-ul colectorului, nu Pionex) */
+  var pa=getJSON("/api/istoric-bot?action=botiInchisi"+(jtArhiva.la?"&la="+encodeURIComponent(jtArhiva.la):"")).then(function(a){return a},function(){return null});
   var d=await getJSON("/api/bot-orders?status=finished&limit=100"),p=d&&Array.isArray(d.bots)?d.bots.map(function(b){return b.brut||b}):null;
   if(!p)return null;
-  try{var a=await getJSON("/api/istoric-bot?action=botiInchisi"+(jtArhiva.la?"&la="+encodeURIComponent(jtArhiva.la):""));
+  try{var a=await pa;
     if(a&&!a.neschimbat&&Array.isArray(a.boti)){jtArhiva.boti=a.boti;jtArhiva.la=a.la;jtArhiva.complet=!!a.complet}else if(a&&a.neschimbat)jtArhiva.complet=!!a.complet}catch(e){}
   jtArhiva.sursa=jtArhiva.boti?"acasa":"pagina";
   var id=function(b){return String(b&&(b.strategyId||b.buOrderId)||"")},vazut={};p.forEach(function(b){vazut[id(b)]=1});
@@ -5881,13 +5957,17 @@ async function jtPorneste(forta){
   if(jtStare.inLucru)return;
   if(!forta&&jtStare.boti&&Date.now()-jtStare.la<5*60000){jtRender();return}
   jtStare.inLucru=true;if($("jtStare"))$("jtStare").textContent="aduc boții închiși din Pionex…";
+  /* v100.272 (ideile auditului 29.10): contrafactualul, raportul și săptămâna pieței (KV-ul de acasă, nu Pionex) pleacă odată cu boții, nu unul după altul;
+     fiecare își prinde eroarea (ca înainte: contrafactual / săptămână ⇒ null, raport ⇒ undefined = „nu pot citi”), iar starea se scrie tot după boți */
+  var luat=function(u){return getJSON(u).then(function(v){return {ok:true,v:v}},function(){return {ok:false}})};
+  var pCf=luat("/api/istoric-bot?action=contrafactual"),pRp=luat("/api/istoric-bot?action=raport"),pRpp=luat("/api/istoric-bot?action=raportPiata");
   try{
     // ruta intoarce botii normalizati, cu forma bruta a Pionex in .brut; v100.25: + arhiva de acasa (jtAduBoti)
     jtStare.boti=await jtAduBoti();jtStare.eroare=jtStare.boti?null:"Pionex nu a dat lista";
-    try{var cf=await getJSON("/api/istoric-bot?action=contrafactual");jtStare.cf=cf&&cf.contrafactual||{}}catch(e){jtStare.cf=null}
-    try{var rp=await getJSON("/api/istoric-bot?action=raport");jtStare.raport=rp&&rp.raport||null}catch(e){jtStare.raport=undefined}
+    var cf=await pCf;jtStare.cf=cf.ok?(cf.v&&cf.v.contrafactual||{}):null;
+    var rp=await pRp;jtStare.raport=rp.ok?(rp.v&&rp.v.raport||null):undefined;
     /* v100.166 (12.10, Weekly Review mutat aici): și „Săptămâna pieței” de duminică (până acum doar pe Discord) */
-    try{var rpp=await getJSON("/api/istoric-bot?action=raportPiata");jtStare.raportPiata=rpp&&rpp.raport||null}catch(e){jtStare.raportPiata=null}
+    var rpp=await pRpp;jtStare.raportPiata=rpp.ok?(rpp.v&&rpp.v.raport||null):null;
   }catch(e){jtStare.eroare=grTextEroare(e)}
   jtStare.inLucru=false;jtStare.la=Date.now();jtRender();
 }
@@ -6150,6 +6230,9 @@ function renderGrid(){
   var h='<div class="grBara"><div class="tbRand"><div class="tbBloc"><div class="tbBlocCap"><h4>Direcția</h4><span class="tbSub">'+(f.manual?"aleasă de tine":"din trend")+'</span></div><p class="grDir">'+GR_DIR[f.dir]+(f.manual?"":' <span class="tbSub">tăria: '+escapeHtml(f.directie.tarie)+'</span>')+'</p><ul class="grLista">'+f.directie.motive.map(function(m){return "<li>"+escapeHtml(m)+"</li>"}).join("")+'</ul>'
     +(f.contra?'<p class="tbWarn">'+(f.manual?"Ai ales ":"Trendul zice ")+GR_DIR[f.contra.fisa]+', dar pe istoric a ieșit mai bine '+GR_DIR[f.contra.proba]+'. Uită-te la tabelul probei și alege tu.</p>':"")+'</div></div>';
   h+='<div class="grVerdict '+niv[1]+'" data-action-click="grVerdictComuta()"><span class="grVEt">'+niv[0]+'</span><div><p class="grVMotiv">'+escapeHtml(mot[0]||"e liniște, iar proba pe istoric a ieșit pe plus, fără lichidări")+'</p>'+(mot.length>1?'<ul class="grLista">'+mot.slice(1).map(function(m){return "<li>"+escapeHtml(m)+"</li>"}).join("")+'</ul>':"")+'</div></div></div>';
+  /* v100.272 (ideile auditului 29.10): verdictul pe mai puțin istoric de 15 minute decât de obicei se spune, cu motivul (o pagină picată / monedă nouă) */
+  var tIst=typeof mcsIstoricScurt==="function"?mcsIstoricScurt(dG&&dG.istoric15,"ce se socotește pe 15 minute e pe atât"):"";
+  if(tIst)h+='<p class="tbWarn grIstoricScurt">⚠️ '+escapeHtml(tIst+(dG.istoric15.motiv==="pagina"?" Reîncerc la următoarea reîmprospătare.":""))+'</p>';
   h+='<div class="tbRand grTrendRand">'+grTrendTfHtml(f)+'</div>';   /* v100.204: trendul pe 5m · 15m · 1h · 4h · 1z, explicit, după calcul; v100.238: în afara barei */
   h+=(mot.length>1?'<ul class="grLista grListaJos">'+mot.slice(1).map(function(m){return "<li>"+escapeHtml(m)+"</li>"}).join("")+'</ul>':"");   /* revizia Opus (04.10): pe telefon motivele stau sub caseta lipicioasă (CSS) - caseta ține doar eticheta și primul motiv */
   h+='<p id="grRezumat" class="tbRezumat" hidden></p>';   /* v100.96: rândul modelelor sub verdict (umplut de grProbDeseneaza) */
@@ -6624,7 +6707,7 @@ function tbPregatire(el){
   if(!f&&!v&&!g)return el.innerHTML=h+'<p class="tbSub">'+(tbPreg.inLucru?"aduc ultimul bot închis, vremea și candidații…":"—")+'</p></div>';
   if(f)h+='<div class="tbPregBloc"><h5>Ultimul bot închis</h5><p class="tbPregTitlu '+(f.nivel==="info"?"good":f.nivel==="critic"?"bad":"tbWarn")+'">'+escapeHtml(f.titlu.replace(/^🔍 /,""))+'</p>'+f.mesaj.split("\n").map(function(t){return '<p class="tbPregRand">'+escapeHtml(t)+'</p>'}).join("")+'</div>';
   if(v)h+='<div class="tbPregBloc"><h5>Vremea pieței</h5><p class="tbPregTitlu">'+escapeHtml(v.eticheta)+' — '+escapeHtml(v.titlu)+'</p>'+(v.faCe?'<p class="tbFac">👉 <b>Ce aș face eu:</b> '+escapeHtml(v.faCe)+'</p>':'')+'</div>';
-  if(g&&g.length)h+='<div class="tbPregBloc"><h5>Pe ce aș porni (🟦 Bun pentru grid, din Scan)</h5>'+g.map(function(q){return '<div class="tbPregMon"><b>'+escapeHtml(q.s)+'</b><span class="tbSub">'+(q.grile?TextRo.cate(q.grile+1,"grilă","grile")+" · pas "+(q.pas*100).toFixed(2).replace(".",",")+"% · ~"+(q.traversari||0).toFixed(1).replace(".",",")+" treceri/zi":"")+' · 7 zile '+(q.ch7>=0?"+":"−")+Math.abs(q.ch7).toFixed(1).replace(".",",")+'%</span><button type="button" class="tbBtnLinie" data-action-click="gridDeschideMoneda(\''+escapeHtml(q.s)+'\')">Fișa</button></div>'}).join("")
+  if(g&&g.length)h+='<div class="tbPregBloc"><h5>Pe ce aș porni (🟦 Bun pentru grid, din Scan)</h5>'+g.map(function(q){return '<div class="tbPregMon"><b>'+escapeHtml(q.s)+'</b><span class="tbSub">'+(q.grile?TextRo.cate(q.grile+1,"grilă","grile")+" · pas "+(q.pas*100).toFixed(2).replace(".",",")+"% · ~"+(q.traversari||0).toFixed(1).replace(".",",")+" treceri/zi":"")+' · 7 zile '+(q.ch7>=0?"+":"−")+Math.abs(q.ch7).toFixed(1).replace(".",",")+'%</span><button type="button" class="tbBtnLinie" data-action-click="gridDeschideMoneda(\''+argActiune(q.s)+'\')">Fișa</button></div>'}).join("")
     +(v&&v.nivel==="miscare"?'<p class="tbWarn">Piața e în mișcare: aș aștepta liniștea înainte de un grid nou.</p>':'')+'</div>';
   el.innerHTML=h+'</div>';
 }
@@ -6753,7 +6836,9 @@ function tbDeseneazaExtra(b){
   // v100.92 (I-517): trei grupuri - Azi (grile și costuri), Dacă închizi acum (banii), Contextul (Busola, liniștea, laboratorul, long simplu, jurnalul)
   h+='<div class="tbGrupCard">'+tbGrup("Azi");
   h+=linie("Grile, ultimele 24 h",z.grile24h==null?"—":botiBan(z.grile24h),botiClasa(z.grile24h),z.umpleri24h!=null?TextRo.cate(z.umpleri24h,"tranzacție","tranzacții"):"");
-  h+=linie("Comisioane pe zi",z.comisionZi==null?"—":botiBan(z.comisionZi),"tbSubVal","medie de la pornire");
+  /* v100.272 (ideile auditului 29.10): taxa de intrare (o dată, la pornire) separat de comisionul pe zi - înainte era împărțită pe zile în el */
+  h+=linie("Comisioane pe zi",z.comisionZi==null?"—":botiBan(z.comisionZi),"tbSubVal",z.taxaIntrare?"medie de la pornire, fără taxa de intrare":"medie de la pornire");
+  if(z.taxaIntrare)h+=linie("Taxa de intrare (o dată)","≈ "+botiBan(z.taxaIntrare,TextRo.zecMici(z.taxaIntrare)),"tbSubVal","estimată: poziția cumpărată la pornire × comisionul la piață");
   h+=linie("Funding pe zi",z.fundingZi==null?"—":botiBan(z.fundingZi),z.fundingMananca?"bad":"tbSubVal",z.fundingMananca?"mănâncă tot câștigul din grile":"medie de la pornire");
   h+=linie("Grile − costuri, pe zi",z.netZi==null?"—":botiBan(z.netZi),botiClasa(z.netZi));
   h+='</div><div class="tbGrupCard">'+tbGrup("Dacă închizi acum");
@@ -6782,7 +6867,7 @@ function tbDeseneazaBanii(b){
   el.innerHTML=rand("Investit",botiBan(b.investit,2,false))+
     rand("Realizat, după comisioane",botiBan(b.profitNet),botiClasa(b.profitNet))+
     rand("Poziția deschisă",botiBan(b.pnlNerealizat)+(b.pnlNerealizatSigur===false?" (semn nesigur)":""),botiClasa(b.pnlNerealizat),"nerealizat")+
-    '<div class="tbLinie tbLinieTotal"><span>Total</span><b class="'+botiClasa(b.profitTotal)+'">'+escapeHtml(botiBan(b.profitTotal))+'</b></div>'+
+    '<div class="tbLinie tbLinieTotal"><span>Total'+(typeof TabloExtra!=="undefined"&&TabloExtra.notaTotal&&TabloExtra.notaTotal(b)?' <span class="tbSub">'+escapeHtml(TabloExtra.notaTotal(b))+'</span>':'')+'</span><b class="'+botiClasa(b.profitTotal)+'">'+escapeHtml(botiBan(b.profitTotal))+'</b></div>'+   /* v100.272: nota neutrului lângă total */
     // v100.4: profitul DOAR din grid (Pionex „Grid profit”) la vedere, colorat, si cat aduce o grila dupa comision (Pionex „Profit/grid”)
     rand("Profit doar din grid",botiBan(b.gridProfitBrut),botiClasa(b.gridProfitBrut),(per!==null?TextRo.cate(per,"pereche încheiată","perechi încheiate")+" · ":"")+"brut, fără comisioane")+
     (pg?rand("Pe grilă, după comision",GridCalcul.procent(pg.pct)+(pg.usdt!==null?" ≈ "+pg.usdt.toFixed(3)+" USDT":""),"",TextRo.cate(pg.grile,"grilă","grile")+" "+pg.mod):"")+
@@ -6852,8 +6937,10 @@ function renderTabloSfaturi(){
   if(!b||typeof Sfaturi==="undefined"||typeof Scenariu==="undefined"){el.innerHTML='<p class="tbSub">'+escapeHtml(b?"Aștept botul…":tbTextFaraBot())+'</p>';return}
   /* v100.267 (auditul 29.10): doar direcția și funding-ul monedei botului de acum (ca renderTabloTrend / tbFundingPt); la schimbarea botului veneau ale celui vechi */
   var d=tbStare.directie&&tbStare.directie.simbol===tbCheieDir(b)?tbStare.directie:null,r4=d&&d.rez?d.rez.filter(function(x){return x.tf==="4H"})[0]:null,e=tbStare.extra&&tbStare.extra.bot===b.id?tbStare.extra:{};
+  /* v100.272 (ideile auditului 29.10): ratele PIONEX ale monedei botului (aceleași ca KPI-ul de funding) - sfatul pe ce plătește botul, nu pe Binance */
+  var fpx=tbStare.funding&&tbStare.funding.info&&tbStare.funding.sim===TabloBot.simboluri(b.baza,b.quote,b.simbolPionex).pionex?tbStare.funding.info:null;
   // v80.1: scenariul, sansele, ritmul, fisa/costuri/zero/setare - revizia 01.10 (I2): din Sfaturi.intrare, ACELEASI ca in colector (o singura voce)
-  var lista=Sfaturi.sfaturi(Sfaturi.intrare({bot:b,k4:d&&d.randuri4h,fata4h:r4&&r4.dir?r4.fata.ton:null,dir4h:r4&&r4.dir,funding:e.funding,fundingHist:e.fundingHist,
+  var lista=Sfaturi.sfaturi(Sfaturi.intrare({bot:b,k4:d&&d.randuri4h,fata4h:r4&&r4.dir?r4.fata.ton:null,dir4h:r4&&r4.dir,funding:e.funding,fundingHist:e.fundingHist,fundingPionex:fpx,
     fisa:tbFisa.botId===b.id?tbFisa.fisa:null,rezumat:d&&d.rez?Directie.rezumat(d.rez,b.directie):null,acum:Date.now()}));
   tbStare.sfaturiLista=lista;
   if($("tbSfaturiCard"))$("tbSfaturiCard").hidden=true;   // v100.44 (I-465): sfaturile intra in Consilier (motive sau „Restul”)
@@ -6920,6 +7007,21 @@ function tbKpiPretDeseneaza(b0){
   pune("tbKpiPretSub",poz===null?"fără grid citit":(dg?dg.text:(poz<0?"sub grid":poz>1?"peste grid":Math.round(poz*100)+"% din interval"))+" · "+tbPretScurt(jos)+" - "+tbPretScurt(sus),poz!==null&&(poz<0||poz>1)?"bad":"");
   var punct=$("tbKpiGridPunct");
   if(punct){if(punct.hidden!==(poz===null))punct.hidden=poz===null;if(poz!==null){var pL=(Math.min(1,Math.max(0,poz))*100).toFixed(1)+"%",pC="tbGaugePunct"+(poz<0||poz>1?" bad":"");if(punct.style.left!==pL)punct.style.left=pL;if(punct.className!==pC)punct.className=pC}}   /* audit 23.10: doar când s-a schimbat */
+  tbKpiLichDeseneaza(b0);
+}
+/* v100.272 (ideile auditului 29.10): KPI „Lichidare” pe prețul arătat lângă el (cel viu, prin pvBotLive), redesenat la fiecare tranzacție ca
+   „Prețul în grid” - înainte distanța venea din citirea botului (8–60 s în urmă) lângă prețul viu */
+function tbKpiLichDeseneaza(b0){
+  var pune=function(id,text,cls){var e=$(id);if(!e)return;if(e.textContent!==text)e.textContent=text;if(cls!=null){var c=(e.classList.contains("tbKpiVal")?"tbKpiVal ":"tbSub ")+cls;if(e.className!==c)e.className=c}};
+  var b=typeof pvBotLive==="function"?pvBotLive(b0):b0;
+  var dist=botiNr(b.distantaLichidarePct),dep=!!b.lichidareDepasita,parte=b.lichidarePartea==="sus"?"sus":b.lichidarePartea==="jos"?"jos":null;
+  var nivel=dep||(dist!==null&&Math.abs(dist)<8)?"bad":dist!==null&&Math.abs(dist)<15?"tbWarn":dist===null?"mutedInfo":"good";
+  pune("tbKpiLich",dep?"DEPĂȘITĂ":dist===null?"—":TextRo.pct(Math.abs(dist),1),nivel);
+  var pl=botiNr(b.pretLichidare);
+  pune("tbKpiLichSub",dist===null&&!dep?(b.motivFaraDistanta==="fara-pret"?"nu am prețul acum":"fără lichidare raportată"):
+    (parte?"prețul trebuie să "+(parte==="jos"?"scadă":"crească")+" până la ":"lichidare la ")+(pl!==null?tbPretScurt(pl):"—"),"");
+  var bara=$("tbKpiLichBara");
+  if(bara){var f=dep?0:dist===null?0:Math.min(1,Math.abs(dist)/40);bara.style.width=(f*100).toFixed(1)+"%";bara.className="tbGaugeUmplut "+nivel}
 }
 function tbDeseneazaKpi(){
   var b=tbStare.routeOk===false?null:tbStare.bot;
@@ -6932,20 +7034,13 @@ function tbDeseneazaKpi(){
   // v87: ritmul de recuperare (grile - costuri pe zi) langa rezultat
   var gvc=typeof TabloExtra!=="undefined"?TabloExtra.grileVsCosturi(b,Date.now()):null,rr=gvc?TabloExtra.ritmRecuperare(tot,gvc.netZi):null;
   // v100.40: sub o zi de viata ritmul nu se socoteste (taxa de pornire nu e un cost zilnic) - se spune, nu dispare fara explicatie
-  pune("tbKpiTotalSub",(tot!==null&&inv!==null&&inv>0?TextRo.pctSemn(100*tot/inv,1)+" din "+TextRo.num(inv,1)+" investiți":"cu tot cu poziția deschisă")+(rr&&rr.zile!==0?" · "+rr.text.replace(/, dacă prețul stă pe loc$/," (preț pe loc)"):tot!==null&&tot<0&&gvc&&gvc.preaTanar?" · ritmul de recuperare se socotește după o zi de viață":""),"");
+  var nN=typeof TabloExtra!=="undefined"&&TabloExtra.notaTotal?TabloExtra.notaTotal(b):null;   /* v100.272 (ideile auditului 29.10): la neutru semnul poziției din total e nesigur - spus lângă cifră */
+  pune("tbKpiTotalSub",(tot!==null&&inv!==null&&inv>0?TextRo.pctSemn(100*tot/inv,1)+" din "+TextRo.num(inv,1)+" investiți":"cu tot cu poziția deschisă")+(nN?" · "+nN:"")+(rr&&rr.zile!==0?" · "+rr.text.replace(/, dacă prețul stă pe loc$/," (preț pe loc)"):tot!==null&&tot<0&&gvc&&gvc.preaTanar?" · ritmul de recuperare se socotește după o zi de viață":""),"");
   // v100.4 (el, 28.09: „lipsește profit per grilă, adică doar din grid”): ce a adus DOAR gridul (Pionex „Grid profit”) + cat aduce o grila
   var gp=botiNr(b.gridProfitBrut),pg=typeof TabloExtra!=="undefined"?TabloExtra.profitPeGrila(b):null;
   var fb=typeof TabloExtra!=="undefined"&&tbStare.funding&&tbStare.funding.info&&tbStare.funding.sim===TabloBot.simboluri(b.baza,b.quote,b.simbolPionex).pionex?TabloExtra.fundingBot(b,tbStare.funding.info):null;   /* v100.136: funding-ul monedei, langa grid; revizia (I3): doar al monedei botului de acum */
   pune("tbKpiGrid","din grid "+(gp===null?"—":s1(gp)+" USDT")+(pg?" · pe grilă "+GridCalcul.procent(pg.pct)+(pg.usdt!==null?" ≈ "+TextRo.num(pg.usdt,3)+" USDT":""):"")+(fb?" · "+fb.text:""),"tbKpiGrid "+botiClasa(b.gridProfitBrut));
-  var dist=botiNr(b.distantaLichidarePct),dep=!!b.lichidareDepasita,parte=b.lichidarePartea==="sus"?"sus":b.lichidarePartea==="jos"?"jos":null;
-  var nivel=dep||(dist!==null&&Math.abs(dist)<8)?"bad":dist!==null&&Math.abs(dist)<15?"tbWarn":dist===null?"mutedInfo":"good";
-  pune("tbKpiLich",dep?"DEPĂȘITĂ":dist===null?"—":TextRo.pct(Math.abs(dist),1),nivel);
-  var pl=botiNr(b.pretLichidare);
-  pune("tbKpiLichSub",dist===null&&!dep?(b.motivFaraDistanta==="fara-pret"?"nu am prețul acum":"fără lichidare raportată"):
-    (parte?"prețul trebuie să "+(parte==="jos"?"scadă":"crească")+" până la ":"lichidare la ")+(pl!==null?tbPretScurt(pl):"—"),"");
-  var bara=$("tbKpiLichBara");
-  if(bara){var f=dep?0:dist===null?0:Math.min(1,Math.abs(dist)/40);bara.style.width=(f*100).toFixed(1)+"%";bara.className="tbGaugeUmplut "+nivel}
-  tbKpiPretDeseneaza(b);
+  tbKpiPretDeseneaza(b);   /* v100.272: și KPI-ul „Lichidare” (tbKpiLichDeseneaza), pe prețul viu */
   /* v100.267 (auditul 29.10): KPI „Piața” doar din direcția monedei botului de acum - la schimbarea botului arăta moneda veche */
   var d=tbStare.directie&&tbStare.directie.simbol===tbCheieDir(b)?tbStare.directie:null,z=d&&d.rez&&typeof Directie!=="undefined"?Directie.rezumat(d.rez,b.directie):null;
   if(!z||z.ton==="nu-se-poate"){pune("tbKpiPiata","—","mutedInfo");pune("tbKpiPiataSub",z?z.text:"aștept lumânările","");return}
@@ -7185,9 +7280,14 @@ function tbModSimplu(){try{return localStorage.getItem(TB_MOD_KEY)!=="complet"}c
 function tbSincMod(){var s=tbModSimplu(),a=$("tbMod-simplu"),c=$("tbMod-complet"),g=document.querySelector("#tabloubot .tbGrInd");if(a)a.setAttribute("aria-pressed",String(s));if(c)c.setAttribute("aria-pressed",String(!s));if(g)g.hidden=s}
 function tbAlegeMod(m){if(m!=="simplu"&&m!=="complet")return;try{localStorage.setItem(TB_MOD_KEY,m)}catch(_){}tbSincMod();renderTabloGrafic()}
 // v100.98: funding-ul pentru citire (rata + ora următoarei plăți, din istoria ratelor adusă de tbAduExtra; Binance, Pionex are rata lui, apropiată)
-function tbFundingPt(){var e=tbStare.extra||{},b=tbStare.bot;if(!b||e.bot!==b.id||e.funding==null||!isFinite(e.funding))return null;var h=Array.isArray(e.fundingHist)?e.fundingHist:[],u=null;
+// v100.272 (ideile auditului 29.10): întâi ratele PIONEX ale monedei (ce plătește botul, ca KPI-ul și sfatul): ultima rată și plata următoare după ritmul
+// Pionex; Binance doar când Pionex n-a dat ratele, cu sursa spusă - pe același ecran nu mai stau două rate de semne diferite
+function tbFundingPt(){var e=tbStare.extra||{},b=tbStare.bot;if(!b)return null;
+  var fu=tbStare.funding,inf=fu&&fu.info&&fu.sim===TabloBot.simboluri(b.baza,b.quote,b.simbolPionex).pionex?fu.info:null;
+  if(inf&&inf.rata!=null&&isFinite(inf.rata)){var pas=(Number(inf.intervalOre)>0?Number(inf.intervalOre):8)*3600000,up=Number(inf.ultimaLa)>0?Number(inf.ultimaLa)+pas:null;if(up!==null)while(up<=Date.now())up+=pas;return {rata:Number(inf.rata),urmatoarea:up,acum:Date.now(),sursa:"Pionex"}}
+  if(e.bot!==b.id||e.funding==null||!isFinite(e.funding))return null;var h=Array.isArray(e.fundingHist)?e.fundingHist:[],u=null;
   if(h.length>1){var ult=Number(h[h.length-1].fundingTime),pas=ult-Number(h[h.length-2].fundingTime);if(ult>0&&pas>0){u=ult+pas;while(u<=Date.now())u+=pas}}
-  return {rata:e.funding,urmatoarea:u,acum:Date.now(),sursa:"după Binance"}}
+  return {rata:e.funding,urmatoarea:u,acum:Date.now(),sursa:"după Binance, ca reper: n-am aici ratele Pionex"}}
 // v100.98: „dacă închizi la…” sub cursor - totalul botului închis la prețul de la înălțimea mouse-ului, cu gridul care umple pe drum
 function tbLaPret(b){return function(px){var t=TabloExtra.totalCuGridLa(b,px);if(t==null||!isFinite(t))return null;return '<b>dacă închizi la '+escapeHtml(tbPretScurt(px))+':</b> <span class="'+(t>=0?"good":"bad")+'">'+(t>=0?"+":"−")+Math.abs(t).toFixed(2).replace(".",",")+' USDT</span><div class="mutedInfo">cu ce cumpără / vinde gridul pe drum, după comision</div>'}}
 // v100.99 (I-528): șansele măsurate ale botului (Probabilitati.randuri) pentru liniile graficului; cifrele vechi de peste 3 h nu se pun pe grafic
@@ -7908,6 +8008,8 @@ function pvArata(){
     var bz=el.querySelector('.bsParte[data-k="zi"]');if(bz&&zt){bz.textContent=zt.t;bz.className="bsParte "+bsTonEfect(zt.ton,b.directie)}
     var bg=el.querySelector('.bsParte[data-k="grid"]'),dg=typeof TabloExtra!=="undefined"?TabloExtra.distanteGrid(pvBotLive(b)):null;
     if(bg&&dg)bg.textContent=PretViu.textGrid(dg);
+    /* v100.272 (ideile auditului 29.10): și distanța la lichidare, din prețul arătat (viu) - ca „azi” și distanțele gridului */
+    var bl=el.querySelector('.bsParte[data-k="lich"]');if(bl&&pa&&PretViu.textLich){var lT=PretViu.textLich(pa.viu?PretViu.botLaPret(b,pa.pret):b);if(bl.textContent!==lT)bl.textContent=lT}
   }
   var pz=$("pzPret");
   if(pz){var pzT=pa?bsPretText(pa)+sag:"",pzC="pzPret"+(pa&&pa.viu&&pa.dir?" "+pa.dir:"");if(pz.textContent!==pzT)pz.textContent=pzT;if(pz.className!==pzC)pz.className=pzC}   // audit 23.10: doar când s-a schimbat
@@ -8022,7 +8124,7 @@ function renderTabloBot(){
   tbDeseneazaBanii(b);
   if($("tbPret")){
     if(tbStare.pretSpot==null)$("tbPret").textContent="—";
-    else $("tbPret").textContent="spot "+tbStare.pretSpot+(tbPretSpotProaspat()?"":" (învechit)");
+    else $("tbPret").textContent="spot Binance "+tbStare.pretSpot+(tbPretSpotProaspat()?"":" (învechit)");   /* v100.272: sursa spotului spusă */
   }
   // Rigla: unde esti intre jos si sus, cu semnul tau pe ea si lichidarea marcata.
   if($("tbRigla")){
@@ -8045,7 +8147,7 @@ function renderTabloBot(){
   }
   var randuri=[["poziția în interval",m.pozitieInterval],["ritmul perechilor",m.ritmPerechi],
     ["oscilație sau trend",m.eficienta],["amplitudine vs treaptă",m.amplitudine],
-    ["până la lichidare",m.lichidare],["basis perp vs spot",m.basis],["comision vs grid",m.comision]];
+    ["până la lichidare",m.lichidare],["basis perp Pionex vs spot Binance",m.basis],["comision vs grid",m.comision]];   /* v100.272 (ideile auditului 29.10): perp-ul e al botului (Pionex), spotul vine de la Binance - diferența cuprinde și cea dintre burse, se spune */
   if($("tbMasuri"))$("tbMasuri").innerHTML=randuri.map(function(r){
     var val=r[1]&&r[1].valoare!=null?(r[1]===m.lichidare?tbLichidareScurt(r[1]):tbCuUnitate(tbFormateazaSemn(+r[1].valoare,2),r[1].unitate)):"—";
     var cls=r[1]&&(r[1].stare==="rau"||r[1].stare==="afara"||(r[1]===m.lichidare&&(r[1].depasita||+r[1].valoare<0)))?"bad":
@@ -8067,8 +8169,10 @@ function initV71PionexJournal(){v71RenderJournal()}
 
 document.addEventListener("change",function(e){if(e.target&&e.target.id==="symbol"){try{localStorage.setItem("crPiataAleasaDeOm",String(e.target.value||""))}catch{}}});
 document.addEventListener("keydown",e=>{if(e.key!=="Tab")return;const p=["commandPalette","moreDrawer"].map($).find(x=>x?.classList.contains("on"));if(!p)return;const f=[...p.querySelectorAll("button,input,select,textarea,[tabindex]:not([tabindex=\"-1\"])")].filter(x=>!x.disabled&&x.offsetParent!==null);if(!f.length){e.preventDefault();p.focus();return}const first=f[0],last=f.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus()}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus()}});
+document.addEventListener("focusin",e=>{const t=e.target;if(t&&t.classList&&t.classList.contains("cmdItem"))cmdPaletaActiv(t)});   /* v100.272: Tab pe o comandă a paletei o face cea evidențiată */
 document.addEventListener("keydown",e=>{
  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="k"){e.preventDefault();toggleCommandPalette();return}
+ if(cmdPaletaTaste(e))return;   /* v100.272 (ideile auditului 29.10): paleta deschisă - săgeți, Enter, Escape; scurtăturile paginii nu pornesc */
  if(e.key==="Escape"){$("commandPalette")?.classList.remove("on");closeMoreDrawer();return}
  if(e.target&&["INPUT","TEXTAREA","SELECT"].includes(e.target.tagName))return;
  if(e.key==="/"){e.preventDefault();$("symbol").focus()}
@@ -8085,9 +8189,13 @@ setTimeout(()=>{if(!isStandalonePwa())showPwaInstall();renderPwaHealth();pwaInit
 // v100.214: `var` (show() o citește și la pornire — un const de mai jos ar fi TDZ); market și cloud au trecut în Laboratorul vechi
 var PAGINI_ZILNICE=["dash","tabloubot","sugestii","gridset","gridsim","carnet","jurnaltrade","t212","salt","scan","alerts","montecarlo","contintreg","deriv","stocks","rezultate","account","settings","health"];
 function peLaboratorVechi(){const p=document.querySelector(".panel.on");return !!p&&!PAGINI_ZILNICE.includes(p.id)}
+/* v100.272 (ideile auditului 29.10): lista albă a dispecerului - DOAR funcțiile folosite azi în atributele data-action-* din index.html, app.js și public/lib.
+   Înainte orice funcție globală putea fi chemată dintr-un atribut (eval, setTimeout cu text, fetch…). Un buton nou cu o funcție nouă ⇒ numele intră aici;
+   scripts/proba-v100272-d.mjs le enumeră singură și pică dacă lipsește vreunul (`node scripts/proba-v100272-d.mjs --lista` dă lista). `var`: citită la clic. */
+var ACTIUNI_PERMISE=new Set("acPiataAlege acasaDeschideAnaliza acasaMergiLa activateModelVersion addPaperTrade addShadowSetup analyze applyPreset applyPrivacyMode applyPwaUpdate assessCurrentSetupPortfolioRisk backtestCurrent calculateRisk cancelHistoricalScanner cancelScan checkStocksHealth clearAlerts clearApiSessionToken clearClosedShadow clearJournal closeMoreDrawer closePaper derivatives deschideAlertsPagina deschideBusola deschideT212 disablePushAlerts dismissPwaInstall dismissPwaUpdate enablePushAlerts ensureLiquidationTape evaluateJournal exportBackup exportCurrentResearchReport exportHistoricalScan exportJournal exportProviderHealthV62 exportReplaySession exportResearchBundle futuresTabel generateResearchReport generateTradeReviews grFranaSalveaza grLabPlanDir grPliereComuta grPoartaGrid grPragDinIstorie grPragSalveaza grVerdictComuta gridCalculeaza gridClasamentAlege gridCopiaza gridDeschideMoneda gridDeschideMonedaDir gridDirectie gridHartiePorneste gridHartieSterge gridJurnalAdauga gridJurnalSterge gridOrizont gridPoarta gridSold gsAlegeBot gsCompara gsComparaTp gsCopiazaCod gsDeschideBot gsDinCod gsDirectie gsMod gsOriz gsSimuleaza importBackup incarcaBoti installPwa jtAlegeFiltru jtArataMai jtStatCsv jtStatOrdine jtStatPerioada latimeUsDeschide loadCloudHistory loadCloudMonitor loadContextIntel loadEconomicCalendar loadFootprint loadHistoricalCvd loadIntelNews loadMarketOverview loadOnchainIntel loadOptionsIntel loadPionexAccount loadPionexMicrostructure loadPionexOpenOrders loadPortfolioRisk loadPredictiveLiquidationMap loadReplayHistory loadStockContext loadStockEarnings loadStoredReport loadTrueTradeFlow mcsAlege mcsAlegeBot mcsAlegeOriz mcsAnalizeaza mcsCompara mcsComparaTp mcsPozitie mcsResimuleaza mergiLaParola moreNav multiTF navTo openMoreDrawer openStocksDesk paperCancelPending paperFlattenAll paperMoveBreakEven paperPartialClose persistCurrentSnapshot pick promoteChallengerV61 promoteExperiment recalibrate refreshExecutionPro refreshLocalDataPanel refreshMarketBreadthV64 refreshPaper refreshShadowLive refreshV65DecisionOS refreshV66EdgeValidation refreshV67Operations rejectExperiment renderAdvancedProfile renderCommandPalette renderDailyDesk renderDecisionCore renderEdgePro renderObservedLiquidationHeatmap renderOpportunity renderPortfolioV3 renderProfitReadiness renderReplayFrame renderReportHistory renderScan renderSessionStructure renderSignals renderStrategyFamilies renderV61Governance renderV63LiveExecution renderVolatilityIntelligence requestNotifications resetForwardValidation resetWorkspace rlAlegeK runChampionChallenger runCloudMonitorNow runDriftMonitor runHealthCheck runHistoricalScanner runLeakageAudit runLocalRetention runMonteCarlo runNasdaqScan runOosValidation runPortfolioStress runProviderHealthV62 runPurgedWalkForwardML runRegisteredExperiment runResearchML runRiskOfRuinPro runRobustnessLab runRollingOos runWalkForwardOptimizer rzArataCheie rzDesfa rzDoarStea rzReincarca rzSalveazaCheie rzToate rzZile saltAdauga saltBilet saltComuta saltEditeaza saltFila saltFiltru saltPorneste saltSterge saltVerifica saltVezi saveAlertProSettings saveApiSessionToken saveCurrentModelVersion savePaperSettings savePortfolioBudgets saveScanPrefs saveSettings saveSignal saveV61GovSettings saveV63CostSettings saveVolatilityRiskPolicy scan scorFormular scorOpreste scorSalveaza scorSezonNou selectCloudOpportunity selectOpportunity selectPionexScan selectStockScan setAnalysisSource setAssetClass setChartBars setProfitProviderVerified setReplayIndex show startForwardValidation startLiquidationTape stepReplay stopLiquidationTape sugDeschidePanda sugLaPoarta sugPanda sugPandaDesfa sugTrendTot t212AnDeclaratie t212BiletPentru t212Comuta t212ComutaInd t212CopiazaDeclaratia t212CsvDeclaratie t212Decizie t212Deschide t212FilaAlege t212ListaSalveaza t212PlanSalveaza t212PlanSterge t212Poarta t212Porneste t212PuneToate tbAlegeBot tbAlegeInterval tbAlegeMod tbComutaInd tbDecizie tbDeschidePlan tbFereastraToata tbMarjaCalc tbMotiveComuta tbPlanSalveaza tbPunePlanPropus tbScenariuPropriu tbSchimbaModul tbTvAmPus tbarComuta toggleChartFullscreen toggleCommandPalette toggleFav toggleMicroAuto toggleReplayPlay toggleSetting trainGovernedEnsemble trainMetaEnsembleV2 trainMetaLabelModel updateScannerUi v67EmergencyPause v67FlattenAndPause v67ResumeOperations v67RunReconcile v71ExportJournal v71SyncPionexJournal".split(" "));
 function v54SplitTopLevel(text,sep){let out=[],cur="",q=null,esc=false,depth=0;for(const ch of String(text||"")){if(esc){cur+=ch;esc=false;continue}if(ch==="\\"){cur+=ch;esc=true;continue}if(q){cur+=ch;if(ch===q)q=null;continue}if(ch==="'"||ch==='"'){q=ch;cur+=ch;continue}if(ch==="("||ch==="["){depth++;cur+=ch;continue}if(ch===")"||ch==="]"){depth=Math.max(0,depth-1);cur+=ch;continue}if(ch===sep&&depth===0){if(cur.trim())out.push(cur.trim());cur=""}else cur+=ch}if(cur.trim())out.push(cur.trim());return out}
 function v54ActionArg(token,el,event){const t=String(token||"").trim();if(!t)return undefined;if(t==="true")return true;if(t==="false")return false;if(t==="null")return null;if(t==="this.value")return el?.value;if(t==="this.checked")return !!el?.checked;if(t==="this.files[0]")return el?.files?.[0]||null;if(t==="event.target.value")return event?.target?.value;if(/^[-+]?\d+(?:\.\d+)?$/.test(t))return Number(t);if((t.startsWith("'")&&t.endsWith("'"))||(t.startsWith('"')&&t.endsWith('"')))return t.slice(1,-1).replace(/\\(['"\\])/g,"$1");throw Error("Unsupported delegated action argument")}
-function v54RunActionExpression(expr,el,event){for(let stmt of v54SplitTopLevel(expr,";")){const cond="if(event.target===this)";if(stmt.startsWith(cond)){if(event.target!==el)continue;stmt=stmt.slice(cond.length).trim()}const click=stmt.match(/^document\.getElementById\(['"]([^'"]+)['"]\)\.click\(\)$/);if(click){document.getElementById(click[1])?.click();continue}const m=stmt.match(/^([A-Za-z_$][\w$]*)\((.*)\)$/);if(!m)continue;const fn=globalThis[m[1]];if(typeof fn!=="function")continue;const args=m[2].trim()?v54SplitTopLevel(m[2],",").map(x=>v54ActionArg(x,el,event)):[];fn(...args)}}
+function v54RunActionExpression(expr,el,event){for(let stmt of v54SplitTopLevel(expr,";")){const cond="if(event.target===this)";if(stmt.startsWith(cond)){if(event.target!==el)continue;stmt=stmt.slice(cond.length).trim()}const click=stmt.match(/^document\.getElementById\(['"]([^'"]+)['"]\)\.click\(\)$/);if(click){document.getElementById(click[1])?.click();continue}const m=stmt.match(/^([A-Za-z_$][\w$]*)\((.*)\)$/);if(!m)continue;if(!ACTIUNI_PERMISE.has(m[1])){console.warn("Acțiune refuzată (nu e în ACTIUNI_PERMISE): "+m[1]);continue}/* v100.272 */const fn=globalThis[m[1]];if(typeof fn!=="function")continue;const args=m[2].trim()?v54SplitTopLevel(m[2],",").map(x=>v54ActionArg(x,el,event)):[];fn(...args)}}
 for(const [evt,attr] of [["click","data-action-click"],["change","data-action-change"],["input","data-action-input"]])document.addEventListener(evt,e=>{const el=e.target?.closest?.(`[${attr}]`);if(!el)return;try{v54RunActionExpression(el.getAttribute(attr),el,e)}catch(err){console.error("Delegated UI action failed",err)}});
 
 

@@ -114,7 +114,8 @@ await test("F7 colectorul: un rând pe monedă din răspunsul serverului, fișie
     cere: async (u) => /NOPE/.test(u) ? { faraContract: true } : { funding: -0.0002, fundingIntervalHours: 4, longShort: 1.29, lsIst: Array.from({ length: 100 }, (_, i) => [i, 1 + i / 100]), markPrice: 0.0101, simbol: "COTIUSDT" },
     trimite: async (c, corp) => { trimise.push([c, corp]); return { ok: true }; } });
   const linii = fs.readFileSync(fisier, "utf8").trim().split("\n").map((l) => JSON.parse(l));
-  assert.equal(linii.length, 1); assert.equal(linii[0][1], "COTIUSDT"); assert.equal(linii[0][0], Date.UTC(2026, 9, 29, 10)); assert.equal(linii[0][3], "K");
+  // v100.272: ștampila = momentul citirii (10:20, nu ora rotunjită 10:00); ora din ceas rămâne aceeași
+  assert.equal(linii.length, 1); assert.equal(linii[0][1], "COTIUSDT"); assert.ok(linii[0][0] >= acum && linii[0][0] < acum + 60000 && Math.floor(linii[0][0] / 3600000) * 3600000 === Date.UTC(2026, 9, 29, 10)); assert.equal(linii[0][3], "K");
   assert.equal(r.randuri, 1);
   assert.equal(trimise.length, 1); assert.equal(trimise[0][0], "/api/istoric-bot?action=futuresProba"); assert.ok(trimise[0][1].rezumat && trimise[0][1].la === acum);
 });

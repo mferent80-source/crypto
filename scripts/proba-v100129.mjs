@@ -126,7 +126,9 @@ await test("(4d) stopul poziției deja DEPĂȘIT (RHM 07.10: preț 936,6, stop 1
 });
 await test("(3e) „ce aș face eu” când și cea mai bună variantă pierde de obicei: se spune că toate ies pe minus (levierul mai mic doar pierde mai puțin)", () => {
   const rd = (nume, p50) => ({ nume, st: { suma: 50 }, g: { p50, pLichidare: 0, pPlus: 0.3 } });
-  assert.match(G.mcsVariantaBuna([rd("așa cum e", -5.6), rd("levier mai mic", -3.8), rd("mai larg", -7)]), /și așa iese de obicei pe minus/);
+  /* v100.272: câștigătorul se verifică pe drumuri noi înainte de „Aș încerca” - aici cu aceleași cifre (testul e despre text, nu despre verificare) */
+  const cuVerif = (rows) => { rows.slice(1).forEach((x) => { x.verif = { n: 2000, baza: rows[0].g, g: x.g, drum: x.drum }; }); return rows; };
+  assert.match(G.mcsVariantaBuna(cuVerif([rd("așa cum e", -5.6), rd("levier mai mic", -3.8), rd("mai larg", -7)])), /și așa iese de obicei pe minus/);
   assert.match(G.mcsVariantaBuna([rd("așa cum e", -5.6), rd("mai îngust", -5.4)]), /toate variantele ies de obicei pe minus/);
   assert.doesNotMatch(G.mcsVariantaBuna([rd("așa cum e", 1), rd("mai îngust", 4)]), /pe minus/);
 });

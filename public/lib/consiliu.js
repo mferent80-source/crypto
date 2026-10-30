@@ -337,12 +337,15 @@ var Consiliu = (function () {
   var PRIO_ACT = ["stop-plan", "trail-plan", "stop-urcator", "trend-jos-minus", "rezultate", "stop-maine", "fara-plan-minus", "trend-jos", "miscare-jos", "tinta-plan", "sf-istoric", "sf-pozitie", "trend-sus"];
   function prioAct(cod) { var i = PRIO_ACT.indexOf(cod); return i < 0 ? PRIO_ACT.length : i; }
   // v100.69 (sfaturile concise, pachetul 4): pretul unei actiuni ca pe pagina T212 („$30.12”, ActiuniSemnale.usd), sumele in dolari cu virgula
-  var PA = function (v) { v = nr(v); return v === null ? "?" : typeof ActiuniSemnale !== "undefined" ? ActiuniSemnale.usd(v) : "$" + v.toFixed(2); };
-  var USD = function (v) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(1).replace(".", ",") + " $"; }   /* v100.196: rezultatul cu o zecimală */, LEI = function (v) { return (v >= 0 ? "+" : "−") + Math.round(Math.abs(v)).toLocaleString("ro-RO") + " lei"; };
+  // v100.272 (ideile auditului 29.10): în moneda acțiunii (m: "USD" / "EUR" / "GBP" / "GBX" = pence / null = nu știu) - nu mereu „$”;
+  // fără m, dolari ca înainte. Sumele în pence se spun în lire (÷ 100).
+  var PA = function (v, m) { v = nr(v); return v === null ? "?" : typeof ActiuniSemnale !== "undefined" ? (ActiuniSemnale.pretIn && m !== undefined ? ActiuniSemnale.pretIn(v, m) : ActiuniSemnale.usd(v)) : "$" + v.toFixed(2); };
+  var USD = function (v, m) { var x = m === "GBX" ? v / 100 : v, sg = m === undefined || m === "USD" ? " $" : m === "EUR" ? " €" : m === "GBP" || m === "GBX" ? " £" : m ? " " + m : ""; return (x >= 0 ? "+" : "−") + Math.abs(x).toFixed(1).replace(".", ",") + sg; }   /* v100.196: rezultatul cu o zecimală */, LEI = function (v) { return (v >= 0 ? "+" : "−") + Math.round(Math.abs(v)).toLocaleString("ro-RO") + " lei"; };
   function alcatuiesteActiune(x) {
     x = x || {}; var sem = x.sem || {};
     if (!sem.nivel || sem.nivel === "fara-date") return { nivel: "asteapta", eticheta: ETICHETA.asteapta, titlu: mare((Array.isArray(sem.motive) && sem.motive[0]) || "încă socotesc"), faCe: "", bani: null, motive: [], rest: [] };
     var cand = [], rest = [], niv = x.niv || null, faCeSem = String(sem.ceAsFace || "").replace(/^👉\s*Ce aș face eu:\s*/, "");
+    var mon = x.moneda !== undefined ? x.moneda : typeof ActiuniSemnale !== "undefined" && ActiuniSemnale.monedaTicker ? ActiuniSemnale.monedaTicker(x.ticker || x.simbol) : undefined;   /* v100.272: moneda acțiunii */
     (Array.isArray(sem.componente) ? sem.componente : []).forEach(function (k) {
       if (!k || !k.cod) return;
       // v100.108 (AVGO, 06.10): trendul pe medii rămâne, dar când becul 1z (regula semaforului) zice „lateral”, diferența se spune pe față
@@ -355,7 +358,7 @@ var Consiliu = (function () {
       // v100.71 (revizia pachetului 4, I3): sursa din profil, pe date reale, avea 179 de caractere (paranteze in paranteze) - aici, scurta
       var srs = String(niv.sursaTrail || "").split(" · ")[0];
       if (/cât coboară acțiunea/.test(srs)) srs = srs.split(" — ")[0] + ": coborârea obișnuită a acțiunii pe 5 zile, din profilul ei";
-      cand.push({ cod: "stop-urcator", nivel: "iesi", c: "r", titlu: "Prețul e sub stopul care urcă (" + PA(niv.stopPozitie) + ")", text: srs, faCe: "Aș ieși, tot sau jumătate, cum cere stopul care urcă.", scurt: "stopul care urcă e atins" });
+      cand.push({ cod: "stop-urcator", nivel: "iesi", c: "r", titlu: "Prețul e sub stopul care urcă (" + PA(niv.stopPozitie, mon) + ")", text: srs, faCe: "Aș ieși, tot sau jumătate, cum cere stopul care urcă.", scurt: "stopul care urcă e atins" });
     }
     (Array.isArray(x.prob) ? x.prob : []).forEach(function (r) {
       if (!r || !r.titlu) return;
@@ -386,9 +389,9 @@ var Consiliu = (function () {
     // audit 23.10: pe pagina T212 „dacă vinzi acum” spune leii din contul T212 (ppl, cu cursul de azi) - aceeași sumă ca tabelul; dolarii × cursul de la
     // cumpărare ieșeau cu ~30% altfel (AVGO: −966 față de −736 lei: diferența e câștigul din curs, fxPpl). Fără ppl (Salt, colectorul): ca până acum.
     // Suma la stop rămâne la cursul de cumpărare și o spune.
-    var ppl = nr(x.pplLei), cuLei = function (usd, laStop) { return USD(usd) + (fx ? " (≈ " + LEI(usd * fx) + (laStop ? ", la cursul de cumpărare" : "") + ")" : ""); };
-    if (pret > 0 && pm > 0 && q > 0) bani.push("dacă vinzi acum: " + (ppl !== null ? USD((pret - pm) * q) + " (" + LEI(ppl) + " în contul T212, cu cursul de azi)" : cuLei((pret - pm) * q)));
-    if (niv && nr(niv.stopPozitie) > 0 && pret > 0 && q > 0) bani.push(niv.stopPozitie < pret ? "dacă atinge stopul care urcă (" + PA(niv.stopPozitie) + "): " + cuLei((niv.stopPozitie - pm) * q, true) : "prețul e deja sub stopul care urcă (" + PA(niv.stopPozitie) + ")");
+    var ppl = nr(x.pplLei), cuLei = function (usd, laStop) { return USD(usd, mon) + (fx ? " (≈ " + LEI(usd * fx) + (laStop ? ", la cursul de cumpărare" : "") + ")" : ""); };
+    if (pret > 0 && pm > 0 && q > 0) bani.push("dacă vinzi acum: " + (ppl !== null ? USD((pret - pm) * q, mon) + " (" + LEI(ppl) + " în contul T212, cu cursul de azi)" : cuLei((pret - pm) * q)));
+    if (niv && nr(niv.stopPozitie) > 0 && pret > 0 && q > 0) bani.push(niv.stopPozitie < pret ? "dacă atinge stopul care urcă (" + PA(niv.stopPozitie, mon) + "): " + cuLei((niv.stopPozitie - pm) * q, true) : "prețul e deja sub stopul care urcă (" + PA(niv.stopPozitie, mon) + ")");
     return { nivel: nivel, eticheta: ETICHETA[nivel], titlu: titlu, faCe: faCe, bani: bani.length ? bani.join(" · ") : null,
       motive: motive.map(function (m) { return { cod: m.cod, c: m.c, titlu: m.titlu, text: m.text, cip: null, extra: null }; }), rest: rest };
   }

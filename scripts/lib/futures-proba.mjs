@@ -1,13 +1,21 @@
 // v100.266 / colector v101.142 (F7, 29.10, el: „fa ideile”): proba pe date noi a etichetei „înghesuit” de pe pagina Futures.
 // O dată pe oră: pentru fiecare monedă din univers (cele 20 măsurate + boții) cere /api/market?type=futures (aceleași date ca pagina),
-// scrie un rând [ora, simbol, markPrice, context C/K/B, funding la 8 h, percentila raportului] în data/futures-jurnal.jsonl, ține 120 de zile,
+// scrie un rând [momentul citirii (v100.272; înainte ora), simbol, markPrice, context C/K/B, funding la 8 h, percentila raportului] în data/futures-jurnal.jsonl, ține 120 de zile,
 // apoi trimite rezumatul (FuturesCitire.evalForward - protocolul e scris acolo) la /api/istoric-bot?action=futuresProba, unde îl citește pagina.
 import fs from "node:fs";
 
-const PASTRARE_MS = 120 * 86400000;
+const PASTRARE_MS = 120 * 86400000, ORA_MS = 3600000;
+// v100.272 (ideile auditului 29.10, felia 5): în fișier stă MOMENTUL citirii (înainte: ora rotunjită în jos - rândurile luate la 10:56, după o
+// repornire, erau notate 10:00). Evaluarea (FuturesCitire.evalForward) caută prețul de peste 24 h pe cheie EXACTĂ și are protocolul scris
+// înainte de date (primul rând cu ora ≤ 3 UTC, întoarcerea la 24 h ± 1 h) ⇒ primește rândurile pe ora din ceas, ca până acum: nimic schimbat
+// în eșantion sau în verdict. Ora din ceas (floor) păstrează și „ora ≤ 3” a momentului real.
+const oraDin = (t) => Math.floor(Number(t) / ORA_MS) * ORA_MS;
+export function randuriPentruEval(randuri) { return (Array.isArray(randuri) ? randuri : []).filter(Array.isArray).map((r) => [oraDin(r[0])].concat(r.slice(1))); }
 
 export async function turaFuturesProba({ F, cere, trimite, jurnal = () => {}, fisier, acum = Date.now(), univers = [] }) {
-  const ora = Math.floor(acum / 3600000) * 3600000, randuri = [];
+  /* v100.272 (revizia): momentul real, dar în ora în care a pornit tura - o tură care trecea de ora fixă punea monedele citite după ea pe ora
+     următoare (cheia de dedublare și perechea exactă la 24 h) */
+  const pornit = Date.now(), capOra = oraDin(acum) + ORA_MS - 1, clipa = () => Math.min(capOra, acum + Math.max(0, Date.now() - pornit)), randuri = [];
   for (const s of univers) {
     let d = null;
     try { d = await cere("/api/market?type=futures&symbol=" + encodeURIComponent(s)); } catch (e) { jurnal("futures proba", s, e.message); continue; }
@@ -16,17 +24,18 @@ export async function turaFuturesProba({ F, cere, trimite, jurnal = () => {}, fi
     if (ag.context == null) continue;
     // conflictul (funding și raport opuse) e „echilibrat” pentru probă, ca pentru verdict
     const cod = ag.conflict ? "B" : ag.context === "CROWDED" ? "C" : ag.context === "CONTRARIAN +" ? "K" : "B";
-    randuri.push([ora, s, Number(d.markPrice), cod, ag.fr8 == null ? null : Number(Number(ag.fr8).toFixed(8)), ag.lsPct == null ? null : Math.round(ag.lsPct * 10) / 10]);
+    randuri.push([clipa(), s, Number(d.markPrice), cod, ag.fr8 == null ? null : Number(Number(ag.fr8).toFixed(8)), ag.lsPct == null ? null : Math.round(ag.lsPct * 10) / 10]);
   }
   let toate = [];
   try { toate = fs.readFileSync(fisier, "utf8").split("\n").filter(Boolean).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Array.isArray); } catch { toate = []; }
-  // rândurile peste 120 de zile ies; aceeași (monedă, oră) se scrie o singură dată (o tură repetată în aceeași oră nu dublează)
+  // rândurile peste 120 de zile ies; aceeași (monedă, oră din ceas) se scrie o singură dată (o tură repetată în aceeași oră nu dublează - nici
+  // lângă un rând vechi, cu ora rotunjită)
   const prag = acum - PASTRARE_MS, chei = new Set();
-  toate = toate.filter((r) => Number(r[0]) >= prag).filter((r) => { const k = r[1] + "|" + r[0]; if (chei.has(k)) return false; chei.add(k); return true; });
-  for (const r of randuri) { const k = r[1] + "|" + r[0]; if (!chei.has(k)) { chei.add(k); toate.push(r); } }
+  toate = toate.filter((r) => Number(r[0]) >= prag).filter((r) => { const k = r[1] + "|" + oraDin(r[0]); if (chei.has(k)) return false; chei.add(k); return true; });
+  for (const r of randuri) { const k = r[1] + "|" + oraDin(r[0]); if (!chei.has(k)) { chei.add(k); toate.push(r); } }
   fs.writeFileSync(fisier + ".tmp", toate.map((r) => JSON.stringify(r)).join("\n") + (toate.length ? "\n" : ""));
   fs.renameSync(fisier + ".tmp", fisier);
-  const rezumat = F.evalForward(toate, acum);
+  const rezumat = F.evalForward(randuriPentruEval(toate), acum);
   delete rezumat.zileC; delete rezumat.zileK;   // pe server pleacă doar rezumatul
   try { await trimite("/api/istoric-bot?action=futuresProba", { la: acum, rezumat }); } catch (e) { jurnal("futures proba: rezumatul n-a plecat", e.message); }
   return { randuri: randuri.length, total: toate.length, rezumat };

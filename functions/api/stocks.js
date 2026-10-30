@@ -81,6 +81,7 @@ function normalizeQuote(d,symbol){
 // v96.1: fara cheia Twelve Data, preturile vin de la Yahoo (aceeasi sursa ca Trading 212 / Scan): acelasi format de
 // raspuns, ca analiza actiunilor sa mearga. 4h nu exista la Yahoo -> se face din barele de 1 ora (4 cate 4, pe zi).
 const YCACHE=new Map();
+const YAHOO_DEODATA=4;   // v100.272: batch_series fără cheie - câte cereri Yahoo deodată (destul de puține cât să nu ne limiteze)
 function yDin(k){const x=YCACHE.get(k);if(x&&x.exp>Date.now())return x.v;YCACHE.delete(k);return null}
 function yIn(k,v,ttl){if(YCACHE.size>400)YCACHE.clear();YCACHE.set(k,{v,exp:Date.now()+ttl*1000})}
 async function yahooChart(symbol,interval,range){
@@ -125,8 +126,10 @@ async function faraCheie(action,u){
   if(action==="batch_series"){
     const symbols=(u.searchParams.get("symbols")||"").split(",").map(safeSymbol).filter(Boolean).slice(0,20),tf=(u.searchParams.get("tf")||"1d").toLowerCase(),limit=Math.min(500,Math.max(60,Number(u.searchParams.get("limit")||260)));
     if(!symbols.length)return json({error:"No stock symbols supplied"},400);
-    const data={};
-    for(const symbol of symbols){try{const y=await yahooRows(symbol,tf,limit);data[symbol]={meta:y.meta,rows:y.rows,corporateActionGuard:y.guard}}catch(e){data[symbol]={error:e.message,rows:[]}}}
+    // v100.272 (ideile auditului 29.10): câte YAHOO_DEODATA cereri deodată (20 de simboluri una după alta = 6–20 s); răspunsul în ordinea simbolurilor
+    const data={},rez=new Array(symbols.length);let k=0;
+    await Promise.all(Array.from({length:Math.min(YAHOO_DEODATA,symbols.length)},async()=>{while(k<symbols.length){const i=k++,symbol=symbols[i];try{const y=await yahooRows(symbol,tf,limit);rez[i]={meta:y.meta,rows:y.rows,corporateActionGuard:y.guard}}catch(e){rez[i]={error:e.message,rows:[]}}}}));
+    symbols.forEach((s,i)=>{data[s]=rez[i]});
     return json({provider:"YAHOO",tf,data})
   }
   return json({error:"Pentru "+action+" trebuie cheia Twelve Data (TWELVE_DATA_API_KEY); fără ea merg doar prețurile și graficele (Yahoo)."},503)

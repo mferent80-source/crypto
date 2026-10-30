@@ -15,7 +15,7 @@ ctx.window = ctx;
 ctx.globalThis = ctx;
 ctx.escapeHtml = (s) => String(s == null ? "" : s);
 ctx.localStorage = { getItem() { return null; }, setItem() {} };
-ctx.ActiuniSemnale = { usd(v) { return v == null || !isFinite(Number(v)) ? "—" : "$" + Number(v); }, greseli() { return []; }, rezumatJurnal() { return { total: 0, n: 1, pePlus: 0, totalOficial: 0, comisioane: 0, ext: { total: 0, n: 0 }, greseli: [] }; } };
+ctx.ActiuniSemnale = { usd(v) { return v == null || !isFinite(Number(v)) ? "—" : "$" + Number(v); }, monedaTicker() { return "USD"; }, pretIn(v) { return ctx.ActiuniSemnale.usd(v); }, greseli()   /* v100.272: t212-ecran ia moneda poziției din monedaTicker / pretIn */ { return []; }, rezumatJurnal() { return { total: 0, n: 1, pePlus: 0, totalOficial: 0, comisioane: 0, ext: { total: 0, n: 0 }, greseli: [] }; } };
 ctx.T212 = { simbol(t) { return String(t || "").replace(/_US_EQ$/, ""); }, perechi() { return { inchise: [] }; } };
 ctx.$ = () => null;
 vm.createContext(ctx);

@@ -61,15 +61,20 @@ var GridPlan = (function () {
     var Z = zile > 0 ? Math.floor(zile) : ZILE, W = FEREASTRA_ZILE * C.BARE_ZI, n0 = b15 ? b15.length - Z * C.BARE_ZI : -1, F = GP.fundingDe(fz);
     if (!b15 || n0 < 0) return null;
     var lung = st.dir === "long", out = { n: 0, stop: 0, tinta: 0, inGrid: 0, lichidari: 0, oreTipic: null, mediaUsdt: null, ceaMaiProastaUsdt: null, zile: Z, ferestreZile: FEREASTRA_ZILE, independente: Math.floor(Z / FEREASTRA_ZILE), funding: F };
-    var ore = [], suma = 0;
+    // v100.272 (ideile auditului 29.10): pornirile la 6 h au ferestre de 3 zile SUPRAPUSE (12 porniri pe fereastră): o singură cădere intra de 12 ori
+    // în „77 din 109”. Pe lângă ele, aceleași rezultate pe ferestrele care NU se suprapun (prima pornire, apoi următoarea de după capătul ei: 10 pe
+    // 30 de zile) - pe ele judecă „aș sări peste ea” (deSarit)
+    out.faraSuprapunere = { n: 0, stop: 0 };
+    var ore = [], suma = 0, urmLibera = n0;
     for (var s = n0; s + W <= b15.length; s += C.PAS_FERESTRE) {
       var P0 = b15[s].o, k = P0 / st.pret;
       if (!(P0 > 0)) continue;
       var r = GP.simuleaza(b15, s, W, { dir: st.dir, jos: st.jos * k, sus: st.sus * k, grile: st.grile, levier: st.levier, stop: { jos: st.stop.jos * k, sus: st.stop.sus * k }, fundingZi: F.rataZi, fundingCost: F.presupus });
+      var ind = s >= urmLibera; if (ind) { urmLibera = s + W; out.faraSuprapunere.n++; }
       out.n++; suma += r.net * st.suma;
       if (out.ceaMaiProastaUsdt === null || r.net * st.suma < out.ceaMaiProastaUsdt) out.ceaMaiProastaUsdt = r.net * st.suma;
       if (r.lichidat) out.lichidari++;
-      else if (r.iesit) { if ((r.iesit === "jos") === lung) out.stop++; else out.tinta++; ore.push(r.bare / 4); }
+      else if (r.iesit) { if ((r.iesit === "jos") === lung) { out.stop++; if (ind) out.faraSuprapunere.stop++; } else out.tinta++; ore.push(r.bare / 4); }
       else out.inGrid++;
     }
     if (!out.n) return null;
@@ -188,15 +193,28 @@ var GridPlan = (function () {
     var x = r.cine === "mea" ? mea : ta, sx = r.cine === "mea" ? sm : sa, y = r.cine === "mea" ? ta : mea, sy = r.cine === "mea" ? sa : sm;
     if (!sx) return r;
     var areY = r.cine === "mea" ? !!(ta && ta.proba) : !unaSingura;
+    // v100.272 (ideile auditului 29.10): amândouă pe aceeași bază - ferestrele fără suprapunere când deSarit a judecat pe ele, altfel pornirile (date vechi)
+    var fy = sx.ferestre && y && y.proba && y.proba.faraSuprapunere, bazaX = sx.ferestre ? cate(sx.n, "fereastră", "ferestre") + " fără suprapunere (" + P1(sx.pct) + ")" : cate(sx.n, "pornire", "porniri") + " (" + Math.round(sx.pct * 100) + "%)";
     if (areY && !sy) { var cine = r.cine === "mea" ? "ta" : "mea";
-      return { cine: cine, text: N[cine] + " · la " + N[r.cine] + " stopul a venit în " + sx.stop + " din " + cate(sx.n, "pornire", "porniri") + " (" + Math.round(sx.pct * 100) + "%), aici în " + y.proba.stop + " din " + cate(y.proba.n, "pornire", "porniri")
+      return { cine: cine, text: N[cine] + " · la " + N[r.cine] + " stopul a venit în " + sx.stop + " din " + bazaX + ", aici în " + (fy ? fy.stop + " din " + cate(fy.n, "fereastră", "ferestre") : y.proba.stop + " din " + cate(y.proba.n, "pornire", "porniri"))
         + "; la stop pierzi " + U1(y.laStop) + ", media pe pornire " + U1(y.proba.mediaUsdt) + " față de " + U1(x.proba.mediaUsdt) + "." }; }
-    return { cine: r.cine, text: r.text, asteapta: true, deCe: areY ? "amândouă au stopul în peste jumătate din porniri" : "stopul vine în peste jumătate din porniri" };
+    var dinCe = sx.ferestre ? "ferestrele de " + cate(FEREASTRA_ZILE, "zi", "zile") + " fără suprapunere" : "porniri";
+    return { cine: r.cine, text: r.text, asteapta: true, deCe: areY ? "amândouă au stopul în peste jumătate din " + dinCe : "stopul vine în peste jumătate din " + dinCe };
   }
   // v100.111 (I-549, NIL 06.10: ÎNGUST cu stopul în 77 din 109 porniri, pornit totuși): fereastra cu stopul în peste jumătate din porniri
   // (cel puțin 20) - se spune pe ea, nu se ascunde (pragul e un privilegiu: se avertizează). ⇒ null | { stop, n, pct, text }
+  // v100.272 (ideile auditului 29.10): pe ferestrele de 3 zile FĂRĂ suprapunere (proba.faraSuprapunere), cel puțin 5 (15 zile): 77 „din 109” porniri
+  // la 6 h erau ~10 ferestre independente, iar o singură cădere se număra de 12 ori. Proba salvată înainte (fără ele) ⇒ regula veche, pe porniri
+  var MIN_FERESTRE = 5;
   function deSarit(v) {
-    var p = v && v.proba, s = nr(p && p.stop), n = nr(p && p.n);
+    var p = v && v.proba, f = p && p.faraSuprapunere;
+    if (f && typeof f === "object") {
+      var fs = nr(f.stop), fn = nr(f.n);
+      if (fs === null || fn === null || fn < MIN_FERESTRE || fs / fn <= 0.5) return null;
+      return { stop: fs, n: fn, pct: fs / fn, ferestre: true, text: "aș sări peste ea: stopul a venit în " + fs + " din " + cate(fn, "fereastră", "ferestre") + " de " + cate(FEREASTRA_ZILE, "zi", "zile") + " fără suprapunere (" + P1(fs / fn)
+        + (nr(p.stop) !== null && nr(p.n) > 0 ? "; " + p.stop + " din " + cate(p.n, "pornire", "porniri") + " la 6 h" : "") + ")" };
+    }
+    var s = nr(p && p.stop), n = nr(p && p.n);
     if (s === null || n === null || n < 20 || s / n <= 0.5) return null;
     return { stop: s, n: n, pct: s / n, text: "aș sări peste ea: stopul a venit în " + s + " din " + cate(n, "pornire", "porniri") + " (" + Math.round(s / n * 100) + "%)" };
   }

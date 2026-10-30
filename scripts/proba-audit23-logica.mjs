@@ -204,14 +204,15 @@ await test("(8) 7 din 10 față de 56% istoric ⇒ „încă nu se poate spune�
   const lista = tr(100, 56, 0).concat(tr(10, 7, 1000)), cfg = { start: Date.UTC(2026, 9, 15), obiectiv: { rata: 0.55, serie: 3, net: 10 } };
   const s = SS.calc(lista, cfg, Date.UTC(2026, 9, 23), "pionex"), h = SS.html(s, {});
   assert.doesNotMatch(h, /Sezonul nou bate trecutul|Sezonul nou e sub trecut/);
-  assert.match(h, /Încă nu se poate spune dacă sezonul nou e mai bun: rata 70 % pe 10 boți are intervalul 40 %–89 %, iar trecutul \(56 %\) e înăuntru\./, h.match(/Înainte de[^]*?<\/div>/) + "");
+  /* v100.272: procentele cu o zecimală, lipite (erau „70 %”, „40 %–89 %”, „56 %”) */
+  assert.match(h, /Încă nu se poate spune dacă sezonul nou e mai bun: rata 70,0% pe 10 boți are intervalul 39,7%–89,2%, iar trecutul \(56,0%\) e înăuntru\./, h.match(/Înainte de[^]*?<\/div>/) + "");
 });
 await test("(8) 28 din 30 față de 56% ⇒ „bate trecutul” (marginea de jos peste trecut); 3 din 30 ⇒ „sub trecut”", () => {
   const cfg = { start: Date.UTC(2026, 9, 15), obiectiv: { rata: 0.55, serie: 3, net: 10 } };
   const sus = SS.html(SS.calc(tr(100, 56, 0).concat(tr(30, 28, 1000)), cfg, Date.UTC(2026, 9, 23), "pionex"), {});
-  assert.match(sus, /Sezonul nou bate trecutul: și marginea de jos a ratei \(\d+ %\) e peste 56 %\./);
+  assert.match(sus, /Sezonul nou bate trecutul: și marginea de jos a ratei \(\d+,\d%\) e peste 56,0%\./);   // v100.272: „56,0%” (era „56 %”)
   const jos = SS.html(SS.calc(tr(100, 56, 0).concat(tr(30, 3, 1000)), cfg, Date.UTC(2026, 9, 23), "pionex"), {});
-  assert.match(jos, /Sezonul nou e sub trecut: și marginea de sus a ratei \(\d+ %\) e sub 56 %\./);
+  assert.match(jos, /Sezonul nou e sub trecut: și marginea de sus a ratei \(\d+,\d%\) e sub 56,0%\./);   // v100.272: idem
 });
 
 // ---------- (10) boții neutri: ambele margini ----------

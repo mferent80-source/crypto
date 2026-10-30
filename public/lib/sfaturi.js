@@ -174,13 +174,15 @@ var Sfaturi = (function () {
     }
 
     // D) Costurile pe zi fata de ce aduc grilele.
-    var co = x.costuri;
+    var co = x.costuri, fTxt = "";
     if (co && co.netZi != null && (co.fundingMananca || co.netZi < 0)) {
       out.push({ cod: "costuri", ton: "atentie", titlu: "Costurile mănâncă grilele: " + TextRo.usdt(co.netZi, TextRo.zecMici(co.netZi)) + " pe zi, net",
         // revizia Opus (I3, 02.10): comisioanele pe zi vin negative, funding-ul negativ cand il platesti si pozitiv cand il incasezi -
         // sumele fara semn, verbul dupa sens (inainte: „comisioanele iau −0,12”, iar funding-ul incasat se citea ca un cost)
+        // v100.272 (ideile auditului 29.10): comisionul pe zi e fără taxa de intrare (plătită o dată, la pornire) - se spune, cu cât a fost
         text: "Grilele aduc " + (co.grile24h != null ? TextRo.num(co.grile24h, 2) : "—") + " USDT în 24 h; comisioanele iau " + (co.comisionZi != null ? TextRo.num(Math.abs(co.comisionZi), 2) : "—") +
-          (co.fundingZi == null ? " și funding-ul —" : TextRo.num(Math.abs(co.fundingZi), 2) === "0,00" ? "" : co.fundingZi < 0 ? " și funding-ul ia " + TextRo.num(-co.fundingZi, 2) : " și funding-ul aduce " + TextRo.num(co.fundingZi, 2)) + " pe zi.",
+          (nr(co.taxaIntrare) ? " pe zi (fără taxa de intrare, ≈ " + TextRo.num(Math.abs(nr(co.taxaIntrare)), 2) + " o dată)" : "") +
+          (fTxt = co.fundingZi == null ? " și funding-ul —" : TextRo.num(Math.abs(co.fundingZi), 2) === "0,00" ? "" : co.fundingZi < 0 ? " și funding-ul ia " + TextRo.num(-co.fundingZi, 2) : " și funding-ul aduce " + TextRo.num(co.fundingZi, 2)) + (fTxt || !nr(co.taxaIntrare) ? " pe zi." : "."),
         faCe: co.fundingMananca ? "Aș lua levier mai mic sau direcția care încasează funding-ul, la următorul bot." : "Aș rări grilele (pas mai mare) ca să rămână mai mult după comision." });
     }
 
@@ -216,20 +218,29 @@ var Sfaturi = (function () {
         faCe: x.rezumat.ton === "rau" ? "N-aș adăuga bani până nu se întoarce pe 4 h." : null });
     }
 
-    // 6) Finantarea (rata Binance, orientativa - Pionex nu o publica).
+    // 6) Finantarea.
     // audit 19.10 (10): rata e pe INTERVAL (1 h, 4 h sau 8 h); pragurile (0,01% / 0,05% la 8 h) se compară pe ZI: rata × intervale pe zi
-    var f = nr(x.funding), fOre = nr(x.fundingOre) || 8, fZi = f !== null ? f * 24 / fOre : null;
+    // v100.272 (ideile auditului 29.10): botul plătește funding-ul PIONEX ⇒ sfatul pe ratele Pionex ale monedei (x.fundingPionex = GridSim.rataFunding):
+    // rata pe zi, media pe 7 zile - aceeași cifră și același semn ca KPI-ul din Tablou (TabloExtra.fundingBot). Înainte sfatul lua rata Binance
+    // și pe același bot putea zice „îl încasezi” lângă KPI-ul „plătești”. Binance rămâne doar când Pionex n-a dat ratele, spus ca reper.
+    var fp = x.fundingPionex && nr(x.fundingPionex.rataZi) !== null ? x.fundingPionex : null;
+    var f = fp ? nr(fp.rataZi) : nr(x.funding), fOre = fp ? null : nr(x.fundingOre) || 8, fZi = f !== null ? (fp ? f : f * 24 / fOre) : null;
     if (f !== null && Math.abs(fZi) >= 0.0003) {
       // v100.65 (ideea 2): intervalul real (istoria ratelor; 8 ore fara ea) si botul NEUTRU - semnul pozitiei lui nu e sigur
       // (bot-orders: pnlNerealizatSigur false la neutru), deci se spune doar cine plateste rata, nu „îl plătești / îl încasezi”
       var dirF = String(b.directie || "").toLowerCase(), neutru = dirF !== "long" && dirF !== "short";
       var platesti = (dirF === "long" && f > 0) || (dirF === "short" && f < 0);
+      var oreTxt = function (o) { return o === 1 ? "o oră" : cate(o, "oră", "ore"); }, pctZi = typeof TabloExtra !== "undefined" && TabloExtra.fundingPct ? TabloExtra.fundingPct : function (v) { return TextRo.pct(v * 100, 3); };
+      var cine = neutru ? "îl plătesc " + (f > 0 ? "long-urile" : "short-urile") : platesti ? "îl plătești" : "îl încasezi";
+      var ultP = fp ? nr(fp.rata) : null, oreP = fp ? nr(fp.intervalOre) : null;
       out.push({ cod: "funding", ton: platesti && Math.abs(fZi) >= 0.0015 ? "atentie" : "info",
-        titlu: "Funding-ul: " + TextRo.pct(f * 100, 3) + " la " + ((nr(x.fundingOre) || 8) === 1 ? "o oră" : cate(nr(x.fundingOre) || 8, "oră", "ore")) + ", " + (neutru ? "îl plătesc " + (f > 0 ? "long-urile" : "short-urile") : platesti ? "îl plătești" : "îl încasezi"),
-        text: mare((nr(b.finantare) === null ? "" : "până acum botul a " + (nr(b.finantare) < 0 ? "plătit " : "primit ") + TextRo.num(Math.abs(nr(b.finantare)), 2) + " USDT; ") +
+        titlu: fp ? "Funding-ul: " + pctZi(f) + " pe zi (" + (fp.veche ? "rată veche" : "media 7 zile") + "), " + cine
+          : "Funding-ul: " + TextRo.pct(f * 100, 3) + " la " + oreTxt(fOre) + ", " + cine,
+        text: mare((fp && ultP !== null ? "ultima rată Pionex " + TextRo.pct(ultP * 100, 3) + (oreP > 0 ? " la " + oreTxt(Math.round(oreP)) : "") + "; " : "") +
+          (nr(b.finantare) === null ? "" : "până acum botul a " + (nr(b.finantare) < 0 ? "plătit " : "primit ") + TextRo.num(Math.abs(nr(b.finantare)), 2) + " USDT; ") +
           (neutru ? "botul neutru îl plătește cât e net " + (f > 0 ? "long și îl încasează cât e net short." : "short și îl încasează cât e net long.")
             : platesti ? "la rata asta plătești din câștigul grilelor." : "la rata asta încasezi peste câștigul grilelor.")),
-        sursa: "Rata e de la Binance, pentru orientare; Pionex poate avea alta.",
+        sursa: fp ? "Ratele Pionex ale monedei (ce plătește botul), ca în Tablou." : "Rata e de la Binance, doar ca reper: n-am aici ratele Pionex, iar botul plătește rata Pionex, care poate fi alta.",
         faCe: platesti && Math.abs(fZi) >= 0.0015 ? "N-aș ține botul mult pe direcția asta cu funding-ul atât de mare." : null });
     }
 
@@ -276,7 +287,10 @@ var Sfaturi = (function () {
     var bu = b.brut && b.brut.buOrderData || {}, zile = nr(b.pornitLa) ? (acum - nr(b.pornitLa)) / 86400000 : null;
     var ritm = { grile24h: nr(bu.gridProfit24h), medieZi: zile && nr(b.gridProfitBrut) != null ? nr(b.gridProfitBrut) / zile : null, tranz24h: nr(bu.trx24h),
       tranzMedieZi: zile && nr(bu.closedExchangeOrderCount) != null ? nr(bu.closedExchangeOrderCount) / zile : null, zile: zile };
-    return { bot: b, scen: scen, sanse: sanse, rezumat: o.rezumat || null, funding: o.funding, fundingOre: oreFunding(o.fundingHist), fata4h: o.fata4h || null, dir4h: o.dir4h, fisa: o.fisa || null,
+    // v100.272 (ideile auditului 29.10): ratele Pionex ale monedei (Tablou: GridSim.rataFunding; colector: { rate, rataZi, intervalOre }) - sursa sfatului
+    var fp = o.fundingPionex && nr(o.fundingPionex.rataZi) !== null ? o.fundingPionex : null;
+    var fundingPionex = fp ? { rataZi: nr(fp.rataZi), rata: nr(fp.rata) !== null ? nr(fp.rata) : nr(fp.rate), intervalOre: nr(fp.intervalOre), veche: fp.veche === true } : null;
+    return { bot: b, scen: scen, sanse: sanse, rezumat: o.rezumat || null, funding: o.funding, fundingOre: oreFunding(o.fundingHist), fundingPionex: fundingPionex, fata4h: o.fata4h || null, dir4h: o.dir4h, fisa: o.fisa || null,
       costuri: TE ? TE.grileVsCosturi(b, acum) : null, zero: TE ? TE.dacaInchizi(b) : null, geom: TE ? TE.geometrieBot(b) : null, ritm: ritm };
   }
   return { sfaturi: sfaturi, intrare: intrare };

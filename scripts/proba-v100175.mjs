@@ -153,7 +153,7 @@ await test("Poarta: cifra „probat” spune câte ferestre de 20 de zile nu se 
   assert.match(citeste("public", "lib", "t212-ecran.js"), /ferestre"\) \+ " de 20 de zile care nu se suprapun; stopul e ales cel mai bun pe aceleași zile, deci cifra e optimistă\)"/);
 });
 const ecr = citeste("public", "lib", "t212-ecran.js");
-await test("Poarta: trendul și ATR-ul pe barele bursei (vinerea seara nu mai e aruncată)", () => { assert.match(ecr, /var bare = GridCalcul\.bareBursa\(b && b\.randuri \|\| \[\], Date\.now\(\)\), pret = /); });
+await test("Poarta: trendul și ATR-ul pe barele bursei (vinerea seara nu mai e aruncată)", () => { assert.match(ecr, /var bare = GridCalcul\.bareBursa\(b && b\.randuri \|\| \[\], Date\.now\(\)(, tk)?\), pret = /); });   /* v100.272: + simbolul (bara în formare pe bursa lui) */
 await test("rândul de sus: futures necitit = necitit (nu 0); boții fără „investit” ⇒ „≥ …” și „N boți necitiți”", () => {
   assert.match(ecr, /Number\(cf\.usdt\.total\) : null \};/); assert.match(ecr, /sp\.botiFaraInvestit \? "≥ " : ""/);
 });

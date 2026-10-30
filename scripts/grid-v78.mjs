@@ -779,8 +779,10 @@ await test("v80 grileVsCosturi: grile 24h +3,99 vs comisioane/zi si funding/zi (
   const acum = P0 + 24 * ORA_;
   const r = TX.grileVsCosturi(botMET, acum);
   aprox(r.grile24h, 3.99005464, 1e-6); assert.equal(r.umpleri24h, 320);
-  aprox(r.zile, 1, 1e-6); aprox(r.fundingZi, -0.05626, 1e-4); aprox(r.comisionZi, -0.7086, 1e-4);
-  aprox(r.netZi, 3.99005464 - 0.7086 - 0.05626, 1e-3);
+  /* v100.272: taxa de intrare (long: nivelurile de peste 0,3556 din 0,30–0,40 × 88,98 × 5 × 0,05%) stă separat, comisionul pe zi e fără ea */
+  aprox(r.taxaIntrare, -88.98 * 5 * (0.4 - 0.3556) / 0.1 * 0.0005, 1e-6);
+  aprox(r.zile, 1, 1e-6); aprox(r.fundingZi, -0.05626, 1e-4); aprox(r.comisionZi, -0.7086 - r.taxaIntrare, 1e-4);
+  aprox(r.netZi, 3.99005464 + r.comisionZi - 0.05626, 1e-3);
   assert.equal(r.fundingMananca, false);
   const b2 = JSON.parse(JSON.stringify(botMET)); b2.brut.buOrderData.gridProfit24h = null;
   assert.strictEqual(TX.grileVsCosturi(b2, acum).grile24h, null, "lipsa ramane lipsa");

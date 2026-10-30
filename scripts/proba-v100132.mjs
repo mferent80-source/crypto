@@ -91,7 +91,9 @@ await test("(2e) recomandarea TP: alta doar cu mijlocul mai bun cu pragul (1 USD
   const g = (p50, p5) => ({ p50, p5, pPlus: 0.5, pLichidare: 0, pTp: 0.3, pStop: 0.1 });
   const d = (a, r) => ({ maiBun: a, maiRau: r, egal: 1 - a - r });
   const tu = { nume: "fără TP", tp: null, tu: true, g: g(-2, -9) };
-  assert.match(G.mcsTpRecomandat([tu, { nume: "+¼ din grid", tp: 1.05, g: g(0, -8), drum: d(0.5, 0.1) }], 50), /^Aș pune TP-ul la 1,05: de obicei 0,0 USDT în loc de −2,0 USDT, mai bun în 50% din drumuri \(mai rău în 10%\)/);
+  /* v100.272: TP-ul ales se verifică pe drumuri noi înainte de „Aș pune” - aici cu aceleași cifre (testul e despre regula alegerii) */
+  const x1 = { nume: "+¼ din grid", tp: 1.05, g: g(0, -8), drum: d(0.5, 0.1) }; x1.verif = { n: 2000, baza: tu.g, g: x1.g, drum: x1.drum };
+  assert.match(G.mcsTpRecomandat([tu, x1], 50), /^Aș pune TP-ul la 1,05: de obicei 0,0 USDT în loc de −2,0 USDT, mai bun în 50% din drumuri \(mai rău în 10%\)/);
   assert.match(G.mcsTpRecomandat([tu, { nume: "+¼ din grid", tp: 1.05, g: g(0, -8), drum: d(0.3, 0.3) }], 50), /^Rămâi fără TP/, "nesigur drum cu drum");
   assert.match(G.mcsTpRecomandat([tu, { nume: "+¼ din grid", tp: 1.05, g: g(-1.5, -8), drum: d(0.5, 0.1) }], 50), /^Rămâi fără TP/, "sub prag");
   assert.match(G.mcsTpRecomandat([tu, { nume: "+¼ din grid", tp: 1.05, g: g(0, -12), drum: d(0.5, 0.1) }], 50), /^Rămâi fără TP/, "coada mai rea");

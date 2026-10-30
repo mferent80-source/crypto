@@ -26,7 +26,8 @@ var ScorSezon = (function () {
   function esc(x) { return String(x == null ? "" : x).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
   // sumele cu O zecimală și virgulă (regula lui din 03.10); „+0,0” fără semn
   function U(v, M) { if (v === null || v === undefined || !isFinite(v)) return "—"; var s = Math.abs(v).toFixed(1); return (Number(s) === 0 ? "" : v >= 0 ? "+" : "−") + s.replace(".", ",") + " " + (M || "USDT"); }
-  function pr(v) { return v === null || v === undefined || !isFinite(v) ? "—" : Math.round(v * 100) + " %"; }
+  // v100.272 (ideile auditului 29.10): procentul cu O zecimală, lipit („56,3%”, nu „56 %”) - regula lui din 03.10
+  function pr(v) { return v === null || v === undefined || !isFinite(v) ? "—" : (v * 100).toFixed(1).replace(".", ",") + "%"; }
   // v100.259: intervalul Wilson (95%) pentru k din n - același ca GridCalcul.wilson
   function wilson(k, n) { if (!(n > 0)) return [0, 1]; var z = 1.96, p = k / n, d = 1 + z * z / n, c = p + z * z / (2 * n), m = z * Math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)); return [Math.max(0, (c - m) / d), Math.min(1, (c + m) / d)]; }
 
@@ -188,7 +189,7 @@ var ScorSezon = (function () {
     return '<div class="scCard' + (s.oprit ? " scCardOprit" : "") + '" style="--sc-c:' + CUL[s.nivel] + '"><div class="scCap"><h4>🏁 Scorul tău pe ' + esc(P.nume) + ' · sezonul din ' + esc(dataScurta(s.start)) + (s.oprit ? " · OPRIT" : "") + '</h4>'
       + '<span class="acSub">' + (s.ultimul ? "ultimul închis " + esc(dataScurta(s.ultimul.inchis)) : "ziua 1") + (o.faraJurnal ? "" : ' · <button type="button" class="actionGhost" data-action-click="navTo(\'jurnaltrade\',true)' + (s.piata === "t212" ? ";jtAlegeFiltru(\'actiuni\')" : "") + '">Jurnal ›</button>') + ' · <button type="button" class="actionGhost" value="' + esc(id) + '" data-action-click="scorFormular(this.value)">' + (o.formular ? "închide" : "Obiectiv ✎") + '</button></span></div>'
       + nota + oprit + '<div class="scCifre">' + cifre + '</div>'
-      + '<div class="scObiectiv"><div class="scTinta"><span class="scSub">Obiectivul tău: rata ≥ <b>' + esc(pr(ob.rata)) + '</b> · max <b>' + ob.serie + '</b> pierderi la rând · <b>' + esc(Um(ob.net)) + '</b>' + zile + '</span><div class="scBara"><i style="width:' + pRata + '%"></i></div><span class="scSub">rata: ' + pRata + ' % din țintă</span></div>'
+      + '<div class="scObiectiv"><div class="scTinta"><span class="scSub">Obiectivul tău: rata ≥ <b>' + esc(pr(ob.rata)) + '</b> · max <b>' + ob.serie + '</b> pierderi la rând · <b>' + esc(Um(ob.net)) + '</b>' + zile + '</span><div class="scBara"><i style="width:' + pRata + '%"></i></div><span class="scSub">rata: ' + esc(pr(s.progresRata === null ? 0 : s.progresRata)) + ' din țintă</span></div>'
       + '<div class="scTinta"><span class="scSub">Netul față de țintă</span><div class="scBara"><i style="width:' + pNet + '%"></i></div><span class="scSub">' + esc(Um(s.net)) + ' din ' + esc(Um(ob.net)) + '</span></div></div>'
       + '<div class="scInainte">' + inTxt + '</div>' + form + '</div>';
   }

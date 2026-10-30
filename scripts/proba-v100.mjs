@@ -108,7 +108,7 @@ await test("acumConcret: fiecare cartela are cifra mare, eticheta de stare si ac
   const c = Object.fromEntries(l.map((x) => [x.cod, x]));
   assert.equal(c.stop.mare, "0.5455"); assert.match(c.stop.mic, /activ/); assert.ok(c.stop.tag && c.stop.tag.t && ["good", "warn", "bad", "mut"].includes(c.stop.tag.c));
   assert.match(c.grid.mare, /−1,1%/); assert.equal(c.grid.tag.c, "bad"); assert.match(c.grid.tag.t, /nu tranzacționează/); assert.match(c.grid.act, /10 grile/);   // v100.38: propunerea de 9 intervale = 10 grile Pionex
-  assert.equal(c.miscare.mare, "1,7×"); assert.equal(c.miscare.tag.c, "bad"); assert.match(c.miscare.tag.t, /împotriva botului/);
+  assert.equal(c.miscare.mare, "1,1×"); assert.match(c.miscare.act, /^1,7× pe 4 h: /); assert.equal(c.miscare.tag.c, "bad");   /* v100.272: cifra mare pe 24 h (definiția comună), cea pe 4 h în rând */ assert.match(c.miscare.tag.t, /împotriva botului/);
   for (const x of l) { assert.ok(x.act && x.act.length < x.text.length + 1, "actiunea e mai scurta decat detaliile"); assert.ok(x.text.length > 30); }
   const ff = S.acumConcret({ bot: BOT, fisa: null, zero: { pretZero: 0.59512 }, costuri: {}, acum: T0 });
   assert.equal(ff.find((x) => x.cod === "miscare").tag.t, "socotesc");

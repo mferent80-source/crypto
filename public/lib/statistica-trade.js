@@ -19,8 +19,9 @@ var StatisticaTrade = (function () {
     var x = Number(v); return isFinite(x) ? x : null;
   }
   function suma(l, f) { var s = 0; for (var i = 0; i < l.length; i++) s += f(l[i]); return s; }
-  function bani(v, m) { return v === null || !isFinite(v) ? "—" : (v >= 0 ? "+" : "−") + Math.abs(v).toLocaleString("ro-RO", { maximumFractionDigits: Math.abs(v) >= 100 ? 0 : 1, minimumFractionDigits: Math.abs(v) >= 100 ? 0 : 1 }) + " " + m; }
-  function pr(v, z) { return v === null || !isFinite(v) ? "—" : (v * 100).toFixed(z == null ? 0 : z).replace(".", ",") + "%"; }
+  // v100.272 (ideile auditului 29.10): rezultatele cu O zecimală și peste 100 (1.234,6, nu 1.235), procentul cu o zecimală, lipit („56,3%”) - regula lui din 03.10
+  function bani(v, m) { return v === null || !isFinite(v) ? "—" : (v >= 0 ? "+" : "−") + Math.abs(v).toLocaleString("ro-RO", { maximumFractionDigits: 1, minimumFractionDigits: 1 }) + " " + m; }
+  function pr(v, z) { return v === null || !isFinite(v) ? "—" : (v * 100).toFixed(z == null ? 1 : z).replace(".", ",") + "%"; }
   var fmtLuna = null;
   try { fmtLuna = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit" }); } catch (e) { fmtLuna = null; }
   function luna(t) { if (!fmtLuna) return new Date(t).toISOString().slice(0, 7); var p = {}; fmtLuna.formatToParts(new Date(t)).forEach(function (x) { p[x.type] = x.value; }); return p.year + "-" + p.month; }

@@ -52,8 +52,10 @@ var GridClasament = (function () {
       var ra = rang[a.stare] == null ? 2 : rang[a.stare], rb = rang[b.stare] == null ? 2 : rang[b.stare];
       if (ra !== rb) return ra - rb;
       if (a.stare === "evita") {
-        var ma = a.regim ? Math.max(a.regim.r4h || 0, a.regim.r24h || 0) : 0, mb = b.regim ? Math.max(b.regim.r4h || 0, b.regim.r24h || 0) : 0;
-        return mb - ma;
+        // v100.272 (ideile auditului 29.10): după cifra pe 24 h - cea din definiția comună (GridCalcul.miscareMare) care le-a pus „de evitat” -,
+        // nu după maximul cu cea pe 4 h; fără ea (regim vechi), cea pe 4 h
+        var c24 = function (r) { return !r ? 0 : r.r24h != null && isFinite(r.r24h) ? r.r24h : (r.r4h || 0); };
+        return c24(b.regim) - c24(a.regim);
       }
       return (b.scor == null ? -Infinity : b.scor) - (a.scor == null ? -Infinity : a.scor);
     });

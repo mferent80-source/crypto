@@ -443,7 +443,9 @@ await test("(17) verificaSemnal: semnalul mai nou decât pornirea ⇒ „iesi”
 await test("(17) colectorul verifică semnalul în bucla lui și în ceasul de 10 s, scrie în jurnal și iese curat (exit 0)", () => {
   const c = citeste("scripts", "colector.mjs");
   assert.match(c, /const SEMNAL_IESIRE = path\.join\(DATA, "colector-iesi\.semnal"\), PORNIT_LA = Date\.now\(\);/);
-  assert.match(c, /function iesiLaSemnal\(\) \{ if \(DOAR_INCARCA\) return; if \(S\.verificaSemnal\(fs, SEMNAL_IESIRE, PORNIT_LA\) === "iesi"\) \{ jurnal\("semnal de ieșire/);
+  /* v100.272 (revizia): semnalul trece prin S.decizieIesire (în tură ⇒ la capătul ei, cel mult 60 s); ieșirea rămâne cu jurnal și exit 0 */
+  assert.match(c, /function iesiLaSemnal\(\) \{ if \(DOAR_INCARCA\) return; const semnal = S\.verificaSemnal\(fs, SEMNAL_IESIRE, PORNIT_LA\) === "iesi", dec = S\.decizieIesire\(/);
+  assert.match(c, /if \(dec === "iesi"\) \{ jurnal\("semnal de ieșire/);
   assert.match(c, /process\.exit\(0\); \} \}/);
   const b = c.slice(c.indexOf("async function bucla()"), c.indexOf("\nbucla();"));
   assert.match(b, /^  iesiLaSemnal\(\);/m); assert.match(b, /setInterval\(\(\) => \{ iesiLaSemnal\(\); bate\(\);/);

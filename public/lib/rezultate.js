@@ -16,6 +16,7 @@
   const pctSemn = (x) => { x = nr(x); if (x === null) return "nu știu"; const t = z1(x); return (x > 0 && t !== "0,0" ? "+" : "") + t + "%"; };
   const clsSemn = (x) => (nr(x) === null ? "" : x > 0 ? " bun" : x < 0 ? " rau" : "");
   const SIM_OK = /^[A-Z0-9][A-Z0-9.\-]{0,11}$/;
+  const PUTINE_RAPORTARI = 20;   // v100.272: sub atâtea, media după raport e doar o orientare (ipoteza; istoricul are cel mult 8)
 
   function oraRo(h) { return h === "bmo" ? "înainte de deschidere" : h === "amc" ? "după închidere" : h === "dmh" ? "în timpul ședinței" : "—"; }
   function simbolDin(t) { return String(t || "").toUpperCase().replace(/_.*$/, "").trim(); }
@@ -50,8 +51,12 @@
     const val = l.filter((x) => nr(x.reactie) !== null && !x.oraDedusa), medie = val.length ? val.reduce((a, x) => a + Math.abs(x.reactie), 0) / val.length : null, sus = val.filter((x) => x.reactie > 0).length;
     const rand = (x) => "<tr><td>" + esc(dataLunga(x.data)) + "</td><td>" + esc(oraRo(x.ora) + (x.oraDedusa ? " · după preț" : x.oraObicei ? " · după obiceiul firmei" : "")) + '</td><td class="num' + clsSemn(x.reactie) + '">' + pctSemn(x.reactie) + '</td><td class="num' + clsSemn(x.reactie5) + '">' + pctSemn(x.reactie5) + '</td><td class="num' + clsSemn(x.surpriza) + '">' + (nr(x.surpriza) === null ? "—" : pctSemn(x.surpriza)) + "</td></tr>";
     return '<div class="rzIst"><b>' + esc(ist.s || "") + " — cum a reacționat prețul după raportările trecute</b>" + notaPret +
-      '<table class="t212Tab rzIstTab"><thead><tr><th>Raportarea</th><th>Momentul</th><th class="num">Ziua de după</th><th class="num">5 zile</th><th class="num">EPS față de estimare</th></tr></thead><tbody>' + l.map(rand).join("") + "</tbody></table>" +
-      (medie === null ? "" : '<p class="tbSub">Mișcarea medie după raport: ' + z1(medie) + "% (în orice direcție) · " + sus + " din " + val.length + " în sus. Răspunde la „merită să stau peste raportare?”, nu e un semnal.</p>") + "</div>";
+      // v100.272 (ideile auditului 29.10): „Ziua de după” era, la anunțurile dinainte de deschidere, chiar ziua raportării (serverul ia corect
+      // ziua reacției: amc ⇒ ziua de după, bmo / în ședință ⇒ aceeași zi) ⇒ coloana spune „Ziua reacției” și care e ea. Media stă pe cel mult
+      // 8 raportări (Nasdaq dă 4) ⇒ se spune „doar N” sub PUTINE_RAPORTARI.
+      '<table class="t212Tab rzIstTab"><thead><tr><th>Raportarea</th><th>Momentul</th><th class="num">Ziua reacției</th><th class="num">5 zile</th><th class="num">EPS față de estimare</th></tr></thead><tbody>' + l.map(rand).join("") + "</tbody></table>" +
+      '<p class="tbSub">Ziua reacției = ziua raportării când anunță înainte de deschidere sau în ședință, ziua de după când anunță după închidere.</p>' +
+      (medie === null ? "" : '<p class="tbSub">Mișcarea medie după raport: ' + z1(medie) + "% (în orice direcție) · " + sus + " din " + val.length + " în sus" + (val.length < PUTINE_RAPORTARI ? " · doar " + cate(val.length, "raportare", "raportări") + " (puține cazuri)" : "") + ". Răspunde la „merită să stau peste raportare?”, nu e un semnal.</p>") + "</div>";
   }
 
   function htmlPagina(st) {

@@ -42,10 +42,12 @@ var TabloExtra = (function () {
   // v100.136: funding-ul monedei botului (rata pe zi cu semn: pozitiva = longul plateste, shortul incaseaza) ⇒ cine plateste si cat pe
   // saptamana, pe pozitia deschisa (|pozitie| x pret) sau, fara ea, pe investit x levier. Neutru: depinde de pozitia neta - doar rata
   // revizia (I4): pozitia ZERO = fara funding acum (nu investit x levier); rata 0 spusa; sub 0,05 USDT „sub 0,1”; rata veche spusa
+  // v100.272 (ideile auditului 29.10): cifra ratei pe zi într-un singur format - KPI-ul și sfatul de funding o scriu la fel (aceeași sursă, Pionex)
+  function fundingPct(r) { r = nr(r); return r === null ? "—" : (r < 0 ? "−" : "") + Math.abs(r * 100).toLocaleString("ro-RO", { minimumFractionDigits: 1, maximumFractionDigits: 3 }) + "%"; }
   function fundingBot(b, info) {
     var r = info ? nr(info.rataZi) : null; if (!b || r === null) return null;
     if (r === 0) return { text: "fără funding acum (rata 0)", ton: "mutedInfo" };
-    var pct = (r < 0 ? "−" : "") + Math.abs(r * 100).toLocaleString("ro-RO", { minimumFractionDigits: 1, maximumFractionDigits: 3 }) + "%", dir = String(b.directie || "").toLowerCase();
+    var pct = fundingPct(r), dir = String(b.directie || "").toLowerCase();
     var cap = "funding " + pct + " pe zi, " + (info.veche ? "rată veche" : "media 7 zile");
     if (dir !== "long" && dir !== "short") return { text: cap + " · pe poziția netă (long plătește, short încasează)", ton: "mutedInfo" };
     var q = nr(b.pozitie), p = nr(b.pretCurent), inv = nr(b.investit), lev = nr(b.levier) || 1, plateste = dir === "long" ? r > 0 : r < 0;
@@ -78,10 +80,22 @@ var TabloExtra = (function () {
     return out;
   }
 
+  // v100.272 (ideile auditului 29.10): taxa de INTRARE - botul long cumpără la pornire, la piață (taker), poziția pentru nivelurile de peste
+  // prețul de pornire (short: de sub el), ≈ investit × levier × partea aceea din interval; neutrul nu cumpără la pornire (0). E plătită o dată,
+  // deci nu intră în comisionul pe zi (înainte „comisioane / zile” o împărțea pe zile și umfla costul zilnic). Estimată, cu semnul comisioanelor
+  // (negativă) și cel mult cât s-a plătit; fără prețul de pornire sau interval ⇒ null (comisionul pe zi rămâne ca înainte).
+  function taxaIntrare(b, com) {
+    var d = bu(b), dir = String(b && b.directie || "").toLowerCase(), inv = nr(b && b.investit), lev = nr(b && b.levier) || 1, jos = nr(b && b.gridJos), sus = nr(b && b.gridSus), p0 = nr(d.initPrice);
+    if (dir && dir !== "long" && dir !== "short") return 0;
+    if (!dir || !(inv > 0) || !(jos > 0) || !(sus > jos) || !(p0 > 0)) return null;
+    var parte = Math.min(1, Math.max(0, dir === "long" ? (sus - p0) / (sus - jos) : (p0 - jos) / (sus - jos)));
+    var t = -inv * lev * parte * C.COMISION;
+    return com !== null && com <= 0 ? Math.max(t, com) : t;
+  }
   function grileVsCosturi(b, acum) {
     var d = bu(b), p = nr(b && b.pornitLa), zile = p > 0 ? Math.max(1 / 24, ((acum || Date.now()) - p) / ZI) : null;
-    var fund = nr(b && b.finantare), com = nr(b && b.comisioane), g24 = nr(d.gridProfit24h);
-    var out = { grile24h: g24, umpleri24h: nr(d.trx24h), zile: zile, fundingZi: fund !== null && zile ? fund / zile : null, comisionZi: com !== null && zile ? com / zile : null, netZi: null, fundingMananca: null };
+    var fund = nr(b && b.finantare), com = nr(b && b.comisioane), g24 = nr(d.gridProfit24h), tx = taxaIntrare(b, com);
+    var out = { grile24h: g24, umpleri24h: nr(d.trx24h), zile: zile, fundingZi: fund !== null && zile ? fund / zile : null, comisionZi: com !== null && zile ? (com - (tx || 0)) / zile : null, taxaIntrare: tx, netZi: null, fundingMananca: null };
     // v100.39 (audit 30.09): sub o zi de viata comisionul e aproape numai taxa de CUMPARARE de la pornire (platita o data) -
     // impartita la 3 ore devenea „−0,68 USDT pe zi” si orice bot nou iesea ATENTIE „costurile depasesc grilele” de la secunda 27.
     // Costurile pe zi se judeca doar de la o zi de viata (grilele pe 24 h fata de costurile pe zi, ferestre egale).
@@ -451,6 +465,10 @@ var TabloExtra = (function () {
     return { lichidare: nou, distantaPct: p > 0 ? Math.abs(p - nou) / p : null, inainte: L };
   }
 
+  // v100.272 (ideile auditului 29.10): la botul NEUTRU serverul ia semnul poziției așa cum vine (pnlNerealizatSigur false) - totalul cuprinde
+  // poziția deschisă cu semnul ei nesigur. Cifra rămâne (e a Pionex); lângă ea se spune. Fără total citit, nimic de spus.
+  function notaTotal(b) { return b && b.pnlNerealizatSigur === false && nr(b.profitTotal) !== null ? "semn nesigur la botul neutru" : null; }
+
   // v81 (4) Botul vs "sa fi tinut doar pozitia": un long/short simplu cu aceeasi suma si
   // acelasi levier, deschis la pretul de pornire al botului. La neutru: vs a nu face nimic.
   function vsPozitie(b) {
@@ -752,7 +770,7 @@ var TabloExtra = (function () {
     return Object.keys(pe).map(function (k) { var g = pe[k]; g.text = "«" + (NUME_ALERTA[k] || k) + "»: prețul a scăzut în " + g.peMinus + " din " + g.n + " după 24 h" + (g.n < 10 ? " (prea puține)" : ""); return g; }).sort(function (a, b) { return b.n - a.n; });
   }
 
-  return { stopDincoloDeLichidare: stopDincoloDeLichidare, dupaAlerta: dupaAlerta, bilantAlerte: bilantAlerte, cifreActiuni: cifreActiuni, textBani: textBani, frecventaAtingere: frecventaAtingere, codTVBot: codTVBot, gridDiferitDeBot: gridDiferitDeBot, alertaRezolvata: alertaRezolvata, alerteleBotului: alerteleBotului, marcheazaDepasite: marcheazaDepasite, ritmRecuperare: ritmRecuperare, comisionDinUmplere: comisionDinUmplere, ceAiDeFacut: ceAiDeFacut, oraSfat: oraSfat, distanteGrid: distanteGrid, geometrieBot: geometrieBot, profitPeGrila: profitPeGrila, fundingBot: fundingBot, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, pretPentruTotal: pretPentruTotal, totalLaPret: totalLaPret, totalCuGridLa: totalCuGridLa, gridVsPlan: gridVsPlan, pragDinPlanuri: pragDinPlanuri, totalLaOpritor: totalLaOpritor, pretOpritorPentru: pretOpritorPentru, pretStopLive: pretStopLive, totalLaTinta: totalLaTinta, pretTintaPentru: pretTintaPentru, miscareZi: miscareZi, podeaUrca: podeaUrca, propunePlan: propunePlan, fisaInchidere: fisaInchidere, legaturaJurnal: legaturaJurnal,
+  return { stopDincoloDeLichidare: stopDincoloDeLichidare, dupaAlerta: dupaAlerta, bilantAlerte: bilantAlerte, cifreActiuni: cifreActiuni, textBani: textBani, frecventaAtingere: frecventaAtingere, codTVBot: codTVBot, gridDiferitDeBot: gridDiferitDeBot, alertaRezolvata: alertaRezolvata, alerteleBotului: alerteleBotului, marcheazaDepasite: marcheazaDepasite, ritmRecuperare: ritmRecuperare, comisionDinUmplere: comisionDinUmplere, ceAiDeFacut: ceAiDeFacut, oraSfat: oraSfat, distanteGrid: distanteGrid, geometrieBot: geometrieBot, profitPeGrila: profitPeGrila, fundingBot: fundingBot, fundingPct: fundingPct, notaTotal: notaTotal, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, pretPentruTotal: pretPentruTotal, totalLaPret: totalLaPret, totalCuGridLa: totalCuGridLa, gridVsPlan: gridVsPlan, pragDinPlanuri: pragDinPlanuri, totalLaOpritor: totalLaOpritor, pretOpritorPentru: pretOpritorPentru, pretStopLive: pretStopLive, totalLaTinta: totalLaTinta, pretTintaPentru: pretTintaPentru, miscareZi: miscareZi, podeaUrca: podeaUrca, propunePlan: propunePlan, fisaInchidere: fisaInchidere, legaturaJurnal: legaturaJurnal,
     peZile: peZile, marjaNoua: marjaNoua, vsPozitie: vsPozitie, planStare: planStare, evenimente: evenimente };
 })();
 if (typeof globalThis !== "undefined") globalThis.TabloExtra = TabloExtra;

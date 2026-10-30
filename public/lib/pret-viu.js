@@ -59,7 +59,26 @@ var PretViu = (function () {
   // distanțele până la marginile gridului - o singură formă pentru bandă și pentru reîmprospătarea live din app.js
   function textGrid(dg) { var f = function (v) { return (v * 100).toFixed(1).replace(".", ",") + "%"; }; return !dg ? "" : dg.inGrid ? "grid ↓" + f(dg.josPct) + " ↑" + f(dg.susPct) : dg.text; }
   // Copia botului cu pretul live - ca „Pretul in grid” si distantele pana la marginile gridului sa mearga pe pretul de ACUM.
-  function botLaPret(b, pret) { var p = nr(pret); if (!b || !(p > 0)) return b; var c = {}; for (var k in b) c[k] = b[k]; c.pretCurent = p; return c; }
+  // v100.272 (ideile auditului 29.10): și distanța până la lichidare - lângă prețul viu stătea distanța din citirea botului (8–60 s în urmă).
+  // Aceeași regulă ca serverul (functions/api/bot-orders.js, lichidare()): fiecare parte cu preț > 0 (Pionex dă 0 = „nu există”), distanța
+  // SEMNATĂ cea mai mică, rotunjită la 2 zecimale; negativă = depășită. Fără lichidareJos / lichidareSus citite, rămân cele din citire.
+  function lichidareLa(b, p) {
+    var parti = [], lj = nr(b.lichidareJos), ls = nr(b.lichidareSus);
+    if (lj !== null && lj > 0) parti.push({ partea: "jos", pret: lj, dist: 100 * (p - lj) / p });
+    if (ls !== null && ls > 0) parti.push({ partea: "sus", pret: ls, dist: 100 * (ls - p) / p });
+    if (!parti.length) return null;
+    var x = parti.reduce(function (a, c) { return c.dist < a.dist ? c : a; });
+    return { pretLichidare: x.pret, lichidarePartea: x.partea, distantaLichidarePct: Math.round(x.dist * 100) / 100, lichidareDepasita: x.dist < 0 };
+  }
+  function botLaPret(b, pret) {
+    var p = nr(pret); if (!b || !(p > 0)) return b; var c = {}; for (var k in b) c[k] = b[k]; c.pretCurent = p;
+    var l = lichidareLa(b, p); if (l) { for (var j in l) c[j] = l[j]; delete c.motivFaraDistanta; }
+    return c;
+  }
+  // v100.272: „lichidare 5,3%” - o singură formă pentru bandă și pentru reîmprospătarea ei la fiecare tranzacție (pvArata)
+  function textLich(b) { var d = nr(b && b.distantaLichidarePct); return b && b.lichidareDepasita ? "LICHIDARE DEPĂȘITĂ" : d === null ? "lichidare —" : "lichidare " + Math.abs(d).toFixed(1).replace(".", ",") + "%"; }
+  // v100.272: la botul neutru totalul are semnul poziției nesigur (TabloExtra.notaTotal) - se spune lângă cifră
+  function notaNeutru(b) { return b && b.pnlNerealizatSigur === false && nr(b.profitTotal) !== null ? "semn nesigur la botul neutru" : null; }
 
   // Banda de sus: bucatile in ordine; pretul e a doua, imediat dupa nume.
   function banda(o) {
@@ -71,16 +90,18 @@ var PretViu = (function () {
     if (zt) parti.push({ k: "zi", t: zt.t, ton: zt.ton, title: "Mișcarea de azi, față de deschiderea zilei (00:00 UTC, lumânarea 1D Pionex)" });
     var tot = nr(b.profitTotal);
     var tr2 = tot === null ? null : Math.round(tot * 10) / 10;   // v100.196: rezultatul cu O zecimală
-    parti.push({ k: "total", t: tr2 === null ? "total —" : "total " + (tr2 > 0 ? "+" : tr2 < 0 ? "−" : "") + Math.abs(tr2).toFixed(1).replace(".", ",") + " USDT" });
-    var dist = nr(b.distantaLichidarePct);
-    parti.push({ k: "lich", t: b.lichidareDepasita ? "LICHIDARE DEPĂȘITĂ" : dist === null ? "lichidare —" : "lichidare " + Math.abs(dist).toFixed(1).replace(".", ",") + "%" });
+    var nN = notaNeutru(b);   /* v100.272 (ideile auditului 29.10): botul neutru - semnul poziției din total e nesigur, spus lângă cifră */
+    parti.push({ k: "total", t: (tr2 === null ? "total —" : "total " + (tr2 > 0 ? "+" : tr2 < 0 ? "−" : "") + Math.abs(tr2).toFixed(1).replace(".", ",") + " USDT") + (nN ? " (semn nesigur)" : ""), title: nN ? "Totalul cuprinde poziția deschisă: " + nN : undefined });
+    // v100.272 (ideile auditului 29.10): distanța la lichidare din prețul ARĂTAT (viu sau din citire), nu din citirea botului lângă prețul viu
+    var bl = pa && pa.viu ? botLaPret(b, pa.pret) : b, dist = nr(bl.distantaLichidarePct);
+    parti.push({ k: "lich", t: textLich(bl) });
     var dg = o.distanteGrid;
     if (dg) parti.push({ k: "grid", t: textGrid(dg) });
     var z = o.piata;
     if (z && z.ton !== "nu-se-poate") parti.push({ k: "piata", t: z.ton === "rau" ? "piața: împotrivă" : z.ton === "bine" ? "piața: cu botul" : "piața: amestecat" });
-    var rau = (dist !== null && (b.lichidareDepasita || Math.abs(dist) < 15)) || (z && z.ton === "rau");
+    var rau = (dist !== null && (bl.lichidareDepasita || Math.abs(dist) < 15)) || (z && z.ton === "rau");
     return { parti: parti, clasa: rau ? "bad" : (tot === null || dist === null || tot < 0) ? "tbWarn" : "good", pret: pa };
   }
 
-  return { VIU_MS: VIU_MS, mesaj: mesaj, eViu: eViu, directia: directia, ora: ora, pretDeAratat: pretDeAratat, banda: banda, ziDinKlines: ziDinKlines, procentZi: procentZi, textZi: textZi, textGrid: textGrid, botLaPret: botLaPret };
+  return { VIU_MS: VIU_MS, mesaj: mesaj, eViu: eViu, directia: directia, ora: ora, pretDeAratat: pretDeAratat, banda: banda, ziDinKlines: ziDinKlines, procentZi: procentZi, textZi: textZi, textGrid: textGrid, botLaPret: botLaPret, textLich: textLich };
 })();

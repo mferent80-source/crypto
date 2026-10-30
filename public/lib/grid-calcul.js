@@ -78,8 +78,16 @@ var GridCalcul = (function () {
   }
   // v95: barele ZILNICE ale unei actiuni americane: bara de AZI se scoate doar cat bursa e deschisa (e in formare);
   // sambata, duminica si dupa inchidere ultima bara e o zi inchisa si ramane (bare() o arunca mereu).
-  function bareBursa(randuri, acum) {
+  // v100.272 (ideile auditului 29.10): cu simbolul, pe bursa LUI (CalendarBursa) - la Xetra / Londra bara de azi era luată drept închisă
+  // până la 16:30 la noi (deschiderea New York-ului) și aruncată după; acum e în formare până la închiderea ședinței ei (aceeași regulă ca
+  // scripts/lib/bare-zi.mjs din colector). NYSE / fără simbol: ca înainte.
+  function bareBursa(randuri, acum, simbol) {
     var v = bareToate(randuri); if (!v.length) return v;
+    var CB = typeof CalendarBursa !== "undefined" ? CalendarBursa : null;
+    if (simbol && CB && CB.bursaSimbol(simbol) !== "NYSE") {
+      try { if (!(CB.inchidereLa(CB.ziLocala(v[v.length - 1].t, simbol), simbol) <= (acum || Date.now()))) v.pop(); } catch (e) {}
+      return v;
+    }
     try {
       var o = {}, n = new Date(acum || Date.now());
       new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit", weekday: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(n).forEach(function (x) { o[x.type] = x.value; });

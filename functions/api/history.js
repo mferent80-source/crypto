@@ -1,4 +1,7 @@
 import {requireApiAuth,authErrorResponse,sameOrigin as strictSameOrigin,tenantKey} from "../_shared/auth.js";
+import {citesteCorp} from "../_shared/corp-limitat.js";
+// v100.272 (ideile auditului 29.10): corpul cu plafon - înainte se citea oricât de mare. 120 de rânduri × 12.000 de semne (safeJson) ≈ 1,4 M ⇒ 2 M ajung
+const CORP_MAX=2097152;
 const H={"content-type":"application/json","cache-control":"no-store"};
 const json=(x,status=200)=>new Response(JSON.stringify(x),{status,headers:H});
 const lim=(v,d=20,max=200)=>Math.max(1,Math.min(max,Number(v)||d));
@@ -104,7 +107,7 @@ export async function onRequestPost({request,env}){
   if(env.ALLOW_BROWSER_HISTORY_WRITES!=="1")return json({error:"Browser history writes are disabled. Set ALLOW_BROWSER_HISTORY_WRITES=1 only if you accept public same-origin research writes."},403);
   const u=new URL(request.url),action=u.searchParams.get("action")||"",db=env.DB,tenant=await tenantKey(request,env);
   try{
-    await ensureTenantColumns(db);const tables=await requireTables(db),b=await request.json();
+    await ensureTenantColumns(db);const tables=await requireTables(db),cit=await citesteCorp(request,CORP_MAX);if(cit.prea)return json({error:"Corp prea mare"},413);const b=JSON.parse(cit.text);
     if(action==="scanner_run"){
       const runId=await insertScannerRun(db,b,tenant);return json({saved:true,runId});
     }

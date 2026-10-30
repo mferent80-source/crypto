@@ -139,13 +139,13 @@ var IndicatoriBot = (function () {
         // v100.266 (F6): pentru alerta „funding-ul s-a întors” - botul plătește și plata dinainte (hist[1], istoria e de la nou la vechi) tot contra lui
         botPlateste: !!botPlateste, doi: !!(botPlateste && nr((f.hist || [])[1]) !== null && nr(f.hist[1]) * rate > 0), rata: rate, ore: ore });
     }
-    var b = o.btc, bd = b && b.dir, br = b && b.regim, bm = br ? nr(br.r4h) : null;
+    var b = o.btc, bd = b && b.dir, br = b && b.regim, bm = br ? nr(br.r24h) : null;   /* v100.272: cifra pe 24 h, ca verdictul „mișcare / liniște” (regim.miscare e pe o zi) */
     var titluB = "Monedele mici merg de obicei după BTC: o cădere bruscă a lui trage și moneda botului spre marginea de jos a gridului.";
     if (!bd) out.push({ k: "btc", eticheta: "BTC", text: "n-am lumânările BTC", ton: "neutru", titlu: titluB });
     else {
       var S = { urca: "↑ urcă", coboara: "↓ coboară", lateral: "↔ lateral" }, bmis = !!(br && br.miscare);
       var contra = (botDir === "long" && bd === "coboara") || (botDir === "short" && bd === "urca"), cu = (botDir === "long" && bd === "urca") || (botDir === "short" && bd === "coboara");
-      out.push({ k: "btc", eticheta: "BTC", text: (S[bd] || "↔ lateral") + " pe 4h · " + (bmis ? "mișcare" : "liniște") + (bm !== null ? " (" + x1(bm) + ")" : ""),
+      out.push({ k: "btc", eticheta: "BTC", text: (S[bd] || "↔ lateral") + " pe 4h · " + (bmis ? "mișcare" : "liniște") + (bm !== null ? " (" + x1(bm) + " pe 24 h)" : ""),
         ton: contra ? (bmis ? "rau" : "atentie") : cu ? "bine" : "neutru", titlu: titluB });
     }
     return out;

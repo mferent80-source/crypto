@@ -72,9 +72,11 @@ export async function turaVarianteNoapte(d) {
           + (fel === "tp" && st.tpAprox ? " TP-ul tău e dat de Pionex în procente: prețul lui e aproximativ." : "")
           + " (Monte Carlo peste noapte: " + cate(n, "drum", "drumuri") + " de 7 zile"
           /* v100.196 (auditul sever 14.10, 🔵7): alegerea celei mai bune dintre mai multe variante pe ACELEAȘI drumuri e în eșantion - se spune */
-          + (fel === "variante" ? "; setarea e aleasă dintre " + cate(rowsV.length, "variantă", "variante") : "; ținta e aleasă dintre " + cate(rowsT ? rowsT.length : 0, "țintă", "ținte"))
-          + " pe aceleași drumuri, deci e cea mai bună dintre " + cate(fel === "variante" ? rowsV.length : rowsT ? rowsT.length : 0, "încercare", "încercări") + ", nu o promisiune.)";
-        const ok = await d.anunta({ nivel: "info", titlu: "🌙 " + sim + ": " + (fel === "variante" ? "altă setare, pe aceleași drumuri" : "alt TP, pe aceleași drumuri"), mesaj }, b.id, "noapte-" + fel);
+          /* v100.272 (revizia): propunerea e aleasă pe aceleași drumuri, apoi VERIFICATĂ pe alte drumuri (mcsVerificaPeDrumuriNoi) - textul ei dă
+             cifrele de acolo; numărul = variantele / țintele fără botul tău (K = rows.length − 1, ca în text), nu „cea mai bună dintre N încercări” */
+          + (fel === "variante" ? "; setarea e aleasă dintre " + cate(rowsV.length - 1, "variantă", "variante") : "; ținta e aleasă dintre " + cate(rowsT ? rowsT.length - 1 : 0, "țintă", "ținte"))
+          + " pe aceleași drumuri, apoi verificată pe alte drumuri; nu o promisiune.)";
+        const ok = await d.anunta({ nivel: "info", titlu: "🌙 " + sim + ": " + (fel === "variante" ? "altă setare, verificată pe drumuri noi" : "alt TP, verificat pe drumuri noi"), mesaj }, b.id, "noapte-" + fel);
         if (ok) { ist.push({ c: cheie, la: acum }); anuntate++; }
       }
     } catch (e) { d.jurnal("variante noapte " + sim, e && e.message || String(e)); }

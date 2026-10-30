@@ -176,12 +176,14 @@ export const lectiaSaptamanii = (l, ver) => {
 };
 // v101.127 (scorul sezonului, ideea 2): pauza la N pierderi la rând și țintele atinse - din ScorSezon.calc (s), o dată pe episod / sezon
 // v101.128: și pentru Trading 212 (s.piata = "t212", s.moneda = "lei", „trade-uri” în loc de „boți”)
-const scM = (s) => (s.moneda || "USDT"), scU = (v, s) => U2(v).replace(/ USDT$/, " " + scM(s)), scNume = (s) => (s.piata === "t212" ? "Trading 212" : "Pionex"), scFel = (s) => (s.piata === "t212" ? ["trade", "trade-uri"] : ["bot", "boți"]);
+// v100.272: procentul scorului cu o zecimală, lipit („58,3%”), ca pe pagina scorului (ScorSezon) - era „58 %”
+const scPc = (x) => (Math.round(Number(x) * 1000) / 10).toFixed(1).replace(".", ",") + "%";
+const scM = (s) => (s.moneda || "USDT"), scU =(v, s) => U2(v).replace(/ USDT$/, " " + scM(s)), scNume = (s) => (s.piata === "t212" ? "Trading 212" : "Pionex"), scFel = (s) => (s.piata === "t212" ? ["trade", "trade-uri"] : ["bot", "boți"]);
 export const scorPauza = (s) => ({ nivel: "atentie", titlu: "Scorul " + scNume(s) + ": " + cate(s.serie.n, "pierdere", "pierderi") + " la rând - pauză",
   mesaj: msg("Sezonul din " + ziRo(s.start) + ": " + s.win + " win / " + s.loss + " loss, net " + scU(s.net, s) + " (ținta ta: cel mult " + s.obiectiv.serie + " la rând).",
     "N-aș mai porni alt " + scFel(s)[0] + " azi; mâine, cu capul limpede, m-aș uita de ce au pierdut " + (s.piata === "t212" ? "ultimele " : "ultimii ") + s.serie.n + ".") });
-export const scorTinta = (s, fel) => ({ nivel: "info", titlu: "Scorul " + scNume(s) + ": " + (fel === "net" ? "netul țintă atins (" + scU(s.net, s) + ")" : "rata țintă atinsă (" + Math.round(s.rata * 100) + " %)"),
-  mesaj: msg("Sezonul din " + ziRo(s.start) + ": " + s.win + " win / " + s.loss + " loss din " + cate(s.n, scFel(s)[0], scFel(s)[1]) + ", net " + scU(s.net, s) + (fel === "net" ? " față de ținta +" + V(s.obiectiv.net) + " " + scM(s) + "." : " - rata " + Math.round(s.rata * 100) + " % față de ținta " + Math.round(s.obiectiv.rata * 100) + " %."),
+export const scorTinta = (s, fel) => ({ nivel: "info", titlu: "Scorul " + scNume(s) + ": " + (fel === "net" ? "netul țintă atins (" + scU(s.net, s) + ")" : "rata țintă atinsă (" + scPc(s.rata) + ")"),
+  mesaj: msg("Sezonul din " + ziRo(s.start) + ": " + s.win + " win / " + s.loss + " loss din " + cate(s.n, scFel(s)[0], scFel(s)[1]) + ", net " + scU(s.net, s) + (fel === "net" ? " față de ținta +" + V(s.obiectiv.net) + " " + scM(s) + "." : " - rata " + scPc(s.rata) + " față de ținta " + scPc(s.obiectiv.rata) + "."),
     fel === "net" ? "Aș păstra ce am câștigat: aceleași sume, nu mai mari, și aș ridica ținta doar după încă 10 " + scFel(s)[1] + "." : "Aș urmări netul, nu rata: o pierdere mare șterge cinci câștiguri mici.") });
 const ziRo = (t) => { const d = new Date(t); return new Intl.DateTimeFormat("ro-RO", { timeZone: "Europe/Bucharest", day: "2-digit", month: "2-digit" }).format(d); };
 export const frana = (f) => {

@@ -23,8 +23,9 @@ async function cheie(env) {
   try { const k = env.ISTORIC && env.ISTORIC.get ? await env.ISTORIC.get(CHEIE_KV) : null; if (k) return String(k); } catch {}
   return env.FINNHUB_API_KEY ? String(env.FINNHUB_API_KEY) : "";
 }
-async function finnhub(url) {
-  const r = await fetch(url, { headers: { accept: "application/json" }, signal: AbortSignal.timeout(15000) });
+// v100.272 (ideile auditului 29.10): cheia în antetul X-Finnhub-Token (documentația Finnhub îl acceptă), nu în URL - un URL ajunge în jurnale
+async function finnhub(url, k) {
+  const r = await fetch(url, { headers: { accept: "application/json", "X-Finnhub-Token": k }, signal: AbortSignal.timeout(15000) });
   if (!r.ok) throw new Error("Finnhub a răspuns " + r.status);
   return r.json();
 }
@@ -33,7 +34,7 @@ async function calendar(env, zile) {
   const k = await cheie(env); if (!k) return json({ error: "fără cheie — pune cheia Finnhub în pagina Rezultate" }, 409);
   const ck = "cal:" + zile + ":" + iso(Date.now()) + ":" + k.slice(-4);
   const c = dinCache(ck); if (c) return json(c);
-  let d; try { d = await finnhub(BAZA + "/calendar/earnings?from=" + iso(Date.now()) + "&to=" + iso(Date.now() + zile * ZI) + "&token=" + encodeURIComponent(k)); }
+  let d; try { d = await finnhub(BAZA + "/calendar/earnings?from=" + iso(Date.now()) + "&to=" + iso(Date.now() + zile * ZI), k); }
   catch (e) { return json({ error: e.message || "Finnhub nu a răspuns" }, 502); }
   const items = (Array.isArray(d && d.earningsCalendar) ? d.earningsCalendar : [])
     .filter((e) => e && /^[A-Z][A-Z0-9]{0,4}$/.test(String(e.symbol || "")) && (e.epsEstimate != null || e.revenueEstimate != null || e.epsActual != null))
@@ -67,8 +68,8 @@ async function istoric(env, s) {
   const de = iso(Date.now() - 2 * 365 * ZI), azi = iso(Date.now());
   let cal = null, pret = null, nasdaq = [], obicei = "";
   const yahoo = (async () => { try { const r = await fetch("https://query1.finance.yahoo.com/v8/finance/chart/" + encodeURIComponent(s) + "?interval=1d&range=2y", { headers: { "user-agent": "Mozilla/5.0" }, signal: AbortSignal.timeout(15000) }); if (r.ok) pret = await r.json(); } catch {} })();
-  const fh = k ? (async () => { try { cal = await finnhub(BAZA + "/calendar/earnings?symbol=" + encodeURIComponent(s) + "&from=" + de + "&to=" + azi + "&token=" + encodeURIComponent(k)); } catch {} })() : null;
-  const viitor = k ? (async () => { try { const v = await finnhub(BAZA + "/calendar/earnings?symbol=" + encodeURIComponent(s) + "&from=" + azi + "&to=" + iso(Date.now() + 120 * ZI) + "&token=" + encodeURIComponent(k)); const l = (Array.isArray(v && v.earningsCalendar) ? v.earningsCalendar : []).filter((e) => e && e.date && (e.hour === "amc" || e.hour === "bmo")).sort((a, b) => (a.date < b.date ? -1 : 1)); if (l.length) obicei = l[0].hour; } catch {} })() : null;
+  const fh = k ? (async () => { try { cal = await finnhub(BAZA + "/calendar/earnings?symbol=" + encodeURIComponent(s) + "&from=" + de + "&to=" + azi, k); } catch {} })() : null;
+  const viitor = k ? (async () => { try { const v = await finnhub(BAZA + "/calendar/earnings?symbol=" + encodeURIComponent(s) + "&from=" + azi + "&to=" + iso(Date.now() + 120 * ZI), k); const l = (Array.isArray(v && v.earningsCalendar) ? v.earningsCalendar : []).filter((e) => e && e.date && (e.hour === "amc" || e.hour === "bmo")).sort((a, b) => (a.date < b.date ? -1 : 1)); if (l.length) obicei = l[0].hour; } catch {} })() : null;
   await Promise.all([yahoo, fh, viitor, (async () => { nasdaq = await nasdaqRaportari(s); })()]);
   const peZi = {}, deschPeZi = {}, zile = [];
   const res = pret && pret.chart && pret.chart.result && pret.chart.result[0];

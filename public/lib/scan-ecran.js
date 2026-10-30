@@ -30,7 +30,9 @@ async function scanPorneste(fortat) {
       if (typeof acasa !== "undefined" && acasa.d && acasa.d.rezultate) return acasa.d.rezultate;
       var zi = new Date().toISOString().slice(0, 10); if (d.rezultate && d.rezultate.zi === zi) return d.rezultate;
       var l = (d.poz || []).filter(function (t) { return /_US_EQ$/.test(String(t)); }), o = { zi: zi, l: [] };
-      for (var i = 0; i < l.length && i < 12; i++) { try { var r = await getJSON("/api/t212?action=rezultate&ticker=" + encodeURIComponent(l[i])); if (r && r.data) o.l.push({ simbol: String(l[i]).split("_")[0].replace(/\d+$/, ""), data: r.data, sigur: !!r.sigur }); } catch (e) {} }
+      /* v100.272 (ideile auditului 29.10): cele până la 12 date câte 4 deodată (erau una după alta); o eroare lasă doar locul ei gol */
+      var rz = await ActiuniSemnale.inParalel(l.slice(0, 12), 4, function (tk) { return getJSON("/api/t212?action=rezultate&ticker=" + encodeURIComponent(tk)); });
+      rz.forEach(function (r, i) { if (r && r.data) o.l.push({ simbol: String(l[i]).split("_")[0].replace(/\d+$/, ""), data: r.data, sigur: !!r.sigur }); });
       return o;
     });
     scanSt.la = d.scan ? Date.now() : Date.now() - SCAN_MS + 30000;
@@ -199,7 +201,7 @@ function scRand(x) {
     + '<span class="' + scCls(x.rel) + '" title="față de ' + (x.fel === "c" ? "BTC" : "Nasdaq (QQQ)") + ' pe 7 zile, în puncte procentuale">' + scPct(x.rel).replace("%", " pp") + '</span>'   /* v100.175 (M14): puncte, nu % */
     + '<span>' + tr + '</span>'
     + '<span class="' + (x.rsi > 70 ? "warn" : x.rsi < 30 ? "bad" : "") + '">' + scNf(x.rsi, 0) + '</span>'
-    + '<span class="scMis ' + (x.mis >= 2 ? "warn" : "") + '">' + (x.mis == null ? "—" : scNf(x.mis, 1) + "×") + '</span>'
+    + '<span class="scMis ' + ((x.mare === true || (x.mare === undefined && x.mis >= 2)) ? "warn" : "") + '">'   /* v100.272: culoarea pe mișcarea mare comună (Scan.mare); fără ea, ca înainte */ + (x.mis == null ? "—" : scNf(x.mis, 1) + "×") + '</span>'
     + '<span class="' + (x.sparge ? "good" : "") + '">' + (x.sparge ? "sparge" : scPct(x.dMax20)) + '</span>'
     + '<span class="scScor">' + x.scor + '</span></div>'
     + (scanSt.deschis === id ? scDetaliu(x) : "");

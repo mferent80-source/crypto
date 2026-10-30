@@ -64,7 +64,7 @@
     var prob = [];
     try { if (niv && PR && b.length >= 120) { var v = PR.pentruActiune(b, { pret: pret, stop: niv.stopPozitie, tinta: niv.tintaPozitie, acum: acum, memo: {} }); prob = PR.randActiune ? PR.randActiune(v, null, {}) || [] : []; } } catch (e) { prob = []; }
     var sf = []; try { sf = CL ? CL.sfaturiPozitie(p, { inchise: [], acum: acum }) : []; } catch (e) { sf = []; }
-    var cons = CS.alcatuiesteActiune({ sem: sem, niv: niv, prob: prob, sfaturi: sf, plan: null, pret: pret, pretMediu: p.pretMediu, qty: p.qty, costLei: null, simbol: p.simbol, socoteala: null, semZi: null });
+    var cons = CS.alcatuiesteActiune({ sem: sem, niv: niv, prob: prob, sfaturi: sf, plan: null, pret: pret, pretMediu: p.pretMediu, qty: p.qty, costLei: null, simbol: p.simbol, socoteala: null, semZi: null, moneda: "USD" });   /* v100.272 (revizia): Salt convertește singur „$n” în moneda simbolului (saltInMoneda) - Consilierul îi dă prețul în „$”, ca înainte */
     return { p: p, st: st, sem: sem, niv: niv, prob: prob, sfaturi: sf, cons: cons };
   }
   root.Salt = { cauta: cauta, pozitieCurata: pozitieCurata, perecheFx: perecheFx, medieInMonedaSimbolului: medieInMonedaSimbolului, verificaMedie: verificaMedie, inMoneda: inMoneda, nr: nr, analizeaza: analizeaza, randTabel: randTabel, textTrend: textTrend, trendLa: trendLa, inchisa: inchisa };

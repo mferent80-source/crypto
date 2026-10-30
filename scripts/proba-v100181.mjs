@@ -39,10 +39,12 @@ await test("paleta de comenzi: „🧭 Busola ↗” cheamă deschideBusola() (n
   const app = citeste("public", "app.js"), i = app.indexOf("const COMMANDS=["), lista = app.slice(i, app.indexOf("];", i));
   assert.match(lista, /\["🧭 Busola ↗ \(moneda ta\)","busola","deschideBusola\(\)"\]/);
   const r = app.slice(app.indexOf("function renderCommandPalette("), app.indexOf("\n", app.indexOf("function renderCommandPalette(")));
-  const doc = { items: "" }, c = { $: (id) => (id === "commandInput" ? { value: "busola" } : { set innerHTML(v) { doc.items = v; } }), COMMANDS: null };
+  /* v100.272: renderCommandPalette pune și aria-activedescendant pe câmp (paleta din tastatură) ⇒ câmpul-stub are setAttribute / removeAttribute */
+  const camp = (value) => ({ value, setAttribute() {}, removeAttribute() {} });
+  const doc = { items: "" }, c = { $: (id) => (id === "commandInput" ? camp("busola") : { set innerHTML(v) { doc.items = v; } }), COMMANDS: null };
   vm.createContext(c); vm.runInContext(lista.replace("const COMMANDS=", "COMMANDS=") + "];" + r, c);
   c.renderCommandPalette(); assert.match(doc.items, /data-action-click="toggleCommandPalette\(false\);deschideBusola\(\)">🧭 Busola ↗ \(moneda ta\)</);
-  c.$ = (id) => (id === "commandInput" ? { value: "tablou" } : { set innerHTML(v) { doc.items = v; } });
+  c.$ = (id) => (id === "commandInput" ? camp("tablou") : { set innerHTML(v) { doc.items = v; } });
   c.renderCommandPalette(); assert.match(doc.items, /toggleCommandPalette\(false\);navTo\(&#x27;tabloubot&#x27;,false\)/);
 });
 await test("stilul: 🧭 din Sugestii are țintă de deget (min 32 px) și nu lățește rândul", () => {

@@ -15,7 +15,9 @@ console.log("\nV100.166 · „Săptămâna pieței” în Jurnalul de trade · p
 const app = citeste("public", "app.js"), acasa = citeste("public", "lib", "acasa.js");
 
 await test("Jurnalul aduce „Săptămâna pieței” de acasă (action=raportPiata), lângă raportul de duminică", () => {
-  assert.match(app, /getJSON\("\/api\/istoric-bot\?action=raportPiata"\)/);
+  /* v100.272: cererea pleacă odată cu boții, prin luat() = getJSON cu eroarea prinsă (null la eroare, ca înainte) */
+  assert.match(app, /var luat=function\(u\)\{return getJSON\(u\)\.then\(/); assert.match(app, /luat\("\/api\/istoric-bot\?action=raportPiata"\)/);
+  assert.match(app, /jtStare\.raportPiata=rpp\.ok\?\(rpp\.v&&rpp\.v\.raport\|\|null\):null;/);
   assert.match(app, /jtStare\.raportPiata=/);
 });
 await test("Jurnalul o desenează sub raportul de duminică, cu titlul și rândurile ei (escapate), doar când există", () => {
