@@ -888,13 +888,15 @@ function setupQualityCurrent(){
  const overall=clamp(.24*trend+.18*entry+.15*liq+.18*riskQ+.15*micro+.10*data-earningsPenalty),grade=researchGrade(overall);
  let blocker="None";if(tm.direction==="WAIT")blocker="No directional setup";else if(earningsDays!=null&&earningsDays>=0&&earningsDays<=2)blocker=`Earnings risk · ${earningsDays}d`;else if(Math.max(sm.long,sm.short)<appSettings().signalMin)blocker="Confidence below threshold";else if(q.smc?.trap)blocker="Liquidity trap";else if(riskQ<50)blocker="Weak risk/reward";else if(micro<35)blocker="Microstructure opposed";
  const rel=journalReliabilityForCoin(coin(st.symbol),q.regime,st.source||analysisSource());
- return {trend,entry,liq,risk:riskQ,micro,data,overall,grade,blocker,netR:rel.n>=20?rel.exp:null,relN:rel.n,earningsDays}
+ /* v100.273 (el: „Spune pe ecran”): buildTradeMap pune TP2 la 1,8 × stopul ⇒ riskQ iese mereu 81,8 - nota rămâne aceeași, riskConstr o spune pe ecran */
+ const riskConstr=Number.isFinite(+tm.rr2)&&+tm.rr2>0&&Math.abs(rr-tm.rr2)<1e-6;
+ return {trend,entry,liq,risk:riskQ,riskConstr,micro,data,overall,grade,blocker,netR:rel.n>=20?rel.exp:null,relN:rel.n,earningsDays}
 }
 function setQuality(id,val){if($(id))$(id).textContent=Math.round(val)+"/100";const m=$(id.replace(/^sq/,"sqm"));if(m)m.style.width=clamp(val)+"%"}
 function renderSetupQuality(){
  const z=setupQualityCurrent();if(!z){if($("setupGradeBadge"))$("setupGradeBadge").textContent="NO SETUP";return}
  $("setupGradeBadge").textContent=`GRADE ${z.grade} · ${z.overall.toFixed(0)}`;$("setupGradeBadge").className="validationBadge "+gradeClass(z.grade);
- setQuality("sqTrend",z.trend);setQuality("sqEntry",z.entry);setQuality("sqLiquidity",z.liq);setQuality("sqRisk",z.risk);setQuality("sqMicro",z.micro);setQuality("sqData",z.data);
+ setQuality("sqTrend",z.trend);setQuality("sqEntry",z.entry);setQuality("sqLiquidity",z.liq);setQuality("sqRisk",z.risk);if($("sqRisk")){if(z.riskConstr){$("sqRisk").textContent+=" · prin construcție";$("sqRisk").setAttribute("title","Ținta TP2 e pusă la 1,8 × distanța până la stop: partea asta a notei iese mereu "+Math.round(z.risk)+"/100 și nu măsoară piața.")}else $("sqRisk").removeAttribute("title")}   /* v100.273 */setQuality("sqMicro",z.micro);setQuality("sqData",z.data);
  $("setupBlocker").textContent=z.blocker;$("setupNetR").textContent=Number.isFinite(z.netR)?`${z.netR.toFixed(2)} R · ${z.relN} n`:"Insufficient empirical sample"
 }
 function renderDailyDesk(){
