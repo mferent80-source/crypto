@@ -34,25 +34,25 @@ const ASCII = /(^|[\s(·:])-\d/;
 await test("partea liniștită: sub 10 boți n-am aflat, 10 boți au suma, zero e niciun bot", () => {
   const p = Date.parse("2026-10-20T12:00:00+03:00");
   const putini = AC.masuraFranei([1, 2, 3].map((i) => ({ pornit: p, baza: 7777, rezultat: -3 })), [linistita("2026-10-20")]);
-  assert.match(putini.text, /Când gura ar fi rămas „Aș porni”: 3 boți, n-am aflat\./);
+  assert.match(putini.text, /În zilele fără frână \(1 zi\): 3 boți, prea puțini ca să-i adun\./);
   assert.doesNotMatch(putini.text, /7\.777|23\.331|7777/);
   assert.match(putini.text, /nu arată că frâna face bani/);
-  assert.match(putini.text, /Eșantion insuficient/);
+  assert.match(putini.text, /Prea puține zile ca să tragem o concluzie/);
   assert.equal(putini.baza, null);
   const zece = Array.from({ length: 10 }, () => ({ pornit: p, baza: 12.5, rezultat: -1.5 }));
   const destul = AC.masuraFranei(zece, [linistita("2026-10-20")]);
-  assert.match(destul.text, /Când gura ar fi rămas „Aș porni”: suma pusă 125,00, rezultatul adunat −15,00\./);
-  assert.doesNotMatch(destul.text, /Suma pusă/);
+  assert.match(destul.text, /În zilele fără frână \(1 zi\): 125,0 puși, rezultat −15,0\./);
+  assert.doesNotMatch(destul.text, /zilele cu frână/);
   assert.doesNotMatch(destul.text, ASCII);
   const gol = AC.masuraFranei([], [linistita("2026-10-20"), ziua]);
-  assert.match(gol.text, /Când gura ar fi rămas „Aș porni”: niciun bot\./);
-  assert.doesNotMatch(gol.text, /Când gura ar fi rămas „Aș porni”: \d/);
+  assert.match(gol.text, /În zilele fără frână \(1 zi\): niciun bot\./);
+  assert.doesNotMatch(gol.text, /În zilele fără frână \(1 zi\): \d/);
   const faraZi = AC.masuraFranei([{ pornit: Date.parse("2026-10-21T12:00:00+03:00"), baza: 100, rezultat: -4 }], [ziua]);
-  assert.match(faraZi.text, /Nicio zi salvată în care gura ar fi rămas „Aș porni”\./);
+  assert.match(faraZi.text, /Nicio zi salvată fără frână\./);
   const spart = zece.slice(); spart[0] = { pornit: p, rezultat: -1.5 };
   const partial = AC.masuraFranei(spart, [linistita("2026-10-20")]);
-  assert.match(partial.text, /n-am aflat suma pusă, baza lipsește/);
-  assert.doesNotMatch(partial.text, /112,50|125,00/);
+  assert.match(partial.text, /nu știu suma pusă, lipsește la 1 bot/);
+  assert.doesNotMatch(partial.text, /112,5|125,0/);
 });
 
 await test("ziua fără oră rămâne în suma veche; ziua cu oră se desparte și nu intră în m.baza", () => {
@@ -60,11 +60,11 @@ await test("ziua fără oră rămâne în suma veche; ziua cu oră se desparte �
   assert.equal(faraOra.baza, 100);
   assert.equal(faraOra.rezultat, -4);
   assert.equal(faraOra.boti, 1);
-  assert.match(faraOra.text, /Suma pusă în boții porniți în zilele acelea e 100,00\./);
-  assert.match(faraOra.text, /Rezultatul lor adunat e −4,00\./);
-  assert.match(faraOra.text, /Zilele astea n-au ora pozei\./);
-  assert.match(faraOra.text, /Eșantion insuficient/);
-  assert.doesNotMatch(faraOra.text, /, n-am aflat/);
+  assert.match(faraOra.text, /Boții porniți în zilele cu frână: 100,0 puși, rezultat −4,0\./);
+  assert.doesNotMatch(faraOra.text, /Rezultatul lor/);   /* v100.275: rezultatul stă în aceeași frază cu suma */
+  assert.match(faraOra.text, /Nu știu ora frânei în zilele astea\./);
+  assert.match(faraOra.text, /Prea puține zile ca să tragem o concluzie/);
+  assert.doesNotMatch(faraOra.text, /prea puțini ca să-i adun/);
   const la = Date.parse("2026-10-21T09:00:00+03:00");
   const cuOra = Object.assign({ la }, ziua);
   const dupa = Array.from({ length: 10 }, () => ({ pornit: la, baza: 12.5, rezultat: -1.5 }));
@@ -72,11 +72,11 @@ await test("ziua fără oră rămâne în suma veche; ziua cu oră se desparte �
   const sp = AC.masuraFranei(dupa.concat(inainte), [cuOra]);
   assert.equal(sp.baza, null);
   assert.equal(sp.boti, 0);
-  assert.match(sp.text, /După ora pozei: suma pusă 125,00, rezultatul adunat −15,00\./);
-  assert.match(sp.text, /Înainte de poză, în aceeași zi: 1 bot, n-am aflat\./);
+  assert.match(sp.text, /Boții pe care i-ar fi oprit: 125,0 puși, rezultat −15,0\./);
+  assert.match(sp.text, /Boții din aceleași zile, porniți mai devreme: 1 bot, prea puțini ca să-i adun\./);
   assert.doesNotMatch(sp.text, /8\.888|8888/);
-  assert.doesNotMatch(sp.text, /Niciun bot din cartea dată n-a pornit/);
-  assert.doesNotMatch(sp.text, /Suma pusă/);
+  assert.doesNotMatch(sp.text, /Niciun bot n-a pornit într-o zi cu frână/);
+  assert.doesNotMatch(sp.text, /zilele cu frână:/);
   const vechi = { z: "2026-10-20", pauza: true, pauzaN: 3, raportStare: "ok", eveniment: "", raport: { valoare: { total: 100000 }, risc: { var95: 1000 } } };
   const amestec = AC.masuraFranei([
     { pornit: Date.parse("2026-10-20T12:00:00+03:00"), baza: 100, rezultat: -4 },
@@ -86,8 +86,8 @@ await test("ziua fără oră rămâne în suma veche; ziua cu oră se desparte �
   assert.equal(amestec.baza, 100);
   assert.equal(amestec.rezultat, -4);
   assert.equal(amestec.boti, 1);
-  assert.match(amestec.text, /Suma pusă/);
-  assert.match(amestec.text, /Zilele fără ora pozei rămân în suma de mai sus\./);
+  assert.match(amestec.text, /Boții porniți în zilele cu frână: 100,0 puși, rezultat −4,0\./);
+  assert.match(amestec.text, /Zilele fără ora frânei sunt în suma de mai sus\./);
   assert.doesNotMatch(amestec.text, /8\.888|7\.777|8888/);
   assert.match(amestec.text, /nu arată că frâna face bani/);
   const loc = [{ z: "2026-10-21", pauza: true, raportStare: "ok", eveniment: "", la: 1000 }];
@@ -96,8 +96,8 @@ await test("ziua fără oră rămâne în suma veche; ziua cu oră se desparte �
   const zece = Array.from({ length: 10 }, (_, i) => ({ z: "2026-09-" + String(i + 1).padStart(2, "0"), pauza: true, pauzaN: 3, raportStare: "ok", eveniment: "", raport: { valoare: { total: 1 }, risc: { var95: 0 } } }));
   const mult = AC.masuraFranei([], zece);
   assert.equal(mult.insuficient, false);
-  assert.doesNotMatch(mult.text, /Eșantion insuficient/);
-  assert.match(mult.text, /Zilele astea n-au ora pozei\./);
+  assert.doesNotMatch(mult.text, /Prea puține zile ca să tragem o concluzie/);
+  assert.match(mult.text, /Nu știu ora frânei în zilele astea\./);
 });
 
 await test("prima poză ține ora; finanțarea deschisă e o celulă, nu o a doua scădere", () => {

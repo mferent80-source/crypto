@@ -93,16 +93,16 @@ await test("măsura spune n-am aflat fără zile complete și nu inventează sum
   assert.equal(m.schimbate, 1);
   assert.equal(m.baza, 100);
   assert.equal(m.rezultat, -4);
-  assert.match(m.text, /Suma pusă/);
-  assert.match(m.text, /Rezultatul lor adunat/);
+  assert.match(m.text, /Boții porniți în zilele cu frână: 100,0 puși, rezultat −4,0\./);
+  assert.doesNotMatch(m.text, /gura|Poza|Cartea|Partea liniștită|100,00/);   /* v100.275: fără vorbele vechi, o zecimală */
   assert.match(m.text, /nu arată că frâna face bani/);
-  assert.match(m.text, /Eșantion insuficient/);
+  assert.match(m.text, /Prea puține zile ca să tragem o concluzie/);
   const fara = AC.masuraFranei([{ pornit, rezultat: -4 }], [ziua]);
   assert.equal(fara.baza, null);
-  assert.match(fara.text, /N-am aflat suma pusă/);
+  assert.match(fara.text, /Nu știu suma pusă: lipsește la 1 bot\./);
   const faraCarte = AC.masuraFranei(null, [ziua]);
   assert.equal(faraCarte.baza, null);
-  assert.match(faraCarte.text, /Cartea închisă n-a fost dată/);
+  assert.match(faraCarte.text, /Nu am lista boților închiși, deci nu știu suma pusă\./);
   const linistita = { z: "2026-10-21", pauza: false, raportStare: "ok", eveniment: "", raport: { valoare: { total: 100000 }, risc: { var95: 1000 } } };
   const zero = AC.masuraFranei([{ pornit, baza: 50, rezultat: 3 }], [linistita]);
   assert.equal(zero.schimbate, 0);
@@ -111,7 +111,7 @@ await test("măsura spune n-am aflat fără zile complete și nu inventează sum
   const destul = AC.masuraFranei([], zece);
   assert.equal(destul.schimbate, 10);
   assert.equal(destul.insuficient, false);
-  assert.doesNotMatch(destul.text, /Eșantion insuficient/);
+  assert.doesNotMatch(destul.text, /Prea puține zile ca să tragem o concluzie/);
   const ms = acasa.slice(acasa.indexOf("function masuraFranei"), acasa.indexOf("// socoteala alertelor"));
   assert.doesNotMatch(ms, /yahoo|Obiceiuri|franaIstoric|0\.04/);
   assert.match(ae, /radar-frana-zile-v1/);

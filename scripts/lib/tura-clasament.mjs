@@ -7,6 +7,13 @@
 // la 1,6 s intre cereri raman ~35/min. O lista cu >20% goluri NU se urca.
 // v101.55 (ideea 2): numărătorile din jurnal - „1 bot”, „25 de boți” (TextRo.cate; rezerva știe aceeași regulă)
 function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
+const CAMPURI_RUTA = ["simbol", "stare", "dir", "tarie", "revenire", "volum", "pret", "latime", "pas", "grile", "profitGrila", "traversariZi", "scor"];
+export function deTrimis(m) {
+  const o = {};
+  for (const k of CAMPURI_RUTA) if (m && k in m) o[k] = m[k];
+  o.regim = m && m.regim && typeof m.regim === "object" ? { r4h: m.regim.r4h, r24h: m.regim.r24h, miscare: !!m.regim.miscare } : null;
+  return o;
+}
 export async function turaClasament(d) {
   const top = d.top || 100, pauzaMs = d.pauzaMs == null ? 1600 : d.pauzaMs, maxEsecuri = d.maxEsecuri || 15;
   const t0 = Date.now();
@@ -34,7 +41,10 @@ export async function turaClasament(d) {
     d.jurnal("clasament NEURCAT:", rz.faraDate, "fara date din", monede.length);
     return { urcat: false, monede, rz, durataS: Math.round((Date.now() - t0) / 1000) };
   }
-  const r = await d.trimite("/api/istoric-bot?action=clasament", { la: Date.now(), monede });
+  // v101.149 (30.10, el: „piața azi nu arată nimic”): din v101.145 regimul poartă și `mare` (~200 de semne pe monedă) ⇒ 100 de monede
+  // treceau de plafonul de 64 KB al rutei (413 „Corp prea mare” la fiecare tură, Acasă „FĂRĂ DATE”). Se trimit doar câmpurile pe care
+  // ruta le păstrează (functions/api/istoric-bot.js, action=clasament); `monede` întoarse rămân întregi.
+  const r = await d.trimite("/api/istoric-bot?action=clasament", { la: Date.now(), monede: monede.map(deTrimis) });
   const urcat = !!(r && r.ok);
   d.jurnal("clasament:", cate(monede.length, "monedă", "monede"), "in", Math.round((Date.now() - t0) / 1000) + " s;", rz.evita, "de evitat,", cate(rz.candidati, "candidat", "candidați") + ",", rz.faraDate, "fara date;", urcat ? "urcat" : "NEURCAT");
   return { urcat, monede, rz, durataS: Math.round((Date.now() - t0) / 1000) };

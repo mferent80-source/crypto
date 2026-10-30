@@ -55,11 +55,11 @@ await test("funcția tot spune lipsa; ecranul o omite până există o zi comple
   ctx.acFranaZileCitite = () => [ziL];
   const lin = ctx.acMasuraLin();
   assert.match(lin, /<p class="acMut">/);
-  assert.match(lin, /Pe 0 zile salvate/);
+  assert.match(lin, /n-ar fi zis „nu porni” în nicio zi/);
   assert.doesNotMatch(lin, /N-am aflat: zilele vechi/);
   const sec = ctx.ciMasuraHtml({ masura: AC.masuraFranei([], [ziL]) });
   assert.match(sec, /Măsura frânei pe cartea închisă/);
-  assert.match(sec, /Pe 0 zile salvate/);
+  assert.match(sec, /n-ar fi zis „nu porni” în nicio zi/);
   assert.doesNotMatch(sec, /N-am aflat: zilele vechi/);
   assert.match(ae, /m\.complete === 0/);
   assert.match(cont, /m\.complete === 0/);
