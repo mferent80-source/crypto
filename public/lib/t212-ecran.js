@@ -1562,7 +1562,9 @@ async function contTotAsigura() {
     if (!t212.piata) { try { var pz = await getJSON("/api/stiri?action=piata"); t212.piata = t212PiataDin(pz); t212.fg = pz && pz.fg || null; } catch (e) {} }
     // v89: botii inchisi (istoricul lui pe monede) si stirile despre moneda botului de pe Tablou
     // v100.25: toata istoria (arhiva de acasa + prima pagina Pionex), nu doar primii 10
-    if (!contTot.inchise && typeof JurnalTrade !== "undefined") { try { var bi = (typeof jtAduBoti === "function" ? await jtAduBoti() : null) || []; contTot.inchise = JurnalTrade.din(bi); contTot.alteInchise = JurnalTrade.alte(bi); } catch (e) { contTot.inchise = []; contTot.alteInchise = []; } }
+    // v100.277 (el: „față de ieri pare blocat”): reîmprospătați la 5 minute - înainte o singură dată pe deschiderea paginii, iar boții închiși
+    // de atunci lipseau din „Boții tăi” până la F5; o citire picată păstrează lista avută (nu o golește)
+    if ((!contTot.inchise || Date.now() - (contTot.inchiseLa || 0) > 5 * 60000) && typeof JurnalTrade !== "undefined") { try { var bi = typeof jtAduBoti === "function" ? await jtAduBoti() : null; if (bi) { contTot.inchise = JurnalTrade.din(bi); contTot.alteInchise = JurnalTrade.alte(bi); } else if (!contTot.inchise) { contTot.inchise = []; contTot.alteInchise = []; } contTot.inchiseLa = Date.now(); } catch (e) { if (!contTot.inchise) { contTot.inchise = []; contTot.alteInchise = []; } contTot.inchiseLa = Date.now(); } }
     if (Date.now() - contTot.clasamentLa > 10 * 60000) { try { var cl = await getJSON("/api/istoric-bot?action=clasament"); contTot.clasament = cl && cl.clasament || null; contTot.clasamentLa = Date.now(); } catch (e) {} }
     if (Date.now() - (contTot.saltLa || 0) > 5 * 60000) { try { var sr = await getJSON("/api/t212?action=saltRezumat"); contTot.salt = sr && sr.rezumat || null; contTot.saltLa = Date.now(); } catch (e) {} }   /* v100.126: Salt lângă T212 (rezumatul colectorului) */
     if (Date.now() - (contTot.sugestiiLa || 0) > 10 * 60000) { try { contTot.sugestii = await getJSON("/api/istoric-bot?action=sugestii"); contTot.sugestiiLa = Date.now(); } catch (e) {} }   /* v100.85 (reveniri + short) */

@@ -1,11 +1,12 @@
 {
-  "version": "v100.276",
-  "badge": "v100.276 · DE CE LIPSEȘTE",
+  "version": "v100.277",
+  "badge": "v100.277 · BOȚII TĂI",
   "engineContract": "54.1",
   "dataSchema": 54,
   "baseRelease": "v77.4 · TABLOUL BOTULUI",
   "releaseType": "valul de reparatii din revizia finala pe ansamblu: marginStatus/riskStatus citite, telefon, scurgere WS/ceas la iesire prin tab-uri, ATR adevarat, pret viu, istoric fara pret inghetat, sortare dupa timp, comision nemasurabil, durata la margine",
   "features": {
+    "boti277": "Boții tăi (30.10.2026, el: „față de ieri pare blocat, aș pune mai multe date acolo, statistici”): „Față de ieri dimineață” adaugă boții porniți și închiși după poza de ieri (lipseau cu totul; poza ține acum și ora ei, colector v101.151); cardul arată ultimul bot închis când nu e niciunul pornit, ziua de azi (câți, pe plus / pe minus, net, cel mai bun / slab, durata tipică) și ultimele 7 zile față de cele 7 dinainte - pe net, descriptiv; lista boților închiși se reîmprospătează la 5 min (înainte o dată pe deschidere). Proba v100277.",
     "lipsa276": "Ideile de după v100.275 (30.10.2026, el: „ok fă idei”): (1) Piața azi spune de ce lipsește clasamentul - colectorul urcă starea turelor (câte au picat la rând, de când, motivul) pe action=clasamentStare; (2) alertă după 3 ture picate la rând (o dată) + „a revenit”, mărimea corpului în jurnal; (3) plafonul corpului într-un singur loc (functions/_shared/plafon-corp.js), aplicat de rută și verificat de colector înainte de trimitere - peste plafon nu pleacă (eroarea spune X KB din Y KB), de la 75% alertă o dată la 24 h pe acțiune. Proba v100276.",
     "piata275": "Piața azi (30.10.2026, el: „sună cam ciudat pe descrierea asta și nici nu arată nimic”): clasamentul pieței era refuzat de server din 29.10 19:24 (413 „Corp prea mare”: din v101.145 regimul fiecărei monede poartă și `mare`, 100 de monede treceau de 64 KB) ⇒ colectorul v101.149 trimite doar câmpurile pe care ruta le păstrează; măsura frânei spusă pe limba lui (fără „gura”, „poza înghețată”, „partea liniștită”), rezultatele cu o zecimală. Proba v100275.",
     "idei274": "Ideile rămase (30.10.2026, el: „ok, continua”): pagina botului folosește memoria comună a lumânărilor de 15 min (a fișei Grid și a paginii Monte Carlo) - o pagină Pionex nouă în loc de 6 când moneda e deja adusă; fișa din Tablou spune când istoricul de 15 min e scurt, ca fișa Grid; „Regulile tale” spun pragul orar și în săptămânile cu decalaj de oră („după 18 (17 în săptămânile cu decalaj de oră)”) - proba proba-v100274.",

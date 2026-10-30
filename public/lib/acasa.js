@@ -282,11 +282,62 @@ var Acasa = (function () {
       var s = 0, ok = true;
       Object.keys(A).forEach(function (id) { var a = nr(A[id]), b = nr(B[id]); if (a === null) ok = false; else s += a - (b === null ? 0 : b); });
       Object.keys(B).forEach(function (id) { if (A[id] !== undefined) return; var f = inc[id], b = nr(B[id]); if (f === null || f === undefined || b === null) ok = false; else s += f - b; });
+      // v100.277 (30.10, el: „boții tăi - față de ieri pare blocat”): boții porniți DUPĂ poza de ieri și închiși până acum nu erau în niciuna din
+      // poze ⇒ lipseau cu totul (30.10: 8 boți închiși, toți pe lângă cifră). Acum intră cu netul lor întreg. Momentul pozei: `la` (de la
+      // v101.151), altfel ora 9 a zilei ei (colectorul o face la prima tură după 9). Fără lista boților închiși: ca înainte.
+      var tPoza = nr(ier.la) || ora9Ro(ier.zi), nDupa = 0;
+      if (Array.isArray(inchise) && tPoza) inchise.forEach(function (t) {
+        var id = t && t.id ? String(t.id) : "", ti = t ? nr(t.inchis) : null, f = t ? nr(t.net !== undefined && t.net !== null ? t.net : t.rezultat) : null;
+        if (!id || A[id] !== undefined || B[id] !== undefined || ti === null || ti <= tPoza || f === null) return;
+        s += f; nDupa++;
+      });
       boti = ok ? Math.round(s * 100) / 100 : null;
     } else if (azi.botiPeId && ier.botiPeId === undefined) boti = null;
     else boti = d("botiTotal");
-    var o = { boti: boti, t212: d("t212Total"), de: ier.zi };
+    var o = { boti: boti, t212: d("t212Total"), de: ier.zi, inchiseDupa: typeof nDupa === "number" ? nDupa : 0 };
     return o.boti === null && o.t212 === null ? null : o;
+  }
+  // ora 9 (ora României) a unei zile „AAAA-LL-ZZ”, în ms - decalajul de vară / iarnă luat din Intl, nu scris de mână
+  function ora9Ro(zi) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(zi || "")); if (!m) return null;
+    var u = Date.UTC(+m[1], +m[2] - 1, +m[3], 9);
+    try {
+      var p = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Bucharest", hour: "2-digit", hourCycle: "h23" }).formatToParts(new Date(u)), h = 9;
+      for (var i = 0; i < p.length; i++) if (p[i].type === "hour") h = +p[i].value;
+      return u - (h - 9) * 3600000;
+    } catch (e) { return u - 2 * 3600000; }
+  }
+  // v100.277 (el: „aș pune mai multe date acolo, statistici”): boții ÎNCHIȘI pe o fereastră - câți, pe plus / pe minus (pe NET, după
+  // comisioane și funding, ca Tabloul și Jurnalul), netul, cel mai bun / cel mai slab, durata tipică (mediana: duratele lui sunt foarte
+  // strâmbe, 1 min … 13 h). Descrie ce s-a întâmplat; nu prezice nimic. inchise: JurnalTrade.din(...) - {id, moneda, dir, levier, pornit, inchis, net}
+  function netTrade(t) { return t ? nr(t.net !== undefined && t.net !== null ? t.net : t.rezultat) : null; }
+  function perioadaBoti(inchise, deLa, panaLa) {
+    var l = (Array.isArray(inchise) ? inchise : []).filter(function (t) { var ti = t ? nr(t.inchis) : null; return ti !== null && ti > deLa && ti <= panaLa && netTrade(t) !== null; });
+    var o = { n: l.length, plus: 0, minus: 0, net: 0, bun: null, slab: null, durataMin: null };
+    if (!l.length) return o;
+    var dur = [];
+    l.forEach(function (t) {
+      var v = netTrade(t); o.net += v; if (v > 0) o.plus++; else if (v < 0) o.minus++;
+      if (!o.bun || v > netTrade(o.bun)) o.bun = t; if (!o.slab || v < netTrade(o.slab)) o.slab = t;
+      var p0 = nr(t.pornit); if (p0 !== null && nr(t.inchis) >= p0) dur.push((t.inchis - p0) / 60000);
+    });
+    o.net = Math.round(o.net * 100) / 100;
+    if (dur.length) { dur.sort(function (a, b) { return a - b; }); var k = Math.floor(dur.length / 2); o.durataMin = dur.length % 2 ? dur[k] : (dur[k - 1] + dur[k]) / 2; }
+    return o;
+  }
+  // azi (ziua României de acum) + ultimele 7 zile + cele 7 dinainte + ultimul bot închis
+  function botiStatistici(inchise, acum) {
+    var a = nr(acum) || Date.now(), z = ziBucMs(a), m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(z), zi0 = null;
+    if (m) { var u = Date.UTC(+m[1], +m[2] - 1, +m[3], 0), n9 = ora9Ro(z); zi0 = n9 !== null ? n9 - 9 * 3600000 : u; }
+    var l = Array.isArray(inchise) ? inchise : [], ult = null;
+    l.forEach(function (t) { var ti = t ? nr(t.inchis) : null; if (ti !== null && ti <= a && netTrade(t) !== null && (!ult || ti > ult.inchis)) ult = t; });
+    return { azi: zi0 !== null ? perioadaBoti(l, zi0, a) : null, sapt: perioadaBoti(l, a - 7 * 86400000, a), saptAnt: perioadaBoti(l, a - 14 * 86400000, a - 7 * 86400000), ultim: ult };
+  }
+  // „3 min”, „65 min” → „1,1 h”, „13 h” (o zecimală sub 10 h)
+  function durataScurta(min) {
+    var v = nr(min); if (v === null) return "—";
+    if (v < 60) return Math.max(0, Math.round(v)) + " min";
+    var h = v / 60; return (h < 10 ? h.toFixed(1).replace(".", ",") : String(Math.round(h))) + " h";
   }
   // raportul de duminica seara (Discord): saptamana care a trecut + ce vine + ce as face
   function semn(v, z) { return v === null || v === undefined || !isFinite(v) ? "—" : (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(z == null ? 1 : z).replace(".", ",") + "%"; }
@@ -508,6 +559,6 @@ var Acasa = (function () {
     return o;
   }
 
-  return { clasamentLipsa: clasamentLipsa, textCorelatie: textCorelatie, SECTOR: SECTOR, sectoare: sectoare, ziuaTa: ziuaTa, raportSaptamana: raportSaptamana, socotealaAlerte: socotealaAlerte, miscareTipica: miscareTipica, fundingPiata: fundingPiata, fundingAtentie: fundingAtentie, schimbari: schimbari, vreme: vreme, miscari: miscari, fg: fg, fgValid: fgValid, largime: largime, ro: ro, rezumatActiune: rezumatActiune, largimeNdx: largimeNdx, vremeBursa: vremeBursa, corelatie: corelatie, calendar: calendar, MAG7: MAG7, franaVerb: franaVerb, frazaPauza: frazaPauza, masuraFranei: masuraFranei, unesteZileFrana: unesteZileFrana };
+  return { perioadaBoti: perioadaBoti, botiStatistici: botiStatistici, durataScurta: durataScurta, ora9Ro: ora9Ro, clasamentLipsa: clasamentLipsa, textCorelatie: textCorelatie, SECTOR: SECTOR, sectoare: sectoare, ziuaTa: ziuaTa, raportSaptamana: raportSaptamana, socotealaAlerte: socotealaAlerte, miscareTipica: miscareTipica, fundingPiata: fundingPiata, fundingAtentie: fundingAtentie, schimbari: schimbari, vreme: vreme, miscari: miscari, fg: fg, fgValid: fgValid, largime: largime, ro: ro, rezumatActiune: rezumatActiune, largimeNdx: largimeNdx, vremeBursa: vremeBursa, corelatie: corelatie, calendar: calendar, MAG7: MAG7, franaVerb: franaVerb, frazaPauza: frazaPauza, masuraFranei: masuraFranei, unesteZileFrana: unesteZileFrana };
 })();
 if (typeof globalThis !== "undefined") globalThis.Acasa = Acasa;

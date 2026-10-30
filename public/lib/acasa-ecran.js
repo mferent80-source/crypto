@@ -387,6 +387,36 @@ function acMasuraLin() {
   if (!m || !m.text || m.complete === 0 || String(m.text).indexOf("N-am aflat:") === 0) return "";
   return '<p class="acMut">' + escapeHtml(m.text) + "</p>";
 }
+// v100.277 (30.10, el: „boții tăi - față de ieri pare blocat, aș pune mai multe date, statistici”): el pornește ~8 boți pe zi, mulți ținuți
+// minute; cardul arăta doar boții activi (des „Niciun bot pornit acum”). Acum: ultimul închis, ziua de azi și ultimele 7 zile (cu cele 7
+// dinainte), toate pe NET (după comisioane și funding, ca Tabloul). Descriu ce s-a întâmplat, nu prezic.
+function acUsd(v) { var x = Math.round(Number(v) * 10) / 10; return isFinite(x) ? (x > 0 ? "+" : x < 0 ? "−" : "") + Math.abs(x).toFixed(1).replace(".", ",") + " USDT" : "—"; }   /* rotunjit întâi: fără „+0,0” / „−0,0” */
+function acClsUsd(v) { var x = Number(v); return !isFinite(x) || Math.abs(x) < 0.05 ? "" : x > 0 ? "good" : "bad"; }
+function acNumeTrade(t) { return String(t && t.moneda || "?") + (t && t.dir ? " " + t.dir : "") + (t && t.levier ? " " + t.levier + "×" : ""); }
+function acUltimInchis(t) {
+  if (!t) return "";
+  var cand = new Date(t.inchis).toLocaleString("ro-RO", { weekday: "short", hour: "2-digit", minute: "2-digit" });
+  return '<div class="acLin"><span>Ultimul închis: ' + escapeHtml(acNumeTrade(t)) + ' <span class="acMut">· a ținut ' + escapeHtml(Acasa.durataScurta((t.inchis - t.pornit) / 60000)) + " · " + escapeHtml(cand) + '</span></span><b class="' + acClsUsd(t.net) + '">' + acUsd(t.net) + "</b></div>";
+}
+function acBotiStatHtml(inchise, acum) {
+  if (!Array.isArray(inchise)) return '<p class="acMut">Aduc boții închiși…</p>';
+  var st = Acasa.botiStatistici(inchise, acum), a = st.azi, s7 = st.sapt, p7 = st.saptAnt, h = "";
+  var cifre = function (o) { return acCate(o.n, "bot închis", "boți închiși") + " · " + o.plus + " pe plus, " + o.minus + " pe minus"; };
+  h += '<div class="acEt" style="margin-top:6px">Azi</div>';
+  if (!a || !a.n) h += '<p class="acMut">Niciun bot închis azi.</p>';
+  else {
+    h += '<div class="acLin"><span>' + escapeHtml(cifre(a)) + '</span><b class="' + acClsUsd(a.net) + '">' + acUsd(a.net) + "</b></div>";
+    if (a.n > 1) h += '<div class="acLin"><span>Cel mai bun · cel mai slab</span><b>' + escapeHtml(a.bun.moneda + " " + acUsd(a.bun.net).replace(" USDT", "") + " · " + a.slab.moneda + " " + acUsd(a.slab.net).replace(" USDT", "")) + "</b></div>";
+    h += '<div class="acLin"><span>Cât țin de obicei</span><b>' + escapeHtml(Acasa.durataScurta(a.durataMin)) + "</b></div>";
+  }
+  h += '<div class="acEt" style="margin-top:6px">Ultimele 7 zile</div>';
+  if (!s7.n) h += '<p class="acMut">Niciun bot închis în 7 zile.</p>';
+  else {
+    h += '<div class="acLin"><span>' + escapeHtml(cifre(s7)) + '</span><b class="' + acClsUsd(s7.net) + '">' + acUsd(s7.net) + "</b></div>";
+    if (p7.n) h += '<div class="acLin"><span>Cele 7 zile dinainte <span class="acMut">· ' + escapeHtml(acCate(p7.n, "bot", "boți")) + '</span></span><b class="' + acClsUsd(p7.net) + '">' + acUsd(p7.net) + "</b></div>";
+  }
+  return h + '<p class="acMut">Ce s-a întâmplat, nu ce urmează' + (s7.n && s7.n < 30 ? "; prea puțini boți ca să tragi concluzii" : "") + ".</p>";
+}
 function acasaDeseneaza() {
   if (!$("acasa") || typeof Acasa === "undefined") return;
   acPiataInit();
@@ -552,12 +582,13 @@ function acasaDeseneaza() {
       + acPandaLin(b);
   });
   if (typeof tbStare !== "undefined" && tbStare.citireGoala) hb += '<p class="acMut">Citirea a venit goală: țin boții de dinainte.</p>';
-  else if (boti && !act.length) hb += '<p class="acMut">Niciun bot pornit acum.</p>';
+  else if (boti && !act.length) hb += '<p class="acMut">Niciun bot pornit acum.</p>' + acUltimInchis(typeof contTot !== "undefined" && Array.isArray(contTot.inchise) ? Acasa.botiStatistici(contTot.inchise, Date.now()).ultim : null);   /* v100.277 */
   // v95: ziua ta - fata de poza de ieri dimineata (colectorul, dupa ora 9)
   var ct = typeof t212 !== "undefined" && t212.cont && t212.cont.cash;
   var botiPeId = {}; act.forEach(function (b) { var v2 = Number(b.profitTotal); if (b.id && isFinite(v2)) botiPeId[String(b.id)] = v2; });
   var zt = Acasa.ziuaTa({ botiTotal: act.length ? act.reduce(function (s2, b) { var v2 = Number(b.profitTotal); return s2 + (isFinite(v2) ? v2 : 0); }, 0) : null, botiPeId: botiPeId, t212Total: ct ? Number(ct.total) : null }, pc.instantanee || [], fz, typeof contTot !== "undefined" ? contTot.inchise : null);   // v100.40: pe bot
-  if (zt && zt.boti !== null) hb += '<div class="acLin acZi"><span>Față de ieri dimineață</span><b class="' + (zt.boti >= 0 ? "good" : "bad") + '">' + (zt.boti >= 0 ? "+" : "−") + Math.abs(zt.boti).toFixed(1).replace(".", ",") + ' USDT</b></div>';   /* v100.196: rezultatele cu O SINGURĂ zecimală */
+  if (zt && zt.boti !== null) hb += '<div class="acLin acZi"><span>Față de ieri dimineață' + (zt.inchiseDupa ? ' <span class="acMut">· cu ' + escapeHtml(acCate(zt.inchiseDupa, "bot închis", "boți închiși")) + ' de atunci</span>' : '') + '</span><b class="' + (zt.boti >= 0 ? "good" : "bad") + '">' + (zt.boti >= 0 ? "+" : "−") + Math.abs(zt.boti).toFixed(1).replace(".", ",") + ' USDT</b></div>';   /* v100.196: rezultatele cu O SINGURĂ zecimală */
+  hb += acBotiStatHtml(typeof contTot !== "undefined" ? contTot.inchise : null, Date.now());   /* v100.277: azi + 7 zile, pe net */
   $("acBoti").innerHTML = hb + '<button class="acBtn" type="button" data-action-click="navTo(\'tabloubot\',true)">Deschide Tabloul</button>';
 
   var c = typeof t212 !== "undefined" && t212.cont && t212.cont.cash, iesi = typeof t212 !== "undefined" ? t212.nrIesi : null, rz = d.rezultate && d.rezultate.l || [];
