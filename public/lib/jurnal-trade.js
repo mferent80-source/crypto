@@ -58,10 +58,26 @@ var JurnalTrade = (function () {
     };
   }
 
-  function greseli(t, toate) {
+  // v100.283 (el, 31.10: „ok, fă” - ideea 6): indexul repornirilor - pe monedă, închiderile sortate, cu poziția din listă; cauta(t) = PRIMUL
+  // din listă închis în (pornirea − 10 min, pornirea] (exact ce găsea înainte căutarea în toată lista, pentru fiecare bot - pătratic)
+  function indexReintrare(toate) {
+    var pe = {};
+    toate.forEach(function (o, i) { (pe[o.moneda] || (pe[o.moneda] = [])).push({ o: o, i: i }); });
+    Object.keys(pe).forEach(function (k) { pe[k].sort(function (a, b) { return a.o.inchis - b.o.inchis; }); });
+    return { cauta: function (t) {
+      var l = pe[t.moneda]; if (!l) return undefined;
+      var lo = 0, hi = l.length, de = t.pornit - REINTRARE_MS;   // primul închis după pornire − 10 min
+      while (lo < hi) { var mij = (lo + hi) >> 1; if (l[mij].o.inchis > de) hi = mij; else lo = mij + 1; }
+      var cel = null;
+      for (var j = lo; j < l.length && l[j].o.inchis <= t.pornit; j++) if (l[j].o !== t && (cel === null || l[j].i < cel.i)) cel = l[j];
+      return cel ? cel.o : undefined;
+    } };
+  }
+
+  function greseli(t, toate, idx) {
     var g = [];
-    // reintrare: acelasi coin, pornit la <10 min dupa ce s-a inchis altul
-    var ant = toate.filter(function (o) { return o !== t && o.moneda === t.moneda && o.inchis <= t.pornit && t.pornit - o.inchis < REINTRARE_MS; })[0];
+    // reintrare: acelasi coin, pornit la <10 min dupa ce s-a inchis altul (v100.283: din index, nu din toată lista)
+    var ant = (idx || indexReintrare(toate)).cauta(t);
     if (ant) g.push({ cod: "reintrare", titlu: "Repornit imediat pe aceeași monedă",
       text: "Pornit la " + Math.round((t.pornit - ant.inchis) / 60000) + " min după ce botul anterior pe " + t.moneda + " s-a închis (" + U(ant.rezultat) + ").",
       dataViitoare: "Aș lăsa măcar o oră și aș porni doar dacă fișa zice 🟢; repornirea imediată e de obicei o reacție, nu un plan." });
@@ -89,8 +105,8 @@ var JurnalTrade = (function () {
 
   function din(boti) {
     if (!Array.isArray(boti)) return [];
-    var l = boti.map(unul).filter(Boolean);
-    l.forEach(function (t) { t.greseli = greseli(t, l); });
+    var l = boti.map(unul).filter(Boolean), idx = indexReintrare(l);
+    l.forEach(function (t) { t.greseli = greseli(t, l, idx); });
     return l.sort(function (a, b) { return b.inchis - a.inchis; });
   }
 

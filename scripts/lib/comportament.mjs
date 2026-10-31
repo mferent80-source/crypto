@@ -240,3 +240,44 @@ export function liniiReguliNoi(noi, istoria) {
   if (istoria) out.push("Pe ultimele 120 de zile, boții porniți peste reguli au dat în medie " + U(istoria.m) + "/bot (interval 99%: " + S1(istoria.lo) + " … " + S1(istoria.hi) + "); pe date noi, un verdict cere luni de boți.");
   return out;
 }
+
+// ---------------- v100.283 / colector v101.155 (el, 31.10: „ok, fă” - ideile 1, 2) ----------------
+// (2) seara pe scurt: boții închiși AZI (ziua României a închiderii) din jurnalul evaluărilor - în regulă / cu reguli încălcate, regula cea
+// mai deasă (la egalitate, cea care a dat mai prost); nimic azi ⇒ null
+export function searaZilei(inreg, acum) {
+  const z = ziRo(acum), l = (Array.isArray(inreg) ? inreg : []).filter((x) => x && nr(x.inchis) !== null && x.inchis <= acum && ziRo(x.inchis) === z);
+  if (!l.length) return null;
+  const are = (x) => Array.isArray(x.rele) && x.rele.length > 0, sum = (a) => r2(a.reduce((s, x) => s + (nr(x.net) || 0), 0)), rele = l.filter(are), bune = l.filter((x) => !are(x)), pe = {};
+  for (const x of rele) for (const c of x.rele) { const o = pe[c] || (pe[c] = { n: 0, net: 0 }); o.n++; o.net = r2(o.net + (nr(x.net) || 0)); }
+  const top = ORDINE_REGULI.filter((c) => pe[c]).sort((a, b) => pe[b].n - pe[a].n || pe[a].net - pe[b].net)[0] || null;
+  return { zi: z, n: l.length, bune: { n: bune.length, net: sum(bune) }, rele: { n: rele.length, net: sum(rele) }, top, pe };
+}
+export const searaDatorata = (st, acum, ora) => Number(ora) >= 22 && st.seara !== ziRo(acum);
+// (1) oglinda lunii: luna „AAAA-LL” după ziua României a PORNIRII (deciziile se iau la pornire); cele 5 obiceiuri din analiza lui:
+// zilele cu peste prag, porniți cu frâna trasă (pierderile: azi / 7 zile / la rând), ținuți peste 6 h, închiși de el sub 15 min, lichidați
+export function lunaInainte(cheie) { const a = Number(String(cheie).slice(0, 4)), l = Number(String(cheie).slice(5, 7)); return l === 1 ? (a - 1) + "-12" : a + "-" + String(l - 1).padStart(2, "0"); }
+export function oglindaLunii(trades, praguri, cheie, franaLaPornire, motive) {
+  const P = praguri || {}, prag = nr(P.boti) > 0 ? nr(P.boti) : 7;
+  const toate = (Array.isArray(trades) ? trades : []).filter((t) => t && nr(t.pornit) !== null && nr(t.inchis) !== null && netDe(t) !== null);
+  const l = toate.filter((t) => ziRo(t.pornit).slice(0, 7) === cheie).sort((a, b) => a.pornit - b.pornit);
+  if (!l.length) return null;
+  const ctx = toate.filter((t) => t.inchis >= l[0].pornit - 8 * ZI), zile = new Map(), adu = (o, t) => { o.n++; o.net = r2(o.net + netDe(t)); };
+  const out = { cheie, n: 0, net: 0, zile: 0, zilePeste: { z: 0, net: 0 }, frana: { n: 0, net: 0 }, lungi: { n: 0, net: 0 }, minute: { n: 0, net: 0 }, lichidati: { n: 0, net: 0 } };
+  for (const t of l) {
+    out.n++; out.net = r2(out.net + netDe(t));
+    const k = ziRo(t.pornit), zz = zile.get(k) || { n: 0, net: 0 }; zz.n++; zz.net = r2(zz.net + netDe(t)); zile.set(k, zz);
+    const dep = new Set((franaLaPornire(t, ctx, P).depasit || []).map((d) => d && d.cod)), cls = clasaInchidere(motive && motive.get ? motive.get(String(t.id)) : null), ore = (t.inchis - t.pornit) / ORA;
+    if (dep.has("zi") || dep.has("sapt") || dep.has("rand")) adu(out.frana, t);
+    if (ore > 6) adu(out.lungi, t);
+    if (ore * 60 < PRAG_MINUTE && (cls === "tine" || cls === "necitit")) adu(out.minute, t);
+    if (cls === "lichidare") adu(out.lichidati, t);
+  }
+  out.zile = zile.size;
+  for (const zz of zile.values()) if (zz.n > prag) { out.zilePeste.z++; out.zilePeste.net = r2(out.zilePeste.net + zz.net); }
+  return out;
+}
+// pe 1–3 ale lunii (colectorul poate fi oprit pe 1), de la 9 la București, o dată: luna trecută (a) față de cea dinainte (b)
+export function oglindaDatorata(st, acum, ora) {
+  const z = ziRo(acum); if (Number(z.slice(8, 10)) > 3 || Number(ora) < 9) return null;
+  const a = lunaInainte(z.slice(0, 7)); return st.oglinda === a ? null : { a, b: lunaInainte(a) };
+}

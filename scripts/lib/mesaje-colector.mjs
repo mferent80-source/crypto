@@ -292,3 +292,46 @@ export function rupeBucati(cap, bucati, max) {
 export const canalEvaluariStricat = (status) => ({ nivel: "atentie", doarRadar: true, cheie: "canal-evaluari", titlu: "Canalul evaluărilor nu primește mesaje",
   mesaj: status === "lipsă" ? msg("DISCORD_WEBHOOK_EVALUARI lipsește din .dev.vars: evaluările boților nu pleacă nicăieri.", "Aș pune webhook-ul canalului de evaluări în .dev.vars și aș reporni colectorul.")
     : msg("Discord răspunde " + status + " la webhook-ul evaluărilor (șters sau greșit): evaluările stau la coadă cel mult 24 h.", "Aș pune un webhook nou în .dev.vars (DISCORD_WEBHOOK_EVALUARI) și aș reporni colectorul.") });
+
+// ---------------- v100.283 / colector v101.155 (el, 31.10: „ok, fă” - ideile 1, 2) ----------------
+const LUNI = ["ianuarie", "februarie", "martie", "aprilie", "mai", "iunie", "iulie", "august", "septembrie", "octombrie", "noiembrie", "decembrie"];
+export const numeLuna = (cheie) => LUNI[Number(String(cheie).slice(5, 7)) - 1] || String(cheie);
+const grup = (g) => (g && g.n ? cate(g.n, "bot", "boți") + " (" + U2(g.net) + ")" : "niciunul");
+const SFAT_SEARA = {
+  boti: (prag) => "Aș număra boții mâine înainte să pornesc: după " + ordinal(prag) + ", gata ziua.",
+  frana: () => "Aș porni mâine doar cu frâna liberă; dacă pragul pe 7 zile nu mai e al meu, îl schimb în Poartă.",
+  banda: () => "Aș hotărî mâine la timp: când prețul iese din grilă, îl închid sau îi mut banda.",
+  minute: () => "Aș porni mâine gridul doar când îl las să lucreze, nu ca să-l închid în minute.",
+  lichidare: () => "Aș pune mâine stopul înaintea lichidării, chiar de la pornire.",
+};
+// (2) seara pe scurt (s = Comportament.searaZilei): câți azi, câți în regulă, regula cea mai deasă, un sfat pentru mâine
+export const searaPeScurt = (s, prag) => {
+  const tot = s.bune.n === s.n ? (s.n === 1 ? "în regulă" : "toți în regulă") : s.bune.n ? s.bune.n + " în regulă" : "niciunul în regulă";
+  const L = ["În regulă: " + grup(s.bune) + " · cu reguli încălcate: " + grup(s.rele) + "."];
+  if (s.top && s.pe[s.top]) L.push("Cel mai des: " + eticheta(s.top, s.pe[s.top].n) + " (" + U2(s.pe[s.top].net) + ").");
+  L.push("👉 " + (s.top && SFAT_SEARA[s.top] ? SFAT_SEARA[s.top](prag) : "Aș păstra ziua de azi ca reper: toate deciziile au fost în regulile tale."));
+  return { nivel: s.rele.n ? "atentie" : "info", cheie: "seara", titlu: "Seara: " + cate(s.n, "bot închis", "boți închiși") + " azi, " + tot, mesaj: L.join("\n") };
+};
+// (1) oglinda lunii (a = luna trecută, b = cea dinainte; Comportament.oglindaLunii): cele 5 obiceiuri, cu câți / % / net, ce s-a rărit și ce
+// s-a îndesit (după pondere), un singur obicei de lucrat - cel ai cărui boți au dat cel mai prost. Descriptiv, fără „dovedit”.
+const OBICEIURI = [
+  { k: "frana", rand: "Porniți cu frâna trasă", nume: "pornirile cu frâna trasă", pc: true },
+  { k: "lungi", rand: "Ținuți peste 6 h", nume: "boții ținuți peste 6 h", pc: true },
+  { k: "minute", rand: "Închiși în minute", nume: "închiderile în minute", pc: true },
+  { k: "lichidati", rand: "Lichidați", nume: "lichidările", pc: false },
+];
+export const oglindaLunii = (a, b, prag) => {
+  const na = numeLuna(a.cheie), nb = numeLuna(b.cheie), L = [], numeZile = "zilele cu peste " + cate(prag, "bot", "boți");
+  const pz = (o) => (o.zilePeste.z ? o.zilePeste.z + " din " + o.zile + " (" + U2(o.zilePeste.net) + ")" : "niciuna din " + o.zile);
+  const pb = (o, x) => (o[x.k].n ? cate(o[x.k].n, "bot", "boți") + (x.pc ? ", " + Math.round(100 * o[x.k].n / o.n) + "%" : "") + " (" + U2(o[x.k].net) + ")" : "niciunul");
+  L.push(mare(na) + ": " + cate(a.n, "bot", "boți") + ", net " + U2(a.net) + " în " + cate(a.zile, "zi", "zile") + " cu boți · " + nb + ": " + cate(b.n, "bot", "boți") + ", net " + U2(b.net) + " în " + cate(b.zile, "zi", "zile") + ".");
+  L.push("Zile cu peste " + cate(prag, "bot", "boți") + ": " + pz(a) + " · " + nb + ": " + pz(b) + ".");
+  for (const x of OBICEIURI) if (x.k !== "lichidati" || a.lichidati.n || b.lichidati.n) L.push(x.rand + ": " + pb(a, x) + " · " + nb + ": " + pb(b, x) + ".");
+  // ce s-a rărit / îndesit: după pondere (zilele pline din zile, boții din boți), ca o lună cu mai mulți boți să nu pară mai rea doar de-asta
+  const pond = [{ nume: numeZile, a: a.zile ? a.zilePeste.z / a.zile : 0, b: b.zile ? b.zilePeste.z / b.zile : 0 }].concat(OBICEIURI.map((x) => ({ nume: x.nume, a: a.n ? a[x.k].n / a.n : 0, b: b.n ? b[x.k].n / b.n : 0 })));
+  const rar = pond.filter((p) => p.a < p.b).map((p) => p.nume), des = pond.filter((p) => p.a > p.b).map((p) => p.nume);
+  L.push("Față de " + nb + ": " + (rar.length || des.length ? [rar.length ? "mai rar - " + rar.join(", ") : "", des.length ? "mai des - " + des.join(", ") : ""].filter(Boolean).join("; ") : "la fel la toate obiceiurile") + ".");
+  const cost = [{ nume: numeZile, net: a.zilePeste.net }].concat(OBICEIURI.map((x) => ({ nume: x.nume, net: a[x.k].net }))).filter((c) => c.net < 0).sort((p, q) => p.net - q.net)[0];
+  L.push("👉 " + (cost ? "Aș lucra luna asta la un singur obicei: " + cost.nume + " (boții lor au dat " + U2(cost.net) + ")." : "Aș păstra ritmul: niciun obicei n-a dat pe minus luna asta."));
+  return { nivel: "info", cheie: "oglinda", titlu: "Oglinda lunii: " + na + " față de " + nb, mesaj: L.join("\n") };
+};

@@ -289,6 +289,11 @@ export function situatiiAlerte(pune) {
     e.luna = { boti: { n: 23, net: -180.4 }, frana: { n: 41, net: -302.5 } }; evb2("evaluarea: cu luna asta pe reguli", e); }
   co("canalul evaluărilor: webhook șters (404)", "canalEvaluariStricat", MC.canalEvaluariStricat(404));
   co("canalul evaluărilor: webhook lipsă", "canalEvaluariStricat", MC.canalEvaluariStricat("lipsă"));
+  // v100.283: seara pe scurt și oglinda lunii
+  pune("seara pe scurt: frâna cea mai deasă", "alerte", "colector.searaPeScurt", MC.searaPeScurt({ zi: "2026-10-31", n: 9, bune: { n: 3, net: 2.1 }, rele: { n: 6, net: -14.8 }, top: "frana", pe: { frana: { n: 6, net: -14.8 } } }, 7), RAP);
+  pune("seara pe scurt: toate în regulă", "alerte", "colector.searaPeScurt", MC.searaPeScurt({ zi: "2026-10-31", n: 2, bune: { n: 2, net: 3.5 }, rele: { n: 0, net: 0 }, top: null, pe: {} }, 7), RAP);
+  { const og = (n, net, z, zp, fr, lu, mi, li) => ({ cheie: "2026-10", n, net, zile: z, zilePeste: { z: zp, net: -420.1 }, frana: { n: fr, net: -540.3 }, lungi: { n: lu, net: -300.2 }, minute: { n: mi, net: -60.4 }, lichidati: { n: li, net: li ? -98.4 : 0 } });
+    pune("oglinda lunii", "alerte", "colector.oglindaLunii", MC.oglindaLunii(og(312, -612.4, 28, 12, 250, 30, 140, 1), Object.assign(og(280, -410.2, 27, 9, 200, 25, 120, 0), { cheie: "2026-09" }), 7), RAP); }
   pune("raportul de duminică: regulile pe date noi", "alerte", "comportament.liniiReguliNoi", { titlu: MC.raport("2026-11-08", ["—"]).titlu,
     mesaj: CO.liniiReguliNoi({ n: 76, peste: { boti: { n: 12, net: -24.5 }, frana: { n: 64, net: -132.4 }, banda: { n: 3, net: -30.2 }, minute: { n: 20, net: -8.1 }, lichidare: { n: 1, net: -98.4 } }, toate: { n: 70, net: -140.2 } }, { n: 1204, z: 112, m: -2.57, lo: -4.13, hi: -1.16 }).join("\n") }, RAP);
   {
