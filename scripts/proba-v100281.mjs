@@ -439,12 +439,14 @@ await test("colectorul: raportul de duminică primește săptămâna frânei (pr
   const s = citeste("scripts", "colector.mjs"), r = s.slice(s.indexOf("async function turaRaport("), s.indexOf("\n}\n", s.indexOf("async function turaRaport(")));
   assert.match(r, /Comportament\.liniiFranaSaptamana\(Comportament\.franaPeSaptamana\(trades, /); assert.match(r, /action=config/);
 });
-await test("versiunile: v100.281 în aplicație, v101.153 în colector; proba în lanț", () => {
-  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.281"/);
-  assert.match(citeste("BUILD_INFO.json"), /"version": "v100\.281"/);
-  assert.match(citeste("public", "index.html"), /id="healthAppVersion">v100\.281</);
-  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-281/);
-  assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.153"/);
+// v100.282: de la v100.281 / v101.153 în sus (ca probele vechi), nu exact
+await test("versiunile: de la v100.281 în aplicație, de la v101.153 în colector; proba în lanț", () => {
+  const app = Number(citeste("functions", "_shared", "versiune.js").match(/VERSIUNE = "v100\.(\d+)"/)[1]);
+  assert.ok(app >= 281, String(app));
+  assert.match(citeste("BUILD_INFO.json"), new RegExp('"version": "v100\\.' + app + '"'));
+  assert.match(citeste("public", "index.html"), new RegExp('id="healthAppVersion">v100\\.' + app + "<"));
+  assert.match(citeste("public", "sw.js"), new RegExp("crypto-radar-v100-" + app));
+  assert.ok(Number(citeste("scripts", "colector.mjs").match(/const VERSIUNE_COLECTOR = "v101\.(\d+)"/)[1]) >= 153);
   const p = JSON.parse(citeste("package.json")); assert.equal(p.scripts["test:v100281"], "node scripts/proba-v100281.mjs"); assert.match(p.scripts.test, /npm run test:v100281/);
 });
 

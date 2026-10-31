@@ -273,6 +273,7 @@ export function situatiiAlerte(pune) {
   const FR = (o) => Object.assign({ pornitiAzi: 2, rand: 0, netZi: -1, netSapt: -10, depasit: [], praguri: PRf, activa: false }, o || {});
   const TB = (o) => Object.assign({ id: "e1", moneda: "SOL", dir: "long", pornit: T0 - 7.5 * ORA, inchis: T0, net: -3.2, rezultat: -2.7, grile: 1.2, pozitie: -3.9, comisioane: -0.4, funding: -0.1 }, o || {});
   const evb = (sit, o) => pune(sit, "alerte", "colector.evaluareBot", MC.evaluareBot(CO.evalueaza(Object.assign({ t: TB(), frana: FR(), afaraOre: 2, banda: BANDA, dovezi: DOV, motiv: "user_cancel" }, o))), RAP);
+  const evb2 = (sit, ev) => pune(sit, "alerte", "colector.evaluareBot", MC.evaluareBot(ev), RAP);   // v100.282: o evaluare gata făcută (cu luna)
   evb("evaluarea: decizii bune, ghinion", {});
   evb("evaluarea: decizii bune, pe plus", { t: TB({ net: 2.1 }) });
   evb("evaluarea: al 9-lea bot, 3 la rând, 7 zile, 7,5 h afară", { frana: FR({ pornitiAzi: 8, rand: 3, netSapt: -682, depasit: [{ cod: "rand" }, { cod: "sapt" }, { cod: "boti" }], activa: true }), afaraOre: 7.5, motiv: null });
@@ -283,6 +284,13 @@ export function situatiiAlerte(pune) {
   co("botul pornit cu frâna trasă (toate pragurile)", "pornitCuFrana", MC.pornitCuFrana("1000BONK", "short", FR({ pornitiAzi: 99, rand: 12, netZi: -1234.5, netSapt: -12345.6, depasit: [{ cod: "sapt" }, { cod: "zi" }, { cod: "rand" }, { cod: "boti" }], activa: true })));
   co("frâna pe 7 zile trasă de 4 zile", "pragSaptIntrebare", MC.pragSaptIntrebare(FR({ netSapt: -682 }), 4));
   co("canalul evaluărilor e legat", "legatEvaluari", MC.legatEvaluari());
+  // v100.282: luna asta în evaluare, regulile pe date noi în raport, nota canalului stricat
+  { const e = CO.evalueaza({ t: TB(), frana: FR({ pornitiAzi: 8, netSapt: -682, depasit: [{ cod: "sapt" }, { cod: "boti" }], activa: true }), afaraOre: null, banda: BANDA, dovezi: DOV, motiv: null });
+    e.luna = { boti: { n: 23, net: -180.4 }, frana: { n: 41, net: -302.5 } }; evb2("evaluarea: cu luna asta pe reguli", e); }
+  co("canalul evaluărilor: webhook șters (404)", "canalEvaluariStricat", MC.canalEvaluariStricat(404));
+  co("canalul evaluărilor: webhook lipsă", "canalEvaluariStricat", MC.canalEvaluariStricat("lipsă"));
+  pune("raportul de duminică: regulile pe date noi", "alerte", "comportament.liniiReguliNoi", { titlu: MC.raport("2026-11-08", ["—"]).titlu,
+    mesaj: CO.liniiReguliNoi({ n: 76, peste: { boti: { n: 12, net: -24.5 }, frana: { n: 64, net: -132.4 }, banda: { n: 3, net: -30.2 }, minute: { n: 20, net: -8.1 }, lichidare: { n: 1, net: -98.4 } }, toate: { n: 70, net: -140.2 } }, { n: 1204, z: 112, m: -2.57, lo: -4.13, hi: -1.16 }).join("\n") }, RAP);
   {
     const l = []; for (let k = 0; k < 9; k++) l.push({ id: "g" + k, pornit: T0 - 3 * ZI + k * ORA, inchis: T0 - 3 * ZI + k * ORA + 1800000, net: k > 6 ? -3.5 : 1.1 });
     pune("raportul de duminică: săptămâna frânei", "alerte", "comportament.liniiFranaSaptamana", { titlu: MC.raport("2026-10-04", ["—"]).titlu, mesaj: CO.liniiFranaSaptamana(CO.franaPeSaptamana(l, PRf, T0, OBf.franaLaPornire)).join("\n") }, RAP);

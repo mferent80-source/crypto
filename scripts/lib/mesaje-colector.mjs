@@ -257,6 +257,9 @@ export const evaluareBot = (ev) => {
   const L = [(dur ? "Ținut " + dur : "Botul") + (g !== null && p !== null ? ": grilele " + U2(g) + ", poziția " + U2(p) + ", comisioane și funding " + U2(cf) : "") + " ⇒ net " + U2(net) + "."];
   for (const d of ev.decizii) if (d.ok) L.push("✅ " + textDecizie(d));
   for (const d of ev.decizii) if (!d.ok) L.push("❌ " + textDecizie(d));
+  // v100.282 (ideea 3): luna asta pe regulile încălcate de bot (din data/evaluari.jsonl, cu el inclus) - de la 2 boți încolo, rupt între reguli
+  const lun = ev.luna ? ORDINE_REGULI.filter((c) => ev.luna[c] && ev.luna[c].n >= 2 && ev.decizii.some((d) => d.cod === c && !d.ok)).map((c) => eticheta(c, ev.luna[c].n) + " (" + U2(ev.luna[c].net) + ")") : [];
+  if (lun.length) L.push(...rupeBucati("📅 Luna asta: ", lun, 160));
   if (ev.verdict === "ghinion") L.push("⚖️ Pe regulile tale n-ai greșit nimic: pierderea vine din piață, nu din decizii.");
   if (ev.verdict === "noroc") L.push("⚖️ Câștigul a venit cu reguli încălcate: de data asta piața te-a ajutat, regula rămâne.");
   L.push("👉 " + sfatEvaluare(ev));
@@ -274,3 +277,18 @@ export const pragSaptIntrebare = (f, zile) => ({ nivel: "atentie", cheie: "frana
     "Aș hotărî azi: țin pauza până revine săptămâna sau pun în Poartă un prag pe care îl respect.") });
 export const legatEvaluari = () => ({ nivel: "info", titlu: "Crypto Radar: aici vin evaluările boților",
   mesaj: "După fiecare bot închis: ce a mers, ce de îndreptat și un sfat, pe regulile și cifrele tale; tot aici, pornirile cu frâna trasă." });
+
+// v100.282: regulile, pe nume (aceeași ordine peste tot) - „23 de boți porniți cu frâna trasă”, „1 bot închis în minute”
+export const ORDINE_REGULI = ["boti", "frana", "banda", "minute", "lichidare"];
+const ETICHETA = { boti: ["pornit peste pragul zilei", "porniți peste pragul zilei"], frana: ["pornit cu frâna trasă", "porniți cu frâna trasă"], banda: ["ținut în afara grilei", "ținuți în afara grilei"], minute: ["închis în minute", "închiși în minute"], lichidare: ["lichidat", "lichidați"] };
+export const eticheta = (cod, n) => { const e = ETICHETA[cod] || [cod, cod]; return cate(n, "bot " + e[0], "boți " + e[1]); };
+// rânduri ≤ max, rupte doar între bucăți (o bucată nu se desparte); rândul continuat se termină în „ ·”
+export function rupeBucati(cap, bucati, max) {
+  const out = []; let rand = cap + bucati[0];
+  for (let i = 1; i < bucati.length; i++) { if ((rand + " · " + bucati[i] + " ·").length > max) { out.push(rand + " ·"); rand = bucati[i]; } else rand += " · " + bucati[i]; }
+  out.push(rand + "."); return out;
+}
+// v100.282: webhook-ul evaluărilor stricat (șters / greșit / lipsă) - o notă doar în Radar (pagina Alerte), o dată pe problemă
+export const canalEvaluariStricat = (status) => ({ nivel: "atentie", doarRadar: true, cheie: "canal-evaluari", titlu: "Canalul evaluărilor nu primește mesaje",
+  mesaj: status === "lipsă" ? msg("DISCORD_WEBHOOK_EVALUARI lipsește din .dev.vars: evaluările boților nu pleacă nicăieri.", "Aș pune webhook-ul canalului de evaluări în .dev.vars și aș reporni colectorul.")
+    : msg("Discord răspunde " + status + " la webhook-ul evaluărilor (șters sau greșit): evaluările stau la coadă cel mult 24 h.", "Aș pune un webhook nou în .dev.vars (DISCORD_WEBHOOK_EVALUARI) și aș reporni colectorul.") });

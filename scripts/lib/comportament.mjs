@@ -5,6 +5,7 @@
 // orele cu prețul în afara grilei, închiderea în minute, lichidarea. Repornirea rapidă, levierul, direcția, mărimea, noaptea NU - nu s-au
 // dovedit pe datele lui. Pornirea se judecă doar cu ce se știa ATUNCI (Obiceiuri.franaLaPornire). Avertizează, nu blochează.
 import { clasaInchidere } from "./tura-monte-carlo-bot.mjs";   // motivul închiderii: tine / stop / tinta / lichidare / pionex / necitit
+import { eticheta, rupeBucati, ORDINE_REGULI } from "./mesaje-colector.mjs";   // v100.282: regulile pe nume, rândurile rupte între bucăți
 
 const ORA = 3600000, ZI = 86400000;
 export const PRAG_MINUTE = 15;   // sub 15 min (ca „Boții tăi” pe Acasă): pe istoria lui comisioanele au fost 3,4× grilele
@@ -168,10 +169,74 @@ export function liniiFranaSaptamana(r) {
     + (r.nPeste ? " (" + cate(r.nPeste, "bot pornit", "boți porniți") + " peste ea, net " + U(r.netPeste) + (r.deschisi ? " pe cei închiși; " + cate(r.deschisi, "bot încă deschis", "boți încă deschiși") : "") + ")" : "") + "."];
   // zilele, rupte în rânduri ≤ 160 doar ÎNTRE zile („29.10: 8 boți, −12,5 USDT” nu se desparte); rândul continuat se termină în „ ·”
   const it = r.zile.filter((x) => x.peste > 0).map((x) => x.zi.slice(8, 10) + "." + x.zi.slice(5, 7) + ": " + cate(x.peste, "bot", "boți") + (x.deschisi ? " (" + cate(x.deschisi, "deschis", "deschiși") + ")" : "") + ", " + U(x.netPeste));
-  if (it.length) {
-    let rand = "Zilele peste frână: " + it[0];
-    for (let i = 1; i < it.length; i++) { if ((rand + " · " + it[i] + " ·").length > 160) { out.push(rand + " ·"); rand = it[i]; } else rand += " · " + it[i]; }
-    out.push(rand + ".");
+  if (it.length) out.push(...rupeBucati("Zilele peste frână: ", it, 160));
+  return out;
+}
+
+// ---------------- v100.282 / colector v101.154 (el, 31.10: „fa” - ideile) ----------------
+// 31.10.2026 00:00 la București: boții PORNIȚI de aici încolo = date noi (regulile și evaluarea au fost scrise atunci)
+export const PROBA_DE = Date.UTC(2026, 9, 30, 22, 0);
+// jurnalul evaluărilor (data/evaluari.jsonl): un rând JSON pe bot; rândurile stricate se sar; același bot o dată (ultimul rând)
+export function dinJsonl(text) {
+  const m = new Map();
+  for (const l of String(text || "").split(/\r?\n/)) { if (!l.trim()) continue; try { const x = JSON.parse(l); if (x && typeof x === "object" && x.id !== undefined && x.id !== null) m.set(String(x.id), x); } catch {} }
+  return [...m.values()];
+}
+const lunaRo = (t) => ziRo(t).slice(0, 7);
+const releDin = (ev) => ((ev && ev.decizii) || []).filter((d) => !d.ok).map((d) => d.cod);
+// (3) luna asta (calendaristică, ziua României a închiderii) pe fiecare regulă încălcată: { cod: { n, net } }
+export function lunaPeReguli(inreg, acum) {
+  const L = lunaRo(acum), out = {};
+  for (const x of Array.isArray(inreg) ? inreg : []) {
+    const i = nr(x && x.inchis); if (i === null || i > acum || lunaRo(i) !== L || !Array.isArray(x.rele)) continue;
+    for (const c of x.rele) { const o = out[c] || (out[c] = { n: 0, net: 0 }); o.n++; o.net = r2(o.net + (nr(x.net) || 0)); }
   }
+  return out;
+}
+export function adaugaInLuna(luna, ev) { for (const c of releDin(ev)) { const o = luna[c] || (luna[c] = { n: 0, net: 0 }); o.n++; o.net = r2(o.net + (nr(ev.net) || 0)); } return luna; }
+export function lunaPentru(luna, ev) { const out = {}; for (const c of releDin(ev)) if (luna[c]) out[c] = { n: luna[c].n, net: luna[c].net }; return out; }
+// (1) regulile pe date noi - DESCRIPTIV: boții porniți de la `de`, pe fiecare regulă și peste oricare (fără verdict: pe istoria lui, un verdict pe
+// câteva săptămâni ar greși 13–17% în loc de 1%, iar puterea e sub 50% chiar la 90 de zile - simularea din 31.10)
+export function reguliPeDateNoi(inreg, de) {
+  const out = { n: 0, peste: {}, toate: { n: 0, net: 0 } };
+  for (const x of Array.isArray(inreg) ? inreg : []) {
+    const p = nr(x && x.pornit); if (p === null || p < de) continue;
+    out.n++; const rele = Array.isArray(x.rele) ? x.rele : [], v = nr(x.net) || 0;
+    for (const c of rele) { const o = out.peste[c] || (out.peste[c] = { n: 0, net: 0 }); o.n++; o.net = r2(o.net + v); }
+    if (rele.length) { out.toate.n++; out.toate.net = r2(out.toate.net + v); }
+  }
+  return out;
+}
+function mulberry32(a) { return function () { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+// media pe bot a listei ({ net, zi }), interval pe ZILE (bootstrap; boții aceleiași zile nu sunt dovezi separate)
+function mediaPeZile(l, B, nivel, seed) {
+  const zile = new Map(); for (const b of l) { const x = zile.get(b.zi) || { s: 0, n: 0 }; x.s += b.net; x.n++; zile.set(b.zi, x); }
+  const Z = [...zile.values()], rnd = mulberry32(seed), ms = [];
+  for (let k = 0; k < B; k++) { let s = 0, c = 0; for (let i = 0; i < Z.length; i++) { const x = Z[Math.floor(rnd() * Z.length)]; s += x.s; c += x.n; } if (c) ms.push(s / c); }
+  ms.sort((a, b) => a - b); const q = (p) => ms[Math.min(ms.length - 1, Math.max(0, Math.floor(p * ms.length)))];
+  return { n: l.length, z: Z.length, m: r2(l.reduce((s, b) => s + b.net, 0) / l.length), lo: r2(q((1 - nivel) / 2)), hi: r2(q(1 - (1 - nivel) / 2)) };
+}
+// istoria (ultimele 120 de zile): boții porniți peste reguli - al N-lea > prag, frâna la pornire (franaLaPornire), închis de el sub 15 min;
+// media pe bot cu interval 99% pe zile (determinist: mulberry32 cu sămânță); sub 30 de boți ⇒ null. Banda nu se știe pe istorie.
+export function istoriaReguli(trades, praguri, acum, franaLaPornire, motive) {
+  const de = acum - 120 * ZI, P = praguri || {}, prag = nr(P.boti) > 0 ? nr(P.boti) : 7, porn = {}, peste = [];
+  const l = (Array.isArray(trades) ? trades : []).filter((t) => t && nr(t.pornit) !== null && nr(t.inchis) !== null && t.inchis <= acum && netDe(t) !== null).sort((a, b) => a.pornit - b.pornit);
+  const ctx = l.filter((t) => t.inchis >= de - 8 * ZI);
+  for (const t of l) {
+    const k = ziRo(t.pornit); porn[k] = (porn[k] || 0) + 1;
+    if (t.pornit < de) continue;
+    const dep = new Set((franaLaPornire(t, ctx, P).depasit || []).map((d) => d && d.cod)), cls = clasaInchidere(motive && motive.get ? motive.get(String(t.id)) : null);
+    if (porn[k] > prag || dep.has("zi") || dep.has("sapt") || dep.has("rand") || ((t.inchis - t.pornit) / 60000 < PRAG_MINUTE && (cls === "tine" || cls === "necitit"))) peste.push({ net: netDe(t), zi: k });
+  }
+  return peste.length >= 30 ? mediaPeZile(peste, 2000, 0.99, 282) : null;
+}
+const S1 = (v) => (v >= 0 ? "+" : "−") + Math.abs(Number(v)).toFixed(1).replace(".", ",");
+export function liniiReguliNoi(noi, istoria) {
+  const cap = "Regulile pe date noi (boți porniți de la 31.10): ";
+  if (!noi || !noi.n) return [cap + "încă niciun bot închis."];
+  const b = ORDINE_REGULI.filter((c) => noi.peste[c] && noi.peste[c].n).map((c) => eticheta(c, noi.peste[c].n) + " (" + U(noi.peste[c].net) + ")");
+  const out = b.length ? rupeBucati(cap, b, 160) : [cap + cate(noi.n, "bot închis", "boți închiși") + ", niciunul peste reguli."];
+  if (noi.toate && noi.toate.n) out.push("Fără " + (noi.toate.n === 1 ? "botul pornit" : "cei " + cate(noi.toate.n, "bot pornit", "boți porniți")) + " peste reguli aveai cu " + Math.abs(noi.toate.net).toFixed(1).replace(".", ",") + " USDT mai puțin " + (noi.toate.net < 0 ? "pierdut" : "câștigat") + ", dacă nu porneai alții în loc (ipoteză).");
+  if (istoria) out.push("Pe ultimele 120 de zile, boții porniți peste reguli au dat în medie " + U(istoria.m) + "/bot (interval 99%: " + S1(istoria.lo) + " … " + S1(istoria.hi) + "); pe date noi, un verdict cere luni de boți.");
   return out;
 }

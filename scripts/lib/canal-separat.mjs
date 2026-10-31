@@ -16,11 +16,14 @@ export function creeazaCanal({ nume, webhook, fis, fetch, jurnal, cheie }) {
   const legat = esteWebhookDiscord(webhook);
   let coada = []; try { const x = JSON.parse(fs.readFileSync(fis, "utf8")); if (Array.isArray(x)) coada = x; } catch {}
   let golire = null, pauzaPana = 0, spusNelegat = false;
+  // v100.282: ce nu trece singur (webhook lipsă, greșit, șters) - colectorul face din el o notă în Radar; 429 / 5xx / rețeaua trec singure
+  let problema = legat ? null : { status: "lipsă", la: Date.now() };
   const salveaza = () => { try { const t = taieCoada(coada, 200); if (t.taiate) j("coada: plafon 200, am renunțat la " + t.taiate + " (întâi cele info)"); coada = t.coada; const tmp = fis + ".tmp"; fs.writeFileSync(tmp, JSON.stringify(coada)); fs.renameSync(tmp, fis); } catch (e) { j("coada nescrisă", e.message); } };
   // { ok, nesigur }: nesigur = plecat fără confirmare (poate a ajuns) ⇒ reîncercat cu „poate e o dublură”, ca pe canalul alertelor
   const unu = async (m) => {
     let info = null; const ok = await trimiteDiscord(m, { fetch, webhook, jurnal: j, laRezultat: (z) => { info = z; } });
     if (!ok && info && info.reiaDupaMs > 0) pauzaPana = Date.now() + info.reiaDupaMs;
+    if (ok) problema = null; else if (info && [401, 403, 404].includes(info.status)) problema = { status: info.status, la: Date.now() };
     return { ok, nesigur: !ok && !!(info && info.nesigur) };
   };
   function goleste() {
@@ -51,5 +54,5 @@ export function creeazaCanal({ nume, webhook, fis, fetch, jurnal, cheie }) {
     if (!z.ok) { if (z.nesigur) x.nesigur = Date.now(); coada.push(x); salveaza(); }
     return true;
   }
-  return { legat, trimite, goleste, coada: () => coada.slice() };
+  return { legat, trimite, goleste, coada: () => coada.slice(), problema: () => (problema ? Object.assign({}, problema) : null) };
 }

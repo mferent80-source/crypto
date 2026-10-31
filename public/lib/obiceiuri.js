@@ -98,11 +98,19 @@ var Obiceiuri = (function () {
   // rand). Ziua = ziua Romaniei; 7 zile = ultimele 7 x 24 h. Net = inchisii (realizat + comisioane + funding) + pierderea celor deschisi
   // (doar partea pe minus a totalului lor). Avertizeaza (alerta + rand in poarta), nu blocheaza - „pragul botului e un privilegiu”.
   var FRANA_IMPLICIT = { zi: 20, sapt: 60, rand: 3, boti: 7 };   /* v100.280: + boți porniți pe zi (analiza din 30.10: zilele cu 4–7 boți, singurele pe plus) */
+  var fOraRo = null, fZiRo = null;   // v100.282: formatoarele o singură dată (inceputZiRo e chemată la fiecare frână, de mii de ori pe istorie)
+  function ziRoStr(t) { if (!fZiRo) fZiRo = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Bucharest" }); return fZiRo.format(new Date(t)); }
   function inceputZiRo(t) {
     try {
-      var p = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Bucharest", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }).formatToParts(new Date(t));
+      if (!fOraRo) fOraRo = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Bucharest", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
+      var p = fOraRo.formatToParts(new Date(t));
       var v = function (k) { return Number((p.filter(function (x) { return x.type === k; })[0] || {}).value); };
-      return t - (((v("hour") % 24) * 60 + v("minute")) * 60 + v("second")) * 1000 - (t % 1000);
+      var x = t - (((v("hour") % 24) * 60 + v("minute")) * 60 + v("second")) * 1000 - (t % 1000);
+      // v100.282: în zilele schimbării orei (29.03, 25.10), după schimbare ora locală nu mai e timpul trecut de la miezul nopții ⇒ ±1 h,
+      // până când x e chiar miezul nopții: aceeași zi a României ca t, iar clipa dinainte e ziua de ieri
+      var z = ziRoStr(t), d = [0, -3600000, 3600000];
+      for (var i = 0; i < d.length; i++) { var c = x + d[i]; if (ziRoStr(c) === z && ziRoStr(c - 1) !== z) return c; }
+      return x;
     } catch (e) { return Math.floor(t / ZI) * ZI; }
   }
   function praguriFrana(p) { p = p || {}; return { zi: nr(p.zi) > 0 ? nr(p.zi) : FRANA_IMPLICIT.zi, sapt: nr(p.sapt) > 0 ? nr(p.sapt) : FRANA_IMPLICIT.sapt, rand: nr(p.rand) > 0 ? Math.round(nr(p.rand)) : FRANA_IMPLICIT.rand, boti: nr(p.boti) > 0 ? Math.round(nr(p.boti)) : FRANA_IMPLICIT.boti }; }
