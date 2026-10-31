@@ -335,3 +335,23 @@ export const oglindaLunii = (a, b, prag) => {
   L.push("👉 " + (cost ? "Aș lucra luna asta la un singur obicei: " + cost.nume + " (boții lor au dat " + U2(cost.net) + ")." : "Aș păstra ritmul: niciun obicei n-a dat pe minus luna asta."));
   return { nivel: "info", cheie: "oglinda", titlu: "Oglinda lunii: " + na + " față de " + nb, mesaj: L.join("\n") };
 };
+
+// ---------------- v100.284 / colector v101.156 (el, 31.10): profitul REAL, duminica, în canalul evaluărilor ----------------
+// p = Profit.profitPe(boții Pionex), q = Profit.profitPe(trade-urile T212) sau null; stareT212 = "ok" / "lipsa" (istoricul n-a venit) /
+// "nelegat" (fără cheile T212). Doar ce s-a închis; sumele cu o zecimală și punct la mii („−5.900,1 USDT”).
+const fMii = new Intl.NumberFormat("ro-RO", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const B1 = (v) => { v = Number(v) || 0; const a = Math.abs(v); return (v >= 0 ? "+" : "−") + (a > 0 && a < 0.05 ? "<0,1" : fMii.format(a)); };
+const ddmm = (zi) => String(zi).slice(8, 10) + "." + String(zi).slice(5, 7);
+const dataRo = (t) => { try { return new Intl.DateTimeFormat("ro-RO", { timeZone: "Europe/Bucharest", day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(t)); } catch { return ""; } };
+export const profitReal = (p, q, stareT212) => {
+  const P = p.perioade, sapt = "săptămâna " + ddmm(P.saptamana.luni) + "–" + ddmm(P.saptamana.azi);
+  const et = { saptamana: sapt, luna: numeLuna(P.luna.cheie), an: P.an.an, total: "total" };
+  const rand = (o, k, sg, pl, mon) => "• " + et[k] + (k === "total" && o.total.de ? ", de la " + dataRo(o.total.de) : "") + ": "
+    + (o[k].n ? cate(o[k].n, sg, pl) + ", net " + B1(o[k].net) + " " + mon + " (" + Math.round(100 * o[k].plus / o[k].n) + "% pe plus)" : "niciun " + sg + " închis");
+  const K = ["saptamana", "luna", "an", "total"], L = ["Doar ce s-a închis: boții și pozițiile încă deschise nu intră, nici pe plus, nici pe minus.", "Boții Pionex, netul după comisioane și funding:"];
+  for (const k of K) L.push(rand(p, k, "bot", "boți", "USDT"));
+  L.push("Trading 212, trade-urile închise, după comisioane:");
+  if (q) for (const k of K) L.push(rand(q, k, "trade", "trade-uri", "lei"));
+  else L.push(stareT212 === "nelegat" ? "• Trading 212 nu e legat la Radar." : "• istoricul Trading 212 n-a venit acum; îl adaug duminica viitoare.");
+  return { nivel: "info", cheie: "profit", titlu: "Profitul real: " + sapt, mesaj: L.join("\n") };
+};

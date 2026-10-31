@@ -289,6 +289,12 @@ export function situatiiAlerte(pune) {
     e.luna = { boti: { n: 23, net: -180.4 }, frana: { n: 41, net: -302.5 } }; evb2("evaluarea: cu luna asta pe reguli", e); }
   co("canalul evaluărilor: webhook șters (404)", "canalEvaluariStricat", MC.canalEvaluariStricat(404));
   co("canalul evaluărilor: webhook lipsă", "canalEvaluariStricat", MC.canalEvaluariStricat("lipsă"));
+  // v100.284: profitul real (boți + T212; T212 lipsă / nelegat)
+  { const pr = (n, net, plus, de) => ({ n, net, plus, de }), P = { saptamana: { de: 0, luni: "2026-10-26", azi: "2026-11-01" }, luna: { de: 0, cheie: "2026-11" }, an: { de: 0, an: "2026" }, total: { de: -Infinity } };
+    const pb = { saptamana: pr(68, -135.29, 28), luna: pr(0, 0, 0), an: pr(2100, -5900.12, 1176), total: pr(2449, -6651.25, 1372, Date.UTC(2025, 11, 21)), perioade: P };
+    const pt = { saptamana: pr(0, 0, 0), luna: pr(2, 45.2, 1), an: pr(40, 312, 24), total: pr(78, 412.5, 45, Date.UTC(2025, 2, 12)), perioade: P };
+    pune("profitul real: boți și T212", "alerte", "colector.profitReal", MC.profitReal(pb, pt, "ok"), RAP);
+    pune("profitul real: T212 n-a venit", "alerte", "colector.profitReal", MC.profitReal(pb, null, "lipsa"), RAP); }
   // v100.283: seara pe scurt și oglinda lunii
   pune("seara pe scurt: frâna cea mai deasă", "alerte", "colector.searaPeScurt", MC.searaPeScurt({ zi: "2026-10-31", n: 9, bune: { n: 3, net: 2.1 }, rele: { n: 6, net: -14.8 }, top: "frana", pe: { frana: { n: 6, net: -14.8 } } }, 7), RAP);
   pune("seara pe scurt: toate în regulă", "alerte", "colector.searaPeScurt", MC.searaPeScurt({ zi: "2026-10-31", n: 2, bune: { n: 2, net: 3.5 }, rele: { n: 0, net: 0 }, top: null, pe: {} }, 7), RAP);

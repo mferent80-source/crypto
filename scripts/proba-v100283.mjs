@@ -168,11 +168,13 @@ await test("colectorul: seara și oglinda în tura comportamentului, pe canalul 
   assert.doesNotMatch(s, /trimiteAlerta\(MesajeColector\.(searaPeScurt|oglindaLunii)/);
 });
 await test("versiunile: v100.283 în aplicație, v101.155 în colector; proba în lanț; v100282 de la v100.282 în sus", () => {
-  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.283"/);
-  assert.match(citeste("BUILD_INFO.json"), /"version": "v100\.283"/);
-  assert.match(citeste("public", "index.html"), /id="healthAppVersion">v100\.283</);
-  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-283/);
-  assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.155"/);
+  // v100.284: de la v100.283 / v101.155 în sus (ca probele vechi), nu exact
+  const app = Number(citeste("functions", "_shared", "versiune.js").match(/VERSIUNE = "v100\.(\d+)"/)[1]);
+  assert.ok(app >= 283, String(app));
+  assert.match(citeste("BUILD_INFO.json"), new RegExp('"version": "v100\\.' + app + '"'));
+  assert.match(citeste("public", "index.html"), new RegExp('id="healthAppVersion">v100\\.' + app + "<"));
+  assert.match(citeste("public", "sw.js"), new RegExp("crypto-radar-v100-" + app));
+  assert.ok(Number(citeste("scripts", "colector.mjs").match(/const VERSIUNE_COLECTOR = "v101\.(\d+)"/)[1]) >= 155);
   const p = JSON.parse(citeste("package.json")); assert.equal(p.scripts["test:v100283"], "node scripts/proba-v100283.mjs"); assert.match(p.scripts.test, /npm run test:v100282 && npm run test:v100283/);
   assert.doesNotMatch(citeste("scripts", "proba-v100282.mjs"), /VERSIUNE = "v100\\\.282"\/\)/);
 });
