@@ -99,11 +99,13 @@ await test("colectorul: în tura comportamentului, pe canalul evaluărilor; boț
   assert.doesNotMatch(s, /trimiteAlerta\(MesajeColector\.profitReal/);
 });
 await test("versiunile: v100.284 în aplicație, v101.156 în colector; proba în lanț; v100283 de la v100.283 în sus", () => {
-  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.284"/);
-  assert.match(citeste("BUILD_INFO.json"), /"version": "v100\.284"/);
-  assert.match(citeste("public", "index.html"), /id="healthAppVersion">v100\.284</);
-  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-284/);
-  assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.156"/);
+  // v100.285: de la v100.284 / v101.156 în sus (ca probele vechi), nu exact
+  const app = Number(citeste("functions", "_shared", "versiune.js").match(/VERSIUNE = "v100\.(\d+)"/)[1]);
+  assert.ok(app >= 284, String(app));
+  assert.match(citeste("BUILD_INFO.json"), new RegExp('"version": "v100\\.' + app + '"'));
+  assert.match(citeste("public", "index.html"), new RegExp('id="healthAppVersion">v100\\.' + app + "<"));
+  assert.match(citeste("public", "sw.js"), new RegExp("crypto-radar-v100-" + app));
+  assert.ok(Number(citeste("scripts", "colector.mjs").match(/const VERSIUNE_COLECTOR = "v101\.(\d+)"/)[1]) >= 156);
   const p = JSON.parse(citeste("package.json")); assert.equal(p.scripts["test:v100284"], "node scripts/proba-v100284.mjs"); assert.match(p.scripts.test, /npm run test:v100283 && npm run test:v100284/);
   assert.doesNotMatch(citeste("scripts", "proba-v100283.mjs"), /VERSIUNE = "v100\\\.283"\/\)/);
 });

@@ -1,11 +1,12 @@
 {
-  "version": "v100.284",
-  "badge": "v100.284 · PROFITUL REAL",
+  "version": "v100.285",
+  "badge": "v100.285 · COSTURI ȘI TOP 3",
   "engineContract": "54.1",
   "dataSchema": 54,
   "baseRelease": "v77.4 · TABLOUL BOTULUI",
   "releaseType": "valul de reparatii din revizia finala pe ansamblu: marginStatus/riskStatus citite, telefon, scurgere WS/ceas la iesire prin tab-uri, ATR adevarat, pret viu, istoric fara pret inghetat, sortare dupa timp, comision nemasurabil, durata la margine",
   "features": {
+    "idei285": "El (31.10.2026): „ok, fă ideile” ⇒ în raportul de profit de duminică: (1) pe fiecare rând cu închideri, cât din net au fost comisioanele și funding-ul (boți) / comisioanele (Trading 212), din aceleași liste ca netul; (2) cei mai buni 3 și cei mai slabi 3 ai săptămânii, sub fiecare piață. Ideea 3 (profitul real în Radar) intră în pagina Comportament.",
     "profit284": "El (31.10.2026): „duminica, pe canalul evaluărilor, un raport de profitabilitate real - săptămânal, lunar, anual și total, pe boți și pe Trading 212 separat, doar închise, nu estimat”. Duminica de la 20, o dată: netul REALIZAT pe data închiderii (boți: StatisticaTrade.dinPionex / dinPionexAlte, după comisioane și funding; T212: dinT212, după comisioane, în lei), câți și % pe plus pe fiecare perioadă; săptămâna de luni 00:00, luna și anul calendaristice (ora României), totalul de la prima închidere; fără poziții deschise, fără dividende. scripts/lib/profit-real.mjs, colector v101.156, proba v100284.",
     "oglinda283": "El (31.10.2026, „ok, fă” - ideile 1, 2, 6): (1) oglinda lunii în canalul evaluărilor, pe 1–3 de la 9: zilele cu peste prag, porniți cu frâna trasă, ținuți peste 6 h, închiși în minute, lichidați - luna trecută față de cea dinainte (câți, %, net, ce s-a rărit / îndesit, un singur obicei de lucrat); (2) seara pe scurt la 22: boții închiși azi, în regulă / cu reguli încălcate, regula cea mai deasă, un sfat pentru mâine; (6) JurnalTrade.din liniar (repornirea căutată în boții monedei, sortați; același rezultat). Colector v101.155, proba v100283.",
     "ideiEvaluare282": "El (31.10.2026, „fa” după evaluarea boților): (1) în raportul de duminică, regulile pe DATE NOI (boți porniți de la 31.10) - descriptiv: câți boți peste fiecare regulă, netul lor, „fără ei” ca ipoteză și media pe ultimele 120 de zile a celor peste reguli cu interval 99% pe zile; FĂRĂ verdict - simularea pe istoria lui a arătat că pe bot încălcat ≈ respectat (regulile lucrează prin volum) și că un verdict pe câteva săptămâni ar greși 13–17% în loc de 1%; (3) în fiecare evaluare, luna asta pe regulile încălcate de bot (data/evaluari.jsonl); ziua României corectă și în zilele schimbării orei (Obiceiuri.inceputZiRo); nota din Radar când webhook-ul evaluărilor nu merge. Colector v101.154, proba v100282.",

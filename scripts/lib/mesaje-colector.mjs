@@ -343,15 +343,22 @@ const fMii = new Intl.NumberFormat("ro-RO", { minimumFractionDigits: 1, maximumF
 const B1 = (v) => { v = Number(v) || 0; const a = Math.abs(v); return (v >= 0 ? "+" : "−") + (a > 0 && a < 0.05 ? "<0,1" : fMii.format(a)); };
 const ddmm = (zi) => String(zi).slice(8, 10) + "." + String(zi).slice(5, 7);
 const dataRo = (t) => { try { return new Intl.DateTimeFormat("ro-RO", { timeZone: "Europe/Bucharest", day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(t)); } catch { return ""; } };
-export const profitReal = (p, q, stareT212) => {
-  const P = p.perioade, sapt = "săptămâna " + ddmm(P.saptamana.luni) + "–" + ddmm(P.saptamana.azi);
+// v100.285 (ideile 1-2): `ext` = { costP, costQ, topP, topQ } ⇒ „din care comisioane (și funding)” pe fiecare rând cu închideri și cei mai
+// buni / slabi 3 ai săptămânii sub fiecare piață; fără `ext`, mesajul din v100.284
+export const profitReal = (p, q, stareT212, ext) => {
+  const P = p.perioade, sapt = "săptămâna " + ddmm(P.saptamana.luni) + "–" + ddmm(P.saptamana.azi), E = ext || {};
   const et = { saptamana: sapt, luna: numeLuna(P.luna.cheie), an: P.an.an, total: "total" };
-  const rand = (o, k, sg, pl, mon) => "• " + et[k] + (k === "total" && o.total.de ? ", de la " + dataRo(o.total.de) : "") + ": "
-    + (o[k].n ? cate(o[k].n, sg, pl) + ", net " + B1(o[k].net) + " " + mon + " (" + Math.round(100 * o[k].plus / o[k].n) + "% pe plus)" : "niciun " + sg + " închis");
+  const rand = (o, k, sg, pl, mon, cost, ceCost) => "• " + et[k] + (k === "total" && o.total.de ? ", de la " + dataRo(o.total.de) : "") + ": "
+    + (o[k].n ? cate(o[k].n, sg, pl) + ", net " + B1(o[k].net) + " " + mon + (cost && cost[k] ? ", din care " + ceCost + " " + B1(cost[k]) : "")
+      + " (" + Math.round(100 * o[k].plus / o[k].n) + "% pe plus)" : "niciun " + sg + " închis");
+  const unul = (x) => x.eticheta + (x.dir === "long" || x.dir === "short" ? " " + x.dir : "") + " " + B1(x.rezultat) + " (" + dataRo(x.inchis).slice(0, 5) + ")";
+  const top = (t, mon) => !t || !(t.buni.length || t.slabi.length) ? [] : ["Cei mai buni ai săptămânii (" + mon + "): " + (t.buni.length ? t.buni.map(unul).join(" · ") : "niciunul pe plus") + ".",
+    "Cei mai slabi ai săptămânii (" + mon + "): " + (t.slabi.length ? t.slabi.map(unul).join(" · ") : "niciunul pe minus") + "."];
   const K = ["saptamana", "luna", "an", "total"], L = ["Doar ce s-a închis: boții și pozițiile încă deschise nu intră, nici pe plus, nici pe minus.", "Boții Pionex, netul după comisioane și funding:"];
-  for (const k of K) L.push(rand(p, k, "bot", "boți", "USDT"));
+  for (const k of K) L.push(rand(p, k, "bot", "boți", "USDT", E.costP, "comisioane și funding"));
+  L.push(...top(E.topP, "USDT"));
   L.push("Trading 212, trade-urile închise, după comisioane:");
-  if (q) for (const k of K) L.push(rand(q, k, "trade", "trade-uri", "lei"));
+  if (q) { for (const k of K) L.push(rand(q, k, "trade", "trade-uri", "lei", E.costQ, "comisioane")); L.push(...top(E.topQ, "lei")); }
   else L.push(stareT212 === "nelegat" ? "• Trading 212 nu e legat la Radar." : "• istoricul Trading 212 n-a venit acum; îl adaug duminica viitoare.");
   return { nivel: "info", cheie: "profit", titlu: "Profitul real: " + sapt, mesaj: L.join("\n") };
 };

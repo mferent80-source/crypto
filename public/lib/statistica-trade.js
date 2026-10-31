@@ -298,9 +298,10 @@ var StatisticaTrade = (function () {
   function dinPionex(l) {
     return (Array.isArray(l) ? l : []).map(function (t) {
       // NET: rezultatul realizat al Pionex e INAINTE de comisioane si funding (LIGHTER: −58,52 realizat, −59,04 net) - aici dupa ele
+      // v100.285: funding-ul ramane si separat, cu semn (costurile din raportul de profit de duminica)
       var net = nr(t.rezultat) !== null ? nr(t.rezultat) + (nr(t.comisioane) || 0) + (nr(t.funding) || 0) : null;
       return { id: t.id, eticheta: t.moneda, pornit: t.pornit, inchis: t.inchis, rezultat: net, baza: nr(t.pus) !== null ? nr(t.pus) : t.investit, durataOre: t.durataOre,   // v100.26: suma pusa reala (cu marja adaugata)
-        comisioane: nr(t.comisioane) !== null ? Math.abs(nr(t.comisioane)) : null, dir: t.dir || null, levier: nr(t.levier), greseli: (t.greseli || []).map(function (g) { return g.cod; }) };
+        comisioane: nr(t.comisioane) !== null ? Math.abs(nr(t.comisioane)) : null, funding: nr(t.funding), dir: t.dir || null, levier: nr(t.levier), greseli: (t.greseli || []).map(function (g) { return g.cod; }) };
     });
   }
   // v100.27: spot grid si smart copy (JurnalTrade.alte) - rezultatul lor e deja NET (banii); „direcția” = felul botului

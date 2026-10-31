@@ -29,5 +29,20 @@ export function profitPe(lista, acum) {
   out.total.de = l.reduce((m, x) => (m === null || x.inchis < m ? x.inchis : m), null);
   return out;
 }
+// v100.285 (ideea 1): costurile pe fiecare perioadă, din aceeași listă ca netul - boți: −comisioane + funding (cu semn);
+// Trading 212: −comisioane (de conversie); spot / copy n-au costurile separate (null ⇒ 0). −0 ⇒ 0.
+export function costuriPe(lista, acum) {
+  const P = perioade(acum), out = {};
+  const l = (Array.isArray(lista) ? lista : []).filter((x) => x && nr(x.inchis) !== null && x.inchis <= acum);
+  for (const k of ["saptamana", "luna", "an", "total"]) out[k] = r2(l.filter((x) => x.inchis >= P[k].de).reduce((a, x) => a - Math.abs(nr(x.comisioane) || 0) + (nr(x.funding) || 0), 0)) || 0;
+  return out;
+}
+// v100.285 (ideea 2): cei mai buni / slabi `n` ai săptămânii (de luni 00:00 până acum) - pe plus descrescător, pe minus crescător; zero în niciunul
+export function topSapt(lista, acum, n = 3) {
+  const de = perioade(acum).saptamana.de;
+  const l = (Array.isArray(lista) ? lista : []).filter((x) => x && nr(x.inchis) !== null && nr(x.rezultat) !== null && x.inchis >= de && x.inchis <= acum);
+  return { buni: l.filter((x) => nr(x.rezultat) > 0).sort((a, b) => nr(b.rezultat) - nr(a.rezultat)).slice(0, n),
+    slabi: l.filter((x) => nr(x.rezultat) < 0).sort((a, b) => nr(a.rezultat) - nr(b.rezultat)).slice(0, n) };
+}
 // duminica de la 20 (ora României), o dată pe duminică
 export const profitDatorat = (st, acum, ora) => fZs.format(new Date(acum)) === "Sun" && Number(ora) >= 20 && st.profit !== ziRo(acum);

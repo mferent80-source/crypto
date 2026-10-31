@@ -294,7 +294,13 @@ export function situatiiAlerte(pune) {
     const pb = { saptamana: pr(68, -135.29, 28), luna: pr(0, 0, 0), an: pr(2100, -5900.12, 1176), total: pr(2449, -6651.25, 1372, Date.UTC(2025, 11, 21)), perioade: P };
     const pt = { saptamana: pr(0, 0, 0), luna: pr(2, 45.2, 1), an: pr(40, 312, 24), total: pr(78, 412.5, 45, Date.UTC(2025, 2, 12)), perioade: P };
     pune("profitul real: boți și T212", "alerte", "colector.profitReal", MC.profitReal(pb, pt, "ok"), RAP);
-    pune("profitul real: T212 n-a venit", "alerte", "colector.profitReal", MC.profitReal(pb, null, "lipsa"), RAP); }
+    pune("profitul real: T212 n-a venit", "alerte", "colector.profitReal", MC.profitReal(pb, null, "lipsa"), RAP);
+    // v100.285: costurile pe rânduri + cei mai buni / slabi ai săptămânii (T212 fără trade-uri în săptămână ⇒ fără top)
+    const T = (z, h) => Date.UTC(2026, 9, z, h);
+    pune("profitul real: costurile și cei mai buni / slabi", "alerte", "colector.profitReal", MC.profitReal(pb, pt, "ok", { costP: { saptamana: -41.37, luna: 0, an: -2988.4, total: -3223.42 }, costQ: { saptamana: 0, luna: -0.9, an: -18.25, total: -40.6 },
+      topP: { buni: [{ eticheta: "1000SHIB", dir: "short", inchis: T(30, 9), rezultat: 21.84 }, { eticheta: "BTC (spot)", dir: "spot grid", inchis: T(28, 9), rezultat: 1004.5 }],
+        slabi: [{ eticheta: "PARTI", dir: "long", inchis: T(27, 9), rezultat: -124.8 }, { eticheta: "BEAMX", dir: "short", inchis: T(29, 9), rezultat: -0.04 }, { eticheta: "ONDO", dir: "short", inchis: T(31, 9), rezultat: -7.4 }] },
+      topQ: { buni: [], slabi: [] } }), RAP); }
   // v100.283: seara pe scurt și oglinda lunii
   pune("seara pe scurt: frâna cea mai deasă", "alerte", "colector.searaPeScurt", MC.searaPeScurt({ zi: "2026-10-31", n: 9, bune: { n: 3, net: 2.1 }, rele: { n: 6, net: -14.8 }, top: "frana", pe: { frana: { n: 6, net: -14.8 } } }, 7), RAP);
   pune("seara pe scurt: toate în regulă", "alerte", "colector.searaPeScurt", MC.searaPeScurt({ zi: "2026-10-31", n: 2, bune: { n: 2, net: 3.5 }, rele: { n: 0, net: 0 }, top: null, pe: {} }, 7), RAP);
