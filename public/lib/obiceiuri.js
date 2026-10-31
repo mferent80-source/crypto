@@ -129,16 +129,28 @@ var Obiceiuri = (function () {
       : "Frâna contului: azi " + U(netZi) + " din −" + P0.zi + ", pe 7 zile " + U(netSapt) + " din −" + P0.sapt + (rand ? ", " + rand + " pe minus la rând" : "") + ", " + pornitiAzi + " din " + cate(P0.boti, "bot pornit azi", "boți porniți azi") + ".";
     return { netZi: netZi, netSapt: netSapt, deschis: deschis, inchiseAzi: nZi, rand: rand, pornitiAzi: pornitiAzi, depasit: dep, activa: dep.length > 0, praguri: P0, text: text };
   }
+  // v100.281 (el, 31.10: evaluarea după fiecare bot închis): frâna în CLIPA pornirii lui t - doar ce se știa atunci: închișii de dinainte și
+  // deschișii în clipa aceea, din listă și din `deschise` (boții încă porniți acum, porniți înaintea lui; același id o singură dată); t însuși
+  // nu intră. franaIstoric o folosește la fel. v100.280: boții încă deschiși în clipa pornirii intră la „porniți azi” (fără ei, al 8-lea bot
+  // al zilei ar fi părut al 3-lea).
+  // cuPierdere (doar pentru o pornire de ACUM): deschișii își aduc și pierderea de acum, ca frâna din colector
+  function franaLaPornire(t, toate, praguri, deschise, cuPierdere) {
+    var p = nr(t && t.pornit), id = t && t.id !== undefined && t.id !== null ? String(t.id) : null, ids = {}, D = Array.isArray(deschise) ? deschise : [];
+    var altul = function (x) { return !!x && x !== t && (id === null || String(x.id) !== id); };
+    var l = (Array.isArray(toate) ? toate : []).filter(function (x) { return altul(x) && nr(x.inchis) !== null && nr(x.pornit) !== null; });
+    if (D.length) l.forEach(function (x) { ids[String(x.id)] = 1; });
+    var inainte = l.filter(function (x) { return x.inchis <= p; });
+    var atunci = l.filter(function (x) { return x.pornit <= p && x.inchis > p; }).map(function (x) { return { activ: true, pornitLa: x.pornit }; });
+    D.forEach(function (b) { var q = b ? nr(b.pornitLa !== undefined && b.pornitLa !== null ? b.pornitLa : b.pornit) : null; if (altul(b) && !ids[String(b.id)] && b.activ !== false && q !== null && q <= p) atunci.push(cuPierdere ? { activ: true, pornitLa: q, profitTotal: b.profitTotal } : { activ: true, pornitLa: q }); });
+    return frana({ trades: inainte, deschise: atunci, acum: p, praguri: praguri });
+  }
   // I-468: cat ar fi economisit frana pe istorie - botii PORNITI dupa ce frana suna (in ziua / saptamana / seria aceea) n-ar mai fi pornit.
   // Pe inchisi, in-sample: e o ipoteza (spusa asa pe ecran), nu o promisiune.
   function franaIstoric(trades, praguri) {
     var P0 = praguriFrana(praguri), l = (Array.isArray(trades) ? trades : []).filter(function (t) { return t && nr(t.inchis) !== null && nr(t.pornit) !== null && netT(t) !== null; })
       .sort(function (a, b) { return a.pornit - b.pornit; }), sarite = 0, economisit = 0, cedat = 0;
     l.forEach(function (t) {
-      var inainte = l.filter(function (x) { return x !== t && x.inchis <= t.pornit; });
-      // v100.280: boții încă deschiși în clipa pornirii intră la „porniți azi” (fără ei, al 8-lea bot al zilei ar fi părut al 3-lea)
-      var deschiseAtunci = l.filter(function (x) { return x !== t && x.pornit <= t.pornit && x.inchis > t.pornit; }).map(function (x) { return { activ: true, pornitLa: x.pornit }; });
-      var f = frana({ trades: inainte, deschise: deschiseAtunci, acum: t.pornit, praguri: P0 });
+      var f = franaLaPornire(t, l, P0);   /* v100.281: aceeași frână la pornire ca evaluarea botului închis */
       if (f.activa) { sarite++; economisit += -netT(t); if (netT(t) > 0) cedat += netT(t); }
     });
     return { sarite: sarite, economisit: economisit, cedat: cedat, n: l.length, praguri: P0,
@@ -289,6 +301,6 @@ var Obiceiuri = (function () {
     if (rele.length && rele.every(function (x) { return x.cod === "moneda"; })) return { fac: "Aș porni cu o sumă mai mică și aș ține stopul la plan.", nota: "Fișa, planul și levierul sunt în regulă, dar pe moneda asta istoria ta e pe minus; îl notez în jurnal." };
     return { fac: "Aș aștepta până trec regulile de mai sus.", nota: "Dacă pornești totuși, îl notez în jurnal și socoteala va arăta cine a avut dreptate." };
   }
-  return { facPoarta: facPoarta, frana: frana, franaIstoric: franaIstoric, praguriFrana: praguriFrana, inceputZiRo: inceputZiRo, poarta: poarta, istoricMoneda: istoricMoneda, subOOra: subOOra, portofoliu: portofoliu, raportDuminica: raportDuminica, autopsie: autopsie, reguliPersonale: reguliPersonale, hartie: hartie };
+  return { facPoarta: facPoarta, frana: frana, franaIstoric: franaIstoric, franaLaPornire: franaLaPornire, praguriFrana: praguriFrana, inceputZiRo: inceputZiRo, poarta: poarta, istoricMoneda: istoricMoneda, subOOra: subOOra, portofoliu: portofoliu, raportDuminica: raportDuminica, autopsie: autopsie, reguliPersonale: reguliPersonale, hartie: hartie };
 })();
 if (typeof globalThis !== "undefined") globalThis.Obiceiuri = Obiceiuri;

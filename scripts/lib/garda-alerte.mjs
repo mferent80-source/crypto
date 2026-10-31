@@ -4,6 +4,7 @@
 // v100.70 (revizia pachetului 3): textele de baza vin din producatorii REALI (SemnaleBot, IndicatoriBot.mediu, Acasa.vreme/vremeBursa,
 // Obiceiuri.istoricMoneda/subOOra/frana, TabloExtra.propunePlan) - fixturile inventate ascundeau abateri reale.
 import * as MC from "./mesaje-colector.mjs";
+import * as CO from "./comportament.mjs";   // v100.281: evaluarea boților închiși, săptămâna frânei
 import { alerteSimboluri, alerteSLTP, alerteT212Pasi, alertaBotPas } from "./poza.mjs";
 import { mesajReteta } from "./tura-scan.mjs";
 import { mesajFundingPiata } from "./tura-piata.mjs";
@@ -265,4 +266,25 @@ export function situatiiAlerte(pune) {
   co("raportul de duminică (titlul)", "raport", { titlu: MC.raport("2026-09-27", ["—"]).titlu });
   co("autopsia acțiunilor (titlul)", "autopsie", { titlu: MC.autopsie("2026-09-27", ["—"]).titlu });
   co("mesaj întârziat în coada Discord", "intarziat", { titlu: MC.intarziat("CRV: lichidarea la 6,2%", 34) });
+  // v100.281 (el, 31.10): evaluarea fiecărui bot închis (canalul lui separat), pornirea cu frâna trasă, întrebarea despre pragul pe 7 zile,
+  // săptămâna frânei în raportul de duminică - din producătorii reali (Comportament.evalueaza / franaPeSaptamana, Obiceiuri.franaLaPornire)
+  const PRf = { zi: 20, sapt: 60, rand: 3, boti: 7 }, BANDA = { dv: { h: 6, intoarse: 0.41, n: 120 }, r: { h: 12, intoarse: 0.28, n: 80 } };
+  const DOV = { zile: { prag: 7, peste: { zile: 97, pe: -54.2 }, sub: { zile: 152, pe: -9.1 } }, minute: { n: 1057, grile: 340.7, comisioane: -1165.1 } };
+  const FR = (o) => Object.assign({ pornitiAzi: 2, rand: 0, netZi: -1, netSapt: -10, depasit: [], praguri: PRf, activa: false }, o || {});
+  const TB = (o) => Object.assign({ id: "e1", moneda: "SOL", dir: "long", pornit: T0 - 7.5 * ORA, inchis: T0, net: -3.2, rezultat: -2.7, grile: 1.2, pozitie: -3.9, comisioane: -0.4, funding: -0.1 }, o || {});
+  const evb = (sit, o) => pune(sit, "alerte", "colector.evaluareBot", MC.evaluareBot(CO.evalueaza(Object.assign({ t: TB(), frana: FR(), afaraOre: 2, banda: BANDA, dovezi: DOV, motiv: "user_cancel" }, o))), RAP);
+  evb("evaluarea: decizii bune, ghinion", {});
+  evb("evaluarea: decizii bune, pe plus", { t: TB({ net: 2.1 }) });
+  evb("evaluarea: al 9-lea bot, 3 la rând, 7 zile, 7,5 h afară", { frana: FR({ pornitiAzi: 8, rand: 3, netSapt: -682, depasit: [{ cod: "rand" }, { cod: "sapt" }, { cod: "boti" }], activa: true }), afaraOre: 7.5, motiv: null });
+  evb("evaluarea: câștig cu noroc, 13 h afară", { t: TB({ net: 4.4, dir: "short" }), frana: FR({ pornitiAzi: 9, depasit: [{ cod: "boti" }] }), afaraOre: 13 });
+  evb("evaluarea: închis în 6 minute", { t: TB({ pornit: T0 - 6 * 60000, net: -0.7, grile: 0.2, pozitie: -0.3, comisioane: -0.6, funding: 0 }), frana: FR({ pornitiAzi: 0 }), afaraOre: 0 });
+  evb("evaluarea: lichidat, toate pragurile", { t: TB({ net: -98.4, moneda: "1000BONK", dir: "neutru" }), frana: FR({ pornitiAzi: 30, rand: 5, netZi: -40.5, netSapt: -1234.5, depasit: [{ cod: "zi" }, { cod: "sapt" }, { cod: "rand" }, { cod: "boti" }], activa: true }), afaraOre: 50, motiv: "liquidation" });
+  co("botul pornit cu frâna trasă (al 9-lea, 7 zile)", "pornitCuFrana", MC.pornitCuFrana("SOL", "long", FR({ pornitiAzi: 8, netSapt: -682, depasit: [{ cod: "boti" }, { cod: "sapt" }], activa: true })));
+  co("botul pornit cu frâna trasă (toate pragurile)", "pornitCuFrana", MC.pornitCuFrana("1000BONK", "short", FR({ pornitiAzi: 99, rand: 12, netZi: -1234.5, netSapt: -12345.6, depasit: [{ cod: "sapt" }, { cod: "zi" }, { cod: "rand" }, { cod: "boti" }], activa: true })));
+  co("frâna pe 7 zile trasă de 4 zile", "pragSaptIntrebare", MC.pragSaptIntrebare(FR({ netSapt: -682 }), 4));
+  co("canalul evaluărilor e legat", "legatEvaluari", MC.legatEvaluari());
+  {
+    const l = []; for (let k = 0; k < 9; k++) l.push({ id: "g" + k, pornit: T0 - 3 * ZI + k * ORA, inchis: T0 - 3 * ZI + k * ORA + 1800000, net: k > 6 ? -3.5 : 1.1 });
+    pune("raportul de duminică: săptămâna frânei", "alerte", "comportament.liniiFranaSaptamana", { titlu: MC.raport("2026-10-04", ["—"]).titlu, mesaj: CO.liniiFranaSaptamana(CO.franaPeSaptamana(l, PRf, T0, OBf.franaLaPornire)).join("\n") }, RAP);
+  }
 }

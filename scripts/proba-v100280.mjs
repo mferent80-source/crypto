@@ -153,11 +153,13 @@ await test("(3) grilele / poziția pe 7 zile: sumele, realizatul = grile + pozi�
   assert.ok(h.indexOf("Grilele au prins") < h.indexOf("Comisioane și funding"));
 });
 
-await test("versiunile: v100.280 în aplicație, v101.152 în colector", () => {
-  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.280"/);
-  assert.match(citeste("public", "index.html"), /id="healthAppVersion">v100\.280</);
-  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-280/);
-  assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.152"/);
+// v100.281: de la v100.280 / v101.152 în sus (ca probele vechi), nu exact
+await test("versiunile: de la v100.280 în aplicație, de la v101.152 în colector", () => {
+  const app = Number(citeste("functions", "_shared", "versiune.js").match(/VERSIUNE = "v100\.(\d+)"/)[1]);
+  assert.ok(app >= 280, String(app));
+  assert.match(citeste("public", "index.html"), new RegExp('id="healthAppVersion">v100\\.' + app + "<"));
+  assert.match(citeste("public", "sw.js"), new RegExp("crypto-radar-v100-" + app));
+  assert.ok(Number(citeste("scripts", "colector.mjs").match(/const VERSIUNE_COLECTOR = "v101\.(\d+)"/)[1]) >= 152);
 });
 
 console.log(picate ? `\n${picate} PICA din ${teste}\n` : `\ntoate ${teste} ok\n`);

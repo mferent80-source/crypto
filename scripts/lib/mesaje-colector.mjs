@@ -140,6 +140,14 @@ export const pondereT212 = (s, pond) => ({ nivel: "atentie", titlu: s + " e " + 
 
 // rapoartele: randurile vin gata (Obiceiuri / Consiliu - pachetul 5); aici doar titlul
 export const raport = (data, linii) => ({ nivel: "info", titlu: "Raportul de duminică (" + data + ")", mesaj: linii.join("\n") });
+// v100.281: raportul lung pe mai multe mesaje - Discord taie descrierea la 2000 (din 25.10 se pierdeau rândurile Trend și acțiunile);
+// rupt doar între rânduri, fiecare parte ≤ max; scurt ⇒ un singur mesaj, exact ca raport()
+export const raportParti = (data, linii, max = 1900) => {
+  const parti = []; let cur = [];
+  for (const x of Array.isArray(linii) ? linii : []) { const s = String(x); if (cur.length && (cur.join("\n") + "\n" + s).length > max) { parti.push(cur); cur = []; } cur.push(s); }
+  if (cur.length || !parti.length) parti.push(cur);
+  return parti.map((p, i) => ({ nivel: "info", titlu: "Raportul de duminică (" + data + ")" + (parti.length > 1 ? " · " + (i + 1) + "/" + parti.length : ""), mesaj: p.join("\n") }));
+};
 export const autopsie = (data, linii) => ({ nivel: "info", titlu: "Autopsia acțiunilor (" + data + ")", mesaj: linii.join("\n") });
 
 export const legat = () => ({ nivel: "info", titlu: "Crypto Radar: alertele sunt legate",
@@ -197,3 +205,72 @@ export const frana = (f) => {
   const fapt = parti.length ? parti.join(", ") : String(f && typeof f === "object" ? f.text || "" : f || "").replace(/^Frâna contului: gata pe azi\s*—\s*/, "").replace(/\s*N-aș mai porni boți azi;.*$/, "");
   return { nivel: "critic", titlu: "🛑 Frâna contului: gata pe azi", mesaj: msg(fapt.charAt(0).toUpperCase() + fapt.slice(1).replace(/\.?\s*$/, "."), "N-aș mai porni boți azi (mâine, cu capul limpede); pragurile se schimbă în Radar → Grid → Poarta de pornire.") };
 };
+
+// ---------------- v100.281 / colector v101.153 (el, 31.10): evaluarea fiecărui bot închis, în canalul LUI separat ----------------
+// ev = Comportament.evalueaza(...) - deciziile (✅ / ❌ cu cifrele lui), verdictul 2×2 (decizii × rezultat) și un sfat; f = Obiceiuri.frana /
+// franaLaPornire. Fiecare rând ≤ 160 (garda „raport”), sfatul „👉 Aș…” ≤ 110.
+const num = (v) => (v === null || v === undefined || v === "" || !Number.isFinite(Number(v)) ? null : Number(v));
+const ordinal = (n) => (Math.round(Number(n)) === 1 ? "primul" : "al " + Math.round(Number(n)) + "-lea");
+const mare = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+const durOre = (h) => { const m = Math.round(Number(h) * 60); return m < 60 ? Math.max(1, m) + " min" : Math.floor(m / 60) + " h" + (m % 60 ? " " + (m % 60) + " min" : ""); };
+const pc = (x) => Math.round(Number(x) * 100) + "%";
+const ori = (a, b) => (Math.abs(Number(a)) / Number(b)).toFixed(1).replace(".", ",") + "×";
+const dirTxt = (d) => (d === "long" || d === "short" ? " " + d : "");
+const VERDICT = { bune: "decizii bune", ghinion: "decizii bune, ghinion", noroc: "câștig cu noroc", cost: "greșeala a costat" };
+// pragurile frânei depășite, mereu în aceeași ordine (boții de azi, la rând, ziua, 7 zile) - scurte, ca și toate patru să încapă în 160;
+// fara = fără pragurile în bani (praguri și sume foarte mari)
+function franaParti(f, cuBoti, fara) {
+  const dep = new Set(((f && f.depasit) || []).map((d) => d && d.cod)), P = (f && f.praguri) || {}, l = [];
+  if (cuBoti && dep.has("boti")) l.push(ordinal((num(f.pornitiAzi) || 0) + 1) + " bot azi (pragul " + P.boti + ")");
+  if (dep.has("rand")) l.push(cate(f.rand, "pierdere", "pierderi") + " la rând (pauza la " + P.rand + ")");
+  if (dep.has("zi")) l.push("ziua " + U2(f.netZi) + (fara ? "" : " (pragul −" + V(P.zi) + ")"));
+  if (dep.has("sapt")) l.push("7 zile " + U2(f.netSapt) + (fara ? "" : " (pragul −" + V(P.sapt) + ")"));
+  return l;
+}
+function textDecizie(d) {
+  if (d.cod === "boti") return mare(ordinal(d.n)) + " bot pornit azi, " + (d.ok ? "în pragul tău de " + d.prag : "peste pragul tău de " + d.prag
+    + (d.dovezi && d.dovezi.peste.pe < d.dovezi.sub.pe ? ": zilele tale cu peste " + cate(d.dovezi.prag, "bot", "boți") + " au dat " + U2(d.dovezi.peste.pe) + "/zi, celelalte " + U2(d.dovezi.sub.pe) + "/zi" : "")) + ".";
+  if (d.cod === "frana") return d.ok ? "Pierderile erau sub pragurile frânei când l-ai pornit." : "Pornit cu frâna trasă: " + franaParti(d.frana, false).join(", ") + ".";
+  if (d.cod === "banda") return d.ok ? "Ai închis la " + durOre(d.ore) + " după ieșirea prețului din grilă, înainte de pragul de " + d.dv.h + " h."
+    : "Ai ținut " + durOre(d.ore) + " cu prețul în afara grilei: la tine, după " + d.dv.h + " h se mai întorc doar " + pc(d.dv.intoarse) + (d.r && d.ore >= d.r.h ? ", după " + d.r.h + " h " + pc(d.r.intoarse) : "") + ".";
+  if (d.cod === "minute") {
+    const g = num(d.grile), c = num(d.comisioane) || 0, dm = d.dovezi;
+    return "Închis după " + Math.max(1, Math.round(d.minute)) + " min: comisioanele " + U2(c) + (g !== null && g > 0 ? " = " + ori(c, g) + " cât au prins grilele (" + U2(g) + ")" : ", grilele n-au prins nimic")
+      + (dm && dm.grile > 0 ? "; la tine, sub " + d.prag + " min comisioanele sunt " + ori(dm.comisioane, dm.grile) + " grilele" : "") + ".";
+  }
+  return "Lichidat: botul n-a avut un stop înaintea lichidării.";
+}
+function sfatEvaluare(ev) {
+  const d = ev.decizii.find((x) => x.cod === ev.sfat && !x.ok);
+  if (!d) return ev.net < 0 ? "Aș repeta la fel: o pierdere cu decizii bune nu cere nicio schimbare." : "Aș porni la fel data viitoare: deciziile au fost pe regulile tale.";
+  if (d.cod === "lichidare") return "Aș pune stopul înaintea lichidării, de la pornire.";
+  if (d.cod === "boti") return "Aș număra boții înainte să pornesc: după " + ordinal(d.prag) + ", gata ziua.";
+  if (d.cod === "banda") return "Aș hotărî la " + d.dv.h + " h cu prețul în afara grilei: îl închid sau îi mut banda.";
+  if (d.cod === "frana") return d.rand ? "Aș închide Pionex după " + cate(d.rand.prag, "pierdere", "pierderi") + " la rând și aș relua mâine."
+    : d.zi ? "Aș lăsa boții pe mâine când ziua trece de −" + V(d.zi.prag) + " USDT."
+    : "Aș porni cu 7 zile sub −" + V(d.sapt.prag) + " doar dacă pragul mai e al meu; altfel l-aș schimba în Poartă.";
+  return "Aș porni gridul doar când îl las să lucreze: în minute prinde puține grile, comisioanele se plătesc oricum.";
+}
+export const evaluareBot = (ev) => {
+  const t = ev.t || {}, net = Number(ev.net) || 0, dur = num(t.inchis) !== null && num(t.pornit) !== null && t.inchis > t.pornit ? durOre((t.inchis - t.pornit) / 3600000) : null;
+  const g = num(t.grile), p = num(t.pozitie), cf = (num(t.comisioane) || 0) + (num(t.funding) || 0);
+  const L = [(dur ? "Ținut " + dur : "Botul") + (g !== null && p !== null ? ": grilele " + U2(g) + ", poziția " + U2(p) + ", comisioane și funding " + U2(cf) : "") + " ⇒ net " + U2(net) + "."];
+  for (const d of ev.decizii) if (d.ok) L.push("✅ " + textDecizie(d));
+  for (const d of ev.decizii) if (!d.ok) L.push("❌ " + textDecizie(d));
+  if (ev.verdict === "ghinion") L.push("⚖️ Pe regulile tale n-ai greșit nimic: pierderea vine din piață, nu din decizii.");
+  if (ev.verdict === "noroc") L.push("⚖️ Câștigul a venit cu reguli încălcate: de data asta piața te-a ajutat, regula rămâne.");
+  L.push("👉 " + sfatEvaluare(ev));
+  return { nivel: ev.nivel, cheie: "evaluare", titlu: (String(t.moneda || "Botul") + dirTxt(t.dir) + ": " + VERDICT[ev.verdict] + " " + U2(net)).slice(0, 60), mesaj: L.join("\n") };
+};
+// botul pornit cu frâna trasă (f = Obiceiuri.franaLaPornire): pe acesta nu-l închid în minute (comisioanele), doar nu mai pornesc altul
+export const pornitCuFrana = (nume, dir, f) => {
+  let fapt = "Frâna trasă la pornire: " + franaParti(f, true).join(", ") + ".";
+  if (fapt.length > 160) fapt = "Frâna trasă la pornire: " + franaParti(f, true, true).join(", ") + ".";   /* revizia: praguri și sume foarte mari */
+  return { nivel: "atentie", cheie: "pornit-frana", titlu: (String(nume || "Botul") + dirTxt(dir) + ": pornit cu frâna trasă").slice(0, 60), mesaj: msg(fapt, "N-aș mai porni altul azi; pe acesta l-aș lăsa să lucreze, cu stopul pus.") };
+};
+// frâna pe 7 zile trasă de peste 3 zile la rând: trasă zilnic, nu mai oprește nimic - pragul de acum mai e al lui?
+export const pragSaptIntrebare = (f, zile) => ({ nivel: "atentie", cheie: "frana-sapt", titlu: "Frâna pe 7 zile e trasă de " + cate(zile, "zi", "zile") + " la rând",
+  mesaj: msg("Ultimele 7 zile: " + U2(f.netSapt) + ", pragul tău e −" + V(f.praguri.sapt) + " USDT; trasă zile la rând, frâna nu mai spune nimic nou.",
+    "Aș hotărî azi: țin pauza până revine săptămâna sau pun în Poartă un prag pe care îl respect.") });
+export const legatEvaluari = () => ({ nivel: "info", titlu: "Crypto Radar: aici vin evaluările boților",
+  mesaj: "După fiecare bot închis: ce a mers, ce de îndreptat și un sfat, pe regulile și cifrele tale; tot aici, pornirile cu frâna trasă." });
