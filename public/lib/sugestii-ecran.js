@@ -176,11 +176,12 @@ function sugHtml(d, acum) {
 }
 // v100.243: o secțiune își schimbă cifrele pe loc. Pagina întreagă se rescrie doar la primul desen
 // sau când apare ori dispare un bloc. „arată toate” nu e parte din schelet: rămâne deschisă.
+// v100.288: nici `randPlin` (cardul întins pe tot rândul de lib/asezare-randuri.js): nodul rămâne, clasa o scoate doar așezarea.
 function sugSchelet(h) { return String(h || "").replace(/\s*\bsugTrendTot\b/g, "").replace(/>([^<]*)</g, "><"); }
 function sugAcelasiNod(a, b) {
   if (!a || !b || a.nodeType !== 1 || b.nodeType !== 1 || a.tagName !== b.tagName) return false;
-  var ca = String(a.className || "").replace(/\bsugTrendTot\b/g, "").replace(/\s+/g, " ").trim();
-  var cb = String(b.className || "").replace(/\bsugTrendTot\b/g, "").replace(/\s+/g, " ").trim();
+  var ca = String(a.className || "").replace(/\b(sugTrendTot|randPlin)\b/g, "").replace(/\s+/g, " ").trim();
+  var cb = String(b.className || "").replace(/\b(sugTrendTot|randPlin)\b/g, "").replace(/\s+/g, " ").trim();
   if (ca !== cb) return false;
   if ((a.getAttribute("href") || "") !== (b.getAttribute("href") || "")) return false;
   if ((a.getAttribute("data-action-click") || "") !== (b.getAttribute("data-action-click") || "")) return false;
@@ -277,7 +278,7 @@ function sugAlinia(vechi, nou) {
     return "";
   }
   function cheieBaza(n) {
-    var cls = String(n.className || "").replace(/\bsugTrendTot\b/g, "").replace(/\bales\b/g, "").replace(/\s+/g, " ").trim();
+    var cls = String(n.className || "").replace(/\b(sugTrendTot|randPlin)\b/g, "").replace(/\bales\b/g, "").replace(/\s+/g, " ").trim();
     return String(n.tagName || "").toUpperCase() + "." + cls;
   }
   function chei(lista) {
@@ -300,6 +301,7 @@ function sugAlinia(vechi, nou) {
     var clsV = " " + String(a.className || "").replace(/\s+/g, " ") + " ";
     var cls = String(b.className || "").replace(/\s+/g, " ").trim();
     if (clsV.indexOf(" sugTrendTot ") >= 0 && (" " + cls + " ").indexOf(" sugTrendTot ") < 0) cls = (cls + " sugTrendTot").trim();
+    if (clsV.indexOf(" randPlin ") >= 0 && (" " + cls + " ").indexOf(" randPlin ") < 0) cls = (cls + " randPlin").trim();
     a.className = cls;
     if (a.setAttribute) a.setAttribute("class", cls);
   }

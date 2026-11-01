@@ -3255,6 +3255,12 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
 @media (min-width:760px){#comportament .coRand3{grid-template-columns:repeat(2,minmax(0,1fr))}#comportament .coRand3>:nth-child(3){grid-column:1/-1}}
 @media (min-width:1320px){#comportament .coRand3{grid-template-columns:repeat(3,minmax(0,1fr))}#comportament .coRand3>:nth-child(3){grid-column:auto}}
 @media (min-width:1600px){#comportament .coEval{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 28px;align-items:start}#comportament .coEval>.coBlocCap,#comportament .coEval>.coSfat,#comportament .coEval>.coCorectii{grid-column:1/-1}#comportament .coCorectii{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:28px}#comportament .coCorectii>h4{grid-column:1/-1}}
+/* v100.288 (el, 01.11: „ok, acum arată bine, fă toate paginile așa”): așezarea paginii Comportament pe toate paginile - ultimul card
+   rămas singur pe rând se întinde pe tot rândul (lib/asezare-randuri.js pune clasa, după poziția văzută), iar grilele de carduri cu
+   înălțimi diferite își lasă cardurile cât conținutul (nu se mai întind în gol cât vecinul) */
+.panel .randPlin{grid-column:1/-1;flex:1 1 100%}
+.settingsGrid,.sugGrila,.sugSectGrid,.reportSections,.volHero,.prHero,.decisionToolGrid,.decisionExplainGrid,.cacheGrid{align-items:start}
+#dash .acPuls,#dash .acDoua{align-items:start}
 /* v100.272 (ideile auditului 29.10): paleta Ctrl+K din tastatură - comanda evidențiată (pe care o pornește Enter) și focusul se văd */
 .cmdItem[aria-selected="true"]{border-color:#5B8FC7;background:#1A2633}
 .cmdItem:focus-visible{outline:2px solid #5B8FC7;outline-offset:1px}
