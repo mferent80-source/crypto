@@ -5,7 +5,7 @@
 const ISTORIC_BOT = {
   cazuri: 1048576, retea: 524288, arbori: 2097152, ore: 524288, scan: 393216, botiInchisi: 393216, ingustUrmarire: 524288,
   risc: 262144, carnet: 262144, latime: 262144, cont: 1048576, verdicteCalibrare: 262144, universSua: 1048576,
-  sectoareTop: 262144, trend12: 262144, disciplinaBanda: 524288,
+  sectoareTop: 262144, trend12: 262144, disciplinaBanda: 524288, comportament: 524288,
 };
 export const PLAFON_IMPLICIT = 65536;
 export const PLAFON_T212 = 262144;

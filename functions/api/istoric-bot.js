@@ -105,6 +105,7 @@ export async function onRequestGet({request,env}){
   if(action==="risc"){let r=null;try{r=JSON.parse(await env.ISTORIC.get("risc")||"null")}catch{r=null}return json({risc:r})}
   // v100.176 (contul întreg): raportul colectorului (valoare, risc, corelații, stres, reconciliere, randament) și valoarea pe zile
   if(action==="cont"){let r=null;try{r=JSON.parse(await env.ISTORIC.get("cont:raport")||"null")}catch{r=null}return json({cont:r})}
+  if(action==="comportament"){let r=null;try{r=JSON.parse(await env.ISTORIC.get("comportament:raport")||"null")}catch{r=null}return json({comportament:r})}   /* v100.286: pagina Comportament (raportul colectorului) */
   // v100.177 (jurnalul verdictelor): verdictele ținute minte și calibrarea lor (cu registrul testelor și corecția pentru teste multiple)
   if(action==="verdicte"){let l=[];try{l=JSON.parse(await env.ISTORIC.get("verdicte:jurnal")||"[]")}catch{l=[]}return json({verdicte:Array.isArray(l)?l:[]})}
   if(action==="verdicteCalibrare"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("verdicte:calibrare")||"null")}catch{c=null}return json({calibrare:c})}
@@ -365,6 +366,7 @@ export async function onRequestPost({request,env}){
   // v100.113: raportul riscului - un singur obiect, cu „la” (îl scrie colectorul; mărimea e păzită mai sus, 256 KB)
   // v100.176: contul întreg - raportul (cu „la”) și valoarea unei zile (o intrare pe zi, ultimele 800)
   if(action==="cont"){const r=corp&&corp.cont;if(!r||typeof r!=="object"||Array.isArray(r)||!(nr(r.la)>0))return json({error:"cont: raportul cu „la”"},400);await env.ISTORIC.put("cont:raport",JSON.stringify(r));return json({ok:true})}
+  if(action==="comportament"){const r=corp&&corp.comportament;if(!r||typeof r!=="object"||Array.isArray(r)||r.forma!==1||!(nr(r.la)>0))return json({error:"comportament: raportul cu „la” și forma 1"},400);await env.ISTORIC.put("comportament:raport",JSON.stringify(r));return json({ok:true})}   /* v100.286 */
   // v100.177: un verdict sau mai multe (pagina: Poarta; colectorul: ideile, macro); un verdict pe (sursă, simbol, zi), cel mai nou rămâne
   // v100.196 (auditul sever, 🔵4 + C5): pe (sursă, simbol, zi) rămâne PRIMUL verdict - pe el a putut acționa; după un reload al paginii sau o
   // repornire a colectorului, retrimiterea de mai târziu nu-l mai înlocuiește. Verdictele PAGINII (Poarta) vin cu ora de acum: un `t` mai vechi

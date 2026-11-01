@@ -99,7 +99,7 @@ await test("P1 paleta Ctrl+K: cele 3 ecrane pierdute sunt înapoi (Jurnal de tra
   const c = ctx({}); const L = vm.runInContext("(" + APP.slice(i + "const COMMANDS=".length, j + 2) + ")", c);
   const id = L.map((x) => x[1]);
   for (const k of ["tabloubot", "busola", "gridset", "jurnaltrade", "t212", "alerts", "dash", "health", "settings"]) assert.ok(id.includes(k), "lipsește " + k);
-  assert.equal(L.length, 22, "19 rămăseseră + 3 întoarse");
+  assert.equal(L.length, 23, "19 rămăseseră + 3 întoarse + Comportament (v100.286)");
   const nume = Object.fromEntries(L.map((x) => [x[1], x[0]]));
   assert.equal(nume.dash, "Piața azi"); assert.equal(nume.alerts, "Alerte"); assert.equal(nume.settings, "Setări"); assert.equal(nume.health, "Starea aplicației");
 });
@@ -232,7 +232,7 @@ await test("🟡2 fâșia „ultimii boți închiși” (asezare-paznic.js): rez
 await test("🟡6 UI: pe Simulator grid, Contul întreg, Monte Carlo și Rezultate nu mai stă banda veche „Selected market / Engine bias WAIT”", () => {
   const f = fnSursa(APP, "show");
   const m = f.match(/toggle\("pePaginaNoua",(\[[^\]]*\])\.includes\(id\)\)/); assert.ok(m, "lista paginilor fără bandă");
-  assert.deepEqual(JSON.parse(m[1]), ["salt", "sugestii", "carnet", "gridsim", "contintreg", "montecarlo", "rezultate"]);
+  assert.deepEqual(JSON.parse(m[1]), ["salt", "sugestii", "carnet", "gridsim", "contintreg", "montecarlo", "rezultate", "comportament"]);   /* v100.286: + Comportament */
   assert.match(CSS, /body\.pePaginaNoua \.toolbar,body\.pePaginaNoua \.heroStrip,body\.pePaginaNoua \.tabs\{display:none\}/);
 });
 

@@ -332,7 +332,7 @@ await test("(revizia I1) botul pornit: frâna văzută ATUNCI, cu pierderea boț
   const ev = CO.evalueaza({ t: TT(), frana: sn, afaraOre: null, banda: BANDA, dovezi: null, motiv: null });
   assert.equal(ev.decizii.find((d) => d.cod === "frana").ok, false, "instantaneul ține frâna trasă de atunci");
   const s = citeste("scripts", "colector.mjs");
-  assert.match(s, /st\.porniri\[String\(b\.id\)\] = \{ la: acum, f: Comportament\.instantaneu\(fr\) \}/);
+  assert.match(s, /st\.porniri\[String\(b\.id\)\] = \{ la: acum, f: Comportament\.instantaneu\(fr\)(, [^}\n]*)? \}/);   /* v100.286: + moneda, direcția */
   assert.match(s, /Obiceiuri\.franaLaPornire\(\{ id: b\.id, pornit: Number\(b\.pornitLa\) \}, tr, P, deschise, true\)/);
   assert.match(s, /sn && sn\.f \? sn\.f : Obiceiuri\.franaLaPornire\(t, tr, P, deschise\)/);
 });
@@ -428,7 +428,7 @@ await test("colectorul: canalul evaluărilor din DISCORD_WEBHOOK_EVALUARI (coada
   assert.match(s, /async function turaFrana\(\)[\s\S]*?turaComportament\(\{ toti, act, praguri, f, cfgOk: !!cfg \}\)[\s\S]*?\n\}\n/, "turaFrana nu cheamă turaComportament");
   const tc = s.slice(s.indexOf("async function turaComportament("), s.indexOf("\n}\n", s.indexOf("async function turaComportament(")));
   assert.ok(tc.length > 100, "turaComportament lipsește");
-  for (const re of [/Comportament\.initStare\(/, /Obiceiuri\.franaLaPornire\(/, /Comportament\.evalueaza\(/, /Comportament\.oreAfara\(stareAlerte\[t\.id\], t\.inchis\)/, /canalEvaluari\.trimite\(MesajeColector\.evaluareBot\(/,
+  for (const re of [/Comportament\.initStare\(/, /Obiceiuri\.franaLaPornire\(/, /Comportament\.evalueaza\(/, /Comportament\.oreAfara\(stareAlerte\[t\.id\], t\.inchis\)/, /canalEvaluari\.trimite\(MesajeColector\.evaluareBot\(|const mEv = MesajeColector\.evaluareBot\(ev\);\s*\n\s*if \(!\(await canalEvaluari\.trimite\(mEv\)\)\)/,
     /Comportament\.porniriNoi\(/, /canalEvaluari\.trimite\(MesajeColector\.pornitCuFrana\(/, /Comportament\.pornesteSeriaSapt\(st, Comportament\.seriaSaptInapoi\(tr, P, acum, Obiceiuri\.frana\), zi\)/, /Comportament\.pasPragSapt\(/, /canalEvaluari\.trimite\(MesajeColector\.pragSaptIntrebare\(/, /Comportament\.noteaza\(/, /Comportament\.curata\(/, /Comportament\.motivDin\(x\)/])
     assert.match(tc, re, "turaComportament: lipsește " + re);
   assert.doesNotMatch(s, /trimiteAlerta\(MesajeColector\.(evaluareBot|pornitCuFrana|pragSaptIntrebare|legatEvaluari)/, "un mesaj de evaluare pe canalul alertelor");

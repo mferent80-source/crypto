@@ -8,7 +8,9 @@
 function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
 // v101.116 (auditul sever, 🔵12): regula lui - rezultatele cu O SINGURĂ zecimală (și pe Discord): „−21,3 USDT”, nu „−21,31”;
 // sub 0,05 (dar nu zero) ⇒ „<0,1”, nu „0,0” (numele U2 a rămas din v100.66)
-const U2 = (v) => { v = Number(v) || 0; const a = Math.abs(v); return (v >= 0 ? "+" : "−") + (a > 0 && a < 0.05 ? "<0,1" : a.toFixed(1).replace(".", ",")) + " USDT"; };
+// v100.286: sumele cu punct la mii („−1.277,0 USDT”, oglinda lunii scria „−1277,0”), ca profitul real
+const fMiiU = new Intl.NumberFormat("ro-RO", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const U2 = (v) => { v = Number(v) || 0; const a = Math.abs(v); return (v >= 0 ? "+" : "−") + (a > 0 && a < 0.05 ? "<0,1" : fMiiU.format(a)) + " USDT"; };
 const V = (v) => String(Math.round(Math.abs(Number(v)) * 10) / 10).replace(".", ",");
 const V1 = (v) => Math.abs(Number(v)).toFixed(1).replace(".", ",");   // v101.70: rezultatele cu o singură zecimală
 const scurt = (s, n) => { s = String(s || ""); return s.length <= n ? s : s.slice(0, n - 1).replace(/\s+\S*$/, "") + "…"; };
@@ -216,7 +218,7 @@ const durOre = (h) => { const m = Math.round(Number(h) * 60); return m < 60 ? Ma
 const pc = (x) => Math.round(Number(x) * 100) + "%";
 const ori = (a, b) => (Math.abs(Number(a)) / Number(b)).toFixed(1).replace(".", ",") + "×";
 const dirTxt = (d) => (d === "long" || d === "short" ? " " + d : "");
-const VERDICT = { bune: "decizii bune", ghinion: "decizii bune, ghinion", noroc: "câștig cu noroc", cost: "greșeala a costat" };
+export const VERDICT = { bune: "decizii bune", ghinion: "decizii bune, ghinion", noroc: "câștig cu noroc", cost: "greșeala a costat" };
 // pragurile frânei depășite, mereu în aceeași ordine (boții de azi, la rând, ziua, 7 zile) - scurte, ca și toate patru să încapă în 160;
 // fara = fără pragurile în bani (praguri și sume foarte mari)
 function franaParti(f, cuBoti, fara) {
@@ -282,6 +284,7 @@ export const legatEvaluari = () => ({ nivel: "info", titlu: "Crypto Radar: aici 
 export const ORDINE_REGULI = ["boti", "frana", "banda", "minute", "lichidare"];
 const ETICHETA = { boti: ["pornit peste pragul zilei", "porniți peste pragul zilei"], frana: ["pornit cu frâna trasă", "porniți cu frâna trasă"], banda: ["ținut în afara grilei", "ținuți în afara grilei"], minute: ["închis în minute", "închiși în minute"], lichidare: ["lichidat", "lichidați"] };
 export const eticheta = (cod, n) => { const e = ETICHETA[cod] || [cod, cod]; return cate(n, "bot " + e[0], "boți " + e[1]); };
+export const numeRegula = (cod) => (ETICHETA[cod] || [cod])[0];   // v100.286: „pornit cu frâna trasă” (pagina Comportament)
 // rânduri ≤ max, rupte doar între bucăți (o bucată nu se desparte); rândul continuat se termină în „ ·”
 export function rupeBucati(cap, bucati, max) {
   const out = []; let rand = cap + bucati[0];
@@ -304,6 +307,7 @@ const SFAT_SEARA = {
   minute: () => "Aș porni mâine gridul doar când îl las să lucreze, nu ca să-l închid în minute.",
   lichidare: () => "Aș pune mâine stopul înaintea lichidării, chiar de la pornire.",
 };
+export const sfatSeara = (top, prag) => (SFAT_SEARA[top] ? SFAT_SEARA[top](prag) : null);   // v100.286: același sfat și în pagina Comportament
 // (2) seara pe scurt (s = Comportament.searaZilei): câți azi, câți în regulă, regula cea mai deasă, un sfat pentru mâine
 export const searaPeScurt = (s, prag) => {
   const tot = s.bune.n === s.n ? (s.n === 1 ? "în regulă" : "toți în regulă") : s.bune.n ? s.bune.n + " în regulă" : "niciunul în regulă";
