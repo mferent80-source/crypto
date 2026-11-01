@@ -42,26 +42,18 @@ const ctx = { console, Date, Math, Object, Array, String, Number, JSON, isFinite
   document: { getElementById: () => null, querySelector: () => null, querySelectorAll: () => [], addEventListener() {} }, location: { hash: "" } };
 ctx.window = ctx; ctx.globalThis = ctx; vm.createContext(ctx);
 vm.runInContext(citeste("public", "lib", "sugestii-ecran.js"), ctx);
-await test("I-627: nota spune „au intrat: ATI, GH” și „au ieșit: DOCN”; EOD de ieri nu e VECHI; EOD de vinerea trecută (3 zile de bursă nepublicate) e VECHI, galben", () => {
-  const h = ctx.sugTrendHtml(trendDinJson(jsonRobot("2026-10-14"), null, ACUM), ACUM);
-  assert.match(h, /au intrat: ATI, GH · au ieșit: DOCN/); assert.ok(!/VECHI/.test(h), "EOD 14.10 văzut pe 15.10 = proaspăt");
-  const v = ctx.sugTrendHtml(trendDinJson(jsonRobot("2026-10-09"), null, ACUM), ACUM);
-  assert.match(v, /<b class="sugTrendVechi">VECHI de 3 zile de bursă — robotul n-a publicat<\/b> · EOD 2026-10-09/);
-  const l = ctx.sugTrendHtml(trendDinJson(jsonRobot("2026-10-10"), null, Date.parse("2026-10-13T06:30:00Z")), Date.parse("2026-10-13T06:30:00Z"));   // vineri ⇒ luni dimineață
-  assert.ok(!/VECHI/.test(l), "EOD de vineri, luni dimineață = proaspăt");
+await test("I-627 (v100.292, pe lista nouă): nota spune „au intrat: ATI, GH” și „au ieșit: DOCN”; EOD de ieri nu e VECHI; EOD de vinerea trecută (3 zile de bursă nepublicate) e VECHI, galben", () => {
+  const g = (j, a) => ctx.sugGrupuri({ trend12: trendDinJson(j, null, a) }, a).filter((x) => x.k === "trend")[0];
+  const h = g(jsonRobot("2026-10-14"), ACUM); assert.match(h.sub, /au intrat: ATI, GH · au ieșit: DOCN/); assert.ok(!/VECHI/.test(h.sub + h.subHtml), "EOD 14.10 văzut pe 15.10 = proaspăt");
+  const v = g(jsonRobot("2026-10-09"), ACUM); assert.match(v.subHtml, /^<b class="sugTrendVechi">VECHI de 3 zile de bursă — robotul n-a publicat<\/b> · EOD 2026-10-09/);
+  const l = g(jsonRobot("2026-10-10"), Date.parse("2026-10-13T06:30:00Z")); assert.ok(!/VECHI/.test(l.sub + l.subHtml), "EOD de vineri, luni dimineață = proaspăt");
+  assert.match(ctx.sugListaHtml({ trend12: trendDinJson(jsonRobot("2026-10-09"), null, ACUM) }, ACUM), /<b class="sugTrendVechi">VECHI de 3 zile de bursă/, "VECHI la vedere, în titlul grupului");
 });
-await test("I-626: cu 20 de rânduri apare butonul „arată toate 20 ›” (sugTrendTot); cu 10 nu; funcția există și nu crapă fără listă", () => {
-  const h = ctx.sugTrendHtml(trendDinJson(jsonRobot("2026-10-14", 20), null, ACUM), ACUM);
-  assert.match(h, /<\/ol><button type="button" class="t212BtnLinie sugTrendTotBtn" data-action-click="sugTrendTot\(\)">arată toate 20 ›<\/button>/);
-  const h10 = ctx.sugTrendHtml(trendDinJson(jsonRobot("2026-10-14", 10), null, ACUM), ACUM); assert.ok(!/sugTrendTotBtn/.test(h10));
-  assert.equal(typeof ctx.sugTrendTot, "function"); ctx.sugTrendTot();
-  const css = citeste("public", "app.css");
-  assert.match(css, /@media \(max-width:640px\)\{\.sugTrendLista:not\(\.sugTrendTot\) li:nth-child\(n\+11\)\{display:none\}\.sugTrendLista:not\(\.sugTrendTot\)\+\.sugTrendTotBtn\{display:inline-block/);
-  assert.match(css, /\.sugTrendVechi\{color:var\(--warn\)/); assert.match(css, /\.sugTrendTotBtn\{display:none\}/);
-  const iTrend = css.indexOf(".sugTrendVechi"), iPanda = css.lastIndexOf("@media (max-width:640px){.sugPandaTab thead"); assert.ok(iTrend > 0 && iPanda > iTrend, "pânda rămâne ultima regulă");
+await test("I-626 (v100.292): cele 20 de rânduri sunt toate la vedere, fără „arată toate”; stilul VECHI rămâne galben", () => {
+  const h = ctx.sugListaHtml({ trend12: trendDinJson(jsonRobot("2026-10-14", 20), null, ACUM) }, ACUM);
+  assert.equal((h.match(/id="sugR-trend:/g) || []).length, 20); assert.ok(!/sugTrendTotBtn|arată toate/.test(h));
+  const css = citeste("public", "app.css"); assert.match(css, /\.sugTrendVechi\{color:var\(--warn\)/); assert.ok(!/sugTrendTot/.test(css) && !/sugTrendTot/.test(citeste("public", "lib", "sugestii-ecran.js")));
 });
-
-// ── colectorul + proba de telefon (pe sursă) ──
 await test("I-630 + I-631: colectorul rulează proba PAZNIC–lățime o dată pe zi de la 12:00 cât există stare.json, iar raportul de duminică are rândul Trend (nemăsurat ≠ +0,0 %)", () => {
   const c = citeste("scripts", "colector.mjs");
   assert.match(c, /async function turaProbaLatimePaznic\(\)/); assert.match(c, /r\.ora < 12 \|\| probaLatimeStare\.data === r\.data \|\| !fs\.existsSync\(PAZNIC_STARE\)/);

@@ -707,7 +707,8 @@ var GraficBot = (function () {
     if (are("zero")) Lg.push('<span><i class="gbDash" style="border-color:' + COL.warn + '"></i>zero-ul botului</span>');
     if (are("planPlus")) Lg.push('<span><i class="gbDash" style="border-color:' + COL.good + '"></i>planul, pe plus</span>');
     if (are("planMinus")) Lg.push('<span><i class="gbDash" style="border-color:' + COL.bad + '"></i>planul, pe minus</span>');
-    if (niv.some(function (x) { return x.k === "stop"; })) Lg.push('<span><i style="border-color:' + COL.bad + '"></i>stopul tău</span>');
+    var nivStop = niv.filter(function (x) { return x.k === "stop"; })[0];   // v100.292: eticheta nivelului (Sugestii: „stopul propus”), altfel „stopul tău”
+    if (nivStop) Lg.push('<span><i style="border-color:' + COL.bad + '"></i>' + esc(nivStop.t || "stopul tău") + '</span>');
     if (spP !== null && spP > 0 && !(spA !== null && Math.abs(spP - spA) / spA < 0.0005)) Lg.push('<span><i class="gbDash" style="border-color:' + COL.bad + '"></i>' + esc(cl.etLung || "stopul planului (Consilierul)") + '</span>');
     if (st.zi5 && o.zi5) Lg.push('<span><i style="border-color:' + COL.info + '"></i>' + esc(o.zi5.sursa || "5 zile obișnuite") + ': jumătate din săptămâni (plin) / trei sferturi (punctat)</span>');
     if (st.zi && o.zi) Lg.push('<span><i class="gbPct" style="background:rgba(233,185,73,.45)"></i>ziua obișnuită de la prețul de acum: jumătate din zile (plin) / trei sferturi (punctat) · ' + esc(o.zi.sursa || "") + '</span>');

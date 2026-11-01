@@ -82,25 +82,24 @@ const ctx = { console, Date, Math, Object, Array, String, Number, JSON, isFinite
   document: { getElementById: () => null, querySelector: () => null, querySelectorAll: () => [], addEventListener() {} }, location: { hash: "" } };
 ctx.window = ctx; ctx.globalThis = ctx; vm.createContext(ctx);
 vm.runInContext(citeste("public", "lib", "sugestii-ecran.js"), ctx);
-await test("sugTrendHtml: titlul „în probă”, regula, nota (EOD, regim, 11 din 20, proba), 20 de butoane spre Poartă, 12-1 și 60 z cu o zecimală, raportarea, numele escapat", () => {
-  const t = trendDinJson(jsonRobot(), bilantRobot, ACUM);
-  const h = ctx.sugTrendHtml(t, ACUM);
-  assert.match(h, /Trend 12 luni \(în probă\)/); assert.match(h, /fixată înainte de cifre/); assert.match(h, /nu e un buton de cumpărat/);
-  assert.match(h, /EOD 2026-10-14 · regim pornit · 11 din 20 Technology — un singur pariu · proba: 17 zile cu rezultat/); assert.match(h, /\+0,9% vs alte acțiuni/);
-  assert.equal((h.match(/sugLaPoarta\('T\d+','trend12','1?'\)/g) || []).length, 20);
-  assert.match(h, /12-1 \+150,0%/); assert.match(h, /60 z \+30,0%/); assert.match(h, /raportează în 7z/); assert.match(h, /au ieșit: DOCN/);
-  assert.ok(!h.includes("<script>"), "numele cu <script> e escapat"); assert.match(h, /&lt;script&gt;/);
-  assert.match(ctx.sugTrendHtml(null, ACUM), /Clasamentul vine o dată pe zi/);
-  const h0 = ctx.sugTrendHtml(trendDinJson(jsonRobot(), { ...bilantRobot, n20: 0, zile: 1, diferenta20: { medie: null, interval: [null, null] } }, ACUM), ACUM);
-  assert.match(h0, /proba: 0 zile cu rezultat \(0 ferestre de 20 z\) · în probă/); assert.ok(!/vs alte acțiuni/.test(h0), "fără zile cu rezultat nu se arată nicio diferență (nici +0,0 %)");
+await test("v100.292: Trend 12 luni ca listă + fișă - nota (EOD, regim, 11 din 20, proba), 20 de butoane spre Poartă, 12-1 și 60 z cu o zecimală, raportarea, numele escapat, regula", () => {
+  const t = trendDinJson(jsonRobot(), bilantRobot, ACUM), d = { trend12: t };
+  const g = ctx.sugGrupuri(d, ACUM).filter((x) => x.k === "trend")[0];
+  assert.equal(g.verdict, "ÎN PROBĂ"); assert.match(g.sub, /EOD 2026-10-14 · regim pornit · 11 din 20 Technology — un singur pariu · proba: 17 zile cu rezultat/); assert.match(g.sub, /\+0,9% vs alte acțiuni/); assert.match(g.sub, /au ieșit: DOCN/);
+  const l = ctx.sugRanduri(d, ACUM).filter((x) => x.grup === "trend"); assert.equal(l.length, 20);
+  const acte = l.map((r) => ctx.sugFisa(r, d, ACUM).actiuni[0].act); assert.equal(acte.filter((a) => /^sugLaPoarta\('T\d+','trend12','1?'\)$/.test(a)).length, 20);
+  assert.ok(l.some((r) => / · 12-1 \+150,0% · 60 z \+30,0%/.test(r.nume))); assert.ok(l.some((r) => /raportează în 7z/.test(r.nume)));
+  const f = ctx.sugFisa(l[0], d, ACUM); assert.match(f.regula, /fixată înainte de cifre/); assert.match(f.dovada.join(" | "), /nu e un buton de cumpărat/);
+  const h = ctx.sugListaHtml(d, ACUM); assert.ok(!h.includes("<script>"), "numele cu <script> e escapat"); assert.match(h, /&lt;script&gt;/);
+  assert.match(ctx.sugGrupuri({ trend12: null }, ACUM).filter((x) => x.k === "trend")[0].sub, /lasamentul vine o dată pe zi/);
+  const g0 = ctx.sugGrupuri({ trend12: trendDinJson(jsonRobot(), { ...bilantRobot, n20: 0, zile: 1, diferenta20: { medie: null, interval: [null, null] } }, ACUM) }, ACUM).filter((x) => x.k === "trend")[0];
+  assert.match(g0.sub, /proba: 0 zile cu rezultat \(0 ferestre de 20 z\) · în probă/); assert.ok(!/vs alte acțiuni/.test(g0.sub), "fără zile cu rezultat nu se arată nicio diferență (nici +0,0 %)");
 });
-await test("sugHtml include secțiunea Trend după topul pe sectoare; pagina o cere de la /api/istoric-bot?action=trend12", () => {
+await test("sugHtml: rândul verdictelor + lista (cu Trend); pagina o cere de la /api/istoric-bot?action=trend12", () => {
   const src = citeste("public", "lib", "sugestii-ecran.js");
-  assert.match(src, /sugSectoareHtml\(d\.sectoare, acum\) \+ sugTrendHtml\(d\.trend12, acum\)/);
+  assert.match(src, /sugVerdicteHtml\(d\) \+ sugListaHtml\(d, acum\)/);
   assert.match(src, /pas\("trend12", function \(\) \{ return getJSON\("\/api\/istoric-bot\?action=trend12"\)/);
 });
-
-// ── verdicte, server, colector, versiuni ──
 await test("jurnalul verdictelor cunoaște sursa trend-12-1 (pagina + serverul), la 5 și 20 de zile față de QQQ", () => {
   const v = { console, Date, Math, Object, Array, String, Number, JSON, isFinite, Intl }; v.window = v; vm.createContext(v);
   vm.runInContext(citeste("public", "lib", "verdicte.js"), v);

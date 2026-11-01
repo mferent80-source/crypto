@@ -212,7 +212,7 @@ await test("A18 (🟡7). Trend 12 luni: din lista lui Poarta dă verdictul, dar 
   assert.ok(p.c.t212MarimePoarta(p.p), "probat ⇒ mărimea obișnuită");
   const alt = await poarta({ inainte: (P) => { P.c.t212.poartaSursa = { s: "XYZ", k: "trend12", probat: false }; } });
   assert.ok(alt.c.t212MarimePoarta(alt.p), "sursa altui simbol nu se lipește de ABC");
-  assert.match(citeste("public", "lib", "sugestii-ecran.js"), /sugLaPoarta\(\\'' \+ String\(t\.s\)\.replace\([^)]*\) \+ '\\',\\'trend12\\'/);
+  assert.match(citeste("public", "lib", "sugestii-ecran.js"), /sugLaPoarta\('" \+ sugCurat\(r\.s\) \+ "','trend12','" \+ probat \+ "'\)"/);   /* v100.292: din fișa rândului */
 });
 await test("A19 (🟡14). „Profit așteptat”: sub 30 de ferestre independente fără cifră; eticheta spune „aleasă pe aceleași date”, fără spread și gap", async () => {
   const r = await poarta({});

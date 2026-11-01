@@ -75,45 +75,33 @@ function elem(n) { return n.childNodes.filter((c) => c.nodeType === 1); }
 function dupa(n, tag) { return elem(n).find((c) => c.tagName === tag); }
 function textNod(n) { return n.childNodes.filter((c) => c.nodeType === 3).map((c) => c.nodeValue).join(""); }
 
-await test("lățimea grilei se ține sub 48 px și nu inventează 1100 când nu se știe", () => {
-  const src = functie(citeste("public", "lib", "sugestii-ecran.js"), "sugLatime", "sugAplicLatime");
-  const sugLatime = vm.runInNewContext(src + "\nsugLatime");
-  assert.equal(sugLatime(900, 912), 912);
-  assert.equal(sugLatime(885, 912), 912);
-  assert.equal(sugLatime(864, 912), 864);
-  assert.equal(sugLatime(0, 0), 0);
-  assert.equal(sugLatime(100, 0), 0);
-  assert.equal(sugLatime(100, 500), 500);
-});
-
-await test("istoricul stă pe un rând; antetul e grilă de 6 ca la Tablou; ultima linie rămâne topLive", () => {
+await test("antetul e grilă de 6 ca la Tablou; locurile paginii în ordine; ultima linie rămâne topLive", () => {
   const css = citeste("public", "app.css");
-  assert.match(css, /#sugPagina \.sugIstoric,#sugPagina \.sugUrm\{[^}]*white-space:nowrap[^}]*min-height:1\.35em/);
   assert.match(css, /#sugestii\.on\{[^}]*grid-template-columns:repeat\(6/);
   assert.match(css, /#sugestii\.on:has\(>#pzV-sug:not\(\[hidden\]\)\)>\.sectionHead\{[^}]*grid-column:4 \/ -1/);
-  assert.match(css, /#sugPagina>\[data-sug="trend"\]\{[^}]*order:50/);
-  assert.match(css, /#sugPagina>\[data-sug="eu"\]\{[^}]*order:60/);
+  assert.match(css, /#sugPagina>\[data-sug="verdicte"\]\{[^}]*order:20/);   /* v100.292: cele 5 locuri */
+  assert.match(css, /#sugPagina>\[data-sug="lista"\]\{[^}]*order:30/);
   assert.match(css, /@media \(max-width:1000px\)\{[^}]*#sugestii\.on\{[^}]*grid-template-columns:minmax\(0,1fr\)/);
   assert.match(css.trim().split("\n").pop(), /#topLive\{display:none!important\}/);
 });
 
-await test("pagina ține cele 8 locuri și fraza de așteptare; pânda rămâne cu același început de marcaj", () => {
+await test("pagina ține cele 5 locuri și fraza de așteptare; pânda rămâne cu același început de marcaj", () => {
   const idx = citeste("public", "index.html");
   const i = idx.indexOf('id="sugPagina"');
   const j = idx.indexOf('id="carnet"');
   assert.ok(i > 0 && j > i);
   const bloc = idx.slice(i, j);
   assert.match(bloc, /Aștept sugestiile/);
-  assert.deepEqual([...bloc.matchAll(/data-sug="([^"]+)"/g)].map((m) => m[1]), ["rasp", "panda", "boti", "us", "sect", "trend", "eu", "nota"]);
+  assert.deepEqual([...bloc.matchAll(/data-sug="([^"]+)"/g)].map((m) => m[1]), ["rasp", "panda", "verdicte", "lista", "nota"]);
   const fis = citeste("public", "lib", "sugestii-ecran.js");
   assert.ok(fis.includes('<div class="tbBloc sugPanda">'), "începutul pândei, proba v100.150");
-  for (const k of ["rasp", "boti", "us", "sect", "trend", "eu", "nota"]) assert.ok(fis.includes('data-sug="' + k + '"'), k);
+  for (const k of ["rasp", "verdicte", "lista", "nota"]) assert.ok(fis.includes('data-sug="' + k + '"'), k);
 });
 
-await test("un rând își păstrează nodul, 🧭 și „arată toate”; rândul nou se adaugă, cel dispărut iese", () => {
+await test("un rând își păstrează nodul și 🧭; rândul nou se adaugă, cel dispărut iese", () => {
   const fis = citeste("public", "lib", "sugestii-ecran.js");
-  const src = fis.slice(fis.indexOf("function sugAlinia("), fis.indexOf("function sugDeseneaza("));
-  assert.ok(src.startsWith("function sugAlinia("), "sugAlinia");
+  const src = fis.slice(fis.indexOf("function sugClasa("), fis.indexOf("function sugAcelasiNod(")) + fis.slice(fis.indexOf("function sugAlinia("), fis.indexOf("function sugDeseneaza("));   /* v100.292: + sugClasa / sugOpac */
+  assert.ok(src.startsWith("function sugClasa(") && src.includes("function sugAlinia("), "sugAlinia (+ ajutoarele ei, v100.292)");
   const ctx = {};
   vm.createContext(ctx);
   vm.runInContext(src + "\nthis.sugAlinia = sugAlinia;", ctx);
@@ -139,7 +127,6 @@ await test("un rând își păstrează nodul, 🧭 și „arată toate”; rând
   assert.equal(ancora.getAttribute("href"), "/b/AAA");
   assert.equal(cifra.nodeValue, "12-1 +1,1%");
   assert.equal(dupa(liA, "SPAN").childNodes.includes(cifra), true);
-  assert.equal(ol.classList.contains("sugTrendTot"), true);
   const cutie = D.parse('<div class="sugCartela"><p class="tbSub">unu</p><p class="tbSub">doi</p></div>')[0];
   const ps = elem(cutie);
   assert.equal(ctx.sugAlinia(cutie, D.parse('<div class="sugCartela"><p class="tbSub">unu schimbat</p><p class="tbSub">doi</p></div>')[0]), true);
@@ -167,13 +154,8 @@ await test("desenarea nu golește pagina la primul desen și aliniază rânduril
   assert.doesNotMatch(d, /peLoc = vechi\.length === nou\.length && el\._sugP/);
   assert.match(d, /if \(el\._sugP && el\._sugP\[i\] === parti\[i\]\) continue;/);
   assert.match(d, /else el\.innerHTML = h/);
-  assert.ok(d.indexOf("sugTineTrend(") > html, "„arată toate” după rescriere");
-  assert.ok(d.indexOf("sugAplicLatime(") > d.indexOf("sugTineTrend("));
-  const ap = fis.slice(fis.indexOf("function sugAplicLatime("), fis.indexOf("function sugAlinia("));
-  assert.match(ap, /sugLatime\(/);
-  assert.match(ap, /\.sugGrila/);
-  assert.match(ap, /\.sugSectGrid/);
-  assert.match(ap, /gridTemplateColumns/);
+  /* v100.292: „arată toate” și grilele de carduri (.sugGrila / .sugSectGrid) nu mai există - lista + fișa au lățimea din CSS (container query) */
+  assert.ok(!/sugTineTrend|sugAplicLatime|\.sugGrila|\.sugSectGrid/.test(fis), "nimic din vechile grile nu mai e în modul");
 });
 
 await test("versiunea de la v100.244 în sus, colectorul rămâne v101.136", () => {

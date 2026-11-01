@@ -13,8 +13,10 @@ console.log("\nv100.182 · listele din Sugestii pe un rând · proba\n");
 const css = citeste("public", "app.css");
 
 await test("rândul listei nu se mai rupe: numele fix, descrierea se înfășoară lângă el (pe toate listele, nu doar cu 🧭)", () => {
-  assert.match(css, /\.sugLista li\{display:flex;flex-wrap:nowrap;gap:6px;align-items:baseline\}\.sugLista li>b\{flex:none\}\.sugLista li>\.tbSub\{flex:1;min-width:0\}/);
-  assert.doesNotMatch(css, /\.sugLista li\{[^}]*flex-wrap:wrap/, "regula veche (wrap) a rămas");
+  /* v100.292: rândul e .sugRand (grilă: simbolul + prețul pe primul rând, descrierea dedesubt, înfășurată în lățimea rândului) - nu mai există .sugLista li */
+  assert.match(css, /\.sugRand\{display:grid;grid-template-columns:minmax\(0,1fr\) auto;grid-template-areas:"sim pret" "sub sub"/);
+  assert.match(css, /\.sugRandSim\{grid-area:sim;min-width:0/); assert.match(css, /\.sugRandPret\{grid-area:pret;[^}]*white-space:nowrap/);
+  assert.doesNotMatch(css, /\.sugLista li\{/, "regula veche a listei a rămas");
 });
 await test("regula numai-pe-rândurile-cu-🧭 (v100.181) e scoasă: cea generală o acoperă", () => {
   assert.doesNotMatch(css, /\.sugLista li:has\(\.sugBusola\)/);

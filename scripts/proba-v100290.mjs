@@ -41,7 +41,7 @@ await test("versiunile: v100.290 în aplicație, colectorul neatins (v101.158); 
   assert.ok(Number(citeste("BUILD_INFO.json").match(/"version": "v100\.(\d+)"/)[1]) >= 290);
   assert.ok(Number(citeste("public", "index.html").match(/id="healthAppVersion">v100\.(\d+)</)[1]) >= 290);
   assert.ok(Number(citeste("public", "sw.js").match(/crypto-radar-v100-(\d+)/)[1]) >= 290);
-  assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.158"/);
+  const mc = citeste("scripts", "colector.mjs").match(/const VERSIUNE_COLECTOR = "v101\.(\d+)"/); assert.ok(mc && Number(mc[1]) >= 158, "colectorul de la v101.158 în sus (v100.292 l-a dus la v101.159)");
   const p = JSON.parse(citeste("package.json")); assert.ok(Number(p.version.split(".")[1]) >= 290, "versiunea din package.json (syntax-v71 o leagă de cache-ul sw.js)"); assert.equal(p.scripts["test:v100290"], "node scripts/proba-v100290.mjs"); assert.match(p.scripts.test, /npm run test:v100289 && npm run test:v100290( |")/);
   assert.doesNotMatch(citeste("scripts", "proba-v100289.mjs"), /VERSIUNE = "v100\\\.289"\/\)/);
 });

@@ -483,8 +483,7 @@
     var p = document.querySelector("#sugPagina .sugPanda p.tbCitScurt") || document.querySelector("#sugPagina .sugPanda p.tbSub");
     if (!p) { antet("pzV-sug", $("sugPagina"), null); return; }
     var capSub = tx("#sugPagina .sugPanda .sugPandaCap .tbSub"), vechi = /veche/.test(capSub);
-    var b = p.querySelector("b"), cart = [].filter.call(document.querySelectorAll("#sugPagina .sugCartela"), function (c) { return /Pe ce aș porni un bot/.test(tx("h4", c)); })[0];
-    var li = cart ? cart.querySelector(".sugLista li") : null, prim = li ? (li.querySelector("b") || li).textContent.trim() : "";
+    var b = p.querySelector("b"), li = document.querySelector('#sugPagina .sugRand[data-grup="porn"]'), prim = li ? tx("b", li) : "";   /* v100.292: primul rând din lista „Pe ce aș porni un bot” */
     var verb = (b ? b.textContent : "").trim().toUpperCase() || "LĂȚIMEA PIEȚEI";
     antet("pzV-sug", $("sugPagina"), { verb: verb.length > 28 ? verb.slice(0, 26) + "…" : verb, ton: "mut", titlu: (b ? "" : p.textContent.replace(/\s+/g, " ").trim()) + (vechi ? (b ? "" : " · ") + "lățimea e " + capSub.split("·")[0].trim() : ""), fac: prim ? "pe ce aș porni un bot: " + prim : "", din: "lățimea pieței pe 150 perp-uri (fapte, nu semnal) · „Pe ce aș porni un bot”" });
   }

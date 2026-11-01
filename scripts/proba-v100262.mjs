@@ -40,36 +40,18 @@ await test("sugDir: long / short / neutru cu tăria; direcție necunoscută sau 
   assert.deepEqual(plain(c.sugDir({ dir: "neutru", tarie: "fara-date" })), { c: "neutru", t: "→ neutru" }, "tăria „fara-date” nu se scrie");
   assert.equal(c.sugDir({ dir: "sus" }), null); assert.equal(c.sugDir({}), null); assert.equal(c.sugDir(null), null);
 });
-await test("sugCartela: rândul cu direcție are pastila lângă nume (clasa direcției, textul escapat); rândul fără direcție e neschimbat (v100.181)", () => {
-  const c = ecran({});
-  const h = c.sugCartela("T", null, [{ s: "ADA", d: "x", dir: { c: "long", t: "↑ long · tare" } }, { s: "AAPL", d: "y" }], "gol");
-  assert.match(h, /<li><b>ADA<\/b> <span class="sugDir long" title="[^"]+">↑ long · tare<\/span> <span class="tbSub">x<\/span><\/li>/);
-  assert.match(h, /<li><b>AAPL<\/b> <span class="tbSub">y<\/span><\/li>/, "fără direcție: exact ca înainte");
-  const rau = c.sugCartela("T", null, [{ s: "X", d: "x", dir: { c: "short", t: "<b>rau</b>" } }], "gol");
-  assert.doesNotMatch(rau, /<b>rau<\/b>/); assert.match(rau, /&lt;b&gt;rau&lt;\/b&gt;/);
+await test("v100.292: rândul de bot cu direcție are pastila „4h+1z” lângă nume; rândul fără direcție n-are pastilă (nu „neutru”); numele se escapează", () => {
+  const c = ecran({ ideiBoti: () => [{ moneda: "ADA_USDT_PERP", dir: "long", tarie: "tare", latime: 0.05 }, { moneda: "DOT_USDT_PERP", latime: 0.04 }], reveniriBoti: () => [{ moneda: "SOL_USDT_PERP", dir: "neutru", tarie: "slab" }], shortBoti: () => [{ moneda: "TAKE_USDT_PERP", dir: "short", tarie: "mediu" }] });
+  const d = { clasament: CL }, l = plain(c.sugRanduri(d, Date.now())), h = c.sugListaHtml(d, Date.now());
+  assert.deepEqual(l.map((x) => x.s), ["ADA", "DOT"], "doar pornirea (revenirea și short-ul monedelor: scoase la cererea lui, 01.11)");
+  assert.match(h, /<b>ADA<\/b> <span class="sugDir long">4h\+1z ↑ long · tare<\/span>/); assert.match(h, /<b>DOT<\/b><\/span><span class="sugRandPret">/, "fără dir în clasament: fără pastilă"); assert.match(l[1].sub, /interval 4,0%/);
+  const e = ecran({ ideiBoti: () => [{ moneda: "X_USDT_PERP", dir: "<b>rau</b>", latime: 0.01 }] }).sugListaHtml(d, Date.now()); assert.doesNotMatch(e, /<b>rau<\/b>/);
 });
-await test("sugBoti: toate trei cartelele (pornire, revenire, short) poartă direcția și tăria din clasament; un clasament vechi fără dir nu strică nimic", () => {
-  const c = ecran({
-    ideiBoti: () => [{ moneda: "ADA_USDT_PERP", dir: "long", tarie: "tare", latime: 0.05 }, { moneda: "DOT_USDT_PERP", latime: 0.04 }],
-    reveniriBoti: () => [{ moneda: "SOL_USDT_PERP", dir: "neutru", tarie: "slab" }],
-    shortBoti: () => [{ moneda: "TAKE_USDT_PERP", dir: "short", tarie: "mediu" }],
-  });
-  const h = c.sugBoti(CL, null);
-  assert.match(h, /<b>ADA<\/b> <span class="sugDir long"[^>]*>↑ long · tare<\/span> <span class="tbSub">interval 5,0%<\/span>/);
-  assert.match(h, /<b>DOT<\/b> <span class="tbSub">interval 4,0%<\/span>/, "fără dir în clasament: rândul vechi");
-  assert.match(h, /<b>SOL<\/b> <span class="sugDir neutru"[^>]*>→ neutru · slab<\/span> <span class="tbSub">pe revenire<\/span>/);
-  assert.match(h, /<b>TAKE<\/b> <span class="sugDir short"[^>]*>↓ short · mediu<\/span> <span class="tbSub">liniștită, direcția short<\/span>/);
-});
-await test("direcția vine chiar din GridClasament.judeca (dir, tarie) prin Idei.ideiBoti - câmpurile există în clasament", () => {
-  const gc = citeste("public", "lib", "grid-clasament.js");
-  assert.match(gc, /out\.dir = d\.dir; out\.tarie = d\.tarie;/);
-  assert.match(citeste("public", "lib", "grid-calcul.js"), /dir: s >= 2 \? "long" : s <= -2 \? "short" : "neutru", tarie: a >= 4 \? "tare" : a >= 2 \? "mediu" : "slab"/);
-  assert.match(citeste("public", "lib", "idei.js"), /function ideiBoti[\s\S]*?Object\.assign\(\{ moneda: mo, istoric: stat\([\s\S]*?\) \}, x\)/, "ideiBoti păstrează câmpurile monedei (dir, tarie)");
-});
-await test("CSS: pastila are culoarea direcției (long verde, short roșu, neutru gri), fără să atingă regula listei păzită de v100.181", () => {
+
+await test("CSS: pastila are culoarea direcției (long verde, short roșu, neutru gri)", () => {
   const css = citeste("public", "app.css");
   assert.match(css, /\.sugDir\{flex:none;[^}]*white-space:nowrap[^}]*\}\.sugDir\.long\{color:var\(--good\);border-color:var\(--good\)\}\.sugDir\.short\{color:var\(--bad\);border-color:var\(--bad\)\}/);
-  assert.match(css, /\.sugLista li\{display:flex;flex-wrap:nowrap;[^}]*\}\.sugLista li>b\{flex:none\}\.sugLista li>\.tbSub\{flex:1;min-width:0\}/);
+  assert.match(css, /\.sugDir\.neutru\{color:var\(--muted\)\}/, "v100.292: și „neutru” gri, pe rândul nou");
 });
 await test("versiunea ≥ v100.262 peste tot (package, BUILD_INFO, index, sw, Functions; ≥ ca să țină și la versiunea următoare), nota DIR în BUILD_INFO", () => {
   const P = JSON.parse(citeste("package.json")), ver = Number(P.version.split(".")[1]), V = "v100." + ver;

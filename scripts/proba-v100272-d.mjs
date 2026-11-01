@@ -311,6 +311,8 @@ const DINAMICE = [
   { fisier: "public/lib/monte-simbol-ecran.js", re: /^' \+ act \+ '/, nume: () => [...culege(new RegExp("act = act \\|\\| \"(" + ID + ")\\(", "g"), LIB.filter(([f]) => f.endsWith("monte-simbol-ecran.js"))), ...culege(new RegExp("mcs(?:Tp|Var)Html\\([^,()]+,\\s*\"(" + ID + ")\\(", "g"))] },
   { fisier: "public/lib/rezultate.js", re: /^' \+ act \+ '/, nume: () => culege(new RegExp('btn\\("(' + ID + ')\\(', "g"), LIB.filter(([f]) => f.endsWith("rezultate.js"))) },
   // v100.291: pastilele verdictului T212 sunt butoane (AsezarePaznic.voceHtml); acțiunea vine din pagT212 („v.act = "t212Deschide('…')"”)
+  // v100.292: butoanele fișei din Sugestii (Fișa gridului / Poarta) - acțiunea vine din `act: "<nume>('…')"`
+  { fisier: "public/lib/sugestii-ecran.js", re: /^' \+ sugEsc\(a\.act\) \+ '/, nume: () => culege(new RegExp('act: "(' + ID + ')\\(', "g"), LIB.filter(([f]) => f.endsWith("sugestii-ecran.js"))) },
   { fisier: "public/lib/asezare-paznic.js", re: /^' \+ String\(v\.act\)/, nume: () => culege(new RegExp('v\\.act = "(' + ID + ')\\(', "g"), LIB.filter(([f]) => f.endsWith("asezare-paznic.js"))) },
   { fisier: "public/lib/statistica-trade.js", re: /^' \+ o\.actiune(Perioada|Ordine|Csv) \+ /, nume: (w) => { const k = /^' \+ o\.actiune(\w+) /.exec(w)[1]; return culege(new RegExp("actiune" + k + "\\s*:\\s*[\"'](" + ID + ")[\"']", "g")); } },
 ];

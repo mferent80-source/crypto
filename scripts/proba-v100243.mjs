@@ -26,11 +26,11 @@ await test("vârsta lățimii stă pe un rând; ultima linie din CSS rămâne to
   assert.match(css.trim().split("\n").pop(), /#topLive\{display:none!important\}/);
 });
 
-await test("scheletul sugestiei ignoră cifrele și clasa „arată toate”; un rând nou nu e același schelet", () => {
+await test("scheletul sugestiei ignoră cifrele; un rând nou nu e același schelet", () => {
   const src = functie(citeste("public", "lib", "sugestii-ecran.js"), "sugSchelet", "sugAcelasiNod");
   const sugSchelet = vm.runInNewContext(src + "\nsugSchelet");
   const a = '<section class="rlSec sugTrend"><ol class="sugTrendLista"><li><span class="tbSub">12-1 +1,0%</span></li></ol></section>';
-  const b = '<section class="rlSec sugTrend"><ol class="sugTrendLista sugTrendTot"><li><span class="tbSub">12-1 +1,1%</span></li></ol></section>';
+  const b = a.replace("+1,0%", "+1,1%");   /* v100.292: „arată toate” nu mai există; scheletul ignoră cifrele */
   const c = a.replace("</ol>", "<li><span class=\"tbSub\">nou</span></li></ol>");
   assert.equal(sugSchelet(a), sugSchelet(b));
   assert.notEqual(sugSchelet(a), sugSchelet(c));
@@ -101,26 +101,22 @@ await test("la același schelet cifrele se schimbă în același nod; un rând n
   const rad = D.createElement("div");
   rad.innerHTML = a;
   const sect = rad.firstElementChild;
-  sect.querySelector(".sugTrendLista").classList.add("sugTrendTot");
   const nod = sect.querySelector(".tbSub").childNodes[0];
   assert.equal(ctx.sugPeLoc(sect, b), true);
   assert.equal(nod.nodeValue, "12-1 +1,1%");
   assert.equal(sect.querySelector(".tbSub").childNodes[0], nod, "același nod");
-  assert.equal(sect.querySelector(".sugTrendLista").classList.contains("sugTrendTot"), true);
   const c = a.replace("</ol>", "<li><span class=\"tbSub\">nou</span></li></ol>");
   assert.equal(ctx.sugPeLoc(sect, c), false);
 });
 
-await test("desenarea schimbă secțiunea pe loc înainte de innerHTML și ține „arată toate”", () => {
+await test("desenarea schimbă secțiunea pe loc înainte de innerHTML", () => {
   const fis = citeste("public", "lib", "sugestii-ecran.js");
   const d = fis.slice(fis.indexOf("function sugDeseneaza("), fis.indexOf("async function sugPorneste("));
   const pe = d.indexOf("sugPeLoc(");
   const html = d.indexOf("el.innerHTML");
   assert.ok(pe > 0 && pe < html, "cifrele pe loc înainte de rescrierea paginii");
   assert.match(d, /outerHTML = parti\[i\]/);
-  assert.ok(d.indexOf("sugTineTrend(") > html, "lista deschisă se pune la loc după rescriere");
-  const tot = fis.slice(fis.indexOf("function sugTrendTot("), fis.indexOf("function sugHtml("));
-  assert.match(tot, /sugStare\.trendTot = true/);
+  assert.ok(!/sugTineTrend|sugTrendTot/.test(fis), "v100.292: „arată toate” nu mai există (lista Trend are rândurile pe față)");
 });
 
 await test("versiunea de la v100.243 în sus, colectorul rămâne v101.136", () => {

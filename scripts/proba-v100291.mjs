@@ -257,12 +257,12 @@ await test("17. rândul se deschide și din tastatură: Enter / Space pe rând a
 
 // ================================================================ 13. versiunile
 await test("13. versiunile v100.291 (aplicația, BUILD_INFO, pagina, cache-ul, package.json)", () => {
-  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.291"/);
-  const B = JSON.parse(citeste("BUILD_INFO.json")); assert.equal(B.version, "v100.291"); assert.match(B.badge, /v100\.291/);
+  assert.ok(Number(citeste("functions", "_shared", "versiune.js").match(/VERSIUNE = "v100\.(\d+)"/)[1]) >= 291, "v100.291 sau mai nouă");
+  const B = JSON.parse(citeste("BUILD_INFO.json")); assert.ok(Number(B.version.match(/v100\.(\d+)/)[1]) >= 291); assert.ok(B.features.t212lista291, "cheia v100.291 rămâne");
   const H = citeste("public", "index.html");
-  for (const re of [/<meta content="v100\.291" name="app-version"\/>/, /id="sideVersiune"[^>]*>v100\.291/, /id="antetVersiune"[^>]*>v100\.291/, /healthAppVersion[^>]*>v100\.291/]) assert.match(H, re);
-  assert.match(citeste("public", "sw.js"), /CACHE="crypto-radar-v100-291"/);
-  const pk = JSON.parse(citeste("package.json")); assert.equal(pk.version, "100.291.0"); assert.equal(pk.scripts["test:v100291"], "node scripts/proba-v100291.mjs");
+  assert.ok(Number(H.match(/id="healthAppVersion">v100\.(\d+)</)[1]) >= 291);
+  assert.ok(Number(citeste("public", "sw.js").match(/crypto-radar-v100-(\d+)/)[1]) >= 291);
+  const pk = JSON.parse(citeste("package.json")); assert.ok(Number(pk.version.split(".")[1]) >= 291); assert.equal(pk.scripts["test:v100291"], "node scripts/proba-v100291.mjs"); assert.match(pk.scripts.test, /npm run test:v100290 && npm run test:v100291( |")/);
 });
 
 console.log(`\n${teste - picate}/${teste} trec${picate ? ` · ${picate} PICĂ` : ""}\n`);

@@ -15,30 +15,26 @@ await test("cartelele Sugestiilor au fondul și chenarul Tabloului; titlurile au
   const css = citeste("public", "app.css");
   assert.match(css, /#sugestii\{[^}]*--tb-fond:#141C24[^}]*--tb-fond2:#1A242E/);
   assert.match(css, /#sugPagina \.tbBloc\{[^}]*background:var\(--tb-fond\)[^}]*border:1px solid var\(--tb-linie\)[^}]*border-radius:var\(--tb-r\)/);
-  assert.match(css, /#sugPagina \.sugCap,#sugPagina \.rlSec>h3\{[^}]*font-size:14px/);
+  assert.match(css, /#sugPagina \.rlSec>h3\{[^}]*font-size:14px/); assert.match(css, /\.sugLista2 h4\.sugGrup\{[^}]*font-size:13\.5px/);   /* v100.292: titlurile grupurilor */
   assert.match(css, /#sugPagina>\.rlRasp,#sugPagina>\[data-sug="nota"\]\{[^}]*max-width:90ch/);
-  assert.match(css, /#sugPagina>\.sugTrend\{[^}]*background:var\(--tb-fond\)/);
-  assert.match(css, /#sugPagina \.sugSect\{[^}]*background:var\(--tb-fond\)/);
+  assert.match(css, /\.sugBloc,\.sugBlocA\{[^}]*background:var\(--tb-fond\)/);
+  assert.match(css, /\.sugRand\{[^}]*background:var\(--tb-fond\)/);
   assert.match(css, /@media \(max-width:640px\)\{#sugPagina \.t212BtnLinie\{min-height:44px\}/);
 });
 
-await test("istoricul, pânda, rândul și ultima linie rămân", () => {
+await test("pânda și ultima linie rămân (v100.292: istoricul e în fișă, rândul e .sugRand)", () => {
   const css = citeste("public", "app.css");
-  assert.match(css, /#sugPagina \.sugIstoric,#sugPagina \.sugUrm\{[^}]*white-space:nowrap[^}]*min-height:1\.35em/);
   assert.match(css, /#sugPagina>\.sugPanda\{[^}]*min-height:14em/);
-  assert.match(css, /\.sugLista li\{display:flex;flex-wrap:nowrap/);
   assert.match(css.trim().split("\n").pop(), /#topLive\{display:none!important\}/);
   const fis = citeste("public", "lib", "sugestii-ecran.js");
   assert.ok(fis.includes('<div class="tbBloc sugPanda">'));
-  assert.match(fis, /title="' \+ sugEsc\(istoric\) \+ '"/);
-  assert.match(fis, /arată toate /);
   assert.match(fis, /monedele boților mei/);
   assert.match(fis, /sugBusola/);
   const idx = citeste("public", "index.html");
   const i = idx.indexOf('id="sugPagina"');
   const bloc = idx.slice(i, idx.indexOf('id="carnet"'));
   assert.match(bloc, /Aștept sugestiile/);
-  assert.deepEqual([...bloc.matchAll(/data-sug="([^"]+)"/g)].map((m) => m[1]), ["rasp", "panda", "boti", "us", "sect", "trend", "eu", "nota"]);
+  assert.deepEqual([...bloc.matchAll(/data-sug="([^"]+)"/g)].map((m) => m[1]), ["rasp", "panda", "verdicte", "lista", "nota"]);   /* v100.292: cele 5 locuri */
 });
 
 await test("versiunea de la v100.246 în sus, colectorul rămâne v101.136", () => {

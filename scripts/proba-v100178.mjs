@@ -135,13 +135,15 @@ await test("Poarta gridului: ce așteaptă opțiunile față de banda gridului (
 });
 // Sugestii
 const ctxS = { TextRo: globalThis.TextRo }; vm.createContext(ctxS); vm.runInContext(citeste("public", "lib", "sugestii-ecran.js"), ctxS);
-await test("Sugestii: „Cele mai tari pe sectoare” — regula, istoricul cu avertismentul de supraviețuire, căsuța fiecărui sector, simbolul deschide Poarta", () => {
-  assert.match(ctxS.sugSectoareHtml(null), /Topul se face o dată pe zi, de la 8:00/);
-  const h = ctxS.sugSectoareHtml({ istoric: { luni: 14, medie: 0.006, luniPlus: 9 }, sectoare: [{ sector: "Technology", ro: "Tehnologie", etf: "XLK", n: 25, top: [{ s: "NVDA", nume: "NVIDIA Corporation", r3: 0.2, r6: 0.4, peste6: 0.25, max52: -0.01 }] }, { sector: "Energy", ro: "Energie", etf: "XLE", n: 25, top: [] }] });
-  assert.match(h, /primele 3 din fiecare sector, ținute o lună, au făcut în medie \+0,6% pe lună față de media sectorului, pe plus în 9 din 14 luni/); assert.match(h, /⚠ Firmele sunt cele mari de AZI/);
-  assert.match(h, /data-action-click="sugLaPoarta\('NVDA'\)">NVDA<\/button>/); assert.match(h, /3 luni \+20% · 6 luni \+40% \(sectorul: \+15%\) · −1% de la maximul pe un an/);
-  assert.match(h, /nicio acțiune mare cu trend în sus acum/);
-  const s = citeste("public", "lib", "sugestii-ecran.js"); assert.match(s, /sugActiuniPiata\("us", sa, pm, d\.idei, "📈", "Acțiuni US", acum\) \+ sugSectoareHtml\(d\.sectoare, acum\)/); assert.match(s, /action=sectoareTop/);
+await test("Sugestii (v100.292): „Cele mai tari pe sectoare” - regula, istoricul cu avertismentul de supraviețuire, sectorul fără trend în sus spus, simbolul deschide Poarta", () => {
+  assert.match(ctxS.sugGrupuri({}, Date.now()).filter((g) => g.k === "sect")[0].sub, /Topul se face o dată pe zi, de la 8:00/);
+  const d = { sectoare: { istoric: { luni: 14, medie: 0.006, luniPlus: 9 }, univers: 250, sectoare: [{ sector: "Technology", ro: "Tehnologie", etf: "XLK", n: 25, top: [{ s: "NVDA", nume: "NVIDIA Corporation", r3: 0.2, r6: 0.4, peste3: 0.1, peste6: 0.25, max52: -0.01, pret: 180 }] }, { sector: "Energy", ro: "Energie", etf: "XLE", n: 20, top: [] }] } };
+  const g = ctxS.sugGrupuri(d, Date.now()).filter((x) => x.k === "sect")[0]; assert.match(g.sub, /nicio acțiune mare cu trend în sus acum în: Energie/);
+  const l = ctxS.sugRanduri(d, Date.now()); assert.equal(l.length, 1); assert.equal(l[0].k, "sect:NVDA"); assert.match(l[0].sub, /3 luni \+20% · 6 luni \+40% \(sectorul: \+15%\) · −1% de la maximul pe un an/);
+  const f = ctxS.sugFisa(l[0], d, Date.now());
+  assert.match(f.regula, /Un clasament, nu o predicție/); assert.ok(f.dovada.some((t) => /primele 3 din fiecare sector, ținute o lună, au făcut în medie \+0,6% pe lună față de media sectorului, pe plus în 9 din 14 luni/.test(t)), f.dovada.join(" | ")); assert.match(f.regula, /prețul peste media de 50 de zile, ea peste cea de 200/);
+  assert.ok(f.dovada.some((t) => /Firmele sunt cele mari de AZI/.test(t))); assert.equal(f.actiuni[0].act, "sugLaPoarta('NVDA')");
+  const s = citeste("public", "lib", "sugestii-ecran.js"); assert.match(s, /sugVerdicteHtml\(d\) \+ sugListaHtml\(d, acum\)/); assert.match(s, /action=sectoareTop/);
 });
 await test("legarea: factori.js în pagină și în cache; colectorul încarcă Factori și rulează tura sectoarelor; tura contului primește Factori", () => {
   assert.match(citeste("public", "index.html"), /<script src="\/lib\/factori\.js"><\/script>/); assert.match(citeste("public", "sw.js"), /"\/lib\/factori\.js"/);

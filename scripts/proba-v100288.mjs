@@ -226,7 +226,7 @@ await test("o tură a observatorului: grilele se refac de sus în jos (grila mar
 await test("Sugestii își schimbă cifrele pe loc și cu un card întins (revizia: `randPlin` stricase actualizarea pe loc din v100.243–244): același nod, aceeași cheie, clasa rămâne", () => {
   const fis = citeste("public", "lib", "sugestii-ecran.js"), D = dom();
   const ctx = {}; vm.createContext(ctx);
-  vm.runInContext(fis.slice(fis.indexOf("function sugAcelasiNod("), fis.indexOf("function sugTexte(")) + "\nthis.acelasi = sugAcelasiNod;", ctx);
+  vm.runInContext(fis.slice(fis.indexOf("function sugClasa("), fis.indexOf("function sugTexte(")) + "\nthis.acelasi = sugAcelasiNod;", ctx);   /* v100.292: + sugClasa / sugOpac (revizia 🔴1) */
   vm.runInContext(fis.slice(fis.indexOf("function sugAlinia("), fis.indexOf("function sugDeseneaza(")) + "\nthis.alinia = sugAlinia;", ctx);
   // pagina are cardul întins, desenul nou nu știe de clasă ⇒ tot același nod (cifrele se schimbă pe loc)
   assert.equal(ctx.acelasi(D.parse('<div class="sugGrila"><div class="sugCartela">A</div><div class="sugCartela">B</div><div class="sugCartela randPlin">C</div></div>')[0],
@@ -276,7 +276,7 @@ await test("stilul: cardul singur pe tot rândul (grilă și rând flexibil); gr
   assert.ok(i > 0 && i < j, "blocul v100.288 înaintea paletei");
   const b = C.slice(i, j);
   assert.match(b, /\.panel \.randPlin\{grid-column:1\/-1;flex:1 1 100%\}/);
-  for (const s of [".settingsGrid", ".sugGrila", ".sugSectGrid", ".reportSections", ".volHero", ".prHero", ".decisionToolGrid", ".decisionExplainGrid", ".cacheGrid"]) assert.ok(b.includes(s), "align-items:start pe " + s);
+  for (const s of [".settingsGrid", ".reportSections", ".volHero", ".prHero", ".decisionToolGrid", ".decisionExplainGrid", ".cacheGrid"]) assert.ok(b.includes(s), "align-items:start pe " + s);
   // Piața azi, cu datele reale: Lărgimea crypto +147 px, Lărgimea Nasdaq +128, VIX +100, Calendarul +82 ⇒ cât conținutul; perechea de verdicte
   // (o casetă împărțită în două, înălțime egală dinadins) rămâne neatinsă
   assert.match(b, /#dash \.acPuls,#dash \.acDoua\{align-items:start\}/); assert.doesNotMatch(b, /acVerdicte/);

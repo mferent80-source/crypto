@@ -89,7 +89,7 @@ await test("(5) antetele stau ca FRATE, în afara containerelor rescrise cu inne
 await test("(7) revizia a doua: Jurnalul pe formatul REAL („+0,00 USDT”), Sugestii doar din cartela „Pe ce aș porni un bot”, vârsta datelor redesenată de pagină, verbele lungi se rup", () => {
   assert.equal(A.valJurnal("+0,00 USDT"), 0); assert.equal(A.valJurnal("−5906,42 USDT"), -5906.42); assert.equal(A.valJurnal("+12,50 USDT"), 12.5); assert.equal(A.valJurnal("—"), null);
   assert.match(AS, /n = valJurnal\(v && v\.textContent\)/); assert.match(AS, /n === 0 \? "CRYPTO: PE ZERO"/);
-  assert.match(AS, /\/Pe ce aș porni un bot\/\.test\(tx\("h4", c\)\)/, "Sugestii: cartela după titlu");
+  assert.match(AS, /#sugPagina \.sugRand\[data-grup="porn"\]/, "Sugestii: primul rând din lista de pornire (v100.292)");
   assert.doesNotMatch(AS, /querySelector\("#sugPagina \.sugCartela \.sugLista li"\)/, "prima idee din ORICE cartelă");
   assert.match(AS, /typeof renderFreshness === "function"\) renderFreshness\(\)/, "vârsta datelor redesenată cu funcția paginii (textul îngheța pe 0s)");
   assert.match(CSS, /\.pzAntet \.pzVerb\{white-space:normal;overflow-wrap:break-word;max-width:62%\}/);

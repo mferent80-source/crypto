@@ -71,34 +71,11 @@ function dom() {
 function elem(n) { return n.childNodes.filter((c) => c.nodeType === 1); }
 function textNod(n) { return n.childNodes.filter((c) => c.nodeType === 3).map((c) => c.nodeValue).join("").replace(/\s+/g, " ").trim(); }
 
-await test("sub 48 px coloanele stau; de la 48 px în sus se măsoară din nou, și doar dacă fereastra ascultă", () => {
-  const fis = citeste("public", "lib", "sugestii-ecran.js");
-  const lat = functie(fis, "sugLatime", "sugAplicLatime");
-  const fer = functie(fis, "sugLaFereastra", "sugAscultaFereastra");
-  const asc = functie(fis, "sugAscultaFereastra", "sugAlinia");
-  assert.match(asc, /typeof addEventListener === "function"/);
-  assert.match(asc, /addEventListener\("resize", sugLaFereastra\)/);
-  assert.equal((fis.match(/sugAscultaFereastra\(\)/g) || []).length, 2);
-  let latime = 900, apeluri = 0;
-  const ctx = {
-    sugStare: { latimeGrila: 912 },
-    sugAplicLatime() { apeluri++; },
-    document: { getElementById: () => ({ getBoundingClientRect: () => ({ width: latime }) }) },
-  };
-  vm.createContext(ctx);
-  vm.runInContext(lat + "\n" + fer, ctx);
-  ctx.sugLaFereastra();
-  assert.equal(apeluri, 0, "900 față de 912 nu măsoară din nou");
-  latime = 800;
-  ctx.sugLaFereastra();
-  assert.equal(apeluri, 1, "800 față de 912 măsoară din nou");
-});
+/* v100.292: testul coloanelor grilelor de carduri (sub 48 px…) a plecat odată cu grilele (lista + fișa au lățimea din CSS) */
 
-await test("istoricul poartă fraza în title; pânda ține 14em; ultima linie rămâne topLive", () => {
+await test("urmărirea stă întreagă în fișă; pânda ține 14em; ultima linie rămâne topLive", () => {
   const fis = citeste("public", "lib", "sugestii-ecran.js");
-  const c = fis.slice(fis.indexOf("function sugCartela("), fis.indexOf("function sugUrm("));
-  assert.match(c, /<p class="tbSub sugIstoric" title="' \+ sugEsc\(istoric\) \+ '">/);
-  assert.match(c, /<p class="tbSub sugUrm" title="' \+ sugEsc\(urm\) \+ '">/);
+  assert.match(fis, /f\.dovada = \[urmP && urmP\.text \? urmP\.text/, "v100.292: istoricul și urmărirea stau ÎNTREGI în fișă, nu tăiate într-un title");
   const css = citeste("public", "app.css");
   assert.match(css, /#sugPagina>\.sugPanda\{[^}]*min-height:14em/);
   assert.match(css.trim().split("\n").pop(), /#topLive\{display:none!important\}/);
@@ -106,7 +83,7 @@ await test("istoricul poartă fraza în title; pânda ține 14em; ultima linie r
 
 await test("filtrul nou intră la mijloc, butonul vechi rămâne pe acțiunea lui, title-ul istoricului se schimbă", () => {
   const fis = citeste("public", "lib", "sugestii-ecran.js");
-  const src = fis.slice(fis.indexOf("function sugAlinia("), fis.indexOf("function sugDeseneaza("));
+  const src = fis.slice(fis.indexOf("function sugClasa("), fis.indexOf("function sugAcelasiNod(")) + fis.slice(fis.indexOf("function sugAlinia("), fis.indexOf("function sugDeseneaza("));   /* v100.292: + sugClasa / sugOpac */
   const ctx = {};
   vm.createContext(ctx);
   vm.runInContext(src + "\nthis.sugAlinia = sugAlinia;", ctx);

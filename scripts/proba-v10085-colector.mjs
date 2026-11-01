@@ -125,8 +125,8 @@ await test("(6) tura sugestiilor: o dată pe zi, de la 8:00; istoricul pieței �
   assert.ok(c.dovada.revenire.piata && c.dovada.revenire.piata.baza.n > 0 && c.dovada.short.piata && c.dovada.short.piata.baza.n > 0, JSON.stringify(c.dovada).slice(0, 300));
   assert.ok(c.dovada.revenire.boti && c.dovada.revenire.boti.reper.n === 2 && c.dovada.short.boti.reper.n === 1);
   assert.equal(c.urmarire.revenire.n, 1); assert.equal(c.urmarire.revenire.pePlus, 1); assert.equal(c.urmarire.short.n, 1); assert.equal(c.urmarire.short.pePlus, 1);
-  assert.deepEqual(c.noi, [{ simbol: "AAA_USDT_PERP", pret: 1.1, lista: "revenire" }, { simbol: "BBB_USDT_PERP", pret: 1.9, lista: "short" }]);
-  assert.ok(r && r.noi.length === 2);
+  assert.deepEqual(c.noi, [{ simbol: "AAA_USDT_PERP", pret: 1.1, lista: "revenire" }, { simbol: "BBB_USDT_PERP", pret: 1.9, lista: "short" }, { simbol: "BBB_USDT_PERP", pret: 1.9, lista: "porn", dir: "short" }]);   /* v100.292: și „Pe ce aș porni”, cu direcția */
+  assert.ok(r && r.noi.length === 3);
 });
 await test("(6) ruta sugestii: se scrie și se citește înapoi, curățată; notările fără dubluri (zi + simbol + listă), cel mult 20 pe trimitere", async () => {
   const env = { APP_API_TOKEN: TOKEN, ISTORIC: kvFals() }, dv = { n: 407, saptamani: 44, pePlus: 0.42, medie: -0.012, mediana: -0.021, baza: { n: 15119, pePlus: 0.45, medie: 0.01 }, eticheta: "mai slab", putine: false, rau: 1 };

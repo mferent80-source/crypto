@@ -61,7 +61,7 @@ await test("pânda (pliată și desfăcută): propoziția despre boții contra, 
   for (const desf of [false, true]) {
     ctx.sugStare.panda.desfacut = desf; ctx.sugStare.panda.filtru = "toate";
     const h = ctx.sugPandaHtml(l, [{ s: "PLUME", dir: "short" }], ACUM);
-    assert.match(h, /<p class="tbCitScurt sugPandaContra">⚠ Contra direcției monedei: <b>PLUME<\/b> \(botul short, moneda SUS de 51 de zile\)\.<\/p>/);
+    assert.match(h, /<p class="tbCitScurt sugPandaContra">⚠ Contra direcției monedei: <b>PLUME<\/b> \(botul short, moneda SUS de 51 de zile\)\. Direcția de aici e cea pe 84 de zile \(ca în PAZNIC\); pe rândul monedei, mai jos, e și trendul pe 4h\+1z\.<\/p>/);
     assert.doesNotMatch(ctx.sugPandaHtml(l, [{ s: "PLUME", dir: "long" }], ACUM), /sugPandaContra/);
   }
 });

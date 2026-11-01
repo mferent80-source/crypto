@@ -197,7 +197,8 @@ await test("(R-I1/I3) colectorul: baza are ziua ei și intraday rulează doar pe
   assert.match(f, /if \(r\.asteapta > 0 && min < 11 \* 60 \+ 20\) return;/);
 });
 await test("(R-min) textul urmăririi „de cel puțin 14 zile, la prețul de acum”; lista intraday veche își spune data; acțiunile tale din Elveția / Milano intră în EU", () => {
-  assert.match(citeste("public", "lib", "sugestii-ecran.js"), /de cel puțin 14 zile, la prețul de acum/);
+  assert.doesNotMatch(citeste("public", "lib", "sugestii-ecran.js"), /14 zile fixe/, "revizia 01.11 (🔴4): urmărirea US e Reveniri.urmarire - semnalele de cel puțin 14 zile, la prețul de azi, pe semnal - nu „14 zile fixe”");
+  assert.match(citeste("public", "lib", "sugestii-ecran.js"), /semnalele de cel puțin 14 zile, la prețul de azi, numărate pe semnal, fără comparație cu piața/);
   assert.ok(UE.universEU([{ ticker: "NESNs_EQ" }, { ticker: "ENIm_EQ" }]).includes("NESNs_EQ") && UE.universEU([{ ticker: "ENIm_EQ" }]).includes("ENIm_EQ"));
   assert.equal(TS.simbolTicker("NESNs_EQ"), "NESN");
 });
@@ -215,18 +216,16 @@ const DATE = {
   clasament: null, sugMonede: null };
 await test("(5a) pagina: trei secțiuni (boți, US, EU), fiecare listă cu rândurile ei, istoricul pe 2 ani și urmărirea; pre-market-ul US se spune că vine la 15:50; totul escapat", () => {
   const h = globalThis.sugHtml(DATE, T0 + 2 * 3600000);
-  for (const t of ["🤖 Boți", "📈 Acțiuni US", "📈 Acțiuni EU", "Început de urcare", "Revers timpuriu", "Pre-market", "Gap la deschidere", "Idei de cumpărare", "Pe revenire"]) assert.ok(h.includes(t), t);
-  for (const t of ["AAA", "MC", "SAP", "NVDA", "INTU"]) assert.ok(h.includes(">" + t + "<"), t);
-  assert.ok(h.includes("După un început de urcare, pe 2 ani"), "istoricul"); assert.match(h, /Urmărit înainte [^:]*: 3/); assert.match(h, /deschiderea de la New York/);
+  for (const t of ["🤖 Boți · 💡 Pe ce aș porni un bot", "📈 Acțiuni US · 99 de acțiuni judecate, 2 fără prețuri · 🔁 Pe revenire", "📈 Acțiuni EU (DAX, CAC, AEX + ale tale) · 120 de acțiuni judecate, 5 fără prețuri · 🔁 Pe revenire", "🏆 Cele mai tari pe sectoare", "📈 Trend 12 luni (în probă)"]) assert.ok(h.includes(t), t);   /* v100.292: listele rămase (el: „da scoate” pentru restul) */
+  assert.ok(h.includes("<b>INTU</b>"), "INTU (pe revenire) e rând");
+  assert.match(h, /Urmărirea înainte începe/, "fără urmărire încă (DATE n-are urmarireReveniri)");
   assert.doesNotMatch(h, /undefined|NaN|null/);
-  const r = globalThis.sugHtml(Object.assign({}, DATE, { idei: { idei: { actiuni: [{ ticker: "X", simbol: "<img src=x>" }] } } }), T0); assert.doesNotMatch(r, /<img src=x>/);
+  const r = globalThis.sugHtml(Object.assign({}, DATE, { idei: { idei: { reveniri: [{ ticker: "X", simbol: "<img src=x>", pret: 1, cadere: 0.5, deLaMin: 0.1 }] } } }), T0); assert.doesNotMatch(r, /<img src=x>/);
 });
 await test("(5a') din poză (06.10): fără steaguri (pe Windows ies litere), fără „scor 0” la boți (detaliile Tabloului), „se face la 15:50” o singură dată, prețurile cu virgulă", () => {
   const cl = { monede: [{ simbol: "LIT_USDT_PERP", stare: "candidat", latime: 0.06, profitGrila: 0.004, traversariZi: 3.2 }] };
   const h = globalThis.sugHtml(Object.assign({}, DATE, { clasament: cl, sugActiuni: { sugestii: DATE.sugActiuni.sugestii, premarket: null } }), T0);
-  assert.doesNotMatch(h, /🇺🇸|🇪🇺/); assert.doesNotMatch(h, /scor 0/); assert.match(h, />LIT</); assert.match(h, /treceri pe zi/);
-  assert.equal((h.match(/se face înainte de deschiderea de la New York/g) || []).length, 1); assert.match(h, /intrare 180,0 · stop 170,0 · țintă 200,0/);   /* v100.183: o zecimală de la 10 în sus (regula lui, 03.10) */
-  const v = globalThis.sugHtml(DATE, T0 + 3 * ZI); assert.match(v, /la \d\d\.\d\d \d\d:\d\d/, "lista intraday de altă zi își spune data");
+  assert.doesNotMatch(h, /🇺🇸|🇪🇺/); assert.doesNotMatch(h, /scor 0/); assert.match(h, /<b>LIT<\/b>/); assert.match(h, /treceri pe zi/);
 });
 await test("(4f) EU „Pe revenire”: tickerul cu un salt de unitate (×100) iese și din istoricul regulii vechi (Reveniri n-are igiena; poza: +49,4% în medie)", async () => {
   vm.runInThisContext(citeste("public", "lib", "reveniri.js"), { filename: "reveniri.js" });
