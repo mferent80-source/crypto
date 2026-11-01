@@ -365,6 +365,12 @@
   var VOT = { sus: "da", jos: "nu", aur: "atentie", mut: "neutru" }, SIMP = { da: "✓", nu: "✗", atentie: "!", neutru: "–" };
   // „1 bot”, „20 de boți” - TextRo.cate (garda v100.75); rezerva știe aceeași regulă (contextele fără TextRo, probele)
   function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), q = Math.abs(k) % 100; return k === 1 ? "1 " + sg : k + (q >= 20 || (q === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
+  // v100.291 (T212, demo aprobat 01.11): o pastilă cu `act` e buton - pe T212 deschide fișa poziției; celelalte rămân pastile simple
+  function voceHtml(v) {
+    var k = VOT[v.ton] || "neutru", t = (v.semn === false ? "" : SIMP[k] + " ") + esc(v.n), tit = v.tit ? ' title="' + esc(v.tit) + '"' : "";
+    return v.act ? '<button type="button" class="pzVoce pzVoce-' + k + '"' + tit + ' data-action-click="' + String(v.act).replace(/[&"<>]/g, function (c) { return { "&": "&amp;", '"': "&quot;", "<": "&lt;", ">": "&gt;" }[c]; }) + '">' + t + '</button>'
+      : '<span class="pzVoce pzVoce-' + k + '"' + tit + '>' + t + '</span>';
+  }
   // antetul unei pagini: `ref` = elementul înaintea căruia stă; cfg null ⇒ ascuns (fără date nu rămâne un verdict vechi la vedere)
   function antet(id, ref, cfg) {
     var el = $(id);
@@ -373,7 +379,7 @@
     if (el.parentNode !== ref.parentNode || el.nextElementSibling !== ref) ref.parentNode.insertBefore(el, ref);
     var h = '<div class="pzVerbRand"><span class="pzVerb pzVerb-' + (cfg.ton || "mut") + '">' + esc(cfg.verb) + '</span><div class="pzVerbTxt">' + (cfg.titlu ? '<b>' + esc(cfg.titlu) + '</b>' : "")
       + (cfg.fac ? '<p>' + esc(cfg.fac) + '</p>' : "") + '<p class="pzDin">din: ' + esc(cfg.din || "") + '</p></div></div>'
-      + (cfg.voci && cfg.voci.length ? '<div class="pzVoci">' + cfg.voci.slice(0, 16).map(function (v) { var k = VOT[v.ton] || "neutru"; return '<span class="pzVoce pzVoce-' + k + '"' + (v.tit ? ' title="' + esc(v.tit) + '"' : "") + '>' + (v.semn === false ? "" : SIMP[k] + " ") + esc(v.n) + '</span>'; }).join("") + '</div>' : "");
+      + (cfg.voci && cfg.voci.length ? '<div class="pzVoci">' + cfg.voci.slice(0, 16).map(voceHtml).join("") + '</div>' : "");
     el.hidden = false; if (el._h !== h) { el.innerHTML = h; el._h = h; }
   }
   // pastila Consilierului (T212 / Salt) - după TEXTUL ei, cum o scrie pagina (AȘTEAPTĂ are clasa „fără date”, dar e un verdict - revizia I4)
@@ -401,7 +407,9 @@
 
   function pagT212() {
     var c = verdictPozitii(randuriPastile("#t212Continut tr.t212Rand", function (tr) { return tx(".t212Sim b", tr); }), "pastilele Consilierului pe fiecare poziție · „Ce ai de făcut acum”");
-    if (c) c.fac = primulTodo("#t212Sus .t212TodoRand");
+    if (c) c.fac = primulTodo("#t212TodoBox .t212TodoRand");   /* v100.291: „Ce ai de făcut acum” stă acum jos, în #t212TodoBox */
+    // v100.291 (demo aprobat): pastila deschide fișa poziției ei (simbolul ⇒ tickerul, din id-ul rândului)
+    if (c && c.voci) c.voci.forEach(function (v) { var r = [].filter.call(document.querySelectorAll("#t212Continut tr.t212Rand"), function (tr) { return tx(".t212Sim b", tr) === v.n; })[0], tk = r && r.id ? r.id.replace(/^t212R-/, "").replace(/[^A-Za-z0-9._-]/g, "") : ""; if (tk) v.act = "t212Deschide('" + tk + "')"; });
     antet("pzV-t212", $("t212Sus"), c);
   }
   function pagSalt() {
@@ -542,7 +550,7 @@
     if (b) { var t = (des ? "▾ " : "▸ ") + "Prețul monedei alese și filele de analiză" + (des ? " (pliază)" : ""); if (b.textContent !== t) b.textContent = t; b.setAttribute("aria-expanded", des ? "true" : "false"); }
   }
 
-  window.AsezarePaznic = { valJurnal: valJurnal, valBani: valBani, verdictPozitii: verdictPozitii, verdictAlerte: verdictAlerte, nivelPastila: nivelPastila, tonVarsta: tonVarsta, randuriKv: randuriKv, ancora: ancora, GLOSAR: GLOSAR, t212Din: t212Din, colectorDin: colectorDin, colectorSursa: colectorSursa, alerteNrDin: alerteNrDin, lichDin: lichDin, nivele: nivele, drumHtml: drumHtml, latimeDrum: latimeDrum, verdictValid: verdictValid, tonLich: tonLich, pliaza: pliaza };
+  window.AsezarePaznic = { voceHtml: voceHtml, valJurnal: valJurnal, valBani: valBani,verdictPozitii: verdictPozitii, verdictAlerte: verdictAlerte, nivelPastila: nivelPastila, tonVarsta: tonVarsta, randuriKv: randuriKv, ancora: ancora, GLOSAR: GLOSAR, t212Din: t212Din, colectorDin: colectorDin, colectorSursa: colectorSursa, alerteNrDin: alerteNrDin, lichDin: lichDin, nivele: nivele, drumHtml: drumHtml, latimeDrum: latimeDrum, verdictValid: verdictValid, tonLich: tonLich, pliaza: pliaza };
   document.documentElement.classList.add("pzDemo");
   var rz = null; addEventListener("resize", function () { clearTimeout(rz); rz = setTimeout(tura, 200); });   // revizia I10: fără tură la fiecare pixel
   document.addEventListener("click", function (e) { if (e.target && e.target.closest && e.target.closest("#jurnaltrade .jtFiltru")) setTimeout(function () { try { pagJurnal(); } catch (x) {} }, 30); });   /* M1: antetul urmează fila pe loc */

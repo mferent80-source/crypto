@@ -68,7 +68,10 @@ await test("suma tace la abatere și după 30 de minute fără citire bună; 429
   const iBine = t212.indexOf("t212.cititBine = Date.now()");
   const iCatch = t212.indexOf("} catch (e) { t212.eroare = t212Eroare(e); }");
   assert.ok(iPoz < iBine && iBine < iCatch);
-  assert.equal((t212.match(/t212\.cititBine = Date\.now\(\)/g) || []).length, 1);
+  // v100.291 (revizia 🔴2): și recitirea la 30 s îl pune - tot DOAR după o citire bună a pozițiilor (altfel Poarta zicea fals „necitit de 30 de minute”)
+  assert.equal((t212.match(/t212\.cititBine = Date\.now\(\)/g) || []).length, 2);
+  const viu = t212.slice(t212.indexOf("async function t212ViuTic"), t212.indexOf("function t212ViuPorneste"));
+  assert.ok(viu.indexOf('getJSON("/api/t212?action=pozitii")') > 0 && viu.indexOf('getJSON("/api/t212?action=pozitii")') < viu.indexOf("t212.cititBine = Date.now()"), "în recitire, după citirea bună a pozițiilor");
   assert.match(t212, /var limita = 30 \* 60000, bun = t212\.cititBine/);
   assert.equal((t212.match(/30 \* 60000/g) || []).length, 1);
   assert.doesNotMatch(t212.slice(t212.indexOf("async function t212RegimAdu"), t212.indexOf("function t212RegimPt")), /10 \* 60000/);

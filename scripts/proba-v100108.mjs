@@ -57,9 +57,10 @@ await test("(S4) desenul acțiunii: banda pe TOATE barele zilnice (închise), le
 await test("(S5) pagina T212: lumânările TF-urilor se aduc doar la deschiderea poziției; graficul primește semaforul și banda; citirea stă sub grafic", () => {
   assert.match(fnE("t212AduTf"), /\["5m", "15m", "30m", "1h", "4h"\]/);
   assert.match(fnE("t212AduTf"), /\/api\/t212\?action=preturi&interval=/);
-  assert.match(fnE("t212Comuta"), /t212AduTf\(tk\)/); assert.match(fnE("t212Deschide"), /t212AduTf\(tk\)/);
+  // v100.291: o singură fișă - clicul (t212Comuta) și „Vezi X” (t212Deschide) aleg poziția prin t212Alege, care aduce lumânările
+  assert.match(fnE("t212Comuta"), /t212Alege\(tk\)/); assert.match(fnE("t212Deschide"), /t212Alege\(tk\)/); assert.match(fnE("t212Alege"), /t212AduTf\(tk\)/);
   const g = fnE("t212GraficHtml");
-  assert.match(g, /var sem = GraficBot\.semafor\(t212PeTf\(p\.ticker\), "long", \{ actiune: true, acum: Date\.now\(\), sedinta: t212SedintaDeschisa\(Date\.now\(\)\), reincerc: t212Reincerc\(p\.ticker\)/); assert.match(g, /semafor: sem, tfGrafic: "1D", trendIstoric: t212ZiRanduri\(p\.ticker\), trendInchise: true/);
+  assert.match(g, /var sem = GraficBot\.semafor\(t212PeTf\(p\.ticker\), "long", \{ actiune: true, acum: Date\.now\(\), sedinta: t212SedintaDeschisa\(Date\.now\(\)\), reincerc: t212Reincerc\(p\.ticker\)/); assert.match(g, /semafor: sem, tfGrafic: X\[1\], trendIstoric: zi \? t212ZiRanduri\(p\.ticker\) : null, trendInchise: zi,/);   // v100.291: 1z ca înainte (zilele închise); intraday, lumânările închise ale TF-ului
   assert.match(g, /d\.semafor = sem;/);
   assert.match(fnE("t212GraficeDeseneaza"), /t212TfCit/);
 });

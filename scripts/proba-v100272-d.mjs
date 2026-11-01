@@ -310,6 +310,8 @@ const DINAMICE = [
   { fisier: "public/lib/grafic-bot.js", re: /^' \+ clic \+ '/, nume: () => culege(/semClic\s*:\s*\{([^}]*)\}/g).flatMap((s) => [...s.matchAll(new RegExp('"(' + ID + ')\\(', "g"))].map((m) => m[1])) },
   { fisier: "public/lib/monte-simbol-ecran.js", re: /^' \+ act \+ '/, nume: () => [...culege(new RegExp("act = act \\|\\| \"(" + ID + ")\\(", "g"), LIB.filter(([f]) => f.endsWith("monte-simbol-ecran.js"))), ...culege(new RegExp("mcs(?:Tp|Var)Html\\([^,()]+,\\s*\"(" + ID + ")\\(", "g"))] },
   { fisier: "public/lib/rezultate.js", re: /^' \+ act \+ '/, nume: () => culege(new RegExp('btn\\("(' + ID + ')\\(', "g"), LIB.filter(([f]) => f.endsWith("rezultate.js"))) },
+  // v100.291: pastilele verdictului T212 sunt butoane (AsezarePaznic.voceHtml); acțiunea vine din pagT212 („v.act = "t212Deschide('…')"”)
+  { fisier: "public/lib/asezare-paznic.js", re: /^' \+ String\(v\.act\)/, nume: () => culege(new RegExp('v\\.act = "(' + ID + ')\\(', "g"), LIB.filter(([f]) => f.endsWith("asezare-paznic.js"))) },
   { fisier: "public/lib/statistica-trade.js", re: /^' \+ o\.actiune(Perioada|Ordine|Csv) \+ /, nume: (w) => { const k = /^' \+ o\.actiune(\w+) /.exec(w)[1]; return culege(new RegExp("actiune" + k + "\\s*:\\s*[\"'](" + ID + ")[\"']", "g")); } },
 ];
 function actiuniFolosite() {

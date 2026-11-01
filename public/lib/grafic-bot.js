@@ -687,13 +687,13 @@ var GraficBot = (function () {
     }
     var josTot = st.adx ? ay0 + adxH : rsiH ? ry0 + rsiH : ly0 + laneH;
     // axa timpului
-    var ay = josTot + 18, lung = o.per && o.per !== "24h", doarZi = o.actiune || o.per === "200z";   // v100.137 (revizia 6): la 1z ora e zgomot
+    var ay = josTot + 18, lung = o.per && o.per !== "24h", doarZi = (o.actiune && !o.oreAxa) || o.per === "200z";   // v100.291: acțiunile pe 5m…4h (T212) au axa cu ore   // v100.137 (revizia 6): la 1z ora e zgomot
     [0, 0.25, 0.5, 0.75, 1].forEach(function (fr, ii) { if (ingust && (ii === 1 || ii === 3)) return; q.push('<text x="' + f1(fr * plotW) + '" y="' + ay + '" font-size="12" fill="' + COL.mut + '" text-anchor="' + (fr === 0 ? "start" : fr === 1 ? "end" : "middle") + '">' + (doarZi ? ziLuna(t0 + fr * (t1 - t0)) : ora(t0 + fr * (t1 - t0), lung)) + '</text>'); });
     q.push('<line class="gbCruceY" x1="0" x2="' + f1(plotW) + '" y1="0" y2="0" stroke="' + COL.text + '" stroke-opacity=".35" stroke-width="1" stroke-dasharray="2 3" style="display:none"/>');
     q.push('<line class="gbCruce" x1="0" x2="0" y1="0" y2="' + josTot + '" stroke="' + COL.text + '" stroke-opacity=".35" stroke-width="1" style="display:none"/>');
     q.push('<g class="gbCrucePret" style="display:none"><rect x="0" y="0" width="44" height="16" rx="2" fill="' + COL.fond + '" stroke="' + COL.text + '" stroke-width="1"/><text x="0" y="0" text-anchor="end" font-size="11" font-weight="700" fill="' + COL.text + '"></text></g>');
     var HT = H + bandaSem;   /* v100.144: + banda semaforului (telefon) */
-    var svg = '<svg class="gbSvg" viewBox="0 0 ' + W + ' ' + HT + '" width="' + W + '" height="' + HT + '" role="img" aria-label="' + (o.actiune ? "Prețul acțiunii (zilnic) cu stopul, ținta și zona de valoare" : "Prețul cu gridul, planul și alertele botului") + '">' + (bandaSem ? qSem.join("") + '<g class="gbTot" transform="translate(0,' + bandaSem + ')">' + q.join("") + '</g>' : q.join("")) + '</svg>';
+    var svg = '<svg class="gbSvg" viewBox="0 0 ' + W + ' ' + HT + '" width="' + W + '" height="' + HT + '" role="img" aria-label="' + (o.actiune ? "Prețul acțiunii (" + esc(o.etTf || "zilnic") + ") cu stopul, ținta și zona de valoare" : "Prețul cu gridul, planul și alertele botului") + '">' + (bandaSem ? qSem.join("") + '<g class="gbTot" transform="translate(0,' + bandaSem + ')">' + q.join("") + '</g>' : q.join("")) + '</svg>';
     // legenda: identitatea nu sta doar in culoare
     // v100.56: la actiuni (o.actiune) nu exista grid si nici alertele botului - legenda nu le pomeneste
     if (cmp && VAL.length && pAcum !== null) VAL.push({ t: "acum", p: pAcum, c: COL.text, acumRand: true });   /* v100.162: reperul pentru „față de acum” */

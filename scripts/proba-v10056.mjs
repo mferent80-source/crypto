@@ -67,8 +67,9 @@ await test("pagina T212: graficul in detaliul pozitiei - comutatoare proprii (t2
   assert.ok(/ziObisnuitaActiune\([^)]*, 1\)/.test(e) && /ziObisnuitaActiune\([^)]*, 5\)/.test(e));
   assert.ok(/stopPlan: [^,]*stopPozitie/.test(e), "stopul propus = stopul care urca calculat");
   assert.ok(/id="t212Graf-' \+ tk \+ '"/.test(e), "locul graficului in detaliu");
-  assert.ok(/t212GraficeDeseneaza\(\)/.test(corp("t212Comuta")), "desenat si la deschiderea cu clic");
-  assert.ok(/t212GraficeDeseneaza\(\)/.test(corp("t212Render")), "desenat la randare");
+  // v100.291: o singură fișă - clicul alege poziția (t212Alege), iar alegerea desenează graficul
+  assert.ok(/t212Alege\(tk\)/.test(corp("t212Comuta")) && /t212GraficeDeseneaza\(\)/.test(corp("t212Alege")), "desenat si la deschiderea cu clic");
+  assert.ok(/t212GraficeDeseneaza\((viu)?\)/.test(corp("t212Render")), "desenat la randare");   // v100.291: (viu) = la recitire, fără cereri noi
   assert.ok(/profilul vine de la colector/.test(e), "fara profil: spune de ce lipsesc benzile");
 });
 
@@ -164,7 +165,7 @@ await test("C1: ruta semneAct PASTREAZA starea de atunci (altfel autopsia zicea 
 await test("I1: „Vezi X” si legatura din Alerte (t212Deschide) deseneaza graficul; I2: „acum” pe grafic = pretul viu, nu inchiderea de ieri", () => {
   const e = fs.readFileSync(path.join(RAD, "public", "lib", "t212-ecran.js"), "utf8");
   const corp = (nume) => { const i = e.indexOf("function " + nume + "("); const j = e.indexOf("\nfunction ", i + 10); return e.slice(i, j < 0 ? e.length : j); };
-  assert.ok(/t212GraficeDeseneaza\(\)/.test(corp("t212Deschide")));
+  assert.ok(/t212Alege\(tk\)/.test(corp("t212Deschide")) && /t212GraficeDeseneaza\(\)/.test(corp("t212Alege")));   // v100.291: prin t212Alege
   assert.ok(/pretViu: p\.pret/.test(corp("t212GraficHtml")));
 });
 await test("I3 + I5: raportul de duminica - jurnalele actiunilor citite inainte (dupa o repornire) si autopsia trimisa SEPARAT pe Discord (limita de 2000 de caractere)", () => {

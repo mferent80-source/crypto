@@ -141,7 +141,7 @@ async function scenariu(lat, inal, nume) {
       assert.equal(await b.ev(`document.querySelectorAll("#t212Continut tr.t212Rand").length`), n, "un rand pe actiune");
       assert.equal(await b.ev(`document.querySelectorAll("#t212Continut tr.t212Rand .t212Pill").length`), n, "un semafor pe fiecare pozitie");
       assert.equal(await b.ev(`[...document.querySelectorAll("#t212Continut .t212Det .t212Plan button")].filter(x=>/Salvează planul/.test(x.textContent)).length`), n, "planul pe fiecare pozitie");
-      assert.equal(await b.ev(`document.querySelectorAll("#t212Continut tr.t212Det:not([hidden])").length`), 0, "detaliile inchise la deschidere (compact)");
+      assert.equal(await b.ev(`document.querySelectorAll("#t212Continut tr.t212Det:not([hidden])").length`), 1, "o singura fisa deschisa la deschidere: cea mai urgenta (v100.291, lista + fisa)");
       assert.match(t, /Câștigat real/i); assert.match(t, /T212 arată/i); assert.match(t, /Portofoliul/i); assert.match(t, /Ce ai de făcut acum/i);
       // v87: tot contul pe un rand + data rezultatelor la macar o pozitie (Nasdaq)
       await panaCand(b, `/Pionex/.test(document.querySelector("#t212Card [data-cont-tot]").innerText)&&/Trading 212/.test(document.querySelector("#t212Card [data-cont-tot]").innerText)`, 30000, "randul cu tot contul");
@@ -201,7 +201,7 @@ async function scenariu(lat, inal, nume) {
       await b.ev(`document.getElementById("t212Graf-${tk0}").scrollIntoView()`); await b.poza(path.join(DOSAR_POZE, `grafic-actiune-${nume}.png`));
       await b.poza(path.join(DOSAR_POZE, `t212-deschis-${nume}.png`));
       await b.ev(`document.getElementById("t212R-${tk0}").click()`);
-      assert.equal(await b.ev(`document.getElementById("t212Det-${tk0}").hidden`), true, "al doilea clic il inchide");
+      assert.equal(await b.ev(`document.getElementById("t212Det-${tk0}").hidden`), await b.ev(`t212Ingust()`), "al doilea clic inchide fisa doar pe ingust (sub rand); pe lat fisa ramane (v100.291)");
       const tk = await b.ev(`t212.poz.find(p=>t212.niveluri[p.ticker]&&!t212.planuri[p.ticker])?.ticker||""`);
       if (!tk) return;
       const astept = await b.ev(`+t212.niveluri["${tk}"].trailPct.toFixed(1)`);

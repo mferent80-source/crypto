@@ -19,7 +19,7 @@ async function test(nume, f) { teste++; await Promise.resolve().then(f).then(() 
 console.log("\nV100.290 · FĂ TOT (AȘEZAREA) · proba\n");
 
 const CSS = citeste("public", "app.css");
-const bloc = () => { const i = CSS.indexOf("/* v100.290"), j = CSS.indexOf("/* v100.272 (ideile auditului 29.10): paleta"); assert.ok(i > 0 && i < j, "blocul v100.290 înaintea paletei"); return CSS.slice(i, j); };
+const bloc = () => { const i = CSS.indexOf("/* v100.290"), j0 = CSS.indexOf("/* v100.291"), j = j0 > i ? j0 : CSS.indexOf("/* v100.272 (ideile auditului 29.10): paleta"); assert.ok(i > 0 && i < j, "blocul v100.290 înaintea paletei"); return CSS.slice(i, j); };
 
 await test("tabelele din Cont / Tablou și rândul de indicatori de pe Tablou: celulele cât conținutul", () => {
   assert.match(bloc(), /\.accountRow,#tabloubot \.tbKpi\{align-items:start\}/);
@@ -37,12 +37,12 @@ await test("Scannerul vechi deschis: butonul „Scanează” nu mai iese din cas
   assert.match(CSS, /#scan details\.scVechi>\.card,#scan details\.scVechi>button\{margin:0 10px 10px;width:calc\(100% - 20px\)\}/);
 });
 await test("versiunile: v100.290 în aplicație, colectorul neatins (v101.158); proba în lanț; v100289 de la v100.289 în sus", () => {
-  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.290"/);
-  assert.match(citeste("BUILD_INFO.json"), /"version": "v100\.290"/);
-  assert.match(citeste("public", "index.html"), /id="healthAppVersion">v100\.290</);
-  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-290/);
+  const app = Number(citeste("functions", "_shared", "versiune.js").match(/VERSIUNE = "v100\.(\d+)"/)[1]); assert.ok(app >= 290, "v100.290 sau mai nouă");
+  assert.ok(Number(citeste("BUILD_INFO.json").match(/"version": "v100\.(\d+)"/)[1]) >= 290);
+  assert.ok(Number(citeste("public", "index.html").match(/id="healthAppVersion">v100\.(\d+)</)[1]) >= 290);
+  assert.ok(Number(citeste("public", "sw.js").match(/crypto-radar-v100-(\d+)/)[1]) >= 290);
   assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.158"/);
-  const p = JSON.parse(citeste("package.json")); assert.equal(p.version, "100.290.0", "versiunea din package.json (syntax-v71 o leagă de cache-ul sw.js)"); assert.equal(p.scripts["test:v100290"], "node scripts/proba-v100290.mjs"); assert.match(p.scripts.test, /npm run test:v100289 && npm run test:v100290/);
+  const p = JSON.parse(citeste("package.json")); assert.ok(Number(p.version.split(".")[1]) >= 290, "versiunea din package.json (syntax-v71 o leagă de cache-ul sw.js)"); assert.equal(p.scripts["test:v100290"], "node scripts/proba-v100290.mjs"); assert.match(p.scripts.test, /npm run test:v100289 && npm run test:v100290( |")/);
   assert.doesNotMatch(citeste("scripts", "proba-v100289.mjs"), /VERSIUNE = "v100\\\.289"\/\)/);
 });
 

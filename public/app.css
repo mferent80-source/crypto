@@ -2671,7 +2671,7 @@ html.pzDemo body:not(.pzFasiaDeschisa):has(main>#cloud.on,main>#settings.on,main
 /* T212 (.t212Card e deja coloană flex) */
 .pzDemo #t212Card>*{order:900}
 .pzDemo #t212Card>.t212CapCard{order:0}.pzDemo #t212Card>#pzV-t212{order:10}.pzDemo #t212Card>#t212Sus{order:20}
-.pzDemo #t212Card>.contTot{order:50}.pzDemo #t212Card>.piataAzi{order:55}.pzDemo #t212Card>.t212Grila{order:60}.pzDemo #t212Card>#t212Idei{order:210}
+.pzDemo #t212Card>.contTot{order:4}.pzDemo #t212Card>.piataAzi{order:6}.pzDemo #t212Card>#t212PozPanou{order:30}.pzDemo #t212Card>.t212Grila{order:60}.pzDemo #t212Card>#t212Idei{order:210}   /* v100.291 (demo aprobat 01.11): benzile sus, apoi verdictul, cifrele, Pozițiile (lista + fișa), [Ce ai de făcut acum | Vreau să cumpăr + Portofoliul], Ideile */
 /* Salt (#saltCard coloană flex; #saltPagina grilă) */
 .pzDemo #saltCard>*{order:900}
 .pzDemo #saltCard>.t212CapCard{order:0}.pzDemo #saltCard>#pzV-salt{order:10}.pzDemo #saltCard>#saltPagina{order:20}
@@ -3272,6 +3272,54 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
    tot. Pe PC `main` intra cu bara de derulare sub ea (.mainArea era 100vw, care ține și bara: 1024 din 1009 px utili) ⇒ cât coloana ei. */
 .accountRow,#tabloubot .tbKpi{align-items:start}
 @media(min-width:981px){.mainArea{width:auto}}
+/* v100.291 (el, 01.11: Trading 212 „redesign, layout, grafice refăcute că nu merg odată cu prețul”, „modul de prezentare a deținerilor”; demo aprobat):
+   pozițiile ca LISTĂ + FIȘĂ. Tabelul rămâne în DOM (rândurile le citește verdictul de sus), așezat ca listă; de la 900 px lățime a panoului fișa
+   poziției alese stă în dreapta, mai îngust sub rândul atins. Capul fișei are etichetele vechi ale tabelului; nimic scos. */
+#t212Continut{container-type:inline-size}
+#t212Continut .t212TabWrap{overflow:visible}
+#t212Continut .t212Tab,#t212Continut .t212Tab tbody{display:contents}
+#t212Continut .t212Tab thead{display:none}
+#t212Continut tr.t212Rand{display:grid;grid-template-columns:auto minmax(0,1fr) auto 84px;grid-template-areas:"pill sim acum spark" "rez rez rez pond" "mod mod mod mod";align-items:center;gap:2px 10px;padding:8px 12px;margin:0 0 6px;border:1px solid var(--tb-linie);border-radius:5px;background:var(--tb-fond);cursor:pointer}
+#t212Continut tr.t212Rand[aria-expanded="true"]{border-color:var(--accent);background:rgba(91,143,199,.12)}
+#t212Continut tr.t212Rand:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+#t212Continut tr.t212Rand td{display:block;padding:0;border:0;text-align:left;white-space:nowrap;background:transparent!important;min-width:0}
+#t212Continut tr.t212Rand td:first-child,#t212Continut tr.t212Rand .t212Sim,#t212Continut tr.t212Rand .t212Sim>div{display:contents}
+#t212Continut tr.t212Rand .t212Pill{grid-area:pill}#t212Continut tr.t212Rand .t212Sim b{grid-area:sim;align-self:center}
+#t212Continut tr.t212Rand td.c-acum{grid-area:acum;text-align:right;font-weight:600}
+#t212Continut tr.t212Rand td.c-spark{grid-area:spark;line-height:0}
+#t212Continut tr.t212Rand td.c-rez{grid-area:rez;white-space:normal}
+#t212Continut tr.t212Rand td.c-rez b{font-size:13px}
+#t212Continut tr.t212Rand td.c-rez .t212Mic{display:inline;margin-left:6px}
+#t212Continut tr.t212Rand td.c-pond{grid-area:pond;text-align:right;color:var(--muted);font-size:12px}
+#t212Continut tr.t212Rand td.c-stop,#t212Continut tr.t212Rand td.c-tinta,#t212Continut tr.t212Rand td.c-trend,#t212Continut tr.t212Rand td.c-plan{display:none}
+#t212Continut tr.t212Rand .t212Sim .t212Mic:not(.t212Modele){display:none}
+#t212Continut tr.t212Rand .t212Modele{grid-area:mod;display:block;white-space:normal;font-size:11.5px;color:var(--muted)}
+#t212Continut tr.t212Rand td[data-et]::before{content:none}
+.t212Spark{display:block}.t212Spark polyline{stroke:var(--muted)}.t212Spark.sus polyline{stroke:var(--good)}.t212Spark.jos polyline{stroke:var(--bad)}
+#t212Continut tr.t212Det{display:block;margin:0 0 10px}
+#t212Continut tr.t212Det[hidden]{display:none}
+#t212Continut tr.t212Det>td{display:block;padding:12px 14px;border:1px solid var(--accent);border-radius:5px;background:var(--panel);white-space:normal;text-align:left}
+.t212FisaCap{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:8px;margin:0 0 10px;align-items:start}
+.t212FisaCelSim{grid-column:span 2}
+.t212FisaCel{min-width:0;padding:8px 10px;border:1px solid var(--tb-linie);border-radius:5px;background:var(--tb-fond);display:flex;flex-direction:column;gap:2px;white-space:normal}
+.t212FisaVal{display:flex;flex-direction:column;gap:2px;font-variant-numeric:tabular-nums;min-width:0}
+.t212FisaVal .t212Mic{display:block}
+.t212FisaSim{display:flex;align-items:flex-start;gap:8px}.t212FisaSim b{font-size:18px}.t212FisaSim>div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.t212FisaPret{font-size:20px}
+.t212FisaTodo{margin:0 0 10px;border:1px solid var(--tb-linie);border-radius:5px;background:var(--tb-fond);padding:2px 0}
+.t212FisaTodo h5{margin:6px 12px 2px;font-size:12px;color:var(--muted);text-transform:none;letter-spacing:0}
+.t212TfGrup{margin:0 0 6px}
+.t212ViuNota{margin:4px 0 0}
+.t212Bursa.deschisa{border-color:rgba(38,169,108,.45);color:var(--good)}
+button.pzVoce{width:auto;min-height:0;margin:0;background:transparent;font-weight:400;line-height:inherit;cursor:pointer;transition:none}button.pzVoce:hover{background:rgba(255,255,255,.05);transform:none;border-color:currentColor}@media (max-width:760px){button.pzVoce{min-height:32px}}button.pzVoce:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+@container (min-width:900px){
+  #t212Continut .t212TabWrap{display:grid;grid-template-columns:330px minmax(0,1fr);grid-template-rows:repeat(var(--n,8),auto) 1fr;column-gap:12px;row-gap:6px;align-items:start}
+  #t212Continut tr.t212Rand{grid-column:1;margin:0}
+  #t212Continut tr.t212Det{grid-column:2;grid-row:1/-1;margin:0}
+}
+@container (max-width:899px){
+  .t212FisaCel:last-child{grid-column:1/-1}
+}
 /* v100.272 (ideile auditului 29.10): paleta Ctrl+K din tastatură - comanda evidențiată (pe care o pornește Enter) și focusul se văd */
 .cmdItem[aria-selected="true"]{border-color:#5B8FC7;background:#1A2633}
 .cmdItem:focus-visible{outline:2px solid #5B8FC7;outline-offset:1px}
