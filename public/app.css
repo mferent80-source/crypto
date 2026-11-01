@@ -3268,6 +3268,10 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
 #tabloubot .tbConcret,.stStat .stDoua,.grPlanDoua,#deriv .grid{align-items:start}
 /* Tablou la 768: cipul lung („Ține-l” a avut dreptate …) se rupe pe rânduri și în golul 761–980 px (sub 760 și la 981–1359 se rupea deja) */
 @media (min-width:761px) and (max-width:980px){#tabloubot .tbConsCip{white-space:normal;max-width:100%}}
+/* v100.290 (el, 01.11: „fă tot”): tabelele din Cont / Tablou și rândul de indicatori de pe Tablou - celulele cât conținutul, ca peste
+   tot. Pe PC `main` intra cu bara de derulare sub ea (.mainArea era 100vw, care ține și bara: 1024 din 1009 px utili) ⇒ cât coloana ei. */
+.accountRow,#tabloubot .tbKpi{align-items:start}
+@media(min-width:981px){.mainArea{width:auto}}
 /* v100.272 (ideile auditului 29.10): paleta Ctrl+K din tastatură - comanda evidențiată (pe care o pornește Enter) și focusul se văd */
 .cmdItem[aria-selected="true"]{border-color:#5B8FC7;background:#1A2633}
 .cmdItem:focus-visible{outline:2px solid #5B8FC7;outline-offset:1px}

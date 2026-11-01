@@ -23,7 +23,9 @@ async function test(nume, f) { teste++; await Promise.resolve().then(f).then(() 
 console.log("\nV100.289 · AȘEZAREA CU DATELE LUI · proba\n");
 
 const CSS = citeste("public", "app.css");
-const bloc = () => { const i = CSS.indexOf("/* v100.289"), j = CSS.indexOf("/* v100.272 (ideile auditului 29.10): paleta"); assert.ok(i > 0 && i < j, "blocul v100.289 înaintea paletei"); return CSS.slice(i, j); };
+// doar blocul v100.289 (până la blocul următor, dacă vine unul): v100.290 a pus, la cererea lui („fă tot”), și tabelele din Cont și
+// rândul de indicatori cât conținutul - decizia „rămân dinadins” de aici a fost schimbată de el, nu pierdută
+const bloc = () => { const i = CSS.indexOf("/* v100.289"), j0 = CSS.indexOf("/* v100.272 (ideile auditului 29.10): paleta"), k = CSS.indexOf("/* v100.290"), j = k > i && k < j0 ? k : j0; assert.ok(i > 0 && i < j0, "blocul v100.289 înaintea paletei"); return CSS.slice(i, j); };
 const LIB = citeste("public", "lib", "asezare-randuri.js");
 const GLOBALE = { console, Math, Number, String, Array, Object, JSON, isFinite, parseFloat, Set };
 const lista = (x) => Array.from(x || []);
@@ -84,12 +86,14 @@ await test("„Ce spune piața acum” pe loc (tbCitirePeLoc, în fiecare secund
   assert.deepEqual(r.className.split(/\s+/).sort(), ["atentie", "pzFold", "pzFoldOk", "randPlin", "tbCitR"], "pliul și marcajul rămân");
 });
 await test("versiunile: v100.289 în aplicație, colectorul neatins (v101.158); proba în lanț; v100288 de la v100.288 în sus", () => {
-  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.289"/);
-  assert.match(citeste("BUILD_INFO.json"), /"version": "v100\.289"/);
-  assert.match(citeste("public", "index.html"), /id="healthAppVersion">v100\.289</);
-  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-289/);
-  assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.158"/);
-  const p = JSON.parse(citeste("package.json")); assert.equal(p.version, "100.289.0", "versiunea din package.json (syntax-v71 o leagă de cache-ul sw.js)"); assert.equal(p.scripts["test:v100289"], "node scripts/proba-v100289.mjs"); assert.match(p.scripts.test, /npm run test:v100288 && npm run test:v100289/);
+  // v100.290: de la v100.289 în sus (ca probele vechi), nu exact
+  const app = Number(citeste("functions", "_shared", "versiune.js").match(/VERSIUNE = "v100\.(\d+)"/)[1]);
+  assert.ok(app >= 289, String(app));
+  assert.match(citeste("BUILD_INFO.json"), new RegExp('"version": "v100\\.' + app + '"'));
+  assert.match(citeste("public", "index.html"), new RegExp('id="healthAppVersion">v100\\.' + app + "<"));
+  assert.match(citeste("public", "sw.js"), new RegExp("crypto-radar-v100-" + app));
+  assert.ok(Number(citeste("scripts", "colector.mjs").match(/const VERSIUNE_COLECTOR = "v101\.(\d+)"/)[1]) >= 158);
+  const p = JSON.parse(citeste("package.json")); assert.equal(p.version, "100." + app + ".0", "versiunea din package.json (syntax-v71 o leagă de cache-ul sw.js)"); assert.equal(p.scripts["test:v100289"], "node scripts/proba-v100289.mjs"); assert.match(p.scripts.test, /npm run test:v100288 && npm run test:v100289/);
   assert.doesNotMatch(citeste("scripts", "proba-v100288.mjs"), /VERSIUNE = "v100\\\.288"\/\)/);
 });
 
