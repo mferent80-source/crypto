@@ -7323,8 +7323,10 @@ function tbCitirePeLoc(el,h){
   var ra=el.querySelectorAll(".tbCitR"),rb=tmp.querySelectorAll(".tbCitR");
   if(ra.length!==rb.length)return false;
   for(var i=0;i<ra.length;i++){
-    var tine=(ra[i].classList.contains("pzFoldOk")?" pzFoldOk":"")+(ra[i].classList.contains("pzFold")?" pzFold":"");
-    var cur=ra[i].className.replace(/\s*pzFoldOk/g,"").replace(/\s*pzFold/g,"").replace(/\s+/g," ").trim();
+    // v100.289: și `randPlin` (rândul pliat rămas singur, întins pe tot rândul de lib/asezare-randuri.js) se ține, ca pzFold: altfel rândul
+    // se rescria la fiecare secundă doar pentru marcaj, iar marcajul pleca
+    var tine=(ra[i].classList.contains("pzFoldOk")?" pzFoldOk":"")+(ra[i].classList.contains("pzFold")?" pzFold":"")+(ra[i].classList.contains("randPlin")?" randPlin":"");
+    var cur=ra[i].className.replace(/\s*pzFoldOk/g,"").replace(/\s*pzFold/g,"").replace(/\s*randPlin/g,"").replace(/\s+/g," ").trim();
     var vrea=String(rb[i].className||"").replace(/\s+/g," ").trim();
     if(cur!==vrea)ra[i].className=vrea+tine;
     var ia=ra[i].querySelector(".tbCitIc"),ib=rb[i].querySelector(".tbCitIc");

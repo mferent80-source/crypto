@@ -3261,6 +3261,13 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
 .panel .randPlin{grid-column:1/-1;flex:1 1 100%}
 .settingsGrid,.sugGrila,.sugSectGrid,.reportSections,.volHero,.prHero,.decisionToolGrid,.decisionExplainGrid,.cacheGrid{align-items:start}
 #dash .acPuls,#dash .acDoua{align-items:start}
+/* v100.289 (el, 01.11: „Livrează acum”, apoi Tabloul și paginile hrănite de Pionex): măsurat cu răspunsurile LUI înregistrate o dată și
+   redate (sub antetul de probă paginile erau goale). Cardurile cât conținutul: Tablou (Stopul / Gridul / Mișcarea, planul gridului),
+   Jurnalul (Ce ai făcut bine / Ce ai greșit), cifrele din Futures. Rândurile de tabel din Cont și celulele cu o singură linie despărțitoare
+   (indicatorii de pe Tablou) rămân cât rândul, dinadins. */
+#tabloubot .tbConcret,.stStat .stDoua,.grPlanDoua,#deriv .grid{align-items:start}
+/* Tablou la 768: cipul lung („Ține-l” a avut dreptate …) se rupe pe rânduri și în golul 761–980 px (sub 760 și la 981–1359 se rupea deja) */
+@media (min-width:761px) and (max-width:980px){#tabloubot .tbConsCip{white-space:normal;max-width:100%}}
 /* v100.272 (ideile auditului 29.10): paleta Ctrl+K din tastatură - comanda evidențiată (pe care o pornește Enter) și focusul se văd */
 .cmdItem[aria-selected="true"]{border-color:#5B8FC7;background:#1A2633}
 .cmdItem:focus-visible{outline:2px solid #5B8FC7;outline-offset:1px}

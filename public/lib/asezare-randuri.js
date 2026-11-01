@@ -3,6 +3,8 @@
 // se întinde pe tot rândul - oricâte coloane are grila la lățimea de acum și oricâte carduri vin din date. Rândurile se socotesc după poziția
 // VĂZUTĂ (merge și cu `order`). Se întind doar cutiile care se văd (fundal sau chenar pe laturi); câmpurile, butoanele, pastilele (sub 60 px)
 // și rândurile de listă (o linie doar sus) nu. O singură clasă, `randPlin`; niciun nod mutat. alege / eCard / tinte sunt pure (proba v100288).
+// v100.289: o grilă cu `data-ar-mici` („Ce spune piața acum”: rândurile pliate de 34 px, rânduri de listă fără cutie) își întinde și
+// rândurile mici sau fără cutie rămase singure (câmpurile și butoanele tot nu).
 // Când: o trecere întreagă la pornire, la lățime nouă și la o schimbare reală a clasei din body (Setări: Crypto / Stocks); în rest observatorul
 // reface ÎNAINTE de desen doar grilele atinse (pagina arătată, un card venit / plecat, o clasă rescrisă, un pliu deschis). Textul (prețurile
 // vii) și scrierile identice (clasa panoului Tablou la 1,5 s) nu-l pornesc; o grilă neschimbată nu se atinge (reviziile Opus 1 și 2, 01.11).
@@ -10,8 +12,8 @@ var ArRanduri = (function () {
   var CLS = "randPlin", FARA = /(^|\s)randPlin(?=\s|$)/g;
   function faraMarcaj(s) { return String(s || "").replace(FARA, " ").replace(/\s+/g, " ").trim(); }
   // copii = [{ top, bottom, width, height, card? }] în ordinea din pagină (null = nu se vede), latime = lățimea grilei
-  // ⇒ indicii copiilor singuri pe rândul lor (pe stil îi verifică apoi eCard)
-  function alege(copii, latime) {
+  // ⇒ indicii copiilor singuri pe rândul lor (pe stil îi verifică apoi eCard); mici = grila cere și rândurile sub 60 px (data-ar-mici)
+  function alege(copii, latime, mici) {
     var l = (copii || []).map(function (c, i) { return { c: c, i: i }; }).filter(function (x) { return x.c && x.c.width > 0 && x.c.height > 0; });
     if (l.length < 3 || !(latime > 0)) return [];
     l.sort(function (a, b) { return a.c.top - b.c.top; });
@@ -23,15 +25,17 @@ var ArRanduri = (function () {
     randuri.forEach(function (r) {
       if (r.l.length !== 1) return;
       var s = r.l[0].c;
-      if (s.card === false || s.width >= 0.6 * latime || s.height < 60 || (s.width < 250 && s.height < 120)) return;
+      if (s.card === false || s.width >= 0.6 * latime || (!mici && (s.height < 60 || (s.width < 250 && s.height < 120)))) return;
       out.push(r.l[0].i);
     });
     return out;
   }
   var transparent = /rgba\([^)]*,\s*0\)$/, CAMPURI = { INPUT: 1, SELECT: 1, TEXTAREA: 1, BUTTON: 1 };
-  // un card = o cutie care se vede (fundal sau chenar pe laturi), în rând cu celelalte (nu așezată deasupra), nu un câmp sau un buton
-  function eCard(tag, cs) {
+  // un card = o cutie care se vede (fundal sau chenar pe laturi), în rând cu celelalte (nu așezată deasupra), nu un câmp sau un buton;
+  // oriceRand = grila cere și rândurile de listă (data-ar-mici): atunci cutia nu mai e cerută
+  function eCard(tag, cs, oriceRand) {
     if (!cs || CAMPURI[String(tag || "").toUpperCase()] || (cs.visibility && cs.visibility !== "visible") || cs.position === "absolute" || cs.position === "fixed") return false;
+    if (oriceRand) return true;
     var bg = cs.backgroundColor;
     if ((bg && bg !== "transparent" && !transparent.test(bg)) || (cs.backgroundImage && cs.backgroundImage !== "none")) return true;
     // o linie doar sus / jos e un rând de listă (Tablou: „Ce spune piața acum”), nu o cutie
@@ -78,7 +82,8 @@ var ArRanduri = (function () {
       for (k = 0; k < aveau.length; k++) aveau[k].classList.remove(CLS);
       dr = dreptunghiuri(copii);
     }
-    var alese = alege(dr, rg.width).map(function (i) { return copii[i]; }).filter(function (e) { return eCard(e.tagName, getComputedStyle(e)); });
+    var mici = !!(g.hasAttribute && g.hasAttribute("data-ar-mici"));
+    var alese = alege(dr, rg.width, mici).map(function (i) { return copii[i]; }).filter(function (e) { return eCard(e.tagName, getComputedStyle(e), mici); });
     for (k = 0; k < alese.length; k++) alese[k].classList.add(CLS);
     var sch = [], atinse = aveau.concat(alese);
     for (k = 0; k < atinse.length; k++) {

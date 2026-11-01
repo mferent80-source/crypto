@@ -43,7 +43,8 @@ await test("(b) app: citirea e pe piață (doarPiata), cu rândurile Indicatorii
 await test("(c) index: cardul se numește „Ce spune piața acum”, cu ceasul live în antet; stilul pentru viu / vechi", () => {
   assert.match(HTML, /<h4>Ce spune piața acum<\/h4><span class="tbSub tbCitLive" id="tbCitireLive" data-cit-live>—<\/span>/);   /* v100.196: „live” abia când sunt date (auditul UI 🟡9) */ assert.doesNotMatch(HTML, /Ce spune graficul acum/);
   assert.match(CSS, /#tabloubot \.tbCitLive\.viu\{/); assert.match(CSS, /#tabloubot \.tbCitLive\.vechi\{/);
-  assert.match(HTML, /<div id="tbCitire">/, "revizia: fără aria-live pe un bloc rescris pe secundă"); assert.match(CSS, /#tabloubot \.tbCitCap\{/);
+  // v100.289: #tbCitire poate cere și rândurile mici (data-ar-mici, lib/asezare-randuri.js); aria-live tot nu
+  assert.match(HTML, /<div id="tbCitire"(?: data-ar-mici)?>/, "revizia: fără aria-live pe un bloc rescris pe secundă"); assert.doesNotMatch(HTML, /<div id="tbCitire"[^>]*aria-live/, "revizia: fără aria-live pe un bloc rescris pe secundă"); assert.match(CSS, /#tabloubot \.tbCitCap\{/);
 });
 await test("(d2) Indicatorii: fără „: ” gol când Stochastic lipsește; „pe bare închise” la Indicatorii și Estimare; Estimarea scurtă (fără „Nedovedit…”); Busola prin tbCheieBusola + kv, „nu răspunde” când e căzută; fără ADX „pe boții tăi”", () => {
   const e = functie(APP, "tbCitireExtra");
