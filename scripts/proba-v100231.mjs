@@ -110,7 +110,7 @@ await test("gura de pauză e aceeași pe Acasă, Sugestii, Scan și Tablou; ciFa
   assert.match(ae, /pas\("contRaport"/);
   assert.match(ae, /else v = acFraneaza\(v, "crypto"\)/);
   assert.match(ae, /acFraneaza\(Acasa\.vremeBursa/);
-  assert.match(ae, /act\.slice\(0, 3\)\.map\(function \(x\) \{ return acSym\(/);
+  assert.match(ae, /acFrazaPauza\(pzB\)/);   // v100.295: coloana ideilor T212 scoasă din „Ce aș cumpăra azi”; gura de pauză rămâne pe coloana boților
   assert.match(citeste("public", "lib", "sugestii-ecran.js"), /acFrazaPauza\(pzS\)/);
   assert.match(t212, /acFrazaPauza\(pzT\)/);
   const iU = ci.indexOf("rec.urmarire"), iT = ci.indexOf("rec.t212"), iS = ci.indexOf("r.stres");

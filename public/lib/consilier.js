@@ -130,7 +130,8 @@ var Consilier = (function () {
     (o.boti || []).forEach(function (x) { deFacut++; linii.push("⚠️ Botul " + x.nume + ": lichidarea la " + x.lich.toFixed(1).replace(".", ",") + "%"); });
     (o.stiri || []).slice(0, 3).forEach(function (x) { linii.push("📰 " + x.simbol + ": " + x.titlu); });
     // v90: ideile de cumparare ale zilei (un filtru, nu o predictie)
-    if ((o.idei && o.idei.length) || (o.ideiBoti && o.ideiBoti.length)) linii.push("💡 Idei azi: " + ((o.idei || []).join(", ") || "—") + ((o.ideiBoti && o.ideiBoti.length) ? " · boți: " + o.ideiBoti.join(", ") : ""));
+    // v100.295 (el, 02.11: „da scoate-le și de pe Discord”): fără ideile T212 (lista „Idei de cumpărare”, scoasă de pe Sugestii pe 01.11); rămân boții
+    if (o.ideiBoti && o.ideiBoti.length) linii.push("💡 Pe ce aș porni un bot: " + o.ideiBoti.join(", "));
     if (!deFacut) linii.push("✓ Azi nu e nimic de făcut pe poziții.");
     if (o.link) linii.push("🔗 Radarul pe telefon: " + o.link);
     return { titlu: "Rezumatul de dimineață", linii: linii };

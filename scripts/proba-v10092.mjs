@@ -86,19 +86,9 @@ await test("(A) I-519 fișa: grPliabil - toate secțiunile se pliază pe telefon
 const ID = new Function("ActiuniSemnale", `${lib("idei.js")}; return Idei;`)(new Function(`${lib("actiuni-semnale.js")}; return ActiuniSemnale;`)());
 const REV = (o) => Object.assign({ cadere: 0.62, deLaMin: 0.28, zileDeLaMin: 6, revine: true }, o || {});
 const IST = (n, pePlus, total) => ({ n: n, pePlus: pePlus, total: total });
-function sugestii(rev, sh) {
-  const ctx = { Reveniri: { textDovada: () => "dovada", textBoti: () => "", TEXT_SUPRAVIETUITORI: "" }, Idei: { reveniriBoti: () => rev, shortBoti: () => sh }, GridCalcul: { procent: (v) => (v * 100).toFixed(1).replace(".", ",") + "%" }, escapeHtml: esc, TextRo: globalThis.TextRo };
-  vm.createContext(ctx);
-  vm.runInContext(fnDin("t212-ecran.js", "t212Cate").split("\n")[0] + "\n" + fnDin("t212-ecran.js", "tbIstoricRosu") + "\n" + fnDin("t212-ecran.js", "tbIstoricBoti") + "\n" + fnDin("t212-ecran.js", "tbSugestiiCorp") + "\n;this.f=tbSugestiiCorp;", ctx);
-  return ctx.f({ la: 1, monede: [{ revenire: REV() }] }, null, []);
-}
-await test("(B) I-525 listele de revenire/short: istoricul tău pe minus (≥ 3 boți, regula candidaților) ⇒ dunga roșie și istoricul pe roșu; altfel după piață (verde), istoricul gri", () => {
-  const h = sugestii([{ moneda: "POWER", revenire: REV(), istoric: IST(17, 10, -173.55) }, { moneda: "AKE", revenire: REV(), istoric: IST(2, 0, -5) }], [{ moneda: "LIT", dir: "short", istoric: IST(5, 4, 12.3) }, { moneda: "Q", dir: "short", istoric: IST(3, 1, -0.5) }]);
-  const rand = (m) => { const i = h.indexOf("<b>" + m + "</b>"); assert.ok(i >= 0, "lipsește rândul " + m); return h.slice(Math.max(0, i - 120), i + 320); };
-  assert.match(rand("POWER"), /tbDunga r"/); assert.match(rand("POWER"), /<p class="bad">istoricul tău: 17 boți, 10 pe plus, −173,6 USDT<\/p>/);   // audit 19.10: rezultatele cu o zecimală
-  assert.match(rand("AKE"), /tbDunga v"/); assert.match(rand("AKE"), /<p>istoricul tău: 2 boți, 0 pe plus, −5,0 USDT<\/p>/);   // audit 19.10: o zecimală
-  assert.match(rand("LIT"), /tbDunga v"/); assert.match(rand("LIT"), /<p>istoricul tău: 5 boți/);
-  assert.match(rand("Q"), /tbDunga r"/); assert.match(rand("Q"), /<p class="bad">istoricul tău: 3 boți, 1 pe plus, −0,5 USDT<\/p>/);   // audit 19.10: o zecimală
+// v100.295 (el, 02.11): listele de revenire / short scoase din Tablou - dunga după istoricul lui rămâne pe candidați (testul F)
+await test("(B) I-525 v100.295: listele de revenire / short scoase din Tablou (tbSugestiiCorp nu mai există)", () => {
+  assert.doesNotMatch(lib("t212-ecran.js"), /function tbSugestiiCorp\(/);
 });
 await test("(B) I-520 Trading 212: t212File - 3 file cu numărul în titlu, fila aleasă apăsată și vizibilă, celelalte ascunse; t212FilaAleasa din localStorage (implicit „idei”)", () => {
   const ctx = { escapeHtml: esc, localStorage: { getItem: (k) => (k === "t212Fila" ? "revenire" : null), setItem() {} } }; vm.createContext(ctx);
@@ -127,19 +117,16 @@ const CLB = { la: 5, monede: [{ simbol: "AKE_USDT_PERP", volum: 90, stare: "evit
 const IIB = { idei: { idei: { zi: "2026-10-04", judecate: 202, trecute: 2, actiuni: [{ simbol: "TE" }, { simbol: "LNKS" }], reveniri: [{ simbol: "LAES" }], dovadaReveniri: { eticheta: "cam la fel" } } } };
 function acasa() {
   const ctx = { escapeHtml: esc, Idei: ID }; vm.createContext(ctx);
-  vm.runInContext(["acClasamentSumar", "acSym", "acasaCumpar", "acasaCumpar2Corp", "acasaCumpar2Parti"].map((f) => fnDin("acasa-ecran.js", f)).join("\n") + "\n;this.f=acasaCumpar;this.g=acasaCumpar2Corp;", ctx);   // audit 19.10: acasaCumpar2 (nechemat) scos ⇒ corpul
+  vm.runInContext(["acClasamentSumar", "acSym", "acasaCumpar", "acasaCumpar2Parti"].map((f) => fnDin("acasa-ecran.js", f)).join("\n") + "\n;this.f=acasaCumpar;", ctx);   // v100.295: acasaCumpar2Corp (nechemat) scos
   return ctx;
 }
-await test("(B) I-521 Acasă: „Ce aș cumpăra azi” pe 3 coloane - acțiuni / boți / revenire și short, fiecare cu butonul ei; nota „aș sări peste ea” doar sub a treia; rândul vechi (acasaCumpar2) neschimbat", () => {
+await test("(B) I-521 Acasă: „Ce aș cumpăra azi” pe coloane, fiecare cu butonul ei (v100.295: două - boți / acțiuni pe revenire; ideile T212 și monedele pe revenire / short scoase)", () => {
   const c = acasa(), d = { ...IIB, clasament: CLB, sugestii: null }, h = c.f(d);
-  assert.equal((h.match(/class="acCumparCol"/g) || []).length, 3, h);
+  assert.equal((h.match(/class="acCumparCol"/g) || []).length, 2, h);
   const col = h.split('<div class="acCumparCol">');
-  assert.ok(text(col[1]).startsWith("Acțiuni") && /data-action-click="sugLaPoarta\(&#39;TE&#39;\)">TE<\/button>, <button[^>]*sugLaPoarta\(&#39;LNKS&#39;\)">LNKS<\/button>/.test(col[1])   /* v100.196: simbolurile = butoane spre Poartă */ && col[1].includes("acasaMergiLa('t212','t212Idei','idei')"), text(col[1]));
-  assert.ok(text(col[2]).startsWith("Boți") && col[2].includes("acasaMergiLa('tabloubot','tbIdei')"), text(col[2]));
-  assert.ok(text(col[3]).startsWith("Revenire și short") && col[3].includes("<b>LAES</b>") && col[3].includes("<b>AKE, Q</b>") && col[3].includes("<b>LIT, Q</b>") && col[3].includes("acasaMergiLa('t212','t212Idei','revenire')"), text(col[3]));
-  assert.match(col[3], /<p class="tbWarn">⚠ Q e și pe revenire, și la short: aș sări peste ea<\/p>/);
-  assert.ok(!col[1].includes("⚠") && !col[2].includes("⚠"), "nota doar sub coloana ei");
-  assert.equal(text(c.g(d)), "↩️ pe revenire: acțiunile LAES (cam la fel) · monedele AKE, Q · 📉 short: LIT, Q · ⚠ Q e și pe revenire, și la short: aș sări peste ea");
+  assert.ok(text(col[1]).startsWith("Boți") && col[1].includes("acasaMergiLa('tabloubot','tbIdei')"), text(col[1]));
+  assert.ok(text(col[2]).startsWith("Acțiuni pe revenire") && col[2].includes("<b>LAES</b>") && col[2].includes("(cam la fel)") && col[2].includes("acasaMergiLa('t212','t212Idei','revenire')"), text(col[2]));
+  assert.ok(!h.includes("⚠") && !/>TE<|LNKS|AKE, Q|LIT, Q|Idei de cumpărare/.test(h), "fără listele scoase: " + text(h));
   assert.ok(/#dash \.acCumparCol3\{/.test(citeste("public", "app.css")), "CSS acCumparCol3");
 });
 
@@ -235,9 +222,8 @@ await test("(F) Discord o singură dată: Consiliu.schimbare tace (doarRadar) c�
 });
 await test("(F) I-525 în toate listele la fel: candidații (tbIdeiRender) cu istoricul lui pe minus (≥ 3 boți) ⇒ dunga roșie și istoricul pe roșu, prin același ajutor tbIstoricRosu", () => {
   const s = lib("t212-ecran.js"); assert.ok(/^function tbIstoricRosu\(x\)/m.test(s), "lipsește tbIstoricRosu");
-  const r = fnDin("t212-ecran.js", "tbIdeiRender"), g = fnDin("t212-ecran.js", "tbSugestiiCorp");
+  const r = fnDin("t212-ecran.js", "tbIdeiRender");   /* v100.295: listele de revenire / short (tbSugestiiCorp) scoase; rămân candidații */
   assert.ok(r.includes('(tbIstoricRosu(x) ? "r" : "v")') && r.includes(`(tbIstoricRosu(x) ? ' class="bad"' : '')`), "candidații nu folosesc ajutorul comun");
-  assert.ok(g.includes("tbIstoricRosu(x)") && !/var rosu = function/.test(g), "listele nu folosesc ajutorul comun");
   const ctx = {}; vm.createContext(ctx); vm.runInContext(fnDin("t212-ecran.js", "tbIstoricRosu") + ";this.f=tbIstoricRosu;", ctx);
   assert.equal(ctx.f({ istoric: IST(17, 10, -173.55) }), true); assert.equal(ctx.f({ istoric: IST(2, 0, -5) }), false); assert.equal(ctx.f({ istoric: IST(5, 4, 12) }), false); assert.equal(ctx.f({}), false);
 });

@@ -101,21 +101,19 @@ function cumpar(d) {
 }
 const CL = { monede: [{ simbol: "PONS_USDT_PERP", stare: "candidat", scor: 8 }, { simbol: "BTC_USDT_PERP", stare: "evita" }, { simbol: "LIT_USDT_PERP", stare: "candidat", scor: 9 }, { simbol: "VVV_USDT_PERP", stare: "candidat", scor: 7 }, { simbol: "PENDLE_USDT_PERP", stare: "candidat", scor: 6 }] };
 const IDEI = { idei: { zi: "2026-10-02", judecate: 201, trecute: 24, actiuni: CINCI } };
-await test("(2) Acasă: „💡 Ce aș cumpăra azi” - primele 3 acțiuni cu cifrele zilei, primele 3 monede candidate, două butoane spre panouri", () => {
+await test("(2) Acasă: „💡 Ce aș cumpăra azi” - primele 3 monede candidate și butonul spre panou (v100.295: fără ideile T212, scoase la cererea lui pe 02.11)", () => {
   const h = cumpar({ idei: IDEI, clasament: CL });
-  /* v100.92 (I-521): cartela pe 3 coloane - aceleași fapte, pe coloana lor */
-  assert.match(text(h), /^💡 Ce aș cumpăra azi\s*Acțiuni\s*LITE, DELL, ARM 24 din 201 trec de poartă pe 02\.10\s*Idei de cumpărare\s*Boți\s*LIT, PONS sau VVV\s*Pe ce aș porni un bot/);
-  assert.match(h, /<button class="acBtn" type="button" data-action-click="acasaMergiLa\('t212','t212Idei','idei'\)">Idei de cumpărare<\/button>/);
+  assert.match(text(h), /^💡 Ce aș cumpăra azi\s*Boți\s*LIT, PONS sau VVV\s*Pe ce aș porni un bot\s*Acțiuni pe revenire/);
   assert.match(h, /<button class="acBtn" type="button" data-action-click="acasaMergiLa\('tabloubot','tbIdei'\)">Pe ce aș porni un bot<\/button>/);
+  assert.ok(!/LITE|DELL|trec de poartă|Idei de cumpărare/.test(text(h)), text(h));
 });
-await test("(2) Acasă: stările - fără idei / nicio acțiune / fără clasament / nicio monedă; o acțiune și una, două monede", () => {
-  assert.match(text(cumpar({ idei: null, clasament: CL })), /^💡 Ce aș cumpăra azi\s*Acțiuni\s*aștept ideile/);   /* v100.92 (I-521): pe coloane */
-  assert.match(text(cumpar({ idei: { idei: { zi: "2026-10-02", judecate: 201, trecute: 0, actiuni: [] } }, clasament: CL })), /Acțiuni\s*pe 02\.10 niciuna nu trece de poartă/);
+await test("(2) Acasă: stările - fără clasament / nicio monedă; două monede (v100.295: fără coloana ideilor T212)", () => {
   assert.match(text(cumpar({ idei: IDEI, clasament: null })), /Boți\s*aștept clasamentul/);
   assert.match(text(cumpar({ idei: IDEI, clasament: { monede: [{ simbol: "BTC_USDT_PERP", stare: "evita" }] } })), /Boți\s*acum nicio monedă nu e candidată/);
-  assert.match(text(cumpar({ idei: { idei: { zi: "2026-10-02", judecate: 201, trecute: 1, actiuni: [idee("LITE")] } }, clasament: { monede: [CL.monede[2], CL.monede[0]] } })),
-    /Acțiuni\s*LITE 1 din 201 trece de poartă pe 02\.10\s*Idei de cumpărare\s*Boți\s*LIT sau PONS/);
+  assert.match(text(cumpar({ idei: IDEI, clasament: { monede: [CL.monede[2], CL.monede[0]] } })), /Boți\s*LIT sau PONS\s*Pe ce aș porni un bot/);
+  assert.ok(!/aștept ideile|niciuna nu trece de poartă/.test(text(cumpar({ idei: null, clasament: CL }))));
 });
+
 await test("(2) Acasă: rândul stă sub cele două verdicte, înaintea legăturii BTC–bursa, și se desenează la fiecare desen al paginii", () => {
   const h = citeste("public", "index.html"), v = h.indexOf('class="acVerdicte"'), c = h.indexOf('<div class="acLegatura acCumpar" id="acCumpar"></div>'), l = h.indexOf('id="acLegatura"');
   assert.ok(v > 0 && c > v && c < l, "locul: " + [v, c, l].join(","));

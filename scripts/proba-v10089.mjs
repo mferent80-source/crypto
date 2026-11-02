@@ -26,26 +26,9 @@ const SH = (s, scor, o) => ({ simbol: s + "_USDT_PERP", volum: 10, stare: "candi
 const CL = { la: 5, monede: [{ simbol: "AKE_USDT_PERP", volum: 90, stare: "evita", dir: "long", scor: 9, revenire: REV({ cadere: 0.79 }) }, SH("Q", 5, { volum: 30, revenire: REV() }), SH("LIT", 7)] };
 
 // ---- (1) Acasă ----
-function acasa2(d) {
-  const ctx = { escapeHtml: esc, Idei: ID }; vm.createContext(ctx);
-  vm.runInContext(fnDin("acasa-ecran.js", "acClasamentSumar") + "\n" + fnDin("acasa-ecran.js", "acasaCumpar2Corp") + "\n" + fnDin("acasa-ecran.js", "acasaCumpar2Parti") + "\n;this.g=acasaCumpar2Corp;", ctx);   /* v100.92: + Parti; audit 19.10: acasaCumpar2 (nechemat) scos ⇒ corpul */
-  return ctx.g(d);
-}
-const II = { idei: { idei: { zi: "2026-10-03", judecate: 202, trecute: 0, actiuni: [], reveniri: [] } } };
-await test("(1) Acasă: Q e și pe revenire, și la short ⇒ rândul al doilea se încheie cu „⚠ Q e și pe revenire, și la short: aș sări peste ea”, în culoarea de avertisment", () => {
-  const h = acasa2({ ...II, clasament: CL, sugestii: null });
-  assert.equal(text(h), "↩️ pe revenire: acțiunile nimic azi · monedele AKE, Q · 📉 short: LIT, Q · ⚠ Q e și pe revenire, și la short: aș sări peste ea");
-  assert.match(h, /<span class="tbWarn">⚠ Q e și pe revenire, și la short: aș sări peste ea<\/span>/);
-});
-await test("(1) Acasă: două monede comune ⇒ „Q, ZZZ sunt … aș sări peste ele”; listele de 5 ale Tabloului (o monedă a 4-a la short, nearătată pe Acasă, tot se spune)", () => {
-  const cl = { la: 5, monede: CL.monede.concat([SH("ZZZ", 1, { volum: 20, revenire: REV() }), SH("A1", 9), SH("A2", 8)]) };
-  assert.ok(text(acasa2({ ...II, clasament: cl, sugestii: null })).endsWith(" · ⚠ Q, ZZZ sunt și pe revenire, și la short: aș sări peste ele"));
-});
-await test("(1) Acasă: fără monedă comună sau înainte de starea de revenire ⇒ fără notă (rândul de până acum)", () => {
-  const fara = acasa2({ ...II, clasament: { la: 5, monede: CL.monede.filter((m) => m.simbol !== "Q_USDT_PERP") }, sugestii: null });
-  assert.equal(text(fara), "↩️ pe revenire: acțiunile nimic azi · monedele AKE · 📉 short: LIT");
-  const vechi = { la: 5, monede: [SH("Q", 5, { revenire: null }), SH("LIT", 7, { revenire: null })] };
-  assert.ok(!/⚠/.test(acasa2({ ...II, clasament: vechi, sugestii: null })));
+// v100.295 (el, 02.11: „da scoate-le și de pe Acasă”): monedele pe revenire / short scoase de pe Piața azi ⇒ nota n-are unde apărea
+await test("(1) v100.295: Piața azi fără monedele pe revenire / short ⇒ fără nota „… e și pe revenire, și la short”; acasaCumpar2Corp scos", () => {
+  assert.doesNotMatch(lib("acasa-ecran.js"), /și pe revenire, și la short|function acasaCumpar2Corp\(|reveniriBoti|shortBoti/);
 });
 
 // ---- (2) istoricul cu virgulă ----

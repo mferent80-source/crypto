@@ -288,10 +288,10 @@ await test("(8) diferența sub ~2 erori standard (56% din 40 față de 50%) ⇒ 
   assert.equal(Rev.eticheta({ n: 200, pePlus: 0.65, medie: 0.02 }, { n: 2000, pePlus: 0.50, medie: 0 }), "mai bine");
   assert.equal(Rev.eticheta({ n: 200, pePlus: 0.35, medie: -0.02 }, { n: 2000, pePlus: 0.50, medie: 0 }), "mai slab");
 });
-await test("(8) avertismentul de supraviețuire și la monede (universul e cel de azi), arătat pe Sugestii și pe Tablou", () => {
+await test("(8) avertismentul de supraviețuire și la monede (universul e cel de azi), arătat pe Sugestii (v100.295: listele de monede scoase din Tablou)", () => {
   assert.match(Rev.TEXT_SUPRAVIETUITORI_MONEDE, /monedele care sunt azi/);
   assert.match(citeste("public", "lib", "sugestii-ecran.js"), /TEXT_SUPRAVIETUITORI_MONEDE/);
-  assert.match(citeste("public", "lib", "t212-ecran.js"), /TEXT_SUPRAVIETUITORI_MONEDE/);
+  assert.doesNotMatch(citeste("public", "lib", "t212-ecran.js"), /function tbSugestiiCorp\(/);   // v100.295: listele care îl arătau pe Tablou nu mai există
 });
 await test("(8) textul istoricului nu pune paranteze în paranteze la „prea puține cazuri”", () => {
   const t = Rev.textDovada({ n: 20, pePlus: 0.7, medie: 0.02, baza: { n: 500, pePlus: 0.5, medie: 0 }, eticheta: "la fel, prea puține cazuri", putine: true }, "monede");

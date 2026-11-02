@@ -32,29 +32,9 @@ const SLAB = { n: 407, saptamani: 44, pePlus: 0.42, medie: -0.012, mediana: -0.0
 const SG = { sugestii: { la: 5, zi: "2026-10-03", dovada: { revenire: { piata: SLAB, boti: { n: 66, pePlus: 0.53, mediana: 0.32, reper: { n: 832, pePlus: 0.59, mediana: 1.23 } } },
   short: { piata: { ...SLAB, pePlus: 0.55, medie: -0.003, baza: { n: 15119, pePlus: 0.55, medie: -0.01 }, eticheta: "cam la fel" }, boti: { n: 83, pePlus: 0.49, mediana: -0.15, reper: { n: 374, pePlus: 0.56, mediana: 1.3 } } } },
   urmarire: { revenire: { n: 0, pePlus: 0, medie: null, text: "Sugestiile se urmăresc de azi: după ~30 se poate spune cu cifre dacă merită." }, short: null } }, istoric: [] };
-function tablou(cl, sg) {
-  const ctx = { Reveniri: R, Idei: ID, GridCalcul: G, escapeHtml: esc, TextRo: globalThis.TextRo }; vm.createContext(ctx);
-  // v100.89: + tbIstoricBoti (istoricul cu virgulă, comun candidaților și listelor noi) - fără el tbSugestiiCorp aruncă, iar try/catch-ul dă ""
-  vm.runInContext(fnDin("t212-ecran.js", "t212Cate").split("\n")[0] + "\n" + fnDin("t212-ecran.js", "tbIstoricRosu") + "\n" + fnDin("t212-ecran.js", "tbIstoricBoti") + "\n" + fnDin("t212-ecran.js", "tbSugestiiHtml") + "\n" + fnDin("t212-ecran.js", "tbSugestiiCorp") + "\n;this.f=tbSugestiiHtml;", ctx);
-  return ctx.f(cl, sg, [{ moneda: "AAA", rezultat: 2 }]);
-}
-await test("(7) Tabloul: „↩️ Pe revenire (bot long)” și „📉 Pentru short”, cu istoricul pe față, rândurile și „Fișa (long/short)”", () => {
-  const h = tablou(CL, SG), t = text(h);
-  assert.ok(t.includes("↩️ Pe revenire (bot long)") && t.includes("📉 Pentru short"));
-  assert.ok(t.includes(R.textDovada(SLAB, "monede")) && t.includes("Boții tăi porniți așa: 53% pe plus din 66, față de 59% la toți boții tăi."), t);
-  assert.ok(t.includes("AAA căzută −32% de la maximul pe 30 de zile · +11% de la minim (acum 4 zile)") && t.includes("istoricul tău: 1 bot, 1 pe plus, +2,0 USDT"), t);   /* v100.89 (ideea 2): virgulă zecimală; audit 19.10: o zecimală */
-  assert.match(h, /data-action-click="gridDeschideMonedaDir\('AAA','long'\)">Fișa \(long\)<\/button>/); assert.match(h, /data-action-click="gridDeschideMonedaDir\('DDD','short'\)">Fișa \(short\)<\/button>/);
-  assert.ok(t.includes("DDD interval 12,00% · 0,26% net pe grilă · ~21 treceri pe zi · direcția short (puternic)") && t.includes("n-ai mai avut boți pe ea"), t);
-  assert.ok(t.includes("Boții tăi short pe monede cu direcția short: 49% pe plus din 83, față de 56% la toți boții tăi short.") && t.includes("📏 Sugestiile se urmăresc de azi"));
-});
-await test("(7) revizia (I7): Tabloul înainte de primul clasament cu reveniri (fără `revenire` sau `revenire: null` peste tot) ⇒ „apare la următorul clasament”; clasament nou fără reveniri ⇒ „Acum nicio monedă…”; fără clasament ⇒ „Aștept clasamentul…”", () => {
-  const a = text(tablou(null, null)); assert.ok(a.includes("Aștept clasamentul…") && a.includes("Istoricul se socotește azi de la 8:00."), a);
-  for (const m of [{ simbol: "X_USDT_PERP", stare: "candidat", dir: "long", scor: 1 }, { simbol: "X_USDT_PERP", stare: "candidat", dir: "long", scor: 1, revenire: null }]) {
-    const b = text(tablou({ la: 5, monede: [m, { ...m, simbol: "Y_USDT_PERP" }] }, null));
-    assert.ok(b.includes("Starea de revenire apare la următorul clasament (o dată pe oră).") && !b.includes("Acum nicio monedă nu e pe revenire.") && b.includes("Acum nicio monedă liniștită nu are direcția short."), b);
-  }
-  const c = text(tablou({ la: 5, monede: [{ simbol: "X_USDT_PERP", stare: "candidat", dir: "long", scor: 1, revenire: { cadere: 0.1, deLaMin: 0.01, zileDeLaMin: 1, revine: false } }] }, null));
-  assert.ok(c.includes("Acum nicio monedă nu e pe revenire.") && !c.includes("apare la următorul clasament") && c.includes("Acum nicio monedă liniștită nu are direcția short."), c);
+// v100.295 (el, 02.11: „da scoate-le și de pe Tablou”): listele „↩️ Pe revenire (bot long)” / „📉 Pentru short” scoase (fără avantaj dovedit, scoase de pe Sugestii pe 01.11)
+await test("(7) v100.295: Tabloul nu mai are „↩️ Pe revenire (bot long)” / „📉 Pentru short”; tbSugestiiHtml / tbSugestiiCorp nu mai există", () => {
+  assert.doesNotMatch(lib("t212-ecran.js"), /function tbSugestii(Html|Corp)\(|Pe revenire \(bot long\)|📉 Pentru short/);
 });
 await test("(7) revizia (I2): „Fișa (long/short)” alege direcția DOAR pentru moneda ei, cu un singur calcul; la altă monedă revine cea de dinainte (și cea aleasă de mână)", () => {
   const apeluri = [], butoane = {}, ctx = { grStare: { dir: null }, gridDeschideMoneda: (m) => apeluri.push(["fisa", m, ctx.grStare.dir]), gridDirectie: (d) => apeluri.push(["dir", d]),
@@ -74,13 +54,9 @@ await test("(7) revizia (I2): „Fișa (long/short)” alege direcția DOAR pent
   assert.match(fnApp("gridCalculeaza"), /var simbol=grSimbol\(\$\("grMoneda"\)&&\$\("grMoneda"\)\.value\),[^\n]*\n  gridDirTemporara\(simbol\);/);
   assert.match(fnApp("gridDirectie"), /^function gridDirectie\(d\)\{grStare\.dirTemp=null;/);
 });
-await test("(7) Tabloul: listele stau SUB nota listei de candidați; sugestiile se aduc odată cu clasamentul (la 10 minute)", () => {
-  assert.match(fnDin("t212-ecran.js", "tbIdeiRender"), /proba pe istoricul monedei\.<\/p>' \+ tbSugestiiHtml\(cl, contTot\.sugestii, contTot\.inchise\);/);
-  const s = lib("t212-ecran.js");
-  assert.match(s, /var contTot = \{.*sugestii: null, sugestiiLa: 0 \};/); assert.match(s, /contTot\.sugestii = await getJSON\("\/api\/istoric-bot\?action=sugestii"\);/);
-});
-await test("(7) o eroare în date nu strică Tabloul: lista nouă iese goală, candidații rămân", () => {
-  assert.equal(tablou({ get monede() { throw new Error("x"); } }, SG), "");
+await test("(7) v100.295: sub nota listei de candidați nu mai e lipit nimic; Tabloul nu mai cere sugestiile (nimic nu le mai citește)", () => {
+  assert.match(fnDin("t212-ecran.js", "tbIdeiRender"), /proba pe istoricul monedei\.<\/p>'; if \(box\._contH !== hI\)/);
+  assert.doesNotMatch(lib("t212-ecran.js"), /contTot\.sugestii|action=sugestii/);
 });
 
 function t212Rev(id, cont) {
@@ -115,26 +91,20 @@ await test("(8) Trading 212: fără acțiuni pe revenire ⇒ „Azi nicio acțiu
 });
 function acasa2(d) {
   const ctx = { escapeHtml: esc, Idei: ID }; vm.createContext(ctx);
-  vm.runInContext(fnDin("acasa-ecran.js", "acClasamentSumar") + "\n" + fnDin("acasa-ecran.js", "acSym") + "\n" + fnDin("acasa-ecran.js", "acasaCumpar2Corp") + "\n" + fnDin("acasa-ecran.js", "acasaCumpar2Parti") + "\n" + fnDin("acasa-ecran.js", "acasaCumpar") + "\n;this.f=acasaCumpar;this.g=acasaCumpar2Corp;", ctx);   /* v100.92: + Parti; audit 19.10: acasaCumpar2 (nechemat) scos ⇒ corpul */
-  return { get tot() { return ctx.f(d); }, get doi() { return ctx.g(d); } };   // audit 19.10: pe cerere (cazul cu eroare cere doar cartela)
+  vm.runInContext(fnDin("acasa-ecran.js", "acClasamentSumar") + "\n" + fnDin("acasa-ecran.js", "acSym") + "\n" + fnDin("acasa-ecran.js", "acasaCumpar2Parti") + "\n" + fnDin("acasa-ecran.js", "acasaCumpar") + "\n;this.f=acasaCumpar;", ctx);   /* v100.295: acasaCumpar2Corp (nechemat) scos */
+  return ctx.f(d);
 }
-await test("(8) Acasă: al doilea rând din „Ce aș cumpăra azi” - primele nume din fiecare listă, cu eticheta istoricului; liste goale ⇒ „nimic azi”; fără date ⇒ lipsește", () => {
-  const d = { idei: { idei: { zi: "2026-10-03", judecate: 202, trecute: 23, actiuni: [{ simbol: "SNDK" }], reveniri: [RV, { ...RV, simbol: "MU" }], dovadaReveniri: BINE } }, clasament: CL, sugestii: SG };
-  const r = acasa2(d);
-  assert.equal(text(r.doi), "↩️ pe revenire: acțiunile INTC, MU (mai bine) · monedele AAA (mai slab) · 📉 short: DDD (cam la fel)");
-  /* v100.92 (I-521): cartela pe 3 coloane - rândul al doilea devine coloana „Revenire și short” */
-  assert.ok(text(r.tot).startsWith("💡 Ce aș cumpăra azi Acțiuni SNDK 23 din 202 trec de poartă pe 03.10") && text(r.tot).includes("Revenire și short ↩️ acțiunile INTC, MU (mai bine) ↩️ monedele AAA (mai slab) 📉 short: DDD (cam la fel)"), text(r.tot));
-  assert.equal(text(acasa2({ idei: { idei: { zi: "2026-10-03", judecate: 202, trecute: 0, actiuni: [], reveniri: [] } }, clasament: { la: 5, monede: [] }, sugestii: null }).doi), "↩️ pe revenire: acțiunile nimic azi · monedele nimic azi · 📉 short: nimic azi");
-  assert.equal(acasa2({}).doi, "");
-  // audit 19.10: plasa de erori stătea în acasaCumpar2 (nechemat de pagină, scos); pe pagină o ține acasaCumpar - cartela nu se strică
-  assert.equal(typeof acasa2({ get sugestii() { throw new Error("x"); }, clasament: CL }).tot, "string", "o eroare în date nu strică cartela");
+await test("(8) Acasă: coloana „Acțiuni pe revenire” din „Ce aș cumpăra azi” - primele nume cu eticheta istoricului; lista goală ⇒ „nimic azi”; fără tura de la 8:00 ⇒ stare (v100.295: fără monedele pe revenire / short)", () => {
+  const d = { idei: { idei: { zi: "2026-10-03", judecate: 202, trecute: 23, actiuni: [{ simbol: "SNDK" }], reveniri: [RV, { ...RV, simbol: "MU" }], dovadaReveniri: BINE } }, clasament: CL };
+  const t = text(acasa2(d));
+  assert.ok(t.includes("Acțiuni pe revenire ↩️ acțiunile INTC, MU (mai bine)"), t);
+  assert.ok(!/SNDK|monedele|📉/.test(t), t);
+  assert.ok(text(acasa2({ idei: { idei: { zi: "2026-10-03", judecate: 202, trecute: 0, actiuni: [], reveniri: [] } }, clasament: { la: 5, monede: [] } })).includes("Acțiuni pe revenire ↩️ acțiunile nimic azi"));
+  assert.ok(text(acasa2({})).includes("Acțiuni pe revenire aștept lista"), text(acasa2({})));   /* încă se încarcă */
+  assert.equal(typeof acasa2({ get idei() { throw new Error("x"); }, clasament: CL }), "string", "o eroare în date nu strică cartela");
 });
-await test("(8) revizia (I7): Acasă înainte de primul clasament cu reveniri (`revenire: null` peste tot) ⇒ „monedele —”, nu „nimic azi”; shortul rămâne", () => {
-  const vechi = { la: 5, monede: [{ simbol: "X_USDT_PERP", stare: "candidat", dir: "short", scor: 1, revenire: null }, { simbol: "Y_USDT_PERP", stare: "evita", dir: "long", scor: 2 }] };
-  assert.equal(text(acasa2({ idei: { idei: { zi: "2026-10-03", judecate: 202, trecute: 0, actiuni: [] } }, clasament: vechi, sugestii: null }).doi), "↩️ pe revenire: acțiunile — · monedele — · 📉 short: X");
-});
-await test("(8) Acasă: sugestiile se aduc cu celelalte date ale paginii", () => {
-  assert.match(lib("acasa-ecran.js"), /pas\("sugestii", function \(\) \{ return getJSON\("\/api\/istoric-bot\?action=sugestii"\); \}\),/);
+await test("(8) v100.295: Piața azi nu mai cere sugestiile (nimic de pe ea nu le mai citește)", () => {
+  assert.doesNotMatch(lib("acasa-ecran.js"), /action=sugestii/);
 });
 await test("(9) garda: grupul „sugestii” e STRICT și n-are abateri (toate etichetele, puține, fără istoric, boții, supraviețuitorii, urmărirea)", () => {
   assert.ok(STRICT.has("sugestii"));

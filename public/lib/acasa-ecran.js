@@ -35,7 +35,6 @@ async function acasaPorneste(fortat) {
   try {
     await Promise.all([
       pas("clasament", async function () { var c = await getJSON("/api/istoric-bot?action=clasament"); d.clasamentStare = c && c.stare || null; return c && c.clasament || null; }),   /* v100.276: + de ce lipsește */
-      pas("sugestii", function () { return getJSON("/api/istoric-bot?action=sugestii"); }),   // v100.85 (reveniri + short)
       pas("piata", function () { return getJSON("/api/stiri?action=piata"); }),
       pas("tickers", async function () { var t = await getJSON("/api/market?type=pionex_tickers&market=PERP"); return t && t.data && t.data.tickers || null; }),
       pas("glob", function () { return intelApi("crypto_global"); }),
@@ -129,7 +128,7 @@ var AC_FARA_PAROLA = { nivel: "fara-date", eticheta: "FĂRĂ PAROLĂ", titlu: "F
 var AC_BUTON_PAROLA = '<button class="actionGhost" type="button" data-action-click="mergiLaParola()">Deschide Setări (parola)</button>';
 function acFaraParola(d) {
   if (typeof eroareDeParola !== "function" || !d) return false;
-  return ["clasamentErr", "piataErr", "tickersErr", "ndxErr", "sugestiiErr"].some(function (k) { return !!d[k] && eroareDeParola(d[k]); });
+  return ["clasamentErr", "piataErr", "tickersErr", "ndxErr"].some(function (k) { return !!d[k] && eroareDeParola(d[k]); });
 }
 // v100.202 (15.10, ideea 5): serverul de acasă nu răspunde (rețea, PC oprit, server căzut) — nu e lipsa parolei. Cererile de bază
 // au căzut toate; cu cifre vechi pe ecran, cardurile le arată și rândul de sus spune că sunt vechi; fără nimic, cardurile spun asta.
@@ -191,51 +190,38 @@ function acZiRo(z) { var d = new Date(z + "T12:00:00Z"); return isFinite(d) ? d.
 // v100.82 (03.10, ideea 2): „💡 Ce aș cumpăra azi” sus, sub cele două verdicte - ideile stăteau doar în Trading 212 și pe Tablou (și jos, în
 // „Idei de azi”), iar el nu le găsea. Aceleași liste ca panourile la care duc butoanele: primele acțiuni care trec de poartă, monedele candidate.
 function acasaCumpar(d) {
-  var ii = d && d.idei && d.idei.idei, act = ii && Array.isArray(ii.actiuni) ? ii.actiuni : [], cl = acClasamentSumar(d && d.clasament), m = cl ? cl.buni.slice(0, 3) : [];
-  var zi = ii && /^\d{4}-\d{2}-\d{2}/.test(String(ii.zi)) ? String(ii.zi).slice(8, 10) + "." + String(ii.zi).slice(5, 7) : "—", tr = ii ? Number(ii.trecute) || act.length : 0;
+  var cl = acClasamentSumar(d && d.clasament), m = cl ? cl.buni.slice(0, 3) : [];
   var lista = function (l, sau) { return l.length < 2 ? l.join("") : l.slice(0, -1).join(", ") + " " + sau + " " + l[l.length - 1]; };
-  // v100.92 (I-521): o cartelă cu 3 coloane - acțiuni / boți / revenire și short - numele în bold, eticheta sub ele și butonul ei;
-  // nota semnalelor opuse („aș sări peste ea”) doar sub coloana ei. Aceleași fapte ca rândurile de până acum, nimic ascuns
+  // v100.92 (I-521): o cartelă pe coloane - numele în bold, eticheta sub ele și butonul ei. v100.295 (el, 02.11: „da scoate-le și de pe Acasă”):
+  // fără coloana ideilor T212 și fără monedele pe revenire / short (listele fără avantaj dovedit, scoase de pe Sugestii pe 01.11) ⇒ două coloane
   var mut = function (t) { return '<span class="acMut">' + escapeHtml(t) + '</span>'; };
-  var ah = !ii ? mut("aștept ideile") : !act.length ? mut("pe " + zi + " niciuna nu trece de poartă")
-    : act.slice(0, 3).map(function (x) { return acSym(x.simbol || String(x.ticker || "").split("_")[0]); }).join(", ") + ' '   /* v100.196 (raportul UI, 🟡12): simbolurile duc la Poarta T212, ca în „Idei de azi” */
-      + mut(tr + " din " + (ii.judecate || "—") + " " + (tr === 1 ? "trece" : "trec") + " de poartă pe " + zi);
   var pzB = typeof acPauzaSezon === "function" ? acPauzaSezon() : null;
   var bh = pzB > 0 ? escapeHtml(acFrazaPauza(pzB)) : !cl ? mut("aștept clasamentul") : !m.length ? mut("acum nicio monedă nu e candidată") : '<b>' + escapeHtml(lista(m.map(function (x) { return String(x.simbol).replace(/_USDT_PERP$/, ""); }), "sau")) + '</b>';
-  var p = null; try { p = typeof acasaCumpar2Parti === "function" ? acasaCumpar2Parti(d) : null; } catch (e) { p = null; }   /* o eroare în date nu strică cartela */
-  var ch = !p ? mut("aștept listele") : '↩️ acțiunile <b>' + escapeHtml(p.actiuni) + '</b>' + escapeHtml(p.etA) + '<br>↩️ monedele <b>' + escapeHtml(p.monede) + '</b>' + escapeHtml(p.etM) + '<br>📉 short: <b>' + escapeHtml(p.short) + '</b>' + escapeHtml(p.etS);
+  var p = null, venit = false; try { venit = !!(d && d.idei && d.idei.idei); p = typeof acasaCumpar2Parti === "function" ? acasaCumpar2Parti(d) : null; } catch (e) { p = null; }   /* o eroare în date nu strică cartela */
+  var ch = !p ? mut(venit ? "lista apare la tura de la 8:00" : "aștept lista") : '↩️ acțiunile <b>' + escapeHtml(p.actiuni) + '</b>' + escapeHtml(p.etA);
   var btn = function (ecran, id, fila, t) { return '<span class="acCumparBtn"><button class="acBtn" type="button" data-action-click="acasaMergiLa(\'' + ecran + '\',\'' + id + '\'' + (fila ? ',\'' + fila + '\'' : '') + ')">' + t + '</button></span>'; };
-  var col = function (et, corp, extra, b) { return '<div class="acCumparCol"><p class="acCumparEt">' + et + '</p><p>' + corp + '</p>' + (extra ? '<p class="tbWarn">' + escapeHtml(extra) + '</p>' : '') + b + '</div>'; };
-  // v100.119: drumul spre pagina cu TOATE sugestiile (boți, US, EU, listele „early”)
-  return '<p class="acCumparCap">💡 <b>Ce aș cumpăra azi</b></p><div class="acCumparCol3">' + col("Acțiuni", ah, null, btn("t212", "t212Idei", "idei", "Idei de cumpărare"))
-    + col("Boți", bh, null, btn("tabloubot", "tbIdei", null, "Pe ce aș porni un bot")) + col("Revenire și short", ch, p && p.nota, btn("t212", "t212Idei", "revenire", "Pe revenire")) + '</div>'
+  var col = function (et, corp, b) { return '<div class="acCumparCol"><p class="acCumparEt">' + et + '</p><p>' + corp + '</p>' + b + '</div>'; };
+  // v100.119: drumul spre pagina cu TOATE sugestiile (boți, US, EU)
+  return '<p class="acCumparCap">💡 <b>Ce aș cumpăra azi</b></p><div class="acCumparCol3">' + col("Boți", bh, btn("tabloubot", "tbIdei", null, "Pe ce aș porni un bot"))
+    + col("Acțiuni pe revenire", ch, btn("t212", "t212Idei", "revenire", "Pe revenire")) + '</div>'
     + '<p class="acCumparToate"><button class="acBtn" type="button" data-action-click="navTo(\'sugestii\',true)">💡 Toate sugestiile: boți, acțiuni US și EU</button></p>';   // v100.119: sub cartelă, titlul rămâne același
 }
 // v100.85 (reveniri + short, 03.10): al doilea rând din „Ce aș cumpăra azi” - listele noi, fiecare cu eticheta istoricului ei
 function acasaCumpar2Parti(d) {
-  var ii = d && d.idei && d.idei.idei, sg = d && d.sugestii && d.sugestii.sugestii, dv = sg && sg.dovada || {}, I = typeof Idei !== "undefined" && Idei.reveniriBoti ? Idei : null;
-  // revizia (I7): un clasament făcut înainte de colectorul nou n-are starea de revenire (lipsește sau e null peste tot) ⇒ „—”, ca acțiunile fără listă, nu „nimic azi”
-  var cm = d && d.clasament && d.clasament.monede, faraStare = Array.isArray(cm) && cm.length > 0 && !cm.some(function (m) { return m && m.revenire; });
-  var ra = ii && Array.isArray(ii.reveniri) ? ii.reveniri : null, rm = I && d && d.clasament && !faraStare ? I.reveniriBoti(d.clasament, [], 3) : null, rs = I && d && d.clasament ? I.shortBoti(d.clasament, [], 3) : null;
-  if (!ra && !rm && !rs) return null;
+  // v100.295 (el, 02.11): rămân doar acțiunile pe revenire (US, tura de la 8:00); monedele pe revenire / short au fost scoase (fără avantaj dovedit)
+  var ii = d && d.idei && d.idei.idei, ra = ii && Array.isArray(ii.reveniri) ? ii.reveniri : null;
+  if (!ra) return null;
   var et = function (x) { return x && x.eticheta ? " (" + x.eticheta + ")" : ""; };
-  var nume = function (l, f) { return !l ? "—" : l.length ? l.slice(0, 3).map(f).join(", ") : "nimic azi"; };
-  var mo = function (x) { return String(x.simbol || x.moneda || "").replace(/_USDT_PERP$/, ""); }, ac = function (x) { return x.simbol || String(x.ticker || "").split("_")[0]; };
-  // v100.89 (ideea 1, ca pe Tablou din v100.87): moneda aflată în AMBELE liste ale Tabloului (listele de 5, nu doar primele 3 de aici)
-  // - semnalele se bat cap în cap; fără starea de revenire (rm null) nu se poate spune nimic
-  var ambele = function (rm, rs) {
-    if (!rm || !rs) return "";
-    var r5 = I.reveniriBoti(d.clasament, [], 5).map(mo), a = I.shortBoti(d.clasament, [], 5).map(mo).filter(function (m) { return r5.indexOf(m) >= 0; });
-    return a.length ? "⚠ " + a.join(", ") + (a.length === 1 ? " e și pe revenire, și la short: aș sări peste ea" : " sunt și pe revenire, și la short: aș sări peste ele") : "";
-  };
-  return { actiuni: nume(ra, ac), etA: ra && ra.length ? et(ii && ii.dovadaReveniri) : "", monede: nume(rm, mo), etM: rm && rm.length ? et(dv.revenire && dv.revenire.piata) : "",
-    short: nume(rs, mo), etS: rs && rs.length ? et(dv.short && dv.short.piata) : "", nota: ambele(rm, rs) };
+  var ac = function (x) { return x.simbol || String(x.ticker || "").split("_")[0]; };
+  return { actiuni: ra.length ? ra.slice(0, 3).map(ac).join(", ") : "nimic azi", etA: ra.length ? et(ii.dovadaReveniri) : "" };
 }
-// rândul al doilea ca până acum (o frază cu „·”), din părțile de mai sus - cartela de pe Acasă (acasaCumpar) le pune pe coloana ei
-function acasaCumpar2Corp(d) {
-  var p = acasaCumpar2Parti(d); if (!p) return "";
-  return '<span class="acCumpar2">↩️ pe revenire: acțiunile <b>' + escapeHtml(p.actiuni) + '</b>' + escapeHtml(p.etA) + ' · monedele <b>' + escapeHtml(p.monede) + '</b>' + escapeHtml(p.etM)
-    + ' · 📉 short: <b>' + escapeHtml(p.short) + '</b>' + escapeHtml(p.etS) + (p.nota ? ' · <span class="tbWarn">' + escapeHtml(p.nota) + '</span>' : '') + '</span>';
+// v100.295 (el, 02.11: „da scoate-le și de pe Acasă”): „Idei de azi” fără rândul acțiunilor pe trend (= ideile T212, scoase de pe Sugestii pe 01.11);
+// rămân monedele liniștite pentru un bot grid. Funcție separată ca să poată fi probată (scripts/proba-v100295.mjs)
+function acIdeiHtml(d, cl) {
+  return '<div class="acCap"><h4>Idei de azi</h4><span class="acSub">filtre, nu predicții</span></div>'
+    + '<div class="acEt">Monede liniștite pentru un bot grid:</div>'
+    + (cl && cl.buni.length ? '<div class="acChips">' + cl.buni.slice(0, 5).map(function (x) { return '<span>' + escapeHtml(String(x.simbol).replace(/_USDT_PERP$/, "")) + '</span>'; }).join("") + '</div>' : '<p class="acMut">Aștept clasamentul…</p>')
+    + '<button class="acBtn" type="button" data-action-click="navTo(\'gridset\',true)">Deschide Grid</button>';
 }
 // v100.82: butoanele din „Ce aș cumpăra azi” - deschid pagina și aduc panoul sus (fără animație)
 function acasaMergiLa(ecran, id, fila) {
@@ -675,13 +661,7 @@ function acasaDeseneaza() {
     + '<button class="acBtn" type="button" data-action-click="navTo(\'t212\',true)">Deschide T212</button>'
     + (typeof saltAcasaHtml === "function" && typeof contTot !== "undefined" ? saltAcasaHtml(contTot.salt) : "");   // v100.126: Salt lângă T212 (rezumatul colectorului)
 
-  var ideiL = d.idei && d.idei.idei && Array.isArray(d.idei.idei.actiuni) ? d.idei.idei.actiuni : [], ii = d.idei && d.idei.idei;
-  $("acIdei").innerHTML = '<div class="acCap"><h4>Idei de azi</h4><span class="acSub">filtre, nu predicții</span></div>'
-    + '<div class="acEt">Acțiuni pe trend' + (ii && ii.judecate ? " (" + ii.trecute + " din " + ii.judecate + " trec de poartă)" : "") + ':</div>'
-    + (ideiL.length ? '<div class="acChips">' + ideiL.slice(0, 5).map(function (x) { return '<span>' + escapeHtml(x.simbol || x.ticker || "") + '</span>'; }).join("") + '</div>' : '<p class="acMut">nicio acțiune nu trece azi de poartă</p>')
-    + '<div class="acEt" style="margin-top:4px">Monede liniștite pentru un bot grid:</div>'
-    + (cl && cl.buni.length ? '<div class="acChips">' + cl.buni.slice(0, 5).map(function (x) { return '<span>' + escapeHtml(String(x.simbol).replace(/_USDT_PERP$/, "")) + '</span>'; }).join("") + '</div>' : '<p class="acMut">Aștept clasamentul…</p>')
-    + '<button class="acBtn" type="button" data-action-click="navTo(\'gridset\',true)">Deschide Grid</button>';
+  $("acIdei").innerHTML = acIdeiHtml(d, cl);   // v100.295: fără rândul ideilor T212
 
   // v95: socoteala alertelor de miscare (au continuat?) - apare cand colectorul a strans alerte
   var so = pc.socoteala;

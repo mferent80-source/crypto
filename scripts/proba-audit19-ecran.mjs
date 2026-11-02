@@ -153,7 +153,8 @@ await test("8 codul mort scos: funcțiile nechemate și CSS-ul fără țintă; c
   for (const f of ["tbProbaComuta", "tbProbaCopiaza", "tbProbaPt", "tbMergiLaMotive"]) assert.ok(!APP.includes("function " + f + "("), "a rămas " + f);
   assert.ok(!/tbProbaStop/.test(APP), "a rămas tbProbaStop");
   assert.ok(!LIB("acasa-ecran.js").includes("function acasaCumpar2("), "a rămas acasaCumpar2");
-  for (const f of ["acasaCumpar2Corp", "acasaCumpar2Parti", "acasaCumpar"]) assert.ok(LIB("acasa-ecran.js").includes("function " + f + "("), "s-a pierdut " + f);
+  for (const f of ["acasaCumpar2Parti", "acasaCumpar"]) assert.ok(LIB("acasa-ecran.js").includes("function " + f + "("), "s-a pierdut " + f);
+  assert.ok(!LIB("acasa-ecran.js").includes("function acasaCumpar2Corp("), "a rămas acasaCumpar2Corp (v100.295: nechemat, rândul monedelor scos)");
   for (const c of ["tbCitProba", "tbGraficZona", "tbRandGrafic", "t212Bloc", "newsBox", "riskSpark", "tbLiniePret", "tbLinieLich", "tbLinieIntrare", "tbNivelGrid", "c-chev", "closeBtn", "networkDisabled", "stressWarn", "structureRows", "dataDot", "cloudBad", "pzAlternativa"]) {
     assert.ok(!new RegExp("\\." + c.replace(/-/g, "\\-") + "(?![\\w-])").test(CSS), "CSS fără țintă rămas: ." + c);
   }

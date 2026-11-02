@@ -855,7 +855,7 @@ function tbIdeiRender() {
   }).join("");
   tbUrmAdu();
   if (tbUrm.v && typeof GridProba !== "undefined") { try { h += '<p class="tbSub">⚡ ' + escapeHtml(GridProba.socotealaUrmarire(tbUrm.v).text) + '</p>'; } catch (e) {} }
-  var hI = h + '<p class="tbSub tbTodoGol">Un filtru (liniște, interval, treceri), nu o predicție: laboratorul n-a găsit încă o diferență clară. Fișa îți dă setările și proba pe istoricul monedei.</p>' + tbSugestiiHtml(cl, contTot.sugestii, contTot.inchise); if (box._contH !== hI) { box._contH = hI; box.innerHTML = hI; }   /* audit 23.10: doar când s-a schimbat. v100.85 (reveniri + short): sub nota listei de candidați */
+  var hI = h + '<p class="tbSub tbTodoGol">Un filtru (liniște, interval, treceri), nu o predicție: laboratorul n-a găsit încă o diferență clară. Fișa îți dă setările și proba pe istoricul monedei.</p>'; if (box._contH !== hI) { box._contH = hI; box.innerHTML = hI; }   /* audit 23.10: doar când s-a schimbat. v100.295: listele de revenire / short de sub notă scoase (el, 02.11) */
 }
 // v100.85 (reveniri + short, 03.10): sub „Pe ce aș porni un bot acum” - două liste cu istoricul pe față și urmărirea (filtre, nu predicții)
 // v100.89 (ideea 2): istoricul boților tăi pe o monedă, pe rândurile Tabloului (candidații + revenire / short) - un singur loc,
@@ -866,31 +866,6 @@ function tbIstoricBoti(ist) {
   if (!ist || !ist.n) return "n-ai mai avut boți pe ea";
   var bani = typeof TextRo !== "undefined" && TextRo.usdt ? TextRo.usdt(ist.total, 1) : (ist.total >= 0 ? "+" : "−") + Math.abs(ist.total).toFixed(1).replace(".", ",") + " USDT";   // audit 19.10: o zecimală
   return "istoricul tău: " + t212Cate(ist.n, "bot", "boți") + ", " + ist.pePlus + " pe plus, " + bani;
-}
-function tbSugestiiHtml(cl, sg, inchise) {
-  if (typeof Reveniri === "undefined" || typeof Idei === "undefined" || !Idei.reveniriBoti) return "";
-  try { return tbSugestiiCorp(cl, sg, inchise); } catch (e) { return ""; }   /* o eroare în date nu strică lista de candidați de deasupra */
-}
-function tbSugestiiCorp(cl, sg, inchise) {
-  var rev = Idei.reveniriBoti(cl, inchise || [], 5), sh = Idei.shortBoti(cl, inchise || [], 5), s = sg && sg.sugestii, dv = s && s.dovada || {}, u = s && s.urmarire || {};
-  var ist = function (x) { return tbIstoricBoti(x.istoric); };
-  // audit 19.10 (8): istoricul monedelor e pe universul de azi - avertismentul de supraviețuire, ca la acțiuni
-  var dov = function (d, cum) { var b = d && d.boti ? Reveniri.textBoti(d.boti, cum) : ""; return '<p class="tbSub">' + escapeHtml(Reveniri.textDovada(d && d.piata, cum)) + (b ? ' ' + escapeHtml(b) : '') + '</p>' + (d && d.piata && Reveniri.TEXT_SUPRAVIETUITORI_MONEDE ? '<p class="tbSub">⚠ ' + escapeHtml(Reveniri.TEXT_SUPRAVIETUITORI_MONEDE) + '</p>' : ''); };
-  var urm = function (x) { return x && x.text ? '<p class="tbSub">📏 ' + escapeHtml(x.text) + '</p>' : ''; };
-  var dunga = function (d) { return d && d.piata && d.piata.eticheta === "mai slab" ? "g" : "v"; };
-  // v100.87 (el, „ok” după poza de la 10:55 - Q era în ambele liste): moneda aflată și pe revenire, și la short primește pe fiecare rând
-  // al ei „Aș sări peste ea” - semnalele se bat cap în cap; listele tot nu se filtrează între ele (specul)
-  var inRev = {}, inSh = {}; rev.forEach(function (x) { inRev[x.moneda] = 1; }); sh.forEach(function (x) { inSh[x.moneda] = 1; });
-  // v100.92 (I-525): istoricul LUI pe monedă pe minus (≥ 3 boți) ⇒ dunga roșie și istoricul pe roșu - același ajutor ca la candidați (tbIstoricRosu)
-  var rand = function (x, det, dir, d, nota) { return '<div class="tbTodoRand"><span class="tbDunga ' + (tbIstoricRosu(x) ? "r" : dunga(d)) + '"></span><div><b>' + escapeHtml(x.moneda) + '</b> <span class="tbSub">' + escapeHtml(det) + '</span><p' + (tbIstoricRosu(x) ? ' class="bad"' : '') + '>' + escapeHtml(ist(x)) + '</p>' + (nota ? '<p class="tbWarn">' + escapeHtml(nota) + '</p>' : '') + '</div><button type="button" class="tbBtnLinie" data-action-click="gridDeschideMonedaDir(\'' + String(x.moneda).replace(/[^A-Za-z0-9._-]/g, "") + '\',\'' + dir + '\')">Fișa (' + dir + ')</button></div>'; };
-  var gol = function (t) { return '<p class="tbSub tbTodoGol">' + (cl ? t : "Aștept clasamentul…") + '</p>'; };
-  // revizia (I7): un clasament făcut înainte de colectorul nou n-are starea de revenire (lipsește sau e null peste tot, după ruta curățată)
-  var faraStare = !!(cl && Array.isArray(cl.monede) && cl.monede.length && !cl.monede.some(function (m) { return m && m.revenire; }));
-  var h = '<div class="tbSugestii"><h4>↩️ Pe revenire (bot long)</h4>' + dov(dv.revenire, "monede");
-  h += rev.length ? rev.map(function (x) { var r = x.revenire; return rand(x, "căzută −" + Math.round(r.cadere * 100) + "% de la maximul pe 30 de zile · +" + Math.round(r.deLaMin * 100) + "% de la minim (acum " + t212Cate(Math.round(r.zileDeLaMin), "zi", "zile") + ")", "long", dv.revenire, inSh[x.moneda] ? "Aș sări peste ea: e și în lista pentru short, deci semnalele se bat cap în cap." : ""); }).join("") : gol(faraStare ? "Starea de revenire apare la următorul clasament (o dată pe oră)." : "Acum nicio monedă nu e pe revenire.");
-  h += urm(u.revenire) + '<h4>📉 Pentru short</h4>' + dov(dv.short, "short");
-  h += sh.length ? sh.map(function (x) { return rand(x, [x.latime != null ? "interval " + GridCalcul.procent(x.latime) : "", x.profitGrila != null ? GridCalcul.procent(x.profitGrila) + " net pe grilă" : "", x.traversariZi != null ? "~" + Math.round(x.traversariZi) + " treceri pe zi" : "", "direcția short" + (x.tarie && x.tarie !== "fara-date" ? " (" + x.tarie + ")" : "")].filter(Boolean).join(" · "), "short", dv.short, inRev[x.moneda] ? "Aș sări peste ea: e și pe revenire (bot long), deci semnalele se bat cap în cap." : ""); }).join("") : gol("Acum nicio monedă liniștită nu are direcția short.");
-  return h + urm(u.short) + '</div>';
 }
 // v100.85: „Fișa (long/short)” din listele de sugestii - aceeași fișă, cu direcția aleasă DOAR pentru moneda ei (revizia: pusă înainte de calcul, deci
 // un singur calcul; la altă monedă gridDirTemporara întoarce direcția de dinainte, iar o alegere de mână o face permanentă)
@@ -1650,7 +1625,7 @@ function t212Cireasa(l) {
 if (typeof document !== "undefined") document.addEventListener("DOMContentLoaded", function () { jtAplicaFiltru(); });
 
 // v87: tot contul pe un rand, sus pe ambele pagini: botii Pionex (USDT, cu echivalentul in lei) si Trading 212 (lei)
-var contTot = { boti: null, botiLa: 0, inLucru: false, inchise: null, stiriCrypto: {}, clasament: null, clasamentLa: 0, conturi: null, conturiLa: 0, salt: null, saltLa: 0, sugestii: null, sugestiiLa: 0 };
+var contTot = { boti: null, botiLa: 0, inLucru: false, inchise: null, stiriCrypto: {}, clasament: null, clasamentLa: 0, conturi: null, conturiLa: 0, salt: null, saltLa: 0 };
 // v100.97 (el, 05.10: „să afișezi la bot SOLDUL CONTULUI”): soldul Pionex = conturile (spot USDT+USDC, futures manual) + ce valorează
 // boții activi (investit + profitul lor). Pe contul lui azi aproape tot stă în bot (spot ~0,006, futures 0, TAKE 42,47 investit).
 // conturi = { spot, futures } citite; null / un cont lipsă ⇒ conturiCitite:false și suma e doar „în boți” - nu un „sold” fals de mic.
@@ -1718,7 +1693,6 @@ async function contTotAsigura() {
     if ((!contTot.inchise || Date.now() - (contTot.inchiseLa || 0) > 5 * 60000) && typeof JurnalTrade !== "undefined") { try { var bi = typeof jtAduBoti === "function" ? await jtAduBoti() : null; if (bi) { contTot.inchise = JurnalTrade.din(bi); contTot.alteInchise = JurnalTrade.alte(bi); contTot.inchiseOk = true; contTot.inchiseLa = Date.now(); } else { if (!contTot.inchise) { contTot.inchise = []; contTot.alteInchise = []; } contTot.inchiseLa = Date.now() - 5 * 60000 + 30000; } } catch (e) { if (!contTot.inchise) { contTot.inchise = []; contTot.alteInchise = []; } contTot.inchiseLa = Date.now() - 5 * 60000 + 30000; } }
     if (Date.now() - contTot.clasamentLa > 10 * 60000) { try { var cl = await getJSON("/api/istoric-bot?action=clasament"); contTot.clasament = cl && cl.clasament || null; contTot.clasamentLa = Date.now(); } catch (e) {} }
     if (Date.now() - (contTot.saltLa || 0) > 5 * 60000) { try { var sr = await getJSON("/api/t212?action=saltRezumat"); contTot.salt = sr && sr.rezumat || null; contTot.saltLa = Date.now(); } catch (e) {} }   /* v100.126: Salt lângă T212 (rezumatul colectorului) */
-    if (Date.now() - (contTot.sugestiiLa || 0) > 10 * 60000) { try { contTot.sugestii = await getJSON("/api/istoric-bot?action=sugestii"); contTot.sugestiiLa = Date.now(); } catch (e) {} }   /* v100.85 (reveniri + short) */
     var bb = typeof tbStare !== "undefined" && tbStare.bot; if (bb) await contTotStiriCrypto(String(bb.baza || "").replace(/\.PERP$/, ""));
   } finally { contTot.inLucru = false; }
   contTotRender();

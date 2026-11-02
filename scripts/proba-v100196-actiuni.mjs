@@ -416,9 +416,10 @@ await test("E1 (🔵2). Poziții: prețurile găsite după NUMELE firmei (gasitD
   const h = randPoz(P, { ticker: "FB_US_EQ", simbol: "FB" });
   assert.match(h, /găsite după numele firmei/);
 });
-await test("E2 (UI 🟡12). Piața azi: simbolurile din „Ce aș cumpăra azi” se apasă (Poarta T212), ca cele din „Idei de azi”", () => {
+await test("E2 (UI 🟡12). Piața azi: simbolurile acțiunilor se apasă (Poarta T212) prin acSym (v100.295: coloana ideilor T212 scoasă din „Ce aș cumpăra azi”; acSym rămâne pe rândurile de acțiuni)", () => {
   const s = citeste("public", "lib", "acasa-ecran.js");
-  assert.match(s, /act\.slice\(0, 3\)\.map\(function \(x\) \{ return acSym\(/);
+  assert.match(s, /^function acSym\(s\)/m); assert.match(s, /'<div class="mbRand">' \+ acSym\(t\.s\)/);
+  assert.doesNotMatch(s, /act\.slice\(0, 3\)\.map\(function \(x\) \{ return acSym\(/);
 });
 
 console.log(`\n${teste - picate} din ${teste} trec`);

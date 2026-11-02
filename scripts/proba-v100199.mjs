@@ -27,7 +27,7 @@ await test("regula de parolă e chiar cea din app.js (aceeași cu Tabloul)", () 
   assert.equal(typeof cx.acFaraParola, "function");
 });
 await test("refuzul de parolă pe oricare cerere de bază ⇒ fără parolă", () => {
-  for (const k of ["clasamentErr", "piataErr", "tickersErr", "ndxErr", "sugestiiErr"]) assert.equal(cx.acFaraParola({ [k]: "AUTH_REQUIRED" }), true, k);
+  for (const k of ["clasamentErr", "piataErr", "tickersErr", "ndxErr"]) assert.equal(cx.acFaraParola({ [k]: "AUTH_REQUIRED" }), true, k);   // v100.295: Piața azi nu mai cere sugestiile ⇒ fără „sugestiiErr”
   assert.equal(cx.acFaraParola({ clasamentErr: "AUTH_INVALID · parola a fost respinsă de server" }), true);
 });
 await test("altă eroare sau date venite ⇒ NU „fără parolă” (cardurile rămân cele de până acum)", () => {
