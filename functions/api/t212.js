@@ -218,7 +218,7 @@ export async function onRequestPost({ request, env }) {
     const uR = corp && corp.urmarireReveniri, urm2 = uR && typeof uR === "object" ? { n: nr(uR.n), pePlus: nr(uR.pePlus), medie: nr(uR.medie), text: txt(uR.text, 300) } : null;
     const zi = /^\d{4}-\d{2}-\d{2}$/.test(String(corp && corp.zi)) ? corp.zi : new Date().toISOString().slice(0, 10);
     const u = corp && corp.urmarire, urm = u && typeof u === "object" ? { n: nr(u.n), pePlus: nr(u.pePlus), medie: nr(u.medie), text: txt(u.text, 300) } : null;
-    await env.ISTORIC.put("t212:idei", JSON.stringify({ la: nr(corp && corp.la) || Date.now(), zi, judecate: nr(corp && corp.judecate), trecute: nr(corp && corp.trecute), actiuni: act2, restul: rest2, reveniri: rev2, dovadaReveniri: dov2, urmarireReveniri: urm2, urmarire: urm }));
+    await env.ISTORIC.put("t212:idei", JSON.stringify({ la: nr(corp && corp.la) || Date.now(), zi, judecate: nr(corp && corp.judecate), trecute: nr(corp && corp.trecute), actiuni: act2, restul: rest2, reveniri: rev2, nReveniri: nr(corp && corp.nReveniri), dovadaReveniri: dov2, urmarireReveniri: urm2, urmarire: urm }));
     await salveazaNdx(env, corp, zi);
     const ist = await citesteKv(env, "t212:idei-istoric", []), l = Array.isArray(ist) ? ist : [];
     act2.forEach((x) => { if (!l.some((y) => y.zi === zi && y.ticker === x.ticker)) l.push({ zi, ticker: x.ticker, simbol: x.simbol, pret: x.pret }); });

@@ -11,7 +11,10 @@ const CAMPURI_RUTA = ["simbol", "stare", "dir", "tarie", "revenire", "volum", "p
 export function deTrimis(m) {
   const o = {};
   for (const k of CAMPURI_RUTA) if (m && k in m) o[k] = m[k];
-  o.regim = m && m.regim && typeof m.regim === "object" ? { r4h: m.regim.r4h, r24h: m.regim.r24h, miscare: !!m.regim.miscare } : null;
+  // v101.160 (02.11): + s24h (mișcarea pe 24 h, cu semn) și mr (= miscareMare.r: mișcarea de azi / pragul ei de „mișcare mare”) - Sugestiile
+  // le arată cu unitatea lor; r4h / r24h (rapoarte față de obișnuit) la 4 zecimale, ca să rămână loc sub plafonul rutei (64 KB)
+  const rot = (v, z) => (typeof v === "number" && Number.isFinite(v) ? Math.round(v * 10 ** z) / 10 ** z : null);
+  o.regim = m && m.regim && typeof m.regim === "object" ? { r4h: rot(m.regim.r4h, 4), r24h: rot(m.regim.r24h, 4), miscare: !!m.regim.miscare, s24h: rot(m.regim.s24h, 5), mr: rot(m.regim.mare && m.regim.mare.r, 3) } : null;
   return o;
 }
 export async function turaClasament(d) {

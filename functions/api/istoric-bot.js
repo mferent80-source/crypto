@@ -279,7 +279,9 @@ export async function onRequestPost({request,env}){
     if(la===null||!monede)return json({error:"Lipseste la sau monede"},400);
     // se pastreaza doar campurile cunoscute, cu numerele curatate (lipsa = null, nu 0)
     const CAMP_NR=["volum","pret","latime","pas","grile","profitGrila","traversariZi","scor"];
-    const curate=monede.slice(0,150).map(m=>{if(!m||typeof m!=="object")return null;const o={simbol:String(m.simbol||"").toUpperCase().replace(/[^A-Z0-9_]/g,"").slice(0,32),stare:["evita","candidat","fara-date"].includes(m.stare)?m.stare:"fara-date",dir:["long","neutru","short"].includes(m.dir)?m.dir:null,tarie:typeof m.tarie==="string"?m.tarie.slice(0,12):null,regim:m.regim&&typeof m.regim==="object"?{r4h:nr(m.regim.r4h),r24h:nr(m.regim.r24h),miscare:!!m.regim.miscare}:null,revenire:curataRevenire(m.revenire)};for(const k of CAMP_NR)o[k]=nr(m[k]);return o.simbol?o:null}).filter(Boolean);
+    // v100.293 (02.11): aceeași rotunjire ca la colector (tura-clasament.mjs deTrimis) și mr din mare.r când lipsește - ruta păstrează la fel din corpul întreg și din cel subțiat
+    const rz=(v,z)=>{const x=nr(v);return x===null?null:Math.round(x*10**z)/10**z};
+    const curate=monede.slice(0,150).map(m=>{if(!m||typeof m!=="object")return null;const o={simbol:String(m.simbol||"").toUpperCase().replace(/[^A-Z0-9_]/g,"").slice(0,32),stare:["evita","candidat","fara-date"].includes(m.stare)?m.stare:"fara-date",dir:["long","neutru","short"].includes(m.dir)?m.dir:null,tarie:typeof m.tarie==="string"?m.tarie.slice(0,12):null,regim:m.regim&&typeof m.regim==="object"?{r4h:rz(m.regim.r4h,4),r24h:rz(m.regim.r24h,4),miscare:!!m.regim.miscare,s24h:rz(m.regim.s24h,5),mr:rz(m.regim.mr!=null?m.regim.mr:m.regim.mare&&m.regim.mare.r,3)}:null,revenire:curataRevenire(m.revenire)};for(const k of CAMP_NR)o[k]=nr(m[k]);return o.simbol?o:null}).filter(Boolean);
     // expira dupa 6 ore: un clasament de ieri nu trebuie sa arate ca unul de azi
     await env.ISTORIC.put("clasament",JSON.stringify({la,monede:curate}),{expirationTtl:6*3600});
     return json({ok:true,monede:curate.length});

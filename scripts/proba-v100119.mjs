@@ -216,7 +216,8 @@ const DATE = {
   clasament: null, sugMonede: null };
 await test("(5a) pagina: trei secțiuni (boți, US, EU), fiecare listă cu rândurile ei, istoricul pe 2 ani și urmărirea; pre-market-ul US se spune că vine la 15:50; totul escapat", () => {
   const h = globalThis.sugHtml(DATE, T0 + 2 * 3600000);
-  for (const t of ["🤖 Boți · 💡 Pe ce aș porni un bot", "📈 Acțiuni US · 99 de acțiuni judecate, 2 fără prețuri · 🔁 Pe revenire", "📈 Acțiuni EU (DAX, CAC, AEX + ale tale) · 120 de acțiuni judecate, 5 fără prețuri · 🔁 Pe revenire", "🏆 Cele mai tari pe sectoare", "📈 Trend 12 luni (în probă)"]) assert.ok(h.includes(t), t);   /* v100.292: listele rămase (el: „da scoate” pentru restul) */
+  for (const t of ["🤖 Boți · 💡 Pe ce aș porni un bot", "📈 Acțiuni US · 🔁 Pe revenire", "📈 Acțiuni EU (DAX, CAC, AEX + ale tale) · 120 de acțiuni judecate, 5 fără prețuri · 🔁 Pe revenire", "🏆 Cele mai tari pe sectoare", "📈 Trend 12 luni (în probă)"]) assert.ok(h.includes(t), t);   /* v100.292: listele rămase (el: „da scoate” pentru restul) */
+  assert.ok(!h.includes("99 de acțiuni judecate"), "v100.293: titlul US fără numărătoarea turei listelor scoase (urcare, revers, gap)"); assert.ok(h.includes("1 din 201 acțiuni judecate la 8:00"), "numărătoarea turei Idei rămâne sub titlu");
   assert.ok(h.includes("<b>INTU</b>"), "INTU (pe revenire) e rând");
   assert.match(h, /Urmărirea înainte începe/, "fără urmărire încă (DATE n-are urmarireReveniri)");
   assert.doesNotMatch(h, /undefined|NaN|null/);

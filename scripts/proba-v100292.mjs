@@ -30,7 +30,7 @@ console.log("\nV100.292 · Sugestii: lista + fișa, listele fără avantaj scoas
 // ---------------------------------------------------------------- datele (forma rutelor, cifrele sintetice)
 const ZI = 86400000, ACUM = Date.parse("2026-11-02T10:00:00Z");
 const cl = { la: ACUM - 600000, monede: [
-  { simbol: "HYPE_USDT_PERP", stare: "candidat", dir: "long", tarie: "mediu", regim: { r4h: 0.01, r24h: 0.047, miscare: false, mare: { prag: 0.05 } }, volum: 4987742, pret: 87.691, latime: 0.0857, pas: 0.00304, grile: 28, profitGrila: 0.00264, traversariZi: 15.2, scor: 0.0014 },
+  { simbol: "HYPE_USDT_PERP", stare: "candidat", dir: "long", tarie: "mediu", regim: { r4h: 0.6, r24h: 0.9, s24h: 0.047, mr: 0.94, miscare: false }, volum: 4987742, pret: 87.691, latime: 0.0857, pas: 0.00304, grile: 28, profitGrila: 0.00264, traversariZi: 15.2, scor: 0.0014 },
   { simbol: "CC_USDT_PERP", stare: "candidat", dir: "short", tarie: "mediu", regim: { r4h: 0.002, r24h: -0.01, miscare: false }, volum: 120000, pret: 0.5123, latime: 0.125, pas: 0.0046, grile: 27, profitGrila: 0.0026, traversariZi: 23, scor: 0.0013 },
   { simbol: "BTC_USDT_PERP", stare: "de evitat", dir: "long", tarie: "tare", regim: { r4h: 0.03, r24h: 0.08, miscare: true }, volum: 9e8, pret: 110000, latime: 0.03, pas: 0.001, grile: 30, profitGrila: 0.0008, traversariZi: 4, scor: 0.0002 }] };
 const latime = { acum: { la: ACUM - 180000, n: 150, lipsa: 0, lat: { sus: 112, jos: 34, mariLong: 142, fundExtrem: 79, oiExtrem: 25, volExtrem: 24, bugetEpuizat: 31 }, regim: { cod: "LARG-SUS" }, monede: [
@@ -76,7 +76,7 @@ await test("2. rândul de bot: direcția 4h+1z ȘI cea pe 84 de zile, numite; co
   const c = ecran(), l = plain(c.sugRanduri(D, ACUM)), h = l.filter((x) => x.k === "porn:HYPE")[0], cc = l.filter((x) => x.k === "porn:CC")[0];
   assert.equal(h.dir, "4h+1z ↑ long · mediu"); assert.match(h.sub, /84 z SUS/); assert.match(h.sub, /5,0 M USDT\/zi/); assert.match(h.sub, /interval 8,6%/); assert.match(h.sub, /0,26% net pe grilă/);
   assert.ok(!h.avert.some((a) => /Direcțiile nu se pun de acord/.test(a)), "HYPE: long și SUS - fără conflict"); assert.ok(!h.avert.some((a) => /Lichiditate/.test(a)), "HYPE are 5 M");
-  assert.ok(h.avert.some((a) => /24 h s-a mișcat \+4,7%/.test(a)), "aproape de pragul de mișcare mare (r24h 0,047)");
+  assert.ok(h.avert.some((a) => /24 h s-a mișcat \+4,7%/.test(a)), "aproape de pragul de mișcare mare (v100.293: s24h 0,047, mr 0,94 ⇒ pragul 5,0%)");
   assert.equal(cc.dir, "4h+1z ↓ short · mediu"); assert.ok(cc.avert.some((a) => /Direcțiile nu se pun de acord: pe 4h\+1z trendul e short, pe 84 de zile moneda e SUS de 5 zile/.test(a)), JSON.stringify(cc.avert));
   assert.ok(cc.avert.some((a) => /Lichiditate mică: 0,1 M USDT\/zi, sub pragul de 1 M/.test(a)));
   assert.ok(!l.some((x) => x.s === "BTC"), "„de evitat” nu intră");
@@ -161,7 +161,7 @@ await test("8. tura trimite notările „porn” ale zilei și urmarire.porn (or
   const R = citeste("functions", "api", "istoric-bot.js");
   assert.match(R, /x&&x\.lista==="porn"\?"porn":/); assert.match(R, /porn:ur\(w\.porn\)/);
   assert.match(T, /lista: "porn", dir: x\.dir/, "notarea de pornire poartă direcția botului"); assert.match(R, /x\.dir==="long"\|\|x\.dir==="short"\|\|x\.dir==="neutru"/); assert.match(R, /dir:dr/, "ruta păstrează direcția");
-  const C = citeste("scripts", "colector.mjs"); assert.match(C, /const VERSIUNE_COLECTOR = "v101\.159"/);
+  const C = citeste("scripts", "colector.mjs"); assert.ok(Number(C.match(/const VERSIUNE_COLECTOR = "v101\.(\d+)"/)[1]) >= 159, "colectorul v101.159 sau mai nou");
 });
 
 // ================================================================ 9. așezarea și stratul PAZNIC
@@ -176,12 +176,12 @@ await test("9. CSS: lista + fișa de la 900 px (container), fișa sub rând mai 
 
 // ================================================================ 10. versiunile
 await test("10. versiunile v100.292 (aplicația, BUILD_INFO, pagina, cache-ul, package.json, lanțul); v100291 pe „≥”", () => {
-  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.292"/);
-  const B = JSON.parse(citeste("BUILD_INFO.json")); assert.equal(B.version, "v100.292"); assert.match(B.badge, /v100\.292/); assert.ok(Object.keys(B.features)[0] === "sugestii292");
+  assert.ok(Number(citeste("functions", "_shared", "versiune.js").match(/VERSIUNE = "v100\.(\d+)"/)[1]) >= 292, "v100.292 sau mai nouă");
+  const B = JSON.parse(citeste("BUILD_INFO.json")); assert.ok(Number(B.version.match(/v100\.(\d+)/)[1]) >= 292); assert.ok(B.features.sugestii292, "cheia v100.292 rămâne");
   const H = citeste("public", "index.html");
-  for (const re of [/<meta content="v100\.292" name="app-version"\/>/, /id="sideVersiune"[^>]*>v100\.292/, /id="antetVersiune"[^>]*>v100\.292/, /healthAppVersion[^>]*>v100\.292/]) assert.match(H, re);
-  assert.match(citeste("public", "sw.js"), /CACHE="crypto-radar-v100-292"/);
-  const pk = JSON.parse(citeste("package.json")); assert.equal(pk.version, "100.292.0"); assert.equal(pk.scripts["test:v100292"], "node scripts/proba-v100292.mjs"); assert.match(pk.scripts.test, /npm run test:v100291 && npm run test:v100292/);
+  assert.ok(Number(H.match(/id="healthAppVersion">v100\.(\d+)</)[1]) >= 292);
+  assert.ok(Number(citeste("public", "sw.js").match(/crypto-radar-v100-(\d+)/)[1]) >= 292);
+  const pk = JSON.parse(citeste("package.json")); assert.ok(Number(pk.version.split(".")[1]) >= 292); assert.equal(pk.scripts["test:v100292"], "node scripts/proba-v100292.mjs"); assert.match(pk.scripts.test, /npm run test:v100291 && npm run test:v100292( |")/);
   assert.doesNotMatch(citeste("scripts", "proba-v100291.mjs"), /VERSIUNE = "v100\\\.291"\/\)/);
 });
 
@@ -225,7 +225,7 @@ await test("12. revizia 01.11, textele adevărate: maximul pe 60 de zile de burs
   assert.equal(sect.dovada.filter((t) => /Verdict: n-am aflat/.test(t)).length, 1, sect.dovada.join(" | "));
   assert.ok(hype.dovada.some((t) => /Gridul îngust/.test(t) && /auditul din 01\.11/.test(t)), hype.dovada.join(" | ")); assert.match(tr.dovada[0], /auditul din 14\.10/);
   const h = l.filter((x) => x.k === "porn:HYPE")[0]; assert.ok(h.avert.some((a) => /24 h s-a mișcat \+4,7%: aproape de pragul ei de „mișcare mare” \(5,0%, percentila 90/.test(a)), JSON.stringify(h.avert));
-  const D2 = JSON.parse(JSON.stringify(D)); delete D2.clasament.monede[0].regim.mare;
+  const D2 = JSON.parse(JSON.stringify(D)); delete D2.clasament.monede[0].regim.mr;
   assert.ok(!plain(c.sugRanduri(D2, ACUM)).filter((x) => x.k === "porn:HYPE")[0].avert.some((a) => /aproape de prag/.test(a)), "fără pragul monedei nu se inventează 4%");
   const D3 = JSON.parse(JSON.stringify(D)); D3.clasament.monede[0].dir = "neutru";
   assert.match(plain(c.sugFisa(plain(c.sugRanduri(D3, ACUM)).filter((x) => x.k === "porn:HYPE")[0], D3, ACUM)).actiuni[0].act, /gridDeschideMonedaDir\('HYPE','neutru'\)/);

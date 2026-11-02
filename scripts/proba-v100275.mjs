@@ -72,9 +72,9 @@ await test("clasamentul de 100 de monede: corpul de până acum e refuzat de rut
   assert.ok(r.monede.every((m) => Array.isArray(m.motive)));
 });
 
-await test("deTrimis: regimul doar cu r4h / r24h / miscare; fără regim ⇒ null; revenire doar când există", () => {
+await test("deTrimis: regimul cu r4h / r24h / miscare (+ s24h și mr de la v101.160, rotunjite); fără regim ⇒ null; revenire doar când există", () => {
   const m = { simbol: "X_USDT_PERP", stare: "evita", dir: "long", tarie: "slab", motive: ["a"], volum: 1, pret: 2, latime: 0.1, pas: 0.003, grile: 30, profitGrila: 0.002, traversariZi: 4, scor: 0.1, regim: { r4h: 1.2, r24h: 2.5, miscare: true, s4h: 1, s24h: 2, sens: "urca", mare: { k: 6, p: 0.9 } }, revenire: { cadere: 0.3, revine: true } };
-  assert.deepEqual(deTrimis(m), { simbol: "X_USDT_PERP", stare: "evita", dir: "long", tarie: "slab", revenire: { cadere: 0.3, revine: true }, volum: 1, pret: 2, latime: 0.1, pas: 0.003, grile: 30, profitGrila: 0.002, traversariZi: 4, scor: 0.1, regim: { r4h: 1.2, r24h: 2.5, miscare: true } });
+  assert.deepEqual(deTrimis(m), { simbol: "X_USDT_PERP", stare: "evita", dir: "long", tarie: "slab", revenire: { cadere: 0.3, revine: true }, volum: 1, pret: 2, latime: 0.1, pas: 0.003, grile: 30, profitGrila: 0.002, traversariZi: 4, scor: 0.1, regim: { r4h: 1.2, r24h: 2.5, miscare: true, s24h: 2, mr: null } });   /* v100.293: s24h și mr (din mare.r; fixtura n-are r ⇒ null) */
   const f = deTrimis({ simbol: "Y_USDT_PERP", stare: "fara-date", regim: null });
   assert.equal(f.regim, null); assert.ok(!("revenire" in f));
   // fiecare câmp pe care ruta îl citește e trimis (lista din rută = lista din colector)

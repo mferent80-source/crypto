@@ -39,5 +39,6 @@ export async function turaIdei(d) {
   const reveniri = rev.sort((a, b) => b.cadere - a.cadere).slice(0, 10).map((x) => ({ ...x, istoric: ist(x.ticker) }));
   const dovadaReveniri = d.Reveniri ? d.Reveniri.dovada(serii, "revine", { pauzaZile: 14 }) : null;
   d.jurnal("idei: " + cate(judecate, "acțiune judecată", "acțiuni judecate") + ", " + (trecute === 1 ? "una trece" : trecute + " trec") + " de poarta" + (actiuni.length ? ": " + actiuni.map((x) => x.simbol).join(", ") : "") + (reveniri.length ? "; pe revenire: " + reveniri.map((x) => x.simbol).join(", ") : ""));
-  return { judecate, trecute, actiuni, restul, reveniri, dovadaReveniri, preturi, ndx };
+  // v101.160 (02.11): nReveniri = câte trec regula înainte de tăietura la 10 - pagina spune „cel mult 10” și câte au trecut
+  return { judecate, trecute, actiuni, restul, reveniri, nReveniri: rev.length, dovadaReveniri, preturi, ndx };
 }
