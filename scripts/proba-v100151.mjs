@@ -81,8 +81,9 @@ await test("(4) așezarea: scriptul e în pagină și în cache-ul offline; capc
   assert.match(CSS, /#tabloubot \.tbPill,\.t212Pill\{color:#0E141A\}/, "pastilele colorate cu text închis (alb pe galben = 1,83:1)");
   for (const f of ["sans", "mono"]) for (const w of [400, 500, 600]) assert.match(SW, new RegExp(`"/fonts/ibm-plex-${f}-latin-ext-${w}-normal\\.woff2"`), "diacriticele offline: " + f + w);
   assert.equal(pandaInainteaCozii(CSS), "", "regula pandei (v100.150) stă după orice regulă de tabel - bate .t212Tab thead");
-  assert.match(CSS, /:root\{--latime-pagina:1800px\}/, "paginile mai late (1600 → 1800), toate la fel");
-  assert.ok(CSS.lastIndexOf("--latime-pagina:1800px") > CSS.indexOf("--latime-pagina:1600px"), "1800 vine DUPĂ 1600 (cascada)");
+  /* v100.296 (el, 02.11: „pe toată lățimea, ca la Comportament”): plafonul comun e `none`; tot o singură valoare pentru toate paginile */
+  assert.match(CSS, /:root\{--latime-pagina:none\}/, "paginile pe toată lățimea, toate la fel");
+  assert.ok(CSS.lastIndexOf("--latime-pagina:none") > CSS.indexOf("--latime-pagina:1600px"), "none vine DUPĂ 1600 (cascada)");
 });
 await test("(5) așezarea, pur: proza → rânduri etichetă–cifră (valorile întregi, escapate), ancora etichetelor la margine, glosarul", () => {
   const ev = [], doc = { documentElement: { classList: { add() {} } }, addEventListener(t) { ev.push(t); }, getElementById: () => null, querySelector: () => null, querySelectorAll: () => [], body: { innerText: "", classList: { add() {} } } };

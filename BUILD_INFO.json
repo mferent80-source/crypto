@@ -1,11 +1,12 @@
 {
-  "version": "v100.295",
-  "badge": "v100.295 · LISTELE SCOASE ȘI DIN PIAȚA AZI, TABLOU, DISCORD",
+  "version": "v100.296",
+  "badge": "v100.296 · PAGINILE PE TOATĂ LĂȚIMEA",
   "engineContract": "54.1",
   "dataSchema": 54,
   "baseRelease": "v77.4 · TABLOUL BOTULUI",
   "releaseType": "valul de reparatii din revizia finala pe ansamblu: marginStatus/riskStatus citite, telefon, scurgere WS/ceas la iesire prin tab-uri, ATR adevarat, pret viu, istoric fara pret inghetat, sortare dupa timp, comision nemasurabil, durata la margine",
   "features": {
+    "latime296": "El (02.11.2026): „verifică și de ce nu se deschide pe toată lățimea decât pe pagina Comportament” - plafonul comun --latime-pagina (1800 px) ținea Piața azi, Tabloul, Jurnalul, Trading 212, Salt și Scannerul la 1800 px; la 2560 rămâneau ~267 px goi pe fiecare parte. Acum `none`, ca la Comportament; la 1440 și 1920 nimic nu se schimbă.",
     "listeScoase295": "El (02.11.2026): „da scoate-le și de pe Acasă, Tablou și Discord” - listele fără avantaj dovedit, scoase de pe Sugestii pe 01.11. Piața azi: „Ce aș cumpăra azi” pe două coloane (boți, acțiuni pe revenire), fără ideile T212 și fără monedele pe revenire / short; „Idei de azi” fără „Acțiuni pe trend”. Tabloul botului: fără „Pe revenire (bot long)” și „Pentru short” sub „Pe ce aș porni un bot acum”. Rezumatul de dimineață (Discord): fără ideile T212, doar „Pe ce aș porni un bot” (colectorul v101.161). Rămân: pagina Trading 212 cu ideile ei, jurnalul verdictelor (măsurarea), calculele colectorului (istoricul).",
     "sugestii294": "02.11.2026, după pozele de pe 8788 ale v100.293 la toate lățimile lui: la 1920 și 2560 px eticheta „Mișcarea pe 24 h” din fișa boților se rupea între cifră și unitate („h” singur pe rând). „24 h” și „4 h” stau acum împreună (spațiu fără rupere).",
     "sugestii293": "El (02.11.2026): „gata?” ⇒ verificarea de după livrarea v100.292 (pozele de pe 8788 la toate lățimile) a găsit în fișa boților „Mișcarea pe 24 h +29,1%”: regim.r24h / r4h sunt rapoarte față de mișcarea obișnuită (percentila 75), nu procente. Fișa arată acum mișcarea reală pe 24 h (s24h) și raportul „× obișnuitul”; avertismentul „aproape de pragul de mișcare mare” vine din mr (mișcarea de azi / pragul ei, percentila 90), trimis de colectorul v101.160 (înainte compara raportul cu un procent și nu putea apărea). Titlul US fără numărătoarea turei listelor scoase; sub titlu: cel mult 10 pe zi, cea mai mare cădere întâi, și câte trec regula; regula revenirii întreagă (minimul vechi de cel puțin 3 zile, prețul peste media pe 5 zile), din Reveniri.REGULI; stopul și ținta spun ce sunt; pasul gridului fără semn; istoricul tău cu semn.",

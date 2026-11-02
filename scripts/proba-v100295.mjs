@@ -126,13 +126,12 @@ await test("7. Fără cereri și CSS rămase fără rost: Piața azi și Tabloul
 });
 
 // ================================================================ 6. versiunile
-await test("6. versiunile v100.295 (aplicația, BUILD_INFO, pagina, cache-ul, package.json, lanțul), colectorul v101.161; v100.294 pe „≥”", () => {
-  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.295"/);
-  const B = JSON.parse(citeste("BUILD_INFO.json")); assert.equal(B.version, "v100.295"); assert.match(B.badge, /v100\.295/); assert.equal(Object.keys(B.features)[0], "listeScoase295"); assert.ok(B.features.sugestii294, "cheia v100.294 rămâne");
-  const H = citeste("public", "index.html");
-  for (const re of [/<meta content="v100\.295" name="app-version"\/>/, /id="sideVersiune"[^>]*>v100\.295/, /id="antetVersiune"[^>]*>v100\.295/, /healthAppVersion[^>]*>v100\.295/]) assert.match(H, re);
-  assert.match(citeste("public", "sw.js"), /CACHE="crypto-radar-v100-295"/);
-  const pk = JSON.parse(citeste("package.json")); assert.equal(pk.version, "100.295.0"); assert.equal(pk.scripts["test:v100295"], "node scripts/proba-v100295.mjs"); assert.match(pk.scripts.test, /npm run test:v100294 && npm run test:v100295/);
+await test("6. versiunile v100.295 sau mai noi (aplicația, BUILD_INFO, pagina, cache-ul, package.json, lanțul), colectorul v101.161; v100.294 pe „≥”", () => {
+  assert.ok(Number(citeste("functions", "_shared", "versiune.js").match(/VERSIUNE = "v100\.(\d+)"/)[1]) >= 295, "v100.295 sau mai nouă");
+  const B = JSON.parse(citeste("BUILD_INFO.json")); assert.ok(Number(B.version.match(/v100\.(\d+)/)[1]) >= 295); assert.ok(B.features.listeScoase295, "cheia v100.295 rămâne"); assert.ok(B.features.sugestii294, "cheia v100.294 rămâne");
+  const H = citeste("public", "index.html"); assert.ok(Number(H.match(/id="healthAppVersion">v100\.(\d+)</)[1]) >= 295);
+  assert.ok(Number(citeste("public", "sw.js").match(/crypto-radar-v100-(\d+)/)[1]) >= 295);
+  const pk = JSON.parse(citeste("package.json")); assert.ok(Number(pk.version.split(".")[1]) >= 295); assert.equal(pk.scripts["test:v100295"], "node scripts/proba-v100295.mjs"); assert.match(pk.scripts.test, /npm run test:v100294 && npm run test:v100295( |$)/);
   assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.161"/);
   assert.doesNotMatch(citeste("scripts", "proba-v100294.mjs"), /VERSIUNE = "v100\\\.294"\/\)/);
 });
