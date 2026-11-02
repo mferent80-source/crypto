@@ -69,13 +69,13 @@ const fisa = (c, k, d) => plain(c.sugFisa(c.sugRanduri(d || D, ACUM).filter((x) 
 
 // ================================================================ 1-3. fișa boților
 await test("1. „Mișcarea pe 24 h”: mișcarea reală cu semn + raportul „× obișnuitul”; fără s24h, doar raportul; raportul nu e niciodată procent", () => {
-  const c = ecran(), h = fisa(c, "porn:HYPE"), cel = h.cele.filter((x) => x.et === "Mișcarea pe 24 h")[0];
+  const c = ecran(), h = fisa(c, "porn:HYPE"), cel = h.cele.filter((x) => /^Mișcarea pe 24\s+h$/.test(x.et))[0];
   assert.ok(cel, JSON.stringify(h.cele));
   assert.equal(cel.v, "+1,2%", "s24h 0,0123 = +1,2% pe 24 h");
-  assert.match(cel.sub, /0,3× obișnuitul/); assert.match(cel.sub, /pe 4 h 0,6×/);
+  assert.match(cel.sub, /0,3× obișnuitul/); assert.match(cel.sub, /pe 4\s+h 0,6×/);
   assert.doesNotMatch(JSON.stringify(h.cele) + JSON.stringify(h.avert), /29,1%|57,6%/, "raportul 0,29 nu e „+29,1%”");
-  const a = fisa(c, "porn:ADA"), ca = a.cele.filter((x) => x.et === "Mișcarea pe 24 h")[0];
-  assert.equal(ca.v, "0,3× obișnuitul", "clasamentul vechi (fără s24h): doar raportul, cu unitatea lui"); assert.match(ca.sub, /pe 4 h 0,6×/);
+  const a = fisa(c, "porn:ADA"), ca = a.cele.filter((x) => /^Mișcarea pe 24\s+h$/.test(x.et))[0];
+  assert.equal(ca.v, "0,3× obișnuitul", "clasamentul vechi (fără s24h): doar raportul, cu unitatea lui"); assert.match(ca.sub, /pe 4\s+h 0,6×/);
   assert.doesNotMatch(JSON.stringify(a.cele), /29,0%|58,0%/);
   const src = citeste("public", "lib", "sugestii-ecran.js");
   assert.doesNotMatch(src, /sug(PctZ|Pr)\([^)]*regim\.r(4|24)h/, "garda: nicăieri în pagină raportul formatat ca procent");
@@ -159,13 +159,12 @@ await test("8. turaIdei numără câte trec regula înainte de tăietura la 10 (
 
 // ================================================================ 9. versiunile
 await test("9. versiunile v100.293 (aplicația, BUILD_INFO, pagina, cache-ul, package.json, lanțul), colectorul v101.160; v100.292 pe „≥”", () => {
-  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.293"/);
-  const B = JSON.parse(citeste("BUILD_INFO.json")); assert.equal(B.version, "v100.293"); assert.match(B.badge, /v100\.293/); assert.equal(Object.keys(B.features)[0], "sugestii293"); assert.ok(B.features.sugestii292, "cheia v100.292 rămâne");
-  const H = citeste("public", "index.html");
-  for (const re of [/<meta content="v100\.293" name="app-version"\/>/, /id="sideVersiune"[^>]*>v100\.293/, /id="antetVersiune"[^>]*>v100\.293/, /healthAppVersion[^>]*>v100\.293/]) assert.match(H, re);
-  assert.match(citeste("public", "sw.js"), /CACHE="crypto-radar-v100-293"/);
-  const pk = JSON.parse(citeste("package.json")); assert.equal(pk.version, "100.293.0"); assert.equal(pk.scripts["test:v100293"], "node scripts/proba-v100293.mjs"); assert.match(pk.scripts.test, /npm run test:v100292-desen && npm run test:v100293/);
-  assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.160"/);
+  assert.ok(Number(citeste("functions", "_shared", "versiune.js").match(/VERSIUNE = "v100\.(\d+)"/)[1]) >= 293, "v100.293 sau mai nouă");
+  const B = JSON.parse(citeste("BUILD_INFO.json")); assert.ok(Number(B.version.match(/v100\.(\d+)/)[1]) >= 293); assert.ok(B.features.sugestii293, "cheia v100.293 rămâne"); assert.ok(B.features.sugestii292, "cheia v100.292 rămâne");
+  const H = citeste("public", "index.html"); assert.ok(Number(H.match(/id="healthAppVersion">v100\.(\d+)</)[1]) >= 293);
+  assert.ok(Number(citeste("public", "sw.js").match(/crypto-radar-v100-(\d+)/)[1]) >= 293);
+  const pk = JSON.parse(citeste("package.json")); assert.ok(Number(pk.version.split(".")[1]) >= 293); assert.equal(pk.scripts["test:v100293"], "node scripts/proba-v100293.mjs"); assert.match(pk.scripts.test, /npm run test:v100292-desen && npm run test:v100293( |$)/);
+  assert.ok(Number(citeste("scripts", "colector.mjs").match(/const VERSIUNE_COLECTOR = "v101\.(\d+)"/)[1]) >= 160, "colectorul v101.160 sau mai nou");
   assert.doesNotMatch(citeste("scripts", "proba-v100292.mjs"), /VERSIUNE = "v100\\\.292"\/\)/); assert.doesNotMatch(citeste("scripts", "proba-v100292.mjs"), /VERSIUNE_COLECTOR = "v101\\\.159"\/\)/);
 });
 

@@ -80,9 +80,9 @@ function sugPr(v, z) { return v == null || !isFinite(v) ? "—" : Math.abs(v * 1
 // mișcarea obișnuită a monedei (percentila 75 a mișcărilor ei, GridCalcul.regimPeBare), nu procente - ca pe Acasă: „0,3×”
 function sugOri(v) { return v == null || !isFinite(v) ? "—" : Number(v).toFixed(1).replace(".", ",") + "×"; }
 // celula „Mișcarea pe 24 h”: mișcarea reală pe 24 h (s24h, cu semn; colectorul o trimite de la v101.160) și raportul față de obișnuit;
-// cu clasamentul vechi din KV (fără s24h), doar raportul, cu unitatea lui
+// cu clasamentul vechi din KV (fără s24h), doar raportul, cu unitatea lui; v100.294: cifra și unitatea legate cu spațiu fără rupere (la 1920 / 2560 „h” rămânea singur pe rând)
 function sugMis(rg) { rg = rg || {}; var s = rg.s24h != null && isFinite(rg.s24h), r24 = rg.r24h != null && isFinite(rg.r24h), r4 = rg.r4h != null && isFinite(rg.r4h);
-  return { v: s ? sugPctZ(rg.s24h) : r24 ? sugOri(rg.r24h) + " obișnuitul" : "—", sub: [s && r24 ? sugOri(rg.r24h) + " obișnuitul" : "", r4 ? "pe 4 h " + sugOri(rg.r4h) : ""].filter(Boolean).join(" · ") }; }
+  return { v: s ? sugPctZ(rg.s24h) : r24 ? sugOri(rg.r24h) + " obișnuitul" : "—", sub: [s && r24 ? sugOri(rg.r24h) + " obișnuitul" : "", r4 ? "pe 4\u00a0h " + sugOri(rg.r4h) : ""].filter(Boolean).join(" · ") }; }
 // regula revenirii pe acțiuni, din Reveniri.REGULI.actiune (cifrele textelor nu se scriu de mână; rezerva = valorile de azi)
 function sugRegRev(R) { var a = R && R.REGULI && R.REGULI.actiune || {}, d = { cadere: 0.2, revenire: 0.08, maxZile: 60, minZile: 20, vechimeZile: 3, medieZile: 5, orizontZile: 10 }, o = {}, k; for (k in d) o[k] = a[k] > 0 ? a[k] : d[k]; return o; }
 function sugMil(v) { return v == null || !isFinite(v) ? "—" : (v / 1e6).toFixed(1).replace(".", ",") + " M USDT/zi"; }
@@ -175,7 +175,7 @@ function sugFisa(r, d, acum) {
   var x = r.x, sm = d.sugMonede && d.sugMonede.sugestii, urmP = sm && sm.urmarire && sm.urmarire.porn, R = typeof Reveniri !== "undefined" ? Reveniri : null, bz = typeof Busola !== "undefined" && Busola.adresaBusola ? Busola.adresaBusola({ simbol: r.s, tf: "4h" }) : null;
   if (r.grup === "porn") {
     f.pretNota = "din clasament" + (d.clasament && d.clasament.la ? ", la " + sugOra(d.clasament.la, acum) : "");
-    f.cele = [{ et: "Interval", v: sugPr(x.latime), sub: "lățimea gridului propus" }, { et: "Net pe grilă", v: sugPr(x.profitGrila, 2), sub: "după comisionul de maker" }, { et: "Treceri pe zi", v: "~" + Math.round(x.traversariZi || 0), sub: "estimare" }, { et: "Grile", v: String(x.grile || "—"), sub: "pasul " + sugPr(x.pas, 2) }, { et: "Volum", v: sugMil(x.volum), sub: x.volum < 1e6 ? "sub 1 M" : "" }, { et: "Mișcarea pe 24 h", v: sugMis(x.regim).v, sub: sugMis(x.regim).sub }];
+    f.cele = [{ et: "Interval", v: sugPr(x.latime), sub: "lățimea gridului propus" }, { et: "Net pe grilă", v: sugPr(x.profitGrila, 2), sub: "după comisionul de maker" }, { et: "Treceri pe zi", v: "~" + Math.round(x.traversariZi || 0), sub: "estimare" }, { et: "Grile", v: String(x.grile || "—"), sub: "pasul " + sugPr(x.pas, 2) }, { et: "Volum", v: sugMil(x.volum), sub: x.volum < 1e6 ? "sub 1 M" : "" }, { et: "Mișcarea pe 24\u00a0h", v: sugMis(x.regim).v, sub: sugMis(x.regim).sub }];
     f.motiv = "Moneda e „candidat”: fără mișcare mare în ultimele 24 h, în primele 100 PERP după volum, ordonate după scor (câștig net pe grilă × treceri / grile). " + (SUG_DIR[x.dir] ? "Direcția 4h+1z: " + x.dir + (x.tarie ? " (" + x.tarie + ")" : "") : "Clasamentul n-are încă direcția") + (r.pd ? "; pe 84 de zile: " + r.pd.dir : "") + ".";
     f.regula = "Regula (grid-clasament.js): fără mișcare mare pe 24 h, ordonate după scor. Un filtru (liniște, interval, treceri), nu o predicție; Fișa îți dă setările și proba pe moneda ta.";
     f.dovada = [urmP && urmP.text ? urmP.text : "Urmărirea înainte (la 7 zile fixe, pe zile, față de piața din aceleași zile, după cost) începe de la prima tură a colectorului.",
