@@ -135,7 +135,7 @@ await test("4b. revizia 03.11: prețul sub 1 USDT fără punct de mii în zecima
   assert.equal(ctx.tzPret(0.1234), "0,1234"); assert.equal(ctx.tzPret(0.00001234), "0,000012"); assert.equal(ctx.tzPret(77081.9), "77.081,90"); assert.equal(ctx.tzPret(2.5), "2,50");
   ctx.tbStare = { boti: [{ activ: true, baza: "DOGE", quote: "USDT", simbolPionex: "DOGE_USDT" }, { activ: true, baza: "BTC.PERP" }, { activ: false, baza: "XRP.PERP" }] };
   ctx.TabloBot = { simboluri: (b, q, r) => r ? { pionex: r, moneda: r.split("_")[0] } : { pionex: String(b).replace(/\.PERP$/, "") + "_" + (q || "USDT") + (/\.PERP$/.test(b) ? "_PERP" : ""), moneda: String(b).replace(/\.PERP$/, "") } };
-  const l = ctx.tzSimboluri(); assert.equal(JSON.stringify(l.map((x) => x.simbol)), JSON.stringify(["BTC", "ETH", "SOL", "DOGE"])); assert.equal(l[3].pionex, "DOGE_USDT");
+  const l = ctx.tzSimboluri(ctx.tbStare.boti, null); assert.equal(JSON.stringify(l.map((x) => x.simbol)), JSON.stringify(["DOGE", "BTC", "ETH", "SOL"])); assert.equal(l[0].pionex, "DOGE_USDT");   /* v100.298: boții primii, lista vine ca argument */
   delete ctx.tbStare; delete ctx.TabloBot;
   const r = Array(13).fill(0.04);
   const b0 = bare(r, 0, 100);                                                   // 00:30 UTC, nicio bară închisă azi
@@ -149,12 +149,12 @@ await test("4b. revizia 03.11: prețul sub 1 USDT fără punct de mii în zecima
 
 await test("5. versiunile v100.297 peste tot (index ×3, sw, package)", () => {
   const H = citeste("public", "index.html");
-  assert.ok((H.match(/v100\.297/g) || []).length >= 3, "index.html: sub 3 locuri");
+  assert.ok((H.match(/v100\.(29[7-9]|[3-9]\d\d)/g) || []).length >= 3, "index.html: sub 3 locuri");
   assert.doesNotMatch(H, /v100\.296 · /);
-  assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-297"/);
-  assert.equal(JSON.parse(citeste("package.json")).version, "100.297.0");
+  assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-(29[7-9]|[3-9]\d\d)"/);
+  assert.ok(Number(JSON.parse(citeste("package.json")).version.split(".")[1]) >= 297);
   assert.match(citeste("package.json"), /"test:v100297": "node scripts\/proba-v100297.mjs"/);
-  assert.match(citeste("package.json"), /npm run test:v100296 && npm run test:v100297"/);
+  assert.match(citeste("package.json"), /npm run test:v100296 && npm run test:v100297/);
 });
 
 console.log(`\n${teste - picate} / ${teste} teste trecute${picate ? " — PICATE: " + picate : ""}\n`);

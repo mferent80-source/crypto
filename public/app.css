@@ -3135,6 +3135,12 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
 #tradezilei .tzLista{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
 #tradezilei .tzLista li{display:grid;grid-template-columns:18px minmax(0,1fr);gap:8px}
 #tradezilei .tzSemn{font-weight:800}
+/* v100.298: gridul / stopul din miscare, eticheta botului, rezumatul zilei */
+#tradezilei .tzGrid{border-top:1px solid var(--tz-linie);padding-top:10px;display:flex;flex-direction:column;gap:10px}
+#tradezilei .tzAct{display:flex;justify-content:flex-end}
+#tradezilei .tzEticheta{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#4FD18B;border:1px solid rgba(79,209,139,.35);border-radius:4px;padding:1px 6px}
+#tradezilei .tzCardBot{border-color:rgba(79,209,139,.35)}
+#tradezilei .tzRezumat{font-weight:600;max-width:1100px}
 @media (max-width:640px){#tradezilei .tzGrila{grid-template-columns:minmax(0,1fr)}#tradezilei .tzRandMare .tzCifra{font-size:20px}}
 /* v100.258: pânda (v100.150) stă după orice regulă de tabel, chiar înaintea blocului v100.224 (#topLive), care rămâne ultimul - scripts/lib/panda-ultima.mjs */
 /* v100.261 (27.10.2026, el: „linia vreau să cumpăr întinde f mult pagina în jos lăsând un mare gol”): raportul Porții (13 blocuri, ~3000 px

@@ -132,7 +132,7 @@ await test("6. versiunile v100.295 sau mai noi (aplicația, BUILD_INFO, pagina, 
   const H = citeste("public", "index.html"); assert.ok(Number(H.match(/id="healthAppVersion">v100\.(\d+)</)[1]) >= 295);
   assert.ok(Number(citeste("public", "sw.js").match(/crypto-radar-v100-(\d+)/)[1]) >= 295);
   const pk = JSON.parse(citeste("package.json")); assert.ok(Number(pk.version.split(".")[1]) >= 295); assert.equal(pk.scripts["test:v100295"], "node scripts/proba-v100295.mjs"); assert.match(pk.scripts.test, /npm run test:v100294 && npm run test:v100295( |$)/);
-  assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.161"/);
+  assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.(16[1-9]|[2-9]\d\d)"/);
   assert.doesNotMatch(citeste("scripts", "proba-v100294.mjs"), /VERSIUNE = "v100\\\.294"\/\)/);
 });
 

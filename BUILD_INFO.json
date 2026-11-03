@@ -1,11 +1,12 @@
 {
-  "version": "v100.297",
-  "badge": "v100.297 · TRADE-UL ZILEI",
+  "version": "v100.298",
+  "badge": "v100.298 · TRADE-UL ZILEI DIMINEAȚA",
   "engineContract": "54.1",
   "dataSchema": 54,
   "baseRelease": "v77.4 · TABLOUL BOTULUI",
   "releaseType": "valul de reparatii din revizia finala pe ansamblu: marginStatus/riskStatus citite, telefon, scurgere WS/ceas la iesire prin tab-uri, ATR adevarat, pret viu, istoric fara pret inghetat, sortare dupa timp, comision nemasurabil, durata la margine",
   "features": {
+    "tradeZileiDimineata298": "El (03.11.2026): „pagina, ca să fie de folos dimineața” - boții + top 20 lichide, gridul / stopul din mișcarea așteptată, „Grid: ce setez?” cu moneda, rezumatul zilei; colectorul v101.162 trimite „🎯 Trade-ul zilei” pe Discord după rezumatul de dimineață.",
     "tradeZilei297": "El (03.11.2026): „un soft care îmi spune ce trade fac azi … integrată în aplicația Radar” - pagina Trade-ul zilei: P3 (dovedit), P1 (calibrat), cât se mișcă azi pe clase de P3; trade-ul zilei doar dacă trece proba pre-înregistrată (03.11: A/B/C toate NEDOVEDITE, spus pe față).",
     "latime296": "El (02.11.2026): „verifică și de ce nu se deschide pe toată lățimea decât pe pagina Comportament” - plafonul comun --latime-pagina (1800 px) ținea Piața azi, Tabloul, Jurnalul, Trading 212, Salt și Scannerul la 1800 px; la 2560 rămâneau ~267 px goi pe fiecare parte. Acum `none`, ca la Comportament; la 1440 și 1920 nimic nu se schimbă.",
     "listeScoase295": "El (02.11.2026): „da scoate-le și de pe Acasă, Tablou și Discord” - listele fără avantaj dovedit, scoase de pe Sugestii pe 01.11. Piața azi: „Ce aș cumpăra azi” pe două coloane (boți, acțiuni pe revenire), fără ideile T212 și fără monedele pe revenire / short; „Idei de azi” fără „Acțiuni pe trend”. Tabloul botului: fără „Pe revenire (bot long)” și „Pentru short” sub „Pe ce aș porni un bot acum”. Rezumatul de dimineață (Discord): fără ideile T212, doar „Pe ce aș porni un bot” (colectorul v101.161). Rămân: pagina Trading 212 cu ideile ei, jurnalul verdictelor (măsurarea), calculele colectorului (istoricul).",

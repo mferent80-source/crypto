@@ -88,6 +88,14 @@ var TradeZilei = (function () {
     };
   }
 
+  // v100.298 (el: „pagina, ca să fie de folos dimineața”): lățimea de grid și distanța de stop DIN MIȘCAREA așteptată (măsurat ca
+  // mișcare, nu ca bani): gridul cuprinde range-ul de azi în 3 zile din 4 (± p75 / 2), pasul = lățimea / 10 grile, stopul ≥ mediana.
+  function grid(d) {
+    if (!d || d.eroare || !d.asteptat) return null;
+    var lat = d.asteptat.p75, jum = lat / 2;
+    return { jumatate: jum, latime: lat, pas: lat / 10, stop: d.asteptat.med, jos: d.pret * (1 - jum), sus: d.pret * (1 + jum) };
+  }
+
   // trade-ul zilei: doar ce e DOVEDIT; altfel spune ce NU faci și de ce
   function trade(d) {
     if (!d || d.eroare) return { fel: "eroare", text: d && d.eroare || "fără date" };
@@ -101,6 +109,6 @@ var TradeZilei = (function () {
     return { fel: "niciunul", text: "Azi nu se îndeplinește condiția niciunui trade dovedit (" + dov.map(function (k) { return PROBA[k].nume; }).join(", ") + ")." };
   }
 
-  return { azi: azi, zile: zile, trade: trade, clasa: clasa, CALIB: CALIB, PROBA: PROBA, COEF_P3: COEF_P3, COEF_P1: COEF_P1, sigm: sigm };
+  return { azi: azi, zile: zile, trade: trade, grid: grid, clasa: clasa, CALIB: CALIB, PROBA: PROBA, COEF_P3: COEF_P3, COEF_P1: COEF_P1, sigm: sigm };
 })();
 if (typeof module !== "undefined" && module.exports) module.exports = TradeZilei;
