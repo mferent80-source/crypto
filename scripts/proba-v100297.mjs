@@ -55,7 +55,7 @@ await test("1a. P3 = formula înghețată (comp = ieri / media d-11..d-2, r1 / r
   assert.ok(Math.abs(d.comp - comp) < 1e-9 && Math.abs(d.r1 - 0.02) < 1e-9);
   assert.ok(Math.abs(d.media10 - (8 * 0.04 + 0.025 + 0.02) / 10) < 1e-12, "media10 = d-10..d-1, ieri inclus");
   assert.equal(TZ.clasa(d.p3).deLa, Math.floor(d.p3 * 10) / 10);
-  assert.ok(Math.abs(d.asteptat.med - d.media10 * TZ.clasa(d.p3).med) < 1e-12, "range-ul așteptat = media10 × mediana clasei");
+  assert.ok(Math.abs(d.asteptat.med - d.media10 * TZ.clasa(d.p3).med * (d.factorZi || 1)) < 1e-12, "range-ul așteptat = media10 × mediana clasei (× factorul zilei, v100.299)");
   assert.equal(d.bareAzi, 3); assert.equal(d.bareRamase, 21);   // 3 ore închise, acum = 03:00 ⇒ 21 rămase, cu cea în curs (ca în Python: cnt − pos)
 });
 

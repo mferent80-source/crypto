@@ -99,16 +99,18 @@ await test("3b. tura Discord: nimic înainte de 9:00 RO, trimite o dată pe zi, 
 await test("4. colectorul: importă tura, încarcă TradeZilei, o cheamă după rezumat cu cheia „tradezilei”, v101.162", () => {
   const C = citeste("scripts", "colector.mjs");
   assert.match(C, /import \{ turaTradeZilei \} from "\.\/lib\/tura-trade-zilei\.mjs"/); assert.match(C, /const TradeZilei = incarca\("trade-zilei\.js", "TradeZilei"\)/);
-  assert.match(C, /const VERSIUNE_COLECTOR = "v101\.162"/);
+  assert.match(C, /const VERSIUNE_COLECTOR = "v101\.(16[2-9]|[2-9]\d\d)"/);   // v101.163: pe „≥ 162”
   const i = C.indexOf("turaDimineataModul({"), j = C.indexOf("turaTradeZilei({"); assert.ok(i > 0 && j > i, "tura trade-ului zilei vine după rezumatul de dimineață");
   assert.match(C, /trimiteAlerta\(m, null, "tradezilei"\)/); assert.match(C, /interval=60M&limit=500"\); return GridCalcul\.bare\(/);
 });
 
 await test("5. versiunile v100.298 peste tot, feature-ul în BUILD_INFO, CSS-ul nou înaintea pândei", () => {
-  const H = citeste("public", "index.html"); assert.ok((H.match(/v100\.298/g) || []).length >= 4, "index.html: sub 4 locuri (3 badge-uri + meta)"); assert.doesNotMatch(H, /v100\.297 · /);
-  assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-298"/); assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.298"/);
-  const B = JSON.parse(citeste("BUILD_INFO.json")); assert.equal(B.version, "v100.298"); assert.match(B.badge, /v100\.298/); assert.equal(Object.keys(B.features)[0], "tradeZileiDimineata298");
-  const pk = JSON.parse(citeste("package.json")); assert.equal(pk.version, "100.298.0"); assert.equal(pk.scripts["test:v100298"], "node scripts/proba-v100298.mjs"); assert.match(pk.scripts.test, /npm run test:v100297 && npm run test:v100298$/);
+  // v100.299: pe „≥ 298” (regula de casă: proba veche cu versiuni fixe se relaxează la următorul bump)
+  const V = /v100\.(29[89]|[3-9]\d\d)/;
+  const H = citeste("public", "index.html"); assert.ok((H.match(/v100\.(29[89]|[3-9]\d\d)/g) || []).length >= 4, "index.html: sub 4 locuri (3 badge-uri + meta)"); assert.doesNotMatch(H, /v100\.297 · /);
+  assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-(29[89]|[3-9]\d\d)"/); assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.(29[89]|[3-9]\d\d)"/);
+  const B = JSON.parse(citeste("BUILD_INFO.json")); assert.match(B.version, V); assert.match(B.badge, V); assert.ok("tradeZileiDimineata298" in B.features);
+  const pk = JSON.parse(citeste("package.json")); assert.match(pk.version, /^100\.(29[89]|[3-9]\d\d)\.0$/); assert.equal(pk.scripts["test:v100298"], "node scripts/proba-v100298.mjs"); assert.match(pk.scripts.test, /npm run test:v100297 && npm run test:v100298/);
   const CSS = citeste("public", "app.css"); assert.match(CSS, /#tradezilei \.tzGrid\{/); assert.match(CSS, /#tradezilei \.tzEticheta\{/); assert.match(CSS, /#tradezilei \.tzRezumat\{/);
   assert.ok(CSS.indexOf("#tradezilei .tzRezumat{") < CSS.indexOf("/* v100.258: pânda")); assert.equal(panda.pandaInainteaCozii(CSS), "");
 });

@@ -19,9 +19,16 @@ var TradeZilei = (function () {
     { deLa: 0.6, maiMult: 0.65, p25: 0.60, med: 0.83, p75: 1.13 }, { deLa: 0.7, maiMult: 0.75, p25: 0.55, med: 0.75, p75: 1.03 },
     { deLa: 0.8, maiMult: 0.91, p25: 0.56, med: 0.73, p75: 0.96 }, { deLa: 0.9, maiMult: 0.95, p25: 0.46, med: 0.61, p75: 0.82 }
   ];
+  // v100.299 (proba ORA ZILEI, 03.11.2026, _JURNAL_ORA_ZILEI.md): cât din întinderea zilei UTC e formată, de obicei, după ora h (indicele 0 = ora
+  // 00–01 UTC închisă); IS 2023–25, 21 de perechi, confirmat pe 2025–26 la cel mult 2,3 pp. Orele 13–16 UTC aduc 20,6 % din mișcare (4/24 = 16,7 %).
+  var CURBA_F = [0.238, 0.336, 0.396, 0.438, 0.473, 0.507, 0.540, 0.575, 0.608, 0.637, 0.662, 0.684, 0.713, 0.748, 0.788, 0.824, 0.857, 0.883, 0.906, 0.925, 0.945, 0.964, 0.985, 1.0];
+  // CALIB e calculată pe TOATE zilele; față de ea, mediana range / media10 e ×1,06 în zilele lucrătoare și ×0,85 sâmbăta / duminica (UTC), în
+  // interiorul claselor de P3 (IS 1,058 / 0,854, OOS 1,073 / 0,862 - oz_v3.py, după revizia din 03.11) ⇒ se înmulțesc peste CALIB
+  var FACTOR_LUCRATOARE = 1.06, FACTOR_WEEKEND = 0.85;
   // Verdictele probei pre-înregistrate TRADE-UL ZILEI (03.11.2026, _JURNAL_TRADE_ZILEI.md). Se completează DOAR din raportul OOS.
   var PROBA = {
-    A: { nume: "Spargere pe zi de mișcare", regula: "P3 ≥ 70 %: intri la prima închidere de 1 h peste maximul / sub minimul de ieri, stop la jumătate din range-ul de ieri, ieși la 23:00 UTC", dovedit: false, cifra: "pe anul de confirmare +0,08 % pe zi (zero, z 0,5); pe celelalte zile spargerea pierde 0,34 %" },
+    A: { nume: "Spargere pe zi de mișcare", regula: "P3 ≥ 70 %: intri la prima închidere de 1 h peste maximul / sub minimul de ieri, stop la jumătate din range-ul de ieri, ieși la 23:00 UTC", dovedit: false, cifra: "pe anul de confirmare +0,08 % pe zi (zero, z 0,5); pe celelalte zile spargerea pierde 0,34 %",
+         prospectiv: "din 04.11.2026 colectorul judecă fiecare zi UTC închisă pe 21 de perechi, cu aceleași reguli (data/proba-a.jsonl); verdict după 2027-02-01, nu înainte - același semn ca pe cei 3 ani, dar sub prag, merită o probă pe zile care nu existau când s-au scris regulile" },
     B: { nume: "Grid de o zi pe zi liniștită", regula: "P3 ≤ 45 %: grid neutru centrat pe deschidere, ½ lățime = 0,5 × media range-ului pe 10 zile, 10 grile pe parte, închis la 23:00 UTC", dovedit: false, cifra: "pierde 0,55 % pe zi din capital (z −7,6): inventarul rămas seara + costurile" },
     C: { nume: "Țintă la nivelul de ieri", regula: "P1 ≥ 70 % și distanță ≥ 0,30 %: intri spre maximul / minimul de ieri cu ținta pe nivel și stop simetric", dovedit: false, cifra: "pierde 0,19 % pe trade (z −5,8); fără P1 pierde la fel" }
   };
@@ -51,7 +58,7 @@ var TradeZilei = (function () {
     if (!toateB.length) return { eroare: "fără lumânări" };
     var t = acum || (toateB[toateB.length - 1].t + ORA);
     toateB = toateB.filter(function (b) { return b.t + ORA <= t; });        // DOAR barele închise înainte de `acum` - nimic din viitor
-    var Z = zile(toateB); if (Z.length < 13) return { eroare: "prea puține zile (" + Z.length + " din 13 necesare)" };
+    var Z = zile(toateB); if (Z.length < 12) return { eroare: "prea puține zile (" + Z.length + " din 12 necesare)" };   // v100.299: la 00:xx UTC azi n-are încă nicio bară - 12 zile închise ajung (garda de mai jos le cere întregi)
     var ziAzi = Math.floor(t / ZI), ultima = Z[Z.length - 1];
     // ziua curentă poate să nu aibă încă nicio bară închisă (00:xx UTC) ⇒ „azi” e goală, ieri = ultima zi închisă
     var azi = ultima.zi === ziAzi ? ultima : { zi: ziAzi, op: ultima.cl, hi: ultima.cl, lo: ultima.cl, cl: ultima.cl, nb: 0, bare: [] };
@@ -80,11 +87,16 @@ var TradeZilei = (function () {
       var x = (sus ? Math.log(L / c) : Math.log(c / L)) / (sig * Math.sqrt(k));
       return { p: sigm(COEF_P1[0] + COEF_P1[1] * x + COEF_P1[2] * Math.log(comp) + COEF_P1[3] * (sus ? trend : -trend)), atins: false, dist: sus ? L / c - 1 : 1 - L / c };
     }
-    var cls = clasa(p3), asteptat = { p25: media10 * cls.p25, med: media10 * cls.med, p75: media10 * cls.p75 };
+    // v100.299: ziua săptămânii (UTC; ziua 0 = 1970-01-01 = joi ⇒ +3: luni 0 … duminică 6), factorul de weekend peste CALIB, cât din
+    // mișcarea zilei e de obicei formată după ultima oră închisă (ora 0 ⇒ nimic) și cât mai rămâne din mișcarea așteptată
+    var ziSapt = (ziAzi + 3) % 7, weekend = ziSapt >= 5, factorZi = weekend ? FACTOR_WEEKEND : FACTOR_LUCRATOARE;
+    var cls = clasa(p3), asteptat = { p25: media10 * cls.p25 * factorZi, med: media10 * cls.med * factorZi, p75: media10 * cls.p75 * factorZi };
+    var format = oraUtc > 0 ? CURBA_F[Math.min(23, oraUtc - 1)] : 0, ramane = 1 - format;
     return {
       ziAzi: ziAzi, pret: c, pdh: ieri.hi, pdl: ieri.lo, pdc: ieri.cl, r1: r1, r2: r2, media10: media10, comp: comp, p3: p3, maiMultCaIeri: cls.maiMult,
       asteptat: asteptat, panaAcum: azi.nb ? (azi.hi - azi.lo) / c : 0, bareAzi: azi.nb, bareRamase: k, sigma: sig, trend: trend,
-      p1Sus: p1(ieri.hi, true), p1Jos: p1(ieri.lo, false), ziIncompleta: inchise.length < 20
+      p1Sus: p1(ieri.hi, true), p1Jos: p1(ieri.lo, false), ziIncompleta: inchise.length < 20,
+      oraUtc: oraUtc, ziSapt: ziSapt, weekend: weekend, factorZi: factorZi, format: format, ramane: ramane, ramaneAsteptat: asteptat.med * ramane
     };
   }
 
@@ -109,6 +121,6 @@ var TradeZilei = (function () {
     return { fel: "niciunul", text: "Azi nu se îndeplinește condiția niciunui trade dovedit (" + dov.map(function (k) { return PROBA[k].nume; }).join(", ") + ")." };
   }
 
-  return { azi: azi, zile: zile, trade: trade, grid: grid, clasa: clasa, CALIB: CALIB, PROBA: PROBA, COEF_P3: COEF_P3, COEF_P1: COEF_P1, sigm: sigm };
+  return { azi: azi, zile: zile, trade: trade, grid: grid, clasa: clasa, CALIB: CALIB, PROBA: PROBA, COEF_P3: COEF_P3, COEF_P1: COEF_P1, sigm: sigm, CURBA_F: CURBA_F, FACTOR_WEEKEND: FACTOR_WEEKEND, FACTOR_LUCRATOARE: FACTOR_LUCRATOARE };
 })();
 if (typeof module !== "undefined" && module.exports) module.exports = TradeZilei;

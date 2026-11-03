@@ -1,11 +1,12 @@
 {
-  "version": "v100.298",
-  "badge": "v100.298 · TRADE-UL ZILEI DIMINEAȚA",
+  "version": "v100.299",
+  "badge": "v100.299 · ORA ZILEI + PROBA A",
   "engineContract": "54.1",
   "dataSchema": 54,
   "baseRelease": "v77.4 · TABLOUL BOTULUI",
   "releaseType": "valul de reparatii din revizia finala pe ansamblu: marginStatus/riskStatus citite, telefon, scurgere WS/ceas la iesire prin tab-uri, ATR adevarat, pret viu, istoric fara pret inghetat, sortare dupa timp, comision nemasurabil, durata la margine",
   "features": {
+    "oraZilei299": "El (03.11.2026): „alte idei?” → „fă” - ce a ieșit DOVEDIT din cele trei probe pre-înregistrate intră în Trade-ul zilei: curba orelor (cât din mișcarea zilei e formată până la ora asta, confirmată pe anul al treilea la 2,3 pp), weekendul ×0,78 pe mișcarea așteptată, orele 15–18 RO; proba PROSPECTIVĂ a spargerii A în colector (data/proba-a.jsonl, verdict după 2027-02-01). NEDOVEDITE și lăsate afară: boții pe clase de mișcare (boții lui țin median o oră), momentum-ul lung (6 variante, toate sub reper).",
     "tradeZileiDimineata298": "El (03.11.2026): „pagina, ca să fie de folos dimineața” - boții + top 20 lichide, gridul / stopul din mișcarea așteptată, „Grid: ce setez?” cu moneda, rezumatul zilei; colectorul v101.162 trimite „🎯 Trade-ul zilei” pe Discord după rezumatul de dimineață.",
     "tradeZilei297": "El (03.11.2026): „un soft care îmi spune ce trade fac azi … integrată în aplicația Radar” - pagina Trade-ul zilei: P3 (dovedit), P1 (calibrat), cât se mișcă azi pe clase de P3; trade-ul zilei doar dacă trece proba pre-înregistrată (03.11: A/B/C toate NEDOVEDITE, spus pe față).",
     "latime296": "El (02.11.2026): „verifică și de ce nu se deschide pe toată lățimea decât pe pagina Comportament” - plafonul comun --latime-pagina (1800 px) ținea Piața azi, Tabloul, Jurnalul, Trading 212, Salt și Scannerul la 1800 px; la 2560 rămâneau ~267 px goi pe fiecare parte. Acum `none`, ca la Comportament; la 1440 și 1920 nimic nu se schimbă.",
