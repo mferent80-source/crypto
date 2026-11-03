@@ -3105,6 +3105,37 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
 /* punctul 21: pe Setări „PAROLA: ȚINUTĂ MINTE…” e o stare, nu o decizie ⇒ mic. v100.260 (24.10, el: „da pune înapoi”): bara cu moneda și „Analizează piața” rămâne la vedere și pe Setări */
 #pzV-settings .pzVerb{font-size:15px;white-space:normal;letter-spacing:.02em}
 /* audit 23.10 · sfârșitul blocului */
+/* v100.297: pagina Trade-ul zilei (aceeasi familie de tokeni ca Comportament; pe toata latimea; grila de cartele care umple ecranul) */
+#tradezilei{--tz-fond:#141C24;--tz-fond2:#0E141A;--tz-linie:rgba(159,179,196,.16);font-variant-numeric:tabular-nums}
+#tradezilei .tzPag{box-sizing:border-box;max-width:none;display:flex;flex-direction:column;gap:16px;font-size:13.5px;line-height:1.45}
+#tradezilei p{margin:0}
+#tradezilei .tzAntet{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+#tradezilei .tzAntet h3{margin:0;font-size:18px}
+#tradezilei .tzDr{margin-left:auto}
+#tradezilei .tzIntro{color:var(--t2,#9FB3C4);max-width:900px}
+#tradezilei .tzGrila{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+#tradezilei .tzCard,#tradezilei .tzBloc{background:var(--tz-fond);border:1px solid var(--tz-linie);border-radius:5px;padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+#tradezilei .tzCardGol{opacity:.75}
+#tradezilei .tzCardCap{display:flex;align-items:baseline;gap:10px}
+#tradezilei .tzSimbol{font-size:16px}
+#tradezilei .tzRand{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;align-items:baseline}
+#tradezilei .tzRand .tzMic{grid-column:1/-1}
+#tradezilei .tzRandMare .tzCifra{font-size:22px}
+#tradezilei .tzEt{color:var(--t2,#9FB3C4)}
+#tradezilei .tzCifra{font-size:16px;text-align:right;font-variant-numeric:tabular-nums}
+#tradezilei .tzMut{color:var(--t3,#7E92A6)}
+#tradezilei .tzMic{font-size:12px}
+#tradezilei .tzBun{color:#4FD18B}
+#tradezilei .tzRau{color:#F0665C}
+#tradezilei .tzTrade{border-top:1px solid var(--tz-linie);padding-top:10px;display:flex;flex-direction:column;gap:4px}
+#tradezilei .tzTradeNu p{color:var(--t2,#9FB3C4)}
+#tradezilei .tzTradeDa p{font-weight:600}
+#tradezilei .tzBlocCap{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+#tradezilei .tzBlocCap h3{margin:0;font-size:15px}
+#tradezilei .tzLista{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+#tradezilei .tzLista li{display:grid;grid-template-columns:18px minmax(0,1fr);gap:8px}
+#tradezilei .tzSemn{font-weight:800}
+@media (max-width:640px){#tradezilei .tzGrila{grid-template-columns:minmax(0,1fr)}#tradezilei .tzRandMare .tzCifra{font-size:20px}}
 /* v100.258: pânda (v100.150) stă după orice regulă de tabel, chiar înaintea blocului v100.224 (#topLive), care rămâne ultimul - scripts/lib/panda-ultima.mjs */
 /* v100.261 (27.10.2026, el: „linia vreau să cumpăr întinde f mult pagina în jos lăsând un mare gol”): raportul Porții (13 blocuri, ~3000 px
    la 310 px) stătea în coloana îngustă din dreapta și întindea grila Trading 212; sub „Pozițiile” (~560 px) rămânea golul. Cu raport pe ecran

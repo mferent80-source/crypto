@@ -41,13 +41,13 @@ await test("2b. Master Verdict (pliul „Analizează o monedă”, Piața azi): 
   assert.match(CSS, /\.decisionKpis\{[^}]*align-content:start/, ".decisionKpis fără align-content:start");
 });
 
-await test("3. versiunile v100.296 (aplicația, BUILD_INFO, pagina, cache-ul, package.json, lanțul); v100.295 pe „≥”", () => {
-  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.296"/);
-  const B = JSON.parse(citeste("BUILD_INFO.json")); assert.equal(B.version, "v100.296"); assert.match(B.badge, /v100\.296/); assert.equal(Object.keys(B.features)[0], "latime296"); assert.ok(B.features.listeScoase295, "cheia v100.295 rămâne");
+await test("3. versiunile ≥ v100.296 (v100.297 a relaxat; aplicația, BUILD_INFO, pagina, cache-ul, package.json, lanțul); v100.295 pe „≥”", () => {
+  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.(29[6-9]|[3-9]\d\d)"/);
+  const B = JSON.parse(citeste("BUILD_INFO.json")); assert.match(B.version, /^v100\.(29[6-9]|[3-9]\d\d)$/); assert.match(B.badge, /v100\.(29[6-9]|[3-9]\d\d)/); assert.ok(B.features.latime296, "lipsește latime296"); assert.ok(B.features.listeScoase295, "cheia v100.295 rămâne");
   const H = citeste("public", "index.html");
-  for (const re of [/<meta content="v100\.296" name="app-version"\/>/, /id="sideVersiune"[^>]*>v100\.296/, /id="antetVersiune"[^>]*>v100\.296/, /healthAppVersion[^>]*>v100\.296/]) assert.match(H, re);
-  assert.match(citeste("public", "sw.js"), /CACHE="crypto-radar-v100-296"/);
-  const pk = JSON.parse(citeste("package.json")); assert.equal(pk.version, "100.296.0"); assert.equal(pk.scripts["test:v100296"], "node scripts/proba-v100296.mjs"); assert.match(pk.scripts.test, /npm run test:v100295 && npm run test:v100296/);
+  for (const re of [/<meta content="v100\.(29[6-9]|[3-9]\d\d)" name="app-version"\/>/, /id="sideVersiune"[^>]*>v100\.(29[6-9]|[3-9]\d\d)/, /id="antetVersiune"[^>]*>v100\.(29[6-9]|[3-9]\d\d)/, /healthAppVersion[^>]*>v100\.(29[6-9]|[3-9]\d\d)/]) assert.match(H, re);
+  assert.match(citeste("public", "sw.js"), /CACHE="crypto-radar-v100-(29[6-9]|[3-9]\d\d)"/);
+  const pk = JSON.parse(citeste("package.json")); assert.ok(Number(pk.version.split(".")[1]) >= 296, "package.json sub 100.296"); assert.equal(pk.scripts["test:v100296"], "node scripts/proba-v100296.mjs"); assert.match(pk.scripts.test, /npm run test:v100295 && npm run test:v100296/);
   assert.doesNotMatch(citeste("scripts", "proba-v100295.mjs"), /VERSIUNE = "v100\\\.295"\/\)/);
 });
 
