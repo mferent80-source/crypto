@@ -3152,6 +3152,16 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
 #rangefilter .rfTf{display:inline-flex;gap:4px}
 #rangefilter .rfTfOn{border-color:var(--accent,#F0A33A);color:var(--accent,#F0A33A)}
 #rangefilter .rfIntro{color:var(--t2,#9FB3C4);max-width:900px}
+/* v100.301: intro pliat (details), filtrele, eticheta CONTRA / semnal nou */
+#rangefilter details.rfIntro summary{cursor:pointer;list-style:none}
+#rangefilter details.rfIntro summary::-webkit-details-marker{display:none}
+#rangefilter details.rfIntro[open] summary .rfMut{display:none}
+#rangefilter details.rfIntro p{margin-top:8px}
+#rangefilter .rfFiltre{display:flex;gap:6px;flex-wrap:wrap}
+#rangefilter .acBtn{width:auto;display:inline-flex;align-items:center;justify-content:center;background:var(--panel-2,#1A242E);border:1px solid var(--line,#26333F);color:var(--text);border-radius:3px;padding:6px 10px;white-space:nowrap;font:inherit;cursor:pointer}   /* butoanele paginii ca pe Piața azi (#dash .acBtn), nu pe toată lățimea */
+#rangefilter .rfContra{border-color:#F0665C;color:#F0665C}
+#rangefilter .rfProaspatEt{border-color:#4FD18B;color:#4FD18B}
+#rangefilter .rfCardProaspat{border-color:rgba(79,209,139,.45)}
 #rangefilter .rfGrila{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}
 #rangefilter .rfCard{background:var(--rf-fond);border:1px solid var(--rf-linie);border-radius:5px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;min-width:0}
 #rangefilter .rfCardGol{opacity:.75}

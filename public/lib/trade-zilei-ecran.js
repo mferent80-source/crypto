@@ -111,6 +111,8 @@ async function tzPorneste(forta) {
       var s = tzStare.simboluri[i];
       try {
         var k = await getJSON("/api/market?type=pionex_klines&symbol=" + encodeURIComponent(s.pionex) + "&interval=60M&limit=500");
+        // v100.301 (auditul RF): refuzul Pionex vine 200 {result:false, retryAfter} - nu aruncă; se citește aici, altfel bucla mergea mai departe
+        if (k && k.result === false && k.retryAfter != null) { monede.push({ simbol: s.simbol, pionex: s.pionex, fel: s.fel, eroare: "Pionex a refuzat (prea multe cereri)" }); tzStare.eroare = "Pionex a refuzat (prea multe cereri) - restul monedelor le citesc la „Recitește”."; break; }
         var bare = typeof GridCalcul !== "undefined" ? GridCalcul.bare(k && k.data && k.data.klines) : null;
         monede.push({ simbol: s.simbol, pionex: s.pionex, fel: s.fel, d: bare && bare.length ? TradeZilei.azi(bare, Date.now()) : { eroare: "fără lumânări de la Pionex" } });
       } catch (e) {
