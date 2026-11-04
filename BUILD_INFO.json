@@ -1,11 +1,12 @@
 {
-  "version": "v100.299",
-  "badge": "v100.299 · ORA ZILEI + PROBA A",
+  "version": "v100.300",
+  "badge": "v100.300 · RANGE FILTER",
   "engineContract": "54.1",
   "dataSchema": 54,
   "baseRelease": "v77.4 · TABLOUL BOTULUI",
   "releaseType": "valul de reparatii din revizia finala pe ansamblu: marginStatus/riskStatus citite, telefon, scurgere WS/ceas la iesire prin tab-uri, ATR adevarat, pret viu, istoric fara pret inghetat, sortare dupa timp, comision nemasurabil, durata la margine",
   "features": {
+    "rangeFilter300": "El (04.11.2026): „integrează și în Crypto Radar ca dash și în panel” - pagina Range Filter (DonovanWall B&S + Trender, același motor ca Range Filter B&S v2.1 din TradingView, port JS = Python pe BTC): pe fiecare monedă VERDICT (direcția filtrului) · TRIGGER · CE FAC? · LOC · BANDA · REGIM · MA · APRINDERE · DOVADA · SEMNAL, 1h / 4h; rândul „Range Filter” în citirea Tabloului botului. Cinstit: proba din 04.11 (21 de perechi, după cost) n-a dovedit nimic - colorant de trend, nu semnal.",
     "oraZilei299": "El (03.11.2026): „alte idei?” → „fă” - ce a ieșit DOVEDIT din cele trei probe pre-înregistrate intră în Trade-ul zilei: curba orelor (cât din mișcarea zilei e formată până la ora asta, confirmată pe anul al treilea la 2,3 pp), weekendul ×0,78 pe mișcarea așteptată, orele 15–18 RO; proba PROSPECTIVĂ a spargerii A în colector (data/proba-a.jsonl, verdict după 2027-02-01). NEDOVEDITE și lăsate afară: boții pe clase de mișcare (boții lui țin median o oră), momentum-ul lung (6 variante, toate sub reper).",
     "tradeZileiDimineata298": "El (03.11.2026): „pagina, ca să fie de folos dimineața” - boții + top 20 lichide, gridul / stopul din mișcarea așteptată, „Grid: ce setez?” cu moneda, rezumatul zilei; colectorul v101.162 trimite „🎯 Trade-ul zilei” pe Discord după rezumatul de dimineață.",
     "tradeZilei297": "El (03.11.2026): „un soft care îmi spune ce trade fac azi … integrată în aplicația Radar” - pagina Trade-ul zilei: P3 (dovedit), P1 (calibrat), cât se mișcă azi pe clase de P3; trade-ul zilei doar dacă trece proba pre-înregistrată (03.11: A/B/C toate NEDOVEDITE, spus pe față).",

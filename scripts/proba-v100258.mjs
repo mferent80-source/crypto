@@ -140,7 +140,7 @@ await test("versiunea e cel puțin v100.258, proba o dată în lanțul `test`", 
   const pk = JSON.parse(citeste("package.json"));
   assert.ok(Number(pk.version.split(".")[1]) >= 258, pk.version);   // v100.259: de acum „cel puțin”
   assert.equal((pk.scripts.test.match(/test:v100258\b/g) || []).length, 1);
-  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-2(5[89]|[6-9]\d)/);
+  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-(?:2(5[89]|[6-9]\d)|[3-9]\d\d)/);
 });
 
 console.log(`\n${teste - picate}/${teste} ${picate ? "PICĂ" : "trec"}`);

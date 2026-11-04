@@ -3142,6 +3142,36 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
 #tradezilei .tzCardBot{border-color:rgba(79,209,139,.35)}
 #tradezilei .tzRezumat{font-weight:600;max-width:1100px}
 @media (max-width:640px){#tradezilei .tzGrila{grid-template-columns:minmax(0,1fr)}#tradezilei .tzRandMare .tzCifra{font-size:20px}}
+/* v100.300: pagina Range Filter (aceeași familie de tokeni ca Trade-ul zilei; pe toată lățimea; grilă de dash-uri pe monedă) */
+#rangefilter{--rf-fond:#141C24;--rf-linie:rgba(159,179,196,.16);font-variant-numeric:tabular-nums}
+#rangefilter .rfPag{box-sizing:border-box;max-width:none;display:flex;flex-direction:column;gap:16px;font-size:13.5px;line-height:1.45}
+#rangefilter p{margin:0}
+#rangefilter .rfAntet{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+#rangefilter .rfAntet h3{margin:0;font-size:18px}
+#rangefilter .rfDr{margin-left:auto;display:flex;gap:8px;align-items:center}
+#rangefilter .rfTf{display:inline-flex;gap:4px}
+#rangefilter .rfTfOn{border-color:var(--accent,#F0A33A);color:var(--accent,#F0A33A)}
+#rangefilter .rfIntro{color:var(--t2,#9FB3C4);max-width:900px}
+#rangefilter .rfGrila{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}
+#rangefilter .rfCard{background:var(--rf-fond);border:1px solid var(--rf-linie);border-radius:5px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;min-width:0}
+#rangefilter .rfCardGol{opacity:.75}
+#rangefilter .rfCardCap{display:flex;align-items:baseline;gap:10px}
+#rangefilter .rfSimbol{font-size:16px}
+#rangefilter .rfEticheta{font-size:11px;font-weight:700;letter-spacing:.04em;padding:1px 7px;border:1px solid var(--rf-linie);border-radius:4px;color:var(--t2,#9FB3C4)}   /* tema PAZNIC (v100.151): colțuri ≤ 5 px */
+#rangefilter .rfHero{font-weight:800;text-align:center;padding:6px 10px;border-radius:4px;color:#fff;background:#3b4254}
+#rangefilter .rfHero-sus{background:#0a8a55}#rangefilter .rfHero-jos{background:#a3104f}
+#rangefilter .rfRand{display:grid;grid-template-columns:84px 64px minmax(0,1fr);gap:2px 10px;align-items:baseline;border-top:1px solid var(--rf-linie);padding-top:4px}
+#rangefilter .rfRand .rfMic{grid-column:2/-1}
+#rangefilter .rfEt{color:var(--t2,#9FB3C4);font-size:11px;font-weight:700;letter-spacing:.04em}
+#rangefilter .rfBara{font-family:ui-monospace,Menlo,Consolas,monospace;letter-spacing:1px;font-size:11px;color:var(--t3,#7E92A6)}
+#rangefilter .rfVal{font-variant-numeric:tabular-nums}
+#rangefilter .rfCe{grid-column:3/-1;font-weight:600}
+#rangefilter .rfTon-sus{color:#4FD18B}#rangefilter .rfTon-jos{color:#F0665C}#rangefilter .rfTon-atentie{color:#F0A33A}#rangefilter .rfTon-fara{color:var(--t2,#9FB3C4)}
+#rangefilter .rfMut{color:var(--t3,#7E92A6)}
+#rangefilter .rfMic{font-size:12px}
+#rangefilter .rfRau{color:#F0665C}
+#rangefilter .rfAct{margin-top:4px}
+@media (max-width:640px){#rangefilter .rfGrila{grid-template-columns:minmax(0,1fr)}#rangefilter .rfRand{grid-template-columns:76px 56px minmax(0,1fr)}}
 /* v100.258: pânda (v100.150) stă după orice regulă de tabel, chiar înaintea blocului v100.224 (#topLive), care rămâne ultimul - scripts/lib/panda-ultima.mjs */
 /* v100.261 (27.10.2026, el: „linia vreau să cumpăr întinde f mult pagina în jos lăsând un mare gol”): raportul Porții (13 blocuri, ~3000 px
    la 310 px) stătea în coloana îngustă din dreapta și întindea grila Trading 212; sub „Pozițiile” (~560 px) rămânea golul. Cu raport pe ecran

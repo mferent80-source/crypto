@@ -84,8 +84,8 @@ const meniu = (() => { const i = html.indexOf('<div class="sideMenu">'); return 
 const nav = (bucata) => [...bucata.matchAll(/data-nav="([a-z0-9]+)"/g)].map((m) => m[1]);
 const grup = (id) => { const i = meniu.indexOf('id="' + id + '"'); assert.ok(i > 0, id); const r = meniu.slice(i + 5), j = r.search(/<(div|details) class="sideGrup[ "]/); return j < 0 ? r : r.slice(0, j); };
 await test("(554a) meniul în 3 grupe, cu toate cele 47 de butoane (nimic șters): Zilnic, Unelte, Laborator vechi (pliat)", () => {
-  assert.equal([...meniu.matchAll(/class="sideBtn/g)].length, 57);   /* v100.286: + „Comportament”; v100.297: + „Trade-ul zilei” */   /* v100.163: + „Rezultate”; v100.176: + „Contul întreg”; v100.180: + „Busola ↗” (fără data-nav) */   // v100.117: + „Carnetul fișei” (I-561); v100.119: + „Sugestii”; v100.120: + „Salt”; v100.134: + „Simulator grid”; v100.159: + „Alerte · ce dețin / urmăresc ↗”
-  assert.deepEqual(nav(grup("sideZilnic")), ["dash", "tabloubot", "sugestii", "gridset", "gridsim", "carnet", "jurnaltrade", "comportament", "tradezilei", "t212", "salt", "scan", "alerts", "montecarlo", "contintreg"]);   /* v100.286: + „Comportament”, după Jurnal; v100.297: + „Trade-ul zilei”, după Comportament */
+  assert.equal([...meniu.matchAll(/class="sideBtn/g)].length, 58);   /* v100.286: + „Comportament”; v100.297: + „Trade-ul zilei”; v100.300: + „Range Filter” */   /* v100.163: + „Rezultate”; v100.176: + „Contul întreg”; v100.180: + „Busola ↗” (fără data-nav) */   // v100.117: + „Carnetul fișei” (I-561); v100.119: + „Sugestii”; v100.120: + „Salt”; v100.134: + „Simulator grid”; v100.159: + „Alerte · ce dețin / urmăresc ↗”
+  assert.deepEqual(nav(grup("sideZilnic")), ["dash", "tabloubot", "sugestii", "gridset", "gridsim", "carnet", "jurnaltrade", "comportament", "tradezilei", "rangefilter", "t212", "salt", "scan", "alerts", "montecarlo", "contintreg"]);   /* v100.286: + „Comportament”, după Jurnal; v100.297: + „Trade-ul zilei”, după Comportament */
   assert.deepEqual(nav(grup("sideUnelte")), ["deriv", "stocks", "rezultate", "account", "settings", "health"]);   /* v100.214: market și cloud în Laborator */
   const v = nav(grup("sideVechi")); assert.equal(v.length, 34);   /* v100.214: + market, cloud */ for (const k of ["desk", "engine", "mtf", "signals", "backtest", "replaylab", "researchml", "decisioncore"]) assert.ok(v.includes(k), k);
   assert.match(meniu, /<details class="sideGrup sideVechi" id="sideVechi"><summary class="sideGrupCap">Laborator vechi \(34\)<\/summary>/);
@@ -104,8 +104,8 @@ await test("(555) bara de jos pe telefon: Tablou · Grid · T212 · Alerte · �
   for (const k of ["dash", "scan", "signals", "market"]) assert.match(sertar, new RegExp("moreNav\\('" + k + "'"), k);
 });
 await test("(E) versiunea v100.116+ / colector v101.79+ (merge mai departe)", () => {
-  assert.match(html, /content="v100\.(?:1\d\d|2\d\d)"/); assert.match(html, /id="antetVersiune">v100\.(?:1\d\d|2\d\d)/); assert.match(html, /id="healthAppVersion">v100\.(?:1\d\d|2\d\d)</);
-  assert.match(JSON.parse(citeste("package.json")).version, /^100\.(?:1\d\d|2\d\d)\.0$/); assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-(?:1\d\d|2\d\d)";/);
+  assert.match(html, /content="v100\.(?:[1-9]\d\d)"/); assert.match(html, /id="antetVersiune">v100\.(?:[1-9]\d\d)/); assert.match(html, /id="healthAppVersion">v100\.(?:[1-9]\d\d)</);
+  assert.match(JSON.parse(citeste("package.json")).version, /^100\.(?:[1-9]\d\d)\.0$/); assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-(?:[1-9]\d\d)";/);
   assert.match(col, /const VERSIUNE_COLECTOR = "v101\.(79|[89]\d|1\d\d)";/);
   const sc = JSON.parse(citeste("package.json")).scripts; assert.equal(sc["test:v100115"], "node scripts/proba-v100115.mjs"); assert.match(sc.test, /npm run test:v100115/);
 });

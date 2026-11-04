@@ -100,7 +100,7 @@ await test("telefonul: foaia „Mai mult” are Zilnic / Unelte / Laborator vech
   const zilnic = intre(foaie, ">Zilnic<", 'class="moreGrupCap">Unelte');
   for (const k of ["dash", "tabloubot", "sugestii", "gridset", "gridsim", "carnet", "jurnaltrade", "salt", "scan", "alerts", "montecarlo", "contintreg"]) assert.ok(zilnic.includes(`moreNav('${k}'`), k + " nu e în Zilnic");
   assert.ok(foaie.includes("closeMoreDrawer();openStocksDesk()"), "Nasdaq lipsește pe telefon"); assert.ok(foaie.includes("closeMoreDrawer();deschideAlertsPagina()"));
-  assert.equal((foaie.match(/class="moreBtn"/g) || []).length, 57);   /* v100.286: + „Comportament”; v100.297: + „Trade-ul zilei” */
+  assert.equal((foaie.match(/class="moreBtn"/g) || []).length, 58);   /* v100.300: + „Range Filter” */   /* v100.286: + „Comportament”; v100.297: + „Trade-ul zilei” */
   assert.match(CSS, /\.moreVechi>summary\{[^}]*min-height:44px/);
 });
 await test("(2) subsolul motorului vechi doar în Laboratorul vechi: show() pune peLaborator, CSS ascunde nota în rest", () => {

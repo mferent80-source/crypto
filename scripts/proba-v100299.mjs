@@ -149,10 +149,11 @@ await test("5. colectorul: importă tura, o cheamă după trade-ul zilei, rându
   assert.match(C, /import \{ turaProbaA, liniaProbaA \} from "\.\/lib\/tura-proba-a\.mjs"/); assert.match(C, /const VERSIUNE_COLECTOR = "v101\.163"/);
   const i = C.indexOf("turaTradeZilei({"), j = C.indexOf("turaProbaA({"); assert.ok(i > 0 && j > i, "proba A vine după trade-ul zilei");
   assert.match(C, /proba-a\.jsonl/); assert.match(C, /rap\.linii\.push\(liniaProbaA\(/);
-  const I = citeste("public", "index.html"); assert.equal((I.match(/v100\.299/g) || []).length >= 3, true, "index ×3"); assert.match(I, /<meta content="v100\.299" name="app-version"\/>/);
-  assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-299"/); assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.299"/);
-  const B = JSON.parse(citeste("BUILD_INFO.json")); assert.equal(B.version, "v100.299"); assert.match(B.badge, /v100\.299/); assert.equal(Object.keys(B.features)[0], "oraZilei299");
-  const P = JSON.parse(citeste("package.json")); assert.equal(P.version, "100.299.0"); assert.match(P.scripts.test, /test:v100299/); assert.equal(P.scripts["test:v100299"], "node scripts/proba-v100299.mjs");
+  /* v100.300 a relaxat pe „≥ 299” (ca v100.297 pe 296) */
+  const I = citeste("public", "index.html"); assert.equal((I.match(/v100\.(299|[3-9]\d\d)/g) || []).length >= 3, true, "index ×3"); assert.match(I, /<meta content="v100\.(299|[3-9]\d\d)" name="app-version"\/>/);
+  assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-(299|[3-9]\d\d)"/); assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.(299|[3-9]\d\d)"/);
+  const B = JSON.parse(citeste("BUILD_INFO.json")); assert.match(B.version, /^v100\.(299|[3-9]\d\d)$/); assert.match(B.badge, /v100\.(299|[3-9]\d\d)/); assert.ok(B.features.oraZilei299, "feature-ul oraZilei299 rămâne");
+  const P = JSON.parse(citeste("package.json")); assert.ok(Number(P.version.split(".")[1]) >= 299, "package.json sub 100.299"); assert.match(P.scripts.test, /test:v100299/); assert.equal(P.scripts["test:v100299"], "node scripts/proba-v100299.mjs");
 });
 
 console.log(`\n${teste - picate}/${teste} teste trecute`);
