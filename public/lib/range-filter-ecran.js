@@ -214,7 +214,8 @@ function rfDeseneaza() {
   var el = rfEl("rfPagina"); if (!el) return;
   var corp = rfEl("rfZonaCorp");
   if (!corp) { el.innerHTML = rfHtml(rfStare); return; }   // prima dată toată pagina; apoi doar zonele care se schimbă
-  var a = rfEl("rfZonaAntet"), f = rfEl("rfZonaFiltre"), r = rfEl("rfZonaCautaRez");
+  var a = rfEl("rfZonaAntet"), f = rfEl("rfZonaFiltre"), r = rfEl("rfZonaCautaRez"), b = rfEl("rfCautaBtn");
+  if (b) b.disabled = !!rfStare.cauta.inLucru;   // v100.303: zona căsuței nu se redesenează ⇒ starea butonului se pune aici (rămânea oprit după prima căutare)
   if (a) a.innerHTML = rfHtmlAntet(rfStare);
   if (f) f.innerHTML = rfHtmlFiltre(rfStare);
   if (r) r.innerHTML = rfHtmlCautaRez(rfStare);
