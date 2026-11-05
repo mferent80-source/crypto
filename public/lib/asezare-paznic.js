@@ -247,13 +247,24 @@
     if (!el) { el = document.createElement("section"); el.id = "pzAcum"; d.insertBefore(el, d.firstChild); }
     el.hidden = false;
     var todo = document.querySelector("#tbTodoLista > *"), fr = todo ? (todo.querySelector("b") || todo).textContent.trim() : "", bs = D.boti, s = D.s || {};
-    var stare = s.routeOk === false ? "Boții nu se pot citi acum (" + (s.eroare || "eroare") + ") — deschide Tabloul botului." : s.citireGoala ? "Citirea a venit goală: țin boții de dinainte." : s.routeOk !== true ? "Citesc boții…" : !bs.length ? "Niciun bot pornit acum." : "Deschide Tabloul botului pentru ce ai de făcut.";   // revizia I8
-    var h = '<div class="pzAcumGrila">' + celule() + '</div><p class="pzAcumFraza">' + esc(s.citireGoala ? stare : (fr || stare)) + '</p>'
+    var ult = typeof acUltimInchisText === "function" ? acUltimInchisText() : "";
+    var h = '<div class="pzAcumGrila">' + celule() + '</div><p class="pzAcumFraza">' + esc(frazaAcum(s, bs, fr, !!(todo && todo.classList && todo.classList.contains("tbTodoGol")), ult)) + '</p>'
       + (bs.length ? '<div class="pzCap"><b>Deschise acum · ' + bs.length + '</b></div>' + bs.map(function (b) {
         var t = nr(b.profitTotal);
         return '<button type="button" class="pzRandBot" data-pz-bot="' + esc(b.id) + '" data-pz-nav="tabloubot"><span><b>' + esc((b.baza || "").replace(".PERP", "")) + '</b> <small>' + esc((b.directie || "") + " " + b.levier + "×") + '</small></span>' + drumHtml(b, true) + '<b class="' + (t >= 0 ? "pzV" : "pzR") + '">' + semn(t) + '</b></button>';
       }).join("") : "");
     if (el._h !== h) { el.innerHTML = h; el._h = h; }
+  }
+
+  // v100.306 (auditul final 05.11): fraza de sub cifre. Rândul gol al listei Tabloului („Aștept botul…”, .tbTodoGol) nu mai câștigă în fața
+  // stării: fără boți spune „Niciun bot pornit acum” și ultimul închis (rămânea „Aștept botul…” la nesfârșit).
+  function frazaAcum(s, bs, fr, gol, ult) {
+    s = s || {}; bs = bs || [];
+    if (s.routeOk === false) return "Boții nu se pot citi acum (" + (s.eroare || "eroare") + ") — deschide Tabloul botului.";
+    if (s.citireGoala) return "Citirea a venit goală: țin boții de dinainte.";
+    if (s.routeOk !== true) return "Citesc boții…";
+    if (!bs.length) return "Niciun bot pornit acum" + (ult ? " · ultimul închis: " + ult : "") + ".";
+    return fr && !gol ? fr : "Deschide Tabloul botului pentru ce ai de făcut.";
   }
 
   // ---------- I-593: „Ce spune piața acum” pliat (rândurile cu BUTOANE rămân întregi: faptele la vedere) ----------
@@ -485,7 +496,8 @@
     var capSub = tx("#sugPagina .sugPanda .sugPandaCap .tbSub"), vechi = /veche/.test(capSub);
     var b = p.querySelector("b"), li = document.querySelector('#sugPagina .sugRand[data-grup="porn"]'), prim = li ? tx("b", li) : "";   /* v100.292: primul rând din lista „Pe ce aș porni un bot” */
     var verb = (b ? b.textContent : "").trim().toUpperCase() || "LĂȚIMEA PIEȚEI";
-    antet("pzV-sug", $("sugPagina"), { verb: verb.length > 28 ? verb.slice(0, 26) + "…" : verb, ton: "mut", titlu: (b ? "" : p.textContent.replace(/\s+/g, " ").trim()) + (vechi ? (b ? "" : " · ") + "lățimea e " + capSub.split("·")[0].trim() : ""), fac: prim ? "pe ce aș porni un bot: " + prim : "", din: "lățimea pieței pe 150 perp-uri (fapte, nu semnal) · „Pe ce aș porni un bot”" });
+    var an = typeof acAziNu === "function" ? acAziNu() : null, nu = !!(an && an.nu);   /* v100.306 (I-824): antetul nu mai zice „pe ce aș porni” sub frână / pauză / mișcare */
+    antet("pzV-sug", $("sugPagina"), { verb: verb.length > 28 ? verb.slice(0, 26) + "…" : verb, ton: "mut", titlu: (b ? "" : p.textContent.replace(/\s+/g, " ").trim()) + (vechi ? (b ? "" : " · ") + "lățimea e " + capSub.split("·")[0].trim() : ""), fac: nu ? "azi nu: " + an.motiv + (prim ? " · prima din listă: " + prim : "") : prim ? "pe ce aș porni un bot: " + prim : "", din: "lățimea pieței pe 150 perp-uri (fapte, nu semnal) · „Pe ce aș porni un bot”" });
   }
   // Market: cifrele „Breadth summary”, fără prag inventat
   function pagMarket() {

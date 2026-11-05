@@ -21,11 +21,14 @@ var ScorSezon = (function () {
   };
   function piataDin(p) { return PIETE[p] ? p : "pionex"; }
 
-  function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
+  function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : mii(String(Math.abs(k))) + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
+  // v100.306 (I-837): punctul miilor pe partea întreagă („−6.430,9 USDT”, „2.401 boți”)
+  function mii(s) { return String(s).replace(/\B(?=(\d{3})+(?!\d))/g, "."); }
+  function z1(v) { var p = Math.abs(v).toFixed(1).split("."); return mii(p[0]) + "," + p[1]; }
   function nr(v) { if (typeof v === "number") return isFinite(v) ? v : null; if (typeof v !== "string" || !v.trim()) return null; var x = Number(v.replace(",", ".")); return isFinite(x) ? x : null; }
   function esc(x) { return String(x == null ? "" : x).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
   // sumele cu O zecimală și virgulă (regula lui din 03.10); „+0,0” fără semn
-  function U(v, M) { if (v === null || v === undefined || !isFinite(v)) return "—"; var s = Math.abs(v).toFixed(1); return (Number(s) === 0 ? "" : v >= 0 ? "+" : "−") + s.replace(".", ",") + " " + (M || "USDT"); }
+  function U(v, M) { if (v === null || v === undefined || !isFinite(v)) return "—"; var s = Math.abs(v).toFixed(1); return (Number(s) === 0 ? "" : v >= 0 ? "+" : "−") + z1(v) + " " + (M || "USDT"); }
   // v100.272 (ideile auditului 29.10): procentul cu O zecimală, lipit („56,3%”, nu „56 %”) - regula lui din 03.10
   function pr(v) { return v === null || v === undefined || !isFinite(v) ? "—" : (v * 100).toFixed(1).replace(".", ",") + "%"; }
   // v100.259: intervalul Wilson (95%) pentru k din n - același ca GridCalcul.wilson
@@ -124,9 +127,9 @@ var ScorSezon = (function () {
     var l = Array.isArray(lista) ? lista : []; if (l.length < 2) return ""; var felCap = PIETE[piataDin(piata)].fel[1]; felCap = felCap.charAt(0).toUpperCase() + felCap.slice(1);
     var rows = l.slice().reverse().map(function (z) {
       var per = dataRo(z.start) + " → " + (z.sfarsit === null ? "acum" : dataRo(z.sfarsit - 1));
-      return "<tr" + (z.curent ? ' class="scIstAcum"' : "") + "><td>" + esc(per) + (z.curent ? " <b>· sezonul de acum" + (z.sfarsit !== null ? " (oprit)" : "") + "</b>" : "") + "</td><td data-et=\"boți:\">" + z.n + "</td><td data-et=\"win / loss:\"><span class=\"good\">" + z.win + "</span> / <span class=\"bad\">" + z.loss + "</span></td><td data-et=\"rata:\">" + esc(pr(z.rata)) + "</td><td data-et=\"net:\" class=\"" + (z.net === null || !(z.n >= 10) ? "" : z.net >= 0 ? "good" : "bad") + "\">" + esc(U(z.net, z.moneda)) + "</td><td data-et=\"pierderi la rând:\">" + z.seriePierderi + "</td></tr>";
+      return "<tr" + (z.curent ? ' class="scIstAcum"' : "") + "><td>" + esc(per) + (z.curent ? " <b>· sezonul de acum" + (z.sfarsit !== null ? " (oprit)" : "") + "</b>" : "") + "</td><td data-et=\"boți:\">" + z.n + "</td><td data-et=\"plus / minus:\"><span class=\"good\">" + z.win + "</span> / <span class=\"bad\">" + z.loss + "</span></td><td data-et=\"rata:\">" + esc(pr(z.rata)) + "</td><td data-et=\"net:\" class=\"" + (z.net === null || !(z.n >= 10) ? "" : z.net >= 0 ? "good" : "bad") + "\">" + esc(U(z.net, z.moneda)) + "</td><td data-et=\"pierderi la rând:\">" + z.seriePierderi + "</td></tr>";
     }).join("");
-    return '<div class="scIst"><h4>Sezoanele tale</h4><table class="scIstTab"><thead><tr><th>Perioada</th><th>' + esc(felCap) + '</th><th>Win / loss</th><th>Rata</th><th>Net</th><th>Pierderi la rând</th></tr></thead><tbody>' + rows + "</tbody></table></div>";
+    return '<div class="scIst"><h4>Sezoanele tale</h4><table class="scIstTab"><thead><tr><th>Perioada</th><th>' + esc(felCap) + '</th><th>Plus / minus</th><th>Rata</th><th>Net</th><th>Pierderi la rând</th></tr></thead><tbody>' + rows + "</tbody></table></div>";
   }
 
   // ---- v100.218 (ideea 2): ce anunță colectorul, pur - starea ține minte ce s-a anunțat (pauza pe ultimul bot, țintele pe sezon) ----
@@ -151,10 +154,12 @@ var ScorSezon = (function () {
     var serieCls = se.fel === "w" ? "good" : s.pauza ? "bad" : se.fel === "l" ? "neutral" : "";
     var serieSub = s.pauza ? "PAUZĂ: " + cate(ob.serie, "pierdere", "pierderi") + " la rând - nu porni alt " + fel[0] + " azi" : se.fel === "l" ? (ob.serie - se.n === 1 ? "încă una și e pauză" : "la " + ob.serie + " la rând e pauză") : se.fel === "w" ? "ține ritmul" : "primul " + P.felInchis[0] + " pornește seria";
     var subN = s.n === 0 ? "niciun " + P.felInchis[0] + " încă" : !s.suficient ? "sub 10: încă nu înseamnă nimic" : (s.piata === "t212" ? "destule ca să conteze" : "destui boți ca să conteze");
-    var cifre = cel("Win", s.win, "good", s.n ? Um(s.castigBrut) : P.felInchis[1] + " pe plus")
-      + cel("Loss", s.loss, "bad", s.n ? Um(s.pierdereBruta) : P.felInchis[1] + " pe minus")
+    // v100.306 (I-837): „Pe plus” / „Pe minus”, nu Win / Loss. (I-826) raport = câștigul mediu ÷ pierderea medie, deci o pierdere = 1 ÷ raport
+    // câștiguri (până la v100.305 scria raportul însuși: „0,3” în loc de „3,0”)
+    var cifre = cel("Pe plus", s.win, "good", s.n ? Um(s.castigBrut) : P.felInchis[1] + " pe plus")
+      + cel("Pe minus", s.loss, "bad", s.n ? Um(s.pierdereBruta) : P.felInchis[1] + " pe minus")
       + cel("Rata de câștig", pr(s.rata), s.nivel === "bine" ? "good" : s.nivel === "atentie" ? "neutral" : s.nivel === "rau" ? "bad" : "", "ținta " + pr(ob.rata) + " · " + subN)
-      + cel("Net", Um(s.net), !s.suficient || s.net === null || Math.round(s.net * 10) === 0 ? "" : s.net > 0 ? "good" : "bad", s.raport !== null ? "o pierdere = " + s.raport.toFixed(1).replace(".", ",") + " câștiguri" + (s.raport < 1 ? " - pierzi mai mult decât câștigi" : "") : (s.piata === "t212" ? "după comisioanele de conversie" : "după comisioane și funding"), true)
+      + cel("Net", Um(s.net), !s.suficient || s.net === null || Math.round(s.net * 10) === 0 ? "" : s.net > 0 ? "good" : "bad", s.raport !== null && s.raport > 0 ? "o pierdere = " + z1(1 / s.raport) + " câștiguri" + (s.raport < 1 ? " - pierzi mai mult decât câștigi" : "") : (s.piata === "t212" ? "după comisioanele de conversie" : "după comisioane și funding"), true)
       + cel("Seria", serieTxt, serieCls, serieSub);
     var b = s.inainte, inTxt;
     if (b.n) {

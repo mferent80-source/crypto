@@ -114,9 +114,11 @@ function rfTexte(c, z) {
   var dovR = d.n === 0 ? "niciun semnal încheiat încă" : d.n < RangeFilter.MIN_EP ? TextRo.cate(d.n, "caz", "cazuri") + " · PUȚINE CAZURI" + (c.n < 900 && !c.doar500 ? " · pornește „DOVADA pe 1.000 de bare”" : "")
     : TextRo.cate(d.n, "caz", "cazuri") + " · marginea de jos " + rfNr(lo, 0) + " · " + (dov ? "DOVEDIT" : "NEDOVEDIT") + (z > 1.97 ? " (corectat pe " + TextRo.cate(rfZMonede, "monedă", "monede") + ")" : "");
   var ma = c.ma, maTxt = ma.col > 0 ? "VERDE" : ma.col < 0 ? "ROȘU" : "NEUTRU", maR = ma.aliniata ? "aliniată cu RF · în probă n-a ajutat (47% față de 50%)" : ma.col === 0 ? "neutră" : "contra RF";
+  // v100.306 (I-836, auditul final 05.11): RF e un colorant de trend NEDOVEDIT (proba din 04.11) ⇒ cartela, TRIGGER și SEMNAL fără verde / roșu de
+  // verdict („SEMNAL SELL” roșu sub „nedovedit” se citea ca un sfat); rândurile care descriu (LOC, REGIM, MA) își păstrează culorile
   return {
-    verdict: verdict, ton: c.dir === 1 ? "sus" : c.dir === -1 ? "jos" : "fara",
-    trigger: trig, triggerTon: c.semnalAcum ? (c.costNu ? "atentie" : buy ? "sus" : "jos") : "fara", triggerR: trigR,
+    verdict: verdict, ton: "fara",
+    trigger: trig, triggerTon: c.semnalAcum && c.costNu ? "atentie" : "fara", triggerR: trigR,
     ceFac: ceFac,
     loc: (c.distAtr == null ? "—" : (c.distAtr >= 0 ? "+" : "") + rfNr(c.distAtr) + " ATR"),
     // v100.302: direcția se întoarce abia la banda OPUSĂ (filtru ∓ r), nu la filtru ⇒ „flip la X ATR” (fraza veche lega flip-ul de filtru: falsă)
@@ -134,7 +136,7 @@ function rfTexte(c, z) {
     dupaCostR: !dc || !dc.n ? "niciun semnal încheiat care să treacă de cost" : "ultimele: " + dc.ultime.map(rfR).join(" · "),
     // revizia Opus: fără verde / roșu - pe 30 de monede jumătate ar ieși „verzi” din noroc, lângă DOVADA care cere Wilson + Bonferroni
     dupaCostTon: dc && dc.n && dc.nTot < RangeFilter.MIN_EP ? "atentie" : "fara",
-    semnal: c.semnal ? c.semnal.fel + (c.semnal.acum === 0 ? " pe ultima bară închisă" : " acum " + TextRo.cate(c.semnal.acum, "bară", "bare")) : "-", semnalR: c.semnal ? "la " + rfPret(c.semnal.pret) : "", semnalTon: c.semnal ? (c.semnal.fel === "BUY" ? "sus" : "jos") : "fara",
+    semnal: c.semnal ? c.semnal.fel + (c.semnal.acum === 0 ? " pe ultima bară închisă" : " acum " + TextRo.cate(c.semnal.acum, "bară", "bare")) : "-", semnalR: c.semnal ? "la " + rfPret(c.semnal.pret) : "", semnalTon: "fara",
     detalii: "semnale " + rfNr(c.sigPer100) + " / 100 de bare (proba: 2,45) · ținere mediană " + (c.tinere == null ? "—" : TextRo.cate(Math.round(c.tinere), "bară", "bare")) + " (proba: 34) · whipsaw " + (c.whipPct == null ? "—" : TextRo.pct(c.whipPct, 1)) + " (proba: 1%)" + " · " + TextRo.cate(c.n, "bară închisă", "bare închise") + (c.doar500 ? " · a doua pagină n-a venit: doar primele 500" : "")
   };
 }
@@ -148,7 +150,7 @@ function rfCartela(m, z) {
   h += '<div class="rfCardCap"><b class="rfSimbol">' + rfEsc(m.simbol) + "</b>" + eticheta + (rfProaspat(m) ? '<span class="rfEticheta rfProaspatEt">semnal nou</span>' : "") + '<span class="rfMut rfMic">' + (m.c && m.c.pret ? rfPret(m.c.pret) + " USDT" + (m.fel === "cautata" && !/_PERP$/.test(m.pionex || "") ? " · spot" : "") : "") + "</span></div>";
   if (m.eroare || !m.c || m.c.eroare) { h += '<p class="rfMut">' + rfEsc(m.eroare || (m.c && m.c.eroare) || "fără date") + "</p></article>"; return h; }
   var c = m.c, t = rfTexte(c, z), prag = TextRo.pct(2 * c.cost * 100, 2);
-  h += '<div class="rfHero rfHero-' + t.ton + '">' + rfEsc(t.verdict) + "</div>";
+  h += '<div class="rfHero rfHero-' + t.ton + '"><span class="rfColorant">colorant de trend (nedovedit)</span>' + rfEsc(t.verdict) + "</div>";
   h += rfRand("TRIGGER", null, t.trigger, t.triggerTon, t.triggerR, "SEMNAL doar pe bara închisă; NU TRECE când stopul la filtru nu acoperă de două ori costul (prag " + prag + ").");
   h += '<div class="rfRand"><span class="rfEt">CE FAC?</span><span class="rfBara rfGol" aria-hidden="true"></span><span class="rfCe">' + rfEsc(t.ceFac) + "</span></div>";
   h += rfRand("LOC", rfBara(c.distAtr, 2), t.loc, t.locTon, t.locR, "Distanța de la close la filtru, în ATR(14). Filtrul e stopul (invalidarea semnalului); direcția se întoarce abia când close trece de banda opusă (filtru ∓ r): „flip la X ATR”.");
@@ -170,7 +172,10 @@ function rfRezumat(monede) {
   var proaspete = ok.filter(rfProaspat).map(function (m) { return m.simbol + " " + m.c.semnal.fel; });
   var cons = ok.filter(function (m) { return m.c.regim.cons; }).length;
   var contra = ok.filter(function (m) { return m.fel === "bot" && m.directie && ((m.c.dir === 1 && m.directie === "SHORT") || (m.c.dir === -1 && m.directie === "LONG")); }).map(function (m) { return m.simbol + " (" + m.directie.toLowerCase() + ", RF " + (m.c.dir === 1 ? "sus" : "jos") + ")"; });
-  var t = "Acum: " + sus + " din " + ok.length + " în trend sus, " + jos + " în trend jos, " + cons + " în consolidare.";
+  // v100.306 (I-836): consolidarea se suprapune cu trendul (o monedă e și „jos”, și „în consolidare”) ⇒ „0 din 20 sus, 20 jos, 2 în consolidare”
+  // adunau 22 din 20; acum consolidarea e spusă ca parte din ele, iar cele fără direcție se numără separat
+  var fara = ok.length - sus - jos, nr = function (n) { return n ? String(n) : "niciuna"; };
+  var t = "Din " + TextRo.cate(ok.length, "monedă", "monede") + ": " + nr(sus) + " în trend sus, " + nr(jos) + " în trend jos" + (fara > 0 ? ", " + fara + " fără direcție" : "") + (cons ? "; " + (cons === 1 ? "una" : cons) + " dintre ele în consolidare" : "") + ".";
   if (proaspete.length) t += " Semnale din ultimele " + TextRo.cate(RF_PROASPAT, "bară", "bare") + ": " + proaspete.join(", ") + ".";
   t += contra.length ? " Contra boților tăi: " + contra.join(", ") + " (RF e nedovedit: de privit, nu de închis botul)." : (ok.some(function (m) { return m.fel === "bot" && m.directie; }) ? " Niciun bot de-al tău contra direcției RF." : "");
   return '<p class="rfRezumat">' + rfEsc(t) + "</p>";

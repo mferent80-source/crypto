@@ -31,7 +31,7 @@ const act = citeste("public", "lib", "actiuni-semnale.js");
 const col = citeste("scripts", "colector.mjs");
 
 await test("Piața azi: doar netul e mare, propoziția e 28 px, telefonul alege o piață", () => {
-  const cifre = ss.slice(ss.indexOf('var cifre = cel("Win"'), ss.indexOf('+ cel("Seria"'));
+  const cifre = ss.slice(ss.indexOf('var cifre = cel("Pe plus"'), ss.indexOf('+ cel("Seria"'));   /* v100.306 (I-837): „Pe plus”, nu „Win” */
   assert.equal((cifre.match(/, true\)/g) || []).length, 1);
   assert.match(cifre, /cel\("Net"/);
   assert.match(css, /#acasa \.scVal\{font-size:15px/);

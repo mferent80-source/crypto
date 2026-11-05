@@ -107,7 +107,7 @@ await test("(5) așezarea, pur: proza → rânduri etichetă–cifră (valorile 
   /* revizia Opus I4: verdictul ținut doar pentru ACELAȘI bot și cel mult 2 h */
   assert.equal(A.verdictValid({ botId: "1", verb: "ATENȚIE", la: T - 3600000 }, "1", T), true); assert.equal(A.verdictValid({ botId: "1", verb: "ATENȚIE", la: T - 3 * 3600000 }, "1", T), false); assert.equal(A.verdictValid({ botId: "2", verb: "ATENȚIE", la: T }, "1", T), false);
   assert.match(AS, /if \(!b \|\| !sem\) \{ if \(el\) \{ el\.hidden = true;/, "fără bot / ruta picată: verdictul de dinainte nu rămâne la vedere");
-  assert.match(AS, /routeOk === false \? "Boții nu se pot citi acum/, "„Niciun bot pornit” doar când ruta a răspuns (revizia I8)");
+  assert.match(AS, /if \(s\.routeOk === false\) return "Boții nu se pot citi acum/, "„Niciun bot pornit” doar când ruta a răspuns (revizia I8)");
   assert.doesNotMatch(AS, /body\.innerText/, "fără innerText pe tot corpul la 1,5 s (revizia I10)");
   assert.doesNotMatch(A.randuriKv('<img src=x onerror=1> 5 USDT'), /<img/, "escapat");
   assert.equal(A.ancora(5), "transform:translateX(-6px);"); assert.equal(A.ancora(95), "transform:translateX(calc(-100% + 6px));"); assert.equal(A.ancora(50), "");

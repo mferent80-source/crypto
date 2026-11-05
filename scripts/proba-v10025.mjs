@@ -197,8 +197,8 @@ await test("nota statisticii spune de unde vin botii: toata istoria / colectorul
   let t = ctx.n("crypto", {}); assert.match(t, /toată istoria Pionex/); assert.match(t, /inclusiv 1 spot grid și 1 smart copy/);   // v100.27: intra in socoteala
   assert.doesNotMatch(t, /doar ultimii/);
   ctx.jtArhiva = { sursa: "acasa", complet: false }; t = ctx.n("crypto", {}); assert.match(t, /colectorul încă strânge istoria/);
-  ctx.jtArhiva = { sursa: "pagina", complet: false }; t = ctx.n("crypto", {}); assert.match(t, /doar ultimii 2200 de boți/); assert.match(t, /de acasă/);   /* v100.74: „2200 de boți” (TextRo.cate) */
-  t = ctx.n("tot", { lpu: 4.65 }); assert.match(t, /4,65 lei/); assert.match(t, /doar ultimii 2200 de boți/);
+  ctx.jtArhiva = { sursa: "pagina", complet: false }; t = ctx.n("crypto", {}); assert.match(t, /doar ultimii 2\.200 de boți/); assert.match(t, /de acasă/);   /* v100.74: „2200 de boți” (TextRo.cate); v100.306 (I-837): cu punctul miilor */
+  t = ctx.n("tot", { lpu: 4.65 }); assert.match(t, /4,65 lei/); assert.match(t, /doar ultimii 2\.200 de boți/);
 });
 
 await test("lista de boti din Jurnal: pe bucati (cate 30, „Arată încă”), nu 2200 de carduri odata", () => {

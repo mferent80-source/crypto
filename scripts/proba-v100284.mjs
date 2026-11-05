@@ -72,8 +72,8 @@ await test("mesajul: titlul cu săptămâna, boți și T212 separat, fiecare per
   assert.ok(r.includes("Boții Pionex, netul după comisioane și funding:"));
   assert.ok(r.includes("• săptămâna 26.10–01.11: 68 de boți, net −135,3 USDT (41% pe plus)"), m.mesaj);
   assert.ok(r.includes("• noiembrie: niciun bot închis"), m.mesaj);
-  assert.ok(r.includes("• 2026: 2100 de boți, net −5.900,1 USDT (56% pe plus)"), m.mesaj);
-  assert.ok(r.includes("• total, de la 21.12.2025: 2449 de boți, net −6.651,3 USDT (56% pe plus)"), m.mesaj);
+  assert.ok(r.includes("• 2026: 2.100 de boți, net −5.900,1 USDT (56% pe plus)"), m.mesaj);
+  assert.ok(r.includes("• total, de la 21.12.2025: 2.449 de boți, net −6.651,3 USDT (56% pe plus)"), m.mesaj);
   assert.ok(r.includes("Trading 212, trade-urile închise, după comisioane:"));
   assert.ok(r.includes("• săptămâna 26.10–01.11: niciun trade închis"), m.mesaj);
   assert.ok(r.includes("• noiembrie: 2 trade-uri, net +45,2 lei (50% pe plus)"), m.mesaj);

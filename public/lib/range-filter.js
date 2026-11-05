@@ -120,11 +120,11 @@ var RangeFilter = (function () {
     var dHit = dN > 0 ? dK / dN * 100 : null, dLo = dN > 0 ? wilsonLo(dK, dN) * 100 : null;
     var distPct = c[L] > 0 ? Math.abs(c[L] - filt) / c[L] : null;
     var semnalAcum = lastSigI === L;
-    var tr = { fel: "asteapta", text: "ASTEAPTA" };
+    var tr = { fel: "asteapta", text: "AȘTEAPTĂ" };   /* v100.306 (I-837): cu diacritice */
     if (semnalAcum && lastSide > 0) tr = { fel: "long", text: "GO LONG ACUM" };
     else if (semnalAcum && lastSide < 0) tr = { fel: "short", text: "GO SHORT ACUM" };
-    else if (dir === 1) tr = { fel: "asteapta", text: "ASTEAPTA · long activ" };
-    else if (dir === -1) tr = { fel: "asteapta", text: "ASTEAPTA · short activ" };
+    else if (dir === 1) tr = { fel: "asteapta", text: "AȘTEAPTĂ · long activ" };
+    else if (dir === -1) tr = { fel: "asteapta", text: "AȘTEAPTĂ · short activ" };
     var costNu = distPct != null && distPct < 2 * cost;
     return {
       n: n, pret: c[L], t: bare[L].t, dir: dir, bareDir: bareDir, filt: filt, r: r, atr: atrL,

@@ -86,23 +86,30 @@ function sugMis(rg) { rg = rg || {}; var s = rg.s24h != null && isFinite(rg.s24h
 // regula revenirii pe acțiuni, din Reveniri.REGULI.actiune (cifrele textelor nu se scriu de mână; rezerva = valorile de azi)
 function sugRegRev(R) { var a = R && R.REGULI && R.REGULI.actiune || {}, d = { cadere: 0.2, revenire: 0.08, maxZile: 60, minZile: 20, vechimeZile: 3, medieZile: 5, orizontZile: 10 }, o = {}, k; for (k in d) o[k] = a[k] > 0 ? a[k] : d[k]; return o; }
 function sugMil(v) { return v == null || !isFinite(v) ? "—" : (v / 1e6).toFixed(1).replace(".", ",") + " M USDT/zi"; }
-function sugUsd(v) { return v == null || !isFinite(v) ? "—" : "$" + Number(v).toFixed(2); }
+function sugUsd(v) { return v == null || !isFinite(v) ? "—" : "$" + Number(v).toFixed(2).replace(".", ","); }   /* v100.306 (I-837): virgula zecimală („$4,22”), prețul își păstrează cele două zecimale */
 function sugPretEU(v) { return v == null || !isFinite(v) ? "—" : Number(v).toFixed(2).replace(".", ","); }   // v100.292 (revizia 01.11): EU = moneda bursei (EUR, GBp…), fără „$”
 function sugScurt(s) { return String(s || "").replace(/_USDT_PERP$/, ""); }
 function sugCurat(s) { return String(s || "").replace(/[^A-Za-z0-9._-]/g, ""); }
 function sugDirPanda(d, s) { var m = d && d.latime && d.latime.acum && d.latime.acum.monede || [], x = null; for (var i = 0; i < m.length; i++) if (String(m[i].sym).replace(/USDT$/, "") === s) { x = m[i]; break; } return x ? { dir: x.dir, zile: x.zileDir } : null; }
-// grupurile paginii (titlul, verdictul, rândul de sub titlu) - pauza sezonului golește pornirea și spune de ce
+// v100.306 (I-824): regula „azi nu” a paginii = cea comună (acasa-ecran.js: acAziNu - frâna zilei, pauza, piața în MIȘCARE); fără ea (probele
+// vechi, în vm) doar pauza sezonului. Lista de pornire rămâne la vedere sub „azi nu: <motivul>”, nu se mai golește.
+function sugAziNu() {
+  if (typeof acAziNu === "function") { try { return acAziNu() || { nu: false, motiv: "" }; } catch (e) { return { nu: false, motiv: "" }; } }
+  var pz = typeof acPauzaSezon === "function" ? acPauzaSezon() : null;
+  return pz > 0 ? { nu: true, motiv: typeof acFrazaPauza === "function" ? acFrazaPauza(pz) : "pauza sezonului", motive: [{ cod: "pauza" }] } : { nu: false, motiv: "" };
+}
+// grupurile paginii (titlul, verdictul, rândul de sub titlu) - sub „azi nu” titlul pornirii pierde tonul de sfat și spune de ce
 function sugGrupuri(d, acum) {
-  d = d || {}; var pzS = typeof acPauzaSezon === "function" ? acPauzaSezon() : null, porn = typeof Idei !== "undefined" && d.clasament ? Idei.ideiBoti(d.clasament, [], 5) : [];
+  d = d || {}; var an = sugAziNu(), porn = typeof Idei !== "undefined" && d.clasament ? Idei.ideiBoti(d.clasament, [], 5) : [];
   var sa = d.sugActiuni && d.sugActiuni.sugestii, ai = d.idei && d.idei.idei, eu = sa && sa.eu, S = d.sectoare, T = d.trend12, bl = T && T.bilant, conc = T && T.concentrare;
   var jud = function (x) { return x ? sugCate(Number(x.judecate) || 0, "acțiune judecată", "acțiuni judecate") + (Number(x.fara) ? ", " + Number(x.fara) + " fără prețuri" : "") : ""; };   // numărătoarea turei de la 8:00, ca pe titlul vechi al secțiunii
-  var sub = { porn: pzS > 0 ? (typeof acFrazaPauza === "function" ? acFrazaPauza(pzS) : "pauza sezonului") : (d.clasament ? porn.length + " din clasamentul primelor 100 de monede PERP · un filtru, nu o predicție" : "aștept clasamentul (colectorul îl face o dată pe oră)"),
+  var sub = { porn: (an.nu ? "azi nu: " + an.motiv + " · " : "") + (d.clasament ? porn.length + " din clasamentul primelor 100 de monede PERP · un filtru, nu o predicție" : "aștept clasamentul (colectorul îl face o dată pe oră)"),
     revUS: "au scăzut puternic și acum revin" + (ai ? " · " + (ai.reveniri || []).length + " din " + sugCate(Number(ai.judecate) || 0, "acțiune judecată", "acțiuni judecate") + " la 8:00 · cel mult 10 pe zi, cea mai mare cădere întâi" + (Number(ai.nReveniri) > (ai.reveniri || []).length ? " (trec regula: " + Number(ai.nReveniri) + ")" : "") : " · aștept tura de la 8:00"),
     revEU: "au scăzut puternic și acum revin" + (eu ? " · " + (eu.revine || []).length + " pe revenire · cel mult 10 pe zi, cea mai mare cădere întâi" : " · aștept tura de la 8:00"),
     sect: S && Array.isArray(S.sectoare) ? sugCate(S.sectoare.length, "sector", "sectoare") + " · " + (S.univers || "—") + " firme mari · o dată pe zi, de la 8:00" + (S.sectoare.some(function (x) { return !(x.top || []).length; }) ? " · nicio acțiune mare cu trend în sus acum în: " + S.sectoare.filter(function (x) { return !(x.top || []).length; }).map(function (x) { return x.ro; }).join(", ") : "") : "Topul se face o dată pe zi, de la 8:00 (după închiderea bursei din SUA), din screenerul Nasdaq: cele mai mari ~25 de firme din fiecare sector, cu prețurile pe 2 ani.",
     trend: T && Array.isArray(T.top) && T.top.length ? sugTrendNota(T, acum).text : "Clasamentul vine o dată pe zi (după 8:00) de la robotul din Trading Tools: primele 20% dintre ~600 de acțiuni SUA de peste 2 mld. $ după randamentul pe lunile 2–12." };
   var trendV = T && Array.isArray(T.top) && T.top.length ? sugTrendNota(T, acum).vechiHtml : "";
-  var titlu = { revEU: eu ? "📈 Acțiuni EU (DAX, CAC, AEX + ale tale) · " + jud(eu) + " · 🔁 Pe revenire" : null };   // v100.293 (02.11): fără numărătoarea turei sugActiuni.us pe titlul US - listele ei (urcare, revers, gap) au fost scoase pe 01.11; lista de revenire vine din tura Idei, iar numărătoarea ei e sub titlu
+  var titlu = { porn: an.nu ? "🤖 Boți · candidatele din clasament (azi nu pornesc)" : null, revEU: eu ? "📈 Acțiuni EU (DAX, CAC, AEX + ale tale) · " + jud(eu) + " · 🔁 Pe revenire" : null };   // v100.293 (02.11): fără numărătoarea turei sugActiuni.us pe titlul US - listele ei (urcare, revers, gap) au fost scoase pe 01.11; lista de revenire vine din tura Idei, iar numărătoarea ei e sub titlu
   return SUG_GRUPURI.map(function (g) { return { k: g[0], titlu: titlu[g[0]] || g[1], verdict: SUG_VERDICT[g[0]][0], verdictC: "sugVerdict-" + SUG_VERDICT[g[0]][1], sub: sub[g[0]], subHtml: g[0] === "trend" && trendV ? trendV + sugEsc(sub[g[0]]) : "" }; });
 }
 function sugTrendProba(T) { var bl = T && T.bilant || {}, conc = T && T.concentrare; return "proba: " + sugCate(bl.n20 || 0, "zi", "zile") + " cu rezultat" + (conc ? " · " + conc.n + " din 20 în " + conc.sector + ": un singur pariu" : ""); }
@@ -121,10 +128,11 @@ function sugTrendNota(x, acum) {
 }
 // toate rândurile, în ordinea paginii; fiecare știe lista lui, cifrele regulii și avertismentele („Înainte să intri”)
 function sugRanduri(d, acum) {
-  d = d || {}; var l = [], pzS = typeof acPauzaSezon === "function" ? acPauzaSezon() : null;
-  var porn = pzS > 0 || typeof Idei === "undefined" || !d.clasament ? [] : Idei.ideiBoti(d.clasament, [], 5);
+  d = d || {}; var l = [], an = sugAziNu();
+  var porn = typeof Idei === "undefined" || !d.clasament ? [] : Idei.ideiBoti(d.clasament, [], 5);   /* v100.306 (I-824): nici pauza nu mai golește lista */
   porn.forEach(function (x) {
     var s = sugScurt(x.simbol || x.moneda), pd = sugDirPanda(d, s), D = SUG_DIR[x.dir] ? x.dir : null, av = [], rg = x.regim || {};
+    if (an.nu) av.push("Azi nu: " + an.motiv + ". Lista e de privit, nu de pornit.");
     if (x.volum != null && x.volum < 1e6) av.push("Lichiditate mică: " + sugMil(x.volum) + ", sub pragul de 1 M. La un grid, ordinele tale sunt o parte vizibilă din piață: alunecare și umpleri parțiale.");
     if (pd && ((x.dir === "short" && pd.dir === "SUS") || (x.dir === "long" && pd.dir === "JOS"))) av.push("Direcțiile nu se pun de acord: pe 4h+1z trendul e " + x.dir + ", pe 84 de zile moneda e " + pd.dir + (pd.zile != null ? " de " + sugCate(pd.zile, "zi", "zile") : "") + ". Botul s-ar înclina contra mișcării lungi.");
     // v100.293 (02.11): mr = mișcarea de azi pe 24 h / pragul ei de „mișcare mare” (GridCalcul.miscareMare(...).r; pragul = percentila 90 a mișcărilor
@@ -132,7 +140,7 @@ function sugRanduri(d, acum) {
     // obișnuit - cu un procent, iar pragul nu ajungea pe pagină: avertismentul nu putea apărea.
     var mr = rg.mr, s24 = rg.s24h;
     if (mr != null && isFinite(mr) && mr >= 0.8 && !rg.miscare) av.push(s24 != null && isFinite(s24) && mr > 0 ? "Pe 24 h s-a mișcat " + sugPctZ(s24) + ": aproape de pragul ei de „mișcare mare” (" + sugPr(Math.abs(s24) / mr) + ", percentila 90 a mișcărilor ei pe o zi)." : "Mișcarea pe 24 h e la " + Math.round(mr * 100) + "% din pragul ei de „mișcare mare” (percentila 90 a mișcărilor ei pe o zi).");
-    l.push({ k: "porn:" + s, grup: "porn", tip: "moneda", s: s, tk: s + "_USDT_PERP", nume: "", dir: D ? "4h+1z " + SUG_DIR[D] + (SUG_TARIE[x.tarie] ? " · " + SUG_TARIE[x.tarie] : "") : "", dirC: D || "", pret: sugPandaPret(x.pret), avert: av, x: x, pd: pd,
+    l.push({ k: "porn:" + s, grup: "porn", tip: "moneda", aziNu: !!an.nu, s: s, tk: s + "_USDT_PERP", nume: "", dir: D ? "4h+1z " + SUG_DIR[D] + (SUG_TARIE[x.tarie] ? " · " + SUG_TARIE[x.tarie] : "") : "", dirC: D || "", pret: sugPandaPret(x.pret), avert: av, x: x, pd: pd,
       sub: "interval " + sugPr(x.latime) + " · " + sugPr(x.profitGrila, 2) + " net pe grilă · ~" + Math.round(x.traversariZi || 0) + " treceri pe zi · " + sugMil(x.volum) + (pd ? " · 84 z " + pd.dir : "") });
   });
   var ai = d.idei && d.idei.idei, eu = d.sugActiuni && d.sugActiuni.sugestii && d.sugActiuni.sugestii.eu;
@@ -142,7 +150,7 @@ function sugRanduri(d, acum) {
     if (x.cadere >= 0.8) av.push("Cădere de " + sugPctZ(-x.cadere, 0) + " de la maxim: o firmă în pericol, nu o corecție.");
     av.push("Istoricul paginii intră la închiderea zilei semnalului și nu scade costul: cifrele lui sunt mai bune decât ce prinzi la deschiderea de după.");
     l.push({ k: "rev" + piata + ":" + s, grup: "rev" + piata, tip: "actiune", s: s, tk: x.ticker || s + "_US_EQ", nume: piata === "EU" ? "EU" : "", dir: "revine", dirC: "neutru", pret: P(x.pret), avert: av, x: x,
-      sub: sugPctZ(-x.cadere, 0) + " de la maxim, revine · " + sugPctZ(x.deLaMin, 0) + " de la minim" + (x.zileDeLaMin != null ? " (" + x.zileDeLaMin + " z)" : "") + " · stop " + P(x.stop) + " · țintă " + P(x.tinta) + (ist ? " · " + sugCate(ist.n, "trade al tău", "trade-uri ale tale") + ", " + ist.pePlus + " pe plus, " + (ist.total >= 0 ? "+" : "−") + Math.abs(Math.round(ist.total)) + " lei" : "") });
+      sub: sugPctZ(-x.cadere, 0) + " de la maxim, revine · " + sugPctZ(x.deLaMin, 0) + " de la minim" + (x.zileDeLaMin != null ? " (" + x.zileDeLaMin + " z)" : "") + " · stop " + P(x.stop) + " · țintă " + P(x.tinta) + (ist ? " · " + sugCate(ist.n, "trade al tău", "trade-uri ale tale") + ", " + ist.pePlus + " pe plus, " + (typeof TextRo !== "undefined" && TextRo.lei ? TextRo.lei(ist.total, true) : (ist.total >= 0 ? "+" : "−") + Math.abs(Math.round(ist.total)) + " lei") : "") });
   };
   (ai && Array.isArray(ai.reveniri) ? ai.reveniri : []).forEach(function (x) { rev(x, "US"); });
   (eu && Array.isArray(eu.revine) ? eu.revine : []).forEach(function (x) { rev(x, "EU"); });
@@ -187,7 +195,7 @@ function sugFisa(r, d, acum) {
   } else if (r.grup === "revUS" || r.grup === "revEU") {
     var ai = d.idei && d.idei.idei, eu = d.sugActiuni && d.sugActiuni.sugestii && d.sugActiuni.sugestii.eu, ist = x.istoric, P = r.grup === "revEU" ? sugPretEU : sugUsd, RA = sugRegRev(R);
     f.pretNota = r.grup === "revEU" ? "închiderea de ieri (Yahoo), în moneda bursei" : "închiderea de ieri (Yahoo)";
-    f.cele = [{ et: "De la maxim", v: sugPctZ(-x.cadere, 0), sub: "pe 60 de zile de bursă" }, { et: "De la minim", v: sugPctZ(x.deLaMin, 0), sub: x.zileDeLaMin != null ? "în " + sugCate(x.zileDeLaMin, "zi", "zile") : "" }, { et: "Stop propus", v: P(x.stop), sub: (x.pret > 0 ? sugPctZ(x.stop / x.pret - 1) + " de acum · " : "") + "1% sub minimul pe " + sugCate(RA.minZile, "zi", "zile") }, { et: "Țintă", v: P(x.tinta), sub: (x.pret > 0 ? sugPctZ(x.tinta / x.pret - 1) + " · " : "") + "vechiul maxim pe " + sugCate(RA.maxZile, "zi", "zile") + ", nu o prognoză" }].concat(ist ? [{ et: "Istoricul tău", v: sugCate(ist.n, "trade", "trade-uri"), sub: ist.pePlus + " pe plus · " + (ist.total >= 0 ? "+" : "−") + Math.abs(Math.round(ist.total)) + " lei" }] : []);
+    f.cele = [{ et: "De la maxim", v: sugPctZ(-x.cadere, 0), sub: "pe 60 de zile de bursă" }, { et: "De la minim", v: sugPctZ(x.deLaMin, 0), sub: x.zileDeLaMin != null ? "în " + sugCate(x.zileDeLaMin, "zi", "zile") : "" }, { et: "Stop propus", v: P(x.stop), sub: (x.pret > 0 ? sugPctZ(x.stop / x.pret - 1) + " de acum · " : "") + "1% sub minimul pe " + sugCate(RA.minZile, "zi", "zile") }, { et: "Țintă", v: P(x.tinta), sub: (x.pret > 0 ? sugPctZ(x.tinta / x.pret - 1) + " · " : "") + "vechiul maxim pe " + sugCate(RA.maxZile, "zi", "zile") + ", nu o prognoză" }].concat(ist ? [{ et: "Istoricul tău", v: sugCate(ist.n, "trade", "trade-uri"), sub: ist.pePlus + " pe plus · " + (typeof TextRo !== "undefined" && TextRo.lei ? TextRo.lei(ist.total, true) : (ist.total >= 0 ? "+" : "−") + Math.abs(Math.round(ist.total)) + " lei") }] : []);
     f.motiv = "A scăzut " + sugPctZ(-x.cadere, 0) + " de la maximul pe 60 de zile de bursă și a urcat " + sugPctZ(x.deLaMin, 0) + " de la minim: prima revenire după cădere.";
     // v100.293 (02.11): regula întreagă - condițiile din reveniri.js (vechimea minimului, media pe 5 zile) + tăietura turelor (tura-idei, tura-sugestii-actiuni: cel mult 10)
     f.regula = "Regula (reveniri.js): cădere de cel puțin " + Math.round(RA.cadere * 100) + "% de la maximul pe " + sugCate(RA.maxZile, "zi", "zile") + " de bursă, apoi prețul urcat cu cel puțin " + Math.round(RA.revenire * 100) + "% de la minimul pe " + sugCate(RA.minZile, "zi", "zile") + "."
@@ -281,7 +289,7 @@ function sugListaHtml(d, acum) {
     h += '<h4 class="sugGrup">' + sugEsc(gr.titlu) + ' <span class="sugVerdict ' + gr.verdictC + '">' + gr.verdict + '</span><span class="tbSub">' + (gr.subHtml || sugEsc(gr.sub)) + '</span></h4>';
     l.filter(function (r) { return r.grup === gr.k; }).forEach(function (r) {
       var e = ales && r.k === ales.k;
-      h += '<button type="button" class="sugRand' + (e ? ' ales' : '') + '" id="sugR-' + sugEsc(r.k) + '" data-grup="' + r.grup + '" aria-pressed="' + e + '" data-action-click="sugAlege(\'' + sugEsc(r.k) + '\')">'
+      h += '<button type="button" class="sugRand' + (r.aziNu ? ' sugAziNu' : '') + (e ? ' ales' : '') + '" id="sugR-' + sugEsc(r.k) + '" data-grup="' + r.grup + '" aria-pressed="' + e + '" data-action-click="sugAlege(\'' + sugEsc(r.k) + '\')">'
         + '<span class="sugRandSim"><b>' + sugEsc(r.s) + '</b>' + (r.nume ? ' <span class="tbSub">' + sugEsc(r.nume) + '</span>' : '') + (r.dir ? ' <span class="sugDir ' + sugEsc(r.dirC) + '">' + sugEsc(r.dir) + '</span>' : '') + '</span><span class="sugRandPret">' + sugEsc(r.pret) + '</span>'
         + '<span class="sugRandSub tbSub">' + sugEsc(r.sub) + (r.avert.length ? ' <span class="sugAv">⚠ ' + r.avert.length + '</span>' : '') + '</span></button>';
       if (e) h += sugFisaHtml(f, r);
@@ -483,6 +491,7 @@ async function sugPorneste(fortat) {
     await Promise.all([
       pas("latime", function () { return getJSON("/api/istoric-bot?action=latime").then(function (r) { return r && r.latime || null; }); }),   /* v100.150 (I-584): lățimea pieței + pânda */
       pas("boti", function () { return getJSON("/api/bot-orders").then(function (r) { return r && Array.isArray(r.bots) ? r.bots.filter(function (b) { return b && b.activ !== false; }).map(function (b) { return { s: String(b.baza || "").replace(/\.PERP$/, "").toUpperCase(), dir: String(b.directie || "").toLowerCase() }; }) : []; }); }),
+      pas("cont", async function () { if (typeof contTotAsigura === "function") await contTotAsigura(); return true; }),   /* v100.306 (I-824): boții închiși, pentru frâna din regula „azi nu” */
       pas("clasament", async function () { var c = await getJSON("/api/istoric-bot?action=clasament"); return c && c.clasament || null; }),
       pas("sugMonede", function () { return getJSON("/api/istoric-bot?action=sugestii"); }),
       pas("idei", function () { return getJSON("/api/t212?action=idei"); }),

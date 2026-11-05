@@ -49,7 +49,7 @@ function showReal() {
 
 await test("(1) Salt, Sugestii, Carnet ascund antetul vechi (toolbar, heroStrip, tabs), ca Grid și T212; laboratorul vechi îl păstrează", () => {
   const show = showReal();
-  const ascunde = (id) => { const cl = [...show(id)]; return ["toolbar", "heroStrip", "tabs"].every((p) => cl.some((c) => are("body." + c + " ." + p, "display", "none", false))); };
+  const ascunde = (id) => { const cl = [...show(id)]; return ["toolbar", "heroStrip", "tabs"].every((p) => cl.some((c) => are("body." + c + " ." + p, "display", "none", false) || are("body." + c + ":not(.peDeriv) ." + p, "display", "none", false))); };   /* v100.306: bara rămâne doar pe Futures (.peDeriv) */
   for (const id of ["salt", "sugestii", "carnet", "gridset", "t212"]) assert.ok(ascunde(id), id + ": antetul vechi rămâne vizibil");
   for (const id of ["engine", "mtf", "signals"]) assert.ok(!ascunde(id), id + ": pagina veche are nevoie de bara de alegere a monedei");
 });

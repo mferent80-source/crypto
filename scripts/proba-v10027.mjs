@@ -87,7 +87,7 @@ await test("pagina: statistica Pionex (si Tot) ia si spot/copy; nota spune cati 
   assert.match(functia(app, "jtStatToate"), /StatisticaTrade\.dinPionexAlte\(JurnalTrade\.alte\(jtStare\.boti\)\)/);
   const ctx = { TextRo: globalThis.TextRo, jtStat: { toate: { crypto: { tr: new Array(2253) } } }, jtArhiva: { sursa: "acasa", complet: true }, jtStare: { boti: [{ buOrderType: "futures_grid" }, { buOrderType: "spot_grid" }, { buOrderType: "spot_grid" }, { buOrderType: "smart_copy" }] } };
   vm.createContext(ctx); vm.runInContext(functia(app, "jtNotaPionex") + ";this.n=jtNotaPionex;", ctx);
-  const t = ctx.n(); assert.match(t, /toată istoria Pionex \(2253 de boți/);   /* v100.74: „2253 de boți” (TextRo.cate) */ assert.match(t, /inclusiv 2 spot grid și 1 smart copy/); assert.doesNotMatch(t, /lăsați deoparte/);
+  const t = ctx.n(); assert.match(t, /toată istoria Pionex \(2\.253 de boți/);   /* v100.74: „2253 de boți” (TextRo.cate); v100.306 (I-837): cu punctul miilor */ assert.match(t, /inclusiv 2 spot grid și 1 smart copy/); assert.doesNotMatch(t, /lăsați deoparte/);
   const d = functia(t2, "t212BotiInchisi"); assert.match(d, /JurnalTrade\.alte\(jtStare\.boti\)/); assert.match(d, /alteInchise/);
   assert.match(t2, /contTot\.alteInchise = JurnalTrade\.alte\(/);
 });

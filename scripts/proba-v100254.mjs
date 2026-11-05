@@ -221,7 +221,7 @@ await test("lista goală ține boții 10 minute, prețul 0 nu e în afara grilei
   assert.match(app, /Citirea a venit goală: țin boții de dinainte\./);
   assert.match(app, /10\*60000/);
   assert.match(ae, /Citirea a venit goală: țin boții de dinainte\./);
-  assert.match(citeste("public", "lib", "asezare-paznic.js"), /s\.citireGoala \? stare : \(fr \|\| stare\)/);
+  assert.match(citeste("public", "lib", "asezare-paznic.js"), /if \(s\.citireGoala\) return "Citirea a venit goală: țin boții de dinainte\.";/);
   assert.match(col, /Number\(b\.pretCurent\) > 0/);
   assert.match(col, /Number\.isFinite\(p\) && p > 0 && b\.gridJos/);
   assert.ok(Number((col.match(/const VERSIUNE_COLECTOR = "v101\.(\d+)"/) || [0, 0])[1]) >= 137, "colectorul");

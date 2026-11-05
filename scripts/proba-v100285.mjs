@@ -63,7 +63,7 @@ await test("(2) cei mai buni / slabi ai săptămânii: doar săptămâna, pe plu
 await test("(1)(2) raportul de duminică: costurile pe fiecare rând, cei mai buni / slabi sub fiecare piață; fără `ext` exact ca în v100.284; garda textelor", () => {
   const { p, q, ext } = exemplu(), m = MC.profitReal(p, q, "ok", ext), r = m.mesaj.split("\n");
   assert.ok(r.includes("• săptămâna 26.10–01.11: 74 de boți, net −572,7 USDT, din care comisioane și funding −40,2 (59% pe plus)"), m.mesaj);
-  assert.ok(r.includes("• total, de la 21.12.2025: 2449 de boți, net −6.741,5 USDT, din care comisioane și funding −3.223,4 (56% pe plus)"), m.mesaj);
+  assert.ok(r.includes("• total, de la 21.12.2025: 2.449 de boți, net −6.741,5 USDT, din care comisioane și funding −3.223,4 (56% pe plus)"), m.mesaj);
   assert.ok(r.includes("• noiembrie: niciun bot închis"), "luna fără boți rămâne fără costuri: " + m.mesaj);
   assert.ok(r.includes("Cei mai buni ai săptămânii (USDT): PARTI short +21,8 (30.10) · SOL long +12,1 (28.10) · BTC (spot) +2,0 (27.10)."), m.mesaj);
   assert.ok(r.includes("Cei mai slabi ai săptămânii (USDT): PARTI short −24,8 (30.10)."), m.mesaj);

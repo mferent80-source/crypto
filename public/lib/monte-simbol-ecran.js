@@ -143,7 +143,7 @@ function mcsCalcVariante(b15, st, P, o) {
 // păstrează 80% din recomandările bune și taie greșelile de la 241 la 87. Fără drumuri noi (Simulatorul): aleasă pe jumătatea pară a drumurilor,
 // verificată pe cea impară (1,6% / 17%). Fără niciun drum ⇒ nu recomand.
 var MCS_VERIF = { n: 2000, seed: 13 };
-function mcsMiiDrumuri(n) { return mcsCate(n, "drum", "drumuri").replace(/^\d+/, Number(n).toLocaleString("ro-RO")); }
+function mcsMiiDrumuri(n) { var t = mcsCate(n, "drum", "drumuri"); return /^\d{1,3}(\.\d{3})+ /.test(t) ? t : t.replace(/^\d+/, Number(n).toLocaleString("ro-RO")); }   /* v100.306: TextRo.cate pune deja punctul miilor („2.000.000” scria de două ori) */
 function mcsVerificaPeDrumuriNoi(b15, P, stB, stC, o) {
   o = o || {}; var opt = { zile: o.zile > 0 ? o.zile : 7, n: MCS_VERIF.n, seed: MCS_VERIF.seed, faraCuTendinta: true, peDrum: true };
   var gb = MonteSimbol.grid(b15, Object.assign({ pret: P }, stB), opt), gc = MonteSimbol.grid(b15, Object.assign({ pret: P }, stC), opt);

@@ -6,7 +6,7 @@ function ciEsc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, functi
 function ciMii(x) { if (x == null || !isFinite(x)) return "—"; var r = Math.round(Math.abs(x)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, "."); return (x < 0 ? "−" : "") + r; }
 function ciLei(x, semn) { if (x == null || !isFinite(x)) return "—"; return (semn && x > 0 ? "+" : "") + ciMii(x) + " lei"; }
 function ciPct(x, z) { if (x == null || !isFinite(x)) return "—"; var v = Math.abs(x * 100).toFixed(z == null ? 1 : z).replace(".", ","); return (x < 0 ? "−" : x > 0 ? "+" : "") + v + "%"; }
-function ciNr(x, z) { return x == null || !isFinite(x) ? "—" : Number(x).toFixed(z == null ? 2 : z).replace(".", ","); }
+function ciNr(x, z) { if (x == null || !isFinite(x)) return "—"; var s = Math.abs(Number(x)).toFixed(z == null ? 2 : z); return (x < 0 && Number(s) !== 0 ? "−" : "") + s.replace(".", ","); }   /* v100.306 (I-837): minusul „−”, nu „-” (β, Sharpe) */
 function ciZi(z) { var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(z || "")); return m ? m[3] + "." + m[2] + "." + m[1] : "—"; }
 function ciZiDinLa(t) {
   var n = Number(t);
@@ -187,7 +187,7 @@ function ciHtml(r, st) {
     if (at.t212Qqq) lin2.push("Față de Nasdaq (QQQ), beta " + ciNr(at.t212Qqq.beta) + ": pasiv " + ciPct(at.t212Qqq.pasiv) + ", alfa " + ciPct(at.t212Qqq.alfa) + ".");
     h += '<section class="ciSec"><h3>Piață sau alegere</h3>' + lin2.map(function (x) { return '<p class="ciRasp">' + ciEsc(x) + "</p>"; }).join("");
     if (b1 && b1.n) {
-      var U = function (v) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(0) + " USDT" + (at.usdLei ? " (" + ciLei(v * at.usdLei, true) + ")" : ""); };
+      var U = function (v) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ".") + " USDT" + (at.usdLei ? " (" + ciLei(v * at.usdLei, true) + ")" : ""); };   /* v100.306 (I-837): punctul miilor */
       h += '<p class="ciRasp">' + ciEsc("Boții, pe ultimul an (" + ciCate(b1.n, "bot închis", "boți închiși") + "): grila a adus " + U(b1.grila) + ", direcția prețului " + U(b1.directie) + ", comisioanele " + U(b1.comisioane) + ", finanțarea " + U(b1.finantare) + " ⇒ net " + U(b1.net) + ".") + "</p>"
         + '<p class="tbSub">' + ciEsc(b1.directie < 0 && b1.grila > 0 ? "Grila își face treaba; pierderea vine din direcție (prețul a ieșit din bandă și a rămas acolo) - asta e de lucrat: banda, stopul, levierul." : b1.grila <= 0 ? "Nici grila n-a acoperit comisioanele: benzile au fost prea late sau gridul a stat puțin." : "") + "</p>";
     }

@@ -101,7 +101,7 @@ await test("Scan nu mai tipărește planul de dimineață și lei la 1% pe un nu
   assert.doesNotMatch(scan, /Mărime la 1% risc din cont/);
   assert.doesNotMatch(scan, /Planul de la poarta T212 \(din tura de dimineață\)/);
   assert.match(scan, /Scan\.plan\(x, null\)/);
-  assert.match(scan, /acPauzaSezon\(\)/);
+  assert.match(scan, /acAziNu\(\)/);   /* v100.306 (I-824): regula comună „azi nu” (pauza e una din voci) */
   assert.match(scan, /Pentru un bot grid/);
   assert.match(scan, /Funding \(la 4 ore\)/);
 });
@@ -110,9 +110,9 @@ await test("gura de pauză e aceeași pe Acasă, Sugestii, Scan și Tablou; ciFa
   assert.match(ae, /pas\("contRaport"/);
   assert.match(ae, /else v = acFraneaza\(v, "crypto"\)/);
   assert.match(ae, /acFraneaza\(Acasa\.vremeBursa/);
-  assert.match(ae, /acFrazaPauza\(pzB\)/);   // v100.295: coloana ideilor T212 scoasă din „Ce aș cumpăra azi”; gura de pauză rămâne pe coloana boților
-  assert.match(citeste("public", "lib", "sugestii-ecran.js"), /acFrazaPauza\(pzS\)/);
-  assert.match(t212, /acFrazaPauza\(pzT\)/);
+  assert.match(ae, /acFrazaPauza\(pzB\)/); assert.match(ae, /function acAziNuDin\(o\)[\s\S]{0,1500}pauza sezonului/);   /* v100.306 (I-824) */   // v100.295: coloana ideilor T212 scoasă din „Ce aș cumpăra azi”; gura de pauză rămâne pe coloana boților
+  assert.match(citeste("public", "lib", "sugestii-ecran.js"), /acFrazaPauza\(pz\)/); assert.match(citeste("public", "lib", "sugestii-ecran.js"), /acAziNu\(\)/);   /* v100.306 (I-824) */
+  assert.match(t212, /acAziNuHtml\(an\)/);   /* v100.306 (I-824): pauza intră în regula comună „azi nu” */
   const iU = ci.indexOf("rec.urmarire"), iT = ci.indexOf("rec.t212"), iS = ci.indexOf("r.stres");
   assert.ok(iU >= 0 && iU < iT && iT < iS, "urmarire " + iU + " t212 " + iT + " stres " + iS);
   assert.match(col, /ScorSezon, StatisticaTrade, JurnalTrade/);

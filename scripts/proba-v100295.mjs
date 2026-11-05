@@ -77,7 +77,7 @@ await test("2. „Idei de azi”: fără „Acțiuni pe trend (… trec de poart
   for (const rau of ["Acțiuni pe trend", "trec de poartă", "ZZT1", "ZZT2", "nicio acțiune nu trece"]) assert.ok(!h.includes(rau), "nu mai apare: " + rau);
   assert.match(text(c.idei({ idei: IDEI, clasament: null }, null)), /Aștept clasamentul…/, "fără clasament: stare");
   const A = lib("acasa-ecran.js");
-  assert.match(A, /\$\("acIdei"\)\.innerHTML = acIdeiHtml\(d, cl\);/, "pagina desenează cartela prin funcția probată");
+  assert.match(A, /\$\("acIdei"\)\.innerHTML = acIdeiHtml\(d, cl, aziNu\);/, "pagina desenează cartela prin funcția probată");
   assert.doesNotMatch(A, /Acțiuni pe trend/);
 });
 
@@ -86,7 +86,7 @@ await test("3. Tabloul: caseta „Pe ce aș porni un bot acum” fără „Pe re
   const T = lib("t212-ecran.js"), A = lib("acasa-ecran.js");
   assert.doesNotMatch(T, /tbSugestii(Html|Corp)/, "nicio urmă a listelor scoase în Tablou");
   assert.doesNotMatch(T, /Pe revenire \(bot long\)|📉 Pentru short/);
-  assert.match(T, /<h4>💡 Pe ce aș porni un bot acum<\/h4>/); assert.match(T, /Fișa îți dă setările și proba pe istoricul monedei\.<\/p>';/, "nota casetei rămâne, fără nimic lipit după ea");
+  assert.match(T, /"💡 Pe ce aș porni un bot acum"\) \+ '<\/h4>/);   /* v100.306 (I-824): titlul se schimbă sub „azi nu” */ assert.match(T, /Fișa îți dă setările și proba pe istoricul monedei\.<\/p>';/, "nota casetei rămâne, fără nimic lipit după ea");
   assert.match(T, /function gridDeschideMonedaDir\(m, dir\)/, "fișa cu direcția rămâne (o folosesc Sugestiile)");
   assert.doesNotMatch(A, /function acasaCumpar2Corp\(/);
   assert.doesNotMatch(A, /reveniriBoti|shortBoti/, "Piața azi nu mai cheamă listele de monede scoase");

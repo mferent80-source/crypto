@@ -223,7 +223,7 @@ await test("(F) Discord o singură dată: Consiliu.schimbare tace (doarRadar) c�
 await test("(F) I-525 în toate listele la fel: candidații (tbIdeiRender) cu istoricul lui pe minus (≥ 3 boți) ⇒ dunga roșie și istoricul pe roșu, prin același ajutor tbIstoricRosu", () => {
   const s = lib("t212-ecran.js"); assert.ok(/^function tbIstoricRosu\(x\)/m.test(s), "lipsește tbIstoricRosu");
   const r = fnDin("t212-ecran.js", "tbIdeiRender");   /* v100.295: listele de revenire / short (tbSugestiiCorp) scoase; rămân candidații */
-  assert.ok(r.includes('(tbIstoricRosu(x) ? "r" : "v")') && r.includes(`(tbIstoricRosu(x) ? ' class="bad"' : '')`), "candidații nu folosesc ajutorul comun");
+  assert.ok(r.includes('(tbIstoricRosu(x) ? "r" : nu ? "n" : "v")') && r.includes(`(tbIstoricRosu(x) ? ' class="bad"' : '')`), "candidații nu folosesc ajutorul comun");
   const ctx = {}; vm.createContext(ctx); vm.runInContext(fnDin("t212-ecran.js", "tbIstoricRosu") + ";this.f=tbIstoricRosu;", ctx);
   assert.equal(ctx.f({ istoric: IST(17, 10, -173.55) }), true); assert.equal(ctx.f({ istoric: IST(2, 0, -5) }), false); assert.equal(ctx.f({ istoric: IST(5, 4, 12) }), false); assert.equal(ctx.f({}), false);
 });

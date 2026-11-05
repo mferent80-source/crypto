@@ -7,7 +7,10 @@
 //   - banda de sus (lipită) e mai înaltă de 100 px (pe telefon mânca o cincime din ecran);
 //   - pagina aruncă o excepție;
 //   - (v100.123) bara de alegere a monedei din paginile vechi, strânsă, e mai înaltă de 120 px sau nu se desface;
-//   - (v100.123) apăsarea lungă pe banda botului nu arată tot rândul sau deschide Tabloul.
+//   - (v100.123) apăsarea lungă pe banda botului nu arată tot rândul sau deschide Tabloul;
+//   - (v100.306, I-837) pe paginile zilnice, TEXTUL VĂZUT calcă convențiile lui: rezultate cu 2–3 zecimale, punct zecimal, minus ASCII,
+//     de la 1.000 în sus fără punctul miilor, cuvintele englezești din listă - regulile și excepțiile scrise (prețurile Pionex, ecoul a ce
+//     tastează omul…) stau în scripts/proba-ecran-telefon-conventii.mjs; lista întreagă se scrie în <dosar>/conventii-abateri.json.
 // Poze: <dosar>/tel-<pagina>.png.
 //
 // Rulare (server pe :8788 - PORNESTE-CRYPTO-RADAR.bat; NU intră în npm test, ca test:ecran-grid):
@@ -16,6 +19,7 @@ import { spawn } from "node:child_process";
 import { rmSync, existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { abateri, PAGINI_CONVENTII, TEXT_VAZUT_JS } from "./proba-ecran-telefon-conventii.mjs";
 
 const URL_T = (process.argv[2] || "http://127.0.0.1:8788/").replace(/\/+$/, "") + "/";
 const DOSAR_POZE = process.argv[3] || path.join(tmpdir(), "proba-ecran-telefon");
@@ -41,6 +45,7 @@ const port = 9500 + Math.floor(Math.random() * 300);
 const profil = path.join(tmpdir(), "proba-ecran-telefon-" + port);
 const br = spawn(BROWSER, ["--headless=new", "--disable-sync", "--disable-extensions", "--disable-gpu", `--remote-debugging-port=${port}`, `--user-data-dir=${profil}`, `--window-size=${LAT},${INALT}`, "--no-first-run", "about:blank"], { stdio: "ignore" });
 let picate = 0, PAGINI_TOTAL = PAGINI.length;
+const conventii = {};   /* v100.306 (I-837): pagina -> abaterile găsite */
 try {
   let t; for (let i = 0; i < 80 && !t; i++) { try { t = (await (await fetch(`http://127.0.0.1:${port}/json/list`)).json()).find((x) => x.type === "page"); } catch {} if (!t) await asteapta(250); }
   const ws = new WebSocket(t.webSocketDebuggerUrl); let id = 0; const m = new Map(); let exc = [];
@@ -89,8 +94,13 @@ try {
     if (r.nRupte) rele.push(`${r.nRupte} grupuri nelegabile rupte pe două rânduri („${r.rupte.join("” · „")}”)`);   // v100.192 (I-628)
     if (r.nLate) rele.push(`${r.nLate} secțiuni ies din ecran (${r.late.join(", ")})`);
     if (exc.length) rele.push("excepție: " + exc[0]);
+    if (PAGINI_CONVENTII.includes(p)) {   /* v100.306 (I-837): garda convențiilor, pe textul văzut al paginii */
+      const ab = abateri((await ev(TEXT_VAZUT_JS)) || ""); conventii[p] = ab;
+      if (ab.length) rele.push(`${ab.length} abateri de la convenții (${[...new Set(ab.map((a) => a.tip))].join(", ")}): „${ab.slice(0, 3).map((a) => a.text).join("” · „")}”`);
+    }
     if (rele.length) { picate++; console.log(`  PICA ${p}: ${rele.join(" · ")}`); } else console.log(`  ok   ${p} (banda ${r.banda} px)`);
   }
+  try { writeFileSync(path.join(DOSAR_POZE, "conventii-abateri.json"), JSON.stringify(conventii, null, 1)); } catch {}
   PAGINI_TOTAL += 2;
   // v100.123: bara paginilor vechi e strânsă pe un rând și se desface la apăsare
   {

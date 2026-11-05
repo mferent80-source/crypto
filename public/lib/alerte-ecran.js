@@ -39,7 +39,12 @@ var AlCentru = (function () {
 if (typeof globalThis !== "undefined") globalThis.AlCentru = AlCentru;
 
 // ---- ecranul ----
-var alSt = { l: null, la: 0, err: null, inLucru: false, f: "toate", imp: false };
+// v100.306 (I-836, auditul final 05.11: 1.413 rânduri, 245.000 px pe telefon): imp = null până alegi tu (pe telefon pornește „Doar importante”);
+// toate = false ⇒ primele AL_PRIMELE rânduri, restul la un clic (nimic șters)
+var alSt = { l: null, la: 0, err: null, inLucru: false, f: "toate", imp: null, toate: false };
+var AL_PRIMELE = 50;
+function alImpAcum() { return alSt.imp === null ? typeof innerWidth === "number" && innerWidth <= 760 : !!alSt.imp; }
+function alMii(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, "."); }
 var AL_VAZUT = "alCentruVazutLa";
 function alVazutLa() { try { return Number(localStorage.getItem(AL_VAZUT)) || 0; } catch (e) { return 0; } }
 function alCentruNecitite() { var v = alVazutLa(); return (alSt.l || []).filter(function (x) { return x.t > v; }).length; }
@@ -70,20 +75,22 @@ function alDeseneaza() {
   var file = [["toate", "Toate"], ["boti", AlCentru.CAT.boti], ["actiuni", AlCentru.CAT.actiuni], ["piata", AlCentru.CAT.piata]].map(function (x) {
     return '<button class="alFila" type="button" data-alf="' + x[0] + '" aria-pressed="' + (alSt.f === x[0]) + '">' + x[1] + ' <span class="alMut">' + c[x[0]] + '</span></button>';
   }).join("");
-  var vazut = alVazutLa(), acum = Date.now(), fl = AlCentru.filtreaza(l, alSt.f, alSt.imp), ziAnt = "";
-  var rows = fl.map(function (x) {
+  var imp = alImpAcum(), vazut = alVazutLa(), acum = Date.now(), fl = AlCentru.filtreaza(l, alSt.f, imp), ziAnt = "", rest = alSt.toate ? 0 : Math.max(0, fl.length - AL_PRIMELE);
+  var rows = (rest ? fl.slice(0, AL_PRIMELE) : fl).map(function (x) {
     var z = AlCentru.zi(x.t, acum), d = AlCentru.drum(x), h = "";
     if (z !== ziAnt) { h += '<div class="alZi">' + escapeHtml(z) + '</div>'; ziAnt = z; }
     return h + '<div class="alRand ' + (x.nivel || "info") + (x.t > vazut ? " nou" : "") + '"><span class="alPunct"></span><div class="alText"><b>' + escapeHtml(x.titlu) + '</b>' + (x.mesaj ? '<p>' + escapeHtml(x.mesaj) + '</p>' : '')
       + '<span class="alMeta">' + new Date(x.t).toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Bucharest" }) + ' · ' + AlCentru.CAT[AlCentru.categorie(x)] + (x.t > vazut ? ' · <b class="alNou">nou</b>' : '') + '</span></div>'
       + '<button class="alBtn" type="button" data-alpag="' + d.pag + '">' + d.et + '</button></div>';
   }).join("");
-  box.innerHTML = cap + '<div class="alFiltre"><div class="alFile" role="group" aria-label="Categoria">' + file + '</div><label class="alComut"><input type="checkbox" id="alImp"' + (alSt.imp ? " checked" : "") + '> Doar importante <span class="alMut">' + c.importante + '</span></label></div>'
-    + '<div class="alLista">' + (rows || '<p class="alGol">Nicio alertă aici în ultimele 7 zile.</p>') + '</div>';
+  box.innerHTML = cap + '<div class="alFiltre"><div class="alFile" role="group" aria-label="Categoria">' + file + '</div><label class="alComut"><input type="checkbox" id="alImp"' + (imp ? " checked" : "") + '> Doar importante <span class="alMut">' + c.importante + '</span></label></div>'
+    + '<div class="alLista">' + (rows || '<p class="alGol">' + (imp && c.toate ? "Nicio alertă importantă aici în ultimele 7 zile; debifează „Doar importante” pentru toate." : "Nicio alertă aici în ultimele 7 zile.") + '</p>') + '</div>'
+    + (rest ? '<p class="alMai"><button class="alBtn" type="button" data-altot="1">Arată toate (' + alMii(fl.length) + ')</button> <span class="alMut">acum vezi cele mai noi ' + AL_PRIMELE + '</span></p>' : '');
 }
 document.addEventListener("click", function (e) {
-  var t = e.target.closest && e.target.closest("#alCentru [data-alf],#alCentru [data-alpag],#alCentru [data-alrefa]"); if (!t) return;
-  if (t.dataset.alf) { alSt.f = t.dataset.alf; alDeseneaza(); }
+  var t = e.target.closest && e.target.closest("#alCentru [data-alf],#alCentru [data-alpag],#alCentru [data-alrefa],#alCentru [data-altot]"); if (!t) return;
+  if (t.dataset.altot) { alSt.toate = true; alDeseneaza(); }
+  else if (t.dataset.alf) { alSt.f = t.dataset.alf; alDeseneaza(); }
   else if (t.dataset.alpag) navTo(t.dataset.alpag, true);
   else alCentruPorneste(true);
 });

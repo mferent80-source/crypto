@@ -138,9 +138,11 @@ function coHtml(r, ui) {
   if (!r || typeof r !== "object" || r.forma !== 1) {
     return cap("Ce ai făcut cu boții tăi și cât te-a costat.") + '<p class="coMut">' + (ui.eroare ? "N-am putut aduce raportul: " + coEsc(ui.eroare) + ". Reîncearcă." : ui.inLucru ? "Aduc raportul colectorului…" : "Colectorul de acasă n-a trimis încă raportul paginii. Vine în câteva minute după ce pornește colectorul v101.158; apasă Reîmprospătează.") + "</p>";
   }
-  var vechi = acum - Number(r.la) > 30 * 60000;
+  // v100.306 (auditul final 05.11): fără niciun bot pornit raportul rămânea vechi și pagina zicea „colectorul pare oprit” (fals: colectorul
+  // mergea, n-avea ce număra) ⇒ spune ce e: niciun bot pornit, și ultimul închis. ui.botiActivi: numărul citit, null = necitit.
+  var vechi = acum - Number(r.la) > 30 * 60000, faraBoti = ui.botiActivi === 0;
   var h = cap("Ce ai făcut cu boții tăi și cât te-a costat. Pregătit de colectorul de acasă la " + coEsc(coOra(r.la, acum)) + "."
-    + (vechi ? ' <span class="coAtentie">Raportul are peste 30 de minute: colectorul pare oprit.</span>' : "") + (ui.eroare ? ' <span class="coAtentie">Reîmprospătarea n-a mers: ' + coEsc(ui.eroare) + ".</span>" : ""));
+    + (vechi && faraBoti ? ' <span class="coMut">Niciun bot pornit acum' + (ui.ultimInchis ? "; ultimul închis: " + coEsc(ui.ultimInchis) : "") + ".</span>" : vechi ? ' <span class="coAtentie">Raportul are peste 30 de minute: colectorul pare oprit.</span>' : "") + (ui.eroare ? ' <span class="coAtentie">Reîmprospătarea n-a mers: ' + coEsc(ui.eroare) + ".</span>" : ""));
   if (r.evaluariLegat === false) h += '<p class="coAtentie">Canalul evaluărilor nu e legat la colector (DISCORD_WEBHOOK_EVALUARI): evaluările, seara și regulile pe date noi nu se mai actualizează.</p>';
   h += coEvalHtml(r);
   h += '<div class="coRand3">' + coAziHtml(r.azi) + coSearaHtml(r.seara) + coPorniriHtml(r.porniri, r.porniriN) + "</div>";
@@ -152,12 +154,15 @@ function coHtml(r, ui) {
 }
 function coDeseneaza() {
   var box = document.getElementById("coPagina"); if (!box) return;
-  box.innerHTML = coHtml(coStare.raport, { filtru: coStare.filtru, deschis: coStare.deschis, acum: Date.now(), eroare: coStare.eroare, inLucru: coStare.inLucru });
+  var boti = typeof tbStare !== "undefined" && tbStare.boti && tbStare.boti.length ? tbStare.boti : typeof contTot !== "undefined" ? contTot.boti : null;   /* v100.306: câți boți rulează (null = necitit) */
+  box.innerHTML = coHtml(coStare.raport, { filtru: coStare.filtru, deschis: coStare.deschis, acum: Date.now(), eroare: coStare.eroare, inLucru: coStare.inLucru,
+    botiActivi: Array.isArray(boti) ? boti.filter(function (b) { return b && b.activ; }).length : null, ultimInchis: typeof acUltimInchisText === "function" ? acUltimInchisText() : "" });
 }
 async function coPorneste(forta) {
   if (!document.getElementById("coPagina") || coStare.inLucru) return;
   if (!forta && coStare.raport && Date.now() - coStare.la < 60000) { coDeseneaza(); return; }
   coStare.inLucru = true; if (!coStare.raport) coDeseneaza();
+  if (typeof contTotAsigura === "function") contTotAsigura().then(coDeseneaza, function () {});   /* v100.306: boții activi și ultimul închis, pentru rândul de sus */
   try { var d = await getJSON("/api/istoric-bot?action=comportament"); coStare.raport = d && d.comportament || null; coStare.eroare = null; coStare.la = Date.now(); }
   catch (e) { coStare.eroare = String(e && e.message || e); }
   coStare.inLucru = false;

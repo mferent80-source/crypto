@@ -12,8 +12,9 @@ var TextRo = (function () {
   // „12,4” / „−0,8”; un zero rotunjit nu poarta semn („0,0”, nu „−0,0”)
   function num(x, z) {
     x = nr(x); if (x === null) return "—";
-    var s = Math.abs(x).toFixed(zec(z, 1));
-    return (x < 0 && Number(s) !== 0 ? "−" : "") + s.replace(".", ",");
+    var s = Math.abs(x).toFixed(zec(z, 1)), p = s.split(".");
+    // v100.306 (I-837, auditul final 05.11): punctul miilor pe partea întreagă („−6.430,9”, nu „−6430,9”) - pe ecran și pe Discord
+    return (x < 0 && Number(s) !== 0 ? "−" : "") + p[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".") + (p[1] ? "," + p[1] : "");
   }
   // x e deja in procente: pct(12.4) -> „12,4%”
   function pct(x, z) { return nr(x) === null ? "—" : num(x, z) + "%"; }
@@ -41,7 +42,8 @@ var TextRo = (function () {
   }
   // v100.71 (revizia pachetului 4, I1): numarul cu substantivul lui - „1 caz”, „4 cazuri”, „45 de cazuri”, „101 cazuri”
   // („de” cand ultimele doua cifre sunt 20–99, sau 00 de la 100 in sus)
-  function cate(n, sg, pl) { var k = Math.round(Number(n)); if (!isFinite(k)) return "— " + pl; var r = Math.abs(k) % 100; return k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
+  // v100.306 (I-837, auditul final 05.11): de la 1.000 în sus cu punctul miilor („2.401 boți”, nu „2401 boți”), minusul „−”
+  function cate(n, sg, pl) { var k = Math.round(Number(n)); if (!isFinite(k)) return "— " + pl; var r = Math.abs(k) % 100, t = (k < 0 ? "−" : "") + String(Math.abs(k)).replace(/\B(?=(\d{3})+(?!\d))/g, "."); return k === 1 ? "1 " + sg : t + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
   // v100.77 (ideea 1): orele unui prag - „1 oră”, „2 ore”, „24 de ore”, „2,25 ore” (cel mult 2 zecimale) - aceeași formă pe Tablou și în alertă
   function oreN(h) { var v = Number(h); if (!isFinite(v)) return "— ore"; v = Math.round(Math.abs(v) * 100) / 100; return Number.isInteger(v) ? cate(v, "oră", "ore") : String(v).replace(".", ",") + " ore"; }
   // v100.78 (ideea 1): un text SALVAT înainte de v100.61 (raportul de duminică de pe server) se afișează cu cifrele în forma nouă:

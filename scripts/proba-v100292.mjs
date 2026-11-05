@@ -81,9 +81,10 @@ await test("2. rândul de bot: direcția 4h+1z ȘI cea pe 84 de zile, numite; co
   assert.ok(cc.avert.some((a) => /Lichiditate mică: 0,1 M USDT\/zi, sub pragul de 1 M/.test(a)));
   assert.ok(!l.some((x) => x.s === "BTC"), "„de evitat” nu intră");
 });
-await test("3. pauza sezonului golește lista de pornire (și spune de ce); avertismentele pe acțiuni: salt, raportează, concentrarea pe sector, revenirea prea tânără, căderea de peste 80%", () => {
+await test("3. pauza sezonului (v100.306, I-824: regula „azi nu”) NU mai golește lista de pornire: rândurile rămân, cu „azi nu” sub titlu și în fișă; avertismentele pe acțiuni: salt, raportează, concentrarea pe sector, revenirea prea tânără, căderea de peste 80%", () => {
   const cp = ecran({ pauza: 3 }), lp = plain(cp.sugRanduri(D, ACUM));
-  assert.equal(lp.filter((x) => x.grup === "porn").length, 0); assert.match(plain(cp.sugGrupuri(D, ACUM)).filter((g) => g.k === "porn")[0].sub, /pauza sezonului, 3 zile/);
+  assert.equal(lp.filter((x) => x.grup === "porn").length, 2); assert.match(plain(cp.sugGrupuri(D, ACUM)).filter((g) => g.k === "porn")[0].sub, /^azi nu: N-aș porni alt bot azi: pauza sezonului, 3 zile/);
+  assert.ok(lp.filter((x) => x.grup === "porn").every((x) => x.aziNu && /^Azi nu: /.test(x.avert[0])), "fiecare rând de pornire spune „azi nu” întâi");
   const l = plain(ecran().sugRanduri(D, ACUM)), f = (k) => l.filter((x) => x.k === k)[0];
   assert.ok(f("sect:MRNA").avert.some((a) => /\+302% în 3 luni: verifică seria/.test(a)));
   assert.ok(f("trend:SNDK").avert.some((a) => /13 din cele 20 sunt în Technology/.test(a))); assert.ok(!f("trend:MRNA").avert.some((a) => /13 din cele 20/.test(a)), "MRNA e Health Care");
@@ -229,7 +230,7 @@ await test("12. revizia 01.11, textele adevărate: maximul pe 60 de zile de burs
   assert.ok(!plain(c.sugRanduri(D2, ACUM)).filter((x) => x.k === "porn:HYPE")[0].avert.some((a) => /aproape de prag/.test(a)), "fără pragul monedei nu se inventează 4%");
   const D3 = JSON.parse(JSON.stringify(D)); D3.clasament.monede[0].dir = "neutru";
   assert.match(plain(c.sugFisa(plain(c.sugRanduri(D3, ACUM)).filter((x) => x.k === "porn:HYPE")[0], D3, ACUM)).actiuni[0].act, /gridDeschideMonedaDir\('HYPE','neutru'\)/);
-  const se = l.filter((x) => x.k === "revEU:SMST")[0]; assert.equal(se.pret, "0,80"); assert.match(smst.pretNota, /moneda bursei/); assert.equal(l.filter((x) => x.k === "revUS:CRBP")[0].pret, "$4.22", "US rămâne ca pe pagina veche");
+  const se = l.filter((x) => x.k === "revEU:SMST")[0]; assert.equal(se.pret, "0,80"); assert.match(smst.pretNota, /moneda bursei/); assert.equal(l.filter((x) => x.k === "revUS:CRBP")[0].pret, "$4,22", "US: prețul cu virgula zecimală (v100.306, I-837)");
 });
 await test("13. urmarireFixa (revizia 01.11): intrarea e bara de la 06:00Z (aceeași ca piața), nu prețul turei; semnul urmează direcția botului (short câștigă când scade; neutru = ca long); textul spune direcția", () => {
   const t0 = Date.parse("2026-10-01T06:00:00Z"), bare = (p0, p7) => { const b = []; for (let i = 0; i <= 8 * 24; i++) b.push({ t: t0 + i * 3600000, o: p0, h: p0, l: p0, c: i < 7 * 24 ? p0 : p7 }); return b; };

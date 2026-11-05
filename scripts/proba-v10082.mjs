@@ -117,7 +117,7 @@ await test("(2) Acasă: stările - fără clasament / nicio monedă; două moned
 await test("(2) Acasă: rândul stă sub cele două verdicte, înaintea legăturii BTC–bursa, și se desenează la fiecare desen al paginii", () => {
   const h = citeste("public", "index.html"), v = h.indexOf('class="acVerdicte"'), c = h.indexOf('<div class="acLegatura acCumpar" id="acCumpar"></div>'), l = h.indexOf('id="acLegatura"');
   assert.ok(v > 0 && c > v && c < l, "locul: " + [v, c, l].join(","));
-  assert.match(fnDin("acasa-ecran.js", "acasaDeseneaza"), /if \(\$\("acCumpar"\)\) \$\("acCumpar"\)\.innerHTML = acasaCumpar\(d\);/);
+  assert.match(fnDin("acasa-ecran.js", "acasaDeseneaza"), /if \(\$\("acCumpar"\)\) \$\("acCumpar"\)\.innerHTML = acasaCumpar\(d, aziNu\);/);
 });
 await test("(2) butonul deschide pagina și aduce panoul sus (fără animație), SUB bara de sus lipită (pe poză titlul stătea sub ea: 56 px pe calculator, 156 pe telefon)", () => {
   // o singură derulare, INSTANT, la ținta socotită: html are scroll-behavior:smooth, iar scrollIntoView + scrollBy se anulau (pagina rămânea sus)

@@ -1961,7 +1961,7 @@ body.peScan .heroStrip,body.peScan .tabs,body.peScan .toolbar{display:none}
 #alerts .alLista{display:flex;flex-direction:column}
 #alerts .alZi{font-size:11.5px;font-weight:600;text-transform:none;letter-spacing:0;color:var(--muted);padding:10px 0 4px;border-bottom:1px solid rgba(159,179,196,.16)}
 #alerts .alRand{display:grid;grid-template-columns:12px minmax(0,1fr) auto;gap:10px;align-items:start;padding:8px 0;border-bottom:1px solid rgba(159,179,196,.1)}
-#alerts .alPunct{width:10px;height:10px;border-radius:50%;margin-top:5px;background:var(--good)}
+#alerts .alPunct{width:10px;height:10px;border-radius:50%;margin-top:5px;background:var(--muted)}
 #alerts .alRand.atentie .alPunct{background:#E9B949}#alerts .alRand.critic .alPunct{background:var(--bad)}
 #alerts .alRand.nou{background:linear-gradient(90deg,rgba(91,143,199,.07),transparent 60%)}
 #alerts .alText b{font-size:13.5px;overflow-wrap:anywhere}#alerts .alText p{margin:2px 0 0;font-size:13px;color:var(--text);opacity:.85;white-space:pre-line;overflow-wrap:anywhere}
@@ -2306,7 +2306,7 @@ body:not(.peLaborator) main>.note{display:none}
 .saltCampuri input,.saltCautaEt input{font:inherit;color:var(--text);background:var(--panel-2);border:1px solid var(--line);border-radius:4px;padding:7px 9px;min-width:0}
 .saltCautaEt{max-width:360px;margin:4px 0 8px}.saltTab td:nth-child(n+4),.saltTab th:nth-child(n+4){text-align:right}
 /* v100.121 (el: „se vede aiurea pe telefon”): paginile noi fără antetul vechi gol; tabelele derulează în ele (pe Salt pagina avea 527 px pe 390); subtitlul se rupe pe telefon */
-body.pePaginaNoua .toolbar,body.pePaginaNoua .heroStrip,body.pePaginaNoua .tabs{display:none}
+body.pePaginaNoua:not(.peDeriv) .toolbar,body.pePaginaNoua .heroStrip,body.pePaginaNoua .tabs{display:none}
 .rlTab{overflow-x:auto;max-width:100%}
 @media (max-width:640px){.sectionHead{flex-wrap:wrap}.sectionHead .small{white-space:normal}}
 /* v100.122: banda de sus pe telefon avea 139-156 px (lipita) - fara dublurile analizei vechi (moneda + 4h/AUTO/BINANCE stau si in bara paginilor vechi) si WS (LIVE DATA ramane) */
@@ -3169,6 +3169,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
 #rangefilter .rfSimbol{font-size:16px}
 #rangefilter .rfEticheta{font-size:11px;font-weight:700;letter-spacing:.04em;padding:1px 7px;border:1px solid var(--rf-linie);border-radius:4px;color:var(--t2,#9FB3C4)}   /* tema PAZNIC (v100.151): colțuri ≤ 5 px */
 #rangefilter .rfHero{font-weight:800;text-align:center;padding:6px 10px;border-radius:4px;color:#fff;background:#3b4254}
+#rangefilter .rfColorant{display:block;font-size:11.5px;font-weight:600;color:#c9d1dc;letter-spacing:0;text-transform:none}
 #rangefilter .rfHero-sus{background:#0a8a55}#rangefilter .rfHero-jos{background:#a3104f}
 #rangefilter .rfRand{display:grid;grid-template-columns:84px 64px minmax(0,1fr);gap:2px 10px;align-items:baseline;border-top:1px solid var(--rf-linie);padding-top:4px}
 #rangefilter .rfRand .rfMic{grid-column:2/-1}
@@ -3437,6 +3438,24 @@ button.pzVoce{width:auto;min-height:0;margin:0;background:transparent;font-weigh
 /* v100.272 (ideile auditului 29.10): paleta Ctrl+K din tastatură - comanda evidențiată (pe care o pornește Enter) și focusul se văd */
 .cmdItem[aria-selected="true"]{border-color:#5B8FC7;background:#1A2633}
 .cmdItem:focus-visible{outline:2px solid #5B8FC7;outline-offset:1px}
+/* v100.306 (auditul final 05.11, partea de ecran) */
+/* I-824: regula „azi nu” - același rând pe Piața azi, Sugestii, Tablou și Scanner; lista de sub el rămâne la vedere, mai stinsă */
+.aziNuRand{display:block;margin:4px 0 6px;padding:6px 10px;border-left:3px solid var(--warn);border-radius:3px;background:rgba(233,185,73,.08);color:var(--text);font-size:13.5px;line-height:1.4;font-weight:400}
+.aziNuRand b{color:var(--warn)}
+.sugRand.sugAziNu{opacity:.8}
+/* Tabloul fără bot: un singur card. Se ascunde doar decorul gol (KPI „—”, graficul fără monedă, „Ce ai de făcut” gol, trendul și citirea fără
+   monedă, scenariile și banii botului, plierile care cer un bot); faptele rămân: ultimii boți închiși, „Pe ce aș porni”, pregătirea următorului bot, contul, riscul tău */
+.pzDemo #tabloubot .tbCadru>#tbFaraBotCard{order:12}
+#tabloubot .tbFaraBotCard{margin:0 0 12px}
+#tabloubot .tbFaraBotRand{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font-size:15px}
+#tabloubot .tbFaraBotBtn{margin-left:auto;min-height:36px}
+#tabloubot.tbFaraBot .tbSus,#tabloubot.tbFaraBot #tbGraficCard>:not(#pzUltimii),#tabloubot.tbFaraBot #tbGraficCard:not(:has(#pzUltimii)),#tabloubot.tbFaraBot #tbTodo,#tabloubot.tbFaraBot .tbGrCol,#tabloubot.tbFaraBot .tbGrilaNoua,#tabloubot.tbFaraBot #tbAcumCard,#tabloubot.tbFaraBot #tbPl-plan,#tabloubot.tbFaraBot #tbPl-sfaturi,#tabloubot.tbFaraBot #tbPl-avert,#tabloubot.tbFaraBot #tbPl-alerte,#tabloubot.tbFaraBot #tbPl-fisa,#tabloubot.tbFaraBot #tbPl-sapt,#tabloubot.tbFaraBot #tbPl-socoteala,#tabloubot.tbFaraBot #tbPl-port,#tabloubot.tbFaraBot #tbDetalii{display:none!important}
+#tabloubot.tbFaraBot .tbGraficRand{grid-template-columns:minmax(0,1fr)!important}
+/* I-836: fișa Grid pe telefon - după „Calculează”, formularul strâns într-un rând (cu tot ce ai ales și „✎ Schimbă”) */
+#gridset #grFormStrans{display:none}
+@media (max-width:600px){#gridset .grIntrari.grStrans>:not(#grFormStrans){display:none}#gridset .grIntrari.grStrans>#grFormStrans{display:flex;align-items:center;gap:8px 10px;width:100%;flex-wrap:wrap;font-weight:600}#gridset #grFormStrans .actionGhost{margin-left:auto;min-height:36px}}
+/* mărunte: țintele mici de pe telefon (Jurnal ›, Obiectiv ✎, Fiecare zi) la cel puțin 32 px */
+@media (max-width:760px),(pointer:coarse){.scCap .actionGhost{min-height:32px;padding:4px 10px}#dash .acZileTab>summary{min-height:32px;display:flex;align-items:center}}
 @media (max-width:640px){.sugPandaTab thead{display:table-header-group}.sugPandaTab{display:table}.sugPandaTab tbody{display:table-row-group}.sugPandaTab tr{display:table-row}.sugPandaTab td,.sugPandaTab th{display:table-cell}}
 /* v100.224: pe paginile de zi rămân alertele, banda botului și versiunea. Cipurile de cercetare revin la analiza monedei și în laborator. */
 body.peAcasa:not(.acMonedaDeschisa) .topLeft,body.peTablou .topLeft,body.peT212 .topLeft,body.peJurnal .topLeft,body.peGrid .topLeft,body.pePaginaNoua .topLeft,

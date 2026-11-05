@@ -298,7 +298,7 @@ await test("legătura paginii: meniul (după Jurnal de trade), telefonul, paleta
   assert.match(H, /<script src="\/lib\/comportament-ecran\.js"><\/script>/);
   assert.match(A, /const NAV_CU_LOAD=new Set\(\[[^\]]*"comportament"/);
   assert.match(A, /else if\(id==="comportament"\)\{if\(typeof coPorneste==="function"\)coPorneste\(false\)\}/);
-  assert.match(A, /\["salt","sugestii","carnet","gridsim","contintreg","montecarlo","rezultate","comportament","tradezilei","rangefilter"\]\.includes\(id\)/   /* v100.297: + Trade-ul zilei */);
+  assert.match(A, /\["salt","sugestii","carnet","gridsim","contintreg","montecarlo","rezultate","comportament","tradezilei","rangefilter"(,"deriv")?\]\.includes\(id\)/   /* v100.297: + Trade-ul zilei */);
   assert.match(A, /var PAGINI_ZILNICE=\[[^\]]*"comportament"/);
   assert.match(A, /\["Jurnal de trade","jurnaltrade"\],\["Comportament","comportament"\]/);
   const lista = /\nvar ACTIUNI_PERMISE=new Set\("([^"]*)"/.exec(A)[1].split(" ");

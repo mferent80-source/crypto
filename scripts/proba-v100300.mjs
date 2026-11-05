@@ -66,13 +66,13 @@ await test("2. ecranul în vm: cartela cu rândurile, rezumatul, stările, proce
   const c = RF.citire(D.bare);
   const h = ctx.rfHtml({ monede: [{ simbol: "BTC", pionex: "BTC_USDT_PERP", fel: "bot", c }, { simbol: "XYZ", pionex: "XYZ_USDT_PERP", eroare: "nu am putut citi lumânările (x)" }], la: Date.now(), inLucru: false, eroare: null, simboluri: [1, 2], tf: "60M" });
   for (const r of ["TREND", "TRIGGER", "CE FAC?", "LOC", "BANDA", "REGIM", "MA", "APRINDERE", "DOVADA", "SEMNAL"]) assert.ok(h.includes(r), "lipsește rândul " + r);
-  assert.match(h, /botul tău/); assert.match(h, /nu am putut citi lumânările/); assert.match(h, /Acum: 1 din 1 în trend/);
+  assert.match(h, /botul tău/); assert.match(h, /nu am putut citi lumânările/); assert.match(h, /Din 1 monedă: (1|niciuna) în trend sus, (1|niciuna) în trend jos/);   /* v100.306 (I-836): numărătoarea nouă */
   assert.match(h, /rfLaGrid\('BTC_USDT_PERP'\)/); assert.match(h, /rfTf\('4H'\)/); assert.match(h, /rfPorneste\(true\)/);
   assert.doesNotMatch(h, /\d\.\d+ (%|ATR)/, "cifrele cu virgulă, nu cu punct");
   assert.match(h, /NIMIC nu s-a dovedit/, "textul cinstit al probei");
   assert.match(ctx.rfHtml({ monede: [], la: 0, inLucru: true, eroare: null, simboluri: [], tf: "60M" }), /Aduc lumânările/);
   assert.match(ctx.rfHtml({ monede: [], la: 0, inLucru: false, eroare: "pică", simboluri: [], tf: "60M" }), /pică/);
-  const t = ctx.rfTexte(c); assert.ok(/TREND (SUS|JOS)/.test(t.verdict)); assert.ok(/ASTEAPTA|GO (LONG|SHORT) ACUM/.test(t.trigger));
+  const t = ctx.rfTexte(c); assert.ok(/TREND (SUS|JOS)/.test(t.verdict)); assert.ok(/AȘTEAPTĂ|GO (LONG|SHORT) ACUM|SEMNAL (BUY|SELL)/.test(t.trigger));   /* v100.306 (I-837): cu diacritice */
   assert.equal(ctx.rfPret(0.1234), "0,1234"); assert.equal(ctx.rfPret(77081.9), "77.081,90");
 });
 
@@ -122,7 +122,7 @@ await test("4. legarea în aplicație: meniu, secțiune, „mai multe”, navTo,
   assert.ok(H.indexOf('<script src="/lib/trade-zilei-ecran.js"></script>') < H.indexOf('<script src="/lib/range-filter-ecran.js"></script>'), "tzSimboluri / tzLaGrid înaintea ecranului RF");
   assert.match(A, /id==="rangefilter"\)\{if\(typeof rfPorneste==="function"\)rfPorneste\(false\)\}/);
   assert.match(A, /PAGINI_ZILNICE=\[[^\]]*"rangefilter"/);
-  assert.match(A, /"comportament","tradezilei","rangefilter"\]\.includes\(id\)/);
+  assert.match(A, /"comportament","tradezilei","rangefilter"(,"deriv")?\]\.includes\(id\)/);
   assert.match(A, /var ACTIUNI_PERMISE=new Set\("[^"]*\brfPorneste\b[^"]*\brfTf\b[^"]*\brfLaGrid\b/, "rfPorneste / rfTf / rfLaGrid în lista albă");
   // revizia Opus (04.11): numele vecine rămân CUVINTE separate (o lipitură „tzLaGridacasaDeschideAnaliza” scotea două butoane din listă)
   const lista = A.match(/var ACTIUNI_PERMISE=new Set\("([^"]*)"/)[1].split(/\s+/);

@@ -107,7 +107,7 @@ await test("pagina: „Pe ce pariezi de fapt” (industria peste 40 %), „Piaț
   const h = ctxE.ciHtml(rap, { acum: rap.la });
   assert.match(h, /Acțiunile tale stau 60% într-o singură industrie \(Semiconductors: MU, WDC, STX\), peste pragul de 40 %/);
   assert.match(h, /alegerile tale \(alfa\) au adus −29,0%: un ETF pe S&amp;P cu aceeași expunere ar fi ieșit mai bine/);
-  assert.match(h, /grila a adus \+300 USDT \(\+1\.320 lei\), direcția prețului −2500 USDT/); assert.match(h, /pierderea vine din direcție/);
+  assert.match(h, /grila a adus \+300 USDT \(\+1\.320 lei\), direcția prețului −2\.500 USDT/); assert.match(h, /pierderea vine din direcție/);   /* v100.306 (I-837): punctul miilor */
   assert.match(h, /Un stop la −7,0% de la cumpărare ar fi păstrat 80 % din câștigători și ar fi tăiat mai devreme 14 pierderi/);
   assert.match(h, /Contul tău se mișcă cu ~32% pe an/); assert.match(h, /ar trebui ținută la ~47% din ce e/);
 });
