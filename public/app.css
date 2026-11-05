@@ -3148,7 +3148,7 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
 #rangefilter p{margin:0}
 #rangefilter .rfAntet{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
 #rangefilter .rfAntet h3{margin:0;font-size:18px}
-#rangefilter .rfDr{margin-left:auto;display:flex;gap:8px;align-items:center}
+#rangefilter .rfDr{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}   /* v100.302: pe telefon rândul se rupe (la 360 px ieșea din ecran) */
 #rangefilter .rfTf{display:inline-flex;gap:4px}
 #rangefilter .rfTfOn{border-color:var(--accent,#F0A33A);color:var(--accent,#F0A33A)}
 #rangefilter .rfIntro{color:var(--t2,#9FB3C4);max-width:900px}
@@ -3159,8 +3159,8 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
 #rangefilter details.rfIntro p{margin-top:8px}
 #rangefilter .rfFiltre{display:flex;gap:6px;flex-wrap:wrap}
 #rangefilter .acBtn{width:auto;display:inline-flex;align-items:center;justify-content:center;background:var(--panel-2,#1A242E);border:1px solid var(--line,#26333F);color:var(--text);border-radius:3px;padding:6px 10px;white-space:nowrap;font:inherit;cursor:pointer}   /* butoanele paginii ca pe Piața azi (#dash .acBtn), nu pe toată lățimea */
-#rangefilter .rfContra{border-color:#F0665C;color:#F0665C}
-#rangefilter .rfProaspatEt{border-color:#4FD18B;color:#4FD18B}
+#rangefilter .rfContra{border-color:var(--pzAur,#E9B949);color:var(--pzAur,#E9B949)}   /* v100.302: RF e nedovedit ⇒ CONTRA e de privit, nu alarmă roșie */
+#rangefilter .rfProaspatEt{border-color:var(--pzSus,#26A96C);color:var(--pzSus,#26A96C)}
 #rangefilter .rfCardProaspat{border-color:rgba(79,209,139,.45)}
 #rangefilter .rfGrila{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}
 #rangefilter .rfCard{background:var(--rf-fond);border:1px solid var(--rf-linie);border-radius:5px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;min-width:0}
@@ -3173,15 +3173,23 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
 #rangefilter .rfRand{display:grid;grid-template-columns:84px 64px minmax(0,1fr);gap:2px 10px;align-items:baseline;border-top:1px solid var(--rf-linie);padding-top:4px}
 #rangefilter .rfRand .rfMic{grid-column:2/-1}
 #rangefilter .rfEt{color:var(--t2,#9FB3C4);font-size:11px;font-weight:700;letter-spacing:.04em}
-#rangefilter .rfBara{font-family:ui-monospace,Menlo,Consolas,monospace;letter-spacing:1px;font-size:11px;color:var(--t3,#7E92A6)}
+#rangefilter .rfBara{font-family:var(--pzMono,ui-monospace,Menlo,Consolas,monospace);letter-spacing:1px;font-size:11px;color:var(--t3,#7E92A6)}
 #rangefilter .rfVal{font-variant-numeric:tabular-nums}
 #rangefilter .rfCe{grid-column:3/-1;font-weight:600}
-#rangefilter .rfTon-sus{color:#4FD18B}#rangefilter .rfTon-jos{color:#F0665C}#rangefilter .rfTon-atentie{color:#F0A33A}#rangefilter .rfTon-fara{color:var(--t2,#9FB3C4)}
+#rangefilter .rfTon-sus{color:var(--pzSus,#26A96C)}#rangefilter .rfTon-jos{color:var(--pzJos,#E5615A)}#rangefilter .rfTon-atentie{color:var(--pzAur,#E9B949)}#rangefilter .rfTon-fara{color:var(--t2,#9FB3C4)}
 #rangefilter .rfMut{color:var(--t3,#7E92A6)}
 #rangefilter .rfMic{font-size:12px}
 #rangefilter .rfRau{color:#F0665C}
 #rangefilter .rfAct{margin-top:4px}
-@media (max-width:640px){#rangefilter .rfGrila{grid-template-columns:minmax(0,1fr)}#rangefilter .rfRand{grid-template-columns:76px 56px minmax(0,1fr)}}
+/* v100.302: căsuța „Analizează o monedă” + butoanele oprite cât citește; culorile tonurilor = ale casei (tema PAZNIC), nu cele din Pine */
+#rangefilter .rfCauta{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+#rangefilter .rfCautaIn{box-sizing:border-box;width:12em;max-width:100%;background:var(--panel-2,#1A242E);border:1px solid var(--line,#26333F);color:var(--text);border-radius:3px;padding:6px 10px;font:inherit;text-transform:uppercase}
+#rangefilter .rfCautaIn::placeholder{text-transform:none;color:var(--t3,#7E92A6)}
+#rangefilter .rfCautataEt{border-color:var(--pzInfo,#5B8FC7);color:var(--pzInfo,#5B8FC7)}
+#rangefilter .rfCautaRez:empty{display:none}
+#rangefilter .rfGrilaCautata{grid-template-columns:repeat(auto-fill,minmax(320px,1fr))}
+#rangefilter .acBtn:disabled{opacity:.55;cursor:default}
+@media (max-width:640px){#rangefilter .rfCautaIn{flex:1 1 10em}#rangefilter .rfGrila{grid-template-columns:minmax(0,1fr)}#rangefilter .rfRand{grid-template-columns:76px 56px minmax(0,1fr)}}
 /* v100.258: pânda (v100.150) stă după orice regulă de tabel, chiar înaintea blocului v100.224 (#topLive), care rămâne ultimul - scripts/lib/panda-ultima.mjs */
 /* v100.261 (27.10.2026, el: „linia vreau să cumpăr întinde f mult pagina în jos lăsând un mare gol”): raportul Porții (13 blocuri, ~3000 px
    la 310 px) stătea în coloana îngustă din dreapta și întindea grila Trading 212; sub „Pozițiile” (~560 px) rămânea golul. Cu raport pe ecran

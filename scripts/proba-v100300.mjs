@@ -37,7 +37,7 @@ const aprox = (a, b, eps) => Math.abs(a - b) <= (eps == null ? 1e-6 : eps) * Mat
 await test("1a. portul JS = Python pe BTC 1h (500 de bare reale): semnale, direcția, filtrul, r, ATR, DOVADA, consolidarea, unghiul, MA", () => {
   const c = RF.citire(D.bare), A = D.asteptat;
   assert.ok(!c.eroare, c.eroare);
-  assert.equal(c.buyuri, A.buyuri); assert.equal(c.selluri, A.selluri); assert.equal(c.dir, A.dir); assert.equal(c.bareDir, A.bareDir);
+  assert.equal(c.buyuri, A.buyuri); assert.equal(c.selluri, A.selluri); assert.equal(c.dir, A.dir); assert.equal(c.bareDir, A.bareDir - 1, "v100.302: „de N bare” = ta.barssince din Pine; proba-date ține numărătoarea veche (cu bara flip-ului)");
   assert.ok(aprox(c.filt, A.filt), `filt ${c.filt} vs ${A.filt}`); assert.ok(aprox(c.r, A.r), `r ${c.r} vs ${A.r}`); assert.ok(aprox(c.atr, A.atr), `atr ${c.atr} vs ${A.atr}`);
   assert.equal(c.dovada.n, A.dovada_n); assert.equal(c.dovada.k, A.dovada_k);
   assert.equal(c.regim.cons, A.cons); assert.ok(aprox(c.regim.ang, A.ang)); assert.equal(c.ma.col, A.maCol); assert.ok(aprox(c.regim.consPct, A.consPct, 1e-9));
@@ -105,7 +105,7 @@ await test("3. rândul din Tablou (tbRangeFilterRand din app.js) pe aceleași ba
   const r = c2.tbRangeFilterRand({ baza: "BTC", quote: "USDT", directie: c.dir === 1 ? "SHORT" : "LONG" });
   assert.ok(r && r.ce === "Range Filter" && /TREND (SUS|JOS) de \d+( de)? bare \(1h\)/.test(r.text), JSON.stringify(r));
   assert.equal(c2.tbRangeFilterRand({ baza: "ETH", quote: "USDT", directie: "LONG" }), null, "altă monedă decât cea din cache ⇒ nimic (nu cifrele alteia)");
-  assert.match(r.text, /DOVADA \d+ din 100 \(\d+( de)? cazuri, nedovedit\)/); assert.match(r.text, /CONTRA botului/); assert.equal(r.stare, "atentie");
+  assert.match(r.text, /DOVADA (\d+ din 100 \(\d+( de)? cazuri, nedovedit\)|\d+ din \d+( de)? cazuri \(puține cazuri\))/); assert.match(r.text, /CONTRA botului/); assert.equal(r.stare, "info", "v100.302: RF e nedovedit ⇒ CONTRA e info, nu alarmă");
   assert.equal(r.actiune, "navTo('rangefilter',true)");
   const r2 = c2.tbRangeFilterRand({ baza: "BTC", quote: "USDT", directie: c.dir === 1 ? "LONG" : "SHORT" }); assert.equal(r2.stare, "info"); assert.doesNotMatch(r2.text, /CONTRA/);
   assert.match(A, /tbRfStare\.inLucru=getJSON\("\/api\/market\?type=pionex_klines&symbol="\+encodeURIComponent\(k\)\+"&interval=60M&limit=500"\)/, "lumânările de 1 h, 500, pentru Tablou");

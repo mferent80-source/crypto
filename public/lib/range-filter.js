@@ -1,5 +1,5 @@
 // Range Filter (v100.300; el, 04.11.2026: „integrează și în Crypto Radar ca dash și în panel”) - partea PURĂ (fără DOM; proba o rulează în vm).
-// Port exact al motorului din pine-scripts\RANGE-FILTER\Range_Filter_BS_v2_1.pine (DonovanWall „Range Filter B&S” v4 + părțile din Trender):
+// Port exact al motorului din pine-scripts\RANGE-FILTER\Range_Filter_BS_v2_5.pine (v100.302: „de N bare” ca ta.barssince, ținerea = mediana, flip la banda opusă, z Bonferroni) (DonovanWall „Range Filter B&S” v4 + părțile din Trender):
 //   - filtrul cu bandă moartă: se mișcă doar când close iese din ±r, r = multiplicator × EMA(EMA(|Δclose|, n), 2n−1); direcția lui = TREND SUS / JOS;
 //   - BUY / SELL la schimbarea direcției cu prețul de partea bună (latch: un BUY nu se repetă până nu a fost un SELL);
 //   - Trender: MA colorată (EMA hl2 15: verde = urcă ȘI close peste, roșu = coboară ȘI close sub), CONSOLIDAREA pe unghiul pantei EMA(hl2,5) / ATR
@@ -41,7 +41,20 @@ var RangeFilter = (function () {
     return out;
   }
   function median(a) { var v = a.filter(function (x) { return x != null && isFinite(x); }).sort(function (x, y) { return x - y; }); if (!v.length) return null; var m = v.length >> 1; return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2; }
-  function wilsonLo(k, n) { if (!(n > 0)) return null; var z = 1.96, p = k / n; return (p + z * z / (2 * n) - z * Math.sqrt(p * (1 - p) / n + z * z / (4 * n * n))) / (1 + z * z / n); }
+  // marginea de jos Wilson; z implicit 1,96 (95 % pe o singură monedă). v100.302: z mai mare când pagina arată multe monede (zBonf)
+  function wilsonLo(k, n, z) { if (!(n > 0)) return null; z = z > 0 ? z : 1.96; var p = k / n; return (p + z * z / (2 * n) - z * Math.sqrt(p * (1 - p) / n + z * z / (4 * n * n))) / (1 + z * z / n); }
+  // inversa normalei (Acklam, eroare ~1e-9) și z-ul Bonferroni pentru m monede: pe o pagină cu 30 de monede, 1,96 pe fiecare dădea ~16 % din
+  // pagini cu un DOVEDIT din noroc (simulare H0 în re-auditul din 05.11.2026); cu z(m) riscul pe toată pagina rămâne ~2,5 %
+  function invNorm(p) {
+    var a = [-39.69683028665376, 220.9460984245205, -275.9285104469687, 138.3577518672690, -30.66479806614716, 2.506628277459239];
+    var b = [-54.47609879822406, 161.5858368580409, -155.6989798598866, 66.80131188771972, -13.28068155288572];
+    var c = [-0.007784894002430293, -0.3223964580411365, -2.400758277161838, -2.549732539343734, 4.374664141464968, 2.938163982698783];
+    var d = [0.007784695709041462, 0.3224671290700398, 2.445134137142996, 3.754408661907416], pl = 0.02425, q, r;
+    if (p < pl) { q = Math.sqrt(-2 * Math.log(p)); return (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1); }
+    if (p <= 1 - pl) { q = p - 0.5; r = q * q; return (((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * q / (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1); }
+    q = Math.sqrt(-2 * Math.log(1 - p)); return -(((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1);
+  }
+  function zBonf(m) { return invNorm(1 - 0.025 / Math.max(1, Math.floor(m) || 1)); }
   // motorul RF pe bare închise: filt, r, fdir (+1 / −1 / 0), buy, sell
   function motor(c, per, qty) {
     per = per || PER; qty = qty || QTY;
@@ -76,22 +89,24 @@ var RangeFilter = (function () {
     opt = opt || {};
     var per = opt.per || PER, qty = opt.qty || QTY, cost = opt.cost != null ? opt.cost : COST, dirH = opt.dirH || DIRH, minEp = opt.minEp || MIN_EP;
     var warm = 3 * (2 * per - 1);
-    if (!Array.isArray(bare) || bare.length < warm + 20) return { eroare: "prea puține lumânări (" + (bare ? bare.length : 0) + ", trebuie cel puțin " + (warm + 20) + ")" };
+    if (!Array.isArray(bare) || bare.length < warm + 20) return { eroare: "prea puține lumânări (" + (bare ? bare.length : 0) + ", trebuie cel puțin " + (warm + 20) + ") - monedă listată de curând?", scurt: true };
     var n = bare.length, h = [], l = [], c = [];
     for (var i = 0; i < n; i++) { var b = bare[i]; var hh = nr(b.h), ll = nr(b.l), cc = nr(b.c); if (hh == null || ll == null || cc == null) return { eroare: "lumânare fără preț" }; h.push(hh); l.push(ll); c.push(cc); }
     var m = motor(c, per, qty), a = atr(h, l, c, 14), t = trender(h, l, c, a), L = n - 1;
     // DOVADA: fiecare semnal închis după dirH bare, mișcarea zero = ratat; rata de bază 50 (semnale în ambele direcții)
-    var dN = 0, dK = 0, nSig = 0, nWhip = 0, sumHold = 0, lastSigBar = null, nBars = 0, nCons = 0, lastSide = 0, lastSigI = null, lastPrice = null, lastIgn = 0, lastIgnI = null;
+    var dN = 0, dK = 0, nSig = 0, nWhip = 0, holds = [], lastSigBar = null, nBars = 0, nCons = 0, lastSide = 0, lastSigI = null, lastPrice = null, lastIgn = 0, lastIgnI = null;
     for (var j = warm; j < n; j++) {
       nBars++; if (t.cons[j]) nCons++;
       if (m.buy[j] || m.sell[j]) {
-        nSig++; if (lastSigBar != null) { var hold = j - lastSigBar; sumHold += hold; if (hold <= 3) nWhip++; } lastSigBar = j;
+        nSig++; if (lastSigBar != null) { var hold = j - lastSigBar; holds.push(hold); if (hold <= 3) nWhip++; } lastSigBar = j;
         lastSide = m.buy[j] ? 1 : -1; lastSigI = j; lastPrice = c[j];
         if (j + dirH <= L) { dN++; if ((c[j + dirH] - c[j]) * lastSide > 0) dK++; }
       }
       if (t.ignUp[j] || t.ignDn[j]) { lastIgn = t.ignUp[j] ? 1 : -1; lastIgnI = j; }
     }
+    // v100.302: „de N bare” = barele de la flip, ca ta.barssince(fdir != fdir[1]) din Pine (înainte era +1: „de 10 bare” lângă „BUY acum 9 bare”)
     var dir = m.fdir[L], bareDir = 0; for (var q = L; q > 0 && m.fdir[q] === dir; q--) bareDir++;
+    if (q > 0 || m.fdir[0] !== dir) bareDir = Math.max(0, bareDir - 1);
     var atrL = a[L], filt = m.filt[L], r = m.r[L];
     var bandAtr = [], j0 = Math.max(warm, n - 100); for (var z = j0; z < n; z++) if (a[z] > 0 && m.r[z] != null) bandAtr.push(m.r[z] / a[z]);
     var dHit = dN > 0 ? dK / dN * 100 : null, dLo = dN > 0 ? wilsonLo(dK, dN) * 100 : null;
@@ -112,10 +127,12 @@ var RangeFilter = (function () {
       ma: { col: t.maCol[L], distAtr: atrL > 0 && t.ma[L] != null ? (c[L] - t.ma[L]) / atrL : null, aliniata: (t.maCol[L] === 1 && dir === 1) || (t.maCol[L] === -1 && dir === -1) },
       aprindere: lastIgn ? { fel: lastIgn > 0 ? "SUS" : "JOS", acum: L - lastIgnI } : null,
       dovada: { n: dN, k: dK, hit: dHit, lo: dLo, dovedit: dN >= minEp && dLo != null && dLo > 50 },
-      sigPer100: nBars ? nSig / nBars * 100 : null, tinere: nSig > 1 ? sumHold / (nSig - 1) : null, whipPct: nSig > 1 ? nWhip / (nSig - 1) * 100 : null,
+      // v100.302: flip = cât mai are close până la banda OPUSĂ (direcția se întoarce acolo, nu la filtru); ținerea = MEDIANA (ca reperul probei și Pine v2.4+)
+      flipAtr: atrL > 0 && r != null ? (dir === 1 ? (c[L] - filt + r) / atrL : dir === -1 ? (filt + r - c[L]) / atrL : null) : null,
+      sigPer100: nBars ? nSig / nBars * 100 : null, tinere: median(holds), whipPct: nSig > 1 ? nWhip / (nSig - 1) * 100 : null,
       buyuri: m.buy.filter(Boolean).length, selluri: m.sell.filter(Boolean).length
     };
   }
-  return { PER: PER, QTY: QTY, COST: COST, DIRH: DIRH, MIN_EP: MIN_EP, ema: ema, rngSize: rngSize, rngFilt: rngFilt, atr: atr, motor: motor, trender: trender, wilsonLo: wilsonLo, citire: citire };
+  return { PER: PER, QTY: QTY, COST: COST, DIRH: DIRH, MIN_EP: MIN_EP, ema: ema, rngSize: rngSize, rngFilt: rngFilt, atr: atr, motor: motor, trender: trender, wilsonLo: wilsonLo, zBonf: zBonf, citire: citire };
 })();
 if (typeof module !== "undefined" && module.exports) module.exports = RangeFilter;

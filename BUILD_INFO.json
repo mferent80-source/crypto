@@ -1,11 +1,12 @@
 {
-  "version": "v100.301",
-  "badge": "v100.301 · RANGE FILTER, AUDITAT",
+  "version": "v100.302",
+  "badge": "v100.302 · RANGE FILTER, RE-AUDITAT + CĂSUȚA",
   "engineContract": "54.1",
   "dataSchema": 54,
   "baseRelease": "v77.4 · TABLOUL BOTULUI",
   "releaseType": "valul de reparatii din revizia finala pe ansamblu: marginStatus/riskStatus citite, telefon, scurgere WS/ceas la iesire prin tab-uri, ATR adevarat, pret viu, istoric fara pret inghetat, sortare dupa timp, comision nemasurabil, durata la margine",
   "features": {
+    "rangeFilterReaudit302": "El (05.11.2026): „vreau să reauditezi rf b&s script și integrarea din radar, să optimizezi și să vii cu idei” + „pune și o căsuță unde să analizez o monedă anume” - re-auditul cu doi auditori independenți (Radar 0 🔴 / 8 🟡 / 9 🔵; paritatea JS = Python pe 126 de serii, 94.500 de bare, 0 diferențe): căsuța „Analizează o monedă” (perp, apoi spot), DOVEDIT corectat pentru câte monede se văd (Bonferroni pe Wilson), textele cinstite (SEMNAL pe bara închisă, flip la X ATR, pragul costului exact, „k din n” sub 20 de cazuri), „de N bare” ca în Pine, ținerea = mediana, căderea parțială la vedere, cache-ul până la închiderea barei, lumânările ținute pe monedă (DOVADA pe 1.000 = doar pagina a doua), redesenarea pe zone, butoanele oprite cât citește, Tabloul: reîncercare după 1 min, CONTRA = info.",
     "rangeFilterAudit301": "El (04.11.2026 seara): „auditează și îmbunătățește” - auditul paginii Range Filter (0 🔴 / 3 🟡 / 5 🔵): DOVADA pe 1.000 de bare (a doua pagină cu endTime, opt-in; pe 500 de bare nu ajungea niciodată la 20 de cazuri), cache pe interval (1h ↔ 4h fără cereri noi), ordinea cartelelor (boții → semnale noi → restul) + filtre Toate / Semnale noi / Boții tăi, „Contra boților tăi” în rezumat, ora barei următoare, intro pliat, stopul și costul în rândul din Tablou; același refuz Pionex „mut” reparat și în Trade-ul zilei.",
     "rangeFilter300": "El (04.11.2026): „integrează și în Crypto Radar ca dash și în panel” - pagina Range Filter (DonovanWall B&S + Trender, același motor ca Range Filter B&S v2.1 din TradingView, port JS = Python pe BTC): pe fiecare monedă VERDICT (direcția filtrului) · TRIGGER · CE FAC? · LOC · BANDA · REGIM · MA · APRINDERE · DOVADA · SEMNAL, 1h / 4h; rândul „Range Filter” în citirea Tabloului botului. Cinstit: proba din 04.11 (21 de perechi, după cost) n-a dovedit nimic - colorant de trend, nu semnal.",
     "oraZilei299": "El (03.11.2026): „alte idei?” → „fă” - ce a ieșit DOVEDIT din cele trei probe pre-înregistrate intră în Trade-ul zilei: curba orelor (cât din mișcarea zilei e formată până la ora asta, confirmată pe anul al treilea la 2,3 pp), weekendul ×0,78 pe mișcarea așteptată, orele 15–18 RO; proba PROSPECTIVĂ a spargerii A în colector (data/proba-a.jsonl, verdict după 2027-02-01). NEDOVEDITE și lăsate afară: boții pe clase de mișcare (boții lui țin median o oră), momentum-ul lung (6 variante, toate sub reper).",

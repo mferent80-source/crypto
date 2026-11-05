@@ -58,7 +58,9 @@ await test("1b. refuzul Pionez pe a doua pagină oprește bucla cu mesajul la ve
 });
 
 await test("2. cache pe interval: 1h → 4h → 1h nu reface cererile pe 1h (sub 10 min)", async () => {
-  const p1 = randuri(D.bare); const ceruri = [];
+  // v100.302: cache-ul ține doar până se închide bara următoare ⇒ lumânările probei mutate în prezent (ultima = bara în formare)
+  const dt = Math.floor(Date.now() / 3600000) * 3600000 - D.bare[D.bare.length - 1].t;
+  const p1 = randuri(D.bare).map((r) => Object.assign({}, r, { time: r.time + dt })); const ceruri = [];
   const getJSON = async (u) => { if (/clasament/.test(u)) return clasament(); ceruri.push(u); return { result: true, data: { klines: p1 } }; };
   const c = context(getJSON, { tzSimboluri: simb });
   await vm.runInContext("rfPorneste(true)", c); assert.equal(ceruri.length, 1); assert.match(ceruri[0], /interval=60M/);
@@ -88,7 +90,8 @@ await test("4. rezumatul: „Contra boților tăi” din direcția botului faț�
   const contra = cit.dir === 1 ? "SHORT" : "LONG", cu = cit.dir === 1 ? "LONG" : "SHORT";
   const st = { monede: [{ simbol: "DOGE", fel: "bot", c: cit, directie: contra }, { simbol: "XRP", fel: "bot", c: cit, directie: cu }, { simbol: "BTC", fel: "piata", c: cit }], la: Date.now(), inLucru: false, eroare: null, simboluri: [1, 2, 3], tf: "60M", filtru: "toate", adanc: false, perTf: {} };
   const h = c.rfHtml(st);
-  assert.match(h, /Contra boților tăi: DOGE \((long|short), RF (sus|jos)\)\./); assert.doesNotMatch(h, /Contra boților tăi: [^.]*XRP/);
+  // v100.302: după „DOGE (…)” urmează „(RF e nedovedit: de privit…)” - comentariul pe rândul LUI, ca să nu înghită aserțiunea de după
+  assert.match(h, /Contra boților tăi: DOGE \((long|short), RF (sus|jos)\)[ .]/); assert.doesNotMatch(h, /Contra boților tăi: [^.]*XRP/);
   assert.match(h, /botul tău · CONTRA/); assert.match(h, /bara următoare se închide la \d{2}:\d{2}/);
   assert.equal(c.rfUrmatoarea(st), cit.t + 2 * 3600000);
   assert.match(h, /<details class="rfIntro"><summary>/); assert.match(h, /NIMIC nu s-a dovedit/); assert.match(h, /colorant de trend/);
