@@ -223,7 +223,11 @@ export async function pazaPas({ Busola, rez, bot, st, acum, pret, trimite, moned
 // v100.207 (16.10, auditul Busolei — „om mort”): pragul urmează programul Busolei (Busola.pragVechime); nota pleacă pe DISCORD, o dată pe rezumat
 export function notaVeche({ Busola, rez, acum, anuntat }) {
   const la = rez ? Number(rez.la) : NaN;
-  const prag = typeof Busola.pragVechime === "function" ? Busola.pragVechime(la) : Busola.PAZA_VECHI_MS;
+  // v101.165 (05.11, auditul Busolei 🔴 2): programul din rezumat (`program`) - pragul vechi alarma fals în fiecare seară la 23:02
+  const prag = typeof Busola.pragVechime === "function" ? Busola.pragVechime(la, rez && rez.program) : Busola.PAZA_VECHI_MS;
   if (!(la > 0) || acum - la <= prag || anuntat === la) return null;
-  return Object.assign(MC.busolaVeche((acum - la) / 3600000, prag / 3600000), { la });
+  const urm = typeof Busola.urmatoareaRulare === "function" ? Busola.urmatoareaRulare(la, rez && rez.program) : null;
+  // revizia (🟠2): doar în Radar NUMAI când Worker-ul Busolei spune în rezumat că paznicul lui poate anunța (`paznic.discord`, 1.88)
+  const paznic = !!(rez && rez.paznic && rez.paznic.discord === true);
+  return Object.assign(MC.busolaVeche((acum - la) / 3600000, prag / 3600000, urm, paznic), { la });
 }

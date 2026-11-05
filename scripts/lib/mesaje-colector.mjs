@@ -126,10 +126,15 @@ export const busolaVoci = (o) => ({ nivel: "atentie", cheie: "busola-voci",
   mesaj: msg(o.text + ".", "Vocile care s-au pronunțat sunt pe aceeași parte, niciuna dovedită: aș verifica stopul și n-aș adăuga bani; nu e un semnal de închidere.") });   /* revizia: numărul real de voci */
 // rezumatul Busolei e vechi: paza tace - o notă doar în Radar, o dată pe rezumat
 // v100.207 (auditul Busolei): omul mort — pe Discord, cu ce să faci; critic peste 3 h (ziua măsurarea e orară)
-export const busolaVeche = (ore, pragOre) => ({ nivel: ore >= 3 && pragOre < 3 ? "critic" : "atentie", cheie: "busola-veche", doarRadar: false,
-  titlu: "Busola n-a mai măsurat de " + cate(Math.floor(ore), "oră", "ore") + (pragOre < 3 ? " (ziua măsoară orar)" : " (noaptea la 4 ore)"),
-  mesaj: "PC-ul e oprit, sarcina nu rulează sau wrangler s-a agățat ori login-ul a expirat; paza boților tace, Busola arată date vechi.\n"
-    + "👉 Aș porni PC-ul sau MASOARA-SI-URCA.bat; la 401 aș rula npx wrangler login în busola." });
+// v101.165 (05.11, auditul Busolei 🔴 2 + I-823): „trebuia la HH:MM” după programul real de pe VPS; măsurarea NU mai e pe PC-ul de acasă,
+// iar un `wrangler login` acolo strică autentificarea VPS-ului (05.11) ⇒ mesajul trimite la VPS și spune pe față să nu faci login acasă.
+// DOAR ÎN RADAR când paznicul din Worker-ul Busolei poate anunța (1.88, I-812: puls + trepte 4 h / 8 h / dimineața, nu moare odată cu VPS-ul,
+// pe care stă și colectorul) — `paznic` vine din rezumat (`paznic.discord`, pus de Worker la servire). Altfel (Busola veche, webhook lipsă)
+// mesajul pleacă pe Discord, ca înainte: o pană nu rămâne fără nicio voce (revizia 🟠2)
+export const busolaVeche = (ore, pragOre, urmatoarea, paznic) => ({ nivel: ore >= 3 && pragOre < 3 ? "critic" : "atentie", cheie: "busola-veche", doarRadar: paznic === true,
+  titlu: "Busola n-a mai măsurat de " + cate(Math.floor(ore), "oră", "ore") + (Number(urmatoarea) > 0 ? " (trebuia la " + oraRo(urmatoarea) + ")" : pragOre < 3 ? " (ziua măsoară orar)" : " (noaptea la 4 ore)"),
+  mesaj: "Măsurarea de pe VPS n-a rulat sau n-a urcat; paza boților tace, Busola arată date vechi.\n"
+    + "👉 Aș verifica pe VPS busola\\cron\\stare\\jurnal-rulari.log; fără wrangler login pe PC-ul de acasă." });
 
 export const t212DinNou = () => ({ nivel: "info", titlu: "Trading 212 răspunde din nou", mesaj: "Alertele de stop și țintă pe acțiuni merg din nou." });
 export const t212Rau = (minute, status, eroare) => ({ nivel: "critic", titlu: "Trading 212 nu mai răspunde de " + minute + " min",

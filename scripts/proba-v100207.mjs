@@ -24,9 +24,10 @@ const REZ = (la) => ({ la, monede: {}, grid: {}, perp: {} });
 await test("pragul programului Busolei: ziua 1 h + 50 min, noaptea 4 h + 50 min", () => {
   assert.equal(B.pragVechime(ZIUA), H + 50 * 60000); assert.equal(B.pragVechime(NOAPTEA), 4 * H + 50 * 60000);
 });
-await test("ziua: rezumat de 1,5 h ⇒ nimic; de 2 h ⇒ nota pleacă pe DISCORD (nu doar în Radar)", () => {
+await test("ziua: rezumat de 1,5 h ⇒ nimic; de 2 h ⇒ nota pleacă pe Discord cât rezumatul nu dovedește paznicul din Worker (v101.165)", () => {
   assert.equal(P.notaVeche({ Busola: B, rez: REZ(ZIUA), acum: ZIUA + 1.5 * H, anuntat: null }), null);
   const n = P.notaVeche({ Busola: B, rez: REZ(ZIUA), acum: ZIUA + 2 * H, anuntat: null });
+  /* v101.165 (revizia): doar în Radar NUMAI când rezumatul spune `paznic.discord: true` (paznicul din Worker poate anunța); aici nu spune ⇒ Discord */
   assert.ok(n); assert.equal(n.doarRadar, false); assert.match(n.titlu, /Busola n-a mai măsurat de 2 ore/); assert.match(n.mesaj, /PC-ul|wrangler|login/);
 });
 await test("noaptea: rezumat de 3 h ⇒ nimic (înainte: 4,5 h fix nu anunța nici ziua)", () => {

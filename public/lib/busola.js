@@ -14,7 +14,15 @@ var Busola = (function () {
   // PROGRAMUL real al măsurării (sarcina „Busola Masoara”: din oră în oră 08:05–22:35 ora României, la 4 h noaptea) + 50 min, nu 4,5 h fixe
   var PAZA_VECHI_MS = 4.5 * 3600 * 1000;   /* rămâne ca rezervă pentru cine nu dă `la` (vezi pragVechime) */
   function oraRomaniei(t) { try { return Number(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Bucharest", hour: "2-digit", hour12: false }).format(new Date(t))); } catch (e) { return new Date(t).getHours(); } }
-  function pragVechime(la) { var h = oraRomaniei(la); return (h >= 8 && h < 23 ? 1 : 4) * 3600 * 1000 + 50 * 60 * 1000; }
+  // v100.305 (05.11, auditul Busolei 🔴 2, I-812): programul REAL de pe VPS - din oră în oră 07:05–21:05, apoi 23:05 și 03:05 - din rezumat
+  // (`program`, Busola 1.88), altfel lista de rezervă de aici (aceeași; contractul Busolei le compară). Pragul vechi (08–23 orar) dădea
+  // „Busola n-a mai măsurat” FALS în fiecare seară pe la 23:02 (pauza 21:05 → 23:05), iar după 07:05 aștepta 4 h în loc de 1
+  var PROGRAM_MASURARE = ["03:05", "07:05", "08:05", "09:05", "10:05", "11:05", "12:05", "13:05", "14:05", "15:05", "16:05", "17:05", "18:05", "19:05", "20:05", "21:05", "23:05"];
+  function minutRomaniei(t) { try { var p = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Bucharest", hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(new Date(t)), v = function (k) { for (var i = 0; i < p.length; i++) if (p[i].type === k) return Number(p[i].value); return 0; }; return (v("hour") % 24) * 60 + v("minute"); } catch (e) { var d = new Date(t); return d.getHours() * 60 + d.getMinutes(); } }
+  function minuteProgram(program) { var l = (Array.isArray(program) && program.length ? program : PROGRAM_MASURARE).map(function (s) { var m = /^(\d{1,2}):(\d{2})$/.exec(String(s)); return m ? Number(m[1]) * 60 + Number(m[2]) : NaN; }).filter(function (x) { return x >= 0 && x < 1440; }).sort(function (a, b) { return a - b; }); return l.length ? l : minuteProgram(null); }
+  function locInProgram(t, program) { var M = minuteProgram(program), m = minutRomaniei(t), i = M.length - 1, k; for (k = 0; k < M.length; k++) if (M[k] <= m) i = k; var ieri = M[i] > m, start = ieri ? M[i] - 1440 : M[i], urm = ieri ? M[0] : (i + 1 < M.length ? M[i + 1] : M[0] + 1440); return { dePana: m - start, pana: urm - start }; }
+  function pragVechime(la, program) { return locInProgram(la, program).pana * 60000 + 50 * 60000; }
+  function urmatoareaRulare(la, program) { var l = locInProgram(la, program); return la - l.dePana * 60000 - (la % 60000) + l.pana * 60000; }
   var stare = { rez: null, la: 0, inLucru: null, esec: false };
   // v100.91 (ideea 3): bilanțul pazei Busolei (I-512) - după „mai agitat” pe futures, gridul chiar a pierdut mai mult? Pe pagină, la mișcare,
   // doar când verdictul e pe date destule („dovedit” / „pe dos” / „n-am aflat”); „prea puține” tace
@@ -77,7 +85,7 @@ var Busola = (function () {
   function pazaStare(rez, simbol, acum) {
     if (!rez || !rez.monede || !rez.grid) return null;
     var cheie = simbolBusola(simbol), v = acum - Number(rez.la);
-    return { cheie: cheie, stare: stare4h(rez.monede[cheie]), vechi: !(v <= pragVechime(Number(rez.la))), la: Number(rez.la) };
+    return { cheie: cheie, stare: stare4h(rez.monede[cheie]), vechi: !(v <= pragVechime(Number(rez.la), rez.program)), la: Number(rez.la) };
   }
   // v100.92 (I-522 / I-523): ce primesc verdictul (semaforul) și Consiliul de la Busola - starea monedei pe 4h și bilanțul pazei (I-512:
   // verdict, diferența „mișcare − oricând” pe date noi, monedele). Rezumatul vechi (> 4,5 h), lipsă sau moneda neurmărită ⇒ null:
@@ -151,11 +159,22 @@ var Busola = (function () {
   var TEXT_STARE = { miscare: ["atentie", "mai agitată ca de obicei"], liniste: ["info", "mai calmă ca de obicei"], "nu-stiu": ["neutru", "nimic neobișnuit"] };
   // kv = { stare, de } de la colector (ruta `paza`): „de N h” DOAR când starea lui e aceeași cu cea de aici (cele două rezumate pot fi
   // defazate ~30 min); „de” necunoscut (prima vedere a monedei) ⇒ fără durată. „nu urmărește” (moneda lipsește) ≠ „n-a putut măsura”
+  // v100.305 (05.11, auditul Busolei, I-814): starea AFIȘATĂ e a paginii Busolei, cu opțiunile (`miscare4h`, Busola 1.88) - pe 04.11 Tabloul
+  // scria „nimic neobișnuit” pe 24 din 30 de monede, iar pagina „mai calmă (din opțiuni)”. Paza (alertele pe Discord) rămâne pe celula
+  // măsurată (stare4h): opțiunile pe BTC puse în alertele altcoin-urilor sunt o hotărâre a LUI, nu una automată. Rezumat vechi ⇒ ca înainte
+  // revizia (🟠4): DOAR când vorbesc opțiunile — altfel celula (perp4h / grid4h / 4h), ca paza: starea paginii pe spot Binance ar putea
+  // contrazice alerta pazei de pe futures Pionex („mai agitată” pe Discord, „nimic neobișnuit” în Tablou) fără să spună de ce
+  function stareAfisata(m) { var x = m && m.miscare4h; return x && x.sursa === "optiuni" && masurat(x.semn) ? { stare: x.semn, sursa: "optiuni" } : { stare: stare4h(m), sursa: "busola" }; }
   function eticheta(rez, simbol, acum, kv) {
     var p = pazaStare(rez, simbol, acum); if (!p) return null;
-    var t = TEXT_STARE[p.stare] || ["nemasurat", rez.monede[p.cheie] ? "n-a putut măsura moneda" : "nu urmărește moneda"];
-    var d = kv && typeof kv === "object" && kv.stare === p.stare ? Number(kv.de) : NaN;
-    return { stare: p.stare, nivel: t[0], text: t[1], nota: [d > 0 && acum - d >= 0 ? "de " + ore(acum - d) : null, "măsurat acum " + ore(acum - p.la), p.stare === "miscare" ? bilantText(rez) : null].filter(Boolean).join(" · ") };
+    var m = rez.monede[p.cheie], a = stareAfisata(m), s = a.stare, dinOpt = a.sursa === "optiuni";
+    var t = TEXT_STARE[s] || ["nemasurat", m ? "n-a putut măsura moneda" : "nu urmărește moneda"];
+    // gridul măsurat „după liniște / mișcare” e al stării BUSOLEI; la starea din opțiuni nu se lipește cifra lui (nu e măsurată acolo)
+    var cine = dinOpt ? " — după piața de opțiuni" + (m && m.optiuni4h && m.optiuni4h.din === "BTC" ? " pe BTC" : "") + "; Busola tace aici" : "";
+    var d = kv && typeof kv === "object" && kv.stare === p.stare && s === p.stare ? Number(kv.de) : NaN;
+    var r = { stare: s, nivel: t[0], text: t[1] + cine, nota: [d > 0 && acum - d >= 0 ? "de " + ore(acum - d) : null, "măsurat acum " + ore(acum - p.la), s === "miscare" && !dinOpt ? bilantText(rez) : null].filter(Boolean).join(" · ") };
+    if (dinOpt) r.sursa = a.sursa;   /* forma de până acum rămâne neschimbată când vorbește Busola (proba v100.90 o compară întreagă) */
+    return r;
   }
   // rândul boților deschiși (portofoliu + rezumatul de dimineață): „AAVE mai agitată de 8 h · LIT mai calmă de 2,5 h · PUMP nimic neobișnuit”;
   // peste 145 de semne (raportul ține 160, cu „Busola, pe 4h: ” în față) cad duratele, apoi coada devine „+N” - niciun bot pierdut pe tăcute
@@ -233,7 +252,11 @@ var Busola = (function () {
   function randVerdict(rez, simbol, acum, o) {
     if (!rez || !rez.monede) return null;
     var pe1h = o && o.interval === "1h", m = rez.monede[simbolBusola(simbol)], c = m && (pe1h ? m.verdict1h : m.verdict4h);   /* v100.149 (I-580) */
-    if (!c || !(c.cate >= 1) || !(c.deObicei >= 1) || !c.ce) return null;
+    if (!c || !(c.cate >= 1) || !(c.deObicei >= 1) || !c.ce) {
+      // v100.305 (I-814): din Busola 1.85 cifra tace INTENȚIONAT unde vorbesc opțiunile - spus, nu un rând care dispare fără explicație
+      var mo = !pe1h && m && m.miscare4h;
+      return mo && mo.sursa === "optiuni" ? { nivel: "info", cate: null, deObicei: null, varsta: varstaText(rez, acum), text: ["cifra tace: verdictul de mișcare vine din piața de opțiuni" + (m.optiuni4h && m.optiuni4h.din === "BTC" ? " pe BTC" : "") + " (Busola are cifră doar când vorbește ea)", varstaText(rez, acum)].filter(Boolean).join(" · ") } : null;
+    }
     var baza = String(simbol || "").toUpperCase().replace(/_USDT_PERP$|_USDT$|USDT$|\.PERP$/, ""), ce = String(c.ce);
     if (/^ating ținta/.test(ce)) ce += " (ținta și stopul Busolei, pe " + (pe1h ? "1h" : "4h") + ")";
     if (/^(1(?:000)+)(?=[A-Z])/.test(baza)) ce = ce.replace(/canalul \S+ în/, "canalul Busolei (pe spot) în");
@@ -375,7 +398,7 @@ var Busola = (function () {
   function nuRaspunde() { return !stare.rez && stare.esec === true; }
   function _reset() { stare = { rez: null, la: 0, inLucru: null, esec: false }; }
 
-  return { URL_REZUMAT: URL_REZUMAT, PAZA_VECHI_MS: PAZA_VECHI_MS, pragVechime: pragVechime, simbolBusola: simbolBusola, randGrid: randGrid, htmlRand: htmlRand, pazaStare: pazaStare, pentruVerdict: pentruVerdict, cifraMiscare: cifraMiscare,
+  return { URL_REZUMAT: URL_REZUMAT, PAZA_VECHI_MS: PAZA_VECHI_MS, pragVechime: pragVechime, urmatoareaRulare: urmatoareaRulare, PROGRAM_MASURARE: PROGRAM_MASURARE, stareAfisata: stareAfisata, simbolBusola: simbolBusola, randGrid: randGrid, htmlRand: htmlRand, pazaStare: pazaStare, pentruVerdict: pentruVerdict, cifraMiscare: cifraMiscare,
     randFisa: randFisa, comparaInterval: comparaInterval, cartela: cartela, htmlCartela: htmlCartela, eticheta: eticheta, liniaBoti: liniaBoti, incarca: incarca, rezumat: rezumat, nuRaspunde: nuRaspunde, _reset: _reset,
     randDirectie: randDirectie, randVerdict: randVerdict, randBtc: randBtc,   /* v100.147 */
     concluzie: concluzie, alteIntervale: alteIntervale, liniaBtc: liniaBtc,   /* v100.148 */

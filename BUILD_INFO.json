@@ -1,11 +1,12 @@
 {
-  "version": "v100.304",
-  "badge": "v100.304 · RANGE FILTER: DUPĂ COST, SUGESTII, UN CACHE",
+  "version": "v100.305",
+  "badge": "v100.305 · BUSOLA: PROGRAMUL REAL, OPȚIUNILE ÎN TABLOU",
   "engineContract": "54.1",
   "dataSchema": 54,
   "baseRelease": "v77.4 · TABLOUL BOTULUI",
   "releaseType": "valul de reparatii din revizia finala pe ansamblu: marginStatus/riskStatus citite, telefon, scurgere WS/ceas la iesire prin tab-uri, ATR adevarat, pret viu, istoric fara pret inghetat, sortare dupa timp, comision nemasurabil, durata la margine",
   "features": {
+    "busolaAudit305": "05.11.2026 (auditul sever al Busolei, „fă toate”): vârsta rezumatului după programul REAL de pe VPS (07:05–21:05 orar, 23:05, 03:05; din rezumat.program) — fără alarma falsă de la 23:02; Tabloul botului arată starea paginii Busolei cu opțiunile (miscare4h), paza rămâne pe celulă; „cifra tace” spus; mesajul n-a mai măsurat trimite la VPS, fără wrangler login acasă (colector v101.165)",
     "rfIdei304": "05.11.2026, el: „fa toate” (ideile I-806..I-810 după re-auditul Range Filter): rândul DUPĂ COST pe cartelă (jurnalul R din Pine v2.5, paritate cu rf_motor.py), sugestiile Pionex + ultimele 5 căutări în căsuță, un singur cache de lumânări (lib/lumanari.js) pentru Range Filter, Tablou și Trade-ul zilei, linia „📏 Range Filter 1h” în rezumatul de dimineață (colector v101.164).",
     "butonCauta303": "05.11.2026, drumul omului pe Radarul viu după livrarea v100.302: butonul „Analizează” rămânea oprit după prima căutare (zona căsuței nu se redesenează, iar starea butonului se punea doar în rfDeseneazaCauta) ⇒ rfDeseneaza o pune și ea.",
     "rangeFilterReaudit302": "El (05.11.2026): „vreau să reauditezi rf b&s script și integrarea din radar, să optimizezi și să vii cu idei” + „pune și o căsuță unde să analizez o monedă anume” - re-auditul cu doi auditori independenți (Radar 0 🔴 / 8 🟡 / 9 🔵; paritatea JS = Python pe 126 de serii, 94.500 de bare, 0 diferențe): căsuța „Analizează o monedă” (perp, apoi spot), DOVEDIT corectat pentru câte monede se văd (Bonferroni pe Wilson), textele cinstite (SEMNAL pe bara închisă, flip la X ATR, pragul costului exact, „k din n” sub 20 de cazuri), „de N bare” ca în Pine, ținerea = mediana, căderea parțială la vedere, cache-ul până la închiderea barei, lumânările ținute pe monedă (DOVADA pe 1.000 = doar pagina a doua), redesenarea pe zone, butoanele oprite cât citește, Tabloul: reîncercare după 1 min, CONTRA = info.",
