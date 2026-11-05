@@ -53,7 +53,7 @@ await test("planul de la cumpărare: bara zilei intră doar după închiderea ș
 const P = await import("./lib/poza.mjs");
 await test("poza: cheile „o dată pe zi” pe ziua bursei simbolului; mesajul în moneda bursei (€ la Xetra, nu „$”)", () => {
   assert.equal(P.ziSesiune(Date.parse("2026-10-13T08:00:00Z"), "SAP.DE"), "2026-10-13"); assert.equal(P.ziSesiune(Date.parse("2026-10-13T08:00:00Z")), "2026-10-12");
-  assert.match(poza, /"sltp-aproape-" \+ p\.s \+ "-" \+ zi\(p\.s\)/); assert.match(poza, /"t212-pas-" \+ p\.s \+ "-" \+ semn \+ k \+ "-" \+ rot\(prev, 4\) \+ "-" \+ zi\(p\.s\)/);
+  assert.match(poza, /"sltp-aproape-" \+ p\.s \+ "-" \+ zi\(p\.s\)/); assert.match(poza, /"t212-pas-" \+ p\.s \+ "-" \+ semn \+ k \+ "-" \+ rot\(prev, 4\);/   /* v101.166 (I-831): cheia = închiderea de ieri, fără ziua ședinței */);
   const i = poza.indexOf("export function alerteSLTP("), bucata = poza.slice(i, poza.indexOf("\nexport function", i + 10));
   assert.ok(!/\(\$" \+ pr\(|Prețul e \$" \+ pr\(|ținta \$" \+ pr\(/.test(bucata), "nu mai rămâne „$” fix în alertele de stop / țintă");
 });

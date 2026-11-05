@@ -28,7 +28,7 @@ const ORA = 3600000, ACUM = Date.UTC(2026, 9, 4, 6, 0), LA = ACUM - 2 * ORA;
 const REZ = (o) => Object.assign({ la: LA, versiune: "1.41.0",
   monede: { AAVE: { grid4h: "miscare", fisa4h: { jos: 159.35, sus: 201.927, linii: 17 } }, BONK: { grid4h: "liniste" }, PUMP: { perp4h: "nu-stiu" } },
   grid: { interval: "4h", canal: "±2×ATR", miscare: -0.011341049, liniste: -0.0081260081, oricand: -0.0094456786, dovedit: true, miscareDovedita: true, canal4h: "+4,2/−3,9 ATR", fisa4hLa: LA },
-  perp: { la: LA, monede: 102, prag: 200000, bilant: { de: 1, notari: 498, judecate: 120, monede: 24, dif: -0.0017, icJos: -0.003, icSus: -0.0004, verdict: "dovedit" } } }, o || {});
+  perp: { la: LA, monede: 102, prag: 200000, bilant: { de: 1, notari: 498, judecate: 120, monede: 24, dif: -0.0017, icJos: -0.003, icSus: -0.0004, verdict: "dovedit", pe: "momente" } } }, o || {});   /* v100.306 (I-828): „dovedit” doar pe momente rărite */
 const cuVerdict = (v) => REZ({ perp: { ...REZ().perp, bilant: { ...REZ().perp.bilant, verdict: v } } });
 
 // ---- (1) bucăți întregi sub 10 $ ----
@@ -71,6 +71,8 @@ await test("(3) eticheta: la mișcare, cu bilanțul Busolei „dovedit” ⇒ no
   assert.equal(B.eticheta(cuVerdict("prea puține"), "AAVE", ACUM, null).nota, "măsurat acum 2 h");
   assert.equal(B.eticheta(REZ(), "BONK", ACUM, null).nota, "măsurat acum 2 h", "liniștea n-are bilanț (bilanțul judecă alerta de mișcare)");
   const fara = REZ(); delete fara.perp; assert.equal(B.eticheta(fara, "AAVE", ACUM, null).nota, "măsurat acum 2 h");
+  // v100.306 (I-828): bilanțul vechi, socotit pe monede (fără `pe: "momente"`), nu mai scrie „dovedit”
+  const peMonede = REZ(); delete peMonede.perp.bilant.pe; assert.equal(B.eticheta(peMonede, "AAVE", ACUM, null).nota, "măsurat acum 2 h · pe date noi: nedovedit (socotit pe monede)");
 });
 await test("(3) fișa: nota rândului de mișcare primește bilanțul („grid pe ±2×ATR, pe date noi: dovedit”); la „prea puține” rămâne ca până acum", () => {
   assert.equal(B.randGrid(REZ(), "AAVE_USDT_PERP", ACUM).nota, "grid pe ±2×ATR, pe date noi: dovedit");
@@ -86,7 +88,7 @@ await test("(4) liniaBoti ține cont de locul rezervat prefixului: implicit ≤ 
 });
 await test("(4) colectorul: rândul „🧭 Busola, pe 4h: …”, cu „(rezumat de acum N h)” când starea e veche de peste 4,5 h, lungimea rezervată, o singură cerere bot-orders în dateDimineata", () => {
   const c = citeste("scripts", "colector.mjs"), d = c.slice(c.indexOf("async function dateDimineata()"), c.indexOf("async function turaDimineata()"));
-  assert.equal((d.match(/cere\("\/api\/bot-orders"\)/g) || []).length, 1, "bot-orders se cere o singură dată");
+  assert.equal((d.match(/cereBotiPorniti\(\)/g) || []).length, 1, "bot-orders se cere o singură dată");   /* v101.166 (I-838): prin cache-ul de 30 s */
   assert.ok(d.includes('"🧭 Busola, pe 4h: "') && d.includes("rezumat de acum") && /Busola\.liniaBoti\(l, acum, 142 - /.test(d), "prefixul cu emoji, vârsta și lungimea rezervată");
   assert.ok(/const VERSIUNE_COLECTOR = "v101\.(6\d|[7-9]\d|1\d\d)";/.test(c), "versiunea colectorului");   /* v101.62 (I-526): versiunea merge înainte */
 });

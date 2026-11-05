@@ -26,7 +26,19 @@ var Busola = (function () {
   var stare = { rez: null, la: 0, inLucru: null, esec: false };
   // v100.91 (ideea 3): bilanțul pazei Busolei (I-512) - după „mai agitat” pe futures, gridul chiar a pierdut mai mult? Pe pagină, la mișcare,
   // doar când verdictul e pe date destule („dovedit” / „pe dos” / „n-am aflat”); „prea puține” tace
-  function bilantText(rez) { var v = rez && rez.perp && rez.perp.bilant && rez.perp.bilant.verdict; return ["dovedit", "pe dos", "n-am aflat"].indexOf(v) >= 0 ? "pe date noi: " + v : null; }
+  // v100.306 (05.11, auditul final, I-828): „dovedit” (și „pe dos”, tot o afirmație de semnificație) DOAR când bilanțul e socotit pe momente
+  // rărite (`perp.bilant.pe === "momente"`, Busola 1.89). Bilanțul vechi = bootstrap pe 70 de MONEDE din aceleași 27 de zile: „dovedit” −2,5 pp
+  // [−4,3; −1,0], pe zile −0,9 [−2,2; +0,5] = n-am aflat (regula lui: dovezile pe zile, nu pe monede) ⇒ „nedovedit (socotit pe monede)”
+  function bilantVerdict(rez) {
+    var b = rez && rez.perp && rez.perp.bilant; if (!b || typeof b !== "object") return null;
+    var v = String(b.verdict || ""); if (!v) return null;
+    return (v === "dovedit" || v === "pe dos") && b.pe !== "momente" ? "nedovedit (socotit pe monede)" : v;
+  }
+  function bilantText(rez) { var v = bilantVerdict(rez); return v && ["dovedit", "pe dos", "n-am aflat", "nedovedit (socotit pe monede)"].indexOf(v) >= 0 ? "pe date noi: " + v : null; }
+  // v100.306 (I-830): paznicul din Worker-ul Busolei (cron la 30 min) e VIU doar cu webhook-ul pus (`paznic.discord`) ȘI cu ultima lui rulare
+  // (`paznic.la`, Busola 1.89) mai nouă de 90 de minute; altfel Radarul își ia vocea înapoi (nota „Busola n-a mai măsurat” pleacă pe Discord)
+  var PAZNIC_VIU_MS = 90 * 60000;
+  function paznicViu(rez, acum) { var p = rez && rez.paznic, la = p && Number(p.la); return !!(p && p.discord === true && la > 0 && acum - la <= PAZNIC_VIU_MS); }
 
   // JTO_USDT_PERP -> JTO; 1000BONK_USDT_PERP -> BONK (pe spot nu există „1000”); ethusdt -> ETH
   function simbolBusola(s) { return String(s || "").toUpperCase().replace(/_USDT_PERP$|_USDT$|USDT$|\.PERP$/, "").replace(/^1000+/, ""); }   /* v100.90: + „AAVE.PERP” (baza botului) */
@@ -93,7 +105,8 @@ var Busola = (function () {
   function pentruVerdict(rez, simbol, acum) {
     var p = pazaStare(rez, simbol, acum); if (!p || p.vechi || !p.stare) return null;
     var b = rez.perp && rez.perp.bilant && typeof rez.perp.bilant === "object" ? rez.perp.bilant : null;
-    return { stare: p.stare, bilant: b ? { verdict: String(b.verdict || ""), dif: typeof b.dif === "number" && isFinite(b.dif) ? b.dif : null, monede: Number(b.monede) || 0 } : null };
+    // v100.306 (I-828): verdictul cinstit - „dovedit” doar pe momente rărite; SemnaleBot pune „Busola” în semafor doar pe „dovedit”
+    return { stare: p.stare, bilant: b ? { verdict: bilantVerdict(rez) || "", dif: typeof b.dif === "number" && isFinite(b.dif) ? b.dif : null, monede: Number(b.monede) || 0 } : null };
   }
   // cifra din mesajul de mișcare: „−0,214% pe episod, grid pe ±2×ATR, dovedit”. Dovada DOAR din grid.miscareDovedita
   // (Busola 1.34, I-506; grid.dovedit privește liniștea); ce lipsește (rezumat vechi) se lasă afară, nimic inventat.
@@ -404,6 +417,7 @@ var Busola = (function () {
     concluzie: concluzie, alteIntervale: alteIntervale, liniaBtc: liniaBtc,   /* v100.148 */
     linkBusola: linkBusola, bilantVoci: bilantVoci,   /* v100.149 */
     intervalBusola: intervalBusola, adresaBusola: adresaBusola,   /* v100.180 */
-    randDecizie: randDecizie };   /* v100.210 */
+    randDecizie: randDecizie,   /* v100.210 */
+    bilantVerdict: bilantVerdict, bilantText: bilantText, paznicViu: paznicViu, PAZNIC_VIU_MS: PAZNIC_VIU_MS };   /* v100.306 (I-828, I-830) */
 })();
 if (typeof globalThis !== "undefined") globalThis.Busola = Busola;

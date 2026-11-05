@@ -4,6 +4,8 @@
 // Alerta {nivel, titlu, mesaj} -> un "embed" colorat: rosu critic, portocaliu atentie, verde info.
 // Discord accepta ~30 de mesaje/minut pe webhook; colectorul trimite mult sub atat.
 const CULOARE = { critic: 0xdc283c, atentie: 0xff8c00, info: 0x00aa5a };
+// v101.166 (I-832): subsolul spune unde rulează colectorul (VPS), din constanta comună - nu „colectorul de acasă”
+import { UNDE } from "./unde-ruleaza.mjs";
 
 export function esteWebhookDiscord(url) {
   return /^https:\/\/(discord\.com|discordapp\.com)\/api\/webhooks\/\d+\/[A-Za-z0-9_-]+$/.test(String(url || "").trim());
@@ -18,7 +20,7 @@ export function mesajDiscord(m) {
     allowed_mentions: { parse: [] },   // v100.40: niciun @everyone / @here / rol din textele alertelor
     // textul simplu apare si in notificarea de pe telefon (embed-ul singur nu se vede in preview)
     content: (nivel === "critic" ? "🔴 " : nivel === "atentie" ? "🟠 " : "🟢 ") + titlu,
-    embeds: [{ title: titlu, description: text || undefined, color: CULOARE[nivel], timestamp: new Date(m && m.t > 0 ? m.t : Date.now()).toISOString(), footer: { text: "Crypto Radar · colectorul de acasă" } }],
+    embeds: [{ title: titlu, description: text || undefined, color: CULOARE[nivel], timestamp: new Date(m && m.t > 0 ? m.t : Date.now()).toISOString(), footer: { text: "Crypto Radar · " + UNDE.colector } }],
   };
 }
 

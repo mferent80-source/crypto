@@ -1,5 +1,6 @@
 // Rândul-verdict din capul rezumatului de dimineață (v101.62, I-526): o frază din ACELEAȘI date - boții pe agitație / calm (starea Busolei pe
-// 4h, „dovedită” doar când bilanțul pazei e „dovedit”), acțiunile pe revenire cu eticheta istoricului lor, câte poziții sunt de ieșit.
+// 4h, „dovedită” doar când bilanțul pazei e „dovedit” - v101.166, I-828: colectorul dă Busola.bilantVerdict, adică „dovedit” doar pe momente
+// rărite, nu pe monede), acțiunile pe revenire cu eticheta istoricului lor (Reveniri.eticheta, neschimbată aici), câte poziții sunt de ieșit.
 // ≤ 160 (garda „raport”); ce lipsește (fără boți, fără lista de revenire) se lasă afară, nimic inventat; nimic de spus ⇒ null.
 import "./text-ro-global.mjs";
 

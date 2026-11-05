@@ -367,7 +367,8 @@ await test("(revizia I4) raportul de duminică: boții încă deschiși intră l
 await test("(revizia I2 + I5) tura nu judecă pe citiri proaste (configurarea picată, lista Pionex nulă) și nu pornește peste ea însăși", () => {
   const s = citeste("scripts", "colector.mjs"), tc = s.slice(s.indexOf("async function turaComportament("), s.indexOf("\n}\n", s.indexOf("async function turaComportament(")));
   assert.match(s, /turaComportament\(\{ toti, act, praguri, f, cfgOk: !!cfg \}\)/);
-  assert.match(tc, /if \(!cfgOk \|\| !act \|\| !Array\.isArray\(act\.bots\) \|\| \(act\.probleme && act\.probleme\.listaNula\)\)/);
+  // v101.166 (I-827): lista nulă e citire proastă DOAR fără arhiva întreagă sau cu boți știuți porniți lipsă (Comportament.listaPornitilor)
+  assert.match(tc, /const lp = Comportament\.listaPornitilor\(act, toti, meta\(\)\.cunoscuti\);/); assert.match(tc, /if \(!cfgOk \|\| !lp\.ok\)/);
   assert.match(tc, /comportamentInLucru/); assert.match(s, /var comportamentInLucru = false/);
   assert.match(tc, /Comportament\.noteaza\(st, t, ev, acum\); scrieStareAcum\(\)/, "evaluarea notată pe disc pe loc (o pană de curent nu o mai dublează)");
   assert.match(tc, /evaluari\.jsonl/, "jurnalul evaluărilor, în fișierul lui"); assert.match(tc, /Comportament\.preaVechi\(/);

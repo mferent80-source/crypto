@@ -82,6 +82,22 @@ export function evalueaza(f) {
   return { t, net, decizii: dec, rele, bune: dec.length - rele, verdict, sfat, nivel: rele ? "atentie" : "info" };
 }
 
+// ---------------- I-827 (auditul final 05.11): zero boți porniți ≠ citire proastă ----------------
+// La ZERO boți porniți Pionex dă lista nulă (results:null), ca la o citire proastă ⇒ evaluările, seara, oglinda și profitul se amânau la
+// nesfârșit (510 „evaluari amanate” pe VPS; XMR, închis la 11:19, neevaluat; „Seara pe scurt” din 04.11 n-a plecat). Diferența o face arhiva:
+// lista nulă e „zero boți” doar cu arhiva celor închiși venită întreagă (`toti.complet`) și cu FIECARE bot știut pornit (cunoscuti = meta()
+// .cunoscuti, activ) regăsit printre cei închiși; altfel e citire proastă și se amână, ca înainte (revizia I2: al 8-lea nu devine al 3-lea).
+// ⇒ { ok, boti (lista de folosit), zero?, motiv? }
+export function listaPornitilor(act, toti, cunoscuti) {
+  if (!act || !Array.isArray(act.bots)) return { ok: false, boti: [], motiv: "lista Pionex a botilor porniti n-a venit" };
+  if (act.bots.length || !(act.probleme && act.probleme.listaNula)) return { ok: true, boti: act.bots };
+  if (!toti || toti.complet !== true) return { ok: false, boti: [], motiv: "lista Pionex e nula si arhiva celor inchisi n-a venit intreaga" };
+  const inchisi = new Set((Array.isArray(toti) ? toti : []).map((x) => String((x && (x.strategyId || x.buOrderId || x.id)) || "")).filter(Boolean));
+  const lipsa = Object.entries(cunoscuti && typeof cunoscuti === "object" ? cunoscuti : {}).filter(([id, c]) => c && c.activ && !inchisi.has(String(id))).map(([id, c]) => (c && c.nume) || id);
+  if (lipsa.length) return { ok: false, boti: [], motiv: "lista Pionex e nula, dar stiu boti porniti care nu sunt printre cei inchisi (" + lipsa.slice(0, 5).join(", ") + ")" };
+  return { ok: true, boti: [], zero: true };
+}
+
 // ---------------- starea (o ține colectorul, în alerte-stare.json) ----------------
 // prima rulare: și boții închiși în ultimele 24 h (ca să vadă pe loc cum arată), nu toată istoria
 export function initStare(st, acum) {

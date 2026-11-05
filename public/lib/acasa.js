@@ -41,7 +41,7 @@ var Acasa = (function () {
   function vreme(o) {
     o = o || {};
     var c = o.clasament, ev = c ? nr(c.evita) : null, ca = c ? nr(c.candidati) : null;
-    if (ev === null || ca === null || ev + ca <= 0) { var ls = clasamentLipsa(o.stare); return { nivel: "fara-date", eticheta: "FĂRĂ DATE", titlu: ls ? ls.titlu : "Clasamentul pieței n-a venit încă.", text: ls ? ls.text : "Îl face colectorul de acasă o dată pe oră, pe primele 100 de monede după volum.", faCe: "" }; }
+    if (ev === null || ca === null || ev + ca <= 0) { var ls = clasamentLipsa(o.stare); return { nivel: "fara-date", eticheta: "FĂRĂ DATE", titlu: ls ? ls.titlu : "Clasamentul pieței n-a venit încă.", text: ls ? ls.text : "Îl face colectorul de pe VPS o dată pe oră, pe primele 100 de monede după volum.", faCe: "" }; }
     var n = ev + ca, cota = ev / n, btcMis = !!(o.btc && o.btc.miscare), fg = fgValid(o.fg);   // v100.259: 0–100, ca regimul macro
     var d = c.dir || {}, lo = nr(d.long) || 0, sh = nr(d.short) || 0, tot = lo + sh + (nr(d.neutru) || 0);
     var sens = tot > 0 && lo / tot >= 0.6 ? "urca" : tot > 0 && sh / tot >= 0.6 ? "coboara" : "imp";
@@ -65,6 +65,7 @@ var Acasa = (function () {
     else r = { nivel: "liniste", eticheta: "🟢 LINIȘTE", titlu: "Piața e liniștită: puține monede în mișcare.",
       faCe: "Aș porni boți grid doar unde fișa monedei zice PORNEȘTE" + (adaos || ", nu pe liniștea pieței singură.") };
     r.text = text; r.inMiscare = ev; r.total = n;
+    r.btcMiscare = btcMis;   // v100.306 (I-831): banda alertei de vreme știe dacă „mișcare” vine de la BTC (intră oricând) sau de la cotă
     return r;
   }
 

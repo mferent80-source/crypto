@@ -5,6 +5,8 @@
 // v101.55 (ideea 2): numărătorile din jurnal - „1 bot”, „25 de boți” (TextRo.cate; rezerva știe aceeași regulă)
 function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
 export const ZILE = 183, PAS_MS = 1600, PAGINA = 500, ORA = 3600000;
+// v101.166 (I-833): simbolurile delistate („ORDER_USDT_PERP symbol error” în fiecare zi) - sărite după 3 zile de eșec, ca în arhiva de 1 h
+import { noteazaEsecSimbol, noteazaOkSimbol, eInListaNeagra } from "./lista-neagra.mjs";
 const tBara = (r) => Number(Array.isArray(r) ? r[0] : r && r.time);
 export function eNoapte(t) {
   const o = Number(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Bucharest", hour: "2-digit", hourCycle: "h23" }).format(new Date(t)));
@@ -44,6 +46,7 @@ export async function turaProfil(d) {
   const toateTrades = async () => tr || (tr = await d.trades());
   for (const { simbol, moneda } of st.lista.v) {
     const f = st.facute[simbol], e = st.esuat[simbol];
+    if (eInListaNeagra(st, simbol, d.acum)) continue;
     if (f && !(noapte && f.zi !== azi)) { if (f.profil && !d.profile.has(simbol)) d.profile.set(simbol, f.profil); continue; }
     if (e && d.acum - e.la < Math.min(24 * ORA, 10 * 60000 * Math.pow(2, e.n))) continue;
     try {
@@ -55,12 +58,14 @@ export async function turaProfil(d) {
       const profil = d.ProfilMoneda.calculeaza(d.GridCalcul.bare(randuri), { acum: d.acum, simbol, trades });
       if (profil) { await d.trimite("/api/istoric-bot?action=profil", { simbol, profil }); d.profile.set(simbol, profil); }
       st.facute[simbol] = { zi: azi, la: d.acum, profil: profil ? { simbol, zile: profil.zile, z12: profil.z12, z24: profil.z24 } : null };
-      delete st.esuat[simbol];
+      delete st.esuat[simbol]; noteazaOkSimbol(st, simbol);
       d.scrieStare(st);
       d.jurnal("profil", simbol, profil ? cate(profil.zile, "zi", "zile") + ", " + cate(randuri.length, "bară", "bare") : "prea putine bare (" + randuri.length + ")");
     } catch (x) {
-      st.esuat[simbol] = { la: d.acum, n: Math.min(8, (e ? e.n : 0) + 1) }; d.scrieStare(st);
-      d.jurnal("profil ESEC", simbol, x.message);
+      st.esuat[simbol] = { la: d.acum, n: Math.min(8, (e ? e.n : 0) + 1) };
+      if (noteazaEsecSimbol(st, simbol, x.message, d.acum)) { delete st.esuat[simbol]; d.jurnal("profil:", simbol, "pe lista neagră (delistat: " + x.message + " de 3 zile); îl mai încerc peste 30 de zile"); }
+      else d.jurnal("profil ESEC", simbol, x.message);
+      d.scrieStare(st);
     }
   }
 }

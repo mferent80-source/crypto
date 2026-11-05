@@ -85,14 +85,16 @@ await test("3. 🔑 cifra tace din cauza opțiunilor ⇒ rândul spune de ce; f�
 await test("4. mesajul trimite la VPS: fără „Aș porni PC-ul”, fără MASOARA-SI-URCA.bat, fără să ceară wrangler login acasă", () => {
   const m = MC.busolaVeche(3, 1.83, Date.UTC(2026, 10, 5, 7, 5));
   assert.match(m.titlu, /\(trebuia la 09:05\)$/); assert.ok(m.titlu.length <= 60);
-  assert.match(m.mesaj, /VPS/); assert.match(m.mesaj, /fără wrangler login pe PC-ul de acasă/);
+  assert.match(m.mesaj, /VPS/); assert.match(m.mesaj, /wrangler login se face doar acolo/);   /* v101.166 (I-832): fără „PC-ul de acasă” în alertă */
   assert.doesNotMatch(m.mesaj, /porni PC-ul|MASOARA-SI-URCA|aș rula npx wrangler login/i);
   // revizia 05.11 (🟠2): Radarul tace pe Discord DOAR când rezumatul spune că paznicul din Worker chiar poate anunța (webhook pus);
   // altfel (Busola dinainte de 1.88, secret lipsă) rămâne vocea pe Discord — o pană nu trebuie să rămână fără nicio voce
   assert.equal(m.doarRadar, false, "fără dovada paznicului ⇒ tot pe Discord");
   assert.equal(MC.busolaVeche(3, 1.83, Date.UTC(2026, 10, 5, 7, 5), true).doarRadar, true, "paznicul din Worker poate anunța ⇒ doar în Radar");
   const veche = (paznic) => P.notaVeche({ Busola: B, rez: REZ(SEARA, paznic === undefined ? {} : { paznic }), acum: Date.UTC(2026, 10, 4, 22, 10), anuntat: null });
-  assert.equal(veche(undefined).doarRadar, false); assert.equal(veche({ discord: false }).doarRadar, false); assert.equal(veche({ discord: true }).doarRadar, true);
+  assert.equal(veche(undefined).doarRadar, false); assert.equal(veche({ discord: false }).doarRadar, false);
+  // v101.166 (I-830): doar cu paznicul VIU (`paznic.la` sub 90 min, Busola 1.89); `discord` singur nu mai ajunge
+  assert.equal(veche({ discord: true }).doarRadar, false); assert.equal(veche({ discord: true, la: Date.UTC(2026, 10, 4, 21, 40) }).doarRadar, true);
 });
 await test("5. versiunile v100.305 / colector v101.165, proba în lanțul npm test", () => {
   const Hh = citeste("public", "index.html");

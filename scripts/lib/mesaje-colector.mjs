@@ -15,23 +15,26 @@ const V = (v) => String(Math.round(Math.abs(Number(v)) * 10) / 10).replace(".", 
 const V1 = (v) => Math.abs(Number(v)).toFixed(1).replace(".", ",");   // v101.70: rezultatele cu o singură zecimală
 const scurt = (s, n) => { s = String(s || ""); return s.length <= n ? s : s.slice(0, n - 1).replace(/\s+\S*$/, "") + "…"; };
 const msg = (fapt, act) => fapt + (act ? "\n👉 " + act : "");
+// v101.166 (I-832, auditul final 05.11): unde rulează Radarul (serverul :8788 și colectorul) - pe VPS, nu pe PC-ul de acasă; un singur loc
+import { UNDE, SFAT_REPORNIRE } from "./unde-ruleaza.mjs";
 
 // coada Discord: mesajul plecat cu intarziere
 export const intarziat = (titlu, minute) => titlu + " (întârziat " + minute + " min)";
 
 // v100.259 (auditul 23.10, punctul 4): colectorul nu mai iese - așteaptă serverul și reia singur; la revenire, serverRevenit
-export const serverOprit = (minute) => ({ nivel: "critic", titlu: "Crypto Radar oprit: serverul de acasă nu mai răspunde",
+// v101.166 (I-832): serverul și colectorul stau pe VPS (sarcina „Crypto Radar pornire” îl reface la 10 minute) - nu „de acasă”, nu .bat
+export const serverOprit = (minute) => ({ nivel: "critic", titlu: "Crypto Radar oprit: serverul de pe " + UNDE.loc + " nu răspunde",
   mesaj: msg("De ~" + cate(minute, "minut", "minute") + " serverul Radarului (:8788) nu răspunde: alertele nu mai vin, iar colectorul reia singur când revine.",
-    "Aș porni PORNESTE-CRYPTO-RADAR.bat; stopurile din Pionex merg și fără Radar.") });
-export const serverRevenit = () => ({ nivel: "info", titlu: "Crypto Radar: serverul de acasă răspunde din nou", mesaj: "Colectorul citește iar boții; alertele merg din nou." });
+    SFAT_REPORNIRE + " dacă ține peste 20 de minute.") });
+export const serverRevenit = () => ({ nivel: "info", titlu: "Crypto Radar: serverul de pe " + UNDE.loc + " răspunde din nou", mesaj: "Colectorul citește iar boții; alertele merg din nou." });
 
 export const citireRea = (minute, eroare) => ({ nivel: "critic", titlu: "Crypto Radar nu mai poate citi botul",
   mesaj: "De " + cate(minute, "minut", "minute") + " (" + scurt(eroare, 60) + ") alertele nu mai sunt de încredere până se rezolvă." });
 export const citireDinNou = () => ({ nivel: "info", titlu: "Crypto Radar citește din nou botul", mesaj: "Alertele merg din nou." });
 // v101.116 (auditul sever, S1): serverul respinge colectorul pe PAROLĂ (AUTH_*), nu pe ritm - înainte trecea drept „limită”, în tăcere
 export const authRespins = (minute, cod) => ({ nivel: "critic", titlu: "Serverul Radarului respinge colectorul",
-  mesaj: msg("De " + cate(minute, "minut", "minute") + " serverul de acasă refuză parola colectorului (" + scurt(cod, 40) + "): alertele boților și ale acțiunilor nu mai vin.",
-    "Aș închide taburile Radarului rămase cu parola veche și aș reporni PORNESTE-CRYPTO-RADAR.bat.") });
+  mesaj: msg("De " + cate(minute, "minut", "minute") + " " + UNDE.server + " refuză parola colectorului (" + scurt(cod, 40) + "): alertele boților și ale acțiunilor nu mai vin.",
+    "Aș închide taburile Radarului rămase cu parola veche; dacă ține, aș reporni " + UNDE.colector + ".") });
 // v101.116 (auditul sever, C3): Pionex dă lista boților porniți goală (results:null), deși știu boți porniți - bucla alertelor e oarbă
 export const botiNevazuti = (minute, nume) => ({ nivel: "critic", titlu: "Crypto Radar nu-ți mai vede boții",
   mesaj: msg("De " + cate(minute, "minut", "minute") + " Pionex îmi dă lista boților goală, deși știu " + cate((nume || []).length, "bot pornit", "boți porniți") + " (" + scurt((nume || []).join(", "), 80) + "): alertele de lichidare, stop și plan nu merg.",
@@ -127,19 +130,44 @@ export const busolaVoci = (o) => ({ nivel: "atentie", cheie: "busola-voci",
 // rezumatul Busolei e vechi: paza tace - o notă doar în Radar, o dată pe rezumat
 // v100.207 (auditul Busolei): omul mort — pe Discord, cu ce să faci; critic peste 3 h (ziua măsurarea e orară)
 // v101.165 (05.11, auditul Busolei 🔴 2 + I-823): „trebuia la HH:MM” după programul real de pe VPS; măsurarea NU mai e pe PC-ul de acasă,
-// iar un `wrangler login` acolo strică autentificarea VPS-ului (05.11) ⇒ mesajul trimite la VPS și spune pe față să nu faci login acasă.
+// iar un `wrangler login` acolo strică autentificarea VPS-ului (05.11) ⇒ mesajul trimite la VPS și spune pe față că login-ul e doar acolo.
 // DOAR ÎN RADAR când paznicul din Worker-ul Busolei poate anunța (1.88, I-812: puls + trepte 4 h / 8 h / dimineața, nu moare odată cu VPS-ul,
-// pe care stă și colectorul) — `paznic` vine din rezumat (`paznic.discord`, pus de Worker la servire). Altfel (Busola veche, webhook lipsă)
-// mesajul pleacă pe Discord, ca înainte: o pană nu rămâne fără nicio voce (revizia 🟠2)
+// pe care stă și colectorul) — `paznic` vine din rezumat: v101.166 (I-830) `paznic.discord` ȘI `paznic.la` sub 90 min (Busola.paznicViu).
+// Altfel (Busola veche, webhook lipsă, cron-ul paznicului mort) mesajul pleacă pe Discord: o pană nu rămâne fără nicio voce (revizia 🟠2)
 export const busolaVeche = (ore, pragOre, urmatoarea, paznic) => ({ nivel: ore >= 3 && pragOre < 3 ? "critic" : "atentie", cheie: "busola-veche", doarRadar: paznic === true,
   titlu: "Busola n-a mai măsurat de " + cate(Math.floor(ore), "oră", "ore") + (Number(urmatoarea) > 0 ? " (trebuia la " + oraRo(urmatoarea) + ")" : pragOre < 3 ? " (ziua măsoară orar)" : " (noaptea la 4 ore)"),
   mesaj: "Măsurarea de pe VPS n-a rulat sau n-a urcat; paza boților tace, Busola arată date vechi.\n"
-    + "👉 Aș verifica pe VPS busola\\cron\\stare\\jurnal-rulari.log; fără wrangler login pe PC-ul de acasă." });
+    + "👉 Aș verifica pe VPS busola\\cron\\stare\\jurnal-rulari.log; wrangler login se face doar acolo." });
+
+// ---------------- v101.166 (I-833, auditul final 05.11): sănătatea colectorului - penele tăcute ----------------
+// erorile 5xx ale serverului pe o rută, 30 min continue (03.11: 1.188 de erori 500 în 15 h, fără niciun mesaj); l = SanatateRute.pas5xx(…).cadere
+const ziOra = (t) => { try { return new Intl.DateTimeFormat("ro-RO", { timeZone: "Europe/Bucharest", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(new Date(t)).replace(",", ""); } catch { return ""; } };
+// cauza din jurnal, ca text de alertă: fără puncte de sfârșit de frază, fără „!”, minus tipografic
+const curatMotiv = (s) => String(s || "").replace(/[.?!]+(\s+|$)/g, ", ").replace(/!/g, "").replace(/(^|[\s(·:])-(\d)/g, "$1−$2").replace(/[,\s]+$/, "");
+export const rute5xx = (l) => {
+  const L = Array.isArray(l) ? l : [], min = Math.max(0, ...L.map((x) => Number(x.minute) || 0)), st = (L[0] && L[0].status) || 500;
+  return { nivel: "atentie", cheie: "sanatate-5xx", titlu: "🩺 colectorul: erori " + st + (L.length > 1 ? " pe " + cate(L.length, "rută", "rute") : "") + " de " + durata(min),
+    mesaj: msg(scurt("Serverul Radarului răspunde cu erori la " + L.map((x) => x.ruta + " (" + cate(x.n, "eroare", "erori") + ")").join(", "), 110) + ": ce scriu sau citesc ele nu ajunge în Radar.",
+      "Aș citi pe VPS jurnalul serverului, " + UNDE.jurnalServer + ".") };
+};
+export const rute5xxRevenit = (l) => ({ nivel: "info", cheie: "sanatate-5xx", titlu: "🩺 colectorul: serverul răspunde din nou fără erori",
+  mesaj: scurt("Rutele merg iar: " + (Array.isArray(l) ? l : []).map((x) => x.ruta + (Number(x.minute) > 0 ? " (după " + durata(x.minute) + ")" : "")).join(", "), 150) + "." });
+// turele care țin minte ce calculează, fără nicio reușită de 24 h (04.11: „cazuri”, 41 de „fetch failed”); l = SanatateRute.pasTure(…).cazute
+const NUME_TURA = { cazuri: "cazuri", frana: "frâna", disciplina: "disciplina", risc: "riscul" };   // „tura „cazuri”” (cazurile asemănătoare, frâna contului, disciplina benzii, riscul lunii)
+const durata = (min) => { const m = Math.max(0, Math.round(Number(min) || 0)); return m < 120 ? m + " min" : Math.round(m / 60) + " h"; };
+export const tureCazute = (l) => {
+  const L = Array.isArray(l) ? l : [], n = (x) => NUME_TURA[x.tura] || x.tura;
+  return { nivel: "atentie", cheie: "sanatate-ture", titlu: L.length === 1 ? scurt("🩺 colectorul: tura „" + n(L[0]) + "” n-a reușit de 24 h", 60) : "🩺 colectorul: " + cate(L.length, "tură", "ture") + " n-au reușit de 24 h",
+    mesaj: msg(scurt(L.map((x, i) => (i ? "tura " : "Tura ") + n(x) + " de la " + ziOra(x.de) + " (" + curatMotiv(x.motiv) + ")").join(" · "), 110) + ": ce calculează rămâne vechi în Radar.",
+      "Aș citi cauza în jurnalul colectorului de pe VPS, " + UNDE.jurnalColector + ".") };
+};
+export const tureRevenite = (l) => ({ nivel: "info", cheie: "sanatate-ture", doarRadar: true, titlu: scurt("🩺 colectorul: " + ((Array.isArray(l) ? l : []).length > 1 ? "turele „" : "tura „") + (Array.isArray(l) ? l : []).map((x) => NUME_TURA[x.tura] || x.tura).join("”, „") + "” " + ((Array.isArray(l) ? l : []).length > 1 ? "merg" : "merge") + " din nou", 60),
+  mesaj: "Tura a reușit iar, după " + Math.max(0, ...(Array.isArray(l) ? l : []).map((x) => Number(x.ore) || 0)) + " h fără nicio reușită." });
 
 export const t212DinNou = () => ({ nivel: "info", titlu: "Trading 212 răspunde din nou", mesaj: "Alertele de stop și țintă pe acțiuni merg din nou." });
 export const t212Rau = (minute, status, eroare) => ({ nivel: "critic", titlu: "Trading 212 nu mai răspunde de " + minute + " min",
   mesaj: msg((status === 401 || status === 403 ? "Cheia API pare expirată sau revocată (" + status + ")" : scurt(eroare, 60)) + ": alertele de stop și țintă nu mai vin; stopurile puse în Trading 212 merg și fără Radar.",
-    "Aș verifica cheia în Trading 212 (Settings → API) și aș pune-o din nou cu PUNE-CHEILE-T212.bat.") });
+    "Aș verifica cheia în Trading 212 (Settings → API) și aș pune-o din nou pe " + UNDE.loc + ", cu scripts\\pune-cheile.ps1.") });
 
 // pond = ponderea pozitiei in cont (0..1)
 export const pondereT212 = (s, pond) => ({ nivel: "atentie", titlu: s + " e " + Math.round(pond * 100) + "% din contul Trading 212",

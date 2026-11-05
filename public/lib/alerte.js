@@ -522,17 +522,31 @@ var Alerte = (function () {
   // Schimbarea "vremii pietei" (Home): crypto (liniste/amestecat/miscare), Nasdaq (larga/ingusta/lateral/scade/frica)
   // si legatura BTC - bursa (urmeaza >= 0,5 / separat < 0,3). O schimbare se anunta abia cand se confirma de 2 ori la rand.
   var RAU = { miscare: 1, scade: 1, frica: 1 };
-  function schimbareVreme(st, o, acum) {
-    o = o || {}; var n = st ? JSON.parse(JSON.stringify(st)) : {}, mesaje = [], init = !st;
+  // v100.306 (05.11, auditul final, I-831): „Crypto: liniște ⇄ mișcare” de 9 ori în 7 zile. banda = { intrare, iesire, pauzaMs } (din colector:
+  // politica-alerte.bandaVreme - pragurile ALESE, nu dovedite, într-un singur loc): „mișcare” intră abia la cota monedelor în mișcare ≥ intrare
+  // (sau BTC în mișcare) și iese abia la ≤ iesire; între ele eticheta rămâne cea de dinainte. Și cel puțin pauzaMs între două schimbări
+  // ANUNȚATE (crypto, Nasdaq, legătura BTC – bursa): confirmată prea curând, schimbarea așteaptă pauza. Fără bandă (pagina, garda) - ca înainte.
+  function nivelInBanda(cur, niv, v, bd) {
+    var ev = nr(v && v.inMiscare), tot = nr(v && v.total), cota = ev !== null && tot > 0 ? ev / tot : null, btc = !!(v && v.btcMiscare);
+    if (cota === null) return niv;
+    if (cur === "miscare" && niv !== "miscare" && cota > bd.iesire) return cur;   // încă în bandă: rămâne „mișcare”
+    if (cur !== "miscare" && niv === "miscare" && !btc && cota < bd.intrare) return cur;   // sub pragul de intrare: rămâne ce era
+    return niv;
+  }
+  function schimbareVreme(st, o, acum, banda) {
+    o = o || {}; var n = st ? JSON.parse(JSON.stringify(st)) : {}, mesaje = [], init = !st, bd = banda && typeof banda === "object" ? banda : null;
+    var pauzaOk = function (c) { return !bd || !(nr(bd.pauzaMs) > 0) || !c || !(nr(c.la) > 0) || acum - c.la >= bd.pauzaMs; };
     [["crypto", "Crypto"], ["bursa", "Nasdaq"]].forEach(function (p) {
       var v = o[p[0]], niv = v && v.nivel; if (!niv || niv === "fara-date") return;
       var c = n[p[0]] || null;
       if (init || !c) { n[p[0]] = { nivel: niv, cand: null }; return; }
+      if (bd && p[0] === "crypto" && nr(bd.intrare) !== null && nr(bd.iesire) !== null) niv = nivelInBanda(c.nivel, niv, v, bd);
       if (niv === c.nivel) { c.cand = null; return; }
       if (c.cand === niv) {
+        if (!pauzaOk(c)) return;   // confirmată, dar prea curând după schimbarea de dinainte: candidatul rămâne, pleacă după pauză
         // v100.70 (revizia pachetului 3, I4): eticheta fara emoji si fara majuscule de strigat - nivelul il da culoarea alertei
         mesaje.push({ cheie: "vreme-" + p[0], nivel: RAU[niv] ? "critic" : "info", titlu: p[1] + ": " + String(v.eticheta || niv).replace(/^[^\p{L}]+/u, "").toLowerCase(), mesaj: msg(v.titlu || "", v.faCe ? mare(v.faCe) : null) });
-        n[p[0]] = { nivel: niv, cand: null };
+        n[p[0]] = { nivel: niv, cand: null, la: acum };
       } else c.cand = niv;
     });
     var r = o.corelatie ? nr(o.corelatie.r) : null;
@@ -543,10 +557,11 @@ var Alerte = (function () {
       var cur = n.cor ? n.cor.stare : null, tinta = r > pb[0] ? "urmeaza" : r <= pb[1] ? "separat" : cur;
       if (init || !n.cor) n.cor = { stare: r > pb[0] ? "urmeaza" : "separat", cand: null };
       else if (tinta === n.cor.stare) n.cor.cand = null;
+      else if (n.cor.cand === tinta && !pauzaOk(n.cor)) { /* v100.306 (I-831): confirmată prea curând - așteaptă pauza */ }
       else if (n.cor.cand === tinta) {
         mesaje.push({ cheie: "vreme-corelatie", nivel: "info", titlu: tinta === "urmeaza" ? "BTC urmează bursa acum (" + r.toFixed(2).replace(".", ",") + ")" : "BTC merge din nou pe drumul lui (" + r.toFixed(2).replace(".", ",") + ")",
           mesaj: tinta === "urmeaza" ? msg("Pe ultimele 30 de zile de bursă BTC se mișcă odată cu Nasdaq: o scădere a bursei trage și crypto.", "M-aș uita la VIX și la Nasdaq înainte să pornesc boți long.") : "Bursa nu mai trage BTC după ea: crypto se judecă din nou pe datele lui." });
-        n.cor = { stare: tinta, cand: null };
+        n.cor = { stare: tinta, cand: null, la: acum };
       } else n.cor.cand = tinta;
     }
     return { mesaje: mesaje, stare: n };

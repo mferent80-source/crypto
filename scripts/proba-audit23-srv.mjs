@@ -147,7 +147,7 @@ await test("(4) colectorul: fără process.exit pe ramura „serverul nu răspun
   assert.match(c, /if \(so\.tip === "oprit"\) \{ await anuntaMesaj\(MesajeColector\.serverOprit\(so\.minute\)\); mo\.serverOpritAnuntat = acum; \}/);
 });
 await test("(4) mesajele: „serverul nu răspunde” nu mai spune că s-a oprit colectorul; „serverul răspunde din nou” (info, ≤ 60)", () => {
-  const a = MC.serverOprit(15); assert.ok(!/colectorul s-a oprit/.test(a.mesaj)); assert.match(a.mesaj, /reia singur/); assert.match(a.mesaj, /PORNESTE-CRYPTO-RADAR\.bat/);
+  const a = MC.serverOprit(15); assert.ok(!/colectorul s-a oprit/.test(a.mesaj)); assert.match(a.mesaj, /reia singur/); assert.match(a.mesaj, /Crypto Radar pornire/);   /* v101.166 (I-832): pe VPS, nu .bat */
   const b = MC.serverRevenit(); assert.equal(b.nivel, "info"); assert.ok(b.titlu.length <= 60); assert.match(b.titlu, /răspunde din nou/);
   assert.match(citeste("scripts", "lib", "garda-alerte.mjs"), /"serverRevenit"/);
 });

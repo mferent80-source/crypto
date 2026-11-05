@@ -117,7 +117,7 @@ await test("(7 → v100.207, v101.165) omul mort: nota pleacă pe Discord până
   assert.ok(n); assert.equal(n.doarRadar, false, "v101.165: fără paznic.discord în rezumat ⇒ tot pe Discord"); assert.equal(n.la, ACUM - 6 * ORA); assert.equal(n.cheie, "busola-veche"); assert.equal(n.nivel, "atentie");
   /* v101.165 (05.11, auditul Busolei 🔴 2): titlul spune rularea care n-a ajuns, după programul real de pe VPS (07:05–21:05 orar, 23:05, 03:05);
      mesajul trimite la VPS și spune să NU faci wrangler login acasă (strică autentificarea VPS-ului) */
-  assert.equal(n.titlu, "Busola n-a mai măsurat de 6 ore (trebuia la 07:05)"); assert.match(n.mesaj, /VPS/); assert.match(n.mesaj, /fără wrangler login/); assert.match(n.mesaj, /\n👉 /);
+  assert.equal(n.titlu, "Busola n-a mai măsurat de 6 ore (trebuia la 07:05)"); assert.match(n.mesaj, /VPS/); assert.match(n.mesaj, /wrangler login se face doar acolo/);   /* v101.166 (I-832): fără „PC-ul de acasă” în alertă */ assert.match(n.mesaj, /\n👉 /);
   const zi = P.notaVeche({ Busola: B, rez: REZ({ la: ACUM - 4 * ORA }), acum: ACUM, anuntat: null });   // ultima la 09:00 RO = zi ⇒ 4 h = CRITIC
   assert.equal(zi.nivel, "critic"); assert.equal(zi.titlu, "Busola n-a mai măsurat de 4 ore (trebuia la 09:05)");
   assert.equal(P.notaVeche({ Busola: B, rez: REZ({ la: ACUM - 25 * ORA }), acum: ACUM, anuntat: null }).titlu, "Busola n-a mai măsurat de 25 de ore (trebuia la 12:05)");   /* 25 h ⇒ ultima la 12:00 RO ieri = zi */

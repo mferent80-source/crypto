@@ -145,8 +145,10 @@ await test("(C) I-523 semaforul: „mai agitată” + bilanț „dovedit” cu c
   assert.ok(lib("semnale-bot.js").includes('busola: "Busola: după agitație gridul pierde mai mult"'), "NUME_SFAT fără busola (socoteala pe cod)");   /* v100.93 (A2): textul nou */
 });
 await test("(C) Busola.pentruVerdict: starea + bilanțul (verdict, dif, monede) din rezumatul proaspăt; rezumat vechi (> 4,5 h), lipsă sau monedă neurmărită ⇒ null; fără bilanț ⇒ bilant null", () => {
-  const v = B.pentruVerdict(REZ({ perp: { la: LA, monede: 102, prag: 200000, bilant: { verdict: "dovedit", dif: -0.0017, monede: 24, judecate: 300 } } }), "AAVE.PERP", ACUM);
+  // v100.306 (I-828): „dovedit” doar cu bilanțul socotit pe momente rărite (`pe: "momente"`); pe monede ⇒ „nedovedit (socotit pe monede)”
+  const v = B.pentruVerdict(REZ({ perp: { la: LA, monede: 102, prag: 200000, bilant: { verdict: "dovedit", dif: -0.0017, monede: 24, judecate: 300, pe: "momente" } } }), "AAVE.PERP", ACUM);
   assert.deepEqual(v, { stare: "miscare", bilant: { verdict: "dovedit", dif: -0.0017, monede: 24 } });
+  assert.equal(B.pentruVerdict(REZ({ perp: { la: LA, monede: 102, prag: 200000, bilant: { verdict: "dovedit", dif: -0.0017, monede: 24, judecate: 300 } } }), "AAVE.PERP", ACUM).bilant.verdict, "nedovedit (socotit pe monede)");
   assert.deepEqual(B.pentruVerdict(cuVerdict("prea puține"), "LIT_USDT_PERP", ACUM), { stare: "liniste", bilant: { verdict: "prea puține", dif: null, monede: 0 } });
   assert.equal(B.pentruVerdict(REZ(), "AAVE", ACUM + 5 * ORA), null); assert.equal(B.pentruVerdict(null, "AAVE", ACUM), null); assert.equal(B.pentruVerdict(REZ(), "ZZZ", ACUM), null);
   assert.equal(B.pentruVerdict(REZ({ perp: { la: LA, monede: 1, prag: 1 } }), "AAVE", ACUM).bilant, null);

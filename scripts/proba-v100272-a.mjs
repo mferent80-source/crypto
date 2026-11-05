@@ -55,8 +55,12 @@ function fnSync(nume, optional) {
 }
 const rand = (re, optional) => { const m = COL.match(re); if (!m && optional) return ""; assert.ok(m, "lipsește rândul " + re + " în colector.mjs"); return m[0] + "\n"; };
 // numele colectorului: din `baza` (cele date de probă) sau un ciot async (orice altceva) - nu din globalThis
+// v100.306 (colector v101.166): numele noi ale colectorului - politica de noapte (POL), sănătatea (SR, sanatate), cache-ul listei boților -
+// implicite în lume, dacă testul nu le dă (altfel ciotul async făcea `cacheBoti.pune` / `POL.politicaNoapte` „is not a function”)
+const IMPLICITE_166 = { POL: await import("./lib/politica-alerte.mjs"), SR: await import("./lib/sanatate-rute.mjs"), cacheBoti: { pune: (d) => d, citeste: async () => ({ bots: [] }) }, sanatate: () => ({}) };
 function inLume(baza, cod) {
   const ciot = async () => undefined;
+  for (const [k, v] of Object.entries(IMPLICITE_166)) if (!(k in baza)) baza[k] = v;
   const M = new Proxy(baza, {
     has: (t, k) => typeof k === "string" && (k in t || !(k in globalThis)),
     get: (t, k) => (typeof k !== "string" ? undefined : k in t ? t[k] : ciot),

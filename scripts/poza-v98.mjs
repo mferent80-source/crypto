@@ -145,7 +145,8 @@ await test("alerteT212Pasi: trepte de 1% fata de inchiderea de ieri - o treapta 
   assert.match(a[0].mesaj, /\$103,20 \(ieri \$100,00\)/);
   assert.match(a[0].mesaj, /−6,2% față de prețul tău mediu/);
   assert.equal(a[0].marcheaza.length, 3, "se marcheaza +1, +2, +3");
-  assert.ok(a[0].marcheaza.every((k) => /^t212-pas-AVGO-/.test(k) && /\d{4}-\d\d-\d\d$/.test(k.slice(-10))), "cheile se termina cu ziua (curatenia dupa 3 zile)");
+  // v101.166 (I-831): cheia e închiderea de ieri, fără ziua ședinței (la deschiderea SUA treptele plecau a doua oară); colectorul ține ziua marcării ca valoare
+  assert.ok(a[0].marcheaza.every((k) => /^t212-pas-AVGO-p\d+-100$/.test(k)), "cheile se termina cu inchiderea de ieri");
   const facute = {}; for (const k of a[0].marcheaza) facute[k] = true;
   assert.equal(alerteT212Pasi(poz(101.5), facute, ACUM).length, 0, "inapoi la +1% = treapta deja trimisa");
   assert.equal(alerteT212Pasi(poz(103.9), facute, ACUM).length, 0, "tot +3% = nimic nou");
@@ -157,21 +158,23 @@ await test("alerteT212Pasi: trepte de 1% fata de inchiderea de ieri - o treapta 
   assert.equal(alerteT212Pasi({ t212: [{ s: "X", pret: 5, prev: null }, { s: "Y", pret: null, prev: 5 }, null] }, {}, ACUM).length, 0, "fara pret sau fara ieri = nimic");
   assert.match(alerteT212Pasi({ t212: [{ s: "RHM.DE", pret: 1500, prev: 1480 }] }, {}, ACUM)[0].mesaj, /€1500,00/, "bursa germana in euro");
 });
-await test("alertaBotPas: 1% fata de ultima alerta; prima citire doar fixeaza referinta; noaptea doar in Radar", () => {
+// v101.166 (I-831): doar la un extrem NOU al zilei; noaptea (23–07) o ține politica de noapte a colectorului (politica-alerte), nu alertaBotPas
+await test("alertaBotPas: 1% fata de ultima alerta, doar la un extrem nou al zilei; prima citire doar fixeaza referinta", () => {
   const bot = (pret, dir = "long", lev = 5) => ({ id: "b1", baza: "JTO.PERP", directie: dir, levier: lev, pretCurent: pret, gridJos: 0.57, gridSus: 0.66 });
   const zi = Date.UTC(2026, 9, 5, 10, 0), noapte = Date.UTC(2026, 9, 5, 0, 30);   // 13:00 si 03:30 ora Romaniei
   let r = alertaBotPas(bot(0.612), null, zi);
-  assert.equal(r.alerta, null); assert.deepEqual(r.ref, { p: 0.612, t: zi });
+  assert.equal(r.alerta, null); assert.deepEqual(r.ref, { p: 0.612, t: zi, zi: "2026-10-05", sus: 0.612, jos: 0.612 });
   r = alertaBotPas(bot(0.6155), r.ref, zi + 20 * 60000);
   assert.equal(r.alerta, null, "+0,57% = nimic"); assert.equal(r.ref.p, 0.612, "referinta ramane");
   r = alertaBotPas(bot(0.6058), r.ref, zi + 40 * 60000);
   assert.ok(r.alerta); assert.equal(r.ref.p, 0.6058, "referinta devine pretul alertei");
   assert.match(r.alerta.titlu, /^JTO \(long 5×\): −1,0% în 40 min/);
   assert.match(r.alerta.mesaj, /0,6120 → 0,6058/); assert.match(r.alerta.mesaj, /în grid 40%/); assert.match(r.alerta.mesaj, /pe marjă cel mult ≈ −5%/);
-  assert.equal(r.alerta.doarRadar, false); assert.match(r.alerta.cheie, /^bot-pas-b1/);
+  assert.notEqual(r.alerta.doarRadar, true); assert.match(r.alerta.cheie, /^bot-pas-b1/);
+  assert.equal(alertaBotPas(bot(0.612), r.ref, zi + 50 * 60000).alerta, null, "intoarcerea la 0,612 nu e un extrem nou (du-te-vino)");
   const s = alertaBotPas(bot(0.6058, "short", 3), { p: 0.612, t: zi }, zi + 2 * 3600000);
   assert.match(s.alerta.titlu, /în 2 h/); assert.match(s.alerta.mesaj, /pe marjă cel mult ≈ \+3%/, "short castiga cand pretul scade");
-  assert.equal(alertaBotPas(bot(0.62), { p: 0.612, t: noapte }, noapte).alerta.doarRadar, true, "00–07 ora Romaniei: doar in Radar");
+  assert.ok(alertaBotPas(bot(0.62), { p: 0.612, t: noapte }, noapte).alerta, "noaptea alerta se socoteste (o tine politica de noapte din trimiteAlerta)");
   assert.equal(alertaBotPas(bot(null), { p: 0.612, t: zi }, zi).alerta, null, "fara pret = nimic");
   assert.equal(alertaBotPas(bot(null), { p: 0.612, t: zi }, zi).ref.p, 0.612);
 });

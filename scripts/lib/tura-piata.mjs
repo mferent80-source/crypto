@@ -5,6 +5,7 @@
 // d = { cere, trimite, trimiteAlerta, jurnal, pauza, Acasa, Alerte, GridCalcul, GridClasament, Directie, NDX }
 // st = starea ei (colectorul o tine in meta si o scrie pe disc)
 import { CalendarBursa } from "./calendar-bursa.mjs";
+import { bandaVreme } from "./politica-alerte.mjs";   // v101.166 (I-831): banda 0,45 / 0,55 și pauza de 2 h ale alertei de vreme (alese, nu dovedite)
 const MIN = 60000, ORA = 3600000;
 const RITM = { vreme: 10 * MIN, funding: ORA, boti: 30 * MIN, bursa: ORA };
 
@@ -89,7 +90,7 @@ async function vreme(d, st, acum) {
   if (sideF) fr.fundingAtentie = sideF;
   const v = aplicaFrana(A, v0, "crypto", fr), vb = aplicaFrana(A, vb0, "bursa", fr);
   const co = b1d && qqq ? A.corelatie(b1d, qqq, 30) : null;
-  const r = d.Alerte.schimbareVreme(st.vreme || null, { crypto: v, bursa: vb, corelatie: co }, acum);
+  const r = d.Alerte.schimbareVreme(st.vreme || null, { crypto: v, bursa: vb, corelatie: co }, acum, bandaVreme());
   if (await trimiteToate(d, r.mesaje)) {
     st.vreme = r.stare;
     // v95: dupa "crypto in MISCARE" se masoara cat s-a mai miscat BTC

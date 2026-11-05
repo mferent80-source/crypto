@@ -24,7 +24,9 @@ export function categorie(faCe) {
 const NUME_CAT = { tine: "aș ține", opreste: "aș opri", plan: "nu se potrivește cu planul", zgomot: "stopul e în zgomot", ban: "o aruncare de ban", reluare: "reluarea nu se potrivește cu Pionex", alt: "altfel" };
 // revizia (3): un fel nou se anunță abia când ține DOUĂ ture la rând (v101.116: marja reală, pe grupe de zile, e ±28…±46 de puncte, nu ±4 - felul ar sări des fără confirmare) și cel
 // mult un mesaj pe bot pe oră; (mărunt) alerta netrimisă nu schimbă starea - se reîncearcă la tura următoare
-const TURE_PANA_LA_ANUNT = 2, PAUZA_ANUNT_MS = 60 * 60000;
+// v101.166 (I-831, auditul final 05.11): „zgomot ⇄ aruncare de ban” orar pe ONDO ⇒ cel puțin 2 h între două anunțuri (pragul ALES, din politica-alerte)
+import { PAUZA_ETICHETA_MS } from "./politica-alerte.mjs";
+const TURE_PANA_LA_ANUNT = 2, PAUZA_ANUNT_MS = PAUZA_ETICHETA_MS;
 // v100.271 (ideile auditului 29.10): regimul Busolei NEVALIDAT se socotește o dată pe oră (pe aceeași stare), nu la fiecare tură - vezi turaMonteCarloBot
 const REGIM_NEVALIDAT_MS = 60 * 60000;
 function ora(t) { const d = new Date(t); return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); }

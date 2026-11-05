@@ -33,9 +33,10 @@ await test("Consilier.adresaTunel scos (nu mai e nimic de citit); rezumatul de d
   const r = c.Consilier.rezumatDimineata({ acum: Date.parse("2026-10-15T06:00:00Z"), link: "https://mau.exemplu.ts.net:8443" });
   assert.match(r.linii.join(" | "), /🔗 Radarul pe telefon: https:\/\/mau\.exemplu\.ts\.net:8443/);
 });
-await test("mesajul „serverul oprit”: doar PORNESTE-CRYPTO-RADAR.bat", async () => {
+// v101.166 (I-832): Radarul rulează pe VPS - mesajul trimite la sarcina „Crypto Radar pornire”, nu la un .bat de pe PC-ul de acasă
+await test("mesajul „serverul oprit”: doar sarcina de pe VPS (fără .bat)", async () => {
   const M = await import("./lib/mesaje-colector.mjs"), m = M.serverOprit(12);
-  assert.match(m.mesaj, /PORNESTE-CRYPTO-RADAR\.bat/); assert.ok(!/PORNESTE-SI-PE-TELEFON/.test(m.mesaj));
+  assert.match(m.mesaj, /schtasks \/Run \/TN "Crypto Radar pornire"/); assert.ok(!/\.bat|PORNESTE-SI-PE-TELEFON/.test(m.mesaj));
 });
 await test("serverul: adresa Tailscale (*.ts.net) e „acasă”, ca 127.0.0.1; trycloudflare nu mai e recunoscut", () => {
   const ph = citeste("functions", "api", "provider-health.js");

@@ -40,14 +40,17 @@ function inchiseActiuni(G, b, acum) {
   return st.deschisa && ziNY(b[b.length - 1].t) === st.zi ? b.slice(0, -1) : b;
 }
 
+// v101.166 (I-838): lumânările zilnice vin incremental (d.klines1d: barele închise de pe disc, o cerere pe monedă o dată pe zi UTC, + bara
+// de azi închisă la prețul tickerului de acum; prețurile = d.preturiPerp(), o cerere pe toată piața). Rețetele folosesc doar barele închise,
+// coloana „azi” doar închiderea barei de azi. Fără d.klines1d (probele vechi), ca înainte.
 export async function scanCrypto(d, acum) {
   const cl = await d.cere("/api/istoric-bot?action=clasament"), m = cl && cl.clasament && Array.isArray(cl.clasament.monede) ? cl.clasament.monede : [];
   if (!m.length) { d.jurnal("scan crypto: clasamentul e gol, astept"); return null; }
-  const randuri = [], bare = [];
+  const randuri = [], bare = [], preturi = d.klines1d && d.preturiPerp ? (await incearca(d, "preturi", () => d.preturiPerp())) || {} : {};
   for (let i = 0; i < m.length; i++) {
     const x = m[i], s = String(x.simbol || "").replace(/_USDT_PERP$/, "");
-    if (i) await d.pauza(d.pauzaMs == null ? 900 : d.pauzaMs);
-    const k = await incearca(d, s, () => d.cere("/api/market?type=pionex_klines&symbol=" + encodeURIComponent(x.simbol) + "&interval=1D&limit=400"));
+    if (i && !d.klines1d) await d.pauza(d.pauzaMs == null ? 900 : d.pauzaMs);   /* incremental: pauza o ține d.klines1d, doar înaintea unei cereri */
+    const k = await incearca(d, s, async () => (d.klines1d ? { data: { klines: await d.klines1d(x.simbol, preturi[x.simbol]) } } : d.cere("/api/market?type=pionex_klines&symbol=" + encodeURIComponent(x.simbol) + "&interval=1D&limit=400")));
     const t = cuVolum(d.GridCalcul, k && k.data && k.data.klines, "volume"), b = t.slice(0, -1), z = cuAzi(d.Scan, t, b);   /* v100.196: bara zilei UTC e în formare */
     if (!z) continue;
     bare.push(b);

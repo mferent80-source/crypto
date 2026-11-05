@@ -228,6 +228,8 @@ export function notaVeche({ Busola, rez, acum, anuntat }) {
   if (!(la > 0) || acum - la <= prag || anuntat === la) return null;
   const urm = typeof Busola.urmatoareaRulare === "function" ? Busola.urmatoareaRulare(la, rez && rez.program) : null;
   // revizia (🟠2): doar în Radar NUMAI când Worker-ul Busolei spune în rezumat că paznicul lui poate anunța (`paznic.discord`, 1.88)
-  const paznic = !!(rez && rez.paznic && rez.paznic.discord === true);
+  // v101.166 (I-830): ȘI când paznicul a rulat de curând (`paznic.la` sub 90 min, Busola 1.89) - un cron `*/30` dispărut (un deploy fără
+  // triggers) nu mai lasă pana fără nicio voce: fără semn de la el, nota pleacă pe Discord
+  const paznic = typeof Busola.paznicViu === "function" ? Busola.paznicViu(rez, acum) : false;
   return Object.assign(MC.busolaVeche((acum - la) / 3600000, prag / 3600000, urm, paznic), { la });
 }

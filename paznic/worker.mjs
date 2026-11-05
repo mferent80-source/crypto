@@ -1,10 +1,14 @@
-// Paznicul colectorului (v97, ideea 5 din 27.09): daca PC-ul de acasa se opreste sau colectorul moare, alertele botului
+// Paznicul colectorului (v97, ideea 5 din 27.09): daca serverul colectorului (din 03.11 VPS-ul) se opreste sau colectorul moare, alertele botului
 // tac FARA niciun semn. Colectorul bate aici la 5 minute (POST /bataie, cu tokenul PAZNIC_TOKEN); cronul de la 10 minute
 // verifica: fara bataie de 30 de minute -> un mesaj pe Discord; tot linistit -> cate o amintire la 6 ore; bataia revine ->
 // "a revenit". Secretele (DISCORD_WEBHOOK, PAZNIC_TOKEN) stau in Cloudflare (wrangler secret put), nu in cod.
 // v98: /poza (poza colectorului pentru pagina alerts din Trading Tools) si /simboluri (lista paginii), cheia de citire
 // CHEIE_CITIRE (wrangler secret put), CORS doar pentru originea suitei.
 const TACE_MS = 30 * 60000, AMINTIRE_MS = 6 * 3600000;
+// v101.166 (I-832, auditul final 05.11): colectorul și serverul Radarului stau pe VPS - mesajele trimit acolo (sarcina „Crypto Radar pornire”,
+// jurnalul ei), nu la „PC-ul de acasă” / PORNESTE-CRYPTO-RADAR.bat (urmat, sfatul vechi pornea al doilea colector ⇒ alerte duble). Constanta
+// e comună cu mesajele colectorului; `wrangler deploy` o ia în pachet. Se publică abia cu deploy-ul paznicului (de pe VPS, contul e acolo).
+import { UNDE } from "../scripts/lib/unde-ruleaza.mjs";
 const POZA_MAX = 512 * 1024, SIMBOLURI_MAX = 60;
 // v100.42 (audit 30.09): lista se scrie cu cheia de CITIRE a paginii - deci nu are voie sa goleasca cota KV (1.000 de scrieri pe zi pe
 // tot contul; o cota golita face paznicul sa tipe pe Discord la 10 minute): lista identica = nicio scriere; cel mult o scriere la 5 s
@@ -36,7 +40,7 @@ export async function pozaScrie(env, text, acum = Date.now()) {
   if (text.length > POZA_MAX) return { status: 413, corp: { error: "poza prea mare", max: POZA_MAX, marime: text.length } };
   let p; try { p = JSON.parse(text); } catch { return { status: 400, corp: { error: "JSON stricat" } }; }
   if (!p || typeof p !== "object" || Array.isArray(p) || !(Number(p.la) > 0)) return { status: 400, corp: { error: "lipseste 'la'" } };
-  if (Number(p.la) > acum + LA_VIITOR_MAX_MS) return { status: 400, corp: { error: "'la' e in viitor (ceasul PC-ului?)", la: Number(p.la), acum } };
+  if (Number(p.la) > acum + LA_VIITOR_MAX_MS) return { status: 400, corp: { error: "'la' e in viitor (ceasul serverului colectorului?)", la: Number(p.la), acum } };
   // o singura cheie (o scriere pe poza: KV-ul are limita zilnica de scrieri; si nicio pereche de chei ne-atomica)
   await env.PAZNIC.put("poza", text);
   return { status: 200, corp: { ok: true, la: Number(p.la), marime: text.length } };
@@ -104,7 +108,7 @@ export async function saltCerereScrie(env, text, acum = Date.now()) {
     Object.assign(x, { qty: c.qty, pretMediu: c.pretMediu, moneda: c.moneda, de: /^\d{4}-\d{2}-\d{2}$/.test(String(c.de || "")) ? c.de : null });
   }
   const l = await env.PAZNIC.list({ prefix: SALT_PREFIX });
-  if (((l && l.keys) || []).length >= SALT_CERERI_MAX) return { status: 429, corp: { error: "sunt deja " + SALT_CERERI_MAX + " cereri în așteptare: colectorul de acasă nu le-a luat (e pornit?)" } };
+  if (((l && l.keys) || []).length >= SALT_CERERI_MAX) return { status: 429, corp: { error: "sunt deja " + SALT_CERERI_MAX + " cereri în așteptare: " + UNDE.colector + " nu le-a luat (e pornit?)" } };
   await env.PAZNIC.put(SALT_PREFIX + x.id, JSON.stringify(x));
   return { status: 200, corp: { ok: true, id: x.id } };
 }
@@ -202,7 +206,7 @@ export async function verificaStopuri(env, acum, f = fetch) {
 export async function bataie(env, corp, acum, f = fetch) {
   const s = await citeste(env), era = s.anuntatLa ? s.la : null;
   const nou = { la: acum, pid: Number(corp && corp.pid) || null, versiune: String(corp && corp.versiune || "").slice(0, 20) };
-  if (era) await discord(env, "info", "Crypto Radar: colectorul a revenit", "Colectorul de acasă bate din nou (a tăcut de la " + ora(era) + ", " + minute(acum - era) + "). Alertele botului merg iar.", f);
+  if (era) await discord(env, "info", "Crypto Radar: colectorul a revenit", "Colectorul de pe " + UNDE.loc + " bate din nou (a tăcut de la " + ora(era) + ", " + minute(acum - era) + "). Alertele botului merg iar.", f);
   await scrie(env, nou);
   return nou;
 }
@@ -221,7 +225,7 @@ export async function verifica(env, acum, f = fetch) {
     // v98.2: cat poza curge, colectorul nu mai bate separat (scrieri KV) -> revenirea dupa o tacere anuntata o spune cronul, o singura data
     if (s.anuntatLa) {
       // de cand tacuse = ultimul semn dinaintea tacerii (tinut minte la anunt: poza sau bataie), nu ultima BATAIE de acum zile
-      await discord(env, "info", "Crypto Radar: colectorul a revenit", "Colectorul de acasă dă iar semn (poza curge; tăcuse de la " + ora(Number(s.tacutDeLa) || Number(s.la) || la) + "). Alertele botului merg iar.", f);
+      await discord(env, "info", "Crypto Radar: colectorul a revenit", "Colectorul de pe " + UNDE.loc + " dă iar semn (poza curge; tăcuse de la " + ora(Number(s.tacutDeLa) || Number(s.la) || la) + "). Alertele botului merg iar.", f);
       await scrie(env, { ...s, la, anuntatLa: undefined, tacutDeLa: undefined });
       return { stare: "revenit" };
     }
@@ -229,15 +233,15 @@ export async function verifica(env, acum, f = fetch) {
   }
   if (s.anuntatLa && acum - s.anuntatLa < AMINTIRE_MS) return { stare: "tace-anuntat" };
   const prima = !s.anuntatLa;
-  // poza vine încă, dar bucla alertelor nu s-a mai terminat ⇒ alt mesaj (PC-ul și internetul merg; colectorul stă)
+  // poza vine încă, dar bucla alertelor nu s-a mai terminat ⇒ alt mesaj (VPS-ul și internetul merg; colectorul stă)
   const pozaVie = laPoza && acum - laPoza < TACE_MS;
   const ok = pozaVie
     ? await discord(env, "critic", "Crypto Radar: alertele botului stau de " + minute(tace),
-      "PC-ul de acasă trimite încă poza (" + ora(laPoza) + "), dar bucla alertelor nu s-a mai terminat din " + ora(la) + ". Cât stă, NU primești alertele botului (lichidare, grid, planul tău, podeaua)." +
-      (prima ? " Aș reporni PORNESTE-CRYPTO-RADAR.bat." : " Încă stă."), f)
+      "Colectorul de pe " + UNDE.loc + " trimite încă poza (" + ora(laPoza) + "), dar bucla alertelor nu s-a mai terminat din " + ora(la) + ". Cât stă, NU primești alertele botului (lichidare, grid, planul tău, podeaua)." +
+      (prima ? " Aș opri pe " + UNDE.loc + " procesul node al colectorului și aș rula " + UNDE.repornire + "." : " Încă stă."), f)
     : await discord(env, "critic", "Crypto Radar: colectorul tace de " + minute(tace),
-      "Ultimul semn de la PC-ul de acasă: " + ora(la) + ". Cât tace, NU primești alertele botului (lichidare, grid, planul tău, podeaua)." +
-      (prima ? " Verifică: e pornit PC-ul? merge internetul? rulează PORNESTE-CRYPTO-RADAR.bat?" : " Încă tace."), f);
+      "Ultimul semn de la colectorul de pe " + UNDE.loc + ": " + ora(la) + ". Cât tace, NU primești alertele botului (lichidare, grid, planul tău, podeaua)." +
+      (prima ? " Verifică: răspunde VPS-ul (ssh gestiune-vps)? Aș rula acolo " + UNDE.repornire + "; jurnalul: " + UNDE.jurnal + "." : " Încă tace."), f);
   if (ok) await scrie(env, { ...s, anuntatLa: acum, tacutDeLa: s.tacutDeLa || la });
   return { stare: ok ? "anuntat" : "discord-picat" };
 }

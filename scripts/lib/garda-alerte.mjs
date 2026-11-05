@@ -4,6 +4,7 @@
 // v100.70 (revizia pachetului 3): textele de baza vin din producatorii REALI (SemnaleBot, IndicatoriBot.mediu, Acasa.vreme/vremeBursa,
 // Obiceiuri.istoricMoneda/subOOra/frana, TabloExtra.propunePlan) - fixturile inventate ascundeau abateri reale.
 import * as MC from "./mesaje-colector.mjs";
+import * as POL from "./politica-alerte.mjs";   // v101.166 (I-831): rezumatul nopții
 import * as CO from "./comportament.mjs";   // v100.281: evaluarea boților închiși, săptămâna frânei
 import { alerteSimboluri, alerteSLTP, alerteT212Pasi, alertaBotPas } from "./poza.mjs";
 import { mesajReteta } from "./tura-scan.mjs";
@@ -176,10 +177,24 @@ export function situatiiAlerte(pune) {
 
   // mesajele colectorului
   const co = (sit, f, m) => pune(sit, "alerte", "colector." + f, m, AL);
-  co("serverul de acasă nu mai răspunde", "serverOprit", MC.serverOprit(15));
-  co("serverul de acasă răspunde din nou", "serverRevenit", MC.serverRevenit());   // v100.259 (auditul 23.10, punctul 4)
+  co("serverul de pe VPS nu mai răspunde", "serverOprit", MC.serverOprit(15));
+  co("serverul de pe VPS răspunde din nou", "serverRevenit", MC.serverRevenit());   // v100.259 (auditul 23.10, punctul 4)
   co("peste 100 de boți porniți", "botiTrunchiati", MC.botiTrunchiati(100));   // v100.259 (auditul 23.10, punctul 13)
   co("colectorul nu mai poate citi botul", "citireRea", MC.citireRea(12, "HTTP 502"));
+  // v101.166 (I-832, I-833): parola respinsă și cheia T212 (spre VPS), sănătatea colectorului (5xx pe rută, ture fără reușită 24 h)
+  co("serverul de pe VPS respinge parola colectorului", "authRespins", MC.authRespins(5, "AUTH_INVALID"));
+  co("Trading 212 nu mai răspunde (cheia)", "t212Rau", MC.t212Rau(12, 401, "Unauthorized"));
+  co("🩺 erori 500 pe o rută de 31 min", "rute5xx", MC.rute5xx([{ ruta: "istoric-bot·paza", n: 31, status: 500, minute: 31 }]));
+  co("🩺 erori 500 pe trei rute", "rute5xx", MC.rute5xx([{ ruta: "istoric-bot·paza", n: 860, status: 500, minute: 45 }, { ruta: "market·pionex_klines", n: 82, status: 500, minute: 40 }, { ruta: "t212·preturi", n: 81, status: 500, minute: 33 }]));
+  co("🩺 rutele merg iar", "rute5xxRevenit", MC.rute5xxRevenit([{ ruta: "istoric-bot·paza", n: 860, minute: 900 }]));
+  co("🩺 cazurile n-au reușit de 24 h", "tureCazute", MC.tureCazute([{ tura: "cazuri", de: T0 - 25 * ORA, n: 25, motiv: "fetch failed (UND_ERR_SOCKET: other side closed)", ore: 25 }]));
+  co("🩺 trei ture n-au reușit de 24 h", "tureCazute", MC.tureCazute([{ tura: "cazuri", de: T0 - 25 * ORA, n: 25, motiv: "fetch failed (UND_ERR_SOCKET: other side closed)", ore: 25 }, { tura: "frana", de: T0 - 24 * ORA, n: 288, motiv: "arhiva boților n-a venit", ore: 24 }, { tura: "disciplina", de: T0 - 26 * ORA, n: 3, motiv: "HTTP 500. Server error!", ore: 26 }]));
+  co("🩺 cazurile merg din nou", "tureRevenite", MC.tureRevenite([{ tura: "cazuri", ore: 30 }]));
+  // v101.166 (I-831): rezumatul nopții (ce a stat 23–07 doar în Radar), la 08:00 - puține și multe (rândul 1 se scurtează la 160)
+  const noapteSt = (n) => { const st = {}, l = [["STX: −5% azi", "t212-pas-STX-m5-100"], ["Gardă încălcată: Contul se mișcă sub 15 % pe an", "garda-vol"], ["🌙 ARIA: altă setare, verificată pe drumuri noi", "noapte-variante"], ["ARIA (short 3×): +1,2% în 40 min", "bot-pas-9"], ["WDC: −6,2% azi, de 2,1× mișcarea lui obișnuită", "sim-miscare-WDC-2026-10-02"]];
+    for (let i = 0; i < n; i++) { const [t, k] = l[i % l.length]; POL.noteazaNoapte(st, { titlu: t.replace(/^(STX|WDC|ARIA)/, "$1" + (i >= l.length ? String.fromCharCode(65 + i % 26) : "")) }, k, Date.UTC(2026, 9, 1, 21, 0) + i * 60000); } return st; };
+  co("🌙 rezumatul nopții, 3 alerte", "rezumatNoapte", POL.rezumatNoapte(noapteSt(3), Date.UTC(2026, 9, 2, 5, 30)));
+  co("🌙 rezumatul nopții, 40 de alerte, 12 simboluri", "rezumatNoapte", POL.rezumatNoapte(noapteSt(40), Date.UTC(2026, 9, 2, 5, 30)));
   // v101.127 (scorul sezonului): pauza la 3 pierderi la rând, rata și netul țintă atinse
   const SC = { start: Date.UTC(2026, 9, 18, 21), n: 12, win: 7, loss: 5, net: 53.4, rata: 7 / 12, suficient: true, serie: { n: 3, fel: "l" }, obiectiv: { rata: 0.55, serie: 3, net: 50, pana: null } };
   co("scorul sezonului: 3 pierderi la rând", "scorPauza", MC.scorPauza({ ...SC, net: -12.3, win: 2, loss: 3, n: 5 }));

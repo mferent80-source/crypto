@@ -22,11 +22,14 @@ export async function turaClasament(d) {
   const t0 = Date.now();
   const tk = await d.cere("/api/market?type=pionex_tickers&market=PERP");
   const lista = d.GridClasament.topDupaVolum(tk && tk.data && tk.data.tickers, top);
+  // v101.166 (I-838): lumânările de 4h vin incremental (d.klines4h: barele închise de pe disc + bara în curs închisă la prețul tickerului de
+  // acum) - o cerere pe monedă doar la o fereastră nouă de 4 h, nu la fiecare oră; fără d.klines4h (probele vechi), ca înainte
+  const pretTicker = new Map(((tk && tk.data && tk.data.tickers) || []).map((x) => [String(x && x.symbol), Number(x && x.close)]));
   const monede = [];
   let esecuri = 0;
   for (const m of lista) {
     try {
-      const k = await d.cere("/api/market?type=pionex_klines&symbol=" + encodeURIComponent(m.simbol) + "&interval=4H&limit=500");
+      const k = d.klines4h ? { data: { klines: await d.klines4h(m.simbol, pretTicker.get(String(m.simbol))) } } : await d.cere("/api/market?type=pionex_klines&symbol=" + encodeURIComponent(m.simbol) + "&interval=4H&limit=500");
       const bare = d.GridCalcul.bare(k && k.data && k.data.klines);
       if (!bare.length) throw new Error((k && (k.error || k.message || k.code)) || "fara lumanari");   // 200 cu result:false e tot esec
       const j = d.GridClasament.judeca(m.simbol, bare, m.volum);
@@ -37,7 +40,7 @@ export async function turaClasament(d) {
       esecuri++; monede.push(d.GridClasament.judeca(m.simbol, null, m.volum));
       if (esecuri >= maxEsecuri) { d.jurnal("clasament: prea multe esecuri, ma opresc la", monede.length); break; }
     }
-    if (pauzaMs) await d.pauza(pauzaMs);
+    if (pauzaMs && !d.klines4h) await d.pauza(pauzaMs);   /* v101.166: incremental, pauza o ține d.klines4h, doar înaintea unei cereri */
   }
   const rz = d.GridClasament.rezumat({ la: Date.now(), monede });
   if (!monede.length || rz.faraDate > monede.length * 0.2) {

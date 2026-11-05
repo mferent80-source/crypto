@@ -127,7 +127,7 @@ await test("4. colectorul: importă tura, încarcă TradeZilei, o cheamă după 
   assert.match(C, /import \{ turaTradeZilei \} from "\.\/lib\/tura-trade-zilei\.mjs"/); assert.match(C, /const TradeZilei = incarca\("trade-zilei\.js", "TradeZilei"\)/);
   assert.match(C, /const VERSIUNE_COLECTOR = "v101\.(16[2-9]|[2-9]\d\d)"/);   // v101.163: pe „≥ 162”
   const i = C.indexOf("turaDimineataModul({"), j = C.indexOf("turaTradeZilei({"); assert.ok(i > 0 && j > i, "tura trade-ului zilei vine după rezumatul de dimineață");
-  assert.match(C, /trimiteAlerta\(m, null, "tradezilei"\)/); assert.match(C, /interval=60M&limit=500"\); return GridCalcul\.bare\(/);
+  assert.match(C, /trimiteAlerta\(m, null, "tradezilei"\)/); assert.match(C, /const k = await lumanari1h\(s\); return GridCalcul\.bare\(/);   /* v101.166 (I-838): lumânările de 1 h o dată dimineața */
 });
 
 await test("5. versiunile v100.298 peste tot, feature-ul în BUILD_INFO, CSS-ul nou înaintea pândei", () => {

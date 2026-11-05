@@ -4,6 +4,7 @@
 // v100.76 (revizia ideilor): „1 bot”, „20 de boți”, „101 cazuri” - TextRo.cate; rezerva știe aceeași regulă (contextele fără TextRo)
 function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
 import { CalendarBursa } from "./calendar-bursa.mjs";
+import * as POL from "./politica-alerte.mjs";   // v101.166 (I-831): treapta, ziua României - pragurile alese, într-un singur loc
 const ZI = 86400000, FEREASTRA_INSIDERI = 60 * ZI;
 const nr = (x) => (typeof x === "number" && Number.isFinite(x) ? x : null);
 const rot = (x, z = 4) => (nr(x) === null ? null : Math.round(x * 10 ** z) / 10 ** z);
@@ -292,14 +293,17 @@ export function alerteSimboluri(simboluri, anterioare, acum) {
 // v101.67 (el, 05.10: „±1% la ce dețin”, A la T212): trepte de 1% fata de inchiderea de ieri (+1, +2, −1…), fiecare o data.
 // Saltul peste mai multe trepte = un singur mesaj (cea mai mare), restul se marcheaza in `marcheaza`. Inchiderea de ieri intra in
 // cheie: o sesiune noua (alt `prev`) porneste treptele de la capat, si la actiunile germane, care nu urmeaza ziua sesiunii NY.
+// v101.166 (I-831, auditul final 05.11): cheia e DOAR închiderea de ieri, fără ziua ședinței - la deschiderea SUA ziua ședinței se schimba,
+// închiderea nu, iar aceleași trepte plecau a doua oară (61 de dubluri în 7 zile). Fiecare treaptă e deja un extrem nou al zilei pe sensul
+// ei (−1, −2 … o dată). Colectorul ține ca valoare ziua marcării (politica-alerte.curataChei le curăță după ea).
 export function alerteT212Pasi(poza, facute, acum) {
-  const zi = (x) => ziSesiune(acum, x), out = [], f = facute || {}, pr = (v) => (v >= 1 ? v.toFixed(2) : v.toFixed(4)).replace(".", ",");
+  const out = [], f = facute || {}, pr = (v) => (v >= 1 ? v.toFixed(2) : v.toFixed(4)).replace(".", ",");
   for (const p of poza && Array.isArray(poza.t212) ? poza.t212 : []) {
     const pret = p && nr(p.pret), prev = p && nr(p.prev);
     if (!pret || !prev || !p.s) continue;
     const d = pret / prev - 1, n = Math.floor(Math.abs(d) * 100 + 1e-9);
     if (n < 1) continue;
-    const semn = d > 0 ? "p" : "m", cheie = (k) => "t212-pas-" + p.s + "-" + semn + k + "-" + rot(prev, 4) + "-" + zi(p.s);
+    const semn = d > 0 ? "p" : "m", cheie = (k) => "t212-pas-" + p.s + "-" + semn + k + "-" + rot(prev, 4);
     if (f[cheie(n)]) continue;
     const marcheaza = []; for (let k = 1; k <= n; k++) marcheaza.push(cheie(k));
     const m = monedaBursa(p.s), mediu = nr(p.mediu), fm = mediu ? pret / mediu - 1 : null;
@@ -308,20 +312,29 @@ export function alerteT212Pasi(poza, facute, acum) {
   }
   return out;
 }
-// v101.67 (B la boti): 1% fata de pretul ultimei alerte (prima citire doar fixeaza referinta); 00–07 ora Romaniei doar in Radar.
+// v101.67 (B la boti): 1% fata de pretul ultimei alerte (prima citire doar fixeaza referinta); noaptea doar in Radar (v101.166: 23–07, din
+// politica de noapte a colectorului, nu de aici).
 // „Pe marjă cel mult”: levierul × mișcarea, cu poziția plină - gridul ține de obicei mai puțin, deci e plafonul, nu suma.
+// v101.166 (I-831, auditul final 05.11): doar la un EXTREM NOU al zilei (ziua României) - 43% din alertele boților se întorceau în ≤ 15 min
+// (+1%, −1%, +1% … pe același du-te-vino). ref = { p, t (ultima alertă, pentru „în N min”), zi, sus, jos (extremele anunțate azi; prima
+// citire a zilei le fixează) }: sus doar la cel puțin TREAPTA peste `sus`, jos la cel puțin TREAPTA sub `jos`. O referință veche (fără zi)
+// pornește ziua de la prețul ei. Noaptea (23–07) treptele stau doar în Radar - politica de noapte din trimiteAlerta (cheia „bot-pas-”).
 export function alertaBotPas(b, ref, acum) {
   const pret = b && nr(b.pretCurent);
   if (!pret) return { alerta: null, ref: ref || null };
-  if (!ref || !nr(ref.p)) return { alerta: null, ref: { p: pret, t: acum } };
+  const zi = POL.ziRo(acum);
+  if (!ref || !nr(ref.p)) return { alerta: null, ref: { p: pret, t: acum, zi, sus: pret, jos: pret } };
+  if (ref.zi && ref.zi !== zi) return { alerta: null, ref: { p: pret, t: acum, zi, sus: pret, jos: pret } };   // ziua nouă: prima citire doar fixează
+  const sus0 = ref.zi ? nr(ref.sus) || ref.p : ref.p, jos0 = ref.zi ? nr(ref.jos) || ref.p : ref.p;
+  const nou = pret >= sus0 * (1 + POL.TREAPTA) - 1e-12 ? "sus" : pret <= jos0 * (1 - POL.TREAPTA) + 1e-12 ? "jos" : null;
+  if (!nou) return { alerta: null, ref: Object.assign({}, ref, { zi, sus: sus0, jos: jos0 }) };
   const d = pret / ref.p - 1;
-  if (Math.abs(d) < 0.01 - 1e-12) return { alerta: null, ref };
   const s = String(b.baza || "").replace(/\.PERP$/, ""), dir = String(b.directie || "").toLowerCase(), lev = nr(b.levier) || 1;
   const min = Math.max(1, Math.round((acum - (nr(ref.t) || acum)) / 60000)), cat = min < 120 ? min + " min" : Math.round(min / 60) + " h";
   const fp = (v) => (v >= 100 ? v.toFixed(2) : v >= 1 ? v.toFixed(3) : v.toPrecision(4)).replace(".", ",");
   const jos = nr(b.gridJos), sus = nr(b.gridSus), inGrid = jos !== null && sus !== null && sus > jos ? Math.round((pret - jos) / (sus - jos) * 100) : null;
-  const marja = dir === "long" ? d * lev : dir === "short" ? -d * lev : null, mr = minutRo(acum);
-  return { ref: { p: pret, t: acum }, alerta: { cheie: ("bot-pas-" + b.id).slice(0, 60), nivel: "info", doarRadar: mr < 7 * 60,
+  const marja = dir === "long" ? d * lev : dir === "short" ? -d * lev : null;
+  return { ref: { p: pret, t: acum, zi, sus: nou === "sus" ? pret : sus0, jos: nou === "jos" ? pret : jos0 }, alerta: { cheie: ("bot-pas-" + b.id).slice(0, 60), nivel: "info",
     titlu: s + (dir ? " (" + dir + " " + lev + "×)" : "") + ": " + (d > 0 ? "+" : "−") + pctTxt(d) + " în " + cat,
     mesaj: fp(ref.p) + " → " + fp(pret) + (inGrid !== null ? " · în grid " + inGrid + "%" : "")
       + (marja !== null ? " · pe marjă cel mult ≈ " + (marja >= 0 ? "+" : "−") + Math.round(Math.abs(marja) * 100) + "%" : "") + "." } };

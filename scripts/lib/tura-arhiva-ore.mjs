@@ -5,6 +5,8 @@
 // Noaptea, cu buget de cereri (serverul lasă 120 de citiri pe minut și le împarte cu restul turelor), reluat noaptea următoare de unde a rămas.
 // Pionex dă bare de 1 h până în noiembrie 2025 (măsurat 05.10); arhiva începe pe 21.12.2025. Probat în scripts/proba-v10169.mjs.
 export const PAS_MS = 1600, PAGINA = 500, ORA = 3600000, INCALZIRE = 72 * ORA, MAX_BARE = 20000;
+// v101.166 (I-833): monedele delistate (MARKET_INVALID_SYMBOL în fiecare noapte, 25 pe VPS) - sărite după 3 zile de eșec
+import { noteazaEsecSimbol, noteazaOkSimbol, eInListaNeagra } from "./lista-neagra.mjs";
 const ZI = 24 * ORA;
 // „1 bară”, „500 de bare” (TextRo.cate; rezerva știe aceeași regulă - ca în tura-profil.mjs)
 function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
@@ -37,6 +39,7 @@ export async function turaArhivaOre(d) {
   let cereri = 0, facute = 0;
   for (const x of plan) {
     if (cereri >= buget) break;
+    if (eInListaNeagra(st, x.moneda, d.acum)) continue;
     const e = st.esuat[x.moneda];
     if (e && d.acum - e.la < Math.min(ZI, 10 * 60000 * Math.pow(2, e.n))) continue;
     let rows = d.citeste(x.moneda) || [];
@@ -76,11 +79,12 @@ export async function turaArhivaOre(d) {
       d.scrie(x.moneda, rows);
       ({ min, max } = acoperire());
       if (!lipsaSus() && !lipsaJos()) st.gata[x.moneda] = true;
-      delete st.esuat[x.moneda];
+      delete st.esuat[x.moneda]; noteazaOkSimbol(st, x.moneda);
       if (facute++ < 50) d.jurnal("arhiva 1h", x.moneda, cate(rows.length, "bară", "bare") + (st.gata[x.moneda] ? " · gata" : " · continuă"));
     } catch (err) {
       st.esuat[x.moneda] = { la: d.acum, n: Math.min(8, (e ? e.n : 0) + 1) };
-      d.jurnal("arhiva 1h ESEC", x.moneda, err && err.message);
+      if (noteazaEsecSimbol(st, x.moneda, err && err.message, d.acum)) { delete st.esuat[x.moneda]; d.jurnal("arhiva 1h:", x.moneda, "pe lista neagră (delistată: " + (err && err.message) + " de 3 zile); o mai încerc peste 30 de zile"); }
+      else d.jurnal("arhiva 1h ESEC", x.moneda, err && err.message);
     }
     d.scrieStare(st);
   }

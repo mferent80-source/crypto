@@ -1,4 +1,5 @@
 import { CalendarBursa } from "./calendar-bursa.mjs";   // v100.175: închiderea ședinței pe bursa simbolului
+import * as POL from "./politica-alerte.mjs";   // v101.166 (I-831): „critic” o dată pe episod (pragul de agravare, ales)
 // Istoricul COMPLET al ordinelor Trading 212 (v85), strans de colector in KV-ul de acasa.
 // T212 da istoricul in pagini de 50, cele mai noi primele, si lasa 6 cereri pe minut => o pagina la ~11 s.
 // Prima data: coboara pagina cu pagina pana la capat, cate `max` pagini pe tura, si tine minte unde a
@@ -51,8 +52,11 @@ export async function turaT212(d) {
 // de acum fata de stop / tinta / "-X% de la maximul de dupa cumparare". O alerta o data pe cheie (pe zi).
 // deps: { cerePozitii() -> [pozitie T212], cerePlan(ticker) -> plan|null, cereBare(ticker) -> [bare zilnice],
 //         trimite(mesaj, cheie) -> true daca a ajuns, stare: {cheie: true}, ActiuniSemnale, T212, jurnal, acum }
+// v101.166 (I-831, auditul final 05.11): „−X% de la maxim” (pragul planului) era critic în FIECARE zi de bursă (32 din 60 de critice în 7 zile).
+// Acum critic o dată pe episod și la fiecare agravare (politica-alerte.episodTrail: −15 ⇒ −20 ⇒ −25), altfel „atenție”; cheia poartă treapta,
+// ca agravarea din aceeași zi să plece. Episodul (d.episoade[ticker] = { treapta }) se închide când prețul revine peste prag.
 export async function turaPlanuri(d) {
-  const poz = (await d.cerePozitii()) || [];
+  const poz = (await d.cerePozitii()) || [], ep = d.episoade || {};
   let trimise = 0;
   for (const x of poz) {
     try {
@@ -64,10 +68,18 @@ export async function turaPlanuri(d) {
       const p = { ticker: x.ticker, simbol: d.T212.simbol(x.ticker), qty: x.quantity, pretMediu: x.averagePrice, pret: x.currentPrice, plan, maxDupaCumparare: mx };
       // v100.267 (auditul 29.10): cheia pe ziua ședinței bursei simbolului, nu pe ziua UTC (alerta critică se repeta la 02/03 RO, cu bursa închisă)
       const acumP = d.acum || Date.now();
-      for (const a of d.ActiuniSemnale.alertePlan(p, acumP, { ziSesiune: CalendarBursa.ziSesiune(acumP, x.ticker) })) {
-        if (d.stare[a.cheie]) continue;
-        if (await d.trimite({ nivel: a.nivel, titlu: a.titlu, mesaj: a.mesaj }, a.cheie)) { d.stare[a.cheie] = true; trimise++; }
+      const alerte = d.ActiuniSemnale.alertePlan(p, acumP, { ziSesiune: CalendarBursa.ziSesiune(acumP, x.ticker) });
+      let trail = false;
+      for (const a of alerte) {
+        let nivel = a.nivel, cheie = a.cheie, eNou = null;
+        if (/-trail-/.test(a.cheie) && Number(plan.trailPct) > 0 && Number(mx) > 0) {
+          trail = true; const r = POL.episodTrail(ep[x.ticker] || null, 1 - Number(x.currentPrice) / Number(mx), Number(plan.trailPct));
+          nivel = r.nivel; cheie = a.cheie.replace("-trail-", "-trail" + r.treapta + "-"); eNou = r.treapta;
+        }
+        if (d.stare[cheie]) continue;
+        if (await d.trimite({ nivel, titlu: a.titlu, mesaj: a.mesaj }, cheie)) { d.stare[cheie] = true; trimise++; if (eNou !== null) ep[x.ticker] = { treapta: Math.max(eNou, ep[x.ticker] ? ep[x.ticker].treapta : -1) }; }
       }
+      if (!trail && ep[x.ticker]) delete ep[x.ticker];   // prețul a revenit peste prag (sau planul nu mai are trail): episodul s-a încheiat
     } catch (e) { d.jurnal("plan t212", x && x.ticker, e.message); }
   }
   return { trimise };

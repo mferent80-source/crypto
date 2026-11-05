@@ -19,6 +19,7 @@ import { situatiiSugestii } from "./lib/garda-sugestii.mjs";   // v100.85 (reven
 import { situatiiRisc } from "./lib/garda-risc.mjs";   // v100.114 (riscul și obiceiurile, revizia v100.113)
 import { situatiiCarnet } from "./lib/garda-carnet.mjs";   // v100.117 (I-561): carnetul fișei
 import { situatiiSugestiiAct } from "./lib/garda-sugestii-act.mjs";   // v100.119: pagina Sugestii (istoricul regulilor noi de acțiuni)
+import { abateriUnde } from "./lib/unde-ruleaza.mjs";   // v100.306 (I-832): alertele nu trimit la „PC-ul de acasă” / .bat - Radarul rulează pe VPS
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 for (const f of ["text-ro.js", "grid-calcul.js", "tablou-extra.js", "alerte.js", "scenariu.js", "directie.js", "sfaturi.js", "semnale-bot.js", "consiliu.js", "actiuni-semnale.js", "consilier.js", "probabilitati.js", "retea.js", "obiceiuri.js", "acasa.js", "indicatori-bot.js", "profil-moneda.js", "jurnal-trade.js", "grid-proba.js", "reveniri.js", "busola.js", "grid-plan.js", "risc-luna.js", "carnet.js", "sugestii-actiuni.js"]) vm.runInThisContext(fs.readFileSync(path.join(RAD, "public", "lib", f), "utf8"), { filename: f });
@@ -39,8 +40,9 @@ export const REGULI = {
   discordTitlu: { max: 60 },
   discordMesaj: { randuri: 2 },
   // v100.66 (pachetul 3): alertele - titlul ≤ 60; mesajul pe 2 randuri: faptul (ca „de ce”) + „👉 ” si o actiune; rapoartele - randuri ≤ 160
-  alertaTitlu: { max: 60, strigat: true },
-  alertaMesaj: { randuri: 2, alerta: true, strigat: true },
+  // v100.306 (I-832): + `unde` - nicio alertă nu trimite la „PC-ul de acasă”, „serverul / colectorul de acasă” sau la un .bat (scripts/lib/unde-ruleaza.mjs)
+  alertaTitlu: { max: 60, strigat: true, unde: true },
+  alertaMesaj: { randuri: 2, alerta: true, strigat: true, unde: true },
   raport: { rand: 160, strigat: true },
   raportEticheta: { rand: 160 },   // v100.77: rândurile de raport care încep cu eticheta nivelului (IEȘI / ATENȚIE / ȚINE - nu se schimbă, specul)
 };
@@ -84,6 +86,7 @@ export function verifica(text, tip, frate) {
   }
   if (r.randuri && t.split("\n").length > r.randuri) ab.push("peste " + r.randuri + " rânduri");
   for (const [re, ce] of INTERZIS) if (re.test(t)) ab.push(ce);
+  if (r.unde) for (const a of abateriUnde(t)) ab.push(a);
   const dn = deNumarate(t); if (dn) ab.push(dn);
   if (frate && norm(frate).length >= 15 && norm(t).includes(norm(frate))) ab.push("repetă titlul");
   // v100.66 (pachetul 3): alerta - randul 1 = faptul, randul 2 = „👉 ” + o actiune la persoana I; raportul - fiecare rand ≤ 160
