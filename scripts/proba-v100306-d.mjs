@@ -128,6 +128,16 @@ await test("🔑 Salt: „$25,17” / „$1.234,56” / „$0,0123” se citesc 
     const d0 = TZ.azi(bare(r12, 0, 100, 0.015), T0 + 12 * ZIx + 300000);
     assert.match(ctx.tzCartela({ simbol: "ETH", pionex: "ETH_USDT_PERP", fel: "piata", d: d0 }), /calibrat: din 100 de zile ca azi, \d+ au ieșit așa/, "la 00:xx UTC (nicio bară de azi) rămâne calibrarea");
   });
+  // pozele de pe VPS, 06.11 00:20: BTC „7 %” mare, deși la prețul de acum ziua e deja 7,1 % față de 6,8 % ieri ⇒ cifra mare spune ce este
+  await test("🔑 cu ziua în curs (fără „deja”): cifra mare e „prognoza de la 00:00 UTC”, pe ton neutru; rezumatul de sus spune la fel", () => {
+    const d = TZ.azi(bare(r12, 20, 100, 0.015), T0 + 12 * ZIx + 20 * ORA + 300000);
+    const h = ctx.tzCartela({ simbol: "BTC", pionex: "BTC_USDT_PERP", fel: "piata", d });
+    assert.match(h, /Azi se mișcă mai mult ca ieri <small class="tzMut">· prognoza de la 00:00 UTC<\/small><\/span><b class="tzCifra tzMut">/);
+    const r = ctx.tzRezumat([{ simbol: "BTC", fel: "piata", d }]);
+    assert.match(r, />Azi: /); assert.match(r, /prognoza de la 00:00 UTC; ziua e în curs/);
+    const d0 = TZ.azi(bare(r12, 0, 100, 0.015), T0 + 12 * ZIx + 300000);
+    assert.doesNotMatch(ctx.tzCartela({ simbol: "BTC", pionex: "BTC_USDT_PERP", fel: "piata", d: d0 }), /prognoza de la 00:00 UTC/, "la 00:xx UTC e chiar prognoza zilei - fără etichetă");
+  });
 }
 
 // 6. (revizia v100.306, 🔵 5) rezumatul nopții: aceeași alertă reîncercată (KV căzut) nu se numără de două ori; tura de dimineață nu

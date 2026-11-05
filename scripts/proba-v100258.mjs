@@ -123,9 +123,10 @@ await test("(4) colectorul din altă sesiune (EPERM, linia de comandă ilizibil�
 });
 await test("(4) colectorul meu ⇒ îl opresc și pornesc altul; mort sau lipsă ⇒ pornesc; alt program pe PID ⇒ pornesc", () => {
   assert.deepEqual(decizieRepornire(10, "node scripts\\colector.mjs", arunca("EPERM")), { opreste: true, porneste: true, motiv: "al-meu" });
-  assert.deepEqual(decizieRepornire(10, "", arunca("ESRCH")), { opreste: false, porneste: true, motiv: "nu-ruleaza" });
-  assert.deepEqual(decizieRepornire(null, "", arunca("ESRCH")), { opreste: false, porneste: true, motiv: "fara-pid" });
-  assert.deepEqual(decizieRepornire(10, "C:\\Windows\\notepad.exe", () => true), { opreste: false, porneste: true, motiv: "alt-program" });
+  // v100.306: colectorul trăiește pe VPS ⇒ acasă se repornește DOAR dacă rula („al-meu”); nu-ruleaza / fara-pid / alt-program ⇒ nu pornesc
+  assert.deepEqual(decizieRepornire(10, "", arunca("ESRCH")), { opreste: false, porneste: false, motiv: "nu-ruleaza" });
+  assert.deepEqual(decizieRepornire(null, "", arunca("ESRCH")), { opreste: false, porneste: false, motiv: "fara-pid" });
+  assert.deepEqual(decizieRepornire(10, "C:\\Windows\\notepad.exe", () => true), { opreste: false, porneste: false, motiv: "alt-program" });
   assert.equal(decizieRepornire(10, "", () => true).porneste, false, "viu, dar nu știu ce e ⇒ nu pornesc al doilea");
 });
 await test("(4) paza colectorului: EPERM (colectorul din sesiunea 0) înseamnă „rulează deja”, nu „a murit”", () => {

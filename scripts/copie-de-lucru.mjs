@@ -99,11 +99,13 @@ export function pidDinFisier(text) { const n = Number(String(text || "").trim().
 export function eLiniaColectorului(linie) { return /(^|[\s"'\\/])scripts[\\/]colector\.mjs(["'\s]|$)/i.test(String(linie || "")); }
 // v100.258 (auditul 23.10): după repornirea PC-ului serverul și colectorul stau în sesiunea 0 (sarcina S4U „Crypto Radar pornire”):
 // din sesiunea lui linia de comandă iese goală și kill(…, 0) dă EPERM. Atunci colectorul RULEAZĂ, dar nu-l pot opri - deci nu pornesc al doilea.
+// v100.306 (06.11.2026): colectorul trăiește pe VPS (din 03.11). Livrarea de acasă îl pornea acasă când nu-l găsea („fara-pid”) ⇒ pe 06.11
+// 00:11–00:15 două colectoare, 5 mesaje pe Discord de acasă. Acum: se REPORNEȘTE doar dacă rula deja acasă („al-meu”); altfel nu pornesc nimic.
 export function decizieRepornire(pid, linie, kill = (p) => process.kill(p, 0)) {
-  if (!pid) return { opreste: false, porneste: true, motiv: "fara-pid" };
+  if (!pid) return { opreste: false, porneste: false, motiv: "fara-pid" };
   if (linie && eLiniaColectorului(linie)) return { opreste: true, porneste: true, motiv: "al-meu" };
-  if (linie) return { opreste: false, porneste: true, motiv: "alt-program" };
-  try { kill(pid); } catch (e) { return e && e.code === "EPERM" ? { opreste: false, porneste: false, motiv: "alta-sesiune" } : { opreste: false, porneste: true, motiv: "nu-ruleaza" }; }
+  if (linie) return { opreste: false, porneste: false, motiv: "alt-program" };
+  try { kill(pid); } catch (e) { return e && e.code === "EPERM" ? { opreste: false, porneste: false, motiv: "alta-sesiune" } : { opreste: false, porneste: false, motiv: "nu-ruleaza" }; }
   return { opreste: false, porneste: false, motiv: "viu-necunoscut" };
 }
 const asteaptaMs = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
@@ -164,6 +166,10 @@ const linieDeComanda = (pid) => ps(`(Get-CimInstance Win32_Process -Filter 'Proc
 function repornesteColectorul(rad) {
   let pid = null; try { pid = pidDinFisier(fs.readFileSync(path.join(rad, "data", "colector.pid"), "utf8")); } catch {}
   const d = decizieRepornire(pid, pid ? linieDeComanda(pid) : "");
+  if (!d.porneste && (d.motiv === "fara-pid" || d.motiv === "nu-ruleaza" || d.motiv === "alt-program")) {
+    scrie("Colectorul nu rula acasă (trăiește pe VPS) — nu-l pornesc aici; pe VPS îl repornește livrarea de acolo (vps-livrare / sarcina „Crypto Radar pornire”).");
+    return false;
+  }
   if (!d.porneste) {
     if (d.motiv === "alta-sesiune" && process.platform === "win32") return repornestePrinSemnal(depSemnal(rad, pid)).ok;   // v100.259 (punctul 17)
     scrie(`⚠ Colectorul rulează (PID ${pid}) ${d.motiv === "alta-sesiune" ? "în altă sesiune (pornit de sarcina S4U după repornirea PC-ului)" : "dar nu-i pot citi linia de comandă"} — nu-l pot opri și NU pornesc al doilea.`
