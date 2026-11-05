@@ -283,10 +283,13 @@ const Rev = new Function(`${lib("reveniri.js")}; return Reveniri;`)();
 await test("(8) sub 30 de cazuri în grup ⇒ „la fel, prea puține cazuri”, nu „mai bine”", () => {
   assert.equal(Rev.eticheta({ n: 20, pePlus: 0.70, medie: 0.02 }, { n: 500, pePlus: 0.50, medie: 0 }), "la fel, prea puține cazuri");
 });
-await test("(8) diferența sub ~2 erori standard (56% din 40 față de 50%) ⇒ „cam la fel”; peste (65% din 200) ⇒ „mai bine”; oglinda ⇒ „mai slab”", () => {
-  assert.equal(Rev.eticheta({ n: 40, pePlus: 0.56, medie: 0.01 }, { n: 1000, pePlus: 0.50, medie: 0 }), "cam la fel");
-  assert.equal(Rev.eticheta({ n: 200, pePlus: 0.65, medie: 0.02 }, { n: 2000, pePlus: 0.50, medie: 0 }), "mai bine");
-  assert.equal(Rev.eticheta({ n: 200, pePlus: 0.35, medie: -0.02 }, { n: 2000, pePlus: 0.50, medie: 0 }), "mai slab");
+// v100.306 (I-834, auditul final 05.11): cele ~2 erori standard socoteau căderile independente (14–18 % „mai bine / mai slab” fals cu factor comun);
+// acum testul e pe blocuri de zile + serii (Reveniri.testBlocuri): sub 5 % în același sens ⇒ „mai bine / mai slab”, altfel „n-am aflat”
+await test("(8) testul nu trece (p 0,2) ⇒ „n-am aflat”; trece (p 0,01, același sens) ⇒ „mai bine”; oglinda ⇒ „mai slab”; fără test ⇒ „n-am aflat”", () => {
+  assert.equal(Rev.eticheta({ n: 40, pePlus: 0.56, medie: 0.01 }, { n: 1000, pePlus: 0.50, medie: 0 }, { p: 0.2, semn: 1 }), "n-am aflat");
+  assert.equal(Rev.eticheta({ n: 200, pePlus: 0.65, medie: 0.02 }, { n: 2000, pePlus: 0.50, medie: 0 }, { p: 0.01, semn: 1 }), "mai bine");
+  assert.equal(Rev.eticheta({ n: 200, pePlus: 0.35, medie: -0.02 }, { n: 2000, pePlus: 0.50, medie: 0 }, { p: 0.01, semn: -1 }), "mai slab");
+  assert.equal(Rev.eticheta({ n: 200, pePlus: 0.65, medie: 0.02 }, { n: 2000, pePlus: 0.50, medie: 0 }), "n-am aflat");
 });
 await test("(8) avertismentul de supraviețuire și la monede (universul e cel de azi), arătat pe Sugestii (v100.295: listele de monede scoase din Tablou)", () => {
   assert.match(Rev.TEXT_SUPRAVIETUITORI_MONEDE, /monedele care sunt azi/);

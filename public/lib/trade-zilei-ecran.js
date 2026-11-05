@@ -11,8 +11,10 @@ var TZ_MAX = 30;
 var TZ_PAUZA_MS = 250;   // între cererile de lumânări: Pionex blochează IP-ul la prea multe cereri (serverul le ține 90 s în cache)
 function tzEsc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
 function tzPct(v, zec) { if (v == null || !isFinite(v)) return "—"; var z = zec == null ? 0 : zec; return (v * 100).toFixed(z).replace(".", ",") + " %"; }
-// prețul: 2 zecimale, 4 sub 1 USDT, 6 sub 0,01 (monede mici); punctul de mii DOAR pe partea întreagă (revizia 03.11: „0,1.234”)
-function tzPret(p) { if (!(p > 0)) return "—"; var z = p < 0.01 ? 6 : p < 1 ? 4 : 2, s = p.toFixed(z).split("."); return s[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "," + s[1]; }
+// prețul: 2 zecimale, 4 sub 1 USDT; punctul de mii DOAR pe partea întreagă (revizia 03.11: „0,1.234”). v100.306 (I-825, auditul final 🔴 4): sub
+// 0,01 prețul ține 3 cifre semnificative (PEPE 0,00000530), nu 6 zecimale fixe, care dădeau „0,000005 – 0,000005”. Regula e cea din rfPret
+// (range-filter-ecran.js), copiată aici, nu chemată: pagina nu depinde de ordinea în care se încarcă fișierele.
+function tzPret(p) { if (!(p > 0)) return "—"; var z = p < 0.01 ? Math.min(12, 2 - Math.floor(Math.log10(p))) : p < 1 ? 4 : 2, s = p.toFixed(z).split("."); return s[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "," + s[1]; }
 function tzOra(t) { try { return new Intl.DateTimeFormat("ro-RO", { timeZone: "Europe/Bucharest", hour: "2-digit", minute: "2-digit" }).format(new Date(t)); } catch (e) { return "—"; } }
 function tzPauza(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
 // monedele paginii: boții activi (cu simbolul LOR Pionex, spot sau perp, prin TabloBot.simboluri) + implicitele + top TZ_TOP din clasament
@@ -39,8 +41,11 @@ function tzCartela(m) {
   h += '<div class="tzCardCap"><b class="tzSimbol">' + tzEsc(m.simbol) + "</b>" + (m.fel === "bot" ? '<span class="tzEticheta">botul tău</span>' : "") + "<span class=\"tzMut tzMic\">" + (m.d && m.d.pret ? tzPret(m.d.pret) + " USDT" : "") + "</span></div>";
   if (m.eroare || !m.d || m.d.eroare) { h += '<p class="tzMut">' + tzEsc(m.eroare || (m.d && m.d.eroare) || "fără date") + "</p></article>"; return h; }
   var d = m.d, t = TradeZilei.trade(d), g = TradeZilei.grid(d);
-  h += '<div class="tzRand tzRandMare"><span class="tzEt">Azi se mișcă mai mult ca ieri</span><b class="tzCifra' + tzTonP(d.p3) + '">' + tzPct(d.p3) + "</b><span class=\"tzMut tzMic\">calibrat: din 100 de zile ca azi, " + Math.round(d.maiMultCaIeri * 100) + " au ieșit așa</span></div>";
-  h += '<div class="tzRand"><span class="tzEt">Cât se mișcă azi, de obicei</span><b class="tzCifra">' + tzPct(d.asteptat.med, 1) + "</b><span class=\"tzMut tzMic\">între " + tzPct(d.asteptat.p25, 1) + " și " + tzPct(d.asteptat.p75, 1) + " (jumătatea zilelor) · ieri " + tzPct(d.r1, 1) + " · media pe 10 zile " + tzPct(d.media10, 1) + (d.weekend ? " · weekend: ×" + String(TradeZilei.FACTOR_WEEKEND).replace(".", ",") + " inclus" : "") + "</span></div>";
+  // v100.306 (I-825, 🔴 2): ziua deja trecută de ieri ⇒ P3 = 100 % și „deja”, nu calibrarea modelului (care vede doar ieri și alaltăieri)
+  var p3Txt = d.dejaMaiMult ? "deja mai mult ca ieri: " + tzPct(d.panaAcum, 1) + " până acum, față de " + tzPct(d.r1, 1) + " ieri" : "calibrat: din 100 de zile ca azi, " + Math.round(d.maiMultCaIeri * 100) + " au ieșit așa";
+  var cuAzi = d.asteptatModel && d.asteptat.med > d.asteptatModel.med + 1e-12;
+  h += '<div class="tzRand tzRandMare"><span class="tzEt">Azi se mișcă mai mult ca ieri</span><b class="tzCifra' + tzTonP(d.p3) + '">' + tzPct(d.p3) + '</b><span class="tzMut tzMic">' + p3Txt + "</span></div>";
+  h += '<div class="tzRand"><span class="tzEt">Cât se mișcă azi, de obicei</span><b class="tzCifra">' + tzPct(d.asteptat.med, 1) + "</b><span class=\"tzMut tzMic\">între " + tzPct(d.asteptat.p25, 1) + " și " + tzPct(d.asteptat.p75, 1) + " (jumătatea zilelor)" + (cuAzi ? ", cu ce s-a mișcat deja azi" : "") + " · ieri " + tzPct(d.r1, 1) + " · media pe 10 zile " + tzPct(d.media10, 1) + (d.weekend ? " · weekend: ×" + String(TradeZilei.FACTOR_WEEKEND).replace(".", ",") + " inclus" : "") + "</span></div>";
   h += '<div class="tzRand"><span class="tzEt">Până acum azi</span><b class="tzCifra">' + tzPct(d.panaAcum, 1) + "</b><span class=\"tzMut tzMic\">" + TextRo.cate(d.bareAzi, "oră închisă", "ore închise") + ", " + TextRo.cate(d.bareRamase, "oră rămasă", "ore rămase") + " (ziua UTC)</span></div>";
   // v100.299 (proba ORA ZILEI): curba orelor - cât din mișcarea zilei e de obicei formată până la ultima oră închisă și cât mai rămâne
   h += '<div class="tzRand"><span class="tzEt">Din mișcarea zilei, până la ora asta</span><b class="tzCifra">' + tzPct(d.format) + "</b><span class=\"tzMut tzMic\">de obicei format; mai rămân ~" + tzPct(d.ramane) + " (≈ " + tzPct(d.ramaneAsteptat, 1) + " din preț) · curba orelor, 21 de perechi, confirmată pe anul al treilea</span></div>";
@@ -50,8 +55,10 @@ function tzCartela(m) {
   }
   h += niv("Maximul de ieri", d.pdh, d.p1Sus) + niv("Minimul de ieri", d.pdl, d.p1Jos);
   if (g) {
-    h += '<div class="tzGrid"><div class="tzRand"><span class="tzEt">Grid azi, din mișcare</span><b class="tzCifra">±' + tzPct(g.jumatate, 1) + "</b><span class=\"tzMut tzMic\">" + tzPret(g.jos) + " – " + tzPret(g.sus) + " · pas ~" + tzPct(g.pas, 2) + " la zece grile pe parte · cuprinde ziua în trei din patru cazuri</span></div>";
-    h += '<div class="tzRand"><span class="tzEt">Stop, nu mai aproape de</span><b class="tzCifra">' + tzPct(g.stop, 1) + '</b><span class="tzMut tzMic">cât se mișcă o zi obișnuită ca azi · măsurat ca mișcare, nu ca bani</span></div>';
+    // v100.306 (I-825, 🔴 3): banda e măsurată pe ora UTC, iar fraza spune cât de des a cuprins restul zilei pe zile NEVĂZUTE la învățare
+    // (TradeZilei.BANDA_ACOPERIRE); pasul = lățimea / 10 ⇒ cinci grile pe parte; stopul cel puțin la marginea benzii
+    h += '<div class="tzGrid"><div class="tzRand"><span class="tzEt">Grid azi, din mișcare</span><b class="tzCifra">±' + tzPct(g.jumatate, 1) + "</b><span class=\"tzMut tzMic\">" + tzPret(g.jos) + " – " + tzPret(g.sus) + " · pas ~" + tzPct(g.pas, 2) + " la cinci grile pe parte · cuprinde restul zilei UTC în " + tzPct(g.acoperire) + " din zile (măsurat pe zile nevăzute, 75 de monede)</span></div>";
+    h += '<div class="tzRand"><span class="tzEt">Stop, nu mai aproape de</span><b class="tzCifra">' + tzPct(g.stop, 1) + '</b><span class="tzMut tzMic">' + (g.stopLaMargine ? "marginea gridului: mai aproape, grilele de dincolo de stop n-ar mai lucra" : "cât se mișcă o zi obișnuită ca azi") + " · măsurat ca mișcare, nu ca bani</span></div>";
     h += '<div class="tzAct"><button class="acBtn" type="button" data-action-click="tzLaGrid(\'' + tzEsc(m.pionex) + '\')">Grid: ce setez? →</button></div></div>';
   }
   h += '<div class="tzTrade' + (t.fel === "niciunul" ? " tzTradeNu" : " tzTradeDa") + '"><span class="tzEt">Trade-ul zilei</span><p>' + tzEsc(t.text) + (t.cifra ? ' <span class="tzMut tzMic">' + tzEsc(t.cifra) + "</span>" : "") + "</p></div>";

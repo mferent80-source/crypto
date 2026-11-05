@@ -1,5 +1,6 @@
 // Proba v100.298 / colector v101.162 (el, 03.11.2026: „pagina, ca să fie de folos dimineața”):
-//   1. modelul pur: TradeZilei.grid - ± p75/2, pasul lățime/10, stopul = mediana, prețurile jos/sus;
+//   1. modelul pur: TradeZilei.grid - ± p75/2, pasul lățime/10, stopul = mediana, prețurile jos/sus (v100.306, I-825: ± BANDA_K[ora UTC] ×
+//      mișcarea așteptată, măsurată; stopul = max(mediana, marginea benzii));
 //   2. ecranul în vm: monedele = boții (simbolul lor Pionex) + BTC/ETH/SOL + top 20 din clasament după volum, fără dubluri, boții primii;
 //      cartela cu gridul / stopul / butonul „Grid: ce setez?”, rezumatul zilei cu TextRo.cate, tzLaGrid trece prin lista albă;
 //   3. tura Discord (scripts/lib/tura-trade-zilei.mjs): monedele, rândurile ≤ 160 cu cifrele, nimic înainte de 9:00, o dată pe zi, starea;
@@ -40,10 +41,33 @@ function bare(ranges, oreAzi, pretAzi, t0) {
 }
 const r12 = Array(12).fill(0.04); r12[11] = 0.02; r12[10] = 0.025;
 const D = TZ.azi(bare(r12, 3, 100), T0 + 12 * ZI + 3 * ORA);
+// v100.306 (I-825, auditul final din 05.11, 🔴 3): garda de pe ADEVĂRUL frazei „cuprinde restul zilei … în N % din zile”. Pe barele REALE de 1 h
+// din zile nevăzute la învățarea benzii (proba-date/tz-bare-1h.json, 8 monede, 24.08 … 02.11.2026), la orele date: cât de des stă restul zilei
+// UTC în banda „Grid azi” față de frecvența scrisă în cartelă, ±10 pp (~2 erori standard pe ~70 de zile). Toate cele 24 de ore: proba-v100306-b.
+function adevarBanda(ore) {
+  const FX = JSON.parse(citeste("scripts", "proba-date", "tz-bare-1h.json")), rez = [];
+  for (const h of ore) {
+    let n = 0, cup = 0, spus = null;
+    for (const m of FX.monede) {
+      const b = []; let cp = m.b[0][2]; m.b.forEach(([hi, lo, c], i) => { b.push({ t: m.t0 + i * ORA, o: cp, h: hi, l: lo, c }); cp = c; });
+      const z0 = Math.ceil(m.t0 / ZI) * ZI + 22 * ZI;
+      for (let z = z0; z + ZI <= m.t0 + b.length * ORA; z += ZI) {
+        const i0 = (z - m.t0) / ORA, i = i0 + h, d = TZ.azi(b.slice(Math.max(0, i - 600), i), z + h * ORA + 300000), g = d && !d.eroare ? TZ.grid(d) : null; if (!g) continue;
+        let mx = -Infinity, mn = Infinity; for (let q = i; q <= i0 + 23; q++) { mx = Math.max(mx, b[q].h); mn = Math.min(mn, b[q].l); }
+        n++; if (mx <= g.sus && mn >= g.jos) cup++;
+        if (spus === null) { const f = ctx.tzCartela({ simbol: m.s, pionex: m.s, fel: "piata", d }).match(/cuprinde [^<·]*?în (\d+) % din zile/); spus = f ? Number(f[1]) / 100 : NaN; }
+      }
+    }
+    rez.push({ h, n, masurat: cup / n, spus });
+  }
+  const rele = rez.filter((r) => !(Math.abs(r.masurat - r.spus) <= 0.10) || r.n < 400);
+  assert.equal(rele.length, 0, rele.map((r) => r.h + ":05 UTC măsurat " + Math.round(r.masurat * 100) + " % pe " + r.n + ", spus " + Math.round(r.spus * 100) + " %").join("; "));
+}
 
-await test("1. TradeZilei.grid: ± p75/2, pasul lățime/10, stopul = mediana, prețurile jos/sus; fără date ⇒ null", () => {
-  const g = TZ.grid(D); assert.ok(g);
-  assert.ok(Math.abs(g.jumatate - D.asteptat.p75 / 2) < 1e-12 && Math.abs(g.latime - D.asteptat.p75) < 1e-12 && Math.abs(g.pas - D.asteptat.p75 / 10) < 1e-12 && Math.abs(g.stop - D.asteptat.med) < 1e-12);
+await test("1. TradeZilei.grid: ± BANDA_K[ora UTC] × mișcarea așteptată (v100.306), pasul lățime/10, stopul = max(mediana, marginea), prețurile jos/sus; fără date ⇒ null", () => {
+  const g = TZ.grid(D); assert.ok(g); const K = TZ.BANDA_K[D.oraUtc]; assert.ok(K > 0 && TZ.BANDA_K.length === 24 && TZ.BANDA_ACOPERIRE.length === 24);
+  assert.ok(Math.abs(g.jumatate - K * D.asteptat.med) < 1e-12 && Math.abs(g.latime - 2 * g.jumatate) < 1e-12 && Math.abs(g.pas - g.latime / 10) < 1e-12 && Math.abs(g.stop - Math.max(D.asteptat.med, g.jumatate)) < 1e-12);
+  assert.equal(g.grilePeParte, 5); assert.equal(g.acoperire, TZ.BANDA_ACOPERIRE[D.oraUtc]);
   assert.ok(Math.abs(g.jos - 100 * (1 - g.jumatate)) < 1e-9 && Math.abs(g.sus - 100 * (1 + g.jumatate)) < 1e-9);
   assert.equal(TZ.grid({ eroare: "x" }), null); assert.equal(TZ.grid(null), null);
 });
@@ -64,7 +88,9 @@ await test("2b. cartela: gridul / stopul / butonul „Grid: ce setez?”; rezuma
   const h = ctx.tzHtml({ monede: [{ simbol: "DOGE", pionex: "DOGE_USDT", fel: "bot", d: D }, { simbol: "BTC", pionex: "BTC_USDT_PERP", fel: "piata", d: D }], simboluri: [1, 2], la: Date.now(), zi: 0, inLucru: false, eroare: null }, Date.now());
   assert.match(h, /Grid azi, din mișcare/); assert.match(h, /Stop, nu mai aproape de/); assert.match(h, /data-action-click="tzLaGrid\('DOGE_USDT'\)"/); assert.match(h, /botul tău/); assert.match(h, /tzCardBot/);
   assert.match(h, /Azi: 2 monede din 2 se mișcă probabil mai mult ca ieri|Azi: \d+ monede? din 2/); assert.match(h, /mișcarea așteptată, în medie \d+,\d %/);
-  assert.doesNotMatch(h, /\d\.\d+ %/); assert.match(h, /zece grile pe parte · cuprinde ziua în trei din patru cazuri/, "numerele mici din textul fix, în litere (garda v100.75)");
+  // v100.306 (I-825): garda fixa fraza („zece grile … cuprinde ziua în trei din patru cazuri”), falsă - acum garda e pe adevărul ei (adevarBanda)
+  assert.doesNotMatch(h, /\d\.\d+ %/); assert.match(h, /cinci grile pe parte · cuprinde restul zilei UTC în \d+ % din zile/, "numerele mici din textul fix, în litere (garda v100.75)");
+  adevarBanda([0, 7, 12, 18]);
   assert.match(citeste("public", "app.js"), /var ACTIUNI_PERMISE=new Set\("[^"]*\btzLaGrid\b/, "tzLaGrid lipsește din lista albă");
   let ales = null; ctx.navTo = () => {}; ctx.gridClasamentAlege = (s) => { ales = s; };
   ctx.tzLaGrid("DOGE_USDT"); return new Promise((r, rej) => setTimeout(() => { try { assert.equal(ales, "DOGE_USDT_PERP"); r(); } catch (e) { rej(e); } }, 500));

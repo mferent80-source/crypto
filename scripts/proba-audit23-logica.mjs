@@ -273,7 +273,8 @@ await test("(12) un efect clar dă p sub 1/1001 (repetițiile urcă la 10.000) �
   const t0 = Date.now(), c = V.calibrare(efectClar()), ms = Date.now() - t0;
   assert.equal(c[0].test.stare, "testat");
   assert.ok(c[0].test.p < 0.0002, "p " + c[0].test.p);
-  assert.ok(c[0].test.pMin > 0 && c[0].test.pMin <= 1 / 10001 + 1e-12, "pMin " + c[0].test.pMin);
+  // v100.306 (I-834): la Poartă (pe zi) p-ul e analitic (Student, varianța pe simboluri + săptămâni) ⇒ fără podea, pMin = 0 (poate trece BH oricât de multe teste)
+  assert.ok(c[0].test.pMin >= 0 && c[0].test.pMin <= 1 / 10001 + 1e-12, "pMin " + c[0].test.pMin);
   assert.ok(ms < 5000, "calibrarea durează " + ms + " ms");
 });
 await test("(12) registrul cu 60 de teste: efectul clar trece BH (cu 1.000 de repetiții nu putea: 1/1001 > 0,05/60)", () => {

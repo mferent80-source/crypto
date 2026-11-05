@@ -139,25 +139,59 @@ var Verdicte = (function () {
     return { stare: "testat", nFav: fav.length, nRest: rest.length, dif: dif, ic: d.length ? [d[Math.floor(d.length * 0.025)], d[Math.min(d.length - 1, Math.floor(d.length * 0.975))]] : null, p: p, pMin: 1 / (R + 1), simboluriAmestecate: grupe.length, simboluriUnice: unice.length, unitati: chei.length };
   }
   // v100.196 (🔴2): favorabil față de rest PE ZI - doar zilele care au ambele feluri (piața comună se scade în zi). Statistica = suma abaterilor
-  // favorabilelor de la media zilei lor (ponderea zilei = nFav·nRest/n, ca la Mantel–Haenszel); p = permutarea etichetelor ÎN INTERIORUL
-  // fiecărei zile (exactă când ziua nu spune nimic); dif = diferența ponderată; IC = bootstrap pe zile; sub `minU` zile amestecate ⇒ „puține”
+  // favorabilelor de la media zilei lor (ponderea zilei = nFav·nRest/n, ca la Mantel–Haenszel); dif = diferența ponderată; sub `minU` zile
+  // amestecate ⇒ „puține”.
+  // v100.306 (I-834, auditul final din 05.11): p-ul vechi (permutarea etichetelor ÎN fiecare zi) socotea zilele independente. Dar eticheta ține
+  // zile la rând pe același simbol, iar rezultatul simbolului are un nivel al lui și se leagă de la o zi la alta ⇒ pe lumi FĂRĂ efect, p ≤ 0,05
+  // în 20–49 % din lumi (auditul: 22–41 %). Statistica rămâne aceeași, dar se desface pe verdicte: fiecare aduce c·(v − media zilei), cu
+  // c = nRest/n la favorabil și −nFav/n la rest (suma pe zi = statistica veche). Varianța ei e pe DOUĂ CĂI (Cameron–Gelbach–Miller): pe
+  // simboluri (persistența etichetei, nivelul simbolului) + pe săptămâni (piața comună care nu se scade în zi, când eticheta ține de cât de
+  // tare se mișcă moneda cu piața) − pe celula simbol × săptămână; luată cel puțin cât fiecare cale singură. p = Student cu
+  // min(simboluri, săptămâni) − 1 grade de libertate; IC la fel. Încercate întâi, pe aceleași lumi (scratchpad rb-lucru/sim-ver-*.mjs):
+  // permutarea blocurilor simbol × săptămână în săptămână 7–25 % fals; semnele întoarse pe simboluri și pe săptămâni, max(p) ~5 % pe lumile
+  // auditorului, dar 9–12 % când eticheta ține de beta-ul monedei (ca la poarta gridului) ⇒ două căi, cu modulul ăsta, 4.000 de lumi pe fiecare
+  // (rb-lucru/sim-ver-real.mjs; contribuțiile = reziduuri, varianța × G / (G − 1)): 2,7–4,2 % pe lumile auditorului, 4,6 % cu eticheta legată
+  // de beta și factor comun (30 de simboluri), 6,0 % în aceeași lume pe 15 simboluri, 3,5–4,3 % pe 8–12 simboluri. Prețul: pe poarta care chiar
+  // știe (+1,5 % la „cumpără”, proba-v100196-statistica) 80 din 100 la p < 0,01 (înainte 83), 92 la p < 0,05 (înainte 93).
+  // Sub 8 simboluri sau 8 săptămâni cu zile amestecate ⇒ „puține” (cu motivul).
+  function lgamaV(x) { var c = [76.18009172947146, -86.50532032941677, 24.01409824083091, -1.231739572450155, 0.1208650973866179e-2, -0.5395239384953e-5], y = x, t = x + 5.5, s = 1.000000000190015; t -= (x + 0.5) * Math.log(t); for (var i = 0; i < 6; i++) s += c[i] / ++y; return -t + Math.log(2.5066282746310005 * s / x); }
+  function fractieBetaV(a, b, x) {
+    var qab = a + b, qap = a + 1, qam = a - 1, c = 1, d = 1 - qab * x / qap, h, m, m2, aa, del, mic = 1e-30;
+    if (Math.abs(d) < mic) d = mic; d = 1 / d; h = d;
+    for (m = 1; m <= 200; m++) {
+      m2 = 2 * m; aa = m * (b - m) * x / ((qam + m2) * (a + m2));
+      d = 1 + aa * d; if (Math.abs(d) < mic) d = mic; c = 1 + aa / c; if (Math.abs(c) < mic) c = mic; d = 1 / d; h *= d * c;
+      aa = -(a + m) * (qab + m) * x / ((a + m2) * (qap + m2));
+      d = 1 + aa * d; if (Math.abs(d) < mic) d = mic; c = 1 + aa / c; if (Math.abs(c) < mic) c = mic; d = 1 / d; del = d * c; h *= del;
+      if (Math.abs(del - 1) < 3e-12) break;
+    }
+    return h;
+  }
+  function betaIncV(a, b, x) { if (x <= 0) return 0; if (x >= 1) return 1; var bt = Math.exp(lgamaV(a + b) - lgamaV(a) - lgamaV(b) + a * Math.log(x) + b * Math.log(1 - x)); return x < (a + 1) / (a + b + 2) ? bt * fractieBetaV(a, b, x) / a : 1 - bt * fractieBetaV(b, a, 1 - x) / b; }
+  function pStudent(t, df) { return !isFinite(t) ? 0 : betaIncV(df / 2, 0.5, df / (df + t * t)); }   /* p bilateral */
+  function cuantilaStudent(p, df) { var lo = 0, hi = 1000, k; for (k = 0; k < 100; k++) { var mij = (lo + hi) / 2; if (pStudent(mij, df) > p) lo = mij; else hi = mij; } return (lo + hi) / 2; }
   function comparaPeZi(fav, rest, o) {
     o = o || {}; var z = {}, favSet = new Set(fav);
-    fav.concat(rest).forEach(function (x) { var u = unitate(x); if (!z[u]) z[u] = { v: [], f: [] }; z[u].v.push(x.val); z[u].f.push(favSet.has(x)); });
-    var zile = Object.keys(z).map(function (u) { var g = z[u], nf = g.f.filter(Boolean).length; return { v: g.v, f: g.f, nf: nf, n: g.v.length, m: medie(g.v) }; }).filter(function (g) { return g.nf > 0 && g.nf < g.n; });
-    if (fav.length < (o.min || 30) || rest.length < (o.min || 30) || zile.length < (o.minU || 12)) return { stare: "putine", nFav: fav.length, nRest: rest.length, unitati: zile.length, minU: o.minU || 12, zileAmestecate: true };
-    var T = function (g, f) { var s = 0; for (var i = 0; i < g.n; i++) if (f[i]) s += g.v[i] - g.m; return s; };
-    var W = zile.reduce(function (s, g) { return s + g.nf * (g.n - g.nf) / g.n; }, 0), obs = zile.reduce(function (s, g) { return s + T(g, g.f); }, 0);
-    var rnd = mulberry32((o.seed || 196) + 7919), R = o.repsP || o.reps || REPS_P, peste = 0;
-    for (var r = 0; r < R; r++) {
-      var s = 0;
-      for (var q = 0; q < zile.length; q++) { var g = zile[q], f = g.f.slice(); for (var i = f.length - 1; i > 0; i--) { var j = Math.floor(rnd() * (i + 1)), t = f[i]; f[i] = f[j]; f[j] = t; } s += T(g, f); }
-      if (Math.abs(s) >= Math.abs(obs) - 1e-12) peste++;
+    fav.concat(rest).forEach(function (x) { var u = unitate(x); if (!z[u]) z[u] = []; z[u].push(x); });
+    var zile = Object.keys(z).map(function (u) { var l = z[u], nf = l.filter(function (x) { return favSet.has(x); }).length; return { l: l, nf: nf, n: l.length, m: medie(l.map(function (x) { return x.val; })) }; }).filter(function (g) { return g.nf > 0 && g.nf < g.n; });
+    var sim = {}, sapt = {}, cel = {}, W = 0, obs = 0;
+    zile.forEach(function (g) { W += g.nf * (g.n - g.nf) / g.n; g.l.forEach(function (x) { obs += (favSet.has(x) ? (g.n - g.nf) / g.n : -g.nf / g.n) * (x.val - g.m); }); });
+    // contribuția fiecărui verdict la varianță = c·(v − media zilei − dif·c) (reziduul modelului „ziua + diferența”; suma lor e zero), ca un
+    // efect adevărat mare să nu-și umfle singur varianța (fără reziduu, o poartă care chiar știe ieșea mai slabă decât este)
+    var difW = W > 0 ? obs / W : 0;
+    zile.forEach(function (g) {
+      g.l.forEach(function (x) { var c = favSet.has(x) ? (g.n - g.nf) / g.n : -g.nf / g.n, v = c * (x.val - g.m) - difW * c * c, w = Math.floor(x.t / (7 * ZI)), kc = x.k + "|" + w; sim[x.k] = (sim[x.k] || 0) + v; sapt[w] = (sapt[w] || 0) + v; cel[kc] = (cel[kc] || 0) + v; });
+    });
+    var nS = Object.keys(sim).length, nW = Object.keys(sapt).length, minS = o.minSimboluri || 8, minW = o.minSaptamani || 8;
+    if (fav.length < (o.min || 30) || rest.length < (o.min || 30) || zile.length < (o.minU || 12) || nS < minS || nW < minW) {
+      var motiv = fav.length < (o.min || 30) || rest.length < (o.min || 30) ? "cazuri" : zile.length < (o.minU || 12) ? "zile" : nS < minS ? "simboluri" : "saptamani";
+      return { stare: "putine", nFav: fav.length, nRest: rest.length, unitati: zile.length, minU: o.minU || 12, zileAmestecate: true, motiv: motiv, simboluri: nS, minSimboluri: minS, saptamani: nW, minSaptamani: minW };
     }
-    var rb = mulberry32(o.seed || 196), b = [];
-    for (var k = 0; k < 1000; k++) { var a = 0, w = 0; for (var e = 0; e < zile.length; e++) { var h = zile[Math.floor(rb() * zile.length)]; a += T(h, h.f); w += h.nf * (h.n - h.nf) / h.n; } if (w > 0) b.push(a / w); }
-    b.sort(function (x, y) { return x - y; });
-    return { stare: "testat", nFav: fav.length, nRest: rest.length, dif: obs / W, ic: b.length ? [b[Math.floor(b.length * 0.025)], b[Math.min(b.length - 1, Math.floor(b.length * 0.975))]] : null, p: (peste + 1) / (R + 1), pMin: 1 / (R + 1), unitati: zile.length, zileAmestecate: true };
+    var patrate = function (m) { return Object.keys(m).reduce(function (s, k) { return s + m[k] * m[k]; }, 0); };
+    // corecția de eșantion mic a varianței pe grupuri, G / (G − 1), cu G = cea mai mică dintre căi (ca la Stata)
+    var df = Math.min(nS, nW) - 1, VS = patrate(sim), VW = patrate(sapt), VC = patrate(cel), V = Math.max(VS, VW, VS + VW - VC) * (df + 1) / df, es = Math.sqrt(V) / W;
+    var p = V > 0 ? pStudent(Math.abs(obs) / Math.sqrt(V), df) : 1, tc = cuantilaStudent(0.05, df), dif = obs / W;
+    return { stare: "testat", nFav: fav.length, nRest: rest.length, dif: dif, ic: [dif - tc * es, dif + tc * es], p: p, pMin: 0, unitati: zile.length, zileAmestecate: true, simboluri: nS, saptamani: nW, gradeLibertate: df };
   }
   // un test cu o singură parte (ideile: media „peste QQQ” față de 0), bootstrap pe simboluri
   function fataDeZero(l, o) {

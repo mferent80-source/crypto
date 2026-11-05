@@ -82,11 +82,17 @@ await test("(2) dovada: grupul (cel mult un caz pe serie la 7 zile) față de re
   assert.equal(R().dovada([], "revine", {}), null, "fără puncte, fără istoric");
   const zero = R().dovada([A.map((x) => ({ ...x, revine: false }))], "revine", { pauzaZile: 7 }); assert.equal(zero.n, 0); assert.equal(zero.eticheta, null);
 });
-await test("(2) eticheta: +3 puncte și media peste ⇒ mai bine; −3 și media sub ⇒ mai slab; altfel cam la fel", () => {
-  const E = R().eticheta, b = { pePlus: 0.5, medie: 0.01 };
-  assert.equal(E({ pePlus: 0.53, medie: 0.02 }, b), "mai bine"); assert.equal(E({ pePlus: 0.52, medie: 0.02 }, b), "cam la fel");
-  assert.equal(E({ pePlus: 0.47, medie: 0.0 }, b), "mai slab"); assert.equal(E({ pePlus: 0.47, medie: 0.02 }, b), "cam la fel");
-  assert.equal(E({ pePlus: 0.6, medie: 0.005 }, b), "cam la fel"); assert.equal(E({ n: 0, pePlus: null, medie: null }, b), null);
+// v100.306 (I-834, auditul final 05.11): pe lângă +3 puncte și media în același sens, „mai bine / mai slab” cer testul pe blocuri de zile + serii
+// (Reveniri.testBlocuri) sub 5 %, în același sens; altfel „n-am aflat” (nu „cam la fel”: nedovedit ≠ dovedit că e la fel)
+await test("(2) eticheta: +3 puncte, media peste și testul pe blocuri ⇒ mai bine; oglinda ⇒ mai slab; altfel n-am aflat (v100.306)", () => {
+  const E = R().eticheta, b = { pePlus: 0.5, medie: 0.01 }, sus = { p: 0.01, semn: 1 }, jos = { p: 0.01, semn: -1 };
+  assert.equal(E({ pePlus: 0.53, medie: 0.02 }, b, sus), "mai bine"); assert.equal(E({ pePlus: 0.52, medie: 0.02 }, b, sus), "n-am aflat");
+  assert.equal(E({ pePlus: 0.47, medie: 0.0 }, b, jos), "mai slab"); assert.equal(E({ pePlus: 0.47, medie: 0.02 }, b, jos), "n-am aflat");
+  assert.equal(E({ pePlus: 0.6, medie: 0.005 }, b, sus), "n-am aflat"); assert.equal(E({ n: 0, pePlus: null, medie: null }, b), null);
+  assert.equal(E({ pePlus: 0.53, medie: 0.02 }, b, { p: 0.3, semn: 1 }), "n-am aflat", "testul nu trece");
+  assert.equal(E({ pePlus: 0.53, medie: 0.02 }, b, { p: 0.01, semn: -1 }), "n-am aflat", "blocurile spun invers");
+  assert.equal(E({ pePlus: 0.53, medie: 0.02 }, b), "n-am aflat", "fără test nu se spune „mai bine”");
+  assert.equal(E({ pePlus: 0.53, medie: 0.02 }, b, { motiv: "zile", p: null }), "la fel, prea puține cazuri");
 });
 await test("(2) dovada la short: câștigul = scăderea prețului (și la reper); 100+ cazuri pe 20+ săptămâni ⇒ nu „puține”", () => {
   const S = [pt(0, -0.02, { short: true }), pt(1, 0.01, { short: false })], d = R().dovada([S], "short", { pauzaZile: 7, short: true });

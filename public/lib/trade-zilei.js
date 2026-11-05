@@ -90,22 +90,41 @@ var TradeZilei = (function () {
     // v100.299: ziua săptămânii (UTC; ziua 0 = 1970-01-01 = joi ⇒ +3: luni 0 … duminică 6), factorul de weekend peste CALIB, cât din
     // mișcarea zilei e de obicei formată după ultima oră închisă (ora 0 ⇒ nimic) și cât mai rămâne din mișcarea așteptată
     var ziSapt = (ziAzi + 3) % 7, weekend = ziSapt >= 5, factorZi = weekend ? FACTOR_WEEKEND : FACTOR_LUCRATOARE;
-    var cls = clasa(p3), asteptat = { p25: media10 * cls.p25 * factorZi, med: media10 * cls.med * factorZi, p75: media10 * cls.p75 * factorZi };
+    var cls = clasa(p3), model = { p25: media10 * cls.p25 * factorZi, med: media10 * cls.med * factorZi, p75: media10 * cls.p75 * factorZi };
     var format = oraUtc > 0 ? CURBA_F[Math.min(23, oraUtc - 1)] : 0, ramane = 1 - format;
+    // v100.306 (I-825, auditul final din 05.11, 🔴 2): ziua de azi, deja făcută, intră în cifre. Modelul P3 vede doar ieri și alaltăieri, iar seara
+    // pagina scria „mai mult ca ieri: 7 %” cu ziua deja peste ieri (7,1 % față de 6,8 %). Acum: până acum ≥ ieri ⇒ P3 = 1 („deja mai mult ca
+    // ieri”); mișcarea așteptată = max(a modelului, până acum) pe fiecare cuantilă. Clasa (CALIB) rămâne pe P3-ul modelului (p3Model), cum a fost
+    // măsurată. La 00:00 UTC (proba A pre-înregistrată, tura-proba-a.mjs) nu e nicio bară de azi ⇒ P3 = al modelului, neatins.
+    var panaAcum = azi.nb ? (azi.hi - azi.lo) / c : 0, deja = azi.nb > 0 && panaAcum >= r1;
+    var asteptat = { p25: Math.max(model.p25, panaAcum), med: Math.max(model.med, panaAcum), p75: Math.max(model.p75, panaAcum) };
     return {
-      ziAzi: ziAzi, pret: c, pdh: ieri.hi, pdl: ieri.lo, pdc: ieri.cl, r1: r1, r2: r2, media10: media10, comp: comp, p3: p3, maiMultCaIeri: cls.maiMult,
-      asteptat: asteptat, panaAcum: azi.nb ? (azi.hi - azi.lo) / c : 0, bareAzi: azi.nb, bareRamase: k, sigma: sig, trend: trend,
+      ziAzi: ziAzi, pret: c, pdh: ieri.hi, pdl: ieri.lo, pdc: ieri.cl, r1: r1, r2: r2, media10: media10, comp: comp, p3: deja ? 1 : p3, p3Model: p3, dejaMaiMult: deja, maiMultCaIeri: cls.maiMult,
+      asteptat: asteptat, asteptatModel: model, panaAcum: panaAcum, bareAzi: azi.nb, bareRamase: k, sigma: sig, trend: trend,
       p1Sus: p1(ieri.hi, true), p1Jos: p1(ieri.lo, false), ziIncompleta: inchise.length < 20,
       oraUtc: oraUtc, ziSapt: ziSapt, weekend: weekend, factorZi: factorZi, format: format, ramane: ramane, ramaneAsteptat: asteptat.med * ramane
     };
   }
 
   // v100.298 (el: „pagina, ca să fie de folos dimineața”): lățimea de grid și distanța de stop DIN MIȘCAREA așteptată (măsurat ca
-  // mișcare, nu ca bani): gridul cuprinde range-ul de azi în 3 zile din 4 (± p75 / 2), pasul = lățimea / 10 grile, stopul ≥ mediana.
+  // mișcare, nu ca bani). v100.306 (I-825, auditul final din 05.11, 🔴 3): banda MĂSURATĂ. Înainte: ± p75 / 2 a range-ului ZILEI ÎNTREGI,
+  // centrată pe prețul de ACUM - restul zilei stătea în bandă în 43 % din zile la 00:05 UTC, 52 % la 05:05, 67 % la 12:05, iar pagina scria
+  // „trei din patru”. Acum: jumătatea benzii = BANDA_K[ora UTC] × asteptat.med (mișcarea așteptată, cu ziua de până acum), unde BANDA_K[h] =
+  // cuantila 75 a lui max(maxim − preț, preț − minim) / asteptat.med pe orele RĂMASE ale zilei UTC (bara în curs inclusă), la h:05 UTC.
+  // Măsurat pe barele reale de 1 h din data/istoric-1h (75 de monede Pionex, zilele 10.05 … 02.11.2026, scratchpad rb-lucru/masoara-banda.mjs):
+  //   ÎNVĂȚAT pe zilele până la 23.08 (106 zile, 6.170 de zile-monedă pe oră) ⇒ 75 % pe fiecare oră (prin construcție);
+  //   VERIFICAT pe zilele de la 24.08 (71 de zile NEVĂZUTE, 5.077 de zile-monedă pe oră) ⇒ 71,5 … 79,2 % după oră, 75,0 % în medie
+  //   (IC 95 % pe zile ±4–5 pp; monedele aceleiași zile se mișcă împreună). Fraza spune BANDA_ACOPERIRE[ora] = cifra de pe zilele nevăzute.
+  // Scara asteptat.med a ieșit mai strânsă pe învățare decât media pe 10 zile (± 4,45 % față de ± 4,57 %, în mediană, la aceeași acoperire).
+  // Pasul = lățimea / 10 ⇒ CINCI grile pe parte (pagina scria „zece”). Stopul nu stă în interiorul benzii: cel puțin marginea ei (orele 0–3
+  // UTC au K > 1, deci banda trece de mișcarea unei zile obișnuite).
+  var BANDA_K = [1.099, 1.08, 1.026, 1.005, 0.967, 0.952, 0.902, 0.871, 0.846, 0.806, 0.781, 0.746, 0.718, 0.694, 0.637, 0.594, 0.531, 0.494, 0.443, 0.396, 0.341, 0.299, 0.228, 0.142];
+  var BANDA_ACOPERIRE = [0.755, 0.754, 0.75, 0.752, 0.739, 0.75, 0.735, 0.731, 0.739, 0.728, 0.729, 0.715, 0.716, 0.731, 0.725, 0.747, 0.763, 0.778, 0.767, 0.786, 0.777, 0.792, 0.774, 0.773];
   function grid(d) {
     if (!d || d.eroare || !d.asteptat) return null;
-    var lat = d.asteptat.p75, jum = lat / 2;
-    return { jumatate: jum, latime: lat, pas: lat / 10, stop: d.asteptat.med, jos: d.pret * (1 - jum), sus: d.pret * (1 + jum) };
+    var h = Math.min(23, Math.max(0, Math.floor(Number(d.oraUtc) || 0))), med = d.asteptat.med, jum = BANDA_K[h] * med, lat = 2 * jum;
+    return { jumatate: jum, latime: lat, pas: lat / 10, grilePeParte: 5, stop: Math.max(med, jum), stopLaMargine: jum >= med, acoperire: BANDA_ACOPERIRE[h], oraUtc: h,
+      jos: d.pret * (1 - jum), sus: d.pret * (1 + jum) };
   }
 
   // trade-ul zilei: doar ce e DOVEDIT; altfel spune ce NU faci și de ce
@@ -121,6 +140,7 @@ var TradeZilei = (function () {
     return { fel: "niciunul", text: "Azi nu se îndeplinește condiția niciunui trade dovedit (" + dov.map(function (k) { return PROBA[k].nume; }).join(", ") + ")." };
   }
 
-  return { azi: azi, zile: zile, trade: trade, grid: grid, clasa: clasa, CALIB: CALIB, PROBA: PROBA, COEF_P3: COEF_P3, COEF_P1: COEF_P1, sigm: sigm, CURBA_F: CURBA_F, FACTOR_WEEKEND: FACTOR_WEEKEND, FACTOR_LUCRATOARE: FACTOR_LUCRATOARE };
+  return { azi: azi, zile: zile, trade: trade, grid: grid, clasa: clasa, CALIB: CALIB, PROBA: PROBA, COEF_P3: COEF_P3, COEF_P1: COEF_P1, sigm: sigm, CURBA_F: CURBA_F, FACTOR_WEEKEND: FACTOR_WEEKEND, FACTOR_LUCRATOARE: FACTOR_LUCRATOARE,
+    BANDA_K: BANDA_K, BANDA_ACOPERIRE: BANDA_ACOPERIRE };
 })();
 if (typeof module !== "undefined" && module.exports) module.exports = TradeZilei;

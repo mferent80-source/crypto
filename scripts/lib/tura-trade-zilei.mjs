@@ -12,7 +12,8 @@ function ziRo(t) {
   return { data: g("year") + "-" + g("month") + "-" + g("day"), ora: Number(g("hour")) };
 }
 const pct = (v, z = 0) => (v == null || !isFinite(v) ? "—" : (v * 100).toFixed(z).replace(".", ",") + " %");
-function pret(p) { if (!(p > 0)) return "—"; const z = p < 0.01 ? 6 : p < 1 ? 4 : 2, s = p.toFixed(z).split("."); return s[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "," + s[1]; }
+// v100.306 (I-825, auditul final 🔴 4): sub 0,01 prețul ține 3 cifre semnificative (PEPE 0,00000530), ca tzPret / rfPret; 6 zecimale fixe dădeau „0,000005”
+function pret(p) { if (!(p > 0)) return "—"; const z = p < 0.01 ? Math.min(12, 2 - Math.floor(Math.log10(p))) : p < 1 ? 4 : 2, s = p.toFixed(z).split("."); return s[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "," + s[1]; }
 // monedele: boții activi (simbolul lor Pionex) + BTC / ETH / SOL, fără dubluri, cel mult MAX_MONEDE
 export function monedeTradeZilei(boti, TabloBot) {
   const l = [];
@@ -39,7 +40,8 @@ export function liniiTradeZilei(monede, TradeZilei) {
   ok.forEach((m) => {
     const d = m.d, g = TradeZilei.grid(d);
     const niv = (L, p) => pret(L) + " " + (p.atins ? "✓" : p.p == null ? "—" : pct(p.p));
-    let r = `${m.fel === "bot" ? "🤖 " : ""}${m.simbol} ${pret(d.pret)} · >ieri ${pct(d.p3)} · azi ~${pct(d.asteptat.med, 1)} (${pct(d.asteptat.p25, 1)}–${pct(d.asteptat.p75, 1)})` +
+    // v100.306 (I-825, 🔴 2): ziua deja trecută de ieri ⇒ „>ieri deja”, nu procentul modelului
+    let r = `${m.fel === "bot" ? "🤖 " : ""}${m.simbol} ${pret(d.pret)} · >ieri ${d.dejaMaiMult ? "deja" : pct(d.p3)} · azi ~${pct(d.asteptat.med, 1)} (${pct(d.asteptat.p25, 1)}–${pct(d.asteptat.p75, 1)})` +
       (g ? ` · grid ±${pct(g.jumatate, 1)} pas ${pct(g.pas, 2)} · stop ≥ ${pct(g.stop, 1)}` : "") + ` · max ${niv(d.pdh, d.p1Sus)} · min ${niv(d.pdl, d.p1Jos)}`;
     if (r.length > LAT) r = r.slice(0, LAT - 1) + "…";
     linii.push(r);

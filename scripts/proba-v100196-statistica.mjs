@@ -171,9 +171,11 @@ await test("🟡6 Poarta gridului („a stat în bandă?”): unitatea = ziua; 3
   for (const h of [1, 3]) { const [n, a] = rez[h]; assert.ok(n >= 200, "testate " + n); assert.ok(a / n <= 0.09, rap.join(" · ")); }
   assert.ok(A0 / N0 <= prag(0.05, N0, 2.5) && B0 / N0 <= prag(0.05 / 14, N0, 3), "cumulat: p ≤ 0,05 " + pr(A0, N0) + ", p ≤ 0,0036 " + pr(B0, N0));
 });
-await test("🔴2 puterea: o poartă care chiar știe (+1,5 % la „cumpără”) iese p < 0,01 în ≥ 80 % din 100 de seturi (h = 5)", () => {
-  let k = 0; for (let s = 0; s < 100; s++) { const c = lumePoarta(5000 + s, { sursa: "poarta-t212", zile: 365, simb: 40, peZi: 6, sigmaPiata: 0.012, sigmaId: 0.02, efect: 0.015 }).find((x) => x.h === 5); if (c && c.test.stare === "testat" && c.test.p < 0.01 && c.test.dif > 0) k++; }
-  console.log("       putere Poarta: " + k + " din 100"); assert.ok(k >= 80, "doar " + k);
+// v100.306 (I-834, auditul final 05.11): p-ul e acum pe DOUĂ CĂI (simboluri + săptămâni, Verdicte.comparaPeZi) - permutarea în zi dădea „dovedit”
+// fals în 20–50 % din lumile cu etichete persistente. Prețul, măsurat aici: la p < 0,01 80 din 100 (înainte 83), la p < 0,05 92 (înainte 93)
+await test("🔴2 puterea: o poartă care chiar știe (+1,5 % la „cumpără”) iese p < 0,01 în ≥ 80 % și p < 0,05 în ≥ 85 % din 100 de seturi (h = 5)", () => {
+  let k = 0, k5 = 0; for (let s = 0; s < 100; s++) { const c = lumePoarta(5000 + s, { sursa: "poarta-t212", zile: 365, simb: 40, peZi: 6, sigmaPiata: 0.012, sigmaId: 0.02, efect: 0.015 }).find((x) => x.h === 5); if (c && c.test.stare === "testat" && c.test.dif > 0) { if (c.test.p < 0.01) k++; if (c.test.p < 0.05) k5++; } }
+  console.log("       putere Poarta: p < 0,01 " + k + " din 100, p < 0,05 " + k5 + " din 100"); assert.ok(k5 >= 85, "p < 0,05: doar " + k5); assert.ok(k >= 80, "p < 0,01: doar " + k);
 });
 await test("🔴2 sursele cu UN simbol (macro, scorul zilei) rămân pe simbol; coșurile rămân pe zi cu fataDeZero", () => {
   assert.equal(V.SURSE["poarta-t212"].zi, true); assert.equal(V.SURSE["poarta-grid"].zi, true);
