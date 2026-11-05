@@ -17,8 +17,11 @@ export function cheieRuta(cale) {
   return p + (m ? "·" + m[1] : "");
 }
 // status = codul HTTP al răspunsului (0 / null = fără răspuns: serverul oprit, conexiune ruptă - asta o anunță deja „serverul nu răspunde”)
+// revizia v100.306: rutele care au deja alerta lor la o pană (bot-orders ⇒ „nu mai poate citi botul”) nu intră aici - o pană, o voce
+export const RUTE_CU_ALERTA_PROPRIE = new Set(["bot-orders"]);
 export function noteazaRaspuns(st, cale, status, acum) {
   const s = Number(status) || 0; if (!s) return st;
+  if (RUTE_CU_ALERTA_PROPRIE.has(cheieRuta(cale))) return st;
   const rute = st.rute || (st.rute = {}), k = cheieRuta(cale), r = rute[k] || (rute[k] = { de: null, n: 0, ultim: 0, anuntat: false });
   if (s >= 500) {
     if (!r.de || acum - r.ultim > TACERE_5XX_MS) { r.de = acum; r.n = 0; }

@@ -58,7 +58,7 @@ await test("1b. P3: până acum sub ieri ⇒ P3 = cel al modelului, mișcarea a�
   const d = TZ.azi(bare(r12, 5, 100, 0.01), T0 + 12 * ZI + 5 * ORA + 300000);
   assert.equal(d.dejaMaiMult, false); assert.equal(d.p3, d.p3Model);
   for (const q of ["p25", "med", "p75"]) assert.ok(Math.abs(d.asteptat[q] - Math.max(d.asteptatModel[q], d.panaAcum)) < 1e-12, q);
-  assert.match(ctx.tzCartela({ simbol: "DOGE", pionex: "DOGE_USDT_PERP", fel: "piata", d }), /calibrat: din 100 de zile ca azi, \d+ au ieșit așa/);
+  assert.match(ctx.tzCartela({ simbol: "DOGE", pionex: "DOGE_USDT_PERP", fel: "piata", d }), /nu vede ziua de azi: din 100 de zile după un ieri ca ăsta, \d+ au ieșit așa/);   // revizia v100.306: cu bare de azi, P3 e al modelului (ieri și alaltăieri) - spus
   // tura-proba-a.mjs: TradeZilei.azi(bare, începutul zilei) - nicio bară de azi ⇒ nimic din ziua de azi, P3 = modelul
   const d0 = TZ.azi(bare(r12, 0, 100), T0 + 12 * ZI);
   assert.equal(d0.bareAzi, 0); assert.equal(d0.dejaMaiMult, false); assert.equal(d0.p3, d0.p3Model); assert.equal(d0.panaAcum, 0);

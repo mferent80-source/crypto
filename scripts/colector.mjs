@@ -2808,11 +2808,18 @@ async function turaSanatate() {
 
 // v101.166 (I-831): de la 08:00, UN mesaj cu ce a stat noaptea doar în Radar (politica-alerte.rezumatNoapte); o noapte nepovestită (colectorul
 // oprit dimineața) se aruncă a doua zi, nu pleacă cu o zi întârziere
+// revizia v100.306: bucla o pornește fără await la fiecare tură ⇒ cu Discord lent (> o tură) rezumatul ar fi plecat de două ori; `var`, nu
+// `let` (capcana TDZ a variabilelor de modul citite devreme)
+var rezumatNoapteInZbor = false;
 async function turaRezumatNoapte() {
-  const mN = meta(), st = mN.noapte; if (!st || !(st.n > 0)) return;
-  const acum = Date.now(), r = POL.rezumatNoapte(st, acum);
-  if (r) { if (await trimiteAlerta(r, null, r.cheie)) { POL.golesteNoapte(st); scrieStare(); } }
-  else if (st.zi && st.zi < POL.ziRo(acum)) { jurnal("rezumatul nopții din " + st.zi + " n-a plecat (colector oprit dimineața) - aruncat"); POL.golesteNoapte(st); scrieStare(); }
+  if (rezumatNoapteInZbor) return;
+  rezumatNoapteInZbor = true;
+  try {
+    const mN = meta(), st = mN.noapte; if (!st || !(st.n > 0)) return;
+    const acum = Date.now(), r = POL.rezumatNoapte(st, acum);
+    if (r) { if (await trimiteAlerta(r, null, r.cheie)) { POL.golesteNoapte(st); scrieStare(); } }
+    else if (st.zi && st.zi < POL.ziRo(acum)) { jurnal("rezumatul nopții din " + st.zi + " n-a plecat (colector oprit dimineața) - aruncat"); POL.golesteNoapte(st); scrieStare(); }
+  } finally { rezumatNoapteInZbor = false; }
 }
 async function bucla() {
   iesiLaSemnal();   // v100.259 (punctul 17)

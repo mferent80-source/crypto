@@ -42,9 +42,23 @@ function semnFunctions { $s = (& git rev-parse 'HEAD:functions' 2>$null); if ($L
 function semnConstruit { if (Test-Path $semnFis) { return ([string](Get-Content $semnFis -Raw -ErrorAction SilentlyContinue)).Trim() } else { return '' } }
 # oprește serverul Radarului: wrangler (node + cmd-ul care l-a pornit) și workerd-ul care ascultă pe 8788; NU și shell-ul curent ($PID),
 # al cărui rând de comandă poate conține aceleași cuvinte (ssh)
+# v100.306 (revizia, 🟡3): wrangler pornește DOUĂ workerd (unul pe 8788, unul pe 127.0.0.1:0), cu rândul de comandă doar din npm-cache;
+# pe Windows copiii nu mor odată cu părintele ⇒ al doilea rămânea orfan, ținând deschisă baza KV. Acum: tot arborele wrangler-ului
+# (după ParentProcessId), adunat ÎNAINTE de oprire.
+function urmasi($radacini) {
+  $toate = @(Get-CimInstance Win32_Process); $gasiti = @{}; $coada = New-Object System.Collections.ArrayList
+  foreach ($r in $radacini) { [void]$coada.Add([int]$r) }
+  while ($coada.Count -gt 0) {
+    $x = $coada[0]; $coada.RemoveAt(0)
+    foreach ($c in ($toate | Where-Object { $_.ParentProcessId -eq $x })) { if (-not $gasiti.ContainsKey([int]$c.ProcessId)) { $gasiti[[int]$c.ProcessId] = $true; [void]$coada.Add([int]$c.ProcessId) } }
+  }
+  return @($gasiti.Keys)
+}
 function opresteServerul {
-  $l = Get-CimInstance Win32_Process | Where-Object { $_.ProcessId -ne $PID -and (([string]$_.CommandLine) -match 'wrangler' -and ([string]$_.CommandLine) -match 'radar-local\.toml') }
+  $l = @(Get-CimInstance Win32_Process | Where-Object { $_.ProcessId -ne $PID -and (([string]$_.CommandLine) -match 'wrangler' -and ([string]$_.CommandLine) -match 'radar-local\.toml') })
+  $copii = @(urmasi ($l | ForEach-Object { $_.ProcessId }) | Where-Object { $_ -ne $PID })
   foreach ($p in $l) { try { Stop-Process -Id $p.ProcessId -Force -ErrorAction Stop } catch { } }
+  foreach ($c in $copii) { try { Stop-Process -Id $c -Force -ErrorAction Stop } catch { } }
   foreach ($c in (asculta8788)) { if ($c.OwningProcess -and $c.OwningProcess -ne $PID) { try { Stop-Process -Id $c.OwningProcess -Force -ErrorAction Stop } catch { } } }
   Get-CimInstance Win32_Process | Where-Object { $_.Name -eq 'workerd.exe' -and ([string]$_.CommandLine) -match [regex]::Escape($rad) } | ForEach-Object { try { Stop-Process -Id $_.ProcessId -Force -ErrorAction Stop } catch { } }
   for ($i = 0; $i -lt 30; $i++) { if (-not (asculta8788)) { return $true }; Start-Sleep -Seconds 1 }
@@ -67,19 +81,38 @@ if ($inainte -and $dupa -and $inainte -ne $dupa) {
   if ($schimbate) { scrie ("pull-ul a adus functions/: " + (($schimbate -split "`r?`n") -join ', ')) }
 }
 
-# Functions construite din alt functions/ decât cel de pe disc (pull nou, pull de mână, semnătura lipsă) ⇒ serverul se oprește și se reface
+# v100.306 (revizia, 🟡2): Functions se construiesc ÎNTÂI în worker-local-nou, cu serverul pornit; serverul se oprește și directorul se
+# schimbă DOAR dacă build-ul a mers (înainte: oprea serverul, apoi un build picat - sintaxă, npx, registrul npm - îl lăsa oprit 10 min)
+$nou = Join-Path $rad 'worker-local-nou'
+function construiesteNou {
+  if (Test-Path -LiteralPath $nou) { try { Remove-Item -LiteralPath $nou -Recurse -Force -ErrorAction Stop } catch { } }
+  $b = (& cmd /c 'npx --yes wrangler@4.137.0 pages functions build functions --outdir "worker-local-nou" --compatibility-date=2026-01-01' 2>&1 | Out-String)
+  if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath (Join-Path $nou 'index.js'))) { scrie "EROARE la construirea Functions: $($b.Trim())"; return $false }
+  return $true
+}
+function mutaNou {
+  $vechi = Join-Path $rad 'worker-local'
+  if (Test-Path -LiteralPath $vechi) { Remove-Item -LiteralPath $vechi -Recurse -Force -ErrorAction Stop }
+  Rename-Item -LiteralPath $nou -NewName 'worker-local' -ErrorAction Stop
+}
+$construit = $false
+# Functions construite din alt functions/ decât cel de pe disc (pull nou, pull de mână, semnătura lipsă) ⇒ build nou, apoi repornire
 $semn = semnFunctions
 if ((asculta8788) -and $semn -ne '' -and $semn -ne (semnConstruit)) {
-  scrie ("functions/ s-a schimbat (" + $(if (semnConstruit) { semnConstruit } else { 'fără semnătură' }) + " -> " + $(if ($semn) { $semn } else { '?' }) + ") - opresc serverul ca să refac Functions")
+  scrie ("functions/ s-a schimbat (" + $(if (semnConstruit) { semnConstruit } else { 'fără semnătură' }) + " -> " + $(if ($semn) { $semn } else { '?' }) + ") - construiesc Functions noi, cu serverul pornit")
+  if (-not (construiesteNou)) { scrie 'serverul rămâne pornit pe Functions vechi - reîncerc la tura următoare'; exit 1 }
   if (opresteServerul) { scrie 'serverul 8788 oprit' } else { scrie 'serverul 8788 tot ascultă după 30 s - îl las, reîncerc la tura următoare'; exit 1 }
+  try { mutaNou; $construit = $true } catch { scrie "EROARE la mutarea worker-local-nou: $($_.Exception.Message)"; exit 1 }
 }
 
 if (-not (asculta8788)) {
   if (rotesteWranglerLog) { scrie 'wrangler.log peste 20MB - rotit în wrangler.log.vechi' }
   $st = Join-Path $rad '.wrangler\state\v3'
   foreach ($d in 'observability', 'cache\default') { $p = Join-Path $st $d; if (Test-Path -LiteralPath $p -PathType Container) { try { Remove-Item -LiteralPath $p -Recurse -Force -ErrorAction Stop } catch { } } }
-  $b = (& cmd /c 'npx --yes wrangler@4.137.0 pages functions build functions --outdir "worker-local" --compatibility-date=2026-01-01' 2>&1 | Out-String)
-  if ($LASTEXITCODE -ne 0) { scrie "EROARE la construirea Functions: $($b.Trim())"; exit 1 }
+  if (-not $construit) {
+    if (-not (construiesteNou)) { exit 1 }
+    try { mutaNou } catch { scrie "EROARE la mutarea worker-local-nou: $($_.Exception.Message)"; exit 1 }
+  }
   if ($semn) { Set-Content -Path $semnFis -Value $semn -Encoding ascii }
   scrie ("Functions construite în worker-local (functions/ " + $(if ($semn) { $semn.Substring(0, [Math]::Min(12, $semn.Length)) } else { 'fără semnătură git' }) + ")")
   $arg = '/c npx --yes wrangler@4.137.0 dev --config radar-local.toml --env-file .dev.vars --no-bundle --port 8788 --ip 127.0.0.1 --persist-to "' + $rad + '\.wrangler\state" --compatibility-date=2026-01-01 >> "' + $wlog + '" 2>&1'

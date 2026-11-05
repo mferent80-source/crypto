@@ -33,7 +33,8 @@
   }
   function verificaMedie(medie, pret) { return medie > 0 && pret > 0 && Math.abs(medie / pret - 1) > 0.6 ? "Prețul mediu e prea departe de prețul de acum (" + Math.round((medie / pret - 1) * 100) + "%): verifică moneda în care l-ai scris." : null; }
   // textele Consilierului scriu prețurile cu „$” (ca pe T212); aici, în moneda simbolului
-  function inMoneda(t, m) { return String(t == null ? "" : t).replace(/\$(\d[\d,]*(?:\.\d+)?)/g, function (_, n) { return n.replace(/,/g, "").replace(".", ",") + " " + (m || ""); }).replace(/ $/, ""); }
+  // v100.306 (revizia, 🔴): „$25,17” / „$1.234,56” (usd() de acum) rămân cum sunt; textele vechi „$271.38” ⇒ „271,38”
+  function inMoneda(t, m) { return String(t == null ? "" : t).replace(/\$(\d[\d.,]*\d|\d)/g, function (_, n) { return (n.indexOf(",") >= 0 ? n : n.replace(".", ",")) + " " + (m || ""); }).replace(/ $/, ""); }
   // ultima bară ÎNCHISĂ (bara deschisă de mai puțin de 9 h - o sesiune EU / US - se lasă deoparte)
   function inchisa(b, acum) { var j = b.length - 1; if (j >= 1 && (acum === undefined ? Date.now() : acum) - b[j].t < 9 * 3600000) j--; return j; }
   function medie(b, j, n) { if (j - n + 1 < 0) return null; var s = 0; for (var i = j - n + 1; i <= j; i++) s += b[i].c; return s / n; }

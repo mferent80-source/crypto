@@ -47,7 +47,11 @@ export function politicaNoapte(m, cheie, acum) {
 // st = meta().noapte = { zi, n, pe: { fel: n }, sim: [..] } - ziua dimineții care le primește; o noapte nouă începe de la zero
 export function noteazaNoapte(st, m, cheie, acum) {
   const zi = ziDimineata(acum), fel = felNoapte(m, cheie) || "alte";
-  if (st.zi !== zi) { st.zi = zi; st.n = 0; st.pe = {}; st.sim = []; }
+  if (st.zi !== zi) { st.zi = zi; st.n = 0; st.pe = {}; st.sim = []; st.chei = []; }
+  // revizia v100.306: o alertă reîncercată (KV căzut ⇒ tura o trimite iar) se numără o singură dată
+  st.chei = Array.isArray(st.chei) ? st.chei : [];
+  if (cheie && st.chei.includes(cheie)) return st;
+  if (cheie) { st.chei.push(cheie); if (st.chei.length > 500) st.chei.shift(); }
   st.n = (st.n || 0) + 1; st.pe = st.pe || {}; st.pe[fel] = (st.pe[fel] || 0) + 1;
   const sim = /^[^:]{1,24}(?=:)/.exec(String(m && m.titlu || "").replace(/^🌙\s*/, "")), s = sim ? sim[0].replace(/\s*\(.*$/, "").trim() : null;
   st.sim = Array.isArray(st.sim) ? st.sim : [];

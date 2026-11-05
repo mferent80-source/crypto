@@ -26,7 +26,10 @@ function saltLei(v) { return v == null || !isFinite(v) ? "—" : Math.round(v).t
 function saltBucati(bucati, pret) { var n = Number(bucati) || 0; return (Number(pret) < 10 ? Math.round(n).toLocaleString("ro-RO") : (+n.toFixed(3)).toLocaleString("ro-RO")) + " buc"; }
 function saltCls(v) { return v > 0 ? "good" : v < 0 ? "bad" : ""; }
 // textele Consilierului au prețurile cu „$” (ca pe T212): aici în moneda simbolului, cu mii („$1109.08” ⇒ „1.109,08 EUR”)
-function saltInMoneda(t, m) { return String(t == null ? "" : t).replace(/\$(\d[\d,]*(?:\.\d+)?)/g, function (_, n) { return saltPret(Number(n.replace(/,/g, "")), m); }); }
+// v100.306 (revizia, 🔴): ActiuniSemnale.usd() scrie acum ca restul paginii („$25,17”, „$1.234,56”) ⇒ cu virgulă = format românesc (punctul
+// = mii); fără virgulă = textele vechi („$1109.08”, punctul = zecimale). Regex-ul vechi lua virgula drept mii: „$25,17” ⇒ 2.517 EUR.
+function saltNumarUsd(n) { return n.indexOf(",") >= 0 ? Number(n.replace(/\./g, "").replace(",", ".")) : Number(n); }
+function saltInMoneda(t, m) { return String(t == null ? "" : t).replace(/\$(\d[\d.,]*\d|\d)/g, function (_, n) { return saltPret(saltNumarUsd(n), m); }); }
 
 // ---------------- socoteala (fără DOM) ----------------
 // o poziție: valoarea și rezultatul în EUR (ce a plătit, la cursul de azi). fx = câte unități din moneda simbolului face 1 EUR (GBp: ×100)

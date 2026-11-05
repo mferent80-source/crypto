@@ -96,7 +96,10 @@ var TradeZilei = (function () {
     // pagina scria „mai mult ca ieri: 7 %” cu ziua deja peste ieri (7,1 % față de 6,8 %). Acum: până acum ≥ ieri ⇒ P3 = 1 („deja mai mult ca
     // ieri”); mișcarea așteptată = max(a modelului, până acum) pe fiecare cuantilă. Clasa (CALIB) rămâne pe P3-ul modelului (p3Model), cum a fost
     // măsurată. La 00:00 UTC (proba A pre-înregistrată, tura-proba-a.mjs) nu e nicio bară de azi ⇒ P3 = al modelului, neatins.
-    var panaAcum = azi.nb ? (azi.hi - azi.lo) / c : 0, deja = azi.nb > 0 && panaAcum >= r1;
+    // revizia v100.306: „deja” compara până-acum / prețul de ACUM cu ieri / închiderea de ieri - o închidere mai sus poate coborî procentul
+    // final sub ieri. Procentul final nu poate fi sub (max − min) / max de până acum (închiderea ≤ maximul zilei, iar un maxim nou mărește
+    // și întinderea) ⇒ „deja” doar când limita asta sigură trece de ieri.
+    var panaAcum = azi.nb ? (azi.hi - azi.lo) / c : 0, sigurAzi = azi.nb ? (azi.hi - azi.lo) / azi.hi : 0, deja = azi.nb > 0 && sigurAzi >= r1;
     var asteptat = { p25: Math.max(model.p25, panaAcum), med: Math.max(model.med, panaAcum), p75: Math.max(model.p75, panaAcum) };
     return {
       ziAzi: ziAzi, pret: c, pdh: ieri.hi, pdl: ieri.lo, pdc: ieri.cl, r1: r1, r2: r2, media10: media10, comp: comp, p3: deja ? 1 : p3, p3Model: p3, dejaMaiMult: deja, maiMultCaIeri: cls.maiMult,

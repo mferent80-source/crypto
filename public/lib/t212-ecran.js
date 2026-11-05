@@ -16,7 +16,7 @@ function t212Usd(v) { return ActiuniSemnale.usd(v); }   // v100.69: o singura fo
 function t212ZiScurta(iso) { var m = String(iso || "").match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? m[3] + "." + m[2] : "—"; }
 function t212Cls(v) { return v === null || v === undefined || !isFinite(v) ? "" : v >= 0 ? "good" : "bad"; }
 function t212Nr(v) { var x = Number(String(v === null || v === undefined ? "" : v).replace(",", ".").trim()); return String(v || "").trim() && isFinite(x) && x > 0 ? x : null; }
-function t212Eroare(e) { var m = e && e.message || String(e); return /503|PUNE-CHEILE|Lipsesc T212/.test(m) ? "Lipsesc cheile Trading 212 pe serverul Radarului: pe VPS se pun în C:\Users\Cimin\crypto\.dev.vars (T212_API_KEY, T212_API_SECRET), apoi aș rula sarcina „Crypto Radar pornire”." : /401|AUTH/.test(m) ? "Serverul a cerut parola aplicației (Setări)." : m; }
+function t212Eroare(e) { var m = e && e.message || String(e); return /503|PUNE-CHEILE|Lipsesc T212/.test(m) ? "Lipsesc cheile Trading 212 pe serverul Radarului: pe VPS se pun în C:\\Users\\Cimin\\crypto\\.dev.vars (T212_API_KEY, T212_API_SECRET), apoi aș rula sarcina „Crypto Radar pornire”." : /401|AUTH/.test(m) ? "Serverul a cerut parola aplicației (Setări)." : m; }
 
 async function t212Porneste(forta) {
   if (t212.inLucru) return;
