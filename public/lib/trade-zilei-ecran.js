@@ -108,9 +108,11 @@ async function tzPorneste(forta) {
     try { var c = await getJSON("/api/istoric-bot?action=clasament"); cl = c && c.clasament || null; } catch (e) { cl = null; }
     tzStare.simboluri = tzSimboluri(boti, cl); tzDeseneaza();
     for (var i = 0; i < tzStare.simboluri.length; i++) {
-      var s = tzStare.simboluri[i];
+      var s = tzStare.simboluri[i], lu = null;
       try {
-        var k = await getJSON("/api/market?type=pionex_klines&symbol=" + encodeURIComponent(s.pionex) + "&interval=60M&limit=500");
+        // v100.304 (I-808): lumânările 1h din cache-ul comun (lib/lumanari.js) - Range Filter și Tabloul le-au adus deja de multe ori
+        lu = typeof Lumanari !== "undefined" ? await Lumanari.cere(s.pionex, "60M", 500) : null;
+        var k = lu ? (lu.refuz ? { result: false, retryAfter: 0 } : { data: { klines: lu.randuri } }) : await getJSON("/api/market?type=pionex_klines&symbol=" + encodeURIComponent(s.pionex) + "&interval=60M&limit=500");
         // v100.301 (auditul RF): refuzul Pionex vine 200 {result:false, retryAfter} - nu aruncă; se citește aici, altfel bucla mergea mai departe
         if (k && k.result === false && k.retryAfter != null) { monede.push({ simbol: s.simbol, pionex: s.pionex, fel: s.fel, eroare: "Pionex a refuzat (prea multe cereri)" }); tzStare.eroare = "Pionex a refuzat (prea multe cereri) - restul monedelor le citesc la „Recitește”."; break; }
         var bare = typeof GridCalcul !== "undefined" ? GridCalcul.bare(k && k.data && k.data.klines) : null;
@@ -121,7 +123,7 @@ async function tzPorneste(forta) {
         if (/429|prea multe|rate/i.test(msg)) { tzStare.eroare = "Pionex a refuzat (prea multe cereri) - restul monedelor le citesc la „Recitește”."; break; }
       }
       tzStare.monede = monede.slice(); tzDeseneaza();   // cartelele apar pe rând, nu toate la final
-      if (i < tzStare.simboluri.length - 1) await tzPauza(TZ_PAUZA_MS);
+      if (i < tzStare.simboluri.length - 1 && !(lu && lu.dinCache)) await tzPauza(TZ_PAUZA_MS);   // din cache nu e nicio cerere de rărit
     }
     tzStare.monede = monede; tzStare.la = Date.now(); tzStare.zi = ziUtc;
     if (!monede.length) tzStare.eroare = "Nicio monedă de citit.";

@@ -30,7 +30,7 @@ await test("1. butonul „Analizează” e oprit cât citește și iar apăsabil
   const getJSON = async (u) => { vazutOprit = vazutOprit || el.rfCautaBtn.disabled === true; if (/WIF/.test(u)) return { result: false, error: "rate", retryAfter: 30 }; return { result: true, data: { klines: p } }; };
   const c = { console, Intl, Date, Math, Number, String, Object, Array, isFinite, JSON, Promise, setTimeout, getJSON, document: { getElementById: (id) => el[id] || null } };
   c.window = c; vm.createContext(c);
-  for (const f of ["text-ro.js", "grid-calcul.js", "range-filter.js", "range-filter-ecran.js"]) vm.runInContext(citeste("public", "lib", f), c);
+  for (const f of ["text-ro.js", "grid-calcul.js", "lumanari.js", "range-filter.js", "range-filter-ecran.js"]) vm.runInContext(citeste("public", "lib", f), c);
   el.rfCautaIn.value = "pepe"; await vm.runInContext("rfCauta()", c);
   assert.ok(vazutOprit, "cât citește, butonul e oprit"); assert.equal(el.rfCautaBtn.disabled, false, "după o căutare reușită butonul e iar apăsabil");
   assert.match(el.rfZonaCautaRez.innerHTML, /aria-label="PEPE"/);

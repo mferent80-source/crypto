@@ -1,5 +1,6 @@
 // Range Filter (v100.300; el, 04.11.2026: „integrează și în Crypto Radar ca dash și în panel”) - partea PURĂ (fără DOM; proba o rulează în vm).
-// Port exact al motorului din pine-scripts\RANGE-FILTER\Range_Filter_BS_v2_5.pine (v100.302: „de N bare” ca ta.barssince, ținerea = mediana, flip la banda opusă, z Bonferroni) (DonovanWall „Range Filter B&S” v4 + părțile din Trender):
+// v100.304 (I-806): citirea întoarce și „dupaCost” - jurnalul R după cost, regula din Pine v2.5 / v2.6 (paritate cu rf_motor.py în proba v100.304).
+// Port exact al motorului din pine-scripts\RANGE-FILTER\Range_Filter_BS_v2_5.pine (motorul neschimbat în v2.6) (v100.302: „de N bare” ca ta.barssince, ținerea = mediana, flip la banda opusă, z Bonferroni) (DonovanWall „Range Filter B&S” v4 + părțile din Trender):
 //   - filtrul cu bandă moartă: se mișcă doar când close iese din ±r, r = multiplicator × EMA(EMA(|Δclose|, n), 2n−1); direcția lui = TREND SUS / JOS;
 //   - BUY / SELL la schimbarea direcției cu prețul de partea bună (latch: un BUY nu se repetă până nu a fost un SELL);
 //   - Trender: MA colorată (EMA hl2 15: verde = urcă ȘI close peste, roșu = coboară ȘI close sub), CONSOLIDAREA pe unghiul pantei EMA(hl2,5) / ATR
@@ -95,12 +96,19 @@ var RangeFilter = (function () {
     var m = motor(c, per, qty), a = atr(h, l, c, 14), t = trender(h, l, c, a), L = n - 1;
     // DOVADA: fiecare semnal închis după dirH bare, mișcarea zero = ratat; rata de bază 50 (semnale în ambele direcții)
     var dN = 0, dK = 0, nSig = 0, nWhip = 0, holds = [], lastSigBar = null, nBars = 0, nCons = 0, lastSide = 0, lastSigI = null, lastPrice = null, lastIgn = 0, lastIgnI = null;
+    var jurR = [];   // v100.304 (I-806): rezultatul fiecărui semnal în R DUPĂ COST, regula din Pine v2.5 (jurnalul I-804)
     for (var j = warm; j < n; j++) {
       nBars++; if (t.cons[j]) nCons++;
       if (m.buy[j] || m.sell[j]) {
         nSig++; if (lastSigBar != null) { var hold = j - lastSigBar; holds.push(hold); if (hold <= 3) nWhip++; } lastSigBar = j;
         lastSide = m.buy[j] ? 1 : -1; lastSigI = j; lastPrice = c[j];
-        if (j + dirH <= L) { dN++; if ((c[j + dirH] - c[j]) * lastSide > 0) dK++; }
+        if (j + dirH <= L) {
+          dN++; if ((c[j + dirH] - c[j]) * lastSide > 0) dK++;
+          // R = (randamentul în direcția semnalului − cost) / distanța close → filtru LA SEMNAL; ținut dirH bare, FĂRĂ stop;
+          // fără semnalele pe care CE FAC? le refuză (stopul sub 2× cost ⇒ R umflat), în doar-long doar BUY (SELL = ieșire)
+          var dist = c[j] > 0 ? Math.abs(c[j] - m.filt[j]) / c[j] : 0;
+          if (dist > 0 && dist >= 2 * cost && (!opt.doarLong || lastSide > 0)) jurR.push(((c[j + dirH] - c[j]) / c[j] * lastSide - cost) / dist);
+        }
       }
       if (t.ignUp[j] || t.ignDn[j]) { lastIgn = t.ignUp[j] ? 1 : -1; lastIgnI = j; }
     }
@@ -127,6 +135,8 @@ var RangeFilter = (function () {
       ma: { col: t.maCol[L], distAtr: atrL > 0 && t.ma[L] != null ? (c[L] - t.ma[L]) / atrL : null, aliniata: (t.maCol[L] === 1 && dir === 1) || (t.maCol[L] === -1 && dir === -1) },
       aprindere: lastIgn ? { fel: lastIgn > 0 ? "SUS" : "JOS", acum: L - lastIgnI } : null,
       dovada: { n: dN, k: dK, hit: dHit, lo: dLo, dovedit: dN >= minEp && dLo != null && dLo > 50 },
+      // v100.304 (I-806): ca rândul „ULTIMELE 5” din Pine - mediana pe ultimele 50, ultimele 5 (cea mai nouă la coadă)
+      dupaCost: { nTot: jurR.length, n: Math.min(50, jurR.length), ultime: jurR.slice(-5), mediana: median(jurR.slice(-50)) },
       // v100.302: flip = cât mai are close până la banda OPUSĂ (direcția se întoarce acolo, nu la filtru); ținerea = MEDIANA (ca reperul probei și Pine v2.4+)
       flipAtr: atrL > 0 && r != null ? (dir === 1 ? (c[L] - filt + r) / atrL : dir === -1 ? (filt + r - c[L]) / atrL : null) : null,
       sigPer100: nBars ? nSig / nBars * 100 : null, tinere: median(holds), whipPct: nSig > 1 ? nWhip / (nSig - 1) * 100 : null,

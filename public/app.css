@@ -3187,6 +3187,9 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
 #rangefilter .rfCautaIn::placeholder{text-transform:none;color:var(--t3,#7E92A6)}
 #rangefilter .rfCautataEt{border-color:var(--pzInfo,#5B8FC7);color:var(--pzInfo,#5B8FC7)}
 #rangefilter .rfCautaRez:empty{display:none}
+#rangefilter .rfUltimeZ:empty{display:none}
+#rangefilter .rfUltime{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:0 0 8px}
+#rangefilter .rfUltimaBtn{padding:3px 10px;min-height:0;font-size:12px}
 #rangefilter .rfGrilaCautata{grid-template-columns:repeat(auto-fill,minmax(320px,1fr))}
 #rangefilter .acBtn:disabled{opacity:.55;cursor:default}
 @media (max-width:640px){#rangefilter .rfCautaIn{flex:1 1 10em}#rangefilter .rfGrila{grid-template-columns:minmax(0,1fr)}#rangefilter .rfRand{grid-template-columns:76px 56px minmax(0,1fr)}}

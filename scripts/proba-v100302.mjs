@@ -37,7 +37,7 @@ function context(getJSON, extra) {
   const c = { console, Intl, Date, Math, Number, String, Object, Array, isFinite, JSON, Promise, setTimeout, document: { getElementById: () => null } };
   c.window = c; c.module = undefined; c.getJSON = getJSON; Object.assign(c, extra || {});
   vm.createContext(c);
-  for (const f of ["text-ro.js", "grid-calcul.js", "range-filter.js", "range-filter-ecran.js"]) vm.runInContext(citeste("public", "lib", f), c);
+  for (const f of ["text-ro.js", "grid-calcul.js", "lumanari.js", "range-filter.js", "range-filter-ecran.js"]) vm.runInContext(citeste("public", "lib", f), c);
   return c;
 }
 const unul = () => [{ simbol: "BTC", pionex: "BTC_USDT_PERP", fel: "piata" }];

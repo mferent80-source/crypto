@@ -1,6 +1,6 @@
 // Pagina „Range Filter” (v100.300; el, 04.11.2026: „integrează și în Crypto Radar ca dash și în panel”) - partea de ECRAN: aduce lumânările
 // (1h sau 4h) pentru monedele tale (boții activi + BTC / ETH / SOL + top 20 din clasament, ca Trade-ul zilei), le trece prin RangeFilter
-// (lib/range-filter.js, pur, același motor ca Pine v2.5) și desenează câte un dash pe monedă: VERDICT · TRIGGER · CE FAC? · LOC · BANDA · REGIM ·
+// (lib/range-filter.js, pur, același motor ca Pine v2.5 / v2.6) și desenează câte un dash pe monedă: VERDICT · TRIGGER · CE FAC? · LOC · BANDA · REGIM ·
 // MA · APRINDERE · DOVADA · SEMNAL. rfHtml e fără DOM (proba o rulează în vm); rfPorneste leagă pagina. Același calcul dă rândul „Range Filter”
 // din citirea Tabloului botului (app.js, tbCitireExtra → RangeFilter.citire pe lumânările botului).
 // Cinstit: nimic dovedit în proba din 04.11 - e un colorant de trend, nu un semnal; rândul DOVADA o spune pe fiecare monedă.
@@ -17,13 +17,26 @@ var RF_TF = { "60M": { eticheta: "1h", bare: 500, ms: 3600000 }, "4H": { etichet
 var RF_PAUZA_MS = 0;     // v100.302: serverul ține deja ≥ 1,1 s între cererile spre Pionex (functions/api/market.js) și 90 s de cache ⇒ pauza din pagină doar întârzia
 var RF_MAX = 30;
 var RF_PROASPAT = 3;     // semnal „proaspăt” = în ultimele 3 bare închise
-var rfBareCache = {};    // v100.302: lumânările pe (monedă, interval): { r1, r2, urm } - bune până se închide bara următoare
+// v100.304 (I-808): lumânările pe (monedă, interval) stau în lib/lumanari.js - un singur cache cu Tabloul și Trade-ul zilei
 var rfZMonede = 1;       // câte monede intră în corecția DOVEZII (ultima pagină desenată)
 try { rfStare.cauta.text = localStorage.getItem("rf_cauta") || ""; } catch (e) {}
+// v100.304 (I-807): ultimele 5 căutări reușite (doar în browserul lui) + listele de simboluri Pionex (sugestii și verificare fără cereri)
+var RF_ULTIME = 5, rfSimProm = null, rfSimEsecLa = 0;
+function rfUltimeCiteste() {
+  try { var a = JSON.parse(localStorage.getItem("rf_cautari") || "[]"); return Array.isArray(a) ? a.filter(function (s) { return typeof s === "string" && /^[A-Z0-9]{1,15}$/.test(s); }).slice(0, RF_ULTIME) : []; } catch (e) { return []; }
+}
+rfStare.ultime = rfUltimeCiteste();
+rfStare.pionexSim = null;
+function rfUltimeAdauga(sim) {
+  rfStare.ultime = [sim].concat((rfStare.ultime || []).filter(function (s) { return s !== sim; })).slice(0, RF_ULTIME);
+  try { localStorage.setItem("rf_cautari", JSON.stringify(rfStare.ultime)); } catch (e) {}
+}
 function rfEsc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
 // regula casei (03.10): rezultatele cu O SINGURĂ zecimală, minusul tipografic („−0,8”), „12,4%” - prin TextRo (revizia Opus 04.11)
 function rfNr(v, zec) { return TextRo.num(v, zec == null ? 1 : zec); }
 function rfPct(v, zec) { return v == null || !isFinite(v) ? "—" : TextRo.pct(v * 100, zec == null ? 1 : zec); }
+// v100.304 (I-806): rezultatul în R, cu semn și O zecimală („+1,2R”, „−0,8R”), ca eticheta jurnalului din Pine
+function rfR(v) { if (v == null || !isFinite(v)) return "—"; var s = TextRo.num(v, 1); return (v > 0 && s !== "0,0" ? "+" : "") + s + "R"; }
 // v100.302: căsuța aduce și monede foarte ieftine (PEPE 0,0000053) ⇒ sub 0,01 prețul ține 3 cifre semnificative, nu 6 zecimale fixe
 function rfPret(p) { if (!(p > 0)) return "—"; var z = p < 0.01 ? Math.min(12, 2 - Math.floor(Math.log10(p))) : p < 1 ? 4 : 2, s = p.toFixed(z).split("."); return s[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "," + s[1]; }
 function rfOra(t) { try { return new Intl.DateTimeFormat("ro-RO", { timeZone: "Europe/Bucharest", hour: "2-digit", minute: "2-digit" }).format(new Date(t)); } catch (e) { return "—"; } }
@@ -89,7 +102,7 @@ function rfTexte(c, z) {
   z = z > 0 ? z : 1.96;
   var dirTxt = c.dir === 1 ? "TREND SUS" : c.dir === -1 ? "TREND JOS" : "FĂRĂ DIRECȚIE";
   var verdict = dirTxt + (c.dir ? (c.bareDir > 0 ? " · de " + TextRo.cate(c.bareDir, "bară", "bare") : " · întors pe ultima bară") : "") + (c.regim.cons ? " · consolidare" : "");
-  var d = c.dovada, dov = rfDovedit(d, z), prag = TextRo.pct(2 * c.cost * 100, 2), buy = c.semnalAcum && c.semnal && c.semnal.fel === "BUY";
+  var d = c.dovada, dov = rfDovedit(d, z), prag = TextRo.pct(2 * c.cost * 100, 2), buy = c.semnalAcum && c.semnal && c.semnal.fel === "BUY", dc = c.dupaCost;
   // v100.302: barele sunt ÎNCHISE (până la o oră / 4 ore în urmă) ⇒ „SEMNAL … pe ultima bară închisă”, nu „GO … ACUM”
   var trig = c.semnalAcum ? "SEMNAL " + c.semnal.fel + " pe ultima bară închisă" + (c.costNu ? " · NU TRECE" : "") : c.trigger.text;
   var trigR = c.costNu ? "stop la " + rfPct(c.distPct) + " < prag " + prag + " (2× cost) ⇒ NU TRECE" : "stop (filtru) la " + rfPct(c.distPct);
@@ -116,6 +129,11 @@ function rfTexte(c, z) {
     // v100.302: sub 20 de cazuri „k din n” (procentul pe 7 cazuri doar impresionează), peste - procentul ținut între 1 și 99
     dovada: !d.n ? "-" : (d.n < RangeFilter.MIN_EP ? d.k + " din " + d.n : rfNr(Math.min(99, Math.max(1, d.hit)), 0) + " din 100") + " (direcția, fără cost)",
     dovadaR: dovR, dovadaTon: d.n === 0 ? "fara" : dov ? "sus" : d.n < RangeFilter.MIN_EP ? "atentie" : "jos",
+    // v100.304 (I-806): DUPĂ COST - mediana în R pe ultimele 50 de semnale care trec de cost, ultimele 5; sub 20 „puține cazuri”
+    dupaCost: !dc || !dc.n ? "-" : "mediana " + rfR(dc.mediana) + (dc.nTot > 50 ? " pe ultimele 50 de semnale" : " pe " + TextRo.cate(dc.nTot, "semnal", "semnale")) + (dc.nTot < RangeFilter.MIN_EP ? " (puține cazuri)" : ""),
+    dupaCostR: !dc || !dc.n ? "niciun semnal încheiat care să treacă de cost" : "ultimele: " + dc.ultime.map(rfR).join(" · "),
+    // revizia Opus: fără verde / roșu - pe 30 de monede jumătate ar ieși „verzi” din noroc, lângă DOVADA care cere Wilson + Bonferroni
+    dupaCostTon: dc && dc.n && dc.nTot < RangeFilter.MIN_EP ? "atentie" : "fara",
     semnal: c.semnal ? c.semnal.fel + (c.semnal.acum === 0 ? " pe ultima bară închisă" : " acum " + TextRo.cate(c.semnal.acum, "bară", "bare")) : "-", semnalR: c.semnal ? "la " + rfPret(c.semnal.pret) : "", semnalTon: c.semnal ? (c.semnal.fel === "BUY" ? "sus" : "jos") : "fara",
     detalii: "semnale " + rfNr(c.sigPer100) + " / 100 de bare (proba: 2,45) · ținere mediană " + (c.tinere == null ? "—" : TextRo.cate(Math.round(c.tinere), "bară", "bare")) + " (proba: 34) · whipsaw " + (c.whipPct == null ? "—" : TextRo.pct(c.whipPct, 1)) + " (proba: 1%)" + " · " + TextRo.cate(c.n, "bară închisă", "bare închise") + (c.doar500 ? " · a doua pagină n-a venit: doar primele 500" : "")
   };
@@ -139,6 +157,7 @@ function rfCartela(m, z) {
   h += rfRand("MA", rfBara(c.ma.distAtr, 2), t.ma, t.maTon, t.maR, "EMA(hl2,15): verde = urcă ȘI close peste; roșu = coboară ȘI close sub. În probă alinierea NU a ajutat (47% față de 50%).");
   h += rfRand("APRINDERE", null, t.aprindere, c.aprindere && c.aprindere.acum === 0 ? (c.aprindere.fel === "SUS" ? "sus" : "jos") : "fara", t.aprindereR, "Trender Ignition: close trece peste / sub EMA(hl2,5), close peste / sub EMA(hl2,48), fără consolidare. În probă: nedovedit.");
   h += rfRand("DOVADA", rfBara(c.dovada.n >= RangeFilter.MIN_EP ? c.dovada.hit : null, 100), t.dovada, t.dovadaTon, t.dovadaR, "Cât din semnalele BUY / SELL de pe moneda asta au mers în direcția lor după " + TextRo.cate(RangeFilter.DIRH, "bară", "bare") + " (direcția, fără cost). DOVEDIT doar cu cel puțin " + TextRo.cate(RangeFilter.MIN_EP, "caz", "cazuri") + " și marginea Wilson peste 50, corectată pentru câte monede se văd pe pagină." + (c.n < 900 ? " Pe 500 de bare ies ~10 cazuri; pe 1.000 ~20 (adesea mai puține)." : ""));
+  h += rfRand("DUPĂ COST", c.dupaCost && c.dupaCost.n ? rfBara(c.dupaCost.mediana, 2) : null, t.dupaCost, t.dupaCostTon, t.dupaCostR, "Rezultatul fiecărui semnal după " + TextRo.cate(RangeFilter.DIRH, "bară", "bare") + ", în R după cost (" + TextRo.pct(c.cost * 100, 2) + " dus-întors): R = distanța close → filtru la semnal. FĂRĂ stop: ținut " + TextRo.cate(RangeFilter.DIRH, "bară", "bare") + ", poate ieși sub −1R. Fără semnalele cu stopul sub 2× cost (CE FAC? le refuză). Mediana ultimelor 50, ca rândul „ULTIMELE 5” din Pine. Nu e o poartă de intrare: nimic nu s-a dovedit.");
   h += rfRand("SEMNAL", null, t.semnal, t.semnalTon, t.semnalR, "");
   h += '<p class="rfMut rfMic">' + rfEsc(t.detalii) + "</p>";
   h += '<div class="rfAct"><button class="acBtn" type="button" data-action-click="rfLaGrid(\'' + rfEsc(m.pionex) + '\')">Grid: ce setez? →</button></div>';
@@ -175,11 +194,22 @@ function rfHtmlFiltre(st) {
   var fil = [["toate", "Toate"], ["semnale", "Semnale noi"], ["boti", "Boții tăi"]];
   return fil.map(function (f) { return '<button class="acBtn' + (st.filtru === f[0] ? " rfTfOn" : "") + '" type="button" data-action-click="rfFiltru(\'' + f[0] + '\')">' + f[1] + "</button>"; }).join("");
 }
+// v100.304 (I-807): sugestiile = monedele de tranzacționat (perp TRADING + spot enable), pe USDT, fără sufix
+function rfOptiuni(sim) { return sim && sim.lista ? sim.lista.map(function (s) { return '<option value="' + rfEsc(s) + '">'; }).join("") : ""; }
 function rfHtmlCauta(st) {
   var q = st.cauta || {};
-  return '<label class="rfEt" for="rfCautaIn">ANALIZEAZĂ O MONEDĂ</label><input id="rfCautaIn" class="rfCautaIn" type="text" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="24" placeholder="ex. PEPE, WIF, ARB" data-action-input="rfCautaScrie()" value="' + rfEsc(q.text || "") + '">'
+  return '<label class="rfEt" for="rfCautaIn">ANALIZEAZĂ O MONEDĂ</label><input id="rfCautaIn" class="rfCautaIn" type="text" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="24" placeholder="ex. PEPE, WIF, ARB" list="rfMonede" data-action-input="rfCautaScrie()" value="' + rfEsc(q.text || "") + '">'
+    + '<datalist id="rfMonede">' + rfOptiuni(st.pionexSim) + "</datalist>"
     + '<button class="acBtn" id="rfCautaBtn" type="button" data-action-click="rfCauta()"' + (q.inLucru ? " disabled" : "") + ">Analizează</button>"
     + '<span class="rfMut rfMic">pe intervalul ales; perp, iar dacă Pionex n-are perp, spot</span>';
+}
+// v100.304 (I-807): ultimele căutări reușite ca butoane, sub căsuță, în zona LOR (rfZonaUltime): se rescrie doar când se schimbă lista sau
+// starea căutării - nu la fiecare monedă citită, unde un clic apăsat înainte și eliberat după rescriere s-ar pierde (revizia Opus)
+function rfHtmlUltime(st) {
+  var a = (st.ultime || []).filter(function (s) { return typeof s === "string" && /^[A-Z0-9]{1,15}$/.test(s); }).slice(0, RF_ULTIME);
+  if (!a.length) return "";
+  var dis = st.cauta && st.cauta.inLucru ? " disabled" : "";
+  return '<div class="rfUltime"><span class="rfMut rfMic">ultimele căutate:</span>' + a.map(function (s) { return '<button class="acBtn rfUltimaBtn" type="button" data-action-click="rfCautaDin(\'' + rfEsc(s) + '\')"' + dis + ">" + rfEsc(s) + "</button>"; }).join("") + "</div>";
 }
 function rfHtmlCautaRez(st) {
   var q = st.cauta || {};
@@ -201,10 +231,11 @@ function rfHtmlCorp(st) {
 function rfHtml(st) {
   var h = '<div class="rfAntet" id="rfZonaAntet">' + rfHtmlAntet(st) + "</div>";
   h += '<details class="rfIntro"><summary>Range Filter (DonovanWall) + Trender pe monedele tale - același motor ca scriptul din TradingView. Cinstit: în probă NIMIC nu s-a dovedit; e un colorant de trend, nu un semnal. <span class="rfMut">(mai mult)</span></summary>';
-  h += '<p>Direcția filtrului cu bandă moartă (TREND SUS / JOS), semnalul BUY / SELL la schimbarea ei, distanța până la filtru (stopul) și până la flip, lățimea benzii, regimul (consolidare după panta MA), MA colorată, aprinderea. Același motor ca Range Filter B&S v2.5 din TradingView. ';
+  h += '<p>Direcția filtrului cu bandă moartă (TREND SUS / JOS), semnalul BUY / SELL la schimbarea ei, distanța până la filtru (stopul) și până la flip, lățimea benzii, regimul (consolidare după panta MA), MA colorată, aprinderea. Același motor ca Range Filter B&S v2.5 / v2.6 din TradingView. ';
   h += "Proba din 04.11.2026 (Binance perp, 21 de perechi, 1h + 4h, după cost): semnalul nu plătește, direcția nimerește 48% la 10 bare, aprinderea nu plătește. E un colorant de trend curat (2,45 semnale / 100 de bare, whipsaw 1%), bun ca filtru de direcție lângă altceva, nu ca semnal singur. Rândul DOVADA o măsoară pe fiecare monedă, corectat pentru câte monede vezi deodată.</p></details>";
   h += '<div class="rfFiltre" id="rfZonaFiltre" role="group" aria-label="Filtru">' + rfHtmlFiltre(st) + "</div>";
   h += '<div class="rfCauta" id="rfZonaCauta">' + rfHtmlCauta(st) + "</div>";
+  h += '<div class="rfUltimeZ" id="rfZonaUltime">' + rfHtmlUltime(st) + "</div>";
   h += '<div class="rfCautaRez" id="rfZonaCautaRez">' + rfHtmlCautaRez(st) + "</div>";
   h += '<div class="rfCorp" id="rfZonaCorp">' + rfHtmlCorp(st) + "</div>";
   return h;
@@ -221,7 +252,8 @@ function rfDeseneaza() {
   if (r) r.innerHTML = rfHtmlCautaRez(rfStare);
   corp.innerHTML = rfHtmlCorp(rfStare);
 }
-function rfDeseneazaCauta() { var r = rfEl("rfZonaCautaRez"), b = rfEl("rfCautaBtn"); if (r) r.innerHTML = rfHtmlCautaRez(rfStare); if (b) b.disabled = !!rfStare.cauta.inLucru; }
+function rfDeseneazaUltime() { var u = rfEl("rfZonaUltime"); if (u) u.innerHTML = rfHtmlUltime(rfStare); }
+function rfDeseneazaCauta() { var r = rfEl("rfZonaCautaRez"), b = rfEl("rfCautaBtn"); if (r) r.innerHTML = rfHtmlCautaRez(rfStare); if (b) b.disabled = !!rfStare.cauta.inLucru; rfDeseneazaUltime(); }
 // v100.301: comutarea intervalului păstrează citirea celuilalt; v100.302: și eroarea / citirea parțială, iar moneda căutată se recitește pe intervalul nou
 async function rfTf(k) {
   if (!RF_TF[k] || rfStare.inLucru) return;
@@ -239,17 +271,17 @@ function rfAdanc() {
 }
 function rfLaGrid(simbol) { if (typeof tzLaGrid === "function") tzLaGrid(simbol); else navTo("gridset", true); }
 // v100.302: lumânările ținute pe (monedă, interval) până se închide bara următoare: „Recitește” în aceeași bară nu mai cere nimic, iar
-// „DOVADA pe 1.000” cere doar pagina a doua. Tabloul folosește același cache (rfCacheIa / rfCachePune).
-function rfUrmDinBare(bare, tf) { var t = bare && bare.length ? bare[bare.length - 1].t : 0; return t > 0 ? t + 2 * (RF_TF[tf] || RF_TF["60M"]).ms : 0; }
-function rfCacheIa(pionex, tf) { var e = rfBareCache[pionex + "|" + tf]; return e && Date.now() < e.urm ? e : null; }
-function rfCachePune(pionex, tf, r1, r2) {
-  var bare = typeof GridCalcul !== "undefined" ? GridCalcul.bare(r1) : null;
-  if (bare && bare.length) rfBareCache[pionex + "|" + tf] = { r1: r1, r2: r2 || null, urm: rfUrmDinBare(bare, tf) };
-}
+// „DOVADA pe 1.000” cere doar pagina a doua. v100.304 (I-808): cache-ul e lib/lumanari.js, comun cu Tabloul și Trade-ul zilei.
 // lumânările unei monede - o pagină (500) sau două (a doua cu endTime înaintea primei); refuzul Pionex vine 200 {result:false, retryAfter}
 async function rfLumanari(pionex, tf, adanc) {
-  var e = rfCacheIa(pionex, tf), r1, r2 = e ? e.r2 : null, pag2Lipsa = false;
+  var LU = typeof Lumanari !== "undefined" ? Lumanari : null;
+  var e = LU ? LU.ia(pionex, tf) : null, r1, r2 = e ? e.r2 : null, pag2Lipsa = false;
   if (e) r1 = e.r1;
+  else if (LU) {   // revizia Opus: prin Lumanari.cere - o cerere deja plecată (Trade-ul zilei, Tabloul) se așteaptă, nu se repetă
+    var p1 = await LU.cere(pionex, tf, RF_TF[tf].bare);
+    if (p1.refuz) return { refuz: true, eroare: "Pionex a refuzat (prea multe cereri)" };
+    r1 = p1.randuri || []; e = LU.ia(pionex, tf); r2 = e ? e.r2 : null;
+  }
   else {
     var k = await getJSON("/api/market?type=pionex_klines&symbol=" + encodeURIComponent(pionex) + "&interval=" + tf + "&limit=" + RF_TF[tf].bare);
     if (k && k.result === false) return k.retryAfter != null ? { refuz: true, eroare: "Pionex a refuzat (prea multe cereri)" } : { refuz: false, eroare: "Pionex n-a dat lumânări pentru moneda asta" };
@@ -266,7 +298,7 @@ async function rfLumanari(pionex, tf, adanc) {
   }
   var bare = typeof GridCalcul !== "undefined" ? GridCalcul.bare((adanc && r2 ? r2 : []).concat(r1)) : null;
   if (!bare || !bare.length) return { refuz: false, eroare: "Pionex n-a dat lumânări pentru moneda asta" };
-  rfCachePune(pionex, tf, r1, r2);
+  if (LU) LU.pune(pionex, tf, r1, r2);
   return { bare: bare, pag2Lipsa: pag2Lipsa };
 }
 async function rfPorneste(forta) {
@@ -320,7 +352,47 @@ function rfNormalizeaza(x) {
   for (var i = 0; i < 3; i++) { var t = s.replace(/(PERP|USDT)$/, ""); if (!t || t === s) break; s = t; }   // „PERP” singur e o monedă (Perpetual Protocol)
   return s !== "USDT" && /^[A-Z0-9]{1,15}$/.test(s) ? s : null;
 }
-function rfCautaScrie() { var el = rfEl("rfCautaIn"); if (el) rfStare.cauta.text = String(el.value || "").slice(0, 40); }
+function rfCautaScrie() { var el = rfEl("rfCautaIn"); if (el) rfStare.cauta.text = String(el.value || "").slice(0, 40); rfSimboluriPionex(); }   // v100.304 (I-807): listele Pionex abia când scrii (nu la fiecare deschidere a paginii)
+// v100.304 (I-807): listele de simboluri Pionex (perp + spot; serverul le ține o oră). Ambele trebuie să vină - cu una singură, „n-are”
+// ar minți pe cealaltă piață. Căzute ⇒ căsuța merge ca înainte (perp, apoi spot) și se reîncearcă după 10 minute.
+function rfListaPionex(dp, ds) {
+  var lp = dp && dp.result !== false && dp.data && dp.data.symbols, ls = ds && ds.result !== false && ds.data && ds.data.symbols;
+  if (!Array.isArray(lp) || !Array.isArray(ls) || !lp.length || !ls.length) return null;
+  // perp = de tranzacționat (TRADING), spot = activ (enable); „exista” = orice stare (o monedă scoasă nu primește „n-are”); baza = baseCurrency → simbol
+  // când diferă (PUMPFUN → PUMP: el scrie numele monedei, Pionex o ține sub alt simbol - revizia Opus)
+  var perp = {}, spot = {}, exista = {}, baza = {}, sug = {};
+  function cu(x, re, ok, tinta) {
+    var m = x && re.exec(String(x.symbol || "")); if (!m) return;
+    exista[m[1]] = 1; if (ok) { tinta[m[1]] = 1; sug[m[1]] = 1; }
+    var b = String(x.baseCurrency || "").toUpperCase(); if (/^[A-Z0-9]{1,15}$/.test(b) && b !== m[1] && !baza[b]) baza[b] = m[1];
+  }
+  lp.forEach(function (x) { cu(x, /^([A-Z0-9]{1,15})_USDT_PERP$/, x && x.status === "TRADING", perp); });
+  ls.forEach(function (x) { cu(x, /^([A-Z0-9]{1,15})_USDT$/, x && x.enable !== false, spot); });
+  return { perp: perp, spot: spot, exista: exista, baza: baza, lista: Object.keys(sug).sort(), la: Date.now() };
+}
+var RF_SIM_TTL = 60 * 60 * 1000;   // revizia Opus: listele expiră ca pe server (o oră) - o monedă listată azi nu primește „n-are” până la F5
+function rfSimboluriPionex(forta) {
+  var sim = rfStare.pionexSim;
+  if (sim && !forta && Date.now() - sim.la < RF_SIM_TTL) return Promise.resolve(sim);
+  if (rfSimProm) return rfSimProm;
+  if (!forta && rfSimEsecLa && Date.now() - rfSimEsecLa < 10 * 60 * 1000) return Promise.resolve(sim || null);
+  rfSimProm = (async function () {
+    var nou = null;
+    try { nou = rfListaPionex(await getJSON("/api/market?type=pionex_symbols&market=PERP"), await getJSON("/api/market?type=pionex_symbols&market=SPOT")); } catch (e) { nou = null; }
+    if (nou) { rfStare.pionexSim = nou; rfSimEsecLa = 0; } else { rfSimEsecLa = Date.now(); if (rfStare.pionexSim && Date.now() - rfStare.pionexSim.la >= RF_SIM_TTL) rfStare.pionexSim = null; }
+    rfSimProm = null;
+    var dl = rfEl("rfMonede"); if (dl) dl.innerHTML = rfOptiuni(rfStare.pionexSim);
+    return rfStare.pionexSim;
+  })();
+  return rfSimProm;
+}
+// simbolul Pionex al ce a scris el: el însuși dacă există, altfel prin baseCurrency (PUMPFUN → PUMP), altfel null
+function rfSimbolPionex(sp, sim) { return sp.exista[sim] ? sim : sp.baza[sim] && sp.exista[sp.baza[sim]] ? sp.baza[sim] : null; }
+function rfCautaDin(s) {
+  var sim = rfNormalizeaza(s); if (!sim) return;
+  rfStare.cauta.text = sim; var el = rfEl("rfCautaIn"); if (el) el.value = sim;
+  return rfCauta(false);
+}
 async function rfCauta(refa) {
   var q = rfStare.cauta;
   if (!refa) { var el = rfEl("rfCautaIn"); if (el) q.text = String(el.value || "").slice(0, 40); }
@@ -334,14 +406,24 @@ async function rfCauta(refa) {
   // la refuz / eroare nu rămâne pe ecran cartela ALTEI monede sau a ALTUI interval
   function curataStrain() { if (q.m && (q.m.simbol !== sim || q.m.tf !== tf)) q.m = null; }
   try {
-    var pionex = sim + "_USDT_PERP", l = await rfLumanari(pionex, tf, adanc);
-    if (!l.bare && !l.refuz) { pionex = sim + "_USDT"; l = await rfLumanari(pionex, tf, adanc); }
-    if (l.refuz) { q.eroare = "Pionex a refuzat (prea multe cereri) - încearcă peste un minut."; curataStrain(); }
-    else if (!l.bare) { q.eroare = "Pionex n-are lumânări pentru " + sim + " (nici perp, nici spot) - verifică simbolul."; q.m = null; }
+    // v100.304 (I-807): cu listele Pionex venite, „n-are” se spune fără nicio cerere, iar moneda doar spot se cere direct pe spot
+    var sp = await rfSimboluriPionex(), ps = sp ? rfSimbolPionex(sp, sim) : sim;
+    // revizia Opus: listele mai vechi de 5 minute se recitesc o dată înainte de „n-are” (moneda poate fi listată de curând)
+    if (sp && !ps && Date.now() - sp.la > 5 * 60 * 1000) { sp = await rfSimboluriPionex(true); ps = sp ? rfSimbolPionex(sp, sim) : sim; }
+    if (sp && !ps) { q.eroare = "Pionex n-are " + sim + " (nici perp, nici spot) - verifică simbolul."; q.m = null; }
     else {
-      var cit = RangeFilter.citire(l.bare);
-      if (l.pag2Lipsa && cit && !cit.eroare) cit.doar500 = true;
-      q.m = { simbol: sim, pionex: pionex, fel: "cautata", tf: tf, c: cit }; q.tf = tf;
+      if (ps !== sim) { sim = ps; q.simbol = sim; }   // PUMPFUN ⇒ PUMP: cartela și „ultimele căutate” poartă simbolul Pionex
+      // perp doar dacă se tranzacționează (revizia Opus: perp scos + spot activ ⇒ spot, nu lumânările vechi ale perp-ului)
+      var pionex = sp && !sp.perp[sim] && sp.spot[sim] ? sim + "_USDT" : sim + "_USDT_PERP", l = await rfLumanari(pionex, tf, adanc);
+      if (!l.bare && !l.refuz && /_PERP$/.test(pionex) && (!sp || sp.exista[sim] && !sp.perp[sim] || sp.spot[sim])) { pionex = sim + "_USDT"; l = await rfLumanari(pionex, tf, adanc); }
+      if (l.refuz) { q.eroare = "Pionex a refuzat (prea multe cereri) - încearcă peste un minut."; curataStrain(); }
+      else if (!l.bare) { q.eroare = "Pionex n-are lumânări pentru " + sim + (sp ? "" : " (nici perp, nici spot)") + " - verifică simbolul."; q.m = null; }
+      else {
+        var cit = RangeFilter.citire(l.bare);
+        if (l.pag2Lipsa && cit && !cit.eroare) cit.doar500 = true;
+        q.m = { simbol: sim, pionex: pionex, fel: "cautata", tf: tf, c: cit }; q.tf = tf;
+        rfUltimeAdauga(sim);
+      }
     }
   } catch (e) { q.eroare = "nu am putut citi lumânările (" + String(e && e.message || e).slice(0, 80) + ")"; curataStrain(); }
   finally { q.inLucru = false; }
@@ -349,7 +431,7 @@ async function rfCauta(refa) {
   var urm = q.dinNou; q.dinNou = null;
   if (urm === "nou") return rfCauta(false);
   if (q.m && (urm === "refa" || tf !== rfStare.tf || adanc !== rfStare.adanc)) return rfCauta(true);
-  rfDeseneaza();   // toată pagina: corecția DOVEZII se schimbă și pe cartelele din corp
+  rfDeseneazaUltime(); rfDeseneaza();   // toată pagina: corecția DOVEZII se schimbă și pe cartelele din corp
 }
 // Enter în căsuță = „Analizează” (o singură dată, la încărcarea fișierului)
 if (typeof document !== "undefined" && document.addEventListener) document.addEventListener("keydown", function (e) { if (e.key === "Enter" && e.target && e.target.id === "rfCautaIn") { e.preventDefault(); rfCauta(false); } });
