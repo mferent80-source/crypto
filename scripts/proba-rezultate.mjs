@@ -52,7 +52,7 @@ await test("grupeaza cu „doar ⭐”: rămân doar simbolurile tale", () => {
 await test("htmlPagina fără cheie: câmpul cheii și butonul de salvare, fără tabel; spune unde se ține cheia", () => {
   const h = RZ.htmlPagina({ cheie: false });
   assert.match(h, /<input[^>]*id="rzCheie"[^>]*type="password"/); assert.match(h, /data-action-click="rzSalveazaCheie\(\)"/);
-  assert.match(h, /serverul Radarului de acasă/); assert.ok(!/<table/.test(h));
+  assert.match(h, /serverul Radarului de pe VPS/); assert.ok(!/<table/.test(h));
 });
 await test("htmlPagina cu cheie: filtrele 7/14/30 + toate / doar ⭐ (n), antetul zilei cu regula „de”, rândurile cu ⭐ și eticheta, textul escapat", () => {
   const h = RZ.htmlPagina({ cheie: true, zile: 7, doarStea: false, cal: { items: ITEMS, la: ACUM }, stele: STELE, acum: ACUM });

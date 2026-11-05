@@ -24,9 +24,9 @@ console.log("Proba v100.72 · sfaturile concise, pachetul 5 (Acasă, rapoartele,
 
 await test("obiceiurile: sumele cu virgulă, istoricul monedei într-o frază (cu „prea puțini” în paranteză), frâna cu acțiunea o dată", () => {
   const ist = Array.from({ length: 2 }, (_, i) => tr("BCH", i ? -12 : 1.32));
-  const t = OB.istoricMoneda(ist, "BCH").text; faraAb(t, "deCe", "istoricul pe 2 boți"); assert.match(t, /−11,08 USDT/); assert.match(t, /prea puțini/);
+  const t = OB.istoricMoneda(ist, "BCH").text; faraAb(t, "deCe", "istoricul pe 2 boți"); assert.match(t, /−11,1 USDT/); assert.match(t, /prea puțini/);
   const f = OB.frana({ trades: [tr("A", -12.05, { inchis: T0 - 2 * ORA }), tr("B", -12.05, { inchis: T0 - 3 * ORA })], acum: T0 });
-  faraAb(f.text, "deCe", "frâna"); assert.match(f.text, /−24,10 USDT/); assert.equal((f.text.match(/n-aș mai porni boți azi/gi) || []).length, 1, f.text);
+  faraAb(f.text, "deCe", "frâna"); assert.match(f.text, /−24,1 USDT/); assert.equal((f.text.match(/n-aș mai porni boți azi/gi) || []).length, 1, f.text);
 });
 
 await test("raportul de duminică: regula săptămânii la persoana I, „Laboratorul a dovedit” fără majuscule, rândurile ≤ 160 cu virgulă", () => {
@@ -52,7 +52,7 @@ await test("Acasă: BTC și bursa cu „−”; raportul săptămânii pieței c
 });
 
 await test("fișa: procentele cu „−” (GridCalcul.procent), gridul îngust fără „rămâi” și fără „ %” cu spațiu", () => {
-  assert.equal(G.procent(-0.012), "−1,20%", G.procent(-0.012));
+  assert.equal(G.procent(-0.012), "−1,2%", G.procent(-0.012)); assert.equal(G.procent(-0.003), "−0,30%");   // v100.306 (I-837): o zecimală la rezultate / virgula la prețuri
   for (const t of [{ nIndep: 30, lichidari: 0, mediana: -0.002 }, { nIndep: 30, lichidari: 0, mediana: 0.002, medie: -0.012 }]) { const m = GP.verdictIngust(t, 12); assert.doesNotMatch(m, /rămâi| %/, m); }
   const ri = GP.rezumatIngust({ propus: true, dir: "long", ore: 12, latime: 0.024, setare: { grile: 9 }, test: { perechiZi: 18.4, mediana: 0.0042, medie: 0.0051, pePlus: 0.64, celMaiRau: -0.021, nIndep: 31 } });
   assert.doesNotMatch(ri, / %/, ri); assert.match(ri, /31 de ferestre/, ri);

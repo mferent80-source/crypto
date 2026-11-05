@@ -26,7 +26,7 @@ const tr = (m, rez, o) => rez.map((r, i) => Object.assign({ id: m + i, moneda: m
 await test("istoricMoneda: pierzi -> avertizare, cu cifrele (boti, pe plus, net, cel mai rau)", () => {
   const r = OB.istoricMoneda(tr("KAITO", [10.5, -300, -600]), "KAITO");
   assert.equal(r.n, 3); assert.equal(r.plus, 1); assert.ok(Math.abs(r.net - (10 - 300.5 - 600.5)) < 1e-9); assert.equal(r.avertizare, true);
-  assert.match(r.text, /Pe KAITO pierzi/); assert.match(r.text, /3 boți/); assert.match(r.text, /−891,00 USDT|−891\.00 USDT/); assert.match(r.text, /cel mai rău −600/);
+  assert.match(r.text, /Pe KAITO pierzi/); assert.match(r.text, /3 boți/); assert.match(r.text, /−891,0 USDT/); assert.match(r.text, /cel mai rău −600/);
 });
 await test("istoricMoneda: castigi des dar pierderile mari mananca tot -> avertizare cu nuanta", () => {
   const r = OB.istoricMoneda(tr("RIVER", [2.5, 2.5, 2.5, -40]), "RIVER");
@@ -43,7 +43,7 @@ await test("subOOra: inchiderile din prima ora - de la 10, doar cand pierd; cu c
   const scurti = tr("A", Array(12).fill(-1), () => ({ durataOre: 0.5 })), lungi = tr("B", Array(5).fill(3), () => ({ durataOre: 5 }));
   const s = OB.subOOra(scurti.concat(lungi));
   assert.equal(s.n, 12); assert.ok(Math.abs(s.net - (-18)) < 1e-9); assert.ok(Math.abs(s.comisioane - (-6)) < 1e-9);
-  assert.match(s.text, /Boții închiși în prima oră: 12/); assert.match(s.text, /comisioane −6,00 USDT|comisioane −6\.00 USDT/);
+  assert.match(s.text, /Boții închiși în prima oră: 12/); assert.match(s.text, /comisioane −6,0 USDT/);   // v100.306 (I-837): o zecimală la rezultate / virgula la prețuri
   assert.equal(OB.subOOra(scurti.slice(0, 9)), null, "sub 10: nimic");
   assert.equal(OB.subOOra(tr("A", Array(12).fill(3), () => ({ durataOre: 0.5 }))), null, "pe plus: nimic");
 });

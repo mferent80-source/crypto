@@ -210,7 +210,7 @@ await test("3a înainte de deschidere (joi 08:00 New York) cu cotația extinsă:
 await test("3b pre-market-ul deja sub stop: verdictul primește motivul „prețul de pre-market e deja sub stop” (și nu mai e CUMPĂR)", async () => {
   const r = await poartaLa(JOI_8, MIERCURI, (C, acum) => ({ simbol: "BBB", randuri: bare5m(C, C, C * 0.9, acum) }), (P, C) => { P.$("t212PStop").value = String((C * 0.95).toFixed(2)); });
   const v = r.c.t212.poarta.v;
-  assert.ok(v.motive.some((m) => /^prețul de pre-market e deja sub stop \(\$[\d.]+, stopul \$[\d.]+\)/.test(m)), JSON.stringify(v.motive));
+  assert.ok(v.motive.some((m) => /^prețul de pre-market e deja sub stop \(\$[\d.,]+, stopul \$[\d.,]+\)/.test(m)), JSON.stringify(v.motive));   // v100.306 (I-837): o zecimală la rezultate / virgula la prețuri
   assert.notEqual(v.nivel, "cumpara");
   assert.ok(antet(r.html).includes("pre-market " + usd(r.C * 0.9) + " (−10,0% față de închidere)"), antet(r.html));
 });
@@ -239,7 +239,7 @@ await test("3f ActiuniSemnale.poarta: motivul vine doar sub stop; pragurile verd
   assert.deepEqual(AS2.poarta(Object.assign({}, baza, { extins: { pret: C * 0.97, faza: "pre" } })), v0, "peste stop: verdictul s-a schimbat");
   const v1 = AS2.poarta(Object.assign({}, baza, { extins: { pret: C * 0.9, faza: "pre" } }));
   assert.equal(v1.motive.length, v0.motive.length + 1); assert.deepEqual(v1.motive.slice(0, v0.motive.length), v0.motive);
-  assert.match(v1.motive[v1.motive.length - 1], /^prețul de pre-market e deja sub stop \(\$[\d.]+, stopul \$[\d.]+\): la deschidere s-ar atinge pe loc$/);
+  assert.match(v1.motive[v1.motive.length - 1], /^prețul de pre-market e deja sub stop \(\$[\d.,]+, stopul \$[\d.,]+\): la deschidere s-ar atinge pe loc$/);   // v100.306 (I-837): o zecimală la rezultate / virgula la prețuri
   assert.equal(v1.nivel, v0.nivel === "nu" ? "nu" : "asteapta");
   const v2 = AS2.poarta(Object.assign({}, baza, { extins: { pret: C * 0.9, faza: "pre", stop: C * 0.85 } }));
   assert.deepEqual(v2, v0, "stopul dat explicit (sub prețul extins) nu e atins");

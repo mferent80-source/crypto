@@ -214,7 +214,7 @@ export async function onRequestPost({ request, env }) {
       istoric: x && x.istoric ? { n: nr(x.istoric.n), pePlus: nr(x.istoric.pePlus), total: nr(x.istoric.total) } : null });
     const rev2 = (Array.isArray(corp && corp.reveniri) ? corp.reveniri : []).slice(0, 10).map(curataRev).filter((x) => x.ticker && x.pret > 0);
     const dvR = corp && corp.dovadaReveniri, dov2 = dvR && typeof dvR === "object" ? { n: nr(dvR.n), saptamani: nr(dvR.saptamani), pePlus: nr(dvR.pePlus), medie: nr(dvR.medie), mediana: nr(dvR.mediana),
-      baza: dvR.baza && typeof dvR.baza === "object" ? { n: nr(dvR.baza.n), pePlus: nr(dvR.baza.pePlus), medie: nr(dvR.baza.medie) } : null, eticheta: ["mai bine", "mai slab", "cam la fel"].includes(dvR.eticheta) ? dvR.eticheta : null, putine: dvR.putine === true } : null;
+      baza: dvR.baza && typeof dvR.baza === "object" ? { n: nr(dvR.baza.n), pePlus: nr(dvR.baza.pePlus), medie: nr(dvR.baza.medie) } : null, eticheta: ["mai bine", "mai slab", "cam la fel", "n-am aflat", "la fel, prea puține cazuri"].includes(dvR.eticheta) ? dvR.eticheta : null, putine: dvR.putine === true } : null;
     const uR = corp && corp.urmarireReveniri, urm2 = uR && typeof uR === "object" ? { n: nr(uR.n), pePlus: nr(uR.pePlus), medie: nr(uR.medie), text: txt(uR.text, 300) } : null;
     const zi = /^\d{4}-\d{2}-\d{2}$/.test(String(corp && corp.zi)) ? corp.zi : new Date().toISOString().slice(0, 10);
     const u = corp && corp.urmarire, urm = u && typeof u === "object" ? { n: nr(u.n), pePlus: nr(u.pePlus), medie: nr(u.medie), text: txt(u.text, 300) } : null;

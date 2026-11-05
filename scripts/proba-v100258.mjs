@@ -79,7 +79,7 @@ await test("(2) mediana pe plus, media pe minus pe zilele nevăzute ⇒ nu PORNE
   assert.equal(v({}).nivel, "porneste", "controlul: mediana și media pe plus");
   const r = v({ medie: -0.0139 });
   assert.equal(r.nivel, "asteapta");
-  assert.ok(r.motive.some((m) => /pe zilele nevăzute, media e pe minus \(−1,39%\): câștigă des puțin și pierde rar mult/.test(m)), r.motive.join(" | "));
+  assert.ok(r.motive.some((m) => /pe zilele nevăzute, media e pe minus \(−1,4%\): câștigă des puțin și pierde rar mult/.test(m)), r.motive.join(" | "));
   assert.equal(v({ medie: 0 }).nivel, "asteapta");
 });
 await test("(2) fără medie (fișă veche) ⇒ nu PORNEȘTE pe ghicite", () => {

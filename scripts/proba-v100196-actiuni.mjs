@@ -277,8 +277,8 @@ await test("B4 (🔵 UI 5). Poziții: stopul la 0% de preț nu mai scrie „−0
 });
 await test("B5 (🟡13). Prețul unei poziții din afara SUA în moneda ei (€, £, pence), nu cu „$”", () => {
   const P = pagina({}); P.c.t212.monede = { VUSAl_EQ: "GBX", RHMd_EQ: "EUR", EQQQl_EQ: "GBP" };
-  assert.equal(P.c.t212PretIn(9500, "VUSAl_EQ"), "9500.00 p"); assert.equal(P.c.t212PretIn(1520.5, "RHMd_EQ"), "€1520.50");
-  assert.equal(P.c.t212PretIn(412, "EQQQl_EQ"), "£412.00"); assert.equal(P.c.t212PretIn(29.5, "MU_US_EQ"), "$29.50");
+  assert.equal(P.c.t212PretIn(9500, "VUSAl_EQ"), "9.500,00 p"); assert.equal(P.c.t212PretIn(1520.5, "RHMd_EQ"), "€1.520,50");
+  assert.equal(P.c.t212PretIn(412, "EQQQl_EQ"), "£412,00"); assert.equal(P.c.t212PretIn(29.5, "MU_US_EQ"), "$29,50");   // v100.306 (I-837): virgula zecimală la prețurile în $ / € / £
   const h = randPoz(P, { ticker: "RHMd_EQ", simbol: "RHM" });
   assert.match(h, /<td class="c-acum">€\d/, "„Acum” pe RHM în euro"); assert.match(h, /mediu €\d/); assert.ok(!/<td class="c-acum">\$/.test(h));
 });

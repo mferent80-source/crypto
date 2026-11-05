@@ -162,7 +162,7 @@
     cel("T212 deschise", t ? '<span class="' + (t.minus ? "pzR" : "pzV") + '">' + esc(t.deschise) + '</span> <small>lei</small>' : "—", "", t ? "Trading 212: cont " + t.cont + " lei" : "se citește din rândul contului, când e adus", "t212");
     var a = alerteNr(); cel("alerte necitite", a.t,   /* audit 23.10: „alerte 0” stătea sub „CRITICE: 4+” (deschiderea Alertelor le citește) */ a.n ? "pzAtentie" : "", "alerte necitite", "alerts");
     var c = D.col;
-    cel("colectorul de acasă", c ? (c.viu ? '<span class="pzV">merge</span> <small>acum ' + c.min + ' min</small>' : '<span class="pzR">oprit de ' + c.min + ' min</span>') : "—", c && !c.viu ? "pzRosu" : "", c ? (c.viu ? "colectorul a dat semn acum " + c.min + " min" : "ultimul semn al colectorului: acum " + c.min + " min — pornește PORNESTE-CRYPTO-RADAR.bat") : "colectorul nu a dat semn (sau serverul de acasă nu răspunde)", "tabloubot");   /* nu „cloud”: Cloud Monitor e despre D1, nu despre colector (harta paginilor) */
+    cel("colectorul de pe VPS", c ? (c.viu ? '<span class="pzV">merge</span> <small>acum ' + c.min + ' min</small>' : '<span class="pzR">oprit de ' + c.min + ' min</span>') : "—", c && !c.viu ? "pzRosu" : "", c ? (c.viu ? "colectorul a dat semn acum " + c.min + " min" : "ultimul semn al colectorului: acum " + c.min + " min — pe VPS, aș rula sarcina „Crypto Radar pornire”") : "colectorul nu a dat semn (sau serverul Radarului nu răspunde)", "tabloubot");   /* nu „cloud”: Cloud Monitor e despre D1, nu despre colector (harta paginilor) */
     return C.join("");
   }
   function fasie() {

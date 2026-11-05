@@ -70,17 +70,17 @@ await test("2 colectorul dă sfaturilor ratele Pionex (d.funding: rate, hist, in
 const AS = cuLib(["actiuni-semnale.js"]).ActiuniSemnale;
 await test("3a frâna pe minus: euro la Xetra, dolari la New York", () => {
   const de = AS.alertaFrana({ ticker: "SAPd_EQ", pret: 180.5, mediu: 200, sub: -0.0975, nr: 1, suma: 900 }, "SAP");
-  assert.match(de.mesaj, /€180\.50/); assert.doesNotMatch(de.mesaj, /\$/);
+  assert.match(de.mesaj, /€180,50/); assert.doesNotMatch(de.mesaj, /\$/);
   const us = AS.alertaFrana({ ticker: "AAPL_US_EQ", pret: 180.5, mediu: 200, sub: -0.0975, nr: 1, suma: 900 }, "AAPL");
-  assert.match(us.mesaj, /\$180\.50/);
+  assert.match(us.mesaj, /\$180,50/);
 });
 await test("3b planul (stop / țintă): moneda simbolului; Londra fără metadate fără semn, cu metadate în lire / pence", () => {
   const p = (ticker) => ({ ticker, simbol: ticker.split("_")[0], pret: 90, plan: { stop: 95, tinta: 80 } });
   const de = AS.alertePlan(p("SAPd_EQ"), Date.UTC(2026, 9, 30), {});
   assert.ok(de.length === 2, "alertele: " + de.length); assert.ok(de.every((a) => !/\$/.test(a.titlu + a.mesaj)), JSON.stringify(de));
-  assert.match(de[0].titlu, /€95\.00/);
-  const us = AS.alertePlan(p("AAPL_US_EQ"), Date.UTC(2026, 9, 30), {}); assert.match(us[0].titlu, /\$95\.00/);
-  const lp = AS.alertePlan(p("VODl_EQ"), Date.UTC(2026, 9, 30), { monede: { VODl_EQ: "GBX" } }); assert.match(lp[0].titlu, /95\.00 p/);
+  assert.match(de[0].titlu, /€95,00/);
+  const us = AS.alertePlan(p("AAPL_US_EQ"), Date.UTC(2026, 9, 30), {}); assert.match(us[0].titlu, /\$95,00/);
+  const lp = AS.alertePlan(p("VODl_EQ"), Date.UTC(2026, 9, 30), { monede: { VODl_EQ: "GBX" } }); assert.match(lp[0].titlu, /95,00 p/);
   const ln = AS.alertePlan(p("VODl_EQ"), Date.UTC(2026, 9, 30), {}); assert.doesNotMatch(ln[0].titlu, /[$€£]/);
 });
 

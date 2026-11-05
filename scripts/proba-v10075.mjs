@@ -91,7 +91,7 @@ await test("(4a) autopsia pe datele lungi: fiecare rând ≤ 160 (motivul real d
   const lung = rd.linii.flatMap(randuri).filter((l) => l.length > 160);
   assert.equal(lung.length, 0, lung.map((l) => l.length + ": " + l).join("\n"));
   const tot = rd.linii.join("\n");
-  for (const x of [NOU, VECHI, "MARSCOIN", "1000BONK", "−6,40 → +2,20 USDT", "ar fi costat 8,60 USDT", "+4,60 → −1,10 USDT", "ar fi costat 5,70 USDT"]) assert.ok(tot.includes(x), "lipsește: " + x + "\n" + tot);
+  for (const x of [NOU, VECHI, "MARSCOIN", "1000BONK", "−6,4 → +2,2 USDT", "ar fi costat 8,60 USDT", "+4,6 → −1,1 USDT", "ar fi costat 5,70 USDT"]) assert.ok(tot.includes(x), "lipsește: " + x + "\n" + tot);
 });
 
 await test("(4b) poarta: rândul „moneda” ≤ 160 și la peste 100 de boți; numele botului („LIT = LIGHTER la boții Pionex”) e notă, arătată pe fișă", () => {

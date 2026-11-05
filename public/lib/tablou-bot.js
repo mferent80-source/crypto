@@ -609,29 +609,29 @@ var TabloBot = (function () {
       return { local: local, titlu: "Nu ajung la server",
         ceFac: publicat
           ? "Nu am legătură cu serverul - verifică internetul. (" + brut + ")"
-          : "Serverul de acasă e oprit — pornește PORNESTE-CRYPTO-RADAR.bat. (" + brut + ")" };
+          : "Serverul Radarului nu răspunde — pe VPS, aș rula sarcina „Crypto Radar pornire”. (" + brut + ")" };
     }
     if (/APP_API_TOKEN_NOT_CONFIGURED/.test(brut)) {
-      return { local: local, titlu: "Parola aplicației nu e pusă pe server — pornește din nou .bat",
+      return { local: local, titlu: "Parola aplicației nu e pusă pe server",
         ceFac: "Serverul rulează, dar nu are parola aplicației (APP_API_TOKEN). " +
-          "Închide fereastra neagră și pornește din nou cu PORNESTE-CRYPTO-RADAR.bat - " +
-          "îți cere parola și cele două chei Pionex o dată, la pornire." };
+          "Pe VPS, parola stă în C:\\Users\\Cimin\\crypto\\.dev.vars; după ce o pui, " +
+          "aș rula sarcina „Crypto Radar pornire”." };
     }
     if (eNeconfigurat) {
       return { local: local, titlu: "Cheile Pionex nu sunt puse",
         ceFac: "Serverul rulează, dar nu are cheile Pionex sau parola aplicației. " +
-          "Închide fereastra neagră și pornește din nou cu PORNESTE-CRYPTO-RADAR.bat - " +
-          "îți cere cele trei chei o dată, la pornire." };
+          "Pe VPS, cheile stau în C:\\Users\\Cimin\\crypto\\.dev.vars; după ce le pui, " +
+          "aș rula sarcina „Crypto Radar pornire”." };
     }
     if (eParola) {
       var gresita = /AUTH_INVALID/.test(brut);
       return { local: local,
         titlu: gresita ? "Parola aplicației nu se potrivește" : "Lipsește parola aplicației",
         ceFac: "Pune parola în Setări (butonul ⚙)" + (gresita ? " - cea de acum nu se potrivește" : "") +
-          ". Parola e textul APP_API_TOKEN pe care l-ai dat la pornirea cu PORNESTE-CRYPTO-RADAR.bat." +
+          ". Parola e textul APP_API_TOKEN din .dev.vars-ul Radarului de pe VPS." +
           (publicat ? " Atenție: pe versiunea publicată boții tot nu se văd - Pionex refuză " +
-            "cererile venite de la Cloudflare. Ca să-ți vezi boții, pornește aplicația acasă " +
-            "cu PORNESTE-CRYPTO-RADAR.bat și deschide adresa pe care ți-o scrie el." : "") };
+            "cererile venite de la Cloudflare. Ca să-ți vezi boții, deschide " +
+            "Radarul de pe server (mau.tail9144fe.ts.net:8443)." : "") };
     }
     if (eDrept) {
       return { local: local, titlu: "Cheia Pionex nu are voie să citească boții",
@@ -643,12 +643,12 @@ var TabloBot = (function () {
       return { local: local, titlu: "Pionex refuză cererile de aici",
         ceFac: "Nu e vina ta și nu trece cu așteptarea: măsurat, refuzul vine cu " +
           "găleata de jetoane PLINĂ, deci e refuz de adresă, nu limitare de ritm. " +
-          "De acasă merge: deschide „Crypto Radar (local)” de pe Desktop (http://127.0.0.1:8788)." };
+          "De pe server merge: deschide mau.tail9144fe.ts.net:8443." };
     }
     if (/NO_ROUTE/.test(brut)) {
       return { local: local, titlu: "Serverul nu cunoaște cererea asta",
-        ceFac: "Serverul de acasă rulează o versiune mai veche decât pagina - închide " +
-          "fereastra Radarului și pornește din nou PORNESTE-CRYPTO-RADAR.bat." };
+        ceFac: "Serverul Radarului rulează o versiune mai veche decât pagina - pe VPS, " +
+          "aș rula sarcina „Crypto Radar pornire” (aduce versiunea nouă și reface serverul)." };
     }
     if (eRitm) {
       return { local: local, titlu: "Prea multe cereri",

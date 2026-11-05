@@ -132,7 +132,7 @@ function ciHtml(r, st) {
   var vechi = acum - r.la > 12 * 3600000;
   var d = new Date(r.la), p2 = function (n) { return String(n).padStart(2, "0"); };
   h += '<p class="tbSub ciLa">Raportul de la ' + p2(d.getDate()) + "." + p2(d.getMonth() + 1) + ", ora " + p2(d.getHours()) + ":" + p2(d.getMinutes()) + " · se reface la 6 ore · pozițiile de acum puse pe istoria reală; e un calcul, nu o promisiune.</p>";
-  if (vechi) h += '<p class="tbWarn">⚠ Raportul e vechi de ' + ciEsc(ciCate(Math.round((acum - r.la) / 3600000), "oră", "ore")) + ": colectorul nu l-a refăcut (e pornit PC-ul de acasă?).</p>";
+  if (vechi) h += '<p class="tbWarn">⚠ Raportul e vechi de ' + ciEsc(ciCate(Math.round((acum - r.la) / 3600000), "oră", "ore")) + ": colectorul nu l-a refăcut (merge colectorul de pe VPS?).</p>";
   // răspunsul
   var cr = (r.stres || [])[0], txt = "Contul tău: " + ciLei(tot) + (v.complet ? "" : " (fără " + (v.lipsa || []).join(", ") + ")") + ".";
   if (rs.var95 != null) txt += " Într-o zi proastă (1 din 20) pozițiile de acum pierd cel puțin ~" + ciLei(rs.var95) + (tot > 0 ? " (" + ciPct(rs.var95 / tot).replace("+", "") + ")" : "") + "; în medie, în zilele acelea, ~" + ciLei(rs.es95) + ".";

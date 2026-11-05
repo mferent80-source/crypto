@@ -56,7 +56,7 @@ await test("(1c) T212: rândul arată „🎲 revine la intrare: X% în 60 z” 
   const p = { revine: { p: 0.13, pCapat: 0.07, zile: 60 }, pretMediu: 120.5 };
   const h = G.t212RevineHtml(p);
   assert.equal(h.mic, '<span class="t212Mic t212RevMic">🎲 revine la intrare: 13% în 60 z</span>');
-  assert.match(h.det, /Șansa să revină la prețul tău de intrare \(\$120\.50\) măcar o dată în 60 de zile de bursă: <b>13%<\/b>; la capăt peste intrare: 7%/);
+  assert.match(h.det, /Șansa să revină la prețul tău de intrare \(\$120,50\) măcar o dată în 60 de zile de bursă: <b>13%<\/b>; la capăt peste intrare: 7%/);
   assert.deepEqual(G.t212RevineHtml({}), { mic: "", det: "" });
   assert.match(functie(TE, "t212RandPozitie"), /t212RevineHtml\(p\)/);
   // .t212Mic.t212RevMic: regula telefonului „td.c-stop .t212Mic{display:inline}” are aceeași greutate și vine după ⇒ bătea „none” (văzut în poză)

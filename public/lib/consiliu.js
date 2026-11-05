@@ -443,7 +443,7 @@ var Consiliu = (function () {
     var scumpe = toate.filter(function (x) { return x.gresit && x.cost < 0 && x.t > acum - 14 * ZI && x.t <= acum; }).sort(function (a, b) { return echiv(a) - echiv(b); }).slice(0, 3);
     var linii = scumpe.length ? scumpe.map(function (x) {
       return (NV_ACT[x.nivel] || x.nivel) + " pe " + String(x.ticker).split("_")[0] + " (" + new Date(x.t).toISOString().slice(5, 10).split("-").reverse().join(".") + ", motive: " + x.coduri.join(", ") + "): starea de atunci: " + etStare(x.stare)
-        + "; în 5 zile de bursă prețul a mers de la $" + (nr(x.pret) !== null ? nr(x.pret).toFixed(2) : "—") + " la $" + (nr(x.c5) !== null ? nr(x.c5).toFixed(2) : "—") + " — urmat, te-ar fi costat " + Ban(x) + ".";
+        + "; în 5 zile de bursă prețul a mers de la $" + (nr(x.pret) !== null ? nr(x.pret).toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, ".") : "—") + " la $" + (nr(x.c5) !== null ? nr(x.c5).toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, ".") : "—") + " — urmat, te-ar fi costat " + Ban(x) + ".";
     }) : ["Niciun sfat greșit judecat pe acțiuni săptămâna asta."];
     var gr = {};
     toate.forEach(function (x) {

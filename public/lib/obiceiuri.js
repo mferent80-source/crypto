@@ -16,7 +16,8 @@ var Obiceiuri = (function () {
     var x = Number(v); return isFinite(x) ? x : null;
   }
   // v100.72 (sfaturile concise, pachetul 5): sumele cu virgula („−52,50 USDT”, nu „−52.50 USDT”); „1 bot”, „20 de boți” prin TextRo.cate
-  var U = function (v) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(2).replace(".", ",") + " USDT"; };
+  // v100.306 (I-837): O zecimală (regula lui) și punctul miilor („−574,1 USDT”, „−2.420,2 USDT”); sub 0,1 două, ca „0,04” să nu iasă „0,0”
+  var U = function (v) { var a = Math.abs(v), p = a.toFixed(a > 0 && a < 0.1 ? 2 : 1).split("."); return (v >= 0 ? "+" : "−") + p[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "," + p[1] + " USDT"; };
   // v100.75 (ideea 4): un text mai lung decât max se rupe în rânduri ≤ max (nimic tăiat); v100.78: ruperea stă într-un singur loc -
   // TextRo.rupe (la granița de sens, altfel pe cuvinte); fără TextRo, rândul rămâne întreg
   function rupe(t, max) { return typeof TextRo !== "undefined" && TextRo.rupe ? TextRo.rupe(t, max) : String(t); }

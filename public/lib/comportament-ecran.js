@@ -136,12 +136,12 @@ function coHtml(r, ui) {
   var acum = ui.acum || Date.now(), btn = '<button type="button" class="coBtn" data-action-click="coPorneste(true)">Reîmprospătează</button>';
   var cap = function (sub) { return '<header class="coCapPag"><div><h2 class="coH1">Comportament</h2><p class="coMut coMic">' + sub + "</p></div>" + btn + "</header>"; };
   if (!r || typeof r !== "object" || r.forma !== 1) {
-    return cap("Ce ai făcut cu boții tăi și cât te-a costat.") + '<p class="coMut">' + (ui.eroare ? "N-am putut aduce raportul: " + coEsc(ui.eroare) + ". Reîncearcă." : ui.inLucru ? "Aduc raportul colectorului…" : "Colectorul de acasă n-a trimis încă raportul paginii. Vine în câteva minute după ce pornește colectorul v101.158; apasă Reîmprospătează.") + "</p>";
+    return cap("Ce ai făcut cu boții tăi și cât te-a costat.") + '<p class="coMut">' + (ui.eroare ? "N-am putut aduce raportul: " + coEsc(ui.eroare) + ". Reîncearcă." : ui.inLucru ? "Aduc raportul colectorului…" : "Colectorul de pe VPS n-a trimis încă raportul paginii. Vine în câteva minute după ce pornește colectorul v101.158; apasă Reîmprospătează.") + "</p>";
   }
   // v100.306 (auditul final 05.11): fără niciun bot pornit raportul rămânea vechi și pagina zicea „colectorul pare oprit” (fals: colectorul
   // mergea, n-avea ce număra) ⇒ spune ce e: niciun bot pornit, și ultimul închis. ui.botiActivi: numărul citit, null = necitit.
   var vechi = acum - Number(r.la) > 30 * 60000, faraBoti = ui.botiActivi === 0;
-  var h = cap("Ce ai făcut cu boții tăi și cât te-a costat. Pregătit de colectorul de acasă la " + coEsc(coOra(r.la, acum)) + "."
+  var h = cap("Ce ai făcut cu boții tăi și cât te-a costat. Pregătit de colectorul de pe VPS la " + coEsc(coOra(r.la, acum)) + "."
     + (vechi && faraBoti ? ' <span class="coMut">Niciun bot pornit acum' + (ui.ultimInchis ? "; ultimul închis: " + coEsc(ui.ultimInchis) : "") + ".</span>" : vechi ? ' <span class="coAtentie">Raportul are peste 30 de minute: colectorul pare oprit.</span>' : "") + (ui.eroare ? ' <span class="coAtentie">Reîmprospătarea n-a mers: ' + coEsc(ui.eroare) + ".</span>" : ""));
   if (r.evaluariLegat === false) h += '<p class="coAtentie">Canalul evaluărilor nu e legat la colector (DISCORD_WEBHOOK_EVALUARI): evaluările, seara și regulile pe date noi nu se mai actualizează.</p>';
   h += coEvalHtml(r);

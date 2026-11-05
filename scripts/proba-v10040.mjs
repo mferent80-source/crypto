@@ -57,7 +57,7 @@ await test("🟡 jurnalul: fiecare bot are NETUL (realizat + comisioane + fundin
   aprox(l[0].net, 0.7, 1e-9, "net"); aprox(r.net, 26 * 0.7, 1e-9, "suma neta");
   assert.equal(r.pePlusNet, 26);
   const rap = OB.raportDuminica({ trades: l, acum: ACUM });
-  assert.match(rap.linii[0], /26 de boți închiși, net \+18,20 USDT/, rap.linii[0]);   /* v100.72: virgula zecimală; „26 de boți” */
+  assert.match(rap.linii[0], /26 de boți închiși, net \+18,2 USDT/, rap.linii[0]);   /* v100.72: virgula zecimală; „26 de boți” */
   assert.equal(rap.n, 26);
   // un bot pe plus brut dar pe minus net
   const b2 = JT.din([{ ...boti[0], buOrderData: { ...boti[0].buOrderData, totalRealizedProfit: "0.1", totalFee: "-0.3" } }]);
@@ -244,7 +244,7 @@ await test("🔵 curatenie: trainTemporalModel (nechemata) scoasa; Ctrl+K are ec
   // v100.69 (pachetul 4): 2 zecimale de la $1 (nu de la $10): a treia nu se poate cota peste $1, iar „$4.900” langa „2.100 lei” se citea ca mii;
   // t212Usd cheama ActiuniSemnale.usd (aceeasi forma in pagina, Consilier si alerte)
   globalThis.ActiuniSemnale = globalThis.ActiuniSemnale || new Function(`${lib("actiuni-semnale.js")}; return ActiuniSemnale;`).call(globalThis);
-  assert.equal(usd(26.0871), "$26.09"); assert.equal(usd(5.123), "$5.12"); assert.equal(usd(250.5), "$250.50");
+  assert.equal(usd(26.0871), "$26,09"); assert.equal(usd(5.123), "$5,12"); assert.equal(usd(250.5), "$250,50"); assert.equal(usd(1234.5), "$1.234,50");   // v100.306 (I-837): virgula zecimală la prețurile în $ / € / £
 });
 
 await test("🟡 copia KV si pe ALT disc (E:) - arhiva botilor nu mai sta doar pe C:", () => {

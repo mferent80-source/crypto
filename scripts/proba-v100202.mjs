@@ -40,7 +40,7 @@ await test("în desen: verdictul „fără legătură” doar fără cifre pe ec
   assert.match(f, /else if \(faraServer && !cl\) v = acFaraServerVerd\(d\);/);
   assert.match(f, /faraServer && !ndxL && !qqq \? acFaraServerVerd\(d\)/);
   assert.match(f, /var faraServer = acFaraServer\(d\), bunLa = d\.clasamentLa \|\| 0;/);
-  assert.match(f, /serverul de acasă nu răspunde acum/);
+  assert.match(f, /serverul Radarului nu răspunde acum/);   // v100.306: Radarul rulează pe VPS
   assert.ok(!/actualizat " \+ \(acasa\.la \?/.test(f), "„actualizat” nu mai ia ora încercării");
 });
 await test("cipul de sus: „fără analiză”, nu „date: —”", () => {

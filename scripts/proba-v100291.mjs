@@ -122,7 +122,7 @@ const P = { ticker: "MU_US_EQ", simbol: "MU", sem: { nivel: "iesi", motive: ["�
 const bare30 = Array.from({ length: 60 }, (_, i) => ({ t: Date.parse("2026-08-01T13:30:00Z") + i * 86400000, o: 900 + i, h: 910 + i, l: 890 + i, c: 905 + i, v: 1 }));
 await test("8. rândul compact are curba; fișa are capul cu etichetele vechi ale tabelului (Acțiune … Plan), „Ce ai de făcut cu MU”, apoi graficul, apoi detaliul; ascunsă cât nu e aleasă", () => {
   const f = fn("t212RandPozitie");
-  T.t212.bare.MU_US_EQ = bare30; T.t212.todo = [{ tk: "MU_US_EQ", c: "r", t: "MU a coborât sub stopul calculat ($925.84)", s: "Aș ieși." }, { t: "general", c: "g", s: "" }];
+  T.t212.bare.MU_US_EQ = bare30; T.t212.todo = [{ tk: "MU_US_EQ", c: "r", t: "MU a coborât sub stopul calculat ($925,84)", s: "Aș ieși." }, { t: "general", c: "g", s: "" }];
   T.t212.deschis = {};
   const inchis = f(P), [rand, det] = inchis.split('<tr class="t212Det"');
   assert.match(rand, /<tr class="t212Rand[^"]*" id="t212R-MU_US_EQ"/); assert.match(rand, /<td class="c-spark"><svg[^>]*class="t212Spark/);
@@ -133,7 +133,7 @@ await test("8. rândul compact are curba; fișa are capul cu etichetele vechi al
   const cap = d.slice(d.indexOf('class="t212FisaCap"'), d.indexOf('class="t212Graf"'));
   assert.ok(d.indexOf('class="t212FisaCap"') > 0, "capul fișei");
   for (const et of ["Acțiune", "Acum", "Rezultat", "Stop calculat", "Țintă", "Trend", "Din cont", "Plan"]) assert.match(cap, new RegExp('<span class="t212Et">' + et + "</span>"), et);
-  assert.match(cap, /\$889\.15/); assert.match(cap, /−648 lei/); assert.match(cap, /21%/); assert.match(cap, /✓ −15% de la max · țintă \$1311\.36/);
+  assert.match(cap, /\$889,15/); assert.match(cap, /−648 lei/); assert.match(cap, /21%/); assert.match(cap, /✓ −15% de la max · țintă \$1\.311,36/);   // v100.306 (I-837): o zecimală la rezultate / virgula la prețuri
   assert.match(cap, /Ce ai de făcut cu MU/); assert.match(cap, /MU a coborât sub stopul calculat/); assert.doesNotMatch(cap, />general</);
   assert.ok(d.indexOf('class="t212Graf"') < d.indexOf('class="t212DetGrila"'), "graficul înaintea detaliului, ca în demo");
 });

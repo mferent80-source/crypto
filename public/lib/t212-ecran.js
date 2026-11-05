@@ -16,7 +16,7 @@ function t212Usd(v) { return ActiuniSemnale.usd(v); }   // v100.69: o singura fo
 function t212ZiScurta(iso) { var m = String(iso || "").match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? m[3] + "." + m[2] : "—"; }
 function t212Cls(v) { return v === null || v === undefined || !isFinite(v) ? "" : v >= 0 ? "good" : "bad"; }
 function t212Nr(v) { var x = Number(String(v === null || v === undefined ? "" : v).replace(",", ".").trim()); return String(v || "").trim() && isFinite(x) && x > 0 ? x : null; }
-function t212Eroare(e) { var m = e && e.message || String(e); return /503|PUNE-CHEILE|Lipsesc T212/.test(m) ? "Lipsesc cheile Trading 212 pe serverul de acasă: pornește PUNE-CHEILE-T212.bat, apoi repornește Radarul." : /401|AUTH/.test(m) ? "Serverul a cerut parola aplicației (Setări)." : m; }
+function t212Eroare(e) { var m = e && e.message || String(e); return /503|PUNE-CHEILE|Lipsesc T212/.test(m) ? "Lipsesc cheile Trading 212 pe serverul Radarului: pe VPS se pun în C:\Users\Cimin\crypto\.dev.vars (T212_API_KEY, T212_API_SECRET), apoi aș rula sarcina „Crypto Radar pornire”." : /401|AUTH/.test(m) ? "Serverul a cerut parola aplicației (Setări)." : m; }
 
 async function t212Porneste(forta) {
   if (t212.inLucru) return;
@@ -332,7 +332,7 @@ async function t212PlanSalveaza(tk) {
     // v100.291: salvat ⇒ câmpurile trimise nu mai sunt „scrise și nesalvate” (altfel redesenarea le-ar pune înapoi peste planul nou / șters)
     CAMPURI.forEach(function (k) { var e = $(k + tk); if (e && e.value === trimis[k]) e.defaultValue = e.value; });
     t212.planuri[tk] = d && d.plan || null; t212Render();
-    toast(gol ? "Planul e șters" : "Planul e salvat; colectorul de acasă te anunță când prețul îl atinge", "good");
+    toast(gol ? "Planul e șters" : "Planul e salvat; colectorul de pe VPS te anunță când prețul îl atinge", "good");
   } catch (e) { toast("Planul nu s-a salvat: " + t212Eroare(e), "bad"); } finally { t212.salvez = false; }
 }
 
@@ -1418,7 +1418,7 @@ function jtRenderActiuni() {
   var box = $("jtActiuni"); if (!box || box.hidden) return;
   var j = t212Jurnal();
   // v100.220: cardul scorului T212 stă sus și fără istoric (0 trade-uri, „ziua 1”) - fila se rescrie toată, deci îl desenăm după
-  if (!j) { box.innerHTML = (jtFiltru === "actiuni" ? '<div id="jtScorT212"></div>' : "") + '<div class="tbBloc"><p class="tbSub">' + escapeHtml(t212.inLucru ? "citesc istoricul Trading 212…" : t212.istoricEroare || "Istoricul Trading 212 nu e încă strâns: colectorul de acasă îl coboară (o pagină la 11 s), apoi apare aici.") + '</p></div>'; if (typeof scDeseneaza === "function") scDeseneaza(); return; }
+  if (!j) { box.innerHTML = (jtFiltru === "actiuni" ? '<div id="jtScorT212"></div>' : "") + '<div class="tbBloc"><p class="tbSub">' + escapeHtml(t212.inLucru ? "citesc istoricul Trading 212…" : t212.istoricEroare || "Istoricul Trading 212 nu e încă strâns: colectorul de pe VPS îl coboară (o pagină la 11 s), apoi apare aici.") + '</p></div>'; if (typeof scDeseneaza === "function") scDeseneaza(); return; }
   var r = j.r, l = j.p.inchise, P = t212Pct, L = function (v) { return t212Lei(v); }, cls = t212Cls;
   var cel = function (et, v, c, sub) { return '<div class="tbKpiCel"><span class="tbEt2">' + escapeHtml(et) + '</span><b class="tbKpiVal ' + (c || "") + '">' + escapeHtml(v) + '</b>' + (sub ? '<span class="tbSub">' + escapeHtml(sub) + '</span>' : "") + '</div>'; };
   var st = t212.istoric.stare || {}, h = '<h3 class="jtTitluPiata">📈 Acțiuni · Trading 212</h3>' + (jtFiltru === "actiuni" ? '<div id="jtScorT212"></div><div id="jtStatActiuni"></div>' : "");   // v100.22: statistica T212 sus pe fila ei   // v100.220: + scorul sezonului T212
@@ -1477,7 +1477,7 @@ function t212Variante(l) {
 function t212StopBloc(l) {
   var x = t212Variante(l), L = function (v) { return t212Lei(v); };
   if (!x) return "";
-  if (!x.rs.judecate && !x.ru.judecate) return '<div class="tbBloc"><div class="tbBlocCap"><h4>✂️ Cât te-ar fi salvat stopul</h4></div><p class="tbSub">Colectorul de acasă rejoacă trade-urile tale cu un stop (40 de acțiuni pe oră). Încă n-a terminat niciunul.</p></div>';
+  if (!x.rs.judecate && !x.ru.judecate) return '<div class="tbBloc"><div class="tbBlocCap"><h4>✂️ Cât te-ar fi salvat stopul</h4></div><p class="tbSub">Colectorul de pe VPS rejoacă trade-urile tale cu un stop (40 de acțiuni pe oră). Încă n-a terminat niciunul.</p></div>';
   var rand = function (v) { return '<tr><td>' + escapeHtml(v.et) + '</td><td class="' + t212Cls(v.total) + '"><b>' + L(v.total) + '</b></td><td class="' + t212Cls(v.dif) + '">' + L(v.dif) + '</td><td>' + v.atinse + '</td><td>' + v.taiate + '</td></tr>'; };
   var b = x.best, fara = b.dif <= 0;
   return '<div class="tbBloc"><div class="tbBlocCap"><h4>✂️ Cât te-ar fi salvat stopul</h4><span class="tbSub">trade-urile tale rejucate pe prețurile zilnice reale · ' + x.rs.judecate + ' judecate</span></div>'
@@ -1548,7 +1548,7 @@ function t212RaportDecl(l) {
 function t212PionexIncomplet() {
   var A = typeof jtArhiva !== "undefined" ? jtArhiva : null;
   if (A && A.sursa === "acasa" && A.complet) return "";
-  return "⚠️ Pionex: nu e anul întreg — " + (A && A.sursa === "acasa" ? "colectorul de acasă încă strânge istoria boților" : "aici se văd doar ultimii boți (prima pagină Pionex); toată istoria se vede pe pagina de acasă") + ".";
+  return "⚠️ Pionex: nu e anul întreg — " + (A && A.sursa === "acasa" ? "colectorul de pe VPS încă strânge istoria boților" : "aici se văd doar ultimii boți (prima pagină Pionex); toată istoria se vede pe Radarul de pe server") + ".";
 }
 function t212DeclaratieBloc(l) {
   var r = t212RaportDecl(l), t = r.t212, px = r.pionex, L = function (v) { return t212Lei(v, 2); }, pxInc = t212PionexIncomplet();
@@ -1609,11 +1609,11 @@ function t212ReguliBloc(l) {
 // 🍒 "Daca ascultai de Radar" pe actiuni: verdictul portii la ora fiecarei cumparari (colectorul de acasa)
 function t212Cireasa(l) {
   var cfm = t212.cf;
-  if (!cfm) return '<p class="tbSub">🍒 „Dacă ascultai de Radar” se socotește pe serverul de acasă.</p>';
+  if (!cfm) return '<p class="tbSub">🍒 „Dacă ascultai de Radar” se socotește pe serverul Radarului.</p>';
   var m = { cumpara: "porneste", asteapta: "asteapta", nu: "nu" };
   var cr = Contrafactual.rezumat(l.map(function (t) { var z = cfm[t.id]; return { t: t, z: { nivel: z && m[z.nivel] || "fara-date" } }; }));
   var toate = l.filter(function (t) { return cfm[t.id]; }).length;
-  if (!cr.judecate) return '<p class="tbSub">🍒 „Dacă ascultai de Radar”: colectorul de acasă îl socotește pentru fiecare trade (40 de acțiuni pe oră). ' + (toate ? t212Cate(toate, "trade văzut", "trade-uri văzute") + (toate === 1 ? ', fără prețuri pentru el.' : ', fără prețuri pentru ele.') : 'Încă n-a terminat niciunul.') + '</p>';
+  if (!cr.judecate) return '<p class="tbSub">🍒 „Dacă ascultai de Radar”: colectorul de pe VPS îl socotește pentru fiecare trade (40 de acțiuni pe oră). ' + (toate ? t212Cate(toate, "trade văzut", "trade-uri văzute") + (toate === 1 ? ', fără prețuri pentru el.' : ', fără prețuri pentru ele.') : 'Încă n-a terminat niciunul.') + '</p>';
   var L = function (v) { return t212Lei(v); }, cls = t212Cls, bine = cr.doarVerde > cr.realJudecate;
   return '<div class="jtCireasa"><h4>🍒 Dacă ascultai de Radar</h4><div class="jtCirGrid">'
     + '<div><span class="tbEt2">Ce ai făcut (pe cei ' + cr.judecate + ' judecați)</span><b class="' + cls(cr.realJudecate) + '">' + L(cr.realJudecate) + '</b></div>'

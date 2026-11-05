@@ -520,7 +520,7 @@ export async function onRequestPost({request,env}){
   }
   if(action==="sugestii"){
     // v100.85 (reveniri + short): istoricul (piața + boții lui), urmărirea și notările zilei - curățate; notările fără dubluri, 150 de zile
-    const dv=x=>x&&typeof x==="object"?{n:nr(x.n),saptamani:nr(x.saptamani),pePlus:nr(x.pePlus),medie:nr(x.medie),mediana:nr(x.mediana),baza:x.baza&&typeof x.baza==="object"?{n:nr(x.baza.n),pePlus:nr(x.baza.pePlus),medie:nr(x.baza.medie)}:null,eticheta:["mai bine","mai slab","cam la fel"].includes(x.eticheta)?x.eticheta:null,putine:x.putine===true}:null;
+    const dv=x=>x&&typeof x==="object"?{n:nr(x.n),saptamani:nr(x.saptamani),pePlus:nr(x.pePlus),medie:nr(x.medie),mediana:nr(x.mediana),baza:x.baza&&typeof x.baza==="object"?{n:nr(x.baza.n),pePlus:nr(x.baza.pePlus),medie:nr(x.baza.medie)}:null,eticheta:["mai bine","mai slab","cam la fel","n-am aflat","la fel, prea puține cazuri"].includes(x.eticheta)?x.eticheta:null,putine:x.putine===true}:null;
     const bt=x=>x&&typeof x==="object"?{n:nr(x.n),pePlus:nr(x.pePlus),mediana:nr(x.mediana),reper:x.reper&&typeof x.reper==="object"?{n:nr(x.reper.n),pePlus:nr(x.reper.pePlus),mediana:nr(x.reper.mediana)}:null}:null;
     const ur=x=>x&&typeof x==="object"?{n:nr(x.n),pePlus:nr(x.pePlus),medie:nr(x.medie),zile:nr(x.zile),exces:nr(x.exces),zilePeste:nr(x.zilePeste),text:typeof x.text==="string"?x.text.slice(0,300):null}:null;   /* v100.292: + zile, exces, zilePeste (orizont fix) */
     const d=corp&&corp.dovada||{},w=corp&&corp.urmarire||{},zi=/^\d{4}-\d{2}-\d{2}$/.test(String(corp&&corp.zi))?corp.zi:new Date().toISOString().slice(0,10);

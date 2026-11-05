@@ -179,7 +179,7 @@ await test("I4: lei si $ nu se amesteca - clasamentul pe echivalent in lei (curs
   const acum = 60 * Z, e = (zi, cod, bani, inLei, stare, fx) => ({ t: acum - zi * Z, coduri: [cod], nivel: "iesi", pret: 192.42999267578125, qty: 1, fx, r: 0, bani, inLei, c5: 195.1, stare });
   const a = CS.autopsieActiuni([{ ticker: "A_US_EQ", log: [e(2, "x", -30, true, "jos|calm|departe", 4.5), e(3, "y", -10, false, "jos|calm|departe", null)] }], acum);
   assert.deepEqual(a.scumpe.map((x) => x.cost), [-10, -30], "−10 $ (≈ −45 lei) e mai scump decat −30 lei");
-  const tx = a.linii.join("\n"); assert.match(tx, /\$192\.43/); assert.ok(!/192\.4299/.test(tx));
+  const tx = a.linii.join("\n"); assert.match(tx, /\$192,43/); assert.ok(!/192\.4299/.test(tx));
   const log = []; for (let d = 15; d < 27; d++) log.push(e(d, "z", d % 2 ? -1000 : -10, d % 2 === 0, "sus|calm|departe", d % 2 === 0 ? 4.5 : null));
   const t = CS.autopsieActiuni([{ ticker: "B_US_EQ", log }], acum).tipar;
   assert.ok(t, "tiparul"); assert.match(t.text, /6\.000,00 \$/); assert.match(t.text, /60,00 lei/);

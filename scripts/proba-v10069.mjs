@@ -1,7 +1,7 @@
 // Proba v100.69 - sfaturile concise, pachetul 4 (actiunile T212): semaforul pozitiei, poarta, portofoliul, situatiile, alertele
 // planului si frana (Discord), raportul, consilierul (pozitia, botul), Consilierul pozitiei, randurile 🎲 si ecranul T212.
 // Ce se verifica: actiunea la persoana I (dupa eticheta „Ce aș face eu:”), ≤ 110; titlurile ≤ 60; alertele pe 2 randuri; „(puține cazuri)”
-// in locul avertizarii comune; preturile actiunilor ca pe pagina („$29.50”), sumele cu virgula - si ca nicio cifra nu se pierde.
+// in locul avertizarii comune; preturile actiunilor ca pe pagina („$29,50”), sumele cu virgula - si ca nicio cifra nu se pierde.
 //   node scripts/proba-v10069.mjs
 import "./lib/text-ro-global.mjs";   // RF4 (v100.61): TextRo inaintea semnale-bot.js / consiliu.js
 import fs from "node:fs";
@@ -35,9 +35,9 @@ await test("semaforul: pe fiecare ramură, acțiunea de după „Ce aș face eu:
     [P({ pretMediu: 29, pret: 22 }), lateral, "−24% fără plan"], [P({ pretMediu: 29, pret: 28 }), zilnice(20, () => 28), "fără prețuri"], [P({ pret: 0 }), null, "fără preț"]];
   for (const [p, b, cine] of ram) { const r = sem(p, b); persoana(r.ceAsFace, cine); assert.match(r.ceAsFace, /^👉 Ce aș face eu: /, cine + ": eticheta (o taie consiliu.js și lista) lipsește"); }
   const t = sem(P({ pret: 31.2, plan: { tinta: 31 } }), urca);
-  assert.match(t.ceAsFace, /\$29\.50/, "ținta: prețul de intrare (unde se mută stopul) s-a pierdut: " + t.ceAsFace);
-  assert.match(t.motive[0], /\$31\.00/, "ținta: prețul țintei, ca pe pagină: " + t.motive[0]);
-  assert.match(sem(P({ pret: 25.2, plan: { stop: 26 } }), urca).motive[0], /\$26\.00/);
+  assert.match(t.ceAsFace, /\$29,50/, "ținta: prețul de intrare (unde se mută stopul) s-a pierdut: " + t.ceAsFace);
+  assert.match(t.motive[0], /\$31,00/, "ținta: prețul țintei, ca pe pagină: " + t.motive[0]);
+  assert.match(sem(P({ pret: 25.2, plan: { stop: 26 } }), urca).motive[0], /\$26,00/);
   const tr = sem(P({ pret: 29, maxDupaCumparare: 35, plan: { trailPct: 15 } }), urca).motive[0];
   assert.match(tr, /17,1%/); assert.match(tr, /−15%/); assert.ok(tr.length <= 60, tr);
   const fp = sem(P({ pretMediu: 29, pret: 22 }), lateral);
@@ -64,19 +64,19 @@ await test("alertele planului (Discord): titlul ≤ 60 cu prețul ca pe pagină,
   const [st, tr] = AS.alertePlan({ ticker: "APLD_US_EQ", simbol: "APLD", pret: 25.2, maxDupaCumparare: 31, plan: { stop: 26, trailPct: 15 } }, T0);
   const [ti] = AS.alertePlan({ ticker: "APLD_US_EQ", simbol: "APLD", pret: 31.4, plan: { tinta: 31 } }, T0);
   assert.equal(st.cheie, "t212-APLD_US_EQ-stop-2026-10-01"); assert.equal(tr.cheie, "t212-APLD_US_EQ-trail-2026-10-01"); assert.equal(ti.cheie, "t212-APLD_US_EQ-tinta-2026-10-01");
-  for (const [a, pret, fac] of [[st, "$25.20", /^👉 Aș ieși/], [tr, "$31.00", /^👉 Aș ieși/], [ti, "$31.40", /^👉 Aș lua profit/]]) {
+  for (const [a, pret, fac] of [[st, "$25,20", /^👉 Aș ieși/], [tr, "$31,00", /^👉 Aș ieși/], [ti, "$31,40", /^👉 Aș lua profit/]]) {
     assert.ok(a.titlu.length <= 60, a.titlu);
     const l = a.mesaj.split("\n"); assert.equal(l.length, 2, "2 rânduri: " + a.mesaj);
     assert.ok(l[0].includes(pret), "prețul " + pret + " pe rândul 1: " + l[0]); assert.match(l[1], fac); persoana(l[1].replace(/^👉 /, ""), a.cheie);
   }
-  assert.match(st.titlu, /\$26\.00/); assert.match(ti.titlu, /\$31\.00/); assert.match(tr.mesaj.split("\n")[0], /18,7%/); assert.match(tr.titlu, /−15%/);
+  assert.match(st.titlu, /\$26,00/); assert.match(ti.titlu, /\$31,00/); assert.match(tr.mesaj.split("\n")[0], /18,7%/); assert.match(tr.titlu, /−15%/);   // v100.306 (I-837): virgula zecimală la prețurile în $ / € / £
 });
 
 await test("frâna (Discord): faptul cu toate sumele pe rândul 1 (≤ 160), lecția NPA pe rândul 2, la persoana I", () => {
   const a = AS.alertaFrana({ ticker: "NPA_US_EQ", pret: 4.12, mediu: 4.9, sub: -0.159, nr: 3, suma: 2100 }, "NPA"), l = a.mesaj.split("\n");
   assert.equal(a.titlu, "NPA: ai cumpărat în plus pe minus (a 3-a oară la rând)"); assert.equal(a.nivel, "critic");
   assert.equal(l.length, 2, a.mesaj); assert.ok(l[0].length <= 160, l[0]);
-  for (const x of ["$4.12", "15,9%", "$4.90", "2.100 lei"]) assert.ok(l[0].includes(x), x + " lipsește: " + l[0]);
+  for (const x of ["$4,12", "15,9%", "$4,90", "2.100 lei"]) assert.ok(l[0].includes(x), x + " lipsește: " + l[0]);
   assert.match(l[1], /^👉 N-aș mai adăuga pe minus/); for (const x of ["33.000", "8.165"]) assert.ok(l[1].includes(x), x + ": " + l[1]); persoana(l[1].replace(/^👉 /, ""), "frâna");
 });
 
@@ -104,7 +104,7 @@ await test("consilierul pe poziție: titlul ≤ 60, acțiunile la persoana I, �
   const mic = CS.sfaturiPozitie(pz(), ctx(6)).find((x) => x.sursa === "istoric");
   assert.match(mic.text, /^\(puține cazuri\)$/); assert.doesNotMatch(mic.text, /un semn/);
   const pr = CS.sfaturiPozitie(pz({ pret: 32.4, pctLei: 0.16 }), ctx(2)).find((x) => x.sursa === "pozitie");
-  assert.match(pr.titlu, /\$33\.00/); assert.match(pr.ceAsFace, /\$33\.00/); assert.match(pr.ceAsFace, /\$29\.50/); persoana(pr.ceAsFace, "profit");
+  assert.match(pr.titlu, /\$33,00/); assert.match(pr.ceAsFace, /\$33,00/); assert.match(pr.ceAsFace, /\$29,50/); persoana(pr.ceAsFace, "profit");
   // comisionul: un fapt, nu o actiune („Dacă ieși acum, ieși de fapt pe minus”) - „N-aș ieși” ar fi contrazis un IEȘI din trend; trece in explicatie
   const co = CS.sfaturiPozitie(pz({ pret: 29.55, pctLei: 0.001 }), ctx(0)).find((x) => /comisionul/.test(x.titlu));
   assert.equal(co.ceAsFace, null); assert.match(co.text, /ieși de fapt pe minus/); assert.deepEqual(verifica(co.text, "deCe"), [], co.text);
@@ -133,8 +133,8 @@ await test("Consilierul poziției: titlul compus ≤ 60, acțiunile proprii la p
   const niv = (o) => Object.assign({ nivel: "ok", stopAtins: false, stopPozitie: 24.1, tintaPozitie: 33, sursaTrail: "−15% de la maxim (măsurat pe trade-urile tale)" }, o || {});
   const cu = (p, bare, o) => CO.alcatuiesteActiune(Object.assign({ sem: sem(p, bare), niv: niv(), prob: [], sfaturi: [], plan: p.plan, pret: p.pret, pretMediu: p.pretMediu, qty: p.qty, costLei: p.qty * p.pretMediu * 4.35, simbol: p.simbol }, o || {}));
   const su = cu(P({ pretMediu: 22, pret: 29 }), urca, { niv: niv({ stopAtins: true, stopPozitie: 30.12 }) });
-  assert.equal(su.nivel, "iesi"); assert.match(su.motive[0].titlu, /\$30\.12/); persoana(su.faCe, "stopul care urcă");
-  assert.match(su.bani, /[+−]\d+,\d \$/  /* v100.196: o zecimală */, "suma în dolari cu virgulă: " + su.bani); assert.match(su.bani, /\$30\.12/);
+  assert.equal(su.nivel, "iesi"); assert.match(su.motive[0].titlu, /\$30,12/); persoana(su.faCe, "stopul care urcă");
+  assert.match(su.bani, /[+−]\d+,\d \$/  /* v100.196: o zecimală */, "suma în dolari cu virgulă: " + su.bani); assert.match(su.bani, /\$30,12/);
   const x = (o) => Object.assign({ p: 0.31, k: 31, n: 100, nIndep: 24, ic: [0.22, 0.41], nivel: "exact", stare: "lateral-liniste" }, o || {});
   const prob = PB.randActiune({ stop1: x({ p: 0.28, k: 28 }), sare1: x({ p: 0.03, k: 3 }), niv: {} }, null, { rezultateZile: 2, evenimente: { mediana: 0.06, max: 0.18 } });
   const mi = cu(P({ pretMediu: 28, pret: 29 }), lateral, { prob });
@@ -167,8 +167,8 @@ await test("prețul unei acțiuni: ActiuniSemnale.usd scrie ca t212Usd de pe pag
   const t212Usd = new Function(m[0] + "; return t212Usd;")();
   assert.equal(typeof AS.usd, "function", "ActiuniSemnale.usd lipsește");
   for (const v of [0.0123, 0.5, 1, 1.2345, 9.999, 10, 29.5, 123.456, 1234.5, null, NaN]) assert.equal(AS.usd(v), t212Usd(v), "v = " + v);
-  // peste 1 $: 2 zecimale („$4.90”, nu „$4.900” - langa „2.100 lei” se citea ca patru mii noua sute); sub 1 $: 3 cifre semnificative
-  assert.equal(AS.usd(4.9), "$4.90"); assert.equal(AS.usd(4.1234), "$4.12"); assert.equal(AS.usd(0.012345), "$0.0123"); assert.equal(AS.usd(29.5), "$29.50");
+  // peste 1 $: 2 zecimale („$4.90”, nu „$4.900” - langa „2.100 lei” se citea ca patru mii noua sute; v100.306: virgula zecimală, „$4,90”); sub 1 $: 3 cifre semnificative
+  assert.equal(AS.usd(4.9), "$4,90"); assert.equal(AS.usd(4.1234), "$4,12"); assert.equal(AS.usd(0.012345), "$0,0123"); assert.equal(AS.usd(29.5), "$29,50");   // v100.306 (I-837): virgula zecimală la prețurile în $ / € / £
 });
 
 console.log("\n" + (pica ? "PICA · " + pica + " din " + (ok + pica) : "PASS · " + ok + "/" + ok));

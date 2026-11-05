@@ -256,7 +256,7 @@ vm.createContext(cutie);
 let paginaOk = true; try { vm.runInContext(citeste("public", "lib", "comportament-ecran.js"), cutie, { filename: "comportament-ecran.js" }); } catch (e) { paginaOk = false; console.log("  (comportament-ecran.js nu se încarcă: " + e.message + ")"); }
 await test("pagina: fără raport spune de ce; cu raport, toate secțiunile demo-ului, în ordine, cu textul scăpat de HTML", () => {
   assert.ok(paginaOk && typeof cutie.coHtml === "function", "lipsește coHtml");
-  assert.match(cutie.coHtml(null, {}), /Colectorul de acasă n-a trimis încă/);
+  assert.match(cutie.coHtml(null, {}), /Colectorul de pe VPS n-a trimis încă/);   // v100.306: Radarul rulează pe VPS
   const r = JSON.parse(JSON.stringify(R)); r.evaluari[0].titlu = "<b>ONDO</b> long";
   const h = cutie.coHtml(r, { filtru: null, deschis: "776", acum: ACUM + 5 * MIN });
   const ordine = ["Evaluarea ta comportamentală", "Disciplina la pornire", "Ce faci bine", "Ce greșești", "Corecțiile", ">Azi<", "Seara de azi", "Porniți cu frâna trasă", "Evaluările boților închiși", "Regulile tale", "Frâna în ultimele 7 zile", "Oglinda lunii", "Profitul real"];

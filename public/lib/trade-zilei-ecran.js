@@ -50,7 +50,7 @@ function tzCartela(m) {
   // v100.299 (proba ORA ZILEI): curba orelor - cât din mișcarea zilei e de obicei formată până la ultima oră închisă și cât mai rămâne
   h += '<div class="tzRand"><span class="tzEt">Din mișcarea zilei, până la ora asta</span><b class="tzCifra">' + tzPct(d.format) + "</b><span class=\"tzMut tzMic\">de obicei format; mai rămân ~" + tzPct(d.ramane) + " (≈ " + tzPct(d.ramaneAsteptat, 1) + " din preț) · curba orelor, 21 de perechi, confirmată pe anul al treilea</span></div>";
   function niv(nume, L, p) {
-    var txt = p.atins ? "atins deja azi" : p.p == null ? "—" : "atinge azi " + tzPct(p.p) + " · la " + tzPct(p.dist, 2) + " de preț";
+    var txt = p.atins ? "atins deja azi" : p.p == null ? "—" : "atinge azi " + tzPct(p.p) + " · la " + tzPct(p.dist, Math.abs(p.dist) >= 0.01 ? 1 : 2) + " de preț"   /* v100.306 (I-837): o zecimală de la 1% în sus */;
     return '<div class="tzRand"><span class="tzEt">' + nume + " " + tzPret(L) + '</span><b class="tzCifra' + (p.atins ? " tzMut" : tzTonP(p.p)) + '">' + (p.atins ? "✓" : p.p == null ? "—" : tzPct(p.p)) + '</b><span class="tzMut tzMic">' + tzEsc(txt) + "</span></div>";
   }
   h += niv("Maximul de ieri", d.pdh, d.p1Sus) + niv("Minimul de ieri", d.pdl, d.p1Jos);

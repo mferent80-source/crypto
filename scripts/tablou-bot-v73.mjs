@@ -1466,8 +1466,8 @@ await test("durata la margine NU numara peste o gaura din istoric", () => {
 await test("eroare: AUTH pe versiunea PUBLICATA spune unde sa se duca, nu codul", () => {
   const e = T.explicaEroarea("AUTH_REQUIRED", 401, "crypto-wuy.pages.dev");
   assert.ok(!/AUTH_REQUIRED|401/.test(e.titlu), `titlul nu are voie sa fie jargon: "${e.titlu}"`);
-  assert.match(e.ceFac, /PORNESTE-CRYPTO-RADAR/,
-    "trebuie sa-i spuna EXACT cu ce sa porneasca acasa");
+  assert.match(e.ceFac, /mau\.tail9144fe\.ts\.net:8443/,   // v100.306: Radarul rulează pe VPS, nu acasă cu .bat
+    "trebuie sa-i spuna EXACT unde sa deschida Radarul (serverul de pe VPS)");
   assert.match(e.ceFac, /Pionex/, "trebuie sa spuna de ce nu merge aici");
   assert.match(e.ceFac, /Pune parola în Setări \(butonul ⚙\)/, "audit 24.09: 401 = parola, si pe publicat");
   assert.equal(e.local, false);
@@ -1509,14 +1509,14 @@ await test("[audit] eroare: 403 fara 'Bot reading' -> bifeaza dreptul la cheia P
   assert.doesNotMatch(e.ceFac, /parola/i, "403 nu e o problema de parola");
 });
 
-await test("[audit] eroare de retea (Failed to fetch) -> serverul de acasa e oprit", () => {
+await test("[audit] eroare de retea (Failed to fetch) -> serverul Radarului nu raspunde (pe VPS: sarcina Crypto Radar pornire)", () => {
   for (const mesaj of ["Failed to fetch", "NetworkError when attempting to fetch resource.", "Load failed", "TypeError: Failed to fetch"]) {
     const e = T.explicaEroarea(mesaj, null, "127.0.0.1");
-    assert.match(e.ceFac, /Serverul de acasă e oprit — pornește PORNESTE-CRYPTO-RADAR\.bat/, `${mesaj}: "${e.ceFac}"`);
+    assert.match(e.ceFac, /Serverul Radarului nu răspunde — pe VPS, aș rula sarcina „Crypto Radar pornire”/, `${mesaj}: "${e.ceFac}"`);   // v100.306
   }
 });
 
-await test("[audit] eroare: cheile lipsa pe server (503 / NOT_CONFIGURED) -> mesajul cu .bat", () => {
+await test("[audit] eroare: cheile lipsa pe server (503 / NOT_CONFIGURED) -> unde stau pe VPS + sarcina de pornire", () => {
   const cazuri = [
     ["Cheile PIONEX_API_KEY / PIONEX_API_SECRET nu sunt configurate.", 503],
     ["APP_API_TOKEN_NOT_CONFIGURED", 503],
@@ -1524,26 +1524,27 @@ await test("[audit] eroare: cheile lipsa pe server (503 / NOT_CONFIGURED) -> mes
   ];
   for (const [mesaj, st] of cazuri) {
     const e = T.explicaEroarea(mesaj, st, "127.0.0.1");
-    assert.match(e.ceFac, /PORNESTE-CRYPTO-RADAR\.bat/, `${mesaj}: "${e.ceFac}"`);
-    assert.match(e.ceFac, /chei/i, `${mesaj}: trebuie sa spuna ca e vorba de chei`);
+    assert.match(e.ceFac, /\.dev\.vars/, `${mesaj}: "${e.ceFac}"`);   // v100.306: pe VPS, nu .bat
+    assert.match(e.ceFac, /Crypto Radar pornire/, `${mesaj}: "${e.ceFac}"`);
+    assert.match(e.ceFac, /chei|parola/i, `${mesaj}: trebuie sa spuna ca e vorba de chei / parola`);
     assert.doesNotMatch(e.ceFac, /fereastra neagră de pe calculator/, "nu e o cadere la Pionex, e configurare");
   }
 });
 
-await test("[runda1] un bug TypeError din cod NU e 'serverul de acasa e oprit'", () => {
+await test("[runda1] un bug TypeError din cod NU e 'serverul nu raspunde'", () => {
   for (const mesaj of ["TypeError: x is undefined", "TypeError: Cannot read properties of null (reading 'bots')"]) {
     const e = T.explicaEroarea(mesaj, null, "127.0.0.1");
-    assert.doesNotMatch(e.ceFac, /Serverul de acasă e oprit/, `${mesaj}: "${e.ceFac}"`);
+    assert.doesNotMatch(e.ceFac, /Serverul Radarului nu răspunde/, `${mesaj}: "${e.ceFac}"`);
     assert.match(e.ceFac, /TypeError/, "mesajul brut ramane la vedere");
   }
   const r = T.explicaEroarea("TypeError: network error", null, "127.0.0.1");
-  assert.match(r.ceFac, /Serverul de acasă e oprit/, "controlul: un TypeError de RETEA ramane retea");
+  assert.match(r.ceFac, /Serverul Radarului nu răspunde/, "controlul: un TypeError de RETEA ramane retea");
 });
 
 await test("[runda1] APP_API_TOKEN_NOT_CONFIGURED are titlu propriu (parola pe server), nu 'cheile Pionex'", () => {
   const e = T.explicaEroarea("APP_API_TOKEN_NOT_CONFIGURED", 503, "127.0.0.1");
-  assert.equal(e.titlu, "Parola aplicației nu e pusă pe server — pornește din nou .bat");
-  assert.match(e.ceFac, /PORNESTE-CRYPTO-RADAR\.bat/);
+  assert.equal(e.titlu, "Parola aplicației nu e pusă pe server");   // v100.306: fără „.bat” (Radarul rulează pe VPS)
+  assert.match(e.ceFac, /Crypto Radar pornire/);
   const k = T.explicaEroarea("Cheile PIONEX_API_KEY / PIONEX_API_SECRET nu sunt configurate.", 503, "127.0.0.1");
   assert.equal(k.titlu, "Cheile Pionex nu sunt puse", "controlul: cheile Pionex lipsa raman cu titlul lor");
 });

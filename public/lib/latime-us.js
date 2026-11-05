@@ -126,7 +126,8 @@
       .replace(/\(idx ([\d.]+), min ([\d.]+)\)/, (_, a, b) => "· media " + z1(+a).replace(/,0$/, "") + ", minimul " + z1(+b).replace(/,0$/, ""))
       .replace(/^max (\d+) dist\.days, (\d+)\/(\d+) sub MM50$/, "până la $1 zile de distribuție · $2 din $3 indici sub MM50")
       .replace(/^(\d+)▲\/(\d+)▼ \(net ([+−-]?\d+)\), (\w+)$/, "$1 maxime ▲ / $2 minime ▼ · net $3 · $4")
-      .replace(/^Market Breadth \(Overall\)/, "Market Breadth Overall").replace(/^momentum MM50 \(([\d.]+)%\)$/, (_, a) => "momentum peste MM50 (" + z1(+a).replace(/,0$/, "") + "%)");
+      .replace(/^Market Breadth \(Overall\)/, "Market Breadth Overall").replace(/^momentum MM50 \(([\d.]+)%\)$/, (_, a) => "momentum peste MM50 (" + z1(+a).replace(/,0$/, "") + "%)")
+      .replace(/(\d)\.(\d)/g, "$1,$2");   // v100.306 (I-837): restul cifrelor robotului („trend MM200 (49.0%)”, „VIX 16.6”) cu virgula
   }
   function numeSc(s) {
     const m = /^(.*?) \(([^)]*)\)$/.exec(String(s || ""));
@@ -160,7 +161,8 @@
   }
   const pc1 = (f) => (nr(f) === null ? "—" : z1(f * 100) + "%");
   const sg1 = (v) => (nr(v) === null ? "—" : (v > 0 ? "+" : "") + z1(v) + "%");
-  const chipZona = (z) => '<span class="mbZona mbZ' + esc(z) + '">' + esc(z) + "</span>";
+  // v100.306: zona e NUMELE robotului (Strong / Healthy / Neutral…, cerut explicit „cu nume” pe 14.10) ⇒ data-conv-nume: garda convențiilor o sare
+  const chipZona = (z) => '<span class="mbZona mbZ' + esc(z) + '" data-conv-nume>' + esc(z) + "</span>";
   const bara = (et, f, cul) => '<div class="acLb mbLb"><span>' + et + '</span><i><b class="' + (cul || "") + '" style="width:' + (nr(f) === null ? 0 : Math.max(0, Math.min(100, f * 100))).toFixed(1) + '%"></b></i><em>' + pc1(f) + "</em></div>";
   const semnS = (v) => (v === null ? "—" : (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v));
   function htmlCard(x) {

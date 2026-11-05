@@ -17,7 +17,9 @@ var ActiuniSemnale = (function () {
   // v100.69 (sfaturile concise, pachetul 4): pretul unei actiuni, o singura forma (si pagina T212 o foloseste, prin t212Usd) - „$29.50”,
   // „$4.12”, „$0.0123”. Inainte: „$33,00” (consilier), „29.50 $” (Consilierul pozitiei), „26.00” (alerte), „$4.120” (pagina) - a treia
   // zecimala nu se poate cota peste 1 $ si, langa „2.100 lei” (punctul = mii), „$4.900” se citea ca patru mii noua sute
-  function usd(v) { return v === null || v === undefined || !isFinite(v) ? "—" : "$" + (v >= 1 ? v.toFixed(2) : v.toPrecision(3)); }
+  // v100.306 (I-837, garda convențiilor): virgula zecimală și punctul miilor, ca restul paginii („$25,17”, „$1.234,56”, „$0,0123”); cu
+  // virgula, „$4.900” nu mai poate fi citit ca patru mii nouă sute (punctul = doar mii)
+  function usd(v) { if (v === null || v === undefined || !isFinite(v)) return "—"; var p = (v >= 1 ? v.toFixed(2) : v.toPrecision(3)).split("."); return "$" + p[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".") + (p[1] ? "," + p[1] : ""); }
   // v100.272 (ideile auditului 29.10): „$” apărea și la acțiunile în euro sau în pence. Moneda prețului: metadatele T212 (t212.monede) întâi,
   // apoi bursa din simbol (ca CalendarBursa / ContIntreg); Londra fără metadate poate fi pence, lire sau dolari ⇒ null = fără semn, nu „$”
   function monedaTicker(tk, monede) {

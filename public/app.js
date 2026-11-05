@@ -3134,7 +3134,7 @@ function updateAlertBadges(){
 // v100.196 (auditul P5): nimic nu punea `read=true` ⇒ insigna „necitite” creștea până la „Șterge”; deschiderea paginii Alerte le citește
 function alerteV67Curata(){const a=appAlerts(),b=a.filter(x=>x&&x.kind!=="ops-v67");if(b.length!==a.length)putAlerts(b)}/* cele vechi, deja intrate, ies o singură dată la pornire */
 function alerteLocaleCitite(){const a=appAlerts();if(!a.some(x=>!x.read)){updateAlertBadges();return}a.forEach(x=>{x.read=true});putAlerts(a)}
-function clearAlerts(){if(typeof confirm==="function"&&!confirm("Șterg alertele ținute în acest browser? Alertele de acasă (boți, acțiuni) rămân."))return;localStorage.removeItem("radarAlerts");renderAlerts();toast("Am șters alertele din browser","warn")}/* v100.196: cu confirmare (auditul UI 🔵4) */
+function clearAlerts(){if(typeof confirm==="function"&&!confirm("Șterg alertele ținute în acest browser? Alertele colectorului (boți, acțiuni) rămân."))return;localStorage.removeItem("radarAlerts");renderAlerts();toast("Am șters alertele din browser","warn")}/* v100.196: cu confirmare (auditul UI 🔵4) */
 function checkAlerts(q,sm,deriv){
  const st=appSettings(),p=q.price,near=st.nearPct/100;
  if(st.alerts.sr){
@@ -4579,7 +4579,7 @@ let scannerRows=[];
 // v100.266 (F7, 29.10, el: „fa ideile”): rezumatul probei futures pe date noi (îl scrie colectorul o dată pe oră) - doar text
 async function futuresProbaArata(){
  const el=$("fProba");if(!el)return;let r=null;
- try{const j=await getJSON("/api/istoric-bot?action=futuresProba");r=j&&j.futuresProba||null}catch(e){el.textContent="Proba pe date noi: serverul de acasă nu a dat rezumatul ("+textEroare(e)+").";return}
+ try{const j=await getJSON("/api/istoric-bot?action=futuresProba");r=j&&j.futuresProba||null}catch(e){el.textContent="Proba pe date noi: serverul Radarului nu a dat rezumatul ("+textEroare(e)+").";return}
  el.textContent=FuturesCitire.subForward(r)}
 // v100.266 (F8): tabelul futures pe monedele tale (cele 20 urmărite + boții), câte trei cereri deodată; HTML-ul îl face FuturesCitire.tabelHtml
 // (simbolul doar litere și cifre, restul numere și etichete fixe)
@@ -5013,7 +5013,7 @@ function tbAlegeBot(id){
   // Simbol nou => lumanari noi, WebSocket nou, istoricul altui bot.
   tbStare.klinePerp=[];tbStare.pretSpot=null;tbStare.pretSpotLa=0;tbStare.istoric=[];tbStare.graficCache={};tbStare.citireO=null;tbStare.citireCheie=null;   /* v100.137: lumânările altei monede nu se țin; v100.138: nici citirea */
   /* v100.267 (auditul 29.10): direcția, lumânările de 4 h și funding-ul botului vechi stăteau 5–20 s lângă botul nou; obiecte noi, ca o tură în lucru pe moneda veche să nu țină pe loc tura nouă.
-     Din extra rămân doar soldul futures al CONTULUI și starea serverului de acasă (nu țin de bot; altfel „sold” dispărea din portofoliu până la aducerea nouă) */
+     Din extra rămân doar soldul futures al CONTULUI și starea serverului Radarului (nu țin de bot; altfel „sold” dispărea din portofoliu până la aducerea nouă) */
   var exVechi=tbStare.extra;tbStare.directie=null;tbStare.extra=exVechi?{la:0,bot:null,inLucru:false,futures:exVechi.futures,futuresEroare:exVechi.futuresEroare,istoricEroare:exVechi.istoricEroare}:null;
   renderTabloBot();
   tbAduDate().then(renderTabloBot);
@@ -5337,7 +5337,7 @@ function grTextEroare(e){
     if(!grStare.reincercare){grStare.reincercare=setTimeout(function(){grStare.reincercare=null;if(grPanouVizibil())gridCalculeaza('fortat')},70000)}
     return "Prea multe cereri la Pionex într-un minut (limita e 45). Reîncerc singur în ~1 minut.";
   }
-  if(!local&&e&&(e.status===429||e.status===403||/429|unavailable/i.test(String(e.message))))return "Pionex nu răspunde de aici: pe versiunea publicată refuză cererile. Deschide Radarul de acasă (PORNESTE-CRYPTO-RADAR.bat).";
+  if(!local&&e&&(e.status===429||e.status===403||/429|unavailable/i.test(String(e.message))))return "Pionex nu răspunde de aici: pe versiunea publicată refuză cererile. Deschide Radarul de pe server (mau.tail9144fe.ts.net:8443).";
   return textEroare(e);
 }
 async function gridCalculeaza(fortat){
@@ -5897,7 +5897,7 @@ async function gridClasamentAdu(fortat){
   if(grClasament.inLucru||(!fortat&&Date.now()-grClasament.la<5*60000))return;
   grClasament.inLucru=true;
   try{var d=await getJSON("/api/istoric-bot?action=clasament");grClasament.date=d&&d.clasament||null;grClasament.eroare=null}
-  catch(e){grClasament.eroare=e&&e.status===503?"doar pe Radarul de acasă (colectorul îl socotește o dată pe oră)":textEroare(e)}
+  catch(e){grClasament.eroare=e&&e.status===503?"doar pe Radarul de pe server (colectorul îl socotește o dată pe oră)":textEroare(e)}
   finally{grClasament.inLucru=false;grClasament.la=Date.now()}
   renderGridClasament();
 }
@@ -5906,7 +5906,7 @@ var grLaborator={date:null,la:0,eroare:null};
 async function gridLaboratorAdu(){
   if(Date.now()-grLaborator.la<10*60000&&grLaborator.date)return;
   try{var d=await getJSON("/api/istoric-bot?action=laborator");grLaborator.date=d&&d.laborator||null;grLaborator.eroare=null}
-  catch(e){grLaborator.eroare=e&&e.status===503?"doar pe Radarul de acasă":textEroare(e)}
+  catch(e){grLaborator.eroare=e&&e.status===503?"doar pe Radarul de pe server":textEroare(e)}
   grLaborator.la=Date.now();renderGridLaborator();
 }
 // v100.18 (ideea 3): „gridul dupa planul tau” pe monedele laboratorului (planul lui cel mai nou) - pe care a iesit pe plus
@@ -5932,7 +5932,7 @@ function renderGridLaborator(){
   var box=$("grLaborator"),sub=$("grLaboratorSub");if(!box)return;
   var L=grLaborator.date,P=(typeof grProc==="function"?grProc:GridCalcul.procent);
   if(grLaborator.eroare){box.innerHTML='<p class="tbSub">'+escapeHtml(grLaborator.eroare)+'</p>';return}
-  if(!L||!Array.isArray(L.intrebari)){box.innerHTML='<p class="tbSub">Încă nu a rulat: colectorul de acasă îl face la ~30 de minute după pornire, apoi o dată pe zi.</p>';return}
+  if(!L||!Array.isArray(L.intrebari)){box.innerHTML='<p class="tbSub">Încă nu a rulat: colectorul de pe VPS îl face la ~30 de minute după pornire, apoi o dată pe zi.</p>';return}
   if(sub)sub.textContent="socotit la "+new Date(L.la).toLocaleString("ro-RO",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})+" · "+TextRo.cate(L.monede,"monedă","monede")+" · "+TextRo.cate(L.ferestre,"fereastră","ferestre")+" de grid neutru de "+TextRo.cate(L.H,"zi","zile");
   var V={dovedit:["✅ DOVEDIT","good"],contrazis:["↔️ SE CONTRAZICE","tbWarn"],"n-am-aflat":["❔ N-AM AFLAT","mutedInfo"]};
   var g=function(x){return x?P(x.pePlus)+' pe plus <span class="tbSub">(IC '+(x.ic?P(x.ic[0])+' – '+P(x.ic[1]):"—")+', mediana '+P(x.mediana)+', '+TextRo.cate(x.nEf,"fereastră independentă","ferestre independente")+')</span>':"—"};
@@ -5945,7 +5945,7 @@ function renderGridClasament(){
   var box=$("grClasament"),sub=$("grClasamentSub");if(!box)return;
   var c=grClasament.date,P=(typeof grProc==="function"?grProc:GridCalcul.procent);
   if(grClasament.eroare){box.innerHTML='<p class="tbSub">'+escapeHtml(grClasament.eroare)+'</p>';return}
-  if(!c||!Array.isArray(c.monede)||!c.monede.length){box.innerHTML='<p class="tbSub">Încă nu e socotit: colectorul de acasă îl face la prima oră după pornire (PORNESTE-CRYPTO-RADAR.bat).</p>';return}
+  if(!c||!Array.isArray(c.monede)||!c.monede.length){box.innerHTML='<p class="tbSub">Încă nu e socotit: colectorul de pe VPS îl face la prima oră după pornire.</p>';return}
   var l=GridClasament.ordoneaza(c.monede),rz=GridClasament.rezumat(c),vechi=Date.now()-c.la>2*3600000;
   if(sub)sub.textContent="socotit acasă la "+new Date(c.la).toLocaleTimeString("ro-RO",{hour:"2-digit",minute:"2-digit"})+(vechi?" (VECHI)":"")+" · "+rz.evita+" de evitat · "+rz.candidati+" candidați · "+rz.faraDate+" fără date";
   var h='<p class="grNota">Nu e fișa: e o sită pe lumânări de 4h. Cele de EVITAT sunt în mișcare (după mișcare gridul iese cel mai rău). Candidații sunt ordonați după cât ar putea aduce gridul pe zi (profit pe grilă × traversări estimate). Apasă pe monedă ⇒ fișa întreagă, cu proba.</p><div class="grTabelWrap"><table class="grTabel"><thead><tr><th>Moneda</th><th>Stare</th><th>Mișcare 4h / 24h</th><th>Direcție</th><th>Lățime 2z</th><th>Grile · pas</th><th>Grid/zi est.</th><th>Volum 24h</th></tr></thead><tbody>';
@@ -6037,7 +6037,7 @@ function jtStatDate(piata){
 // (v100.23 scria „doar ultimii ~10” - gresit: Pionex da istoria pe pagini de cate 10); + botii spot grid / smart copy lasati deoparte
 // v100.27: spot grid si smart copy intra in socoteala - nota spune cati sunt inclusi
 function jtNotaPionex(){var c=jtStat.toate.crypto,nb=c?c.tr.length:0,A=jtArhiva||{},B=jtStare.boti||[],nr2=function(t){return B.filter(function(b){return b&&b.buOrderType===t}).length},sp=nr2("spot_grid"),sc=nr2("smart_copy");
-  return (A.sursa==="acasa"?(A.complet?"toată istoria Pionex ("+TextRo.cate(nb,"bot","boți")+")":TextRo.cate(nb,"bot","boți")+" până acum — colectorul încă strânge istoria"):"doar ultimii "+TextRo.cate(nb,"bot","boți")+" (prima pagină Pionex) — toată istoria se vede de acasă")+(sp||sc?" · inclusiv "+sp+" spot grid și "+sc+" smart copy":"")}
+  return (A.sursa==="acasa"?(A.complet?"toată istoria Pionex ("+TextRo.cate(nb,"bot","boți")+")":TextRo.cate(nb,"bot","boți")+" până acum — colectorul încă strânge istoria"):"doar ultimii "+TextRo.cate(nb,"bot","boți")+" (prima pagină Pionex) — toată istoria se vede pe Radarul de pe server")+(sp||sc?" · inclusiv "+sp+" spot grid și "+sc+" smart copy":"")}
 // v100.175 (auditul Opus, M13): „Tot” pune boții la UN curs (cel BNR de azi) - nota o spune; Declarația folosește cursul din ziua fiecărui trade
 function jtStatNota(piata,d){var px=jtNotaPionex();return piata==="crypto"?"net, după comisioane și funding · "+px:piata==="actiuni"?"după comisioanele de conversie, fiecare vânzare cu cumpărările ei (FIFO)":"Pionex la 1 USD = "+d.lpu.toFixed(2).replace(".",",")+" lei ("+(typeof t212!=="undefined"&&t212.bnr&&t212.bnr.curs>0?"cursul BNR din "+t212.bnr.zi.slice(8)+"."+t212.bnr.zi.slice(5,7):"cursul ultimei tranzacții Trading 212")+", același pentru toți boții; Declarația folosește cursul din ziua fiecărui trade); Pionex: "+px+"; boții apar cu „(bot)”"}
 function jtStatRender(piata){
@@ -6158,7 +6158,7 @@ function jtRender(){
   var cel=function(et,v,c,sub){return '<div class="tbKpiCel"><span class="tbEt2">'+escapeHtml(et)+'</span><b class="tbKpiVal '+(c||"")+'">'+escapeHtml(v)+'</b>'+(sub?'<span class="tbSub">'+escapeHtml(sub)+'</span>':"")+'</div>'};
   // v83: 🍒 "daca ascultai de Radar"
   var cfm=jtStare.cf||{},cfl=l.map(function(t){return {t:t,z:cfm[t.id]?{nivel:cfm[t.id].nivel}:{nivel:"fara-date"}}}),cr=Contrafactual.rezumat(cfl);
-  var cirea=!jtStare.cf?'<p class="tbSub">„Dacă ascultai de Radar” se socotește pe serverul de acasă.</p>':!cr.judecate?'<p class="tbSub">🍒 „Dacă ascultai de Radar”: colectorul de acasă îl socotește pentru fiecare bot închis (câte 5 pe oră). Încă nu a terminat niciunul.</p>'
+  var cirea=!jtStare.cf?'<p class="tbSub">„Dacă ascultai de Radar” se socotește pe serverul Radarului.</p>':!cr.judecate?'<p class="tbSub">🍒 „Dacă ascultai de Radar”: colectorul de pe VPS îl socotește pentru fiecare bot închis (câte 5 pe oră). Încă nu a terminat niciunul.</p>'
     :'<div class="jtCireasa"><h4>🍒 Dacă ascultai de Radar</h4><div class="jtCirGrid"><div><span class="tbEt2">Ce ai făcut (pe cei '+cr.judecate+' judecați)</span><b class="'+cls(cr.realJudecate)+'">'+U(cr.realJudecate)+'</b></div><div><span class="tbEt2">Dacă porneai doar pe 🟢 ('+TextRo.cate(cr.nVerde,"bot","boți")+')</span><b class="'+cls(cr.doarVerde)+'">'+U(cr.doarVerde)+'</b></div><div><span class="tbEt2">Pierderi evitate de blocări ('+cr.nBlocate+')</span><b class="good">+'+TextRo.num(cr.blocateSalvat,1)+' USDT</b></div><div><span class="tbEt2">Câștiguri pe care le-ar fi ratat</span><b class="bad">−'+TextRo.num(cr.blocateRatat,1)+' USDT</b></div></div>'
       +'<p class="tbFac">👉 <b>Ce aș face eu:</b> '+(cr.doarVerde>cr.realJudecate?"Aș porni doar pe 🟢 și n-aș reporni pe aceeași monedă în primele 10 minute.</p><p class='tbSub'>Pe boții tăi, asta ar fi însemnat "+U(cr.doarVerde-cr.realJudecate)+" în plus.":"Aș nota mai departe și aș reverifica la 30 de boți: pe cei de până acum, fișa n-ar fi ajutat.")+'</p>'
       +'<p class="tbSub">Radarul a văzut doar lumânările închise înainte de ora fiecărei porniri. Pe '+TextRo.cate(cr.judecate,"bot","boți")+' e un semn, nu o dovadă: la 30 se poate spune mai sigur.</p></div>';
@@ -6582,7 +6582,7 @@ async function tbDecizie(urmat){
   try{var r=await apiFetch("/api/istoric-bot?action=decizie",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(corp)});if(!r.ok)throw Object.assign(new Error("HTTP "+r.status),{status:r.status});
     tbConsKv.decizii=(tbConsKv.decizii||[]).filter(function(e){return e.cheie!==corp.cheie}).concat([corp]);var el=$("tbDecStare");if(el)el.textContent=tbDecStareText(c);
     toast(urmat?"Notat: ai făcut ce zice Consilierul — îl judec la 24 h":"Notat: n-ai făcut — îl judec la 24 h","good")}
-  catch(e){toast("Nu am putut nota decizia: "+(e&&e.status===503?"doar pe Radarul de acasă":textEroare(e)),"bad")}
+  catch(e){toast("Nu am putut nota decizia: "+(e&&e.status===503?"doar pe Radarul de pe server":textEroare(e)),"bad")}
 }
 function tbDecStareText(c){var k=tbConsCheie(c),e=(tbConsKv.decizii||[]).filter(function(x){return x.cheie===k}).pop();
   return e?"notat: "+(e.urmat?"am făcut":"n-am făcut")+" ("+new Date(e.t).toLocaleTimeString("ro-RO",{hour:"2-digit",minute:"2-digit"})+")"+(e.r!=null?" · după 24 h: "+TextRo.usdt(e.r,1):""):"ai făcut ce zice? notează — după 30 de decizii îți spun cum ți-a mers"}
@@ -6616,7 +6616,7 @@ async function tbAduSaptamana(b){
   if(!b||!b.id||tbSapt.inLucru||(tbSapt.botId===b.id&&Date.now()-tbSapt.la<10*60000))return;
   tbSapt.inLucru=true;
   try{var d=await getJSON("/api/istoric-bot?action=citeste&ore=168&bot="+encodeURIComponent(b.id));tbSapt={botId:b.id,la:Date.now(),intrari:Array.isArray(d.intrari)?d.intrari:[],eroare:null,inLucru:false}}
-  catch(e){tbSapt={botId:b.id,la:Date.now(),intrari:null,eroare:e&&e.status===503?"doar pe Radarul de acasă":textEroare(e),inLucru:false}}
+  catch(e){tbSapt={botId:b.id,la:Date.now(),intrari:null,eroare:e&&e.status===503?"doar pe Radarul de pe server":textEroare(e),inLucru:false}}
   try{var p=await getJSON("/api/istoric-bot?action=plan&bot="+encodeURIComponent(b.id));tbPlan={botId:b.id,plan:p&&p.plan||null,la:Date.now()};tbPlanInForm()}catch(e){}
   if(tbPanouVizibil()&&tbStare.bot&&tbStare.bot.id===b.id)tbDeseneazaSaptPlan(tbStare.bot);
 }
@@ -6645,7 +6645,7 @@ async function tbPlanSalveaza(){
   try{var r=await apiFetch("/api/istoric-bot?action=plan",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({bot:b.id,plan:window.__proba?Object.assign({proba:true},plan):plan})});var d=await r.json();
     if(!r.ok)throw Object.assign(new Error(d&&d.error||("HTTP "+r.status)),{status:r.status});
     tbPlan={botId:b.id,plan:d.plan,la:Date.now()};toast("Planul e salvat; colectorul te anunță când atingi un prag","good")}
-  catch(e){toast("Nu am putut salva planul: "+(e&&e.status===503?"doar pe Radarul de acasă":textEroare(e)),"bad")}
+  catch(e){toast("Nu am putut salva planul: "+(e&&e.status===503?"doar pe Radarul de pe server":textEroare(e)),"bad")}
   tbDeseneazaSaptPlan(b);
 }
 function tbMarjaCalc(v){
@@ -6665,7 +6665,7 @@ function tbDeseneazaSaptPlan(b){
     var z=TabloExtra.peZile(tbSapt.intrari||[],"Europe/Bucharest");
     if(!z.length)el.innerHTML='<p class="tbSub">Colectorul n-a strâns încă istoric pentru botul ăsta.</p>';
     else{var mx=Math.max.apply(null,z.map(function(x){return Math.abs(x.grile||0)}).concat([0.01]));
-      el.innerHTML='<div class="tbZile">'+z.map(function(x){var h=x.grile==null?0:Math.round(Math.abs(x.grile)/mx*100);return '<div class="tbZi" title="'+escapeHtml(x.zi)+'"><span class="tbSub">'+(x.grile==null?"—":(x.grile>=0?"+":"−")+Math.abs(x.grile).toFixed(1).replace(".",","))+'</span><i class="'+(x.grile!=null&&x.grile<0?"neg":"poz")+'" style="height:'+h+'%"></i><span class="tbEt2">'+escapeHtml(x.zi.slice(8,10)+"."+x.zi.slice(5,7))+'</span><span class="tbSub '+(x.total==null?"":x.total>=0?"good":"bad")+'">'+(x.total==null?"—":(x.total>=0?"+":"−")+Math.abs(x.total).toFixed(1).replace(".",","))+'</span></div>'}).join("")+'</div><p class="tbSub">Bara = cât au adus grilele în ziua aceea; dedesubt, totalul botului seara. Din istoricul strâns de colectorul de acasă (7 zile).</p>';}
+      el.innerHTML='<div class="tbZile">'+z.map(function(x){var h=x.grile==null?0:Math.round(Math.abs(x.grile)/mx*100);return '<div class="tbZi" title="'+escapeHtml(x.zi)+'"><span class="tbSub">'+(x.grile==null?"—":(x.grile>=0?"+":"−")+Math.abs(x.grile).toFixed(1).replace(".",","))+'</span><i class="'+(x.grile!=null&&x.grile<0?"neg":"poz")+'" style="height:'+h+'%"></i><span class="tbEt2">'+escapeHtml(x.zi.slice(8,10)+"."+x.zi.slice(5,7))+'</span><span class="tbSub '+(x.total==null?"":x.total>=0?"good":"bad")+'">'+(x.total==null?"—":(x.total>=0?"+":"−")+Math.abs(x.total).toFixed(1).replace(".",","))+'</span></div>'}).join("")+'</div><p class="tbSub">Bara = cât au adus grilele în ziua aceea; dedesubt, totalul botului seara. Din istoricul strâns de colectorul de pe VPS (7 zile).</p>';}
   }
   // (3) planul
   var st=TabloExtra.planStare(b,tbPlan.botId===b.id?tbPlan.plan:null,{afaraDe:null},Date.now());
@@ -6819,7 +6819,7 @@ function tbDeseneazaSemafor(b){
     var pb=kv?SemnaleBot.podeaPeBani(kv.log||[],b.profitTotal):null,U2=function(v){return (v>=0?"+":"−")+Math.abs(v).toFixed(2).replace(".",",")+" USDT"},sh="";
     if(pb)sh+='<p class="tbPodeaBani">🪜 <b>Ținta devine podea, pe banii tăi:</b> dacă ieșeai la prima „țintă atinsă” ('+escapeHtml(new Date(pb.la).toLocaleString("ro-RO",{weekday:"short",hour:"2-digit",minute:"2-digit"}))+') aveai <b>'+U2(pb.laIesire)+'</b>; acum botul are <b>'+U2(pb.acum)+'</b> — ținerea a adus <b class="'+(pb.dif>=0?"good":"bad")+'">'+U2(pb.dif)+'</b> până acum (nerealizat până închizi; opritorul hotărăște cât rămâne sigur).</p>';
     if(soc&&Object.keys(soc).length)sh+='<div class="grTabelWrap"><table class="grTabel"><thead><tr><th>Semnal</th><th>Date</th><th>Judecate</th><th>Au avut dreptate</th><th>Pe bani, urmat</th></tr></thead><tbody>'+Object.keys(soc).map(function(k){var x=soc[k];return '<tr><td>'+escapeHtml(E[k]||k)+'</td><td>'+x.n+'</td><td>'+x.judecate+'</td><td>'+(x.rata==null?"încă nu":GridCalcul.procent(x.rata)+" ("+x.corecte+" din "+x.judecate+")")+'</td><td class="'+(x.baniN?(x.bani>=0?"good":"bad"):"")+'">'+(x.baniN?U2(x.bani):"încă nu")+'</td></tr>'}).join("")+'</tbody></table></div><p class="tbSub">„Pe bani, urmat” = câți USDT ar fi adus semnalul dacă îl urmai, în 24 h (plus = a ajutat, minus = te-ar fi costat). „Ieși/atenție” au avut dreptate dacă în 24 h totalul botului a scăzut (ieșirea ar fi salvat bani); „ține” dacă n-a scăzut. Sub 10 judecate, e doar începutul.</p>';
-    if(!ac)sh+='<p class="tbSub">BTC și aglomerarea vin de la colectorul de acasă (la 5 min); '+(kv?"ultima lui socoteală e mai veche de 20 de minute.":"n-a trimis încă nimic pentru botul ăsta.")+'</p>';
+    if(!ac)sh+='<p class="tbSub">BTC și aglomerarea vin de la colectorul de pe VPS (la 5 min); '+(kv?"ultima lui socoteală e mai veche de 20 de minute.":"n-a trimis încă nimic pentru botul ăsta.")+'</p>';
     socEl.innerHTML=sh||'<p class="tbSub">Încă nimic de socotit pentru botul ăsta.</p>';
     var ps=$("tbPlSub-socoteala");if(ps)ps.textContent=soc&&Object.keys(soc).length?TextRo.cate(Object.keys(soc).length,"semnal urmărit","semnale urmărite")+" · au avut dreptate după 24 h?":"au avut dreptate după 24 h?";
   }
@@ -7012,16 +7012,16 @@ function tbDeschidePlan(){var d=$("tbPl-plan");if(!d)return;d.open=true;if(d.scr
 function renderTabloAlerte(){
   var el=$("tbAlerteStare");if(!el)return;
   var s=tbStare.istoricServer,c=s&&s.config,e=tbStare.extra||{};
-  if(e.istoricEroare==="doar-acasa"){el.innerHTML='<p class="tbSub">Alertele pe telefon și istoricul de 7 zile merg de pe serverul de acasă (PORNESTE-CRYPTO-RADAR.bat).</p>';return}
-  if(!s){el.innerHTML='<p class="tbSub">Aștept datele serverului de acasă (vin odată cu botul din Tablou)…</p>';return}   /* v100.194: înainte scria „colectorul n-a pornit” și când datele încă nu sosiseră */
-  if(!c||!c.colectorLa){el.innerHTML='<p class="tbSub">Colectorul de acasă n-a pornit încă. Pornește din nou PORNESTE-CRYPTO-RADAR.bat.</p>';return}
+  if(e.istoricEroare==="doar-acasa"){el.innerHTML='<p class="tbSub">Alertele pe telefon și istoricul de 7 zile merg doar de pe serverul Radarului (mau.tail9144fe.ts.net:8443).</p>';return}
+  if(!s){el.innerHTML='<p class="tbSub">Aștept datele serverului Radarului (vin odată cu botul din Tablou)…</p>';return}   /* v100.194: înainte scria „colectorul n-a pornit” și când datele încă nu sosiseră */
+  if(!c||!c.colectorLa){el.innerHTML='<p class="tbSub">Colectorul de pe VPS n-a pornit încă. Pe VPS, aș rula sarcina „Crypto Radar pornire”.</p>';return}
   /* v100.194: aceeași regulă ca banda de sus (AsezarePaznic.colectorDin): „oprit” doar dacă tăcea la aducerea orei, nu „acum − ora veche” */
   var cd=typeof AsezarePaznic!=="undefined"&&AsezarePaznic.colectorDin?AsezarePaznic.colectorDin(c,Date.now(),s.adusLa):{min:Math.max(0,Math.round((Date.now()-c.colectorLa)/60000)),viu:(s.adusLa?(s.adusLa-c.colectorLa<=180000&&Date.now()-s.adusLa<=720000):(Date.now()-c.colectorLa<=180000))};
   var min=cd?cd.min:null,viu=!!(cd&&cd.viu);
   var canal=c.canal==="ntfy"&&c.ntfyTopic?"ntfy · canal "+c.ntfyTopic:c.canal==="telegram"?"Telegram":c.canal==="discord"?"Discord (webhook) + aici":"doar aici, în Radar (niciun canal extern legat încă)";
   var lista=Array.isArray(tbStare.alerteServer)?tbStare.alerteServer.slice(0,12):null;
   var NIV={critic:["🔴","bad"],atentie:["🟠","tbWarn"],info:["🟢","good"]};
-  var h='<div class="tbLinie"><span>Colectorul de acasă</span><b class="'+(viu?"good":"bad")+'">'+(min===null?"—":viu?"merge (acum "+Math.max(0,min)+" min)":"oprit de "+min+" min")+'</b></div>'+
+  var h='<div class="tbLinie"><span>Colectorul de pe VPS</span><b class="'+(viu?"good":"bad")+'">'+(min===null?"—":viu?"merge (acum "+Math.max(0,min)+" min)":"oprit de "+min+" min")+'</b></div>'+
     '<div class="tbLinie"><span>Istoric strâns pe server</span><b>'+(s.intrari.length?((Date.now()-s.intrari[0].t)/3600000).toFixed(1).replace(".",",")+" ore":"—")+'</b></div>'+
     '<div class="tbLinie"><span>Canalul de alerte</span><b>'+escapeHtml(canal)+'</b></div>';
   if(lista===null)h+='<p class="tbSub">Nu pot citi alertele de pe server.</p>';
@@ -7456,7 +7456,7 @@ async function rzCalendar(fortat){
   try{rzStare.cal=await getJSON("/api/rezultate?action=calendar&zile="+rzStare.zile)}catch(e){rzStare.cal={eroare:(e&&e.message)||"nu s-a putut aduce calendarul"}}
   rzStare.calLa=Date.now()}
 async function rzPorneste(){
-  if(rzStare.cheie===null){try{var s=await getJSON("/api/rezultate?action=stare");rzStare.cheie=!!(s&&s.areCheie)}catch(e){rzStare.cheie=false;rzStare.mesajCheie="Serverul de acasă nu a răspuns: "+((e&&e.message)||"")}}
+  if(rzStare.cheie===null){try{var s=await getJSON("/api/rezultate?action=stare");rzStare.cheie=!!(s&&s.areCheie)}catch(e){rzStare.cheie=false;rzStare.mesajCheie="Serverul Radarului nu a răspuns: "+((e&&e.message)||"")}}
   rzDeseneaza();await rzStele();await rzCalendar(false);rzDeseneaza()}
 function rzZile(n){rzStare.zile=n;rzStare.deschis=null;rzFiltruSalveaza();rzCalendar(true).then(rzDeseneaza)}
 function rzDoarStea(){rzStare.doarStea=true;rzFiltruSalveaza();rzDeseneaza()}

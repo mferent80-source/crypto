@@ -88,7 +88,7 @@ var Disciplina = (function () {
     }
     if (Array.isArray(o.pozitii) && o.stop !== null && o.stop !== undefined) {
       var sub = o.pozitii.filter(function (x) { return x && x.pct !== null && x.pct <= o.stop; });
-      add("stop", !sub.length, "Nicio acțiune ținută sub stopul tău (" + (o.stop * 100).toFixed(0) + " % de la cumpărare)", sub.map(function (x) { return x.nume + " " + Math.round(x.pct * 100) + " %"; }).join(", "), o.stopDinMae ? "din MAE-ul tău" : "implicit −8 %");
+      add("stop", !sub.length, "Nicio acțiune ținută sub stopul tău (" + (o.stop < 0 ? "−" : "") + Math.abs(o.stop * 100).toFixed(0) + " % de la cumpărare)", sub.map(function (x) { var q = Math.round(x.pct * 100); return x.nume + " " + (q < 0 ? "−" : "") + Math.abs(q) + " %"; }).join(", "), o.stopDinMae ? "din MAE-ul tău" : "implicit −8 %");
     }
     if (Array.isArray(o.boti) && o.regulaOre) {
       var af = o.boti.filter(function (x) { return x && x.oreAfara >= o.regulaOre; });

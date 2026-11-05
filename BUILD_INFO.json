@@ -1,11 +1,12 @@
 {
-  "version": "v100.305",
-  "badge": "v100.305 · BUSOLA: PROGRAMUL REAL, OPȚIUNILE ÎN TABLOU",
+  "version": "v100.306",
+  "badge": "v100.306 · AUDITUL FINAL: AZI NU, ALERTE MAI PUȚINE",
   "engineContract": "54.1",
   "dataSchema": 54,
   "baseRelease": "v77.4 · TABLOUL BOTULUI",
   "releaseType": "valul de reparatii din revizia finala pe ansamblu: marginStatus/riskStatus citite, telefon, scurgere WS/ceas la iesire prin tab-uri, ATR adevarat, pret viu, istoric fara pret inghetat, sortare dupa timp, comision nemasurabil, durata la margine",
   "features": {
+    "auditFinal306": "05.11.2026 (auditul final Radar + Busola, el: „repară tot și fă tot”, I-824..I-839): o singură regulă „azi nu” (frâna zilei, pauza de sezon, piața în MIȘCARE) pe Acasă, Idei, Sugestii, Tablou și Scanner; scorul sezonului cu raportul întors corect; ecranul fără bot; telefonul (fișa Grid sare la verdict, „nicio variantă nu câștigă”, Alerte pe zile, Range Filter neutru); garda convențiilor pe ecran; Trade-ul zilei cinstit (P3 cu ziua făcută, banda gridului măsurată pe ora UTC, cinci grile pe parte, prețurile pe cifre semnificative); Reveniri, Verdicte și laboratorul gridului pe blocuri / două căi (mărimea sub H0 ≤ 6 %); colectorul v101.166: evaluările la zero boți, alerte mai puține (extrem nou, noaptea în Radar + rezumat la 08:00, critic o dată pe episod), sănătatea colectorului, textele spre VPS, cache Pionex; paza Busolei „dovedit” doar pe momente; nota „Busola n-a mai măsurat” cu paznicul viu.",
     "busolaAudit305": "05.11.2026 (auditul sever al Busolei, „fă toate”): vârsta rezumatului după programul REAL de pe VPS (07:05–21:05 orar, 23:05, 03:05; din rezumat.program) — fără alarma falsă de la 23:02; Tabloul botului arată starea paginii Busolei cu opțiunile (miscare4h), paza rămâne pe celulă; „cifra tace” spus; mesajul n-a mai măsurat trimite la VPS, fără wrangler login acasă (colector v101.165)",
     "rfIdei304": "05.11.2026, el: „fa toate” (ideile I-806..I-810 după re-auditul Range Filter): rândul DUPĂ COST pe cartelă (jurnalul R din Pine v2.5, paritate cu rf_motor.py), sugestiile Pionex + ultimele 5 căutări în căsuță, un singur cache de lumânări (lib/lumanari.js) pentru Range Filter, Tablou și Trade-ul zilei, linia „📏 Range Filter 1h” în rezumatul de dimineață (colector v101.164).",
     "butonCauta303": "05.11.2026, drumul omului pe Radarul viu după livrarea v100.302: butonul „Analizează” rămânea oprit după prima căutare (zona căsuței nu se redesenează, iar starea butonului se punea doar în rfDeseneazaCauta) ⇒ rfDeseneaza o pune și ea.",

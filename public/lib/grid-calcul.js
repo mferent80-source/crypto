@@ -152,7 +152,8 @@ var GridCalcul = (function () {
   }
   // v100.72 (pachetul 5): „o dată”, „de 2 ori”, „de 21 de ori” (nu „de 1 ori”)
   function oriDe(n) { var k = Math.round(Number(n)), r = Math.abs(k) % 100; return k === 1 ? "o dată" : "de " + k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de" : "") + " ori"; }
-  function procent(x) { return x === null || x === undefined || !isFinite(x) ? "—" : (x < 0 && x * 100 <= -0.005 ? "−" : "") + Math.abs(x * 100).toFixed(2).replace(".", ",") + "%"; }   // v100.72: minusul „−”
+  // v100.72: minusul „−”; v100.306 (I-837): o zecimală de la 1% în sus (rezultatele: „mediana −1,1%”), două sub 1% (pasul gridului „0,30%”)
+  function procent(x) { if (x === null || x === undefined || !isFinite(x)) return "—"; var a = Math.abs(x * 100), z = a >= 1 ? 1 : 2; return (x < 0 && Number(a.toFixed(z)) !== 0 ? "−" : "") + a.toFixed(z).replace(".", ",") + "%"; }
 
   // Cat s-a plimbat pretul (max high - min low, raportat la deschidere) in fiecare
   // fereastra de H zile, cu o fereastra noua la fiecare 6h.

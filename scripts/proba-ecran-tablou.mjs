@@ -740,7 +740,7 @@ async function main() {
       const ceFac = await textEl(b, "tbCeFac");
       assert.ok(!/AUTH_REQUIRED/.test(String(titlu) + String(ceFac)),
         `omul nu are ce face cu "AUTH_REQUIRED": titlu="${titlu}" ceFac="${ceFac}"`);
-      assert.match(String(ceFac), /PORNESTE-CRYPTO-RADAR/,
+      assert.match(String(ceFac), /Crypto Radar pornire/,   // v100.306: pe VPS, nu .bat
         `trebuie sa-i spuna cu ce sa porneasca: "${ceFac}"`);
     });
 
@@ -897,7 +897,7 @@ async function main() {
       await b.ev(`incarcaBoti(false)`);
       const buton2 = await b.ev(`!!document.querySelector('#botiRanduri [data-action-click="mergiLaParola()"]')`);
       assert.equal(buton2, false, "la retea cazuta parola nu e vinovata - fara buton spre Setari");
-      if (await textT2Nou()) assert.match(await b.ev(`document.getElementById('botiRanduri').textContent`), /PORNESTE-CRYPTO-RADAR/);
+      if (await textT2Nou()) assert.match(await b.ev(`document.getElementById('botiRanduri').textContent`), /Crypto Radar pornire/);   // v100.306
     });
 
     await test("A4c. parola respinsa se blocheaza doar un minut, apoi se incearca din nou", async () => {

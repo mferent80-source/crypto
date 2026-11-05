@@ -16,7 +16,9 @@
 //   - sumele mici, sub 0,1 („0,04 USDT”, TextRo.zecMici): cu o zecimală ar ieși „0,0”;
 //   - ecoul a ce tastează omul: câmpurile (input / select / textarea) nu se citesc deloc, iar un element marcat `data-conv-ecou` e sărit;
 //   - graficele (svg: scara de prețuri, axele) și codul (code / pre: rândul pentru TradingView) - prețuri și coduri, nu rezultate;
-//   - datele („05.11”, „05.11.2026”, „6.10” pe axă), orele, versiunile („v2.6”, „v100.306”), coeficienții fără unitate („0,72”, „Brier 0,077”).
+//   - datele („05.11”, „05.11.2026”, „6.10” pe axă), orele, versiunile („v2.6”, „v100.306”), coeficienții fără unitate („0,72”, „Brier 0,077”);
+//   - NUMELE robotului de market breadth, cerute de el explicit „cu nume” (14.10): „Master Score”, „Bearish Signal”, zonele (Strong / Neutral…,
+//     marcate `data-conv-nume`) - nume proprii, nu cuvinte de tradus.
 // Ce NU vede: textul pliat (un <details> închis nu se citește - „judecă după poză”: ce e la vedere).
 
 export const CUVINTE_ENGLEZE = ["WIN", "LOSS", "Win", "Loss", "score", "Score", "Neutral", "NEUTRAL", "ASTEAPTA", "Asteapta", "BULLISH", "BEARISH", "Bullish", "Bearish", "LOADING", "Loading"];
@@ -62,7 +64,8 @@ export function abateri(text) {
   }
   // 5. cuvintele din listă
   const reEn = new RegExp("(^|[^A-Za-zĂÎȘȚÂăîșțâ])(" + CUVINTE_ENGLEZE.join("|") + ")(?![A-Za-zĂÎȘȚÂăîșțâ])", "g");
-  while ((m = reEn.exec(t))) pune("engleza", m.index + m[1].length, m[2].length);
+  const tEn = t.replace(/Master Score|Bearish Signal/g, (s) => " ".repeat(s.length));   // numele robotului (excepție scrisă sus)
+  while ((m = reEn.exec(tEn))) pune("engleza", m.index + m[1].length, m[2].length);
   return out;
 }
 
@@ -70,7 +73,7 @@ export function abateri(text) {
 // un text pliat (details închis, display:none) n-are dreptunghiuri ⇒ nu se citește
 export const TEXT_VAZUT_JS = `(() => {
   const rad = document.querySelector(".panel.on"); if (!rad) return "";
-  const sari = "input,select,textarea,svg,code,pre,script,style,[data-conv-ecou],[hidden]";
+  const sari = "input,select,textarea,svg,code,pre,script,style,[data-conv-ecou],[data-conv-nume],[hidden]";
   const w = document.createTreeWalker(rad, NodeFilter.SHOW_TEXT), bucati = [];
   for (let n = w.nextNode(); n; n = w.nextNode()) {
     const p = n.parentElement; if (!p || p.closest(sari)) continue;

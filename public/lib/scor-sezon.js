@@ -177,7 +177,7 @@ var ScorSezon = (function () {
     // v100.220: sezon oprit - banda de stare + butoanele potrivite („Pornește sezon nou de azi” în loc de „Oprește” + „Sezon nou”)
     var oprit = s.oprit ? '<div class="scOprit">⏸ Sezon OPRIT din ' + esc(dataRo(s.oprit)) + ' - cifrele sunt înghețate' + (s.dupaOprire ? "; " + esc(cate(s.dupaOprire, P.felInchis[0], P.felInchis[1])) + " după oprire nu intră în scor" : "") + '. Apasă „Obiectiv ✎” → „Pornește sezon nou de azi” când reiei.</div>' : "";
     // v100.221 (audit 9): setările nu s-au putut citi de pe serverul de acasă - spus pe față, nu obiectiv implicit în tăcere
-    var nota = o.sursaEroare ? '<div class="scOprit">⚠ Setările scorului nu s-au putut citi de pe serverul de acasă: cardul arată sezonul și obiectivul implicit până răspunde.</div>' : "";
+    var nota = o.sursaEroare ? '<div class="scOprit">⚠ Setările scorului nu s-au putut citi de pe serverul Radarului: cardul arată sezonul și obiectivul implicit până răspunde.</div>' : "";
     var form = "";
     if (o.formular) {
       // v100.221 (audit 7): ce a tastat (o.valori) are întâietate față de obiectivul salvat - o eroare sau o redesenare nu îi șterge câmpurile
@@ -189,7 +189,7 @@ var ScorSezon = (function () {
         + '<div class="scFormBtn"><button class="acBtn" type="button" value="' + esc(id) + '" data-action-click="scorSalveaza(this.value)">Salvează obiectivul</button>'
         + (s.oprit ? '<button class="acBtn" type="button" value="' + esc(id) + '" data-action-click="scorSezonNou(this.value)">Pornește sezon nou de azi</button>'
           : '<button class="acBtn" type="button" value="' + esc(id) + '" data-action-click="scorOpreste(this.value)">Oprește sezonul</button><button class="acBtn" type="button" value="' + esc(id) + '" data-action-click="scorSezonNou(this.value)">Sezon nou de azi</button>')
-        + (o.mesaj ? '<span class="scSub scMesaj">' + esc(o.mesaj) + '</span>' : '<span class="scSub">obiectivul și data sezonului stau pe serverul de acasă · sezonul vechi rămâne în Jurnal</span>') + '</div>';
+        + (o.mesaj ? '<span class="scSub scMesaj">' + esc(o.mesaj) + '</span>' : '<span class="scSub">obiectivul și data sezonului stau pe serverul Radarului · sezonul vechi rămâne în Jurnal</span>') + '</div>';
     }
     return '<div class="scCard' + (s.oprit ? " scCardOprit" : "") + '" style="--sc-c:' + CUL[s.nivel] + '"><div class="scCap"><h4>🏁 Scorul tău pe ' + esc(P.nume) + ' · sezonul din ' + esc(dataScurta(s.start)) + (s.oprit ? " · OPRIT" : "") + '</h4>'
       + '<span class="acSub">' + (s.ultimul ? "ultimul închis " + esc(dataScurta(s.ultimul.inchis)) : "ziua 1") + (o.faraJurnal ? "" : ' · <button type="button" class="actionGhost" data-action-click="navTo(\'jurnaltrade\',true)' + (s.piata === "t212" ? ";jtAlegeFiltru(\'actiuni\')" : "") + '">Jurnal ›</button>') + ' · <button type="button" class="actionGhost" value="' + esc(id) + '" data-action-click="scorFormular(this.value)">' + (o.formular ? "închide" : "Obiectiv ✎") + '</button></span></div>'

@@ -83,7 +83,23 @@ var GridLaborator = (function () {
   // etichete grupate în timp, varianță mai mare în mișcare): scratchpad audit23/p13-h0.mjs, cifrele în raportul auditului.
   var ZI_MS = 86400000;
   function blocDe(r, H) { return typeof r.t === "number" ? Math.floor(r.t / (H * ZI_MS)) : typeof r.s === "number" ? Math.floor(r.s / (H * C.BARE_ZI)) : null; }
-  function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; var t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  // v100.306: p și IC din Student (aceleași funcții ca în verdicte.js, copiate - pagina și colectorul încarcă laboratorul fără Verdicte)
+  function lgamaL(x) { var c = [76.18009172947146, -86.50532032941677, 24.01409824083091, -1.231739572450155, 0.1208650973866179e-2, -0.5395239384953e-5], y = x, t = x + 5.5, s = 1.000000000190015; t -= (x + 0.5) * Math.log(t); for (var i = 0; i < 6; i++) s += c[i] / ++y; return -t + Math.log(2.5066282746310005 * s / x); }
+  function fractieBetaL(a, b, x) {
+    var qab = a + b, qap = a + 1, qam = a - 1, c = 1, d = 1 - qab * x / qap, h, m, m2, aa, del, mic = 1e-30;
+    if (Math.abs(d) < mic) d = mic; d = 1 / d; h = d;
+    for (m = 1; m <= 200; m++) {
+      m2 = 2 * m; aa = m * (b - m) * x / ((qam + m2) * (a + m2));
+      d = 1 + aa * d; if (Math.abs(d) < mic) d = mic; c = 1 + aa / c; if (Math.abs(c) < mic) c = mic; d = 1 / d; h *= d * c;
+      aa = -(a + m) * (qab + m) * x / ((a + m2) * (qap + m2));
+      d = 1 + aa * d; if (Math.abs(d) < mic) d = mic; c = 1 + aa / c; if (Math.abs(c) < mic) c = mic; d = 1 / d; del = d * c; h *= del;
+      if (Math.abs(del - 1) < 3e-12) break;
+    }
+    return h;
+  }
+  function betaIncL(a, b, x) { if (x <= 0) return 0; if (x >= 1) return 1; var bt = Math.exp(lgamaL(a + b) - lgamaL(a) - lgamaL(b) + a * Math.log(x) + b * Math.log(1 - x)); return x < (a + 1) / (a + b + 2) ? bt * fractieBetaL(a, b, x) / a : 1 - bt * fractieBetaL(b, a, 1 - x) / b; }
+  function pStudentL(t, df) { return !isFinite(t) ? 0 : betaIncL(df / 2, 0.5, df / (df + t * t)); }   /* p bilateral */
+  function cuantilaStudentL(p, df) { var lo = 0, hi = 1000, k; for (k = 0; k < 100; k++) { var mij = (lo + hi) / 2; if (pStudentL(mij, df) > p) lo = mij; else hi = mij; } return (lo + hi) / 2; }
   function testNet(rows, predA, predB, H, o) {
     o = o || {};
     var cel = {}, blocuri = {};
@@ -95,26 +111,30 @@ var GridLaborator = (function () {
       var a = predA(r), b = !a && predB(r); if (!a && !b) return;
       var bl = blocDe(r, H); if (bl === null) return;
       var k = bl + "|" + (r.simbol || "") + "|" + (a ? "A" : "B");
-      if (!cel[k]) { cel[k] = { bl: bl, A: a, s: 0, n: 0 }; (blocuri[bl] = blocuri[bl] || []).push(cel[k]); }
+      if (!cel[k]) { cel[k] = { bl: bl, A: a, sim: r.simbol || "", s: 0, n: 0 }; (blocuri[bl] = blocuri[bl] || []).push(cel[k]); }
       cel[k].s += r.net; cel[k].n++;
     });
-    var bl = Object.keys(blocuri).map(function (k) { var l = blocuri[k].map(function (c) { return { v: c.s / c.n, A: c.A }; }), nA = l.filter(function (c) { return c.A; }).length; return { l: l, nA: nA, n: l.length, m: l.reduce(function (s, c) { return s + c.v; }, 0) / l.length }; })
+    var bl = Object.keys(blocuri).map(function (k) { var l = blocuri[k].map(function (c) { return { v: c.s / c.n, A: c.A, sim: c.sim }; }), nA = l.filter(function (c) { return c.A; }).length; return { l: l, nA: nA, n: l.length, m: l.reduce(function (s, c) { return s + c.v; }, 0) / l.length }; })
       .filter(function (g) { return g.nA > 0 && g.nA < g.n; });
     var cA = 0, cB = 0; bl.forEach(function (g) { cA += g.nA; cB += g.n - g.nA; });
     if (bl.length < (o.minBlocuri || 8) || cA < 10 || cB < 10) return { stare: "putine", blocuri: bl.length, celuleA: cA, celuleB: cB };
-    var T = function (g, et) { var s = 0; for (var i = 0; i < g.n; i++) if (et[i]) s += g.l[i].v - g.m; return s; };
-    var Wt = bl.reduce(function (s, g) { return s + g.nA * (g.n - g.nA) / g.n; }, 0), obs = 0;
-    bl.forEach(function (g) { g.et = g.l.map(function (c) { return c.A; }); obs += T(g, g.et); });
-    var R = o.reps || 10000, rnd = mulberry32(o.seed || 259), peste = 0;
-    for (var r = 0; r < R; r++) {
-      var s = 0;
-      for (var q = 0; q < bl.length; q++) { var g = bl[q], e = g.et.slice(); for (var i = e.length - 1; i > 0; i--) { var j = Math.floor(rnd() * (i + 1)), t = e[i]; e[i] = e[j]; e[j] = t; } s += T(g, e); }
-      if (Math.abs(s) >= Math.abs(obs) - 1e-12) peste++;
-    }
-    var rb = mulberry32((o.seed || 259) + 7919), bs = [];
-    for (var k2 = 0; k2 < 1000; k2++) { var a2 = 0, w2 = 0; for (var e2 = 0; e2 < bl.length; e2++) { var h = bl[Math.floor(rb() * bl.length)]; a2 += T(h, h.et); w2 += h.nA * (h.n - h.nA) / h.n; } if (w2 > 0) bs.push(a2 / w2); }
-    bs.sort(function (x, y) { return x - y; });
-    return { stare: "testat", dif: obs / Wt, p: (peste + 1) / (R + 1), pMin: 1 / (R + 1), ic: bs.length ? [bs[Math.floor(bs.length * 0.025)], bs[Math.min(bs.length - 1, Math.floor(bs.length * 0.975))]] : null, blocuri: bl.length, celuleA: cA, celuleB: cB };
+    // v100.306 (la unirea auditului final, 05.11): p-ul vechi = permutarea etichetelor ÎN fiecare bloc (+ IC bootstrap pe blocuri), adică
+    // blocurile socotite independente. Dar eticheta ține pe aceeași monedă bloc după bloc, iar netul are un nivel al monedei (o monedă volatilă
+    // iese mereu altfel) ⇒ pe lumi FĂRĂ efect, „dovedit” în 15–50 % din lumi (scratchpad lab-marime.mjs: 49,5 % cu persistență 0,85 și nivelul
+    // monedei cât zgomotul; 35 % pe blocuri de 7 zile; 6,5 % doar fără nivel pe monedă). Statistica rămâne ACEEAȘI (abaterea celulelor A de la
+    // media blocului, ponderată ca Mantel–Haenszel: Σ c·(v − media blocului), c = nB/n la A și −nA/n la B), varianța e pe DOUĂ căi ca la
+    // Verdicte.comparaPeZi (monede + blocuri − celula monedă × bloc, cel puțin cât fiecare cale, × G / (G − 1); contribuțiile = reziduuri);
+    // p și IC din Student cu min(monede, blocuri) − 1 grade de libertate. Mărimea, aceleași lumi: proba-v100306-d (≤ 6 %). Sub 8 monede ⇒ „putine”.
+    var obs = 0, Wt = 0;
+    bl.forEach(function (g) { Wt += g.nA * (g.n - g.nA) / g.n; g.l.forEach(function (c) { obs += (c.A ? (g.n - g.nA) / g.n : -g.nA / g.n) * (c.v - g.m); }); });
+    var difW = Wt > 0 ? obs / Wt : 0, pm = {}, pb = {}, pc = {};
+    bl.forEach(function (g, q) { g.l.forEach(function (c) { var k = c.A ? (g.n - g.nA) / g.n : -g.nA / g.n, u = k * (c.v - g.m) - difW * k * k; pm[c.sim] = (pm[c.sim] || 0) + u; pb[q] = (pb[q] || 0) + u; pc[c.sim + "|" + q] = (pc[c.sim + "|" + q] || 0) + u; }); });
+    var nS = Object.keys(pm).length;
+    if (nS < (o.minSimboluri || 8)) return { stare: "putine", motiv: "simboluri", blocuri: bl.length, celuleA: cA, celuleB: cB, simboluri: nS };
+    var patrate = function (m) { return Object.keys(m).reduce(function (s, k) { return s + m[k] * m[k]; }, 0); };
+    var df = Math.min(nS, bl.length) - 1, VS = patrate(pm), VB = patrate(pb), VC = patrate(pc), V = Math.max(VS, VB, VS + VB - VC) * (df + 1) / df, es = Math.sqrt(V) / Wt;
+    var dif = obs / Wt, p = V > 0 ? pStudentL(Math.abs(obs) / Math.sqrt(V), df) : 1, tc = cuantilaStudentL(0.05, df);
+    return { stare: "testat", dif: dif, p: p, pMin: 0, ic: [dif - tc * es, dif + tc * es], blocuri: bl.length, celuleA: cA, celuleB: cB, simboluri: nS, gradeLibertate: df };
   }
 
   function compara(rows, predA, predB, H) {

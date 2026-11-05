@@ -35,7 +35,7 @@ await test("colectorul chiar tăcea la aducere (semn cu 10 min înainte) ⇒ „
 await test("Tabloul și banda de sus folosesc aceeași regulă, cu ora aducerii; tbAduExtra ține minte când a sosit ora", () => {
   const app = citeste("public", "app.js"), ap = citeste("public", "lib", "asezare-paznic.js");
   assert.match(app, /config:ist\.config\|\|null,adusLa:Date\.now\(\)\}/);
-  assert.match(app, /if\(!s\)\{el\.innerHTML='<p class="tbSub">Aștept datele serverului de acasă/, "datele încă nesosite nu mai înseamnă „colectorul n-a pornit”");
+  assert.match(app, /if\(!s\)\{el\.innerHTML='<p class="tbSub">Aștept datele serverului Radarului/, "datele încă nesosite nu mai înseamnă „colectorul n-a pornit”");
   assert.match(app, /AsezarePaznic\.colectorDin\(c,Date\.now\(\),s\.adusLa\)/);
   /* v100.196 (auditul UI 🟡8): sursa trece prin colectorSursa - istoricul Tabloului cu ora aducerii când există, altfel config-ul adus separat */
   assert.match(ap, /col: colectorDin\(cs\.cfg, Date\.now\(\), cs\.adusLa\)/); assert.match(ap, /if \(i && i\.config\) return \{ cfg: i\.config, adusLa: i\.adusLa \};/);

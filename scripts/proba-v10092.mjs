@@ -179,7 +179,8 @@ await test("(C) garda: situațiile noi (semafor.busola, consiliu.busolaVsRadar �
 await test("(D) I-526 titluDimineata: „Azi: 1 bot pe agitație dovedită, 2 pe calm · 9 acțiuni pe revenire, istoricul cam la fel · nimic de ieșit”; fără dovadă ⇒ „pe agitație”; părțile lipsă se lasă afară; nimic ⇒ null; ≤ 160", async () => {
   const { titluDimineata: T } = await import("./lib/dimineata-titlu.mjs");
   const boti = [{ nume: "AAVE", stare: "miscare" }, { nume: "LIT", stare: "liniste" }, { nume: "PUMP", stare: "liniste" }];
-  assert.equal(T({ boti: boti, bilant: "dovedit", reveniri: 9, eticheta: "cam la fel", deIesit: 0 }), "Azi: 1 bot pe agitație dovedită, 2 pe calm · 9 acțiuni pe revenire, istoricul cam la fel · nimic de ieșit");
+  // v100.306: „cam la fel” (eticheta veche, nedovedită) ⇒ „istoricul nedovedit” (proba-v100306-d)
+  assert.equal(T({ boti: boti, bilant: "dovedit", reveniri: 9, eticheta: "cam la fel", deIesit: 0 }), "Azi: 1 bot pe agitație dovedită, 2 pe calm · 9 acțiuni pe revenire, istoricul nedovedit · nimic de ieșit");
   assert.equal(T({ boti: boti, bilant: "prea puține", reveniri: 1, eticheta: null, deIesit: 2 }), "Azi: 1 bot pe agitație, 2 pe calm · 1 acțiune pe revenire · 2 poziții de ieșit");
   assert.equal(T({ boti: [{ nume: "SOL", stare: "nemasurat" }], reveniri: 0, deIesit: 0 }), "Azi: niciun bot pe agitație · nicio acțiune pe revenire · nimic de ieșit");
   assert.equal(T({ boti: [], reveniri: null, deIesit: null }), null); assert.equal(T({}), null);

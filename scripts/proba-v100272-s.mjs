@@ -132,27 +132,27 @@ await test("3a. ActiuniSemnale.monedaTicker + pretIn: metadatele T212 întâi, a
   assert.equal(typeof AS.monedaTicker, "function", "lipsește ActiuniSemnale.monedaTicker"); assert.equal(typeof AS.pretIn, "function", "lipsește ActiuniSemnale.pretIn");
   assert.deepEqual(["AAPL_US_EQ", "AAPL", "BRK-B", "SAPd_EQ", "SAP.DE", "MCp_EQ", "VUSAl_EQ", "VUSA.L", "NESNs_EQ"].map((t) => AS.monedaTicker(t)), ["USD", "USD", "USD", "EUR", "EUR", "EUR", null, null, "CHF"]);
   assert.equal(AS.monedaTicker("VUSAl_EQ", { VUSAl_EQ: "GBp" }), "GBX"); assert.equal(AS.monedaTicker("VUSAl_EQ", { VUSAl_EQ: "USD" }), "USD");
-  assert.deepEqual(["USD", "EUR", "GBP", "GBX", "CHF", null].map((m) => AS.pretIn(30.123, m)), ["$30.12", "€30.12", "£30.12", "30.12 p", "30.12 CHF", "30.12"]);
+  assert.deepEqual(["USD", "EUR", "GBP", "GBX", "CHF", null].map((m) => AS.pretIn(30.123, m)), ["$30,12", "€30,12", "£30,12", "30,12 p", "30,12 CHF", "30,12"]);   // v100.306 (I-837): virgula zecimală la prețurile în $ / € / £
   assert.equal(AS.pretIn(null, "EUR"), "—");
 });
 const POZ = (o) => Object.assign({ sem: { nivel: "tine", componente: [] }, niv: { stopPozitie: 90 }, prob: [], sfaturi: [], plan: null, pret: 100, pretMediu: 95, qty: 10, costLei: null }, o);
 await test("3b. Consilierul poziției: banii și stopul în moneda acțiunii (€ / pence ⇒ £ / fără semn), dolarii rămân la fel", () => {
-  assert.equal(CO.alcatuiesteActiune(POZ({ simbol: "AAPL" })).bani, "dacă vinzi acum: +50,0 $ · dacă atinge stopul care urcă ($90.00): −50,0 $", "SUA s-a schimbat");
-  assert.equal(CO.alcatuiesteActiune(POZ({ simbol: "SAP.DE", moneda: "EUR" })).bani, "dacă vinzi acum: +50,0 € · dacă atinge stopul care urcă (€90.00): −50,0 €");
-  assert.equal(CO.alcatuiesteActiune(POZ({ simbol: "SAP.DE" })).bani, "dacă vinzi acum: +50,0 € · dacă atinge stopul care urcă (€90.00): −50,0 €", "fără moneda dată: din simbol");
-  assert.equal(CO.alcatuiesteActiune(POZ({ simbol: "VUSA.L", moneda: "GBX", pret: 9000, pretMediu: 8500, niv: { stopPozitie: 8000 } })).bani, "dacă vinzi acum: +50,0 £ · dacă atinge stopul care urcă (8000.00 p): −50,0 £");
+  assert.equal(CO.alcatuiesteActiune(POZ({ simbol: "AAPL" })).bani, "dacă vinzi acum: +50,0 $ · dacă atinge stopul care urcă ($90,00): −50,0 $", "SUA s-a schimbat");
+  assert.equal(CO.alcatuiesteActiune(POZ({ simbol: "SAP.DE", moneda: "EUR" })).bani, "dacă vinzi acum: +50,0 € · dacă atinge stopul care urcă (€90,00): −50,0 €");
+  assert.equal(CO.alcatuiesteActiune(POZ({ simbol: "SAP.DE" })).bani, "dacă vinzi acum: +50,0 € · dacă atinge stopul care urcă (€90,00): −50,0 €", "fără moneda dată: din simbol");
+  assert.equal(CO.alcatuiesteActiune(POZ({ simbol: "VUSA.L", moneda: "GBX", pret: 9000, pretMediu: 8500, niv: { stopPozitie: 8000 } })).bani, "dacă vinzi acum: +50,0 £ · dacă atinge stopul care urcă (8.000,00 p): −50,0 £");
   const l = CO.alcatuiesteActiune(POZ({ simbol: "VUSA.L", ticker: "VUSAl_EQ" })).bani; assert.ok(!/[$€£]/.test(l), l);
   const at = CO.alcatuiesteActiune(POZ({ simbol: "SAP.DE", moneda: "EUR", pret: 85, niv: { stopPozitie: 90, stopAtins: true, sursaTrail: "−15% de la maxim" } }));
-  assert.ok(at.motive.concat(at.rest).some((m) => /stopul care urcă \(€90\.00\)/.test(m.titlu)), JSON.stringify(at.motive.map((m) => m.titlu)));
+  assert.ok(at.motive.concat(at.rest).some((m) => /stopul care urcă \(€90,00\)/.test(m.titlu)), JSON.stringify(at.motive.map((m) => m.titlu)));
 });
 await test("3c. semaforul poziției: stopul / ținta din plan în moneda acțiunii", () => {
   const st = { trend: { dir: "lateral", motive: ["x"] }, miscare: null, max7z: 120 };
   const s = AS.semafor({ ticker: "SAPd_EQ", simbol: "SAP.DE", pret: 85, pretMediu: 95, qty: 1, plan: { stop: 90 } }, st);
-  assert.ok(s.motive.some((m) => /stopul din planul tău \(€90\.00\)/.test(m)), JSON.stringify(s.motive));
+  assert.ok(s.motive.some((m) => /stopul din planul tău \(€90,00\)/.test(m)), JSON.stringify(s.motive));
   const u = AS.semafor({ ticker: "AAPL_US_EQ", simbol: "AAPL", pret: 85, pretMediu: 95, qty: 1, plan: { stop: 90 } }, st);
-  assert.ok(u.motive.some((m) => /stopul din planul tău \(\$90\.00\)/.test(m)), JSON.stringify(u.motive));
+  assert.ok(u.motive.some((m) => /stopul din planul tău \(\$90,00\)/.test(m)), JSON.stringify(u.motive));
   const t = AS.semafor({ ticker: "SAPd_EQ", simbol: "SAP.DE", pret: 130, pretMediu: 95, qty: 1, plan: { tinta: 120 } }, st);
-  assert.ok(/prețul de intrare \(€95\.00\)/.test(t.ceAsFace), t.ceAsFace);
+  assert.ok(/prețul de intrare \(€95,00\)/.test(t.ceAsFace), t.ceAsFace);
 });
 await test("3d. planulMeu: moneda dată (o.moneda) în mesaj; fără ea, dolari ca înainte", () => {
   const e = AS.planulMeu({ intrare: 95, calc: { intrare: 95, stop: 100 }, moneda: "EUR" });

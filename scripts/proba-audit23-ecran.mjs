@@ -278,7 +278,7 @@ await test("15a Tablou: tbFormateazaSemn scrie cu virgulă și „−” („bar
 await test("15c Nasdaq: schimbările cu virgulă și „−” (pctSemnRo), nu „+0.28%” / „-2.86%”", () => {
   const m = APP.match(/function pctSemnRo\([^\n]*/); assert.ok(m, "lipsește pctSemnRo");
   const f = new Function("return " + m[0])();
-  assert.equal(f(0.28), "+0,28%"); assert.equal(f(-2.86), "−2,86%"); assert.equal(f(NaN), "—");
+  assert.equal(f(0.28), "+0,3%"); assert.equal(f(-2.86), "−2,9%"); assert.equal(f(NaN), "—");
   for (const v of ["gap", "+qqqTick.priceChangePercent", "rel", "p20", "q20", "rs20"]) assert.ok(APP.includes("pctSemnRo(" + v + ")"), "Nasdaq: " + v);
 });
 await test("15d Contul Pionex: soldurile cu num() (ro-RO, virgulă), lichidarea „+22,9%”; Calendarul „estimat 55,4”", () => {

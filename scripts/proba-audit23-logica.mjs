@@ -316,7 +316,7 @@ await test("(13) întrebările intră în registrul BH (pentruRegistru) cu p, pM
   const q = GL.intrebari(randuriLab(4), 2), l = GL.pentruRegistru(q);
   assert.ok(l.length >= 1);
   const m = l.find((x) => /mișcare/.test(x.afirmatie));
-  assert.equal(m.felul, "laborator"); assert.ok(m.p > 0 && m.p < 0.05); assert.ok(m.pMin > 0); assert.match(m.directie, /pe net/);
+  assert.equal(m.felul, "laborator"); assert.ok(m.p > 0 && m.p < 0.05); assert.ok(m.pMin >= 0 && m.pMin < m.p); assert.match(m.directie, /pe net/);   // v100.306: laboratorul pe două căi (Student) ⇒ fără podea, pMin = 0
   const reg = V.registru({ calibrare: [], alte: l });
   assert.ok(reg.some((x) => x.felul === "laborator"));
 });

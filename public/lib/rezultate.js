@@ -37,7 +37,7 @@
   }
 
   function htmlCheie(st) {
-    return '<div class="rzCheieBox"><p class="tbSub">Calendarul pe toată piața vine de la Finnhub și cere cheia ta Finnhub. O lipești o singură dată aici; se ține pe serverul Radarului de acasă (nu în browser), deci merge și de pe telefon.</p>' +
+    return '<div class="rzCheieBox"><p class="tbSub">Calendarul pe toată piața vine de la Finnhub și cere cheia ta Finnhub. O lipești o singură dată aici; se ține pe serverul Radarului de pe VPS (nu în browser), deci merge și de pe telefon.</p>' +
       '<div class="rzCheieRand"><input id="rzCheie" type="password" autocomplete="off" spellcheck="false" placeholder="cheia Finnhub" aria-label="Cheia Finnhub"><button type="button" class="t212BtnLinie" data-action-click="rzSalveazaCheie()">Salvează cheia</button></div>' +
       (st && st.mesajCheie ? '<p class="tbSub rzMesaj">' + esc(st.mesajCheie) + "</p>" : "") + "</div>";
   }

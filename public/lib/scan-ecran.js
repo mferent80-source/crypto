@@ -137,7 +137,7 @@ function scanDeseneaza() {
   // lista
   var cap = '<div class="scCapL"><span></span><span>Simbol</span><span>Preț</span><span>Azi</span><span>7 zile</span><span>Față de piață</span><span>Trend</span><span>RSI</span><span>Mișcare</span><span>La max. 20z</span><span>Scor</span></div>';
   var l = scSortat(scFiltrat(R, false)), html;
-  if (!R.length) html = '<div class="scGol">' + (d.scanErr ? "Nu pot citi scanul: " + escapeHtml(d.scanErr) : scanSt.inLucru ? "Aduc scanul…" : "Scanul îl face colectorul de acasă o dată pe oră; primul apare la câteva minute după pornire.") + '</div>';
+  if (!R.length) html = '<div class="scGol">' + (d.scanErr ? "Nu pot citi scanul: " + escapeHtml(d.scanErr) : scanSt.inLucru ? "Aduc scanul…" : "Scanul îl face colectorul de pe VPS o dată pe oră; primul apare la câteva minute după pornire.") + '</div>';
   else if (scanSt.fel === "toate" && !scanSt.q.trim()) {
     html = [["c", "Crypto", "monede Pionex"], ["a", "Acțiuni", "Nasdaq 100 + ale tale"]].map(function (m) {
       var lm = l.filter(function (x) { return x.fel === m[0]; }), n = scanSt["tot" + m[0]] ? lm.length : 15;

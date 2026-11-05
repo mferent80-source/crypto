@@ -124,7 +124,7 @@ var AC_DIR = { urca: '<span class="good">urcă</span>', coboara: '<span class="b
 
 // v100.199: piața nu se poate citi fără parola aplicației — o cerere de bază refuzată pe parolă e destul (celelalte cad la fel)
 var AC_FARA_PAROLA = { nivel: "fara-date", eticheta: "FĂRĂ PAROLĂ", titlu: "Fără parola aplicației nu pot citi piața pe dispozitivul ăsta.",
-  text: "Serverul de acasă refuză cererile până pui parola (textul APP_API_TOKEN de la pornire) în Setări → Parola aplicației pe acest dispozitiv. Se pune o dată pe fiecare adresă din care deschizi Radarul (acasă și Tailscale sunt separate)." };
+  text: "Serverul Radarului refuză cererile până pui parola (textul APP_API_TOKEN de la pornire) în Setări → Parola aplicației pe acest dispozitiv. Se pune o dată pe fiecare adresă din care deschizi Radarul (acasă și Tailscale sunt separate)." };
 var AC_BUTON_PAROLA = '<button class="actionGhost" type="button" data-action-click="mergiLaParola()">Deschide Setări (parola)</button>';
 function acFaraParola(d) {
   if (typeof eroareDeParola !== "function" || !d) return false;
@@ -137,8 +137,8 @@ function acFaraServer(d) {
   return ["clasamentErr", "piataErr", "tickersErr"].every(function (k) { return !!d[k]; });
 }
 function acFaraServerVerd(d) {
-  return { nivel: "fara-date", eticheta: "FĂRĂ LEGĂTURĂ", titlu: "Serverul de acasă nu răspunde.",
-    text: "N-am primit nimic de la el de la deschidere (" + String(d && d.clasamentErr || "eroare") + "). Verifică dacă PC-ul de acasă e pornit; reîncerc singur în 30 de secunde." };
+  return { nivel: "fara-date", eticheta: "FĂRĂ LEGĂTURĂ", titlu: "Serverul Radarului nu răspunde.",
+    text: "N-am primit nimic de la el de la deschidere (" + String(d && d.clasamentErr || "eroare") + "). Verifică dacă merge serverul Radarului de pe VPS; reîncerc singur în 30 de secunde." };
 }
 function acZiAzi() {
   try { return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Bucharest", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date()); }
@@ -544,7 +544,7 @@ function acasaDeseneaza() {
   // v100.202 (15.10, ideea 5): „actualizat” = ora ultimei citiri BUNE a clasamentului (înainte: ora încercării, și când picase);
   // când serverul de acasă nu răspunde, rândul o spune
   var faraServer = acFaraServer(d), bunLa = d.clasamentLa || 0;
-  if ($("acCand")) $("acCand").textContent = acum.toLocaleDateString("ro-RO", { weekday: "long", day: "numeric", month: "long" }) + " · actualizat " + (bunLa ? new Date(bunLa).toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" }) : "acum…") + (faraServer ? " · serverul de acasă nu răspunde acum" : "");
+  if ($("acCand")) $("acCand").textContent = acum.toLocaleDateString("ro-RO", { weekday: "long", day: "numeric", month: "long" }) + " · actualizat " + (bunLa ? new Date(bunLa).toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" }) : "acum…") + (faraServer ? " · serverul Radarului nu răspunde acum" : "");
   var deschis = acBursaDeschisa(acum), ultZi = qqq && qqq.length ? new Date(qqq[qqq.length - 1].t).toLocaleDateString("ro-RO", { weekday: "long" }) : "";
   if ($("acBursaCand")) $("acBursaCand").textContent = deschis ? "bursa e deschisă · ultimele cifre de azi" : "închiderea de " + (ultZi || "ieri") + " · bursa se redeschide în zilele lucrătoare la " + acOraRedeschidere(acum);   /* v100.272: ora din CalendarBursa */
 
@@ -624,7 +624,7 @@ function acasaDeseneaza() {
       + lb("Peste media de 50", ndxL.e50, ndxL.n) + lb("Peste media de 200", ndxL.e200, ndxL.n) + lb("RSI peste 50", ndxL.rsi, ndxL.n)
       + '<div class="acLin" style="margin-top:4px"><span>În mișcare mare</span><b>' + ndxL.inMiscare.length + (ndxL.inMiscare.length ? ' · ' + escapeHtml(ndxL.inMiscare.slice(0, 3).join(", ")) + (ndxL.inMiscare.length > 3 ? "…" : "") : "") + '</b></div>'
       + '<p class="acEt">' + escapeHtml(vb.nivel === "ingusta" && vb.latime === "mixta" ? "Indicele urcă, dar cam jumătate din acțiuni sunt sub media de 50: urcarea nu e încă largă." : vb.nivel === "ingusta" ? "Indicele urcă, dar o bună parte din acțiuni sunt sub medii: urcarea e dusă de câteva acțiuni mari." : vb.nivel === "larga" ? "Majoritatea acțiunilor urcă odată cu indicele." : vb.nivel === "scade" ? "Majoritatea acțiunilor coboară." : "") + (ndxZi ? (/^azi/.test(ndxZi) ? " Actualizat " + ndxZi + ", o dată pe oră cât e bursa deschisă." : " Calculat la închiderea din " + ndxZi.replace(/\.$/, "") + ".") : "") + '</p>'
-      : '<p class="acMut">' + escapeHtml(d.ndxErr ? "N-am lărgimea Nasdaq: " + d.ndxErr : "Lărgimea Nasdaq o calculează colectorul de acasă în fiecare dimineață, după ora 8.") + '</p>');
+      : '<p class="acMut">' + escapeHtml(d.ndxErr ? "N-am lărgimea Nasdaq: " + d.ndxErr : "Lărgimea Nasdaq o calculează colectorul de pe VPS în fiecare dimineață, după ora 8.") + '</p>');
 
   // v95: dobanzi, dolar, aur, dolar/leu
   var macroRand = function (nume, serieB, cul, fmt, sub, invers) {

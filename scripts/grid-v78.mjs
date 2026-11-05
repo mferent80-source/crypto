@@ -727,7 +727,9 @@ const rand = (parte, net, cond) => Object.assign({ parte, net, miscare: false, l
 await test("v79.5 compara: efect real si stabil in ambele parti -> DOVEDIT; semn schimbat -> CONTRAZIS; putine/amestecate -> N-AM AFLAT; n efectiv = ferestre / 8", () => {
   let rows = [];
   // v100.259 (auditul 23.10): verdictul e pe net, pe zile ⇒ rândurile poartă poziția de start (o fereastră la 6 h = 24 de bare)
-  for (let i = 0; i < 400; i++) rows.push(rand(i < 260 ? "a" : "t", (i % 10 < 8 ? -0.01 : 0.01), { miscare: true, s: i * 24 }), rand(i < 260 ? "a" : "t", (i % 10 < 2 ? -0.01 : 0.01), { miscare: false, s: i * 24 }));
+  // v100.306: testul e pe două căi (monede + blocuri) ⇒ cere cel puțin 8 monede, ca în tura laboratorului (rândurile poartă simbolul);
+  // aceleași ferestre, împărțite pe 10 monede (cele păstrate, la fiecare 8, cad pe monede diferite)
+  for (let i = 0; i < 400; i++) { const simbol = "S" + (Math.floor(i / 8) % 10); rows.push(rand(i < 260 ? "a" : "t", (i % 10 < 8 ? -0.01 : 0.01), { miscare: true, s: i * 24, simbol }), rand(i < 260 ? "a" : "t", (i % 10 < 2 ? -0.01 : 0.01), { miscare: false, s: i * 24, simbol })); }
   const c = GL.compara(rows, (x) => x.miscare, (x) => !x.miscare, 2);
   assert.equal(c.verdict, "dovedit"); assert.ok(c.A.pePlus < c.B.pePlus); assert.equal(c.A.nEf, Math.floor(400 / 8));
   const rows2 = rows.map((x) => x.parte === "t" ? Object.assign({}, x, { miscare: !x.miscare }) : x);
