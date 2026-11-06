@@ -73,6 +73,7 @@ import { titluDimineata } from "./lib/dimineata-titlu.mjs";   // v101.62 (I-526)
 import * as SR from "./lib/sanatate-rute.mjs";   // v101.166 (I-833): erorile 5xx pe rută, turele fără reușită 24 h, cauza reală a unui „fetch failed”
 import { creeazaCacheBoti, creeazaMemo } from "./lib/cache-pionex.mjs";   // v101.166 (I-838): lista boților la 30 s, lumânările de 1 h de dimineață o dată
 import { klinesIncrementale } from "./lib/lumanari-disc.mjs";   // v101.166 (I-838): lumânările de 4h / 1 zi de pe disc, doar coada
+import { pornesteMartorBucla } from "./lib/martor-bucla.mjs";   // v101.167 (06.11): o notă când bucla stă blocată peste 5 s
 import * as POL from "./lib/politica-alerte.mjs";   // v101.166 (I-831): politica alertelor - noaptea, treptele, critic o dată pe episod; pragurile ALESE, într-un loc
 import { alcatuieste as pentruBusola, intrariRetea, trimiteBusolei, cheiaBotilorBusola, secretScriereBusola, inchisiProaspeti } from "./lib/pentru-busola.mjs";   // v101.60 (I-515 + I-498): fișierul local pentru Busola
 /* v101.132 (20.10, el: „fa idei”): candidatul neconfirmat pleacă lângă regimul ținut, nu în locul lui */
@@ -1820,6 +1821,7 @@ async function turaRaport(acum) {
 }
 
 jurnal("pornit, PID " + process.pid + ", server " + BAZA + ", canal alerte: " + CANAL + (NTFY.topic ? " (" + NTFY.topic + (NTFY.nou ? ", NOU" : "") + ")" : ""));
+pornesteMartorBucla({ jurnal });   // v101.167: un calcul sincron mare se vede în jurnal (pe 06.11 disciplina ținea bucla 44 s la fiecare minut)
 if (NTFY.nou) await ntfy(MesajeColector.legat());
 // Turele nu se suprapun: urmatoarea porneste abia dupa ce s-a terminat asta.
 // v94: vremea pietei (alerta la schimbare), funding-ul pe piata, miscarea neobisnuita pe botii si actiunile lui,
@@ -2418,6 +2420,23 @@ const ORE_ARHIVA_DIR = path.join(DATA, "istoric-1h-arhiva"); fs.mkdirSync(ORE_AR
 const ARHIVA_ORE_STARE = path.join(DATA, "arhiva-ore-stare.json");
 const fisArhiva = (m) => path.join(ORE_ARHIVA_DIR, String(m).replace(/[^A-Z0-9_]/gi, "") + ".json");
 const citesteArhiva = (m) => citesteJson(fisArhiva(m), []);
+// v101.167 (06.11.2026, ECONNRESET / timeout-urile de pe VPS): barele unei monede pentru o tură, citite O DATĂ pe monedă. Înainte `bareDe`
+// recitea și reîmbina fișierele la fiecare trade (2.428) ⇒ disciplina ținea bucla SINCRON 44 s (2,9 s cu cache, rezultat identic - măsurat
+// pe VPS, scratchpad banda-durata-vps.mjs); folosit de disciplina banda și de cazuri.
+function bareArhivaPeTura(harta) {
+  const memo = new Map();
+  return (m) => {
+    if (memo.has(m)) return memo.get(m);
+    const ore = harta[m] ? citesteJson(fisOre(harta[m]), []) : [], u = GridCalcul.imbinaRanduri(citesteArhiva(m), ore, 0), b = u.length ? GridCalcul.bare(u) : null;
+    memo.set(m, b);
+    return b;
+  };
+}
+// v101.167: barele se încarcă ÎNAINTEA calculului, câte o monedă, cu un pas buclei între ele (citirea fișierelor ~2 s pe VPS) ⇒ calculul
+// propriu-zis ține bucla ~0,1 s (măsurat pe VPS: 43,6 s ⇒ 3,3 s de la zero, 0,14 s cu barele încărcate; rezultat identic)
+async function preincarcaBare(bareDe, monede) {
+  for (const m of new Set(monede)) { bareDe(m); await new Promise((gata) => setImmediate(gata)); }
+}
 let arhivaOreInLucru = false;
 async function turaArhivaOre() {
   if (!eNoapte(Date.now())) return;
@@ -2600,19 +2619,24 @@ async function turaVerdicteColector() {
 // v101.106 (disciplina, el 13.10: „fă 1, 2, 3, 4”): (1) o dată pe zi, din boții închiși și barele de 1 h ale arhivei: ce s-a întâmplat după ce
 // prețul a ieșit din bandă (câți s-au întors, cât a mers împotrivă) ⇒ regula LUI în ore; (1b) pe viu: botul afară peste regula lui ⇒ o alertă
 let disciplinaZi = null, disciplinaInLucru = false, bandaMemo = { la: 0, v: null };
+// v101.167: după un eșec, următoarea încercare peste 30 de minute - înainte, la fiecare tură (un minut), adică 44 s de blocaj pe minut
+var disciplinaEsecLa = 0;
 async function turaDisciplinaBanda() {
   const zi = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Bucharest" }).format(new Date());
   if (disciplinaInLucru || disciplinaZi === zi) return;
+  if (Date.now() - disciplinaEsecLa < 30 * 60000) return;
   disciplinaInLucru = true;
   try {
-    const tr = JurnalTrade.din(await botiInchisiCompleti()), harta = simbolPeMoneda();
-    const bareDe = (m) => { const ore = harta[m] ? citesteJson(fisOre(harta[m]), []) : [], u = GridCalcul.imbinaRanduri(citesteArhiva(m), ore, 0); return u.length ? GridCalcul.bare(u) : null; };
-    const r = Disciplina.iesiriBanda(tr, bareDe);
+    const tr = JurnalTrade.din(await botiInchisiCompleti()), harta = simbolPeMoneda(), t0 = Date.now();
+    const bareDe = bareArhivaPeTura(harta);
+    await preincarcaBare(bareDe, tr.map((t) => t.moneda));
+    const r = Disciplina.iesiriBanda(tr, bareDe), tCalc = Date.now() - t0;
+    await new Promise((gata) => setImmediate(gata));   // un pas buclei înainte de trimitere (conexiunile închise între timp se văd)
     await trimite("/api/istoric-bot?action=disciplinaBanda", { la: Date.now(), tabel: r.tabel, regula: r.regula, grupe: r.grupe, oreAfaraPe: r.oreAfaraPe });
     bandaMemo = { la: Date.now(), v: r }; disciplinaZi = zi;
-    jurnal("disciplina banda: " + (r.regula ? "după " + r.regula.h + " h afară se mai întorc " + Math.round(r.regula.intoarse * 100) + "% (" + cate(r.regula.n, "caz", "cazuri") + ")" : "fără regulă (prea puține cazuri)"));
+    jurnal("disciplina banda: " + (r.regula ? "după " + r.regula.h + " h afară se mai întorc " + Math.round(r.regula.intoarse * 100) + "% (" + cate(r.regula.n, "caz", "cazuri") + ")" : "fără regulă (prea puține cazuri)") + ` · calculul în ${(tCalc / 1000).toFixed(1).replace(".", ",")} s`);
     SR.noteazaTura(sanatate(), "disciplina", true, Date.now());
-  } catch (e) { jurnal("disciplina banda ESEC", SR.motivEroare(e)); SR.noteazaTura(sanatate(), "disciplina", false, Date.now(), SR.motivEroare(e)); }
+  } catch (e) { disciplinaEsecLa = Date.now(); jurnal("disciplina banda ESEC (reîncerc peste 30 de minute)", SR.motivEroare(e)); SR.noteazaTura(sanatate(), "disciplina", false, Date.now(), SR.motivEroare(e)); }
   disciplinaInLucru = false;
 }
 async function regulaBanda() {
@@ -2697,7 +2721,8 @@ async function turaCazuri() {
   try {
     const tr = JurnalTrade.din(await botiInchisiCompleti()).sort((a, b) => (b.pornit || 0) - (a.pornit || 0)).slice(0, 6000), harta = simbolPeMoneda();
     // v101.69: barele arhivei (de la cel mai vechi bot) + cele de acum, unite (o bară o singură dată)
-    const bareDe = (m) => { const ore = harta[m] ? citesteJson(fisOre(harta[m]), []) : [], u = GridCalcul.imbinaRanduri(citesteArhiva(m), ore, 0); return u.length ? GridCalcul.bare(u) : null; };
+    const bareDe = bareArhivaPeTura(harta);
+    await preincarcaBare(bareDe, tr.map((t) => t.moneda));
     const cz = Asemanatoare.cazuri(tr, bareDe);
     // v101.74 (revizia R4): bilanțurile ADX și becuri socotite aici, o dată pe noapte (pe pagină țineau firul 1–2 s) - stau lângă cazuri
     let bilant = null;

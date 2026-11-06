@@ -35,13 +35,31 @@ var Disciplina = (function () {
   // pentru fiecare bot închis (JurnalTrade.din: jos, sus, dir, pornit, inchis, pct) și barele de 1 h ale monedei: prima ieșire a prețului din
   // bandă; pentru fiecare prag de ore în care a STAT afară continuu: s-a întors în bandă în următoarele 24 h? cât a mers prețul în continuare
   // ÎMPOTRIVA botului (long ieșit pe jos: în jos; short ieșit pe sus: în sus; neutrul: mai departe de bandă)
+  // v100.307 (06.11.2026): fereastra botului din barele monedei. Tura colectorului trece 2.428 de boți × toate barele monedei: filtrul liniar
+  // ținea bucla ~1 s în plus. Barele sortate după t (cum le dă GridCalcul.bare) ⇒ căutare binară; nesortate ⇒ filtrul de până acum (același
+  // rezultat, probat în scripts/proba-v100307-c.mjs față de versiunea veche). Verificarea ordinii se ține minte pe tablou (WeakMap).
+  var sortateVazute = typeof WeakMap === "function" ? new WeakMap() : null;
+  function eSortat(b) {
+    if (sortateVazute && sortateVazute.has(b)) return sortateVazute.get(b);
+    var ok = true; for (var i = 1; i < b.length; i++) if (!(b[i - 1].t <= b[i].t)) { ok = false; break; }
+    if (sortateVazute) sortateVazute.set(b, ok);
+    return ok;
+  }
+  function fereastraBare(b, de, pana) {
+    if (!eSortat(b)) return b.filter(function (x) { return x.t >= de && x.t <= pana; });
+    var lo = 0, hi = b.length, m;
+    while (lo < hi) { m = (lo + hi) >> 1; if (b[m].t < de) lo = m + 1; else hi = m; }
+    var i0 = lo; hi = b.length;
+    while (lo < hi) { m = (lo + hi) >> 1; if (b[m].t <= pana) lo = m + 1; else hi = m; }
+    return b.slice(i0, lo);
+  }
   function iesiriBanda(trades, bareDe, o) {
     o = o || {}; var praguri = o.praguri || PRAGURI_ORE, rez = {}, oreAfaraPe = {}, bucket = { "sub 6 h": [], "6–24 h": [], "peste 24 h": [], "nu a ieșit": [] };
     praguri.forEach(function (h) { rez[h] = { h: h, n: 0, intoarse: 0, miscari: [], net: [], boti: 0, ep: {} }; });
     (trades || []).forEach(function (t) {
       var jos = nr(t.jos), sus = nr(t.sus); if (!(jos > 0) || !(sus > jos) || !(t.pornit > 0) || !(t.inchis > t.pornit)) return;
       var b = bareDe(t.moneda); if (!b || !b.length) return;
-      var l = b.filter(function (x) { return x.t >= t.pornit && x.t <= t.inchis + 72 * ORA; }); if (l.length < 3) return;
+      var l = fereastraBare(b, t.pornit, t.inchis + 72 * ORA); if (l.length < 3) return;
       var iesire = -1, parte = 0;
       for (var i = 0; i < l.length && l[i].t <= t.inchis; i++) { if (l[i].c < jos) { iesire = i; parte = -1; break; } if (l[i].c > sus) { iesire = i; parte = 1; break; } }
       var dirSemn = t.dir === "short" ? 1 : t.dir === "long" ? -1 : parte;   // direcția în care mișcarea strică botul
