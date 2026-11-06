@@ -43,7 +43,9 @@ export function judecaZi(bare, zi, TradeZilei) {
   const bz = (bare || []).filter((b) => b && b.t >= ziStart && b.t < ziStart + ZI).sort((a, b) => a.t - b.t);
   if (bz.length !== 24) return { eroare: "zi incompletă (" + cate(bz.length, "bară", "bare") + ")" };
   const tr = tradeA(bz, d.pdh, d.pdl, d.r1);
-  return { zi, p3: d.p3, semnal: d.p3 >= PRAG_P3, net: tr ? tr.net : null, fel: tr ? tr.fel : "fara" };
+  // v100.307 (revizia I-841, 🟡 3): regula pre-înregistrată e pe P3-ul de la 00:00 UTC ⇒ p3Model, explicit. La ziStart nu e nicio bară de
+  // azi, deci p3Model = d.p3 - rândurile din data/proba-a.jsonl nu se schimbă.
+  return { zi, p3: d.p3Model, semnal: d.p3Model >= PRAG_P3, net: tr ? tr.net : null, fel: tr ? tr.fel : "fara" };
 }
 
 export async function turaProbaA(d) {

@@ -29,13 +29,13 @@ export function monedeTradeZilei(boti, TabloBot) {
 }
 // rândurile mesajului (fiecare ≤ 160): capul, câte unul pe monedă, coada cinstită
 export function liniiTradeZilei(monede, TradeZilei) {
-  const ok = monede.filter((m) => m.d && !m.d.eroare), rau = monede.filter((m) => !m.d || m.d.eroare);
+  const ok = monede.filter((m) => m.d && !m.d.eroare), rau = monede.filter((m) => !m.d || m.d.eroare), cuZiua = ok.some((m) => m.d.cuZiua);
   const linii = [];
   if (ok.length) {
     const mult = ok.filter((m) => m.d.p3 >= 0.6).length, medie = ok.reduce((s, m) => s + m.d.asteptat.med, 0) / ok.length;
     // v101.163: cât din mișcarea zilei s-a format de obicei până la ora asta (curba orelor, proba din 03.11) + weekendul (factorul e inclus în cifre)
     // v100.307 (I-841): după 9:00 ora României ziua UTC e în curs ⇒ P3 (d.p3, același ca pe pagină) e condiționat de ziua făcută; capul o spune
-    const d0 = ok[0].d, cuZiua = ok.some((m) => m.d.cuZiua);
+    const d0 = ok[0].d;
     linii.push(`🎯 Azi: ${mult} din ${ok.length} se mișcă probabil mai mult ca ieri${cuZiua ? " (cu ziua de până acum)" : ""} · mișcarea așteptată, în medie ${pct(medie, 1)}` + (d0.format != null ? ` · format până acum ~${pct(d0.format)}` : "") + (d0.weekend ? " · weekend ×" + String(TradeZilei.FACTOR_WEEKEND).replace(".", ",") : ""));
   }
   ok.forEach((m) => {
@@ -50,6 +50,8 @@ export function liniiTradeZilei(monede, TradeZilei) {
   if (rau.length) linii.push(("fără date: " + rau.map((m) => m.simbol).join(", ")).slice(0, LAT));
   const t = ok.length ? TradeZilei.trade(ok[0].d) : null;
   linii.push(t && t.fel !== "niciunul" && t.fel !== "eroare" ? ("Trade dovedit: " + t.text).slice(0, LAT) : "Niciun trade cu avantaj dovedit (proba din 03.11): gridul / stopul de mai sus sunt din MIȘCARE, nu din bani. Ziua = UTC.");
+  // revizia I-841 (🟡 2): „>ieri” e condiționat de ziua făcută, dar „azi ~”, gridul și stopul vin din clasa modelului de dimineață - spus
+  if (cuZiua) linii.push("„>ieri” = din ziua de până acum și din ieri; „azi ~”, gridul și stopul = din prognoza de la 00:00 UTC și ce s-a mișcat deja.");
   return linii;
 }
 export async function turaTradeZilei(d) {

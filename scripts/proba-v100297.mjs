@@ -90,8 +90,9 @@ await test("2. trade-ul zilei: nimic dovedit ⇒ textul cinstit; un trade dovedi
   assert.match(TZ.trade(d).text, /Niciun trade cu avantaj dovedit/);
   const salv = TZ.PROBA.A.dovedit; TZ.PROBA.A.dovedit = true;
   try {
-    assert.equal(TZ.trade(Object.assign({}, d, { p3: 0.8 })).fel, "A");
-    assert.equal(TZ.trade(Object.assign({}, d, { p3: 0.5 })).fel, "niciunul");
+    // v100.307 (revizia I-841): regula A e cea probată la 00:00 UTC ⇒ citește p3Model, nu P3 condiționat de ziua făcută
+    assert.equal(TZ.trade(Object.assign({}, d, { p3: 0.5, p3Model: 0.8 })).fel, "A");
+    assert.equal(TZ.trade(Object.assign({}, d, { p3: 0.9, p3Model: 0.5 })).fel, "niciunul");
   } finally { TZ.PROBA.A.dovedit = salv; }
   assert.equal(TZ.trade({ eroare: "x" }).fel, "eroare");
 });

@@ -62,7 +62,7 @@ await test("1b. P3: până acum sub ieri ⇒ P3 condiționat de ziua făcută (v
   // tura-proba-a.mjs: TradeZilei.azi(bare, începutul zilei) - nicio bară de azi ⇒ nimic din ziua de azi, P3 = modelul
   const d0 = TZ.azi(bare(r12, 0, 100), T0 + 12 * ZI);
   assert.equal(d0.bareAzi, 0); assert.equal(d0.dejaMaiMult, false); assert.equal(d0.p3, d0.p3Model); assert.equal(d0.panaAcum, 0);
-  assert.match(citeste("scripts", "lib", "tura-proba-a.mjs"), /semnal: d\.p3 >= PRAG_P3/, "proba A citește tot d.p3 (la 00:00 = modelul)");
+  assert.match(citeste("scripts", "lib", "tura-proba-a.mjs"), /semnal: d\.p3Model >= PRAG_P3/, "proba A citește P3-ul modelului, explicit (la 00:00 = d.p3)");
 });
 
 // ---------------------------------------------------------------- 2. banda pe adevăr, pe barele reale ale fixture-ului
