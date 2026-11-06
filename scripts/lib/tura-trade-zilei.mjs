@@ -34,8 +34,9 @@ export function liniiTradeZilei(monede, TradeZilei) {
   if (ok.length) {
     const mult = ok.filter((m) => m.d.p3 >= 0.6).length, medie = ok.reduce((s, m) => s + m.d.asteptat.med, 0) / ok.length;
     // v101.163: cât din mișcarea zilei s-a format de obicei până la ora asta (curba orelor, proba din 03.11) + weekendul (factorul e inclus în cifre)
-    const d0 = ok[0].d;
-    linii.push(`🎯 Azi: ${mult} din ${ok.length} se mișcă probabil mai mult ca ieri · mișcarea așteptată, în medie ${pct(medie, 1)}` + (d0.format != null ? ` · format până acum ~${pct(d0.format)}` : "") + (d0.weekend ? " · weekend ×" + String(TradeZilei.FACTOR_WEEKEND).replace(".", ",") : ""));
+    // v100.307 (I-841): după 9:00 ora României ziua UTC e în curs ⇒ P3 (d.p3, același ca pe pagină) e condiționat de ziua făcută; capul o spune
+    const d0 = ok[0].d, cuZiua = ok.some((m) => m.d.cuZiua);
+    linii.push(`🎯 Azi: ${mult} din ${ok.length} se mișcă probabil mai mult ca ieri${cuZiua ? " (cu ziua de până acum)" : ""} · mișcarea așteptată, în medie ${pct(medie, 1)}` + (d0.format != null ? ` · format până acum ~${pct(d0.format)}` : "") + (d0.weekend ? " · weekend ×" + String(TradeZilei.FACTOR_WEEKEND).replace(".", ",") : ""));
   }
   ok.forEach((m) => {
     const d = m.d, g = TradeZilei.grid(d);

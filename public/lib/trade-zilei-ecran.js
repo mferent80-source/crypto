@@ -45,10 +45,17 @@ function tzCartela(m) {
   // revizia v100.306 (pozele de pe VPS, 06.11 00:20: BTC „7 %” mare, deși la prețul de acum ziua era 7,1 % față de 6,8 % ieri): cu ziua în
   // curs și fără „deja”, cifra mare e PROGNOZA de la 00:00 UTC (modelul vede doar ieri și alaltăieri) - spus în etichetă și pe ton neutru;
   // realitatea zilei stă alături. P3 condiționat de ziua făcută (măsurat pe ore) ⇒ I-841.
-  var prognoza = !d.dejaMaiMult && d.bareAzi > 0;
-  var p3Txt = d.dejaMaiMult ? "deja mai mult ca ieri: " + tzPct(d.panaAcum, 1) + " până acum, față de " + tzPct(d.r1, 1) + " ieri" : prognoza ? "prognoza de la 00:00 UTC (din ieri și alaltăieri), nu vede ziua de azi: din 100 de zile după un ieri ca ăsta, " + Math.round(d.maiMultCaIeri * 100) + " au ieșit așa · până acum " + tzPct(d.panaAcum, 1) + " față de " + tzPct(d.r1, 1) + " ieri" : "calibrat: din 100 de zile ca azi, " + Math.round(d.maiMultCaIeri * 100) + " au ieșit așa";
+  // v100.307 (I-841): cu ziua în curs și fără „deja”, cifra mare = P3 condiționat de ziua făcută (TradeZilei: repartiția lui F pe ore +
+  // modelul, verificat pe zile nevăzute), pe tonul lui; „N au ieșit așa” = frecvența măsurată pe zilele nevăzute în (blocul de ore, zecimea
+  // de P3). Prognoza de la 00:00 UTC (modelul din ieri și alaltăieri) coboară pe un rând al ei, pe ton neutru - nimic pierdut. Ramura
+  // „prognoza” de mai jos rămâne doar ca rezervă (o zi în curs fără P3 condiționat; cu lib-ul de acum nu se întâmplă).
+  var cuZiua = !d.dejaMaiMult && !!d.cuZiua, prognoza = !d.dejaMaiMult && d.bareAzi > 0 && !cuZiua;
+  var p3Txt = d.dejaMaiMult ? "deja mai mult ca ieri: " + tzPct(d.panaAcum, 1) + " până acum, față de " + tzPct(d.r1, 1) + " ieri"
+    : cuZiua ? "din ziua de până acum și din ieri: din 100 de zile ca azi la ora asta, " + Math.round(d.iesitCuZiua * 100) + " au ieșit așa · până acum " + tzPct(d.panaAcum, 1) + " față de " + tzPct(d.r1, 1) + " ieri"
+    : prognoza ? "prognoza de la 00:00 UTC (din ieri și alaltăieri), nu vede ziua de azi: din 100 de zile după un ieri ca ăsta, " + Math.round(d.maiMultCaIeri * 100) + " au ieșit așa · până acum " + tzPct(d.panaAcum, 1) + " față de " + tzPct(d.r1, 1) + " ieri" : "calibrat: din 100 de zile ca azi, " + Math.round(d.maiMultCaIeri * 100) + " au ieșit așa";
   var cuAzi = d.asteptatModel && d.asteptat.med > d.asteptatModel.med + 1e-12;
   h += '<div class="tzRand tzRandMare"><span class="tzEt">Azi se mișcă mai mult ca ieri' + (prognoza ? ' <small class="tzMut">· prognoza de la 00:00 UTC</small>' : '') + '</span><b class="tzCifra' + (prognoza ? ' tzMut' : tzTonP(d.p3)) + '">' + tzPct(d.p3) + '</b><span class="tzMut tzMic">' + p3Txt + "</span></div>";
+  if (cuZiua) h += '<div class="tzRand"><span class="tzEt">Prognoza de la 00:00 UTC</span><b class="tzCifra tzMut">' + tzPct(d.p3Model) + '</b><span class="tzMut tzMic">din ieri și alaltăieri, nu vede ziua de azi: din 100 de zile după un ieri ca ăsta, ' + Math.round(d.maiMultCaIeri * 100) + " au ieșit așa</span></div>";
   h += '<div class="tzRand"><span class="tzEt">Cât se mișcă azi, de obicei</span><b class="tzCifra">' + tzPct(d.asteptat.med, 1) + "</b><span class=\"tzMut tzMic\">între " + tzPct(d.asteptat.p25, 1) + " și " + tzPct(d.asteptat.p75, 1) + " (jumătatea zilelor)" + (cuAzi ? ", cu ce s-a mișcat deja azi" : "") + " · ieri " + tzPct(d.r1, 1) + " · media pe 10 zile " + tzPct(d.media10, 1) + (d.weekend ? " · weekend: ×" + String(TradeZilei.FACTOR_WEEKEND).replace(".", ",") + " inclus" : "") + "</span></div>";
   h += '<div class="tzRand"><span class="tzEt">Până acum azi</span><b class="tzCifra">' + tzPct(d.panaAcum, 1) + "</b><span class=\"tzMut tzMic\">" + TextRo.cate(d.bareAzi, "oră închisă", "ore închise") + ", " + TextRo.cate(d.bareRamase, "oră rămasă", "ore rămase") + " (ziua UTC)</span></div>";
   // v100.299 (proba ORA ZILEI): curba orelor - cât din mișcarea zilei e de obicei formată până la ultima oră închisă și cât mai rămâne
@@ -69,20 +76,22 @@ function tzCartela(m) {
   if (d.ziIncompleta) h += '<p class="tzMut tzMic">sub 20 de zile întregi în lumânări: trendul lipsește din P1 (efect mic).</p>';
   return h + "</article>";
 }
-// rândul de sus: câte monede se mișcă azi mai mult ca ieri, cât e mișcarea așteptată în medie, boții care au atins deja un nivel de ieri
+// rândul de sus: câte monede se mișcă azi mai mult ca ieri, cât e mișcarea așteptată în medie, boții care au atins deja un nivel de ieri.
+// v100.307 (I-841): numără cu P3 condiționat de ziua făcută (d.p3) și spune „(cu ziua de până acum)”; v100.306 spunea că numără prognoza de la 00:00 UTC
 function tzRezumat(monede) {
   var ok = monede.filter(function (m) { return m.d && !m.d.eroare; });
   if (!ok.length) return "";
   var mult = ok.filter(function (m) { return m.d.p3 >= 0.6; }).length, medie = ok.reduce(function (s, m) { return s + m.d.asteptat.med; }, 0) / ok.length;
   var atinse = ok.filter(function (m) { return m.fel === "bot" && (m.d.p1Sus.atins || m.d.p1Jos.atins); }).map(function (m) { return m.simbol; });
   var cal = ok.filter(function (m) { return m.d.p3 <= 0.4; }).length;
-  var t = "Azi: " + TextRo.cate(mult, "monedă", "monede") + " din " + ok.length + " se mișcă probabil mai mult ca ieri, " + TextRo.cate(cal, "stă", "stau") + " probabil mai liniștit" + (cal === 1 ? "ă" : "e") + " · mișcarea așteptată, în medie " + tzPct(medie, 1) + (ok.some(function (m) { return !m.d.dejaMaiMult && m.d.bareAzi > 0; }) ? " (prognoza de la 00:00 UTC; ziua e în curs - vezi „până acum” pe fiecare monedă)" : "") + ".";
+  var cuZiua = ok.some(function (m) { return m.d.cuZiua; }), prognoza = ok.some(function (m) { return !m.d.dejaMaiMult && m.d.bareAzi > 0 && !m.d.cuZiua; });
+  var t = "Azi: " + TextRo.cate(mult, "monedă", "monede") + " din " + ok.length + " se mișcă probabil mai mult ca ieri, " + TextRo.cate(cal, "stă", "stau") + " probabil mai liniștit" + (cal === 1 ? "ă" : "e") + (cuZiua ? " (cu ziua de până acum)" : "") + " · mișcarea așteptată, în medie " + tzPct(medie, 1) + (prognoza ? " (prognoza de la 00:00 UTC; ziua e în curs - vezi „până acum” pe fiecare monedă)" : "") + ".";
   if (atinse.length) t += " Boții pe " + atinse.join(", ") + " au atins deja un nivel de ieri.";
   return '<p class="tzRezumat">' + tzEsc(t) + "</p>";
 }
 function tzHtml(st, acum) {
   var h = '<div class="tzAntet"><h3>Trade-ul zilei</h3><span class="tzMut tzMic" id="tzCand">' + (st.la ? "citit la " + tzOra(st.la) : "") + '</span><div class="tzDr"><button class="acBtn" type="button" data-action-click="tzPorneste(true)">↻ Recitește</button></div></div>';
-  h += '<p class="tzIntro">Ce se știe despre ziua de azi, pe monedele tale (boții activi, BTC / ETH / SOL și cele mai lichide ' + TZ_TOP + ' din clasament): cât se mișcă (P3, dovedit: potrivit pe 2 ani, confirmat pe al treilea, 21 de perechi, 01.11.2026) și cât de probabil atinge nivelurile de ieri (P1, calibrat, nu dovedit că bate mersul la întâmplare). Direcția nu se prezice - nu apare aici. ';
+  h += '<p class="tzIntro">Ce se știe despre ziua de azi, pe monedele tale (boții activi, BTC / ETH / SOL și cele mai lichide ' + TZ_TOP + ' din clasament): cât se mișcă (P3, dovedit: potrivit pe 2 ani, confirmat pe al treilea, 21 de perechi, 01.11.2026; cu ziua în curs ține cont și de cât s-a mișcat deja ziua, verificat pe 72 de zile nevăzute, 77 de monede, 06.11.2026) și cât de probabil atinge nivelurile de ieri (P1, calibrat, nu dovedit că bate mersul la întâmplare). Direcția nu se prezice - nu apare aici. ';
   h += "Ziua e cea UTC (se termină la 02:00 ora României iarna). Orele 15–18 (România, iarna) sunt cele mai agitate: ~21 % din mișcarea zilei în patru ore; sâmbăta și duminica ziua e cu ~20 % mai liniștită decât una lucrătoare (inclus în cifre). Un trade apare ca „trade-ul zilei” doar dacă a trecut proba pre-înregistrată din 03.11.2026. Același rezumat pleacă dimineața pe Discord.</p>";
   if (st.inLucru && !st.monede.length) h += '<p class="tzMut">Aduc lumânările…</p>';
   else if (st.eroare && !st.monede.length) h += '<p class="tzRau">' + tzEsc(st.eroare) + ' <button class="acBtn" type="button" data-action-click="tzPorneste(true)">Încearcă din nou</button></p>';

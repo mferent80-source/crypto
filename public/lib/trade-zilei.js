@@ -25,6 +25,66 @@ var TradeZilei = (function () {
   // CALIB e calculată pe TOATE zilele; față de ea, mediana range / media10 e ×1,06 în zilele lucrătoare și ×0,85 sâmbăta / duminica (UTC), în
   // interiorul claselor de P3 (IS 1,058 / 0,854, OOS 1,073 / 0,862 - oz_v3.py, după revizia din 03.11) ⇒ se înmulțesc peste CALIB
   var FACTOR_LUCRATOARE = 1.06, FACTOR_WEEKEND = 0.85;
+  // v100.307 (I-841; pozele de pe VPS, 06.11.2026 00:20: BTC „7 %” deși ziua era la 7,1 % față de 6,8 % ieri, cu ~96 % din zi format; ETH „6 %”
+  // la 9,8 % față de 9,3 %). Modelul P3 vede doar ieri și alaltăieri ⇒ cu ziua în curs, P3 se condiționează de ziua deja făcută.
+  // IPOTEZA (scrisă înainte de cifre): dată fiind ora h (câte ore UTC din ziua de azi sunt închise, 1..23) și cât s-a mișcat deja ziua,
+  // P(întinderea finală a zilei > ieri) se citește din repartiția măsurată a lui F_h = întinderea până la ora h / întinderea zilei întregi
+  // (prețuri absolute, aceeași zi). Evenimentul e cel din P3: (max − min) / închiderea zilei > r1. Cu închiderea ≈ prețul de acum c:
+  // max − min ≥ r1 · c ⇔ F_h ≤ x, x = (max − min de până acum) / (r1 · c) - același preț la numărător și la numitor ⇒ P3c = P(F_h ≤ x).
+  // Combinarea cu modelul de dimineață: P3 = σ(a + b · logit(P3 model) + c · logit(P3c)), coeficienții pe blocuri FIXE de ore (1–4, 5–8,
+  // 9–12, 13–16, 17–20, 21–23); probabilitățile tăiate la [0,005; 0,995] pentru logit. Dimineața cântărește modelul, seara ziua făcută.
+  // MĂSURAT pe barele reale de 1 h din data/istoric-1h (77 de monede Pionex, zilele UTC întregi 10.05 … 04.11.2026, starea la h:05 prin
+  // TradeZilei.azi; scratchpad i841/masoara-f.mjs + analiza.mjs; o SINGURĂ variantă, fixată înainte de cifre):
+  //   ÎNVĂȚAT pe zilele până la 24.08 (107 zile): cuantilele lui F_h pe toate zilele-monedă, coeficienții pe rândurile fără „deja” (116.079);
+  //   VERIFICAT pe zilele de la 25.08 (72 de zile NEVĂZUTE, 93.203 de rânduri fără „deja”), cu codul de mai jos: Brier P3 nou 0,150,
+  //   modelul de dimineață singur 0,210, P3c singur 0,164 (nou − model −0,060, z pe zile −9,7; nou − P3c −0,014, z −4,2;
+  //   pe săptămâni −4,2); modelul doar recalibrat pe blocuri 0,181 ⇒ câștigul vine din ziua făcută, nu din recalibrare. Pe ore:
+  //   nou < model la fiecare oră 1–23 (z −2,8 … −17,8); față de P3c mai bun la orele 1–14 (z ≤ −2), la egalitate în rest
+  //   (z +0,1 … −1,6; niciun bloc mai slab). Calibrarea pe zecimi, pe nevăzut: ECE 1,2 pp (modelul 12,4, P3c 4,7);
+  //   din 100 de zile cu P3 ≈ 25 % au ieșit 25, cu ≈ 75 % au ieșit 80.
+  // ⇒ trece regula scrisă înainte (bate ambele pe nevăzut, z pe zile ≥ 2, niciun bloc mai slab) ⇒ cu ziua în curs și fără „deja”, P3 = acesta.
+  // Ce NU s-a probat: monedele mari (BTC / ETH nu sunt în data/istoric-1h; P3 al modelului a fost potrivit pe 21 de perechi Binance) și
+  // zilele dinainte de mai 2026; 72 de zile nevăzute într-un singur regim de piață. Proba: scripts/proba-v100307-a.mjs (fixture de 7 monede).
+  var NIV_F = [0.01, 0.025, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 0.975, 0.99];
+  var CUANT_F = [   // CUANT_F[h − 1][k] = cuantila NIV_F[k] a lui F_h (1 = întinderea zilei e deja toată făcută la ora h)
+    [0.037, 0.052, 0.066, 0.087, 0.103, 0.115, 0.127, 0.139, 0.151, 0.163, 0.177, 0.189, 0.204, 0.219, 0.238, 0.256, 0.278, 0.307, 0.344, 0.394, 0.479, 0.561, 0.66],   // 1 oră închisă
+    [0.059, 0.081, 0.105, 0.135, 0.158, 0.176, 0.195, 0.211, 0.229, 0.248, 0.268, 0.288, 0.308, 0.33, 0.352, 0.381, 0.412, 0.447, 0.494, 0.552, 0.638, 0.728, 0.845],   // 2 ore închise
+    [0.071, 0.104, 0.134, 0.17, 0.198, 0.224, 0.249, 0.271, 0.291, 0.314, 0.336, 0.358, 0.381, 0.407, 0.436, 0.471, 0.503, 0.546, 0.6, 0.66, 0.775, 0.875, 0.996],   // 3 ore închise
+    [0.089, 0.123, 0.156, 0.204, 0.237, 0.266, 0.294, 0.32, 0.342, 0.367, 0.392, 0.417, 0.445, 0.475, 0.505, 0.54, 0.577, 0.618, 0.667, 0.741, 0.855, 0.957, 1],   // 4 ore închise
+    [0.104, 0.141, 0.182, 0.23, 0.268, 0.299, 0.33, 0.354, 0.38, 0.407, 0.434, 0.463, 0.491, 0.524, 0.558, 0.593, 0.633, 0.673, 0.74, 0.818, 0.927, 1, 1],   // 5 ore închise
+    [0.117, 0.157, 0.203, 0.261, 0.3, 0.336, 0.366, 0.396, 0.426, 0.453, 0.484, 0.512, 0.545, 0.576, 0.612, 0.645, 0.684, 0.742, 0.803, 0.878, 1, 1, 1],   // 6 ore închise
+    [0.131, 0.18, 0.227, 0.286, 0.332, 0.368, 0.4, 0.436, 0.468, 0.5, 0.532, 0.565, 0.597, 0.627, 0.657, 0.695, 0.746, 0.794, 0.848, 0.925, 1, 1, 1],   // 7 ore închise
+    [0.143, 0.196, 0.25, 0.312, 0.359, 0.399, 0.434, 0.468, 0.502, 0.536, 0.569, 0.601, 0.632, 0.662, 0.7, 0.742, 0.786, 0.833, 0.893, 0.962, 1, 1, 1],   // 8 ore închise
+    [0.159, 0.215, 0.269, 0.338, 0.391, 0.433, 0.472, 0.509, 0.543, 0.577, 0.609, 0.639, 0.667, 0.705, 0.745, 0.787, 0.83, 0.879, 0.934, 1, 1, 1, 1],   // 9 ore închise
+    [0.182, 0.232, 0.288, 0.359, 0.415, 0.461, 0.502, 0.539, 0.573, 0.607, 0.638, 0.669, 0.705, 0.744, 0.783, 0.825, 0.865, 0.914, 0.968, 1, 1, 1, 1],   // 10 ore închise
+    [0.194, 0.25, 0.308, 0.384, 0.439, 0.489, 0.528, 0.565, 0.6, 0.633, 0.665, 0.699, 0.736, 0.775, 0.815, 0.853, 0.894, 0.943, 1, 1, 1, 1, 1],   // 11 ore închise
+    [0.206, 0.27, 0.331, 0.412, 0.468, 0.516, 0.557, 0.595, 0.632, 0.663, 0.696, 0.73, 0.765, 0.801, 0.841, 0.879, 0.922, 0.969, 1, 1, 1, 1, 1],   // 12 ore închise
+    [0.233, 0.299, 0.358, 0.443, 0.5, 0.551, 0.594, 0.632, 0.667, 0.7, 0.735, 0.769, 0.803, 0.841, 0.878, 0.915, 0.959, 1, 1, 1, 1, 1, 1],   // 13 ore închise
+    [0.266, 0.327, 0.403, 0.485, 0.55, 0.602, 0.641, 0.677, 0.714, 0.751, 0.786, 0.825, 0.858, 0.892, 0.929, 0.966, 1, 1, 1, 1, 1, 1, 1],   // 14 ore închise
+    [0.306, 0.388, 0.456, 0.543, 0.603, 0.649, 0.693, 0.73, 0.765, 0.803, 0.839, 0.873, 0.903, 0.939, 0.974, 1, 1, 1, 1, 1, 1, 1, 1],   // 15 ore închise
+    [0.351, 0.448, 0.513, 0.602, 0.658, 0.709, 0.75, 0.786, 0.825, 0.857, 0.89, 0.922, 0.957, 0.989, 1, 1, 1, 1, 1, 1, 1, 1, 1],   // 16 ore închise
+    [0.407, 0.483, 0.556, 0.642, 0.702, 0.751, 0.792, 0.835, 0.872, 0.903, 0.936, 0.969, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],   // 17 ore închise
+    [0.431, 0.516, 0.589, 0.677, 0.743, 0.792, 0.84, 0.878, 0.909, 0.945, 0.977, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],   // 18 ore închise
+    [0.461, 0.553, 0.623, 0.71, 0.774, 0.827, 0.873, 0.908, 0.943, 0.977, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],   // 19 ore închise
+    [0.496, 0.585, 0.665, 0.757, 0.817, 0.867, 0.906, 0.947, 0.983, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],   // 20 ore închise
+    [0.544, 0.626, 0.71, 0.794, 0.851, 0.895, 0.935, 0.973, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],   // 21 ore închise
+    [0.622, 0.72, 0.8, 0.872, 0.93, 0.971, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],   // 22 ore închise
+    [0.767, 0.843, 0.906, 0.967, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]   // 23 ore închise
+  ];
+  var BLOC_P3Z = [[1, 4], [5, 8], [9, 12], [13, 16], [17, 20], [21, 23]];
+  var COEF_P3Z = [[0.0019, 0.6252, 0.3884], [-0.0061, 0.6116, 0.5305], [-0.0348, 0.5656, 0.5979], [-0.0842, 0.5036, 0.6772], [-0.3198, 0.5305, 0.6822], [-0.4094, 0.5587, 0.7699]];   // pe bloc: a, b (logit P3 model), c (logit P3c)
+  var LIM_P3Z = 0.005;
+  // „din 100 de zile ca azi la ora asta, N au ieșit așa”: frecvența MĂSURATĂ pe zilele NEVĂZUTE (de la 25.08), pe (blocul de ore, zecimea de
+  // P3 nou); null = celula are sub 200 de zile-monedă ⇒ se spune zecimea pe toate orele (IESIT_P3Z_TOATE)
+  var IESIT_P3Z = [
+    [0.08, 0.13, 0.19, 0.33, 0.43, 0.54, 0.65, 0.79, 0.89, 0.96],   // orele 1–4
+    [0.05, 0.11, 0.26, 0.36, 0.45, 0.54, 0.66, 0.81, 0.9, 0.96],   // orele 5–8
+    [0.04, 0.14, 0.31, 0.34, 0.46, 0.55, 0.66, 0.8, 0.89, 0.96],   // orele 9–12
+    [0.04, 0.15, 0.26, 0.36, 0.46, 0.58, 0.7, 0.79, null, 0.93],   // orele 13–16
+    [0.03, 0.13, 0.26, 0.38, 0.42, 0.6, null, null, null, 0.9],   // orele 17–20
+    [0.02, 0.13, 0.21, null, null, null, null, null, null, 0.92]   // orele 21–23
+  ];
+  var IESIT_P3Z_TOATE = [0.03, 0.13, 0.25, 0.35, 0.45, 0.55, 0.66, 0.8, 0.89, 0.93];
   // Verdictele probei pre-înregistrate TRADE-UL ZILEI (03.11.2026, _JURNAL_TRADE_ZILEI.md). Se completează DOAR din raportul OOS.
   var PROBA = {
     A: { nume: "Spargere pe zi de mișcare", regula: "P3 ≥ 70 %: intri la prima închidere de 1 h peste maximul / sub minimul de ieri, stop la jumătate din range-ul de ieri, ieși la 23:00 UTC", dovedit: false, cifra: "pe anul de confirmare +0,08 % pe zi (zero, z 0,5); pe celelalte zile spargerea pierde 0,34 %",
@@ -38,6 +98,23 @@ var TradeZilei = (function () {
   function medie(a) { return a.length ? a.reduce(function (s, x) { return s + x; }, 0) / a.length : null; }
   function abatere(a) { if (a.length < 2) return null; var m = medie(a), s = 0; a.forEach(function (x) { s += (x - m) * (x - m); }); return Math.sqrt(s / (a.length - 1)); }
   function clasa(p3) { var c = CALIB[Math.min(9, Math.max(0, Math.floor(p3 * 10)))]; return c; }
+  // v100.307 (I-841): P(F_ore ≤ x) din cuantilele înghețate - liniar între ele, (0, 0) sub prima, 1 de la x ≥ 1 (F nu trece de 1)
+  function repartitiaF(ore, x) {
+    var Q = CUANT_F[Math.min(23, Math.max(1, Math.round(ore))) - 1], P = NIV_F;
+    if (!(x > 0)) return 0;
+    if (x >= 1) return 1;
+    if (x < Q[0]) return P[0] * x / Q[0];
+    for (var k = P.length - 1; k >= 0; k--) if (x >= Q[k]) {
+      var q1 = k + 1 < P.length ? Q[k + 1] : 1, p1 = k + 1 < P.length ? P[k + 1] : 1;
+      return q1 > Q[k] ? P[k] + (p1 - P[k]) * (x - Q[k]) / (q1 - Q[k]) : p1;
+    }
+    return 0;
+  }
+  function blocP3Z(ore) { for (var i = 0; i < BLOC_P3Z.length; i++) if (ore <= BLOC_P3Z[i][1]) return i; return BLOC_P3Z.length - 1; }
+  function logitP3Z(p) { var q = Math.min(1 - LIM_P3Z, Math.max(LIM_P3Z, p)); return Math.log(q / (1 - q)); }
+  // P3 nou = σ(a + b · logit(P3 model) + c · logit(P3c)), coeficienții blocului de ore
+  function combinaP3Z(ore, p3m, p3z) { var w = COEF_P3Z[blocP3Z(ore)]; return sigm(w[0] + w[1] * logitP3Z(p3m) + w[2] * logitP3Z(p3z)); }
+  function iesitP3Z(ore, p) { var z = Math.min(9, Math.max(0, Math.floor(p * 10))), v = IESIT_P3Z[blocP3Z(ore)][z]; return v == null ? IESIT_P3Z_TOATE[z] : v; }
 
   // lumânări 1h (crescător, închise) -> zilele UTC: { zi, op, hi, lo, cl, nb, bare }
   function zile(bare) {
@@ -96,13 +173,21 @@ var TradeZilei = (function () {
     // pagina scria „mai mult ca ieri: 7 %” cu ziua deja peste ieri (7,1 % față de 6,8 %). Acum: până acum ≥ ieri ⇒ P3 = 1 („deja mai mult ca
     // ieri”); mișcarea așteptată = max(a modelului, până acum) pe fiecare cuantilă. Clasa (CALIB) rămâne pe P3-ul modelului (p3Model), cum a fost
     // măsurată. La 00:00 UTC (proba A pre-înregistrată, tura-proba-a.mjs) nu e nicio bară de azi ⇒ P3 = al modelului, neatins.
+    // v100.307 (I-841): între cele două (ziua în curs, încă sub ieri), P3 e condiționat de ziua făcută - mai jos, la oreZi.
     // revizia v100.306: „deja” compara până-acum / prețul de ACUM cu ieri / închiderea de ieri - o închidere mai sus poate coborî procentul
     // final sub ieri. Procentul final nu poate fi sub (max − min) / max de până acum (închiderea ≤ maximul zilei, iar un maxim nou mărește
     // și întinderea) ⇒ „deja” doar când limita asta sigură trece de ieri.
     var panaAcum = azi.nb ? (azi.hi - azi.lo) / c : 0, sigurAzi = azi.nb ? (azi.hi - azi.lo) / azi.hi : 0, deja = azi.nb > 0 && sigurAzi >= r1;
     var asteptat = { p25: Math.max(model.p25, panaAcum), med: Math.max(model.med, panaAcum), p75: Math.max(model.p75, panaAcum) };
+    // v100.307 (I-841): cu ziua în curs și fără „deja”, P3 se condiționează de ziua făcută (ipoteza, măsurătoarea și verificarea pe zile
+    // nevăzute: sus, la CUANT_F). oreZi = orele UTC ale zilei acoperite de barele închise (ora ultimei bare + 1); x = (max − min de până acum)
+    // / (r1 × prețul de acum). „deja” rămâne P3 = 1; la 00:00 UTC (nicio bară de azi, proba A pre-înregistrată) P3 = modelul, neatins.
+    var oreZi = azi.nb ? Math.min(23, Math.floor((azi.bare[azi.bare.length - 1].t % ZI) / ORA) + 1) : 0;
+    var p3Ziua = null, p3Cond = null;
+    if (azi.nb > 0 && !deja) { p3Ziua = repartitiaF(oreZi, (azi.hi - azi.lo) / (r1 * c)); p3Cond = combinaP3Z(oreZi, p3, p3Ziua); if (!isFinite(p3Cond)) { p3Ziua = null; p3Cond = null; } }
     return {
-      ziAzi: ziAzi, pret: c, pdh: ieri.hi, pdl: ieri.lo, pdc: ieri.cl, r1: r1, r2: r2, media10: media10, comp: comp, p3: deja ? 1 : p3, p3Model: p3, dejaMaiMult: deja, maiMultCaIeri: cls.maiMult,
+      ziAzi: ziAzi, pret: c, pdh: ieri.hi, pdl: ieri.lo, pdc: ieri.cl, r1: r1, r2: r2, media10: media10, comp: comp, p3: deja ? 1 : p3Cond !== null ? p3Cond : p3, p3Model: p3, dejaMaiMult: deja, maiMultCaIeri: cls.maiMult,
+      p3Ziua: p3Ziua, p3CuZiua: p3Cond, cuZiua: p3Cond !== null, oreZi: oreZi, iesitCuZiua: p3Cond !== null ? iesitP3Z(oreZi, p3Cond) : null,
       asteptat: asteptat, asteptatModel: model, panaAcum: panaAcum, bareAzi: azi.nb, bareRamase: k, sigma: sig, trend: trend,
       p1Sus: p1(ieri.hi, true), p1Jos: p1(ieri.lo, false), ziIncompleta: inchise.length < 20,
       oraUtc: oraUtc, ziSapt: ziSapt, weekend: weekend, factorZi: factorZi, format: format, ramane: ramane, ramaneAsteptat: asteptat.med * ramane
@@ -144,6 +229,7 @@ var TradeZilei = (function () {
   }
 
   return { azi: azi, zile: zile, trade: trade, grid: grid, clasa: clasa, CALIB: CALIB, PROBA: PROBA, COEF_P3: COEF_P3, COEF_P1: COEF_P1, sigm: sigm, CURBA_F: CURBA_F, FACTOR_WEEKEND: FACTOR_WEEKEND, FACTOR_LUCRATOARE: FACTOR_LUCRATOARE,
-    BANDA_K: BANDA_K, BANDA_ACOPERIRE: BANDA_ACOPERIRE };
+    BANDA_K: BANDA_K, BANDA_ACOPERIRE: BANDA_ACOPERIRE,
+    NIV_F: NIV_F, CUANT_F: CUANT_F, BLOC_P3Z: BLOC_P3Z, COEF_P3Z: COEF_P3Z, IESIT_P3Z: IESIT_P3Z, IESIT_P3Z_TOATE: IESIT_P3Z_TOATE, repartitiaF: repartitiaF, combinaP3Z: combinaP3Z, iesitP3Z: iesitP3Z };
 })();
 if (typeof module !== "undefined" && module.exports) module.exports = TradeZilei;

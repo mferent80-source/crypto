@@ -57,7 +57,7 @@ await test("1b. weekendul: sâmbătă / duminică UTC mișcarea așteptată ×0,
   const joi = TZ.azi(bare(r12, 3, 100), T0 + 12 * ZI + 3 * ORA);   // 2025-11-13 joi
   const sam = TZ.azi(bare(r12, 3, 100, T0 + 2 * ZI), T0 + 14 * ZI + 3 * ORA);   // 2025-11-15 sâmbătă (aceleași 12 zile, mutate cu 2)
   assert.equal(joi.weekend, false); assert.equal(joi.factorZi, 1.06); assert.equal(sam.weekend, true); assert.equal(sam.factorZi, 0.85);
-  const cls = TZ.clasa(joi.p3), r = 0.85 / 1.06;
+  const cls = TZ.clasa(joi.p3Model), r = 0.85 / 1.06;   // v100.307 (I-841): clasa CALIB e pe P3-ul modelului; cu bare de azi, d.p3 e condiționat de ziua făcută
   assert.ok(Math.abs(joi.asteptat.med - joi.media10 * cls.med * 1.06) < 1e-12, "lucrătoare = CALIB × 1,06");
   assert.ok(Math.abs(sam.asteptat.med - joi.asteptat.med * r) < 1e-12 && Math.abs(sam.asteptat.p75 - joi.asteptat.p75 * r) < 1e-12 && Math.abs(sam.asteptat.p25 - joi.asteptat.p25 * r) < 1e-12);
   assert.ok(Math.abs(TZ.grid(sam).latime - TZ.grid(joi).latime * r) < 1e-12);

@@ -51,11 +51,12 @@ await test("1a. P3 = formula înghețată (comp = ieri / media d-11..d-2, r1 / r
   assert.ok(!d.eroare, d.eroare);
   const comp = 0.02 / ((9 * 0.04 + 0.025) / 10);
   const ast = sigm(TZ.COEF_P3[0] + TZ.COEF_P3[1] * Math.log(comp) + TZ.COEF_P3[2] * Math.log(0.02 / 0.025));
-  assert.ok(Math.abs(d.p3 - ast) < 1e-9, `${d.p3} vs ${ast}`);
+  assert.ok(Math.abs(d.p3Model - ast) < 1e-9, `${d.p3Model} vs ${ast}`);   // v100.307 (I-841): cu bare de azi, d.p3 e condiționat de ziua făcută; modelul e p3Model
+  assert.equal(d.p3, d.p3CuZiua); assert.equal(d.cuZiua, true);
   assert.ok(Math.abs(d.comp - comp) < 1e-9 && Math.abs(d.r1 - 0.02) < 1e-9);
   assert.ok(Math.abs(d.media10 - (8 * 0.04 + 0.025 + 0.02) / 10) < 1e-12, "media10 = d-10..d-1, ieri inclus");
-  assert.equal(TZ.clasa(d.p3).deLa, Math.floor(d.p3 * 10) / 10);
-  assert.ok(Math.abs(d.asteptat.med - d.media10 * TZ.clasa(d.p3).med * (d.factorZi || 1)) < 1e-12, "range-ul așteptat = media10 × mediana clasei (× factorul zilei, v100.299)");
+  assert.equal(TZ.clasa(d.p3Model).deLa, Math.floor(d.p3Model * 10) / 10);
+  assert.ok(Math.abs(d.asteptat.med - d.media10 * TZ.clasa(d.p3Model).med * (d.factorZi || 1)) < 1e-12, "range-ul așteptat = media10 × mediana clasei P3-ului modelului (× factorul zilei, v100.299)");
   assert.equal(d.bareAzi, 3); assert.equal(d.bareRamase, 21);   // 3 ore închise, acum = 03:00 ⇒ 21 rămase, cu cea în curs (ca în Python: cnt − pos)
 });
 
