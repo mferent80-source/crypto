@@ -39,10 +39,12 @@ var Disciplina = (function () {
   // ținea bucla ~1 s în plus. Barele sortate după t (cum le dă GridCalcul.bare) ⇒ căutare binară; nesortate ⇒ filtrul de până acum (același
   // rezultat, probat în scripts/proba-v100307-c.mjs față de versiunea veche). Verificarea ordinii se ține minte pe tablou (WeakMap).
   var sortateVazute = typeof WeakMap === "function" ? new WeakMap() : null;
+  // revizia v100.307: se ține minte și lungimea - un tablou la care s-a adăugat ceva după verificare se reverifică
   function eSortat(b) {
-    if (sortateVazute && sortateVazute.has(b)) return sortateVazute.get(b);
+    var m = sortateVazute && sortateVazute.get(b);
+    if (m && m.n === b.length) return m.ok;
     var ok = true; for (var i = 1; i < b.length; i++) if (!(b[i - 1].t <= b[i].t)) { ok = false; break; }
-    if (sortateVazute) sortateVazute.set(b, ok);
+    if (sortateVazute) sortateVazute.set(b, { n: b.length, ok: ok });
     return ok;
   }
   function fereastraBare(b, de, pana) {

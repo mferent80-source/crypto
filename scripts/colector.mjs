@@ -2627,10 +2627,10 @@ async function turaDisciplinaBanda() {
   if (Date.now() - disciplinaEsecLa < 30 * 60000) return;
   disciplinaInLucru = true;
   try {
-    const tr = JurnalTrade.din(await botiInchisiCompleti()), harta = simbolPeMoneda(), t0 = Date.now();
+    const tr = JurnalTrade.din(await botiInchisiCompleti()), harta = simbolPeMoneda();
     const bareDe = bareArhivaPeTura(harta);
     await preincarcaBare(bareDe, tr.map((t) => t.moneda));
-    const r = Disciplina.iesiriBanda(tr, bareDe), tCalc = Date.now() - t0;
+    const t0 = Date.now(), r = Disciplina.iesiriBanda(tr, bareDe), tCalc = Date.now() - t0;   // doar calculul (blocajul), fără preîncărcare
     await new Promise((gata) => setImmediate(gata));   // un pas buclei înainte de trimitere (conexiunile închise între timp se văd)
     await trimite("/api/istoric-bot?action=disciplinaBanda", { la: Date.now(), tabel: r.tabel, regula: r.regula, grupe: r.grupe, oreAfaraPe: r.oreAfaraPe });
     bandaMemo = { la: Date.now(), v: r }; disciplinaZi = zi;

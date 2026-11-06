@@ -6,7 +6,8 @@ export const PAS_BUCLA_MS = 1000;
 export const PRAG_BUCLA_MS = 5000;
 export const NOTA_LA_MS = 60000;
 
-export function pornesteMartorBucla({ jurnal, acum = () => Date.now(), pas = PAS_BUCLA_MS, prag = PRAG_BUCLA_MS, setInt = setInterval }) {
+// ceasul MONOTON (performance.now): un salt al ceasului de sistem (NTP) sau o suspendare n-au voie să pară blocaj (revizia v100.307)
+export function pornesteMartorBucla({ jurnal, acum = () => performance.now(), pas = PAS_BUCLA_MS, prag = PRAG_BUCLA_MS, setInt = setInterval }) {
   let ultim = acum(), ultimaNota = -Infinity;
   const t = setInt(() => {
     const a = acum(), intarziere = a - ultim - pas;
