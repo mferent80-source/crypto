@@ -1285,7 +1285,7 @@ function t212BiletTu(p) {
 function t212StiriHtml(l, max) {
   var s = (Array.isArray(l) ? l : []).slice(0, max || 3);
   if (!s.length) return "";
-  return '<ul class="t212Stiri">' + s.map(function (x) { return '<li><a href="' + escapeHtml(x.link) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(x.titlu) + '</a> <span class="tbSub">' + (x.la ? escapeHtml(new Date(x.la).toLocaleString("ro-RO", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })) : "") + '</span></li>'; }).join("") + '</ul>';
+  return '<ul class="t212Stiri">' + s.map(function (x) { return '<li><a href="' + escapeHtml(x.link) + '" target="_blank" rel="noopener noreferrer"><span data-conv-citat>' + escapeHtml(x.titlu) + '</span></a> <span class="tbSub">' + (x.la ? escapeHtml(new Date(x.la).toLocaleString("ro-RO", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })) : "") + '</span></li>'; }).join("") + '</ul>';
 }
 var T212_SURSA = { istoric: "istoricul tău", pozitie: "poziția", piata: "piața", stiri: "știri" };
 function t212SfaturiHtml(l) {

@@ -18,7 +18,9 @@
 //   - graficele (svg: scara de prețuri, axele) și codul (code / pre: rândul pentru TradingView) - prețuri și coduri, nu rezultate;
 //   - datele („05.11”, „05.11.2026”, „6.10” pe axă), orele, versiunile („v2.6”, „v100.306”), coeficienții fără unitate („0,72”, „Brier 0,077”);
 //   - NUMELE robotului de market breadth, cerute de el explicit „cu nume” (14.10): „Master Score”, „Bearish Signal”, zonele (Strong / Neutral…,
-//     marcate `data-conv-nume`) - nume proprii, nu cuvinte de tradus.
+//     marcate `data-conv-nume`) - nume proprii, nu cuvinte de tradus;
+//   - textul CITAT dintr-o sursă externă, în limba și cu cifrele ei - titlurile de știri (Piața azi, Trading 212), marcate `data-conv-citat`
+//     (v100.309, 07.11: „employment rate slips to 4.1%” pica proba de telefon; punctul e al agenției, nu un rezultat al Radarului).
 // Ce NU vede: textul pliat (un <details> închis nu se citește - „judecă după poză”: ce e la vedere).
 
 export const CUVINTE_ENGLEZE = ["WIN", "LOSS", "Win", "Loss", "score", "Score", "Neutral", "NEUTRAL", "ASTEAPTA", "Asteapta", "BULLISH", "BEARISH", "Bullish", "Bearish", "LOADING", "Loading"];
@@ -73,7 +75,7 @@ export function abateri(text) {
 // un text pliat (details închis, display:none) n-are dreptunghiuri ⇒ nu se citește
 export const TEXT_VAZUT_JS = `(() => {
   const rad = document.querySelector(".panel.on"); if (!rad) return "";
-  const sari = "input,select,textarea,svg,code,pre,script,style,[data-conv-ecou],[data-conv-nume],[hidden]";
+  const sari = "input,select,textarea,svg,code,pre,script,style,[data-conv-ecou],[data-conv-nume],[data-conv-citat],[hidden]";
   const w = document.createTreeWalker(rad, NodeFilter.SHOW_TEXT), bucati = [];
   for (let n = w.nextNode(); n; n = w.nextNode()) {
     const p = n.parentElement; if (!p || p.closest(sari)) continue;
