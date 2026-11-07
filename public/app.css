@@ -3413,7 +3413,7 @@ button.pzVoce{width:auto;min-height:0;margin:0;background:transparent;font-weigh
 .sugVerdict-v{background:rgba(233,185,73,.14);color:var(--warn);border-color:rgba(233,185,73,.55)}
 .sugVerdict-p{background:rgba(91,143,199,.16);color:var(--accent);border-color:rgba(91,143,199,.55)}
 .sugVerdict-n{background:rgba(159,179,196,.12);color:var(--text);border-color:rgba(159,179,196,.4)}
-.sugVerdicte{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--tb-linie);border-radius:5px;background:var(--tb-fond);margin:10px 0}
+.sugVerdicte{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));border:1px solid var(--tb-linie);border-radius:5px;background:var(--tb-fond);margin:10px 0}
 .sugVerdicte>div{padding:8px 12px;border-left:1px solid var(--tb-linie);min-width:0;display:flex;flex-direction:column;gap:3px;align-items:flex-start}
 .sugVerdicte>div:first-child{border-left:0}.sugVerdicte>div .tbSub{margin:0}
 .sugRand{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"sim pret" "sub sub";gap:2px 8px;align-items:center;width:100%;text-align:left;color:var(--text);border:1px solid var(--tb-linie);border-radius:5px;padding:7px 10px;margin:0;cursor:pointer;background:var(--tb-fond);font:inherit;font-weight:400;min-height:44px;box-shadow:none}
@@ -3434,7 +3434,7 @@ button.pzVoce{width:auto;min-height:0;margin:0;background:transparent;font-weigh
 .sugTfGrup{display:flex;gap:4px;flex-wrap:wrap;margin:0 0 6px}.sugTfGrup .tbIntBtn{width:auto;flex:0 0 auto;padding:4px 10px}
 .sugActiuni{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.sugActiuni .sugBtnPlin{background:var(--accent);color:#141C24;border-color:var(--accent)}.sugActiuni a.t212BtnLinie{text-decoration:none;display:inline-flex;align-items:center}
 @container (min-width:900px){.sugLista2 .sugCorp{display:grid;grid-template-columns:330px minmax(0,1fr);grid-template-rows:repeat(var(--n,80),auto) 1fr;column-gap:10px;row-gap:5px;align-items:start}.sugLista2 .sugCorp>*{grid-column:1}.sugLista2 #sugFisa{grid-column:2;grid-row:1/-1;position:sticky;top:10px;max-height:calc(100vh - 20px);overflow:auto}}
-@container (max-width:899px){.sugVerdicte{grid-template-columns:repeat(2,minmax(0,1fr))}.sugVerdicte>div:nth-child(3){border-left:0}.sugVerdicte>div:nth-child(n+3){border-top:1px solid var(--tb-linie)}.sugCel>div:last-child{grid-column:1/-1}}
+@container (max-width:899px){.sugVerdicte{grid-template-columns:repeat(2,minmax(0,1fr))}.sugVerdicte>div:nth-child(odd){border-left:0}.sugVerdicte>div:last-child:nth-child(odd){grid-column:1/-1}.sugVerdicte>div:nth-child(n+3){border-top:1px solid var(--tb-linie)}.sugCel>div:last-child{grid-column:1/-1}}
 /* v100.272 (ideile auditului 29.10): paleta Ctrl+K din tastatură - comanda evidențiată (pe care o pornește Enter) și focusul se văd */
 .cmdItem[aria-selected="true"]{border-color:#5B8FC7;background:#1A2633}
 .cmdItem:focus-visible{outline:2px solid #5B8FC7;outline-offset:1px}
