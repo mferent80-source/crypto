@@ -139,11 +139,12 @@ await test("4. legarea în aplicație: meniu, secțiune, „mai multe”, navTo,
 
 await test("5. versiunile v100.300 peste tot (index ×3, sw, versiune.js, BUILD_INFO, package)", () => {
   const H = citeste("public", "index.html");
-  assert.ok((H.match(/v100\.(30\d|[4-9]\d\d)/g) || []).length >= 3, "index.html: sub 3 locuri");
+  // v100.310: „≥ 300” scris ca 30\d|[4-9]\d\d sărea 310–399 ⇒ [3-9]\d\d
+  assert.ok((H.match(/v100\.([3-9]\d\d)/g) || []).length >= 3, "index.html: sub 3 locuri");
   assert.doesNotMatch(H, /v100\.299 · /);
-  assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-(30\d|[4-9]\d\d)"/);
-  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.(30\d|[4-9]\d\d)"/);
-  assert.match(JSON.parse(citeste("BUILD_INFO.json")).version, /^v100\.(30\d|[4-9]\d\d)$/);
+  assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-([3-9]\d\d)"/);
+  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.([3-9]\d\d)"/);
+  assert.match(JSON.parse(citeste("BUILD_INFO.json")).version, /^v100\.([3-9]\d\d)$/);
   assert.ok(Number(JSON.parse(citeste("package.json")).version.split(".")[1]) >= 300);
   assert.match(citeste("package.json"), /"test:v100300": "node scripts\/proba-v100300.mjs"/);
   assert.match(citeste("package.json"), /npm run test:v100299 && npm run test:v100300/);

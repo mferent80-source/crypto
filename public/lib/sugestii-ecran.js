@@ -287,6 +287,19 @@ function sugLaPoarta(sim, k, probat) {
 }
 // rândul ales (implicit primul), intervalul graficului lui (implicit 1z), lumânările ținute pe cheie „rând|interval”
 sugStare.graf = sugStare.graf || {}; sugStare.grafInLucru = sugStare.grafInLucru || {}; sugStare.tf = sugStare.tf || null; sugStare.ales = sugStare.ales || null;   // tf null = încă n-a ales: implicitul tipului
+// v100.310 (el, 07.11: „un gol imens și o listă lungă”; ales „Primele 5, restul la un clic”): fiecare listă arată primele 5 rânduri,
+// restul stau în pagină pliate (clasa sugPeste) până la „Arată încă N”; ce a deschis rămâne deschis pe aparatul ăsta; rândul ales nu se pliază
+var SUG_PRIMELE = 5, SUG_DESF_CHEIE = "cryptoRadarSugDesfacuteV1";
+sugStare.desfacute = sugStare.desfacute || (function () { try { var o = JSON.parse(localStorage.getItem(SUG_DESF_CHEIE) || "{}"); return o && typeof o === "object" && !Array.isArray(o) ? o : {}; } catch (e) { return {}; } })();
+function sugDesface(k) {
+  k = String(k || ""); if (!k) return;
+  if (sugStare.desfacute[k]) delete sugStare.desfacute[k]; else sugStare.desfacute[k] = true;
+  try { localStorage.setItem(SUG_DESF_CHEIE, JSON.stringify(sugStare.desfacute)); } catch (e) {}
+  sugDeseneaza();
+  // la închidere lista se scurtează sub deget: butonul rămâne în ecran
+  var b = !sugStare.desfacute[k] && typeof document !== "undefined" ? document.getElementById("sugMai-" + k) : null;
+  if (b && b.getBoundingClientRect && b.scrollIntoView) { var r = b.getBoundingClientRect(); if (r.top < 70 || r.bottom > (window.innerHeight || 0)) b.scrollIntoView({ block: "center" }); }
+}
 function sugRandAles(d, acum) { var l = sugRanduri(d || sugStare.d, acum); var r = null; for (var i = 0; i < l.length; i++) if (l[i].k === sugStare.ales) r = l[i]; return r || l[0] || null; }
 // intervalul implicit: monede 4h (intervalul clasamentului și al Fișei), acțiuni 1 zi; alegerea lui rămâne cât e în lista rândului
 function sugTfAles(r) { var L = SUG_TF[r && r.tip] || SUG_TF.actiune; for (var i = 0; i < L.length; i++) if (L[i][0] === sugStare.tf) return L[i]; return r && r.tip === "moneda" ? L[0] : L[L.length - 1]; }
@@ -331,20 +344,25 @@ function sugVerdicteHtml(d) {
     + cel("Cele mai tari pe sectoare", "sect", "auditul 01.11: +1,1% pe lună față de sector, după cost, 8 din 11 luni (t 1,1)") + cel("Trend 12 luni", "trend", T && T.top && T.top.length ? sugTrendProba(T) : "aștept clasamentul robotului") + '</div>';
 }
 function sugListaHtml(d, acum) {
-  var g = sugGrupuri(d, acum), l = sugRanduri(d, acum), ales = sugRandAles(d, acum), f = sugFisa(ales, d, acum), h = '<section class="rlSec sugLista2" data-sug="lista"><div class="sugPandaCap"><h4>Sugestiile</h4><span class="tbSub">' + sugCate(l.length, "rând", "rânduri") + ' în ' + sugCate(g.length, "listă", "liste") + ' · atinge un rând: fișa lui, cu de ce e în listă, cum a mers regula și ce faci</span></div><div class="sugCorp" style="--n:' + (l.length + g.length) + '">';
+  var g = sugGrupuri(d, acum), l = sugRanduri(d, acum), ales = sugRandAles(d, acum), f = sugFisa(ales, d, acum), h = '<section class="rlSec sugLista2" data-sug="lista"><div class="sugPandaCap"><h4>Sugestiile</h4><span class="tbSub">' + sugCate(l.length, "rând", "rânduri") + ' în ' + sugCate(g.length, "listă", "liste") + ' · atinge un rând: fișa lui, cu de ce e în listă, cum a mers regula și ce faci</span></div><div class="sugCorp" style="--n:', c = "", nVaz = 0;   // v100.310: --n = doar ce se vede (pliatele nu ocupă rânduri în grilă)
   g.forEach(function (gr) {
-    h += '<h4 class="sugGrup">' + sugEsc(gr.titlu) + ' <span class="sugVerdict ' + gr.verdictC + '">' + gr.verdict + '</span><span class="tbSub">' + (gr.subHtml || sugEsc(gr.sub)) + '</span></h4>';
-    l.filter(function (r) { return r.grup === gr.k; }).forEach(function (r) {
-      var e = ales && r.k === ales.k;
-      h += '<button type="button" class="sugRand' + (r.aziNu ? ' sugAziNu' : '') + (e ? ' ales' : '') + '" id="sugR-' + sugEsc(r.k) + '" data-grup="' + r.grup + '" aria-pressed="' + e + '" data-action-click="sugAlege(\'' + sugEsc(r.k) + '\')">'
+    c += '<h4 class="sugGrup">' + sugEsc(gr.titlu) + ' <span class="sugVerdict ' + gr.verdictC + '">' + gr.verdict + '</span><span class="tbSub">' + (gr.subHtml || sugEsc(gr.sub)) + '</span></h4>'; nVaz++;
+    var rg = l.filter(function (r) { return r.grup === gr.k; }), desf = !!sugStare.desfacute[gr.k], pliate = 0;
+    rg.forEach(function (r, i) {
+      var e = ales && r.k === ales.k, peste = !desf && i >= SUG_PRIMELE && !e;   // v100.310: după primele 5 se pliază, afară de rândul ales
+      if (peste) pliate++; else nVaz++;
+      c += '<button type="button" class="sugRand' + (r.aziNu ? ' sugAziNu' : '') + (e ? ' ales' : '') + (peste ? ' sugPeste' : '') + '" id="sugR-' + sugEsc(r.k) + '" data-grup="' + r.grup + '" aria-pressed="' + e + '" data-action-click="sugAlege(\'' + sugEsc(r.k) + '\')">'
         + '<span class="sugRandSim"><b>' + sugEsc(r.s) + '</b>' + (r.nume ? ' <span class="tbSub">' + sugEsc(r.nume) + '</span>' : '') + (r.dir ? ' <span class="sugDir ' + sugEsc(r.dirC) + '">' + sugEsc(r.dir) + '</span>' : '') + '</span><span class="sugRandPret">' + sugEsc(r.pret) + '</span>'
         + '<span class="sugRandSub tbSub">' + sugEsc(r.sub) + (r.avert.length ? ' <span class="sugAv">⚠ ' + r.avert.length + '</span>' : '') + '</span></button>';
-      if (e) h += sugFisaHtml(f, r);
+      if (e) c += sugFisaHtml(f, r);
     });
-    if (!l.some(function (r) { return r.grup === gr.k; })) h += '<p class="sugGol">' + sugEsc(gr.k === "porn" && /pauz/i.test(gr.sub) ? gr.sub : gr.gol || "nimic acum") + '</p>';
+    if (rg.length > SUG_PRIMELE && (desf || pliate > 0)) {   // v100.310: un singur buton pe listă, sub rândurile ei; spune exact ce face
+      c += '<button type="button" class="sugMaiMult" id="sugMai-' + sugEsc(gr.k) + '" aria-expanded="' + desf + '" data-action-click="sugDesface(\'' + sugEsc(gr.k) + '\')">' + (desf ? "▴ Arată doar primele " + SUG_PRIMELE : "▾ Arată încă " + sugCate(pliate, "rând", "rânduri")) + '</button>'; nVaz++;
+    }
+    if (!rg.length) { c += '<p class="sugGol">' + sugEsc(gr.k === "porn" && /pauz/i.test(gr.sub) ? gr.sub : gr.gol || "nimic acum") + '</p>'; nVaz++; }
   });
-  if (!ales) h += '<p class="sugGol">Nicio sugestie acum.</p>';
-  return h + '</div></section>';
+  if (!ales) { c += '<p class="sugGol">Nicio sugestie acum.</p>'; nVaz++; }
+  return h + nVaz + '">' + c + '</div></section>';
 }
 function sugFisaHtml(f, r) {
   if (!f) return "";
@@ -464,7 +482,7 @@ function sugAlinia(vechi, nou) {
     if (a.setAttribute) a.setAttribute("class", cls);
   }
   function puneLegatura(a, b) {
-    var i, k, v, nume = ["href", "data-action-click", "title", "aria-pressed"];   // v100.292: rândul ales își schimbă și aria-pressed, nu doar clasa
+    var i, k, v, nume = ["href", "data-action-click", "title", "aria-pressed", "aria-expanded"];   // v100.292: rândul ales își schimbă și aria-pressed, nu doar clasa; v100.310: butonul „Arată încă” - aria-expanded
     for (i = 0; i < nume.length; i++) {
       k = nume[i];
       v = b.getAttribute ? b.getAttribute(k) : null;
@@ -511,13 +529,15 @@ function sugAlinia(vechi, nou) {
 function sugPuneN(el) {
   var c = el && el.querySelector ? el.querySelector(".sugCorp") : null, n = 0, i;
   if (!c || !c.children || !c.style || !c.style.setProperty) return 0;
-  for (i = 0; i < c.children.length; i++) if (c.children[i].id !== "sugFisa") n++;
+  for (i = 0; i < c.children.length; i++) if (c.children[i].id !== "sugFisa" && !/\bsugPeste\b/.test(sugClasa(c.children[i]))) n++;   // v100.310: nici rândurile pliate
   c.style.setProperty("--n", String(n));
   return n;
 }
 function sugDeseneaza() {
   var el = typeof document !== "undefined" && document.getElementById("sugPagina"); if (!el) return;
   var h = sugHtml(sugStare.d, Date.now()); if (el._sugH === h) return;
+  // v100.310: alinierea pe loc mută nodurile în DOM ⇒ rândul apăsat pierdea focusul (Tab o lua de la capăt); îl pun la loc, fără derulare
+  var fa = document.activeElement, faId = fa && fa.id && el.contains && el.contains(fa) ? fa.id : "";
   var tmp = document.createElement("div"); tmp.innerHTML = h;
   var nou = [].slice.call(tmp.children), vechi = [].slice.call(el.children), parti = nou.map(function (c) { return c.outerHTML; }), peLoc = vechi.length === nou.length;
   if (peLoc) for (var i = 0; i < nou.length; i++) {
@@ -528,6 +548,8 @@ function sugDeseneaza() {
   } else el.innerHTML = h;
   el._sugH = h; el._sugP = parti;
   sugPuneN(el);
+  var fb = faId ? document.getElementById(faId) : null;
+  if (fb && fb !== document.activeElement && fb.focus) try { fb.focus({ preventScroll: true }); } catch (e) {}
 }
 async function sugPorneste(fortat) {
   sugDeseneaza();

@@ -37,12 +37,14 @@ await test("Trading 212: t212StiriHtml pune titlul în `<span data-conv-citat>` 
   assert.match(h, /<span data-conv-citat>CPI rises 4\.1% &lt;b&gt;<\/span>/, "titlul citat și tot scăpat (escapeHtml)");
 });
 await test("versiunile: pagina v100.309 (BUILD_INFO, versiune.js, sw, index, package.json, lanțul cu v100309); colectorul neatins (v101.168)", () => {
-  assert.match(citeste("BUILD_INFO.json"), /"version": "v100\.309"/);
-  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.309"/);
-  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-309/);
-  assert.equal((citeste("public", "index.html").match(/v100\.309/g) || []).length, 4);
-  const pk = JSON.parse(citeste("package.json")); assert.equal(pk.version, "100.309.0"); assert.match(pk.scripts.test, /npm run test:v100309/);
-  assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.168"/);
+  // v100.310: „cel puțin v100.309” (fix pe .309 pica la versiunea următoare); versiunea de acum e aceeași peste tot, de 4 ori în index
+  const v = JSON.parse(citeste("BUILD_INFO.json")).version, nr = Number((v.match(/^v100\.(\d+)$/) || [])[1]);
+  assert.ok(nr >= 309, "BUILD_INFO " + v);
+  assert.match(citeste("functions", "_shared", "versiune.js"), new RegExp('VERSIUNE = "v100\\.' + nr + '"'));
+  assert.match(citeste("public", "sw.js"), new RegExp("crypto-radar-v100-" + nr));
+  assert.equal((citeste("public", "index.html").match(new RegExp("v100\\." + nr + "(?!\\d)", "g")) || []).length, 4);
+  const pk = JSON.parse(citeste("package.json")); assert.equal(pk.version, "100." + nr + ".0"); assert.match(pk.scripts.test, /npm run test:v100309/);
+  assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.(16[89]|1[7-9]\d|[2-9]\d\d)"/);
 });
 
 console.log(`\n${teste - picate}/${teste} trec${picate ? " — " + picate + " PICATE" : ""}\n`);
