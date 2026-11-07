@@ -233,7 +233,7 @@ const CAD = { la: Date.parse("2026-11-08T07:30:00Z"), zi: "2026-11-07", nElig: 1
   urmarire: { zile: 0, evenimente: 0, zileIncomplete: 0, grupuri: { E: { n: 0 } }, verdict: null, P: { episoade: 0 } }, istoric: K.ISTORIC };
 await test("🔑 pagina: grupul „📉 … după o cădere mare (în probă)” cu ÎN PROBĂ, după boți; cele 2 rânduri cu etichetele A / B / C", () => {
   const P = pagina(), d = { caderi: CAD };
-  assert.deepEqual(J(P.SUG_GRUPURI.map((g) => g[0])), ["porn", "cad", "revUS", "revEU", "sect", "trend"]);
+  assert.deepEqual(J(P.SUG_GRUPURI.map((g) => g[0])).filter((k) => k !== "dir"), ["porn", "cad", "revUS", "revEU", "sect", "trend"]);   // v100.311: „dir” (direcția pe 7 zile) vine după căderi - proba ei e în proba-v100311-directie
   const g = P.sugGrupuri(d, CAD.la).find((x) => x.k === "cad");
   assert.equal(g.verdict, "ÎN PROBĂ"); assert.match(g.sub, /ziua UTC 07\.11\.2026: 3 căderi noi de −25% pe Binance, 2 și pe Pionex, 1 cu spălare de levier/);
   const r = P.sugRanduri(d, CAD.la).filter((x) => x.grup === "cad");
@@ -352,7 +352,7 @@ await test("pagina: prețul 1000PEPE împărțit; lista veche spusă; Pionex pic
 // ── 5. colectorul ──
 await test("colectorul v101.168: importă tura, o cheamă din buclă între cele grele (o dată pe zi), zilele în data/caderi", () => {
   const c = citeste("scripts", "colector.mjs");
-  assert.match(c, /const VERSIUNE_COLECTOR = "v101\.168"/);
+  assert.match(c, /const VERSIUNE_COLECTOR = "v101\.(16[89]|1[7-9]\d|[2-9]\d\d)"/);   // v100.311: cel puțin v101.168 (v101.169 = tura direcției după căderi)
   assert.match(c, /import \{ turaCaderi as turaCaderiModul \} from "\.\/lib\/tura-caderi\.mjs";/);
   assert.match(c, /if \(val\.grele\) turaCaderiColector\(\)\.catch\(/);
   assert.match(c, /const CADERI_DIR = path\.join\(DATA, "caderi"\)/);

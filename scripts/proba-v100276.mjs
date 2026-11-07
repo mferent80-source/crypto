@@ -31,7 +31,7 @@ const vechi = (action) => (action === "cazuri" ? 1048576 : action === "retea" ? 
 await test("(3) plafonul: același ca lanțul vechi pe fiecare acțiune a rutei; ruta îl citește din tabelul comun", () => {
   const actiuni = [...new Set([...api.matchAll(/action===?"([A-Za-z0-9]+)"/g)].map((m) => m[1]))].concat(["inventata", "constructor", "__proto__", "toString", ""]);
   assert.ok(actiuni.length > 30, "acțiunile rutei: " + actiuni.length);
-  const NOI = { comportament: 524288, caderi: 131072 };   /* v100.286: raportul paginii Comportament (evaluările cu textul lor); v100.308: căderile de ieri + urmărirea (≤ 10 rânduri + statisticile) */
+  const NOI = { comportament: 524288, caderi: 131072, directie: 131072 };   /* v100.286: raportul paginii Comportament (evaluările cu textul lor); v100.311: direcția pe 7 zile (10 monede + urmărirea); v100.308: căderile de ieri + urmărirea (≤ 10 rânduri + statisticile) */
   for (const a of actiuni) assert.equal(plafonIstoricBot(a), Object.prototype.hasOwnProperty.call(NOI, a) ? NOI[a] : vechi(a), a);
   assert.equal(PLAFON_IMPLICIT, 65536);
   assert.doesNotMatch(api, /action==="cazuri"\?1048576/, "lanțul vechi a ieșit din rută");

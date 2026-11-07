@@ -73,8 +73,8 @@ function sugSim(x) { return x.simbol || String(x.ticker || x.simbolTicker || "")
 // stă lângă titlu; cifrele auditului din 01.11 sunt scrise cu data lor. sugRanduri / sugGrupuri / sugFisa sunt fără DOM (proba le rulează în vm).
 // v100.308 (07.11, el: „ok fă așa dar fă și sugestie de coinuri”, după proba pre-înregistrată din 07.11 - A / B / C = n-am aflat): grupul „cad”,
 // căderile de ieri pe monedele Pionex, cu fapte și urmărirea înainte; ÎN PROBĂ - fără Poartă, fără sumă (colectorul: scripts/lib/tura-caderi.mjs)
-var SUG_GRUPURI = [["porn", "🤖 Boți · 💡 Pe ce aș porni un bot"], ["cad", "📉 Monede Pionex · după o cădere mare (în probă)"], ["revUS", "📈 Acțiuni US · 🔁 Pe revenire"], ["revEU", "📈 Acțiuni EU (DAX, CAC, AEX + ale tale) · 🔁 Pe revenire"], ["sect", "🏆 Cele mai tari pe sectoare (acțiuni mari din SUA)"], ["trend", "📈 Trend 12 luni (în probă)"]];   /* titlurile vechilor secțiuni rămân în titlul grupului */
-var SUG_VERDICT = { porn: ["N-AM AFLAT", "v"], cad: ["ÎN PROBĂ", "p"], revUS: ["N-AM AFLAT", "v"], revEU: ["N-AM AFLAT", "v"], sect: ["N-AM AFLAT", "v"], trend: ["ÎN PROBĂ", "p"] };
+var SUG_GRUPURI = [["porn", "🤖 Boți · 💡 Pe ce aș porni un bot"], ["cad", "📉 Monede Pionex · după o cădere mare (în probă)"], ["dir", "🎯 Monede Pionex · direcția pe 7 zile (în probă)"],["revUS", "📈 Acțiuni US · 🔁 Pe revenire"], ["revEU", "📈 Acțiuni EU (DAX, CAC, AEX + ale tale) · 🔁 Pe revenire"], ["sect", "🏆 Cele mai tari pe sectoare (acțiuni mari din SUA)"], ["trend", "📈 Trend 12 luni (în probă)"]];   /* titlurile vechilor secțiuni rămân în titlul grupului */
+var SUG_VERDICT = { porn: ["N-AM AFLAT", "v"], cad: ["ÎN PROBĂ", "p"], dir: ["ÎN PROBĂ", "p"],revUS: ["N-AM AFLAT", "v"], revEU: ["N-AM AFLAT", "v"], sect: ["N-AM AFLAT", "v"], trend: ["ÎN PROBĂ", "p"] };
 // v100.308: fraza urmăririi înainte a căderilor (din KV `sugestii:caderi`, urmarire.grupuri) - cifrele, fără verdict până la privirile fixate
 function sugCadZi(z) { var m = String(z || "").match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? m[3] + "." + m[2] + "." + m[1] : "—"; }   // ca în restul textelor lui: 06.11.2026
 function sugCadUrm(c) {
@@ -93,6 +93,20 @@ function sugCadUrm(c) {
 function sugCadVeche(c, acum) { return !!(c && c.la > 0 && (acum || Date.now()) - c.la > 30 * 3600000); }
 function sugCadEtichete(x) { return [x.A === true ? "A spălare" : "", x.B === "piata" ? "B cu piața" : x.B === "singura" ? "B singură" : "", x.C ? "C top 20" : ""].filter(Boolean).join(" · "); }
 var SUG_TF = { moneda: [["4h", "4H", "4 ore"], ["1z", "1D", "1 zi"]], actiune: [["1h", "1h", "1 oră"], ["1z", "1d", "1 zi"]] };
+// v100.311 (el: „nu vrei să-mi dai o direcție reală a unui coin” ⇒ proba din 07.11): „🎯 Direcția pe 7 zile (în probă)” - din KV `sugestii:directie`
+// (scripts/lib/tura-directie.mjs). Istoricul (124 de săptămâni OOS): nici M1, nici M2 n-au prezis mai bine decât întâmplarea ⇒ fapte + urmărire, nu semnal.
+function sugDirVeche(c, acum) { return !!(c && c.la > 0 && (acum || Date.now()) - c.la > 30 * 3600000); }
+function sugDirSag(s) { return s > 0 ? "▲" : s < 0 ? "▼" : "·"; }
+function sugDirCalib(P, I) { var c = I && I.M2 && I.M2.calibrare, b = null; if (!c || P == null || !isFinite(P)) return null; for (var i = 0; i < c.length; i++) if (!b || Math.abs(c[i][0] - P) < Math.abs(b[0] - P)) b = c[i]; return b; }
+function sugDirUrm(c) {
+  var u = c && c.urmarire, st = sugCadZi(c && c.start);
+  var fin = " Privirile fixate: 08.05.2027 (doar cifrele) și 08.11.2027; istoricul n-a dovedit nimic, deci rămâne urmărire, nu verdict.";
+  if (!u || !u.perechi) return "Urmărit înainte de la " + st + ": nicio zi judecată încă (prima, la 7 zile după start)." + fin;
+  var B = u.brier || {}, pr = function (k) { return B[k] != null && B.clim != null ? "; probabilitățile " + k + " " + (B[k] < B.clim ? "mai bune" : "mai proaste") + " decât rata de bază" : ""; };
+  var m = function (k) { var x = u[k] || {}, a = x.abs || {}, r = x.rel || {}; return k + " a nimerit direcția în " + sugPc(a.nimerire) + " (față de piață în " + sugPc(r.nimerire) + "), media " + sugP1(a.medie) + " pe 7 zile după cost (față de piață " + sugP1(r.medie) + ")" + pr(k); };
+  var putine = u.M1 && u.M1.abs && u.M1.abs.sapt < 8 ? " Sub 8 săptămâni judecate: monedele merg împreună, deci cifrele de mai sus sunt practic o singură observație - nu trage concluzii." : "";   // revizia 07.11
+  return "Urmărit înainte de la " + st + ": " + sugCate(u.perechi, "pereche judecată", "perechi judecate") + " în " + sugCate(u.zile, "zi", "zile") + "; " + m("M1") + "; " + m("M2") + "." + putine + fin;
+}
 function sugPctZ(x, z) { return x == null || !isFinite(x) ? "—" : (x > 0 ? "+" : x < 0 ? "−" : "") + Math.abs(x * 100).toFixed(z == null ? 1 : z).replace(".", ",") + "%"; }
 function sugPr(v, z) { return v == null || !isFinite(v) ? "—" : Math.abs(v * 100).toFixed(z == null ? 1 : z).replace(".", ",") + "%"; }   // mărimi (intervalul, câștigul pe grilă): fără semn, ca pe Tablou
 // v100.293 (02.11, el: „gata?” ⇒ în poza de pe 8788 fișa HYPE arăta „Mișcarea pe 24 h +29,1%”): regim.r4h / r24h sunt RAPOARTE față de
@@ -127,10 +141,12 @@ function sugGrupuri(d, acum) {
     revEU: "au scăzut puternic și acum revin" + (eu ? " · " + (eu.revine || []).length + " pe revenire · cel mult 10 pe zi, cea mai mare cădere întâi" : " · aștept tura de la 8:00"),
     sect: S && Array.isArray(S.sectoare) ? sugCate(S.sectoare.length, "sector", "sectoare") + " · " + (S.univers || "—") + " firme mari · o dată pe zi, de la 8:00" + (S.sectoare.some(function (x) { return !(x.top || []).length; }) ? " · nicio acțiune mare cu trend în sus acum în: " + S.sectoare.filter(function (x) { return !(x.top || []).length; }).map(function (x) { return x.ro; }).join(", ") : "") : "Topul se face o dată pe zi, de la 8:00 (după închiderea bursei din SUA), din screenerul Nasdaq: cele mai mari ~25 de firme din fiecare sector, cu prețurile pe 2 ani.",
     trend: T && Array.isArray(T.top) && T.top.length ? sugTrendNota(T, acum).text : "Clasamentul vine o dată pe zi (după 8:00) de la robotul din Trading Tools: primele 20% dintre ~600 de acțiuni SUA de peste 2 mld. $ după randamentul pe lunile 2–12.",
-    cad: d.caderi && d.caderi.zi ? (sugCadVeche(d.caderi, acum) ? "LISTĂ VECHE (colectorul n-a mai trimis din " + sugCadZi(d.caderi.zi) + ") · " : "") + "ziua UTC " + sugCadZi(d.caderi.zi) + ": " + sugCate(d.caderi.nE || 0, "cădere nouă", "căderi noi") + " de −25% pe Binance, " + (d.caderi.pionexLipsa ? "lista Pionex n-a venit (nu știu care sunt pe Pionex)" : (d.caderi.nPionex || 0) + " și pe Pionex") + (d.caderi.nA ? ", " + d.caderi.nA + " cu spălare de levier" : "") + (d.caderi.incomplet ? " · date incomplete (ziua nu intră în probă)" : "") + (d.caderi.inainteDeProba ? " · ziua de dinaintea probei (arătată, nu intră în urmărire)" : "") + " · cel mult 10, după lichiditate · fapte, nu semnal" : "Lista vine o dată pe zi (după 8:00) din colector: căderile de ieri pe Binance (prima zi la −25% sub maximul pe 30 de zile), doar monedele care sunt și pe Pionex." };
+    cad: d.caderi && d.caderi.zi ? (sugCadVeche(d.caderi, acum) ? "LISTĂ VECHE (colectorul n-a mai trimis din " + sugCadZi(d.caderi.zi) + ") · " : "") + "ziua UTC " + sugCadZi(d.caderi.zi) + ": " + sugCate(d.caderi.nE || 0, "cădere nouă", "căderi noi") + " de −25% pe Binance, " + (d.caderi.pionexLipsa ? "lista Pionex n-a venit (nu știu care sunt pe Pionex)" : (d.caderi.nPionex || 0) + " și pe Pionex") + (d.caderi.nA ? ", " + d.caderi.nA + " cu spălare de levier" : "") + (d.caderi.incomplet ? " · date incomplete (ziua nu intră în probă)" : "") + (d.caderi.inainteDeProba ? " · ziua de dinaintea probei (arătată, nu intră în urmărire)" : "") + " · cel mult 10, după lichiditate · fapte, nu semnal" : "Lista vine o dată pe zi (după 8:00) din colector: căderile de ieri pe Binance (prima zi la −25% sub maximul pe 30 de zile), doar monedele care sunt și pe Pionex.",
+    dir: d.directie && d.directie.zi ? (sugDirVeche(d.directie, acum) ? "LISTĂ VECHE (colectorul n-a mai trimis din " + sugCadZi(d.directie.zi) + ") · " : "") + "ziua UTC " + sugCadZi(d.directie.zi) + " · primele 10 monede Pionex după volum, cu direcția pe 7 zile a două reguli (M1 momentum, M2 combinat)" + (d.directie.incomplet ? " · date incomplete" : "") + " · pe istoric n-au nimerit mai des decât întâmplarea · fapte, nu semnal" : "Lista vine o dată pe zi (după 8:00) din colector: primele 10 monede Pionex după volum, cu direcția pe 7 zile a două reguli fixate înainte (proba din 07.11)." };   // v100.311
   var trendV = T && Array.isArray(T.top) && T.top.length ? sugTrendNota(T, acum).vechiHtml : "";
   var titlu = { porn: an.nu ? "🤖 Boți · candidatele din clasament (azi nu pornesc)" : null, revEU: eu ? "📈 Acțiuni EU (DAX, CAC, AEX + ale tale) · " + jud(eu) + " · 🔁 Pe revenire" : null };   // v100.293 (02.11): fără numărătoarea turei sugActiuni.us pe titlul US - listele ei (urcare, revers, gap) au fost scoase pe 01.11; lista de revenire vine din tura Idei, iar numărătoarea ei e sub titlu
-  var gol = { cad: d.caderi && d.caderi.zi ? (d.caderi.pionexLipsa ? "Lista Pionex n-a venit la tura de azi: căderile de pe Binance sunt numărate mai sus, dar nu știu care sunt și pe Pionex." : "În ziua UTC " + sugCadZi(d.caderi.zi) + " nicio monedă de pe Pionex n-a trecut pentru prima dată de −25% sub maximul pe 30 de zile.") : "aștept tura de la 8:00" };   // v100.308
+  var gol = { cad: d.caderi && d.caderi.zi ? (d.caderi.pionexLipsa ? "Lista Pionex n-a venit la tura de azi: căderile de pe Binance sunt numărate mai sus, dar nu știu care sunt și pe Pionex." : "În ziua UTC " + sugCadZi(d.caderi.zi) + " nicio monedă de pe Pionex n-a trecut pentru prima dată de −25% sub maximul pe 30 de zile.") : "aștept tura de la 8:00",
+    dir: d.directie && d.directie.zi ? (d.directie.pionexLipsa ? "Lista Pionex n-a venit la tura de azi: nu știu care monede sunt și pe Pionex." : "În ziua UTC " + sugCadZi(d.directie.zi) + " nicio monedă Pionex n-a avut toate datele (bare, volum, funding).") : "aștept tura de la 8:00" };   // v100.308; v100.311 dir
   return SUG_GRUPURI.map(function (g) { return { k: g[0], titlu: titlu[g[0]] || g[1], verdict: SUG_VERDICT[g[0]][0], verdictC: "sugVerdict-" + SUG_VERDICT[g[0]][1], sub: sub[g[0]], subHtml: g[0] === "trend" && trendV ? trendV + sugEsc(sub[g[0]]) : "", gol: gol[g[0]] || "" }; });
 }
 function sugTrendProba(T) { var bl = T && T.bilant || {}, conc = T && T.concentrare; return "proba: " + sugCate(bl.n20 || 0, "zi", "zile") + " cu rezultat" + (conc ? " · " + conc.n + " din 20 în " + conc.sector + ": un singur pariu" : ""); }
@@ -176,6 +192,16 @@ function sugRanduri(d, acum) {
     if (cd.incomplet) av.push("Ziua are date incomplete (prea puține monede citite): nu intră în probă.");
     l.push({ k: "cad:" + s, grup: "cad", tip: "moneda", s: s, tk: String(x.s || ""), nume: "", dir: et, dirC: "", pret: sugPandaPret(x.c / (x.mult > 1 ? x.mult : 1)), avert: av, x: x,   /* revizia 07.11: 1000PEPE ⇒ prețul unui PEPE, ca pe Pionex */
       sub: sugPctZ(-x.cadere, 0) + " de la maximul pe 30 z" + (x.oi != null ? " · OI " + sugPctZ(x.oi, 0) + " în 3 z" : "") + (x.f72 != null ? " · funding " + sugPctZ(x.f72, 3) : "") + " · " + sugMil(x.vol) + " (locul " + (x.rang || "—") + ")" });
+  });
+  // v100.311: direcția pe 7 zile (în probă) - direcțiile pe rând, calibrarea istorică și contradicțiile în „Înainte să intri”
+  var dd = d.directie;
+  (dd && Array.isArray(dd.lista) ? dd.lista : []).forEach(function (x) {
+    var s = sugScurt(x.s), av = [], cb = sugDirCalib(x.P2, dd.istoric);
+    av.push("Pe istoric (124 de săptămâni, 06.2024 – 10.2026, ~217 monede pe săptămână), nici M1, nici M2 n-au nimerit direcția pe 7 zile mai des decât întâmplarea după cost (M1 50,5%, M2 51,2%)." + (cb ? " Probabilitățile M2 nu se țin pe istoric: când a spus ~" + sugPc(cb[0]) + " „sus”, a urcat " + sugPc(cb[1]) + " din cazuri." : ""));
+    if (x.s1 !== x.s2) av.push("Cele două reguli se contrazic azi (M1 " + sugDirSag(x.s1) + ", M2 " + sugDirSag(x.s2) + ").");
+    if (x.fund != null && isFinite(x.fund) && Math.abs(x.fund) >= 0.0005) av.push("Funding mare (" + sugPctZ(x.fund, 3) + " pe decontare, media pe 72 h): mulți pe levier într-o parte; pe Pionex funding-ul e altul.");
+    l.push({ k: "dir:" + s, grup: "dir", tip: "moneda", s: s, tk: String(x.s || ""), nume: "", dir: "M1 " + sugDirSag(x.s1) + " · M2 " + sugDirSag(x.s2), dirC: "", pret: sugPandaPret(x.c / (x.mult > 1 ? x.mult : 1)), avert: av, x: x,
+      sub: "P sus: M1 " + sugPc(x.P1) + " · M2 " + sugPc(x.P2) + " · 28 z " + sugPctZ(x.r28, 0) + " · BTC " + (x.btcEma < 0 ? "sub" : "peste") + " EMA50" });
   });
   var ai = d.idei && d.idei.idei, eu = d.sugActiuni && d.sugActiuni.sugestii && d.sugActiuni.sugestii.eu;
   var rev = function (x, piata) {
@@ -235,6 +261,19 @@ function sugFisa(r, d, acum) {
     f.dovada = ["Pe istoric (Binance 2022-01 … 2026-10, 6.932 de căderi pe 583 de monede, cu cele delistate), față de media monedelor din aceeași zi, după cost (0,2%) și funding: toate căderile −0,1% la 7 zile (mediana −1,6%, 40% pe plus); A (spălare) +1,1% la 3 zile, p 0,29 — tot plusul din 13 cazuri cu funding extrem; B (cu piața vs singură) nimic; C (top 20) +0,6%, p 0,72. Verdict: n-am aflat. Proba ar fi prins un efect de ~2% (A) sau ~2,5% (C) de 8–9 ori din 10.",
       sugCadUrm(cd),
       "Prețurile sunt ale Binance (reperul pieței); pe Pionex prețul și funding-ul diferă puțin. Nu e semnal de cumpărare: de aceea lista nu duce la Poartă și nu dă o sumă."];
+    f.actiuni = [{ et: "Fișa monedei", c: "sugBtnPlin", act: "gridDeschideMonedaDir('" + sugCurat(r.s) + "','')" }].concat(bz ? [{ et: "🧭 Busola, 4h", c: "", href: bz }] : []);
+    f.actNota = "În probă: fără Poartă și fără sumă. Fișa îți dă proba gridului pe monedă; Busola, imaginea pe 4h.";
+  } else if (r.grup === "dir") {   // v100.311: direcția pe 7 zile (în probă)
+    var dd2 = d.directie || {}, I = dd2.istoric || {}, sus = function (k) { return (x["s" + k] > 0 ? "▲ sus" : "▼ jos"); };
+    f.pretNota = "închiderea zilei UTC " + sugCadZi(dd2.zi) + " pe Binance (00:00 UTC)" + (x.mult > 1 ? ", împărțită la " + (x.mult === 1000 ? "1.000" : "1.000.000") + " (contractul " + (x.b || "") + ")" : "");
+    f.cele = [{ et: "M1 · momentum", v: sus("1"), sub: "P sus " + sugPc(x.P1) + " (pe istoric, cam ban) · semnul celor 28 de zile" }, { et: "M2 · combinat", v: sus("2"), sub: "P sus " + sugPc(x.P2) + " · regresia înghețată" },
+      { et: "28 de zile", v: sugPctZ(x.r28, 0), sub: "în abateri: " + sugZec(x.z28) }, { et: "7 zile", v: sugZec(x.z7), sub: "saltul pe 7 zile, în abateri (σ pe 30 de zile)" },
+      { et: "BTC", v: sugPctZ(x.btcEma, 0), sub: "față de EMA50 · 28 z în abateri: " + sugZec(x.btc28) }, { et: "Funding 72 h", v: sugPctZ(x.fund, 3), sub: "media pe decontare; plus = long-urile plătesc" }];
+    f.motiv = "Pe ziua UTC " + sugCadZi(dd2.zi) + ": M1 (momentum pe 28 de zile, " + sugPctZ(x.r28, 0) + ") spune " + sus("1") + "; M2 („judecata mea” scrisă ca regulă: momentum, saltul pe 7 zile, BTC, funding, volum) spune " + sus("2") + ", cu " + sugPc(x.P2) + " „sus”." + (x.s1 !== x.s2 ? " Cele două se contrazic." : "");
+    f.regula = "Regulile probei din 07.11, fixate înainte de cifre: primele 10 monede Pionex după mediana volumului pe 30 de zile pe Binance (≥ 90 de zile de istoric, ≥ 5 M USDT/zi). M1 = semnul randamentului pe 28 de zile. M2 = regresie logistică pe 6 intrări (z28, z7, BTC pe 28 de zile, BTC față de EMA50, funding pe 72 h, volumul pe 7 zile față de 30), potrivită pe 2022-01 … 2024-05 și înghețată. Rezultatul la 7 zile: s·randament − 0,2% − s·funding, și față de media pieței.";
+    f.dovada = ["Pe istoric (Binance 2022–2026, cu monedele delistate; jumătatea a doua: 124 de săptămâni, 26.894 de perechi, ~217 monede pe săptămână), după cost și funding: M1 +0,1% pe săptămână pe direcția absolută (p 0,4), cam 0 față de piață; M2 +0,4% (p 0,3), față de piață −0,3% (adică costul de 0,2% plus funding-ul; brut, cam 0). Verdict: N-AM AFLAT pe trei întrebări; pe M2 față de piață regula a dat „merge invers”, dar e costul, nu o prezicere pe dos. Direcția absolută pe 124 de săptămâni nu se poate dovedi decât la un avantaj de peste 2% pe săptămână; probabilitățile M2 au ieșit mai proaste decât rata de bază.",
+      sugDirUrm(dd2),
+      "Prețurile sunt ale Binance (reperul pieței); pe Pionex prețul și funding-ul diferă puțin. Nu e semnal de cumpărare sau vânzare: de aceea lista nu duce la Poartă și nu dă o sumă."];
     f.actiuni = [{ et: "Fișa monedei", c: "sugBtnPlin", act: "gridDeschideMonedaDir('" + sugCurat(r.s) + "','')" }].concat(bz ? [{ et: "🧭 Busola, 4h", c: "", href: bz }] : []);
     f.actNota = "În probă: fără Poartă și fără sumă. Fișa îți dă proba gridului pe monedă; Busola, imaginea pe 4h.";
   } else if (r.grup === "revUS" || r.grup === "revEU") {
@@ -567,7 +606,8 @@ async function sugPorneste(fortat) {
       pas("sugActiuni", function () { return getJSON("/api/t212?action=sugestii"); }),
       pas("sectoare", function () { return getJSON("/api/istoric-bot?action=sectoareTop").then(function (r) { return r && r.sectoare || null; }); }),   /* v100.178 */
       pas("trend12", function () { return getJSON("/api/istoric-bot?action=trend12").then(function (r) { return r && r.trend || null; }); }),   /* v100.190 */
-      pas("caderi", function () { return getJSON("/api/istoric-bot?action=caderi").then(function (r) { return r && r.caderi || null; }); })   /* v100.308: căderile de ieri (în probă) */
+      pas("caderi", function () { return getJSON("/api/istoric-bot?action=caderi").then(function (r) { return r && r.caderi || null; }); }),
+      pas("directie", function () { return getJSON("/api/istoric-bot?action=directie").then(function (r) { return r && r.directie || null; }); })   /* v100.311: direcția pe 7 zile (în probă); rândul de deasupra: v100.308, căderile de ieri (în probă) */
     ]);
   } finally { sugStare.inLucru = false; }
   sugDeseneaza();
