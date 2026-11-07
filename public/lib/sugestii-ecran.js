@@ -75,6 +75,19 @@ function sugSim(x) { return x.simbol || String(x.ticker || x.simbolTicker || "")
 // căderile de ieri pe monedele Pionex, cu fapte și urmărirea înainte; ÎN PROBĂ - fără Poartă, fără sumă (colectorul: scripts/lib/tura-caderi.mjs)
 var SUG_GRUPURI = [["porn", "🤖 Boți · 💡 Pe ce aș porni un bot"], ["cad", "📉 Monede Pionex · după o cădere mare (în probă)"], ["dir", "🎯 Monede Pionex · direcția pe 7 zile (în probă)"],["revUS", "📈 Acțiuni US · 🔁 Pe revenire"], ["revEU", "📈 Acțiuni EU (DAX, CAC, AEX + ale tale) · 🔁 Pe revenire"], ["sect", "🏆 Cele mai tari pe sectoare (acțiuni mari din SUA)"], ["trend", "📈 Trend 12 luni (în probă)"]];   /* titlurile vechilor secțiuni rămân în titlul grupului */
 var SUG_VERDICT = { porn: ["N-AM AFLAT", "v"], cad: ["ÎN PROBĂ", "p"], dir: ["ÎN PROBĂ", "p"],revUS: ["N-AM AFLAT", "v"], revEU: ["N-AM AFLAT", "v"], sect: ["N-AM AFLAT", "v"], trend: ["ÎN PROBĂ", "p"] };
+// v100.312 (el, 07.11: „pune tot ce am făcut azi pe o pagină separată” ⇒ pagina „Probe”, lib/probe-ecran.js): listele ÎN PROBĂ pe monede
+// (căderi, direcție) au plecat din Sugestii pe pagina lor, cu ACELAȘI motor (listă + fișă + grafic). O singură stare, două vederi: vederea
+// dă rădăcina și grupurile. Trend 12 luni rămâne în Sugestii (acolo e lista de acțiuni); pe Probe apare în „Unde e fiecare probă”.
+var SUG_VEDERI = { sugestii: { el: "sugPagina", grupuri: ["porn", "revUS", "revEU", "sect", "trend"] }, probe: { el: "prPagina", grupuri: ["cad", "dir"] } };
+sugStare.vedere = sugStare.vedere || "sugestii";
+function sugVedere(v) { return Object.prototype.hasOwnProperty.call(SUG_VEDERI, v) ? v : "sugestii"; }
+function sugInVedere(grup, v) { return SUG_VEDERI[sugVedere(v)].grupuri.indexOf(grup) >= 0; }
+// revizia: rândul ales și intervalul graficului rămân ale fiecărei pagini (un clic pe Probe nu mai mută alegerea din Sugestii)
+function sugSchimbaVedere(v) {
+  v = sugVedere(v); var vechi = sugVedere(sugStare.vedere); if (vechi === v) return;
+  sugStare.alesV = sugStare.alesV || {}; sugStare.alesV[vechi] = { ales: sugStare.ales, tf: sugStare.tf };
+  var n = sugStare.alesV[v] || {}; sugStare.ales = n.ales; sugStare.tf = n.tf; sugStare.vedere = v;
+}
 // v100.308: fraza urmăririi înainte a căderilor (din KV `sugestii:caderi`, urmarire.grupuri) - cifrele, fără verdict până la privirile fixate
 function sugCadZi(z) { var m = String(z || "").match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? m[3] + "." + m[2] + "." + m[1] : "—"; }   // ca în restul textelor lui: 06.11.2026
 function sugCadUrm(c) {
@@ -132,7 +145,7 @@ function sugAziNu() {
   return pz > 0 ? { nu: true, motiv: typeof acFrazaPauza === "function" ? acFrazaPauza(pz) : "pauza sezonului", motive: [{ cod: "pauza" }] } : { nu: false, motiv: "" };
 }
 // grupurile paginii (titlul, verdictul, rândul de sub titlu) - sub „azi nu” titlul pornirii pierde tonul de sfat și spune de ce
-function sugGrupuri(d, acum) {
+function sugGrupuri(d, acum, vedere) {   // v100.312: cu `vedere`, doar grupurile ei; fără, toate (probele vechi)
   d = d || {}; var an = sugAziNu(), porn = typeof Idei !== "undefined" && d.clasament ? Idei.ideiBoti(d.clasament, [], 5) : [];
   var sa = d.sugActiuni && d.sugActiuni.sugestii, ai = d.idei && d.idei.idei, eu = sa && sa.eu, S = d.sectoare, T = d.trend12, bl = T && T.bilant, conc = T && T.concentrare;
   var jud = function (x) { return x ? sugCate(Number(x.judecate) || 0, "acțiune judecată", "acțiuni judecate") + (Number(x.fara) ? ", " + Number(x.fara) + " fără prețuri" : "") : ""; };   // numărătoarea turei de la 8:00, ca pe titlul vechi al secțiunii
@@ -147,8 +160,10 @@ function sugGrupuri(d, acum) {
   var titlu = { porn: an.nu ? "🤖 Boți · candidatele din clasament (azi nu pornesc)" : null, revEU: eu ? "📈 Acțiuni EU (DAX, CAC, AEX + ale tale) · " + jud(eu) + " · 🔁 Pe revenire" : null };   // v100.293 (02.11): fără numărătoarea turei sugActiuni.us pe titlul US - listele ei (urcare, revers, gap) au fost scoase pe 01.11; lista de revenire vine din tura Idei, iar numărătoarea ei e sub titlu
   var gol = { cad: d.caderi && d.caderi.zi ? (d.caderi.pionexLipsa ? "Lista Pionex n-a venit la tura de azi: căderile de pe Binance sunt numărate mai sus, dar nu știu care sunt și pe Pionex." : "În ziua UTC " + sugCadZi(d.caderi.zi) + " nicio monedă de pe Pionex n-a trecut pentru prima dată de −25% sub maximul pe 30 de zile.") : "aștept tura de la 8:00",
     dir: d.directie && d.directie.zi ? (d.directie.pionexLipsa ? "Lista Pionex n-a venit la tura de azi: nu știu care monede sunt și pe Pionex." : "În ziua UTC " + sugCadZi(d.directie.zi) + " nicio monedă Pionex n-a avut toate datele (bare, volum, funding).") : "aștept tura de la 8:00" };   // v100.308; v100.311 dir
-  return SUG_GRUPURI.map(function (g) { return { k: g[0], titlu: titlu[g[0]] || g[1], verdict: SUG_VERDICT[g[0]][0], verdictC: "sugVerdict-" + SUG_VERDICT[g[0]][1], sub: sub[g[0]], subHtml: g[0] === "trend" && trendV ? trendV + sugEsc(sub[g[0]]) : "", gol: gol[g[0]] || "" }; });
+  return SUG_GRUPURI.filter(function (g) { return vedere == null || sugInVedere(g[0], vedere); }).map(function (g) { return { k: g[0], titlu: titlu[g[0]] || g[1], verdict: SUG_VERDICT[g[0]][0], verdictC: "sugVerdict-" + SUG_VERDICT[g[0]][1], sub: sub[g[0]], subHtml: g[0] === "trend" && trendV ? trendV + sugEsc(sub[g[0]]) : "", gol: gol[g[0]] || "" }; });
 }
+// v100.312: locul = poziția în lista robotului (ordonată), nu `rang` - acela e procentilul din ~600 (0,0017 ⇒ pagina scria „locul 1.0017064846416381 din 20”)
+function sugTrendLoc(T, t) { var L = T && Array.isArray(T.top) ? T.top : [], i = L.indexOf(t); return (i >= 0 ? i + 1 : "—") + " din " + (L.length || 20); }
 function sugTrendProba(T) { var bl = T && T.bilant || {}, conc = T && T.concentrare; return "proba: " + sugCate(bl.n20 || 0, "zi", "zile") + " cu rezultat" + (conc ? " · " + conc.n + " din 20 în " + conc.sector + ": un singur pariu" : ""); }
 // v100.190-192 (păstrate): nota robotului - EOD, regim, concentrarea, proba (ferestre de 20 z, diferența față de alte acțiuni, t-ul, ABATEREA), au intrat / au ieșit,
 // raportările; vechimea = zile de bursă NY de la EOD până azi, minus una (EOD de ieri = proaspăt); de la 2 ⇒ VECHI (robotul n-a publicat)
@@ -164,7 +179,7 @@ function sugTrendNota(x, acum) {
   return { text: nota, vechime: vechime, vechiHtml: vechime >= 2 ? '<b class="sugTrendVechi">VECHI de ' + sugEsc(sugCate(vechime, "zi", "zile")) + ' de bursă — robotul n-a publicat</b> · ' : "" };
 }
 // toate rândurile, în ordinea paginii; fiecare știe lista lui, cifrele regulii și avertismentele („Înainte să intri”)
-function sugRanduri(d, acum) {
+function sugRanduri(d, acum, vedere) {   // v100.312: cu `vedere`, doar rândurile grupurilor ei
   d = d || {}; var l = [], an = sugAziNu();
   var porn = typeof Idei === "undefined" || !d.clasament ? [] : Idei.ideiBoti(d.clasament, [], 5);   /* v100.306 (I-824): nici pauza nu mai golește lista */
   porn.forEach(function (x) {
@@ -232,9 +247,9 @@ function sugRanduri(d, acum) {
     if (t.salt && t.salt.pct >= 0.5) av.push("Salt " + sugPctZ(t.salt.pct) + " într-o zi (" + t.salt.d + "): verifică seria (split, știre), nu e trend.");
     if (rap != null && rap >= 0) av.push("Raportează în " + rap + "z (" + t.raporteaza.d + "): prețul poate sări 10–20% într-o noapte.");
     l.push({ k: "trend:" + t.s, grup: "trend", tip: "actiune", s: t.s, tk: t.s + "_US_EQ", nume: String(t.nume || "").slice(0, 28) + " " + t.sector + " · 12-1 " + sugPctZ(t.m12) + " · 60 z " + sugPctZ(t.r60) + (rap != null && rap >= 0 ? " · raportează în " + rap + "z" : "") + (t.salt && t.salt.pct >= 0.5 ? " · salt " + sugPctZ(t.salt.pct) + " într-o zi" + (t.salt.d ? " (" + t.salt.d + ")" : "") + " — verifică seria" : ""), dir: "", dirC: "", pret: sugUsd(t.pret), avert: av, x: t,
-      sub: "6 luni " + sugPctZ(t.m6, 0) + " · locul " + ((t.rang || 0) + 1) + " din 20" });
+      sub: "6 luni " + sugPctZ(t.m6, 0) + " · locul " + sugTrendLoc(T, t) });
   });
-  return l;
+  return vedere == null ? l : l.filter(function (r) { return sugInVedere(r.grup, vedere); });
 }
 // fișa unui rând: celulele, de ce e în listă, regula, cum a mers (dovada paginii + urmărirea înainte, întregi), ce faci
 function sugFisa(r, d, acum) {
@@ -306,7 +321,7 @@ function sugFisa(r, d, acum) {
   } else if (r.grup === "trend") {
     var T = d.trend12 || {}, bl = T.bilant || {}, probat = bl && /^probat/i.test(String(bl.verdict || "")) ? "1" : "";
     f.pretNota = "închiderea de ieri";
-    f.cele = [{ et: "Randament lunile 2–12", v: sugPctZ(x.m12), sub: "ultima lună sărită" }, { et: "60 de zile", v: sugPctZ(x.r60), sub: "" }, { et: "6 luni", v: sugPctZ(x.m6, 0), sub: "" }, { et: "Locul", v: ((x.rang || 0) + 1) + " din 20", sub: "din ~600 de acțiuni ≥ 2 mld. $" }];
+    f.cele = [{ et: "Randament lunile 2–12", v: sugPctZ(x.m12), sub: "ultima lună sărită" }, { et: "60 de zile", v: sugPctZ(x.r60), sub: "" }, { et: "6 luni", v: sugPctZ(x.m6, 0), sub: "" }, { et: "Locul", v: sugTrendLoc(T, x), sub: x.rang >= 0 && x.rang < 1 ? "în lista de azi · primele " + sugPr(Math.max(x.rang, 0.001)) + " din ~600 de acțiuni ≥ 2 mld. $" : "în lista de azi, din ~600 de acțiuni ≥ 2 mld. $" }];   /* v100.312: rang vine ca procentil (0,0017), nu ca loc ⇒ „locul 1.0017…” */
     f.motiv = "Primele 20% după randamentul pe lunile 2–12, cu momentum pozitiv; regimul (SPY peste media pe 200 de zile) e " + (T.regim && T.regim.peste ? "pornit" : "oprit") + ".";
     f.regula = "Regula, fixată înainte de cifre: primele 20% după randamentul pe lunile 2–12 (ultima lună sărită), cu momentum pozitiv, din ~600 de acțiuni SUA ≥ 2 mld. $; regim = SPY peste media pe 200 de zile. Se ține 20–60 de zile, fără stop strâns; iese când cade din top 20 % sau când regimul se oprește.";
     f.dovada = ["Pe 5 ani, față de alte acțiuni în aceleași zile, doar un indiciu (+0,8% pe 20 de zile, t ≈ 1,5 pe ferestre care nu se suprapun — sub pragul de „probat”), NEprobat pe listă istorică ⇒ în probă — nu e un buton de cumpărat. Cifrele: auditul din 14.10.",
@@ -339,7 +354,7 @@ function sugDesface(k) {
   var b = !sugStare.desfacute[k] && typeof document !== "undefined" ? document.getElementById("sugMai-" + k) : null;
   if (b && b.getBoundingClientRect && b.scrollIntoView) { var r = b.getBoundingClientRect(); if (r.top < 70 || r.bottom > (window.innerHeight || 0)) b.scrollIntoView({ block: "center" }); }
 }
-function sugRandAles(d, acum) { var l = sugRanduri(d || sugStare.d, acum); var r = null; for (var i = 0; i < l.length; i++) if (l[i].k === sugStare.ales) r = l[i]; return r || l[0] || null; }
+function sugRandAles(d, acum) { var l = sugRanduri(d || sugStare.d, acum, sugVedere(sugStare.vedere)); var r = null; for (var i = 0; i < l.length; i++) if (l[i].k === sugStare.ales) r = l[i]; return r || l[0] || null; }
 // intervalul implicit: monede 4h (intervalul clasamentului și al Fișei), acțiuni 1 zi; alegerea lui rămâne cât e în lista rândului
 function sugTfAles(r) { var L = SUG_TF[r && r.tip] || SUG_TF.actiune; for (var i = 0; i < L.length; i++) if (L[i][0] === sugStare.tf) return L[i]; return r && r.tip === "moneda" ? L[0] : L[L.length - 1]; }
 function sugBare(rasp) {
@@ -376,14 +391,13 @@ function sugAlegeTf(tf) { var r = sugRandAles(); if (!r) return; var L = SUG_TF[
 function sugVerdicteHtml(d) {
   var sm = d.sugMonede && d.sugMonede.sugestii, urmP = sm && sm.urmarire && sm.urmarire.porn, ai = d.idei && d.idei.idei, T = d.trend12;
   var cel = function (et, k, sub) { var V = SUG_VERDICT[k]; return '<div><span class="tbEt2">' + sugEsc(et) + '</span><span class="sugVerdict sugVerdict-' + V[1] + '">' + V[0] + '</span><p class="tbSub">' + sugEsc(sub) + '</p></div>'; };
-  var cd = d.caderi, uE = cd && cd.urmarire && cd.urmarire.grupuri && cd.urmarire.grupuri.E;   /* v100.308 */
   return '<div class="sugVerdicte" data-sug="verdicte">' + cel("Pe ce aș porni un bot", "porn", urmP && urmP.n ? urmP.text : "auditul 01.11, pe boții tăi: „candidat” față de „de evitat” −0,7 pp în aceleași zile (45 de zile)")
-    + cel("După o cădere mare · monede", "cad", uE && uE.n ? "urmărit înainte: " + sugCate(uE.n, "cădere", "căderi") + ", la 7 zile " + sugP1(uE.stat) + " față de piață (istoric −0,1%)" : "proba din 07.11 (6.932 de căderi, 2022–2026): A, B, C n-am aflat; urmărirea înainte pornește de la 07.11")
+    /* v100.312: celula „După o cădere mare · monede” a plecat cu lista ei pe pagina Probe (rândul ei din „Unde e fiecare probă”) */
     + cel("Pe revenire · acțiuni", "revUS", ai && ai.urmarireReveniri && ai.urmarireReveniri.n ? "urmărit înainte (semnalele de cel puțin 14 zile, la prețul de azi): " + ai.urmarireReveniri.text : "auditul 01.11, SUA: −6,0% după cost la 10 zile, +0,5% față de QQQ")
     + cel("Cele mai tari pe sectoare", "sect", "auditul 01.11: +1,1% pe lună față de sector, după cost, 8 din 11 luni (t 1,1)") + cel("Trend 12 luni", "trend", T && T.top && T.top.length ? sugTrendProba(T) : "aștept clasamentul robotului") + '</div>';
 }
 function sugListaHtml(d, acum) {
-  var g = sugGrupuri(d, acum), l = sugRanduri(d, acum), ales = sugRandAles(d, acum), f = sugFisa(ales, d, acum), h = '<section class="rlSec sugLista2" data-sug="lista"><div class="sugPandaCap"><h4>Sugestiile</h4><span class="tbSub">' + sugCate(l.length, "rând", "rânduri") + ' în ' + sugCate(g.length, "listă", "liste") + ' · atinge un rând: fișa lui, cu de ce e în listă, cum a mers regula și ce faci</span></div><div class="sugCorp" style="--n:', c = "", nVaz = 0;   // v100.310: --n = doar ce se vede (pliatele nu ocupă rânduri în grilă)
+  var v = sugVedere(sugStare.vedere), g = sugGrupuri(d, acum, v), l = sugRanduri(d, acum, v), ales = sugRandAles(d, acum), f = sugFisa(ales, d, acum), h = '<section class="rlSec sugLista2" data-sug="lista"><div class="sugPandaCap"><h4>' + (v === "probe" ? "Listele în probă" : "Sugestiile") + '</h4><span class="tbSub">' + sugCate(l.length, "rând", "rânduri") + ' în ' + sugCate(g.length, "listă", "liste") + ' · atinge un rând: fișa lui, cu de ce e în listă, cum a mers regula și ce faci</span></div><div class="sugCorp" style="--n:', c = "", nVaz = 0;   // v100.310: --n = doar ce se vede (pliatele nu ocupă rânduri în grilă)
   g.forEach(function (gr) {
     c += '<h4 class="sugGrup">' + sugEsc(gr.titlu) + ' <span class="sugVerdict ' + gr.verdictC + '">' + gr.verdict + '</span><span class="tbSub">' + (gr.subHtml || sugEsc(gr.sub)) + '</span></h4>'; nVaz++;
     var rg = l.filter(function (r) { return r.grup === gr.k; }), desf = !!sugStare.desfacute[gr.k], pliate = 0;
@@ -416,7 +430,8 @@ function sugFisaHtml(f, r) {
 }
 function sugHtml(d, acum) {
   d = d || {};
-  return '<p class="rlRasp" data-sug="rasp">Nicio listă de mai jos n-are un avantaj dovedit (auditul din 01.11, numărat pe zile, față de piața din aceleași zile, după cost): verdictul fiecăreia e lângă titlu, iar cum a mers regula e în fișa fiecărui rând. Un filtru, nu o predicție - judeci tu.</p>'
+  if (sugVedere(sugStare.vedere) === "probe" && typeof prHtml === "function") return prHtml(d, acum);   // v100.312: pagina Probe (lib/probe-ecran.js)
+  return '<p class="rlRasp" data-sug="rasp">Nicio listă de mai jos n-are un avantaj dovedit (auditul din 01.11, numărat pe zile, față de piața din aceleași zile, după cost): verdictul fiecăreia e lângă titlu, iar cum a mers regula e în fișa fiecărui rând. Un filtru, nu o predicție - judeci tu. Căderile mari și direcția pe 7 zile (monede Pionex, în probă) sunt pe pagina lor, cu caietul de păreri: <button type="button" class="t212BtnLinie sugSpreProbe" data-action-click="navTo(\'probe\',true)">🧪 Probe ›</button></p>'   /* v100.312: legătura stă în primul paragraf - pagina își păstrează cele 5 locuri */
     + sugPandaHtml(d.latime, d.boti, acum) + sugVerdicteHtml(d) + sugListaHtml(d, acum)
     + '<p class="tbSub" data-sug="nota">Regulile au fost fixate înainte de cifre și nu se ajustează după istoric; fiecare listă își spune intrarea, ieșirea și costul în fișă, iar urmărirea înainte e la orizont fix, numărată pe zile, față de piața din aceleași zile. Scoase de pe pagină la cererea ta (01.11), fără avantaj dovedit: Pe revenire (monede), Pentru short, Idei de cumpărare, Început de urcare, Revers timpuriu, Gap / Pre-market.</p>';
 }
@@ -529,15 +544,6 @@ function sugAlinia(vechi, nou) {
       else if (a.getAttribute && a.getAttribute(k) != null && a.removeAttribute) a.removeAttribute(k);
     }
   }
-  function sincronTexte(a, b) {
-    var ta = [], tb = [], i, n;
-    for (i = 0; i < a.childNodes.length; i++) if (a.childNodes[i].nodeType === 3) ta.push(a.childNodes[i]);
-    for (i = 0; i < b.childNodes.length; i++) if (b.childNodes[i].nodeType === 3) tb.push(b.childNodes[i]);
-    n = Math.min(ta.length, tb.length);
-    for (i = 0; i < n; i++) if (ta[i].nodeValue !== tb[i].nodeValue) ta[i].nodeValue = tb[i].nodeValue;
-    for (i = n; i < tb.length; i++) a.appendChild(tb[i]);
-    for (i = ta.length - 1; i >= n; i--) if (ta[i].parentNode) ta[i].parentNode.removeChild(ta[i]);
-  }
   function alinia(a, b) {
     if (!a || !b || a.nodeType !== 1 || b.nodeType !== 1) return false;
     if (String(a.tagName).toUpperCase() !== String(b.tagName).toUpperCase()) return false;
@@ -557,8 +563,21 @@ function sugAlinia(vechi, nou) {
       } else ordine.push(be[j]);
     }
     for (i = 0; i < ae.length; i++) if (!folosit[ak[i]] && ae[i].parentNode) ae[i].parentNode.removeChild(ae[i]);
-    for (j = 0; j < ordine.length; j++) a.appendChild(ordine[j]);
-    sincronTexte(a, b);
+    // v100.312: ordinea AMESTECATĂ (text + elemente) a nodului nou. Înainte elementele treceau la capăt, iar spațiul dintre ele rămânea
+    // în față: „<b>MA</b> <span>Mastercard</span>” ieșea „ MAMastercard” după prima reîmprospătare a datelor
+    var bc = [], ta = [], tot = [], ei = 0, ti = 0, c;
+    for (i = 0; i < b.childNodes.length; i++) bc.push(b.childNodes[i]);
+    for (i = 0; i < a.childNodes.length; i++) if (a.childNodes[i].nodeType === 3) ta.push(a.childNodes[i]);
+    for (i = 0; i < bc.length; i++) {
+      c = bc[i];
+      if (c.nodeType === 1) { if (ei < ordine.length) tot.push(ordine[ei++]); }
+      else if (c.nodeType === 3) {
+        if (ti < ta.length) { if (ta[ti].nodeValue !== c.nodeValue) ta[ti].nodeValue = c.nodeValue; tot.push(ta[ti]); } else tot.push(c);
+        ti++;
+      }
+    }
+    for (i = ta.length - 1; i >= ti; i--) if (ta[i].parentNode) ta[i].parentNode.removeChild(ta[i]);
+    for (j = 0; j < tot.length; j++) a.appendChild(tot[j]);
     return true;
   }
   return alinia(vechi, nou);
@@ -573,7 +592,10 @@ function sugPuneN(el) {
   return n;
 }
 function sugDeseneaza() {
-  var el = typeof document !== "undefined" && document.getElementById("sugPagina"); if (!el) return;
+  if (typeof document === "undefined") return;
+  // v100.312: rădăcina vederii (Sugestii / Probe); cealaltă se golește - aceleași id-uri (sugFisa, sugGraf, sugR-…) ar fi de două ori în pagină
+  var vd = sugVedere(sugStare.vedere), el = document.getElementById(SUG_VEDERI[vd].el); if (!el) return;
+  for (var kv in SUG_VEDERI) if (kv !== vd) { var alt = document.getElementById(SUG_VEDERI[kv].el); if (alt && alt._sugH) { alt.innerHTML = '<p class="tbSub">Se încarcă…</p>'; alt._sugH = null; alt._sugP = null; } }
   var h = sugHtml(sugStare.d, Date.now()); if (el._sugH === h) return;
   // v100.310: alinierea pe loc mută nodurile în DOM ⇒ rândul apăsat pierdea focusul (Tab o lua de la capăt); îl pun la loc, fără derulare
   var fa = document.activeElement, faId = fa && fa.id && el.contains && el.contains(fa) ? fa.id : "";
@@ -591,6 +613,7 @@ function sugDeseneaza() {
   if (fb && fb !== document.activeElement && fb.focus) try { fb.focus({ preventScroll: true }); } catch (e) {}
 }
 async function sugPorneste(fortat) {
+  sugSchimbaVedere("sugestii");   // v100.312: Probe are prPorneste (aceeași stare, altă vedere)
   sugDeseneaza();
   if (sugStare.inLucru || (!fortat && Date.now() - sugStare.la < 5 * 60000)) return;
   sugStare.inLucru = true; sugStare.la = Date.now();

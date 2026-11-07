@@ -121,7 +121,7 @@ await test("4. legarea în aplicație: meniu, secțiune, „mai multe”, navTo,
   assert.ok(H.indexOf('<script src="/lib/grid-calcul.js"></script>') < H.indexOf('<script src="/lib/trade-zilei-ecran.js"></script>'), "GridCalcul înaintea ecranului");
   assert.match(A, /id==="tradezilei"\)\{if\(typeof tzPorneste==="function"\)tzPorneste\(false\)\}/);
   assert.match(A, /PAGINI_ZILNICE=\[[^\]]*"tradezilei"/);
-  assert.match(A, /"comportament","tradezilei"(,"rangefilter")?(,"deriv")?\]\.includes\(id\)/);   /* v100.300: + rangefilter */
+  assert.match(A, /"comportament","tradezilei"(,"rangefilter")?(,"deriv")?(,"probe")?\]\.includes\(id\)/);   /* v100.300: + rangefilter */
   assert.match(C, /#tradezilei \.tzPag\{/); assert.match(C, /#tradezilei \.tzGrila\{/);
   // revizia Opus din 03.11: lista albă a dispecerului, cache-ul offline, paleta Ctrl+K, NAV_CU_LOAD, CSS-ul ÎNAINTEA pândei (blocul v100.224 rămâne ultimul)
   assert.match(A, /var ACTIUNI_PERMISE=new Set\("[^"]*\btzPorneste\b/, "tzPorneste lipsește din ACTIUNI_PERMISE ⇒ „Recitește” n-ar face nimic");

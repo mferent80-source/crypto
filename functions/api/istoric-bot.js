@@ -118,6 +118,10 @@ export async function onRequestGet({request,env}){
   if(action==="caderi"){let v=null;try{v=JSON.parse(await env.ISTORIC.get("sugestii:caderi")||"null")}catch{v=null}return json({caderi:v})}
   // v100.311: „🎯 Direcția pe 7 zile (în probă)” — primele 10 monede Pionex cu direcția M1 / M2 și probabilitatea + urmărirea la 7 zile (tura-directie.mjs)
   if(action==="directie"){let v=null;try{v=JSON.parse(await env.ISTORIC.get("sugestii:directie")||"null")}catch{v=null}return json({directie:v})}
+  // v100.312 (I-843): caietul de păreri judecate - lista (o scrie pagina) + judecățile (le scrie colectorul, tura-pareri.mjs), pe chei separate
+  if(action==="pareri"){let l,j;try{l=JSON.parse(await env.ISTORIC.get("pareri:lista")||"[]");j=JSON.parse(await env.ISTORIC.get("pareri:judecate")||"{}")}catch{return json({error:"caietul nu s-a putut citi acum"},503)}if(!Array.isArray(l)||!j||typeof j!=="object"||Array.isArray(j))return json({error:"caietul nu s-a putut citi acum"},503);return json({pareri:l,judecate:j})}   /* revizia: la o eroare de citire 503, nu gol - colectorul ar fi șters judecățile */
+  // v100.312: stadiul probei A (Trade-ul zilei) pentru pagina Probe - îl pune colectorul după tura probei A
+  if(action==="probaA"){let v=null;try{v=JSON.parse(await env.ISTORIC.get("sugestii:probaA")||"null")}catch{v=null}return json({probaA:v})}
   if(action==="universSua"){let v=null;try{v=JSON.parse(await env.ISTORIC.get("univers:sua")||"null")}catch{v=null}return json({la:v&&v.la||null,harta:v&&v.harta||{}})}
   if(action==="sector"){const s=String(u.searchParams.get("s")||"").toUpperCase().replace(/[^A-Z0-9.-]/g,"").slice(0,12);let v=null;try{v=JSON.parse(await env.ISTORIC.get("univers:sua")||"null")}catch{v=null}const h=v&&v.harta&&v.harta[s];return json({s,sector:h?h[0]:null,industrie:h?h[1]:null})}
   // v100.179 (disciplina): tezele, statisticile ieșirii din bandă, lecțiile săptămânii
@@ -391,6 +395,28 @@ export async function onRequestPost({request,env}){
   if(action==="universSua"){const h=corp&&corp.harta;if(!h||typeof h!=="object"||!(nr(corp.la)>0))return json({error:"universSua: la + harta"},400);const o={};for(const k of Object.keys(h).slice(0,12000)){const v=h[k];if(Array.isArray(v))o[String(k).toUpperCase().replace(/[^A-Z0-9.-]/g,"").slice(0,12)]=[String(v[0]||"").slice(0,40),String(v[1]||"").slice(0,80)]}await env.ISTORIC.put("univers:sua",JSON.stringify({la:nr(corp.la),harta:o}));return json({ok:true,n:Object.keys(o).length})}
   if(action==="caderi"){if(!(nr(corp&&corp.la)>0)||!/^\d{4}-\d{2}-\d{2}$/.test(String(corp.zi||""))||!Array.isArray(corp.lista)||corp.lista.length>20||!corp.urmarire||typeof corp.urmarire!=="object")return json({error:"caderi: la + zi + lista (≤ 20) + urmarire"},400);await env.ISTORIC.put("sugestii:caderi",JSON.stringify(corp));return json({ok:true})}   /* v100.308 */
   if(action==="directie"){if(!(nr(corp&&corp.la)>0)||!/^\d{4}-\d{2}-\d{2}$/.test(String(corp.zi||""))||!Array.isArray(corp.lista)||corp.lista.length>20||!corp.urmarire||typeof corp.urmarire!=="object")return json({error:"directie: la + zi + lista (≤ 20) + urmarire"},400);await env.ISTORIC.put("sugestii:directie",JSON.stringify(corp));return json({ok:true})}   /* v100.311 */
+  // v100.312 (I-843): o părere nouă, sau ștearsă în primele 15 minute. Ora notării o pune serverul; o oră din trecut (cel mult 3 zile) rămâne
+  // marcată „trecută mai târziu”. Prețurile (la notare și la termen) le citește colectorul din Binance, din lumânarea de 1 minut a orei.
+  if(action==="pareri")return peCheie("kv:pareri",async()=>{
+    let l=[];try{l=JSON.parse(await env.ISTORIC.get("pareri:lista")||"[]")}catch{l=[]}if(!Array.isArray(l))l=[];
+    const acum=Date.now(),op=String(corp&&corp.op||"");
+    if(op==="sterge"){const id=String(corp.id||"").slice(0,40),x=l.find(p=>p&&p.id===id);if(!x)return json({error:"părerea nu există"},404);if(acum-(nr(x.creat)||0)>15*60000)return json({error:"după 15 minute o părere nu se mai șterge"},409);l=l.filter(p=>p!==x);await env.ISTORIC.put("pareri:lista",JSON.stringify(l));return json({ok:true,n:l.length})}
+    if(op!=="adauga")return json({error:"op: adauga sau sterge"},400);
+    const s=String(corp.s||"").toUpperCase().replace(/[^A-Z0-9]/g,"").replace(/USDT(PERP)?$/,"").slice(0,15),p=nr(corp.p),zile=nr(corp.zile),autor=corp.autor==="claude"?"claude":corp.autor==="eu"?"eu":"";
+    if(!s||!(p>=0.01&&p<=0.99)||![1,3,7,14,30].includes(zile)||!autor)return json({error:"părerea: moneda, șansa între 1 și 99 %, orizontul 1, 3, 7, 14 sau 30 de zile, autorul"},400);
+    let la=acum,retro=false;const lc=nr(corp.la);
+    if(lc!=null){if(lc>acum+60000||lc<acum-3*864e5)return json({error:"ora notării: cel mult 3 zile în urmă"},400);if(acum-lc>10*60000){la=Math.floor(lc/60000)*60000;retro=true}}
+    if(la+zile*864e5<=acum+3600000)return json({error:"termenul părerii a trecut deja (sau trece în mai puțin de o oră): rezultatul s-ar ști dinainte"},400);   /* revizia: fără păreri pe un rezultat cunoscut */
+    if(l.length>=3000)return json({error:"caietul e plin (3.000 de păreri)"},409);
+    const m2=nr(corp.m2),nota=String(corp.nota||"").replace(/[\u0000-\u001f]/g," ").slice(0,200).trim();
+    const x={id:la.toString(36)+"-"+Math.random().toString(36).slice(2,7),s,p:Math.round(p*100)/100,zile,autor,la,creat:acum};
+    if(retro)x.retro=true;if(m2!=null&&m2>0&&m2<1&&zile===7)x.m2=Math.round(m2*1000)/1000;   /* revizia: M2 prezice 7 zile - pe alt orizont comparația n-ar avea sens */if(nota)x.nota=nota;
+    l.push(x);await env.ISTORIC.put("pareri:lista",JSON.stringify(l));return json({ok:true,parere:x,n:l.length});
+  });
+  // v100.312: judecățile caietului, scrise ÎNTREGI de colector (tura-pareri.mjs); pagina nu le atinge
+  if(action==="pareriJudecate"){const j=corp&&corp.judecate;if(!(nr(corp&&corp.la)>0)||!j||typeof j!=="object"||Array.isArray(j)||Object.keys(j).length>3600)return json({error:"pareriJudecate: la + judecate (≤ 3.600)"},400);await env.ISTORIC.put("pareri:judecate",JSON.stringify(j));return json({ok:true})}
+  // v100.312: stadiul probei A (Trade-ul zilei), pentru pagina Probe
+  if(action==="probaA"){const zp=nr(corp&&corp.zile);if(!(nr(corp&&corp.la)>0)||zp===null||!(zp>=0))return json({error:"probaA: la + zile"},400);await env.ISTORIC.put("sugestii:probaA",JSON.stringify(corp));return json({ok:true})}
   if(action==="trend12"){if(!(nr(corp&&corp.la)>0)||!/^\d{4}-\d{2}-\d{2}$/.test(String(corp.dataUltimei||""))||!Array.isArray(corp.top)||!corp.top.length||corp.top.length>40)return json({error:"trend12: la + dataUltimei + top"},400);await env.ISTORIC.put("sugestii:trend12",JSON.stringify(corp));return json({ok:true})}
   if(action==="sectoareTop"){if(!(nr(corp&&corp.la)>0)||!Array.isArray(corp.sectoare))return json({error:"sectoareTop: la + sectoare"},400);await env.ISTORIC.put("sugestii:sectoare",JSON.stringify(corp));return json({ok:true})}
   if(action==="contZi"){const z=String(corp&&corp.z||"");if(!/^\d{4}-\d{2}-\d{2}$/.test(z)||!(nr(corp.valoare)>0))return json({error:"contZi: z și valoare"},400);
@@ -466,7 +492,7 @@ export async function onRequestPost({request,env}){
     if(la===null||!b||typeof b!=="object")return json({error:"Lipseste la / boti"},400);
     // v100.149 (I-579): + regimul Busolei (starea, câte zile de bare, textul, nevalidat) - Tabloul îl arată doar validat
     const rg=x=>x&&typeof x==="object"&&typeof x.stare==="string"?{stare:x.stare.slice(0,20),zile:nr(x.zile),text:String(x.text||"").slice(0,300),nevalidat:x.nevalidat!==false,eroare:!!x.eroare}:null;
-    const boti={};for(const k of Object.keys(b).slice(0,60)){const id=idBot(k),x=b[k];if(!id||id!==k||!x||typeof x!=="object"||!CAT.includes(x.cat))continue;/* v100.269 (auditul MC): riscul pe 1 h / 4 h / o zi - cel mult 3 rânduri, doar ore 1 / 4 / 24 și numere */const scurt=Array.isArray(x.scurt)?x.scurt.filter(y=>y&&[1,4,24].includes(nr(y.ore))).slice(0,3).map(y=>({ore:nr(y.ore),pStop:nr(y.pStop),pLich:nr(y.pLich),p5:nr(y.p5)})):null;boti[id]={cat:x.cat,stare:STARI.includes(x.stare)?x.stare:null,text:String(x.text||"").slice(0,400),la:nr(x.la),ultima:nr(x.ultima),regim:rg(x.regim),scurt}}
+    const boti={};for(const k of Object.keys(b).slice(0,60)){const id=idBot(k),x=b[k];if(!id||id!==k||!x||typeof x!=="object"||!CAT.includes(x.cat))continue;/* v100.269 (auditul MC): riscul pe 1 h / 4 h / o zi - cel mult 3 rânduri, doar ore 1 / 4 / 24 și numere */const scurt=Array.isArray(x.scurt)?x.scurt.filter(y=>y&&[1,4,24].includes(nr(y.ore))).slice(0,3).map(y=>({ore:nr(y.ore),pStop:nr(y.pStop),pLich:nr(y.pLich),p5:nr(y.p5)})):null;boti[id]={cat:x.cat,stare:STARI.includes(x.stare)?x.stare:null,text:String(x.text||"").slice(0,400),la:nr(x.la),ultima:nr(x.ultima),regim:rg(x.regim),scurt,sapt:typeof x.sapt==="string"?x.sapt.slice(0,400):null}}
     /* v100.201 (B1): raportul calibrării (colectorul), doar cifre */
     const c=corp&&corp.calibrare,cutie=x=>x&&typeof x==="object"?{de:nr(x.de),la:nr(x.la),n:nr(x.n),pMed:nr(x.pMed),rata:nr(x.rata)}:null;
     /* v100.269 (29.10, el: „un contor … gen 1-0”): scorul verdictelor - doar numere, „D/G”, cel mult 60 de boți (id-uri ca ale boților) */

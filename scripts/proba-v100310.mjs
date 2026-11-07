@@ -23,7 +23,9 @@ function pagina(ls) {
   const ctx = { console, Intl, Date, Math, JSON, isFinite, Number, String, Array, Object, RegExp, setTimeout, document: undefined };
   if (ls) ctx.localStorage = ls;
   vm.createContext(ctx);
-  vm.runInContext(citeste("public", "lib", "text-ro.js") + "\n" + SUG + "\nthis.sugHtml = sugHtml; this.sugRanduri = sugRanduri; this.sugStare = sugStare; this.sugPuneN = sugPuneN; this.sugDesface = typeof sugDesface === 'function' ? sugDesface : null;", ctx);
+  // v100.312: lista căderilor e pe pagina Probe - aceeași sugHtml, în vederea „probe” (lib/probe-ecran.js)
+  vm.runInContext(citeste("public", "lib", "text-ro.js") + "\n" + SUG + "\n" + citeste("public", "lib", "caiet.js") + "\n" + citeste("public", "lib", "probe-ecran.js") + "\nthis.sugHtml = sugHtml; this.sugRanduri = sugRanduri; this.sugStare = sugStare; this.sugPuneN = sugPuneN; this.sugDesface = typeof sugDesface === 'function' ? sugDesface : null;", ctx);
+  ctx.sugStare.vedere = "probe";
   return ctx;
 }
 const moneda = (i) => ({ s: "C" + i + "_USDT_PERP", b: "C" + i + "USDT", c: 1 + i, cadere: 0.3, vol: 3e7, rang: 40 + i, A: false, oi: -0.05, f72: 0.0001, B: "piata", bs: 0.3, beta: 1.2, C: false });

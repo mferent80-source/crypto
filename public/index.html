@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ro"><head><link href="/manifest.webmanifest" rel="manifest"/><meta content="#0E141A" name="theme-color"/><meta content="dark" name="color-scheme"/><meta charset="utf-8"/><meta content="v100.311" name="app-version"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
+<html lang="ro"><head><link href="/manifest.webmanifest" rel="manifest"/><meta content="#0E141A" name="theme-color"/><meta content="dark" name="color-scheme"/><meta charset="utf-8"/><meta content="v100.312" name="app-version"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
 <title>Crypto Radar</title>
 <link href="/app.css" rel="stylesheet"/>
 </head><body><div aria-live="polite" class="offlineBanner" hidden="" id="offlineBanner" role="status">OFFLINE · read-only local research mode. Network analysis/scanners are disabled; cached UI, journal and reports remain available.</div>
@@ -13,6 +13,7 @@
 <button class="sideBtn" data-action-click="navTo('tabloubot',true)" data-nav="tabloubot"><span class="sideIcon">◉</span>Tabloul botului</button>
 <button class="sideBtn" data-action-click="deschideBusola()" title="Busola în fereastra ei, pe moneda și intervalul tău"><span class="sideIcon">🧭</span>Busola ↗</button>
 <button class="sideBtn" data-action-click="navTo('sugestii',true)" data-nav="sugestii"><span class="sideIcon">💡</span>Sugestii</button>
+<button class="sideBtn" data-action-click="navTo('probe',true)" data-nav="probe"><span class="sideIcon">🧪</span>Probe</button>
 <button class="sideBtn" data-action-click="navTo('gridset',true)" data-nav="gridset"><span class="sideIcon">▦</span>Grid: ce setez?</button>
 <button class="sideBtn" data-action-click="navTo('gridsim',true)" data-nav="gridsim"><span class="sideIcon">⚄</span>Simulator grid</button>
 <button class="sideBtn" data-action-click="navTo('carnet',true)" data-nav="carnet"><span class="sideIcon">✓</span>Carnetul fișei</button>
@@ -74,7 +75,7 @@
 </details>
 </div>
 <div class="sideFooter">
-<div class="label">Build</div><div id="sideVersiune" style="font-size:11px;font-weight:800;margin-top:3px">v100.311 · DIRECȚIA PE 7 ZILE (ÎN PROBĂ)</div>
+<div class="label">Build</div><div id="sideVersiune" style="font-size:11px;font-weight:800;margin-top:3px">v100.312 · PROBE + CAIETUL DE PĂRERI</div>
 <div class="row"><span class="small">Spot source</span><b class="good">DIRECT</b></div>
 <div class="row"><span class="small">Engine</span><b class="good">READY</b></div>
 </div>
@@ -91,7 +92,7 @@
 <div class="logo">◈</div>
 <div><h1>Crypto Radar Pro · Multi-Market</h1><div class="subhead">Crypto + Nasdaq + US stocks · multi-timeframe research</div></div>
 </div>
-<div class="headerMeta"><span class="badge" id="antetVersiune">v100.311 · CRYPTO RADAR · PIONEX + TRADING 212 DOAR CITIRE</span><span class="metaChip">STRICT READ-ONLY · STATIC+RUNTIME</span><span class="metaChip">SPOT DATA · NO ORDER ROUTE</span><span class="metaChip">4 TIMEFRAMES</span></div>
+<div class="headerMeta"><span class="badge" id="antetVersiune">v100.312 · CRYPTO RADAR · PIONEX + TRADING 212 DOAR CITIRE</span><span class="metaChip">STRICT READ-ONLY · STATIC+RUNTIME</span><span class="metaChip">SPOT DATA · NO ORDER ROUTE</span><span class="metaChip">4 TIMEFRAMES</span></div>
 </div>
 <div class="toolbar"><button aria-expanded="false" class="tbarRezumat" data-action-click="tbarComuta()" id="tbarRezumat" title="Alege moneda, intervalul, modul și sursa" type="button">BTC · 4h · Auto · Binance ▾</button>
 <div class="controls">
@@ -1211,7 +1212,7 @@
 <div class="cacheBox"><span class="label">Scannerul Pionex</span><b id="healthScanner">—</b></div>
 <div class="cacheBox"><span class="label">Reconectări WS</span><b id="healthReconnects">—</b></div>
 <div class="cacheBox"><span class="label">Mod PWA</span><b id="healthPwaMode">—</b></div>
-<div class="cacheBox"><span class="label">Versiunea aplicației</span><b id="healthAppVersion">v100.311</b></div>
+<div class="cacheBox"><span class="label">Versiunea aplicației</span><b id="healthAppVersion">v100.312</b></div>
 <div class="cacheBox"><span class="label">Contractul motorului</span><b>54.1</b></div>
 <div class="cacheBox"><span class="label">Ce s-a verificat</span><b>STATIC+RUNTIME · LIVE UNVERIFIED</b></div>
 <div class="cacheBox"><span class="label">Intel API</span><b id="healthIntel">—</b></div>
@@ -1643,6 +1644,24 @@
 <div class="sugVerdicte" data-sug="verdicte"></div>
 <section class="rlSec sugLista2" data-sug="lista"><div class="sugPandaCap"><h4>Sugestiile</h4><span class="tbSub">Aștept sugestiile…</span></div></section>
 <p class="tbSub" data-sug="nota">Regulile au fost fixate înainte de cifre și nu se ajustează după istoric.</p>
+</div>
+</section>
+<!-- pagina Probe (el, 07.11.2026: „pune tot ce am făcut azi pe o pagină separată”): tot ce e ÎN PROBĂ; formularul caietului e în afara zonei redesenate -->
+<section class="panel" id="probe">
+<div class="sectionHead"><h3>Probe</h3><span class="small">ce se testează pe date noi · regulile fixate dinainte · verdictul doar la privire</span></div>
+<div class="card full" id="prPagina"><p class="tbSub">Aștept probele…</p></div>
+<div class="card full prCaiet" id="prCaiet">
+<div class="sugPandaCap"><h4>📓 Caietul de păreri</h4><span class="tbSub">o părere scrisă acum, judecată singură la termen</span></div>
+<div class="prForm" id="prCaietForm" role="group" aria-label="Notează o părere">
+<label class="prCamp">Moneda<input id="prS" type="text" maxlength="15" placeholder="STX" autocapitalize="characters" autocomplete="off" spellcheck="false"/></label>
+<label class="prCamp">Șansa să fie mai sus, în %<input id="prP" type="number" min="1" max="99" step="1" placeholder="55" inputmode="numeric" autocomplete="off"/></label>
+<label class="prCamp">Peste<select id="prZile"><option value="1">1 zi</option><option value="3">3 zile</option><option value="7" selected="">7 zile</option><option value="14">14 zile</option><option value="30">30 de zile</option></select></label>
+<label class="prCamp">A cui<select id="prAutor"><option value="eu" selected="">a mea</option><option value="claude">a lui Claude</option></select></label>
+<label class="prCamp prCampNota">De ce, pe scurt (nu e obligatoriu)<input id="prNota" type="text" maxlength="200" placeholder="a spart maximul pe 30 de zile" autocomplete="off"/></label>
+<button type="button" class="t212BtnLinie sugBtnPlin" id="prNoteaza" data-action-click="prNoteaza()">Notează părerea</button>
+</div>
+<p class="tbSub">Ora o pune serverul. Prețul de la notare și pe cel de la termen le citește colectorul din Binance (perpetue, lumânarea de 1 minut a orei). După 15 minute părerea nu se mai poate șterge.</p>
+<div id="prCaietLista"><p class="tbSub">Aduc caietul…</p></div>
 </div>
 </section>
 <section class="panel" id="carnet">
@@ -2350,6 +2369,7 @@
 <button class="moreBtn" data-action-click="moreNav('tabloubot',true)"><b>◉</b>Tablou bot</button>
 <button class="moreBtn" data-action-click="closeMoreDrawer();deschideBusola()"><b>🧭</b>Busola ↗</button>
 <button class="moreBtn" data-action-click="moreNav('sugestii',true)"><b>💡</b>Sugestii</button>
+<button class="moreBtn" data-action-click="moreNav('probe',true)"><b>🧪</b>Probe</button>
 <button class="moreBtn" data-action-click="moreNav('gridset',true)"><b>▦</b>Grid: ce setez?</button>
 <button class="moreBtn" data-action-click="moreNav('gridsim',true)"><b>⚄</b>Simulator grid</button>
 <button class="moreBtn" data-action-click="moreNav('carnet',true)"><b>✓</b>Carnet</button>
@@ -2412,5 +2432,5 @@
 <button class="moreBtn" data-action-click="moreNav('localdata',true)"><b>DB</b>Local Data</button>
 </div>
 </details>
-</div></div><script src="/lib/text-ro.js"></script><script src="/lib/latime.js"></script><script src="/lib/latime-us.js"></script><script src="/lib/sectoare.js"></script><script src="/lib/macro.js"></script><script src="/lib/scor-zi.js"></script><script src="/lib/rezultate.js"></script><script src="/lib/grid-calcul.js"></script><script src="/lib/lumanari.js"></script><script src="/lib/grafic-bot.js"></script><script src="/lib/tablou-trend.js"></script><script src="/lib/risc-luna.js"></script><script src="/lib/risc-ecran.js"></script><script src="/lib/cont-intreg.js"></script><script src="/lib/verdicte.js"></script><script src="/lib/factori.js"></script><script src="/lib/disciplina.js"></script><script src="/lib/cont-ecran.js"></script><script src="/lib/comportament-ecran.js"></script><script src="/lib/trade-zilei.js"></script><script src="/lib/trade-zilei-ecran.js"></script><script src="/lib/range-filter.js"></script><script src="/lib/range-filter-ecran.js"></script><script src="/lib/asezare-randuri.js"></script><script src="/lib/monte-simbol.js"></script><script src="/lib/monte-simbol-ecran.js"></script><script src="/lib/valoare.js"></script><script src="/lib/busola.js"></script><script src="/lib/pret-viu.js"></script><script src="/lib/grid-proba.js"></script><script src="/lib/perechi.js"></script><script src="/lib/grid-plan.js"></script><script src="/lib/carnet.js"></script><script src="/lib/carnet-ecran.js"></script><script src="/lib/sugestii-actiuni.js"></script><script src="/lib/grid-jurnal.js"></script><script src="/lib/grid-umpleri.js"></script><script src="/lib/grid-clasament.js"></script><script src="/lib/grid-laborator.js"></script><script src="/lib/tablou-extra.js"></script><script src="/lib/grid-sim.js"></script><script src="/lib/grid-sim-ecran.js"></script><script src="/lib/indicatori-bot.js"></script><script src="/lib/jurnal-trade.js"></script><script src="/lib/statistica-trade.js"></script><script src="/lib/scor-sezon.js"></script><script src="/lib/profil-moneda.js"></script><script src="/lib/probabilitati.js"></script><script src="/lib/retea.js"></script><script src="/lib/arbori.js"></script><script src="/lib/dovada.js"></script><script src="/lib/asemanatoare.js"></script><script src="/lib/semnale-bot.js"></script><script src="/lib/consiliu.js"></script><script src="/lib/contrafactual.js"></script><script src="/lib/obiceiuri.js"></script><script src="/lib/tablou-bot.js"></script><script src="/lib/directie.js"></script><script src="/lib/alerte.js"></script><script src="/lib/scenariu.js"></script><script src="/lib/sfaturi.js"></script><script src="/lib/t212.js"></script><script src="/lib/calendar-bursa.js"></script><script src="/lib/actiuni-semnale.js"></script><script src="/lib/consilier.js"></script><script src="/lib/salt.js"></script><script src="/lib/salt-ecran.js"></script><script src="/lib/reveniri.js"></script><script src="/lib/idei.js"></script><script src="/lib/sugestii-ecran.js"></script><script src="/lib/acasa.js"></script><script src="/lib/futures-citire.js"></script><script defer="" src="/app.js"></script><script defer="" src="/lib/t212-ecran.js"></script><script defer="" src="/lib/acasa-ecran.js"></script><script src="/lib/scan.js"></script><script defer="" src="/lib/scan-ecran.js"></script><script defer="" src="/lib/alerte-ecran.js"></script><script defer="" src="/lib/asezare-paznic.js"></script>
+</div></div><script src="/lib/text-ro.js"></script><script src="/lib/latime.js"></script><script src="/lib/latime-us.js"></script><script src="/lib/sectoare.js"></script><script src="/lib/macro.js"></script><script src="/lib/scor-zi.js"></script><script src="/lib/rezultate.js"></script><script src="/lib/grid-calcul.js"></script><script src="/lib/lumanari.js"></script><script src="/lib/grafic-bot.js"></script><script src="/lib/tablou-trend.js"></script><script src="/lib/risc-luna.js"></script><script src="/lib/risc-ecran.js"></script><script src="/lib/cont-intreg.js"></script><script src="/lib/verdicte.js"></script><script src="/lib/factori.js"></script><script src="/lib/disciplina.js"></script><script src="/lib/cont-ecran.js"></script><script src="/lib/comportament-ecran.js"></script><script src="/lib/trade-zilei.js"></script><script src="/lib/trade-zilei-ecran.js"></script><script src="/lib/range-filter.js"></script><script src="/lib/range-filter-ecran.js"></script><script src="/lib/asezare-randuri.js"></script><script src="/lib/monte-simbol.js"></script><script src="/lib/monte-simbol-ecran.js"></script><script src="/lib/valoare.js"></script><script src="/lib/busola.js"></script><script src="/lib/pret-viu.js"></script><script src="/lib/grid-proba.js"></script><script src="/lib/perechi.js"></script><script src="/lib/grid-plan.js"></script><script src="/lib/carnet.js"></script><script src="/lib/carnet-ecran.js"></script><script src="/lib/sugestii-actiuni.js"></script><script src="/lib/grid-jurnal.js"></script><script src="/lib/grid-umpleri.js"></script><script src="/lib/grid-clasament.js"></script><script src="/lib/grid-laborator.js"></script><script src="/lib/tablou-extra.js"></script><script src="/lib/grid-sim.js"></script><script src="/lib/grid-sim-ecran.js"></script><script src="/lib/indicatori-bot.js"></script><script src="/lib/jurnal-trade.js"></script><script src="/lib/statistica-trade.js"></script><script src="/lib/scor-sezon.js"></script><script src="/lib/profil-moneda.js"></script><script src="/lib/probabilitati.js"></script><script src="/lib/retea.js"></script><script src="/lib/arbori.js"></script><script src="/lib/dovada.js"></script><script src="/lib/asemanatoare.js"></script><script src="/lib/semnale-bot.js"></script><script src="/lib/consiliu.js"></script><script src="/lib/contrafactual.js"></script><script src="/lib/obiceiuri.js"></script><script src="/lib/tablou-bot.js"></script><script src="/lib/directie.js"></script><script src="/lib/alerte.js"></script><script src="/lib/scenariu.js"></script><script src="/lib/sfaturi.js"></script><script src="/lib/t212.js"></script><script src="/lib/calendar-bursa.js"></script><script src="/lib/actiuni-semnale.js"></script><script src="/lib/consilier.js"></script><script src="/lib/salt.js"></script><script src="/lib/salt-ecran.js"></script><script src="/lib/reveniri.js"></script><script src="/lib/idei.js"></script><script src="/lib/sugestii-ecran.js"></script><script src="/lib/caiet.js"></script><script src="/lib/probe-ecran.js"></script><script src="/lib/acasa.js"></script><script src="/lib/futures-citire.js"></script><script defer="" src="/app.js"></script><script defer="" src="/lib/t212-ecran.js"></script><script defer="" src="/lib/acasa-ecran.js"></script><script src="/lib/scan.js"></script><script defer="" src="/lib/scan-ecran.js"></script><script defer="" src="/lib/alerte-ecran.js"></script><script defer="" src="/lib/asezare-paznic.js"></script>
 </body></html>

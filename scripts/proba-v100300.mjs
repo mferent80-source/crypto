@@ -122,7 +122,7 @@ await test("4. legarea în aplicație: meniu, secțiune, „mai multe”, navTo,
   assert.ok(H.indexOf('<script src="/lib/trade-zilei-ecran.js"></script>') < H.indexOf('<script src="/lib/range-filter-ecran.js"></script>'), "tzSimboluri / tzLaGrid înaintea ecranului RF");
   assert.match(A, /id==="rangefilter"\)\{if\(typeof rfPorneste==="function"\)rfPorneste\(false\)\}/);
   assert.match(A, /PAGINI_ZILNICE=\[[^\]]*"rangefilter"/);
-  assert.match(A, /"comportament","tradezilei","rangefilter"(,"deriv")?\]\.includes\(id\)/);
+  assert.match(A, /"comportament","tradezilei","rangefilter"(,"deriv")?(,"probe")?\]\.includes\(id\)/);
   assert.match(A, /var ACTIUNI_PERMISE=new Set\("[^"]*\brfPorneste\b[^"]*\brfTf\b[^"]*\brfLaGrid\b/, "rfPorneste / rfTf / rfLaGrid în lista albă");
   // revizia Opus (04.11): numele vecine rămân CUVINTE separate (o lipitură „tzLaGridacasaDeschideAnaliza” scotea două butoane din listă)
   const lista = A.match(/var ACTIUNI_PERMISE=new Set\("([^"]*)"/)[1].split(/\s+/);

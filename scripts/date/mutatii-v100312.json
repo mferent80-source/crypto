@@ -1,0 +1,216 @@
+{
+ "_nota": "I-846 (v100.312): mutațiile codului din 07.11 seara (pagina Probe, caietul, I-842 / I-844 / I-845 / I-847, cele două defecte); fiecare trebuie PRINSĂ de proba listei.",
+ "proba": "scripts/proba-v100312.mjs",
+ "mutatii": [
+  {
+   "nume": "caiet: egalul socotit „mai sus”",
+   "fisier": "scripts/lib/tura-pareri.mjs",
+   "cauta": "y: c > x.p0 ? 1 : 0",
+   "pune": "y: c >= x.p0 ? 1 : 0"
+  },
+  {
+   "nume": "caiet: prețul la secunda notării, nu la minutul ei",
+   "fisier": "scripts/lib/tura-pareri.mjs",
+   "cauta": "const m = Math.floor(t / MIN) * MIN, r = Array.isArray(k) ? k[0] : null;",
+   "pune": "const m = t, r = Array.isArray(k) ? k[0] : null;"
+  },
+  {
+   "nume": "caiet: fără așteptarea de 2 minute după notare",
+   "fisier": "scripts/lib/tura-pareri.mjs",
+   "cauta": "if (acum - p.la < ASTEPT_TERMEN_MIN * MIN) {",
+   "pune": "if (false) {"
+  },
+  {
+   "nume": "caiet: judecata scrisă se rescrie",
+   "fisier": "scripts/lib/tura-pareri.mjs",
+   "cauta": "if (x.y === 0 || x.y === 1 || x.eroare) continue;",
+   "pune": "if (x.eroare) continue;"
+  },
+  {
+   "nume": "caiet: judecata părerii șterse rămâne",
+   "fisier": "scripts/lib/tura-pareri.mjs",
+   "cauta": "for (const id of Object.keys(j)) if (!vii.has(id)) { delete j[id]; schimbat = true; }",
+   "pune": ""
+  },
+  {
+   "nume": "caiet: tura la fiecare buclă",
+   "fisier": "scripts/lib/tura-pareri.mjs",
+   "cauta": "acum - (stare.la || 0) < PAUZA_ORE * ORA",
+   "pune": "false"
+  },
+  {
+   "nume": "scor: abilitatea față de 0,5",
+   "fisier": "public/lib/caiet.js",
+   "cauta": "x.abilitate = x.brier == null ? null : 1 - x.brier / 0.25;",
+   "pune": "x.abilitate = x.brier == null ? null : 1 - x.brier / 0.5;"
+  },
+  {
+   "nume": "scor: 50% socotit ca decizie",
+   "fisier": "public/lib/caiet.js",
+   "cauta": "if (p.p !== 0.5) { x.decise++;",
+   "pune": "if (true) { x.decise++;"
+  },
+  {
+   "nume": "panou: același obiect la ambele ture",
+   "fisier": "scripts/lib/panou-binance.mjs",
+   "cauta": "if (harta.has(k)) { luate++; return structuredClone(harta.get(k)); }",
+   "pune": "if (harta.has(k)) { luate++; return harta.get(k); }"
+  },
+  {
+   "nume": "panou: eșecul ținut minte",
+   "fisier": "scripts/lib/panou-binance.mjs",
+   "cauta": "if (v != null) harta.set(k, v);",
+   "pune": "harta.set(k, v);"
+  },
+  {
+   "nume": "panou: ziua nouă nu golește",
+   "fisier": "scripts/lib/panou-binance.mjs",
+   "cauta": "if (z !== zi) {",
+   "pune": "if (zi == null) {"
+  },
+  {
+   "nume": "panou: și funding-ul / barele pe interval ținute",
+   "fisier": "scripts/lib/panou-binance.mjs",
+   "cauta": "if (q.get(\"interval\") !== \"1d\" || q.has(\"startTime\") || q.has(\"endTime\")) return null;",
+   "pune": "if (q.has(\"endTime\")) return null;"
+  },
+  {
+   "nume": "raport: zilele de dinaintea startului socotite lipsă",
+   "fisier": "scripts/lib/probe-raport.mjs",
+   "cauta": "if (z >= String(start || \"\") && !s.has(z)) out.push(z);",
+   "pune": "if (!s.has(z)) out.push(z);"
+  },
+  {
+   "nume": "ruta: ora din trecut fără „retro”",
+   "fisier": "functions/api/istoric-bot.js",
+   "cauta": "if(acum-lc>10*60000){la=Math.floor(lc/60000)*60000;retro=true}",
+   "pune": ""
+  },
+  {
+   "nume": "ruta: ștergerea și după 15 minute",
+   "fisier": "functions/api/istoric-bot.js",
+   "cauta": "if(acum-(nr(x.creat)||0)>15*60000)return json(",
+   "pune": "if(false)return json("
+  },
+  {
+   "nume": "ruta: proba A fără zile",
+   "fisier": "functions/api/istoric-bot.js",
+   "cauta": "zp===null||",
+   "pune": ""
+  },
+  {
+   "nume": "alinierea: textele la coadă (MAMastercard)",
+   "fisier": "public/lib/sugestii-ecran.js",
+   "cauta": "for (j = 0; j < tot.length; j++) a.appendChild(tot[j]);",
+   "pune": "for (j = 0; j < tot.length; j++) if (tot[j].nodeType === 1) a.appendChild(tot[j]); for (j = 0; j < tot.length; j++) if (tot[j].nodeType === 3) a.appendChild(tot[j]);"
+  },
+  {
+   "nume": "Trend: locul de la zero",
+   "fisier": "public/lib/sugestii-ecran.js",
+   "cauta": "return (i >= 0 ? i + 1 : \"—\")",
+   "pune": "return (i >= 0 ? i : \"—\")"
+  },
+  {
+   "nume": "vederi: Trend și pe Probe",
+   "fisier": "public/lib/sugestii-ecran.js",
+   "cauta": "probe: { el: \"prPagina\", grupuri: [\"cad\", \"dir\"] }",
+   "pune": "probe: { el: \"prPagina\", grupuri: [\"cad\", \"dir\", \"trend\"] }"
+  },
+  {
+   "nume": "Tablou: mișcarea pe o zi, nu pe 7",
+   "fisier": "public/lib/grid-sim.js",
+   "cauta": "mis = Math.exp(Math.sqrt(v * 7)) - 1;",
+   "pune": "mis = Math.exp(Math.sqrt(v)) - 1;"
+  },
+  {
+   "nume": "Tablou: pierderea la stop și sub 0,5%",
+   "fisier": "public/lib/grid-sim.js",
+   "cauta": "if (laStop != null && isFinite(laStop) && x.pStop != null && x.pStop >= 0.005)",
+   "pune": "if (laStop != null && isFinite(laStop) && x.pStop != null)"
+  },
+  {
+   "nume": "Probe: căderile fără prima privire",
+   "fisier": "public/lib/probe-ecran.js",
+   "cauta": "[[\"2027-03-01\", \"prima privire\"], [\"2027-11-08\", \"verdictul\"]]",
+   "pune": "[[\"2027-11-08\", \"verdictul\"]]"
+  },
+  {
+   "nume": "Probe: „Șterge” oricând",
+   "fisier": "public/lib/probe-ecran.js",
+   "cauta": "Date.now() - (p.creat || 0) < 15 * 60000 ?",
+   "pune": "true ?"
+  },
+  {
+   "nume": "Probe: prețul PEPE fără ÷ 1000",
+   "fisier": "public/lib/probe-ecran.js",
+   "cauta": "mult = j.mult > 1 ? j.mult : 1;",
+   "pune": "mult = 1;"
+  },
+  {
+   "nume": "Probe: M2 și din lista veche",
+   "fisier": "public/lib/probe-ecran.js",
+   "cauta": "!(typeof sugDirVeche === \"function\" && sugDirVeche(dl, Date.now()))",
+   "pune": "true"
+  },
+  {
+   "nume": "telefon: fără corpurile de probă",
+   "fisier": "scripts/proba-ecran-telefon.mjs",
+   "cauta": "for (const f of [\"caderi\", \"directie\", \"pareri\", \"probaA\"])",
+   "pune": "for (const f of [])"
+  },
+  {
+   "nume": "colector: direcția fără panou",
+   "fisier": "scripts/colector.mjs",
+   "cauta": "turaDirectieModul({ binance: binancePanou,",
+   "pune": "turaDirectieModul({ binance: binanceDirect,"
+  },
+  {
+   "nume": "Tablou: mișcarea pe 15 minute (dus-întorsul din zi)",
+   "fisier": "public/lib/grid-sim.js",
+   "cauta": "var P4 = 96;",
+   "pune": "var P4 = 1;"
+  },
+  {
+   "nume": "Tablou: botul oprit în reluare dă 100% inventate",
+   "fisier": "public/lib/grid-sim.js",
+   "cauta": "var oprit = !!(rez && rez.acum && rez.acum.oprit);",
+   "pune": "var oprit = false;"
+  },
+  {
+   "nume": "ruta: părerea cu termenul trecut primită",
+   "fisier": "functions/api/istoric-bot.js",
+   "cauta": "if(la+zile*864e5<=acum+3600000)return json(",
+   "pune": "if(false)return json("
+  },
+  {
+   "nume": "ruta: M2 și pe alte orizonturi",
+   "fisier": "functions/api/istoric-bot.js",
+   "cauta": "if(m2!=null&&m2>0&&m2<1&&zile===7)",
+   "pune": "if(m2!=null&&m2>0&&m2<1)"
+  },
+  {
+   "nume": "ruta: mcVerdict pierde „Pe 7 zile”",
+   "fisier": "functions/api/istoric-bot.js",
+   "cauta": ",sapt:typeof x.sapt===\"string\"?x.sapt.slice(0,400):null}",
+   "pune": "}"
+  },
+  {
+   "nume": "ruta: caietul stricat dat drept gol",
+   "fisier": "functions/api/istoric-bot.js",
+   "cauta": "catch{return json({error:\"caietul nu s-a putut citi acum\"},503)}",
+   "pune": "catch{l=[];j={}}"
+  },
+  {
+   "nume": "Tablou: toată lățimea gridului față de mișcarea într-o parte",
+   "fisier": "public/lib/grid-sim.js",
+   "cauta": "(x.latime / 2 < x.miscare7 ?",
+   "pune": "(x.latime < x.miscare7 ?"
+  },
+  {
+   "nume": "vederi: alegerea comună celor două pagini",
+   "fisier": "public/lib/sugestii-ecran.js",
+   "cauta": "var n = sugStare.alesV[v] || {}; sugStare.ales = n.ales; sugStare.tf = n.tf; sugStare.vedere = v;",
+   "pune": "sugStare.vedere = v;"
+  }
+ ]
+}

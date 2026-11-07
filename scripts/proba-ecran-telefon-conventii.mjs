@@ -27,7 +27,7 @@ export const CUVINTE_ENGLEZE = ["WIN", "LOSS", "Win", "Loss", "score", "Score", 
 
 // paginile zilnice + uneltele (Zilnic și Unelte din meniu, fără Setări / Starea aplicației: acolo sunt nume tehnice); „Laboratorul vechi”
 // (34 de pagini în engleză, Quant Engine…) nu intră: e o listă a lui separată, nu ecranul de zi cu zi
-export const PAGINI_CONVENTII = ["dash", "tabloubot", "sugestii", "gridset", "gridsim", "carnet", "jurnaltrade", "comportament", "tradezilei", "rangefilter", "t212", "salt", "scan", "alerts", "montecarlo", "contintreg", "deriv", "stocks", "rezultate", "account"];
+export const PAGINI_CONVENTII = ["dash", "tabloubot", "sugestii", "probe", "gridset", "gridsim", "carnet", "jurnaltrade", "comportament", "tradezilei", "rangefilter", "t212", "salt", "scan", "alerts", "montecarlo", "contintreg", "deriv", "stocks", "rezultate", "account"];
 
 const UNITATE = "(?:USDT|USD|lei|RON|EUR|€|\\$|%|boți|bot|trade-uri|trade|acțiuni|monede|cazuri|porniri|zile|bare)";
 const nrDin = (s) => Number(String(s).replace(/\./g, "").replace(",", "."));

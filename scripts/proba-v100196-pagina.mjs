@@ -99,7 +99,7 @@ await test("P1 paleta Ctrl+K: cele 3 ecrane pierdute sunt înapoi (Jurnal de tra
   const c = ctx({}); const L = vm.runInContext("(" + APP.slice(i + "const COMMANDS=".length, j + 2) + ")", c);
   const id = L.map((x) => x[1]);
   for (const k of ["tabloubot", "busola", "gridset", "jurnaltrade", "t212", "alerts", "dash", "health", "settings"]) assert.ok(id.includes(k), "lipsește " + k);
-  assert.equal(L.length, 25, "19 rămăseseră + 3 întoarse + Comportament (v100.286) + Trade-ul zilei (v100.297) + Range Filter (v100.300)");
+  assert.equal(L.length, 26, "19 rămăseseră + 3 întoarse + Comportament (v100.286) + Trade-ul zilei (v100.297) + Range Filter (v100.300) + Probe (v100.312)");
   const nume = Object.fromEntries(L.map((x) => [x[1], x[0]]));
   assert.equal(nume.dash, "Piața azi"); assert.equal(nume.alerts, "Alerte"); assert.equal(nume.settings, "Setări"); assert.equal(nume.health, "Starea aplicației");
 });
@@ -232,7 +232,7 @@ await test("🟡2 fâșia „ultimii boți închiși” (asezare-paznic.js): rez
 await test("🟡6 UI: pe Simulator grid, Contul întreg, Monte Carlo și Rezultate nu mai stă banda veche „Selected market / Engine bias WAIT”", () => {
   const f = fnSursa(APP, "show");
   const m = f.match(/toggle\("pePaginaNoua",(\[[^\]]*\])\.includes\(id\)\)/); assert.ok(m, "lista paginilor fără bandă");
-  assert.deepEqual(JSON.parse(m[1]), ["salt", "sugestii", "carnet", "gridsim", "contintreg", "montecarlo", "rezultate", "comportament", "tradezilei", "rangefilter", "deriv"]);   /* v100.306 (I-836): + Futures */   /* v100.300: + Range Filter */   /* v100.286: + Comportament; v100.297: + Trade-ul zilei */
+  assert.deepEqual(JSON.parse(m[1]), ["salt", "sugestii", "carnet", "gridsim", "contintreg", "montecarlo", "rezultate", "comportament", "tradezilei", "rangefilter", "deriv", "probe"]);   /* v100.312: + Probe */   /* v100.306 (I-836): + Futures */   /* v100.300: + Range Filter */   /* v100.286: + Comportament; v100.297: + Trade-ul zilei */
   assert.match(CSS, /body\.pePaginaNoua:not\(\.peDeriv\) \.toolbar,body\.pePaginaNoua \.heroStrip,body\.pePaginaNoua \.tabs\{display:none\}/);   /* v100.306: pe Futures bara cu moneda rămâne */
 });
 

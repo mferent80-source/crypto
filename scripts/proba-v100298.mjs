@@ -125,7 +125,7 @@ await test("3b. tura Discord: nimic înainte de 9:00 RO, trimite o dată pe zi, 
 await test("4. colectorul: importă tura, încarcă TradeZilei, o cheamă după rezumat cu cheia „tradezilei”, v101.162", () => {
   const C = citeste("scripts", "colector.mjs");
   assert.match(C, /import \{ turaTradeZilei \} from "\.\/lib\/tura-trade-zilei\.mjs"/); assert.match(C, /const TradeZilei = incarca\("trade-zilei\.js", "TradeZilei"\)/);
-  assert.match(C, /const VERSIUNE_COLECTOR = "v101\.(16[2-9]|[2-9]\d\d)"/);   // v101.163: pe „≥ 162”
+  assert.match(C, /const VERSIUNE_COLECTOR = "v101\.(16[2-9]|1[7-9]\d|[2-9]\d\d)"/);   // v101.163: pe „≥ 162”
   const i = C.indexOf("turaDimineataModul({"), j = C.indexOf("turaTradeZilei({"); assert.ok(i > 0 && j > i, "tura trade-ului zilei vine după rezumatul de dimineață");
   assert.match(C, /trimiteAlerta\(m, null, "tradezilei"\)/); assert.match(C, /const k = await lumanari1h\(s\); return GridCalcul\.bare\(/);   /* v101.166 (I-838): lumânările de 1 h o dată dimineața */
 });

@@ -1,0 +1,222 @@
+{
+ "_nota": "I-846 (v100.312): mutațiile din 07.11 (scratchpad-ul sesiunii) aduse în repo; fiecare trebuie PRINSĂ de proba listei (ieșire ≠ 0). Proba pre-înregistrată: pine-scripts/_proba-revenire-2026-11-07.",
+ "proba": "scripts/proba-v100308-caderi.mjs",
+ "mutatii": [
+  {
+   "nume": "pauza ≥",
+   "fisier": "scripts/lib/tura-caderi.mjs",
+   "cauta": "i - ultim > r.pauza",
+   "pune": "i - ultim >= r.pauza - 1"
+  },
+  {
+   "nume": "prag <",
+   "fisier": "scripts/lib/tura-caderi.mjs",
+   "cauta": "c <= prag * M",
+   "pune": "c < prag * M"
+  },
+  {
+   "nume": "fără ziua dinainte",
+   "fisier": "scripts/lib/tura-caderi.mjs",
+   "cauta": "cp > prag * Mp && ",
+   "pune": ""
+  },
+  {
+   "nume": "mediana fără ziua t",
+   "fisier": "scripts/lib/tura-caderi.mjs",
+   "cauta": "k <= i; k++) if (p.Q[k][j] != null",
+   "pune": "k < i; k++) if (p.Q[k][j] != null"
+  },
+  {
+   "nume": "minBare 60",
+   "fisier": "scripts/lib/tura-caderi.mjs",
+   "cauta": "i - prim >= r.minBare",
+   "pune": "i - prim >= 60"
+  },
+  {
+   "nume": "β neclipat",
+   "fisier": "scripts/lib/tura-caderi.mjs",
+   "cauta": "Math.min(r.betaLim[1], Math.max(r.betaLim[0], cov / vx))",
+   "pune": "cov / vx * 0.9"
+  },
+  {
+   "nume": "OI fără 2 h",
+   "fisier": "scripts/lib/tura-caderi.mjs",
+   "cauta": "lim - b.t <= 2 * ORA ? b.v : null",
+   "pune": "b.v"
+  },
+  {
+   "nume": "funding 72h ≥",
+   "fisier": "scripts/lib/tura-caderi.mjs",
+   "cauta": "x.t > intrare - r.fundingOre * ORA && x.t <= intrare",
+   "pune": "x.t >= intrare - r.fundingOre * ORA && x.t < intrare"
+  },
+  {
+   "nume": "fără rotunjire",
+   "fisier": "scripts/lib/tura-caderi.mjs",
+   "cauta": "Math.round(Number(t) / 1000) * 1000",
+   "pune": "Number(t)"
+  },
+  {
+   "nume": "A fără funding",
+   "fisier": "scripts/lib/tura-caderi.mjs",
+   "cauta": "oi <= -r.oiScadere && fm < 0",
+   "pune": "oi <= -r.oiScadere"
+  },
+  {
+   "nume": "funding pe ținere [t0,t1)",
+   "fisier": "scripts/lib/tura-caderi.mjs",
+   "cauta": "x.v != null && x.t > t0 && x.t <= t1",
+   "pune": "x.v != null && x.t >= t0 && x.t < t1"
+  },
+  {
+   "nume": "ieșire fără ffill",
+   "fisier": "scripts/lib/tura-caderi.mjs",
+   "cauta": "for (let q = Math.min(k, C.length - 1); q >= i; q--) if (C[q][j] != null) return C[q][j]; return null;",
+   "pune": "return C[Math.min(k, C.length - 1)][j];"
+  },
+  {
+   "nume": "Holm fără oprire",
+   "fisier": "scripts/lib/tura-caderi.mjs",
+   "cauta": "oprit = oprit || !t;",
+   "pune": "oprit = false;"
+  },
+  {
+   "nume": "episod fără pauză",
+   "fisier": "scripts/lib/tura-caderi.mjs",
+   "cauta": "t - ultim > r.pEpisod * ZI",
+   "pune": "t - ultim > 0"
+  },
+  {
+   "nume": "P: prag 1",
+   "fisier": "scripts/lib/tura-caderi.mjs",
+   "cauta": "(z.nA || 0) >= r.pLarga",
+   "pune": "(z.nA || 0) >= 1"
+  },
+  {
+   "nume": "privire fără dată",
+   "fisier": "scripts/lib/tura-caderi.mjs",
+   "cauta": "r.priviri.filter(([d]) => azi >= d).map",
+   "pune": "r.priviri.map"
+  },
+  {
+   "nume": "incomplete în probă",
+   "fisier": "scripts/lib/tura-caderi.mjs",
+   "cauta": "zile.filter((z) => !z.incomplet).flatMap",
+   "pune": "zile.flatMap"
+  },
+  {
+   "nume": "evenimentul nevenit se închide",
+   "fisier": "scripts/lib/tura-caderi.mjs",
+   "cauta": "(fara || piata == null || ies.some((x) => !x)) && !vechi",
+   "pune": "(piata == null) && !vechi"
+  },
+  {
+   "nume": "privirea pe tot",
+   "fisier": "scripts/lib/tura-caderi.mjs",
+   "cauta": "e.zi <= pana[h] && f(e)",
+   "pune": "f(e)"
+  },
+  {
+   "nume": "fără cost dublu",
+   "fisier": "scripts/lib/tura-caderi.mjs",
+   "cauta": "g[k].stat - (r.costStres - r.cost) > 0",
+   "pune": "g[k].stat > -1"
+  },
+  {
+   "nume": "fără net absolut",
+   "fisier": "scripts/lib/tura-caderi.mjs",
+   "cauta": "net = k === \"B\" || (abs[k].stat != null && abs[k].stat > 0)",
+   "pune": "net = true"
+  },
+  {
+   "nume": "Holm micșorează familia",
+   "fisier": "scripts/lib/tura-caderi.mjs",
+   "cauta": "Object.entries(ps).map(([k, p]) => [k, p == null ? 1 : p])",
+   "pune": "Object.entries(ps).filter(([, p]) => p != null)"
+  },
+  {
+   "nume": "P pe toate episoadele",
+   "fisier": "scripts/lib/tura-caderi.mjs",
+   "cauta": "ep.length >= r.pMinEpisoade ? ep.slice(0, r.pMinEpisoade)",
+   "pune": "ep.length >= r.pMinEpisoade ? ep"
+  },
+  {
+   "nume": "ziua dinainte scrisă",
+   "fisier": "scripts/lib/tura-caderi.mjs",
+   "cauta": "if (zk >= r.start) { if (",
+   "pune": "if (true) { if ("
+  },
+  {
+   "nume": "A picat ignorat",
+   "fisier": "scripts/lib/tura-caderi.mjs",
+   "cauta": "(lipsa > 0.1 * toate.length || esecA) && k > i - 15",
+   "pune": "(lipsa > 0.1 * toate.length) && k > i - 15"
+  },
+  {
+   "nume": "funding picat închide",
+   "fisier": "scripts/lib/tura-caderi.mjs",
+   "cauta": "if (fus.some((fu) => !Array.isArray(fu)) && !vechi) continue;",
+   "pune": ""
+  },
+  {
+   "nume": "delistata ignorată",
+   "fisier": "scripts/lib/tura-caderi.mjs",
+   "cauta": "if (!Uset.has(sym) && u && u[0] >= z.zi",
+   "pune": "if (false && u && u[0] >= z.zi"
+  },
+  {
+   "nume": "privirea recalculată",
+   "fisier": "scripts/lib/tura-caderi.mjs",
+   "cauta": "vechiV = d.citesteZi(k); if (vechiV) return vechiV;",
+   "pune": "vechiV = null; if (vechiV) return vechiV;"
+  },
+  {
+   "nume": "fără multiplicator",
+   "fisier": "scripts/lib/tura-caderi.mjs",
+   "cauta": "return m ? (m[1] === \"1000\" ? 1000 : 1e6) : 1;",
+   "pune": "return 1;"
+  },
+  {
+   "nume": "klines fără codificare",
+   "fisier": "scripts/lib/tura-caderi.mjs",
+   "cauta": "klines?symbol=${encodeURIComponent(s)}",
+   "pune": "klines?symbol=${s}"
+  },
+  {
+   "nume": "Pionex picat strică tura",
+   "fisier": "scripts/lib/tura-caderi.mjs",
+   "cauta": "try { const tk = ((await d.cere(",
+   "pune": "{ const tk = ((await d.cere("
+  },
+  {
+   "nume": "reîncercarea lasă ziua",
+   "fisier": "scripts/lib/tura-caderi.mjs",
+   "cauta": "if (reincearca) { st.esecLa = acum;",
+   "pune": "if (false) { st.esecLa = acum;"
+  },
+  {
+   "nume": "fără recuperare",
+   "fisier": "scripts/lib/tura-caderi.mjs",
+   "cauta": "k = Math.max(r.minBare + 2, i - 20)",
+   "pune": "k = i"
+  },
+  {
+   "nume": "net fără funding",
+   "fisier": "scripts/lib/tura-caderi.mjs",
+   "cauta": "e[\"r\" + h] = g - r.cost - f;",
+   "pune": "e[\"r\" + h] = g - r.cost;"
+  },
+  {
+   "nume": "lista fără Pionex",
+   "fisier": "scripts/lib/tura-caderi.mjs",
+   "cauta": "ziNoua.ev.filter((e) => e.pionex).sort",
+   "pune": "ziNoua.ev.slice().sort"
+  },
+  {
+   "nume": "ora 8 ignorată",
+   "fisier": "scripts/lib/tura-caderi.mjs",
+   "cauta": "oraRo(acum) < 8 || ",
+   "pune": ""
+  }
+ ]
+}

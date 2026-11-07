@@ -146,7 +146,7 @@ await test("4d. rândul de duminică: numără zilele și semnalele, mediile, f�
 
 await test("5. colectorul: importă tura, o cheamă după trade-ul zilei, rândul în raportul de duminică, v101.163; versiunile v100.299 peste tot", () => {
   const C = citeste("scripts", "colector.mjs");
-  assert.match(C, /import \{ turaProbaA, liniaProbaA \} from "\.\/lib\/tura-proba-a\.mjs"/); assert.match(C, /const VERSIUNE_COLECTOR = "v101\.(16[3-9]|1[7-9]\d)"/);
+  assert.match(C, /import \{ turaProbaA, liniaProbaA(, stadiuProbaA)? \} from "\.\/lib\/tura-proba-a\.mjs"/); assert.match(C, /const VERSIUNE_COLECTOR = "v101\.(16[3-9]|1[7-9]\d)"/);
   const i = C.indexOf("turaTradeZilei({"), j = C.indexOf("turaProbaA({"); assert.ok(i > 0 && j > i, "proba A vine după trade-ul zilei");
   assert.match(C, /proba-a\.jsonl/); assert.match(C, /rap\.linii\.push\(liniaProbaA\(/);
   /* v100.300 a relaxat pe „≥ 299” (ca v100.297 pe 296) */

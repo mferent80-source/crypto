@@ -368,6 +368,33 @@ var GridSim = (function () {
     });
     return out;
   }
+  // v100.312 (I-842, 07.11: botul STX avea gridul de 8% pe o monedă care se mișcă ~13% pe săptămână): ce poate face piața botului în 7 zile,
+  // pe aceleași drumuri ca verdictul (fără tendință) - lățimea gridului față de mișcarea obișnuită pe o săptămână (o abatere standard a
+  // randamentelor de 15 minute din barele aduse, × √(7 zile)) și șansa ca prețul să iasă din grid. Șansa stopului e deja în textul verdictului.
+  function riscSaptamana(rez, b15, bot) {
+    var o = rez && Array.isArray(rez.orizonturi) ? rez.orizonturi.filter(function (x) { return x && Math.abs(Number(x.zile) - 7) < 1e-6; })[0] : null;
+    var j = nr(bot && bot.gridJos), s = nr(bot && bot.gridSus), lat = j > 0 && s > j ? (s - j) / ((s + j) / 2) : null, r = [];
+    // pe ZILE care nu se suprapun (de la ultima bară înapoi), × √7: cât se duce prețul până la capătul săptămânii. Pe 15 minute și pe 4 ore
+    // mișcările din zi se întorc și umflă cifra (STX, 07.11: ±18,5% pe 15 minute și pe 4 ore, ±13,4% pe zile)
+    var P4 = 96;
+    for (var i = Array.isArray(b15) ? b15.length - 1 : -1; i - P4 >= 0; i -= P4) if (b15[i].c > 0 && b15[i - P4].c > 0) r.push(Math.log(b15[i].c / b15[i - P4].c));
+    var mis = null;
+    if (r.length >= 20) { var m = r.reduce(function (a, x) { return a + x; }, 0) / r.length, v = r.reduce(function (a, x) { return a + (x - m) * (x - m); }, 0) / (r.length - 1); mis = Math.exp(Math.sqrt(v * 7)) - 1; }
+    if (!o && lat == null) return null;
+    // reluarea pe drumul real arată botul deja OPRIT (stop / TP atins de la pornire): drumurile „de aici încolo” stau pe loc - șansele n-ar spune nimic
+    var oprit = !!(rez && rez.acum && rez.acum.oprit);
+    return { latime: lat, miscare7: mis, oprit: oprit, pIesire: !oprit && o && isFinite(o.pIesire) ? o.pIesire : null, pStop: !oprit && o && isFinite(o.pStop) ? o.pStop : null, zileBare: Array.isArray(b15) ? Math.floor(b15.length / BZ) : 0 };
+  }
+  function textSaptamana(x, laStop) {
+    if (!x) return "";
+    var p = [], pc1 = function (v) { return nrRo(Math.round(v * 1000) / 10, 1) + "%"; };
+    if (x.latime != null && x.miscare7 != null) p.push("gridul are " + pc1(x.latime) + " lățime (±" + pc1(x.latime / 2) + " de la mijloc), iar o săptămână obișnuită mișcă moneda cu ±" + pc1(x.miscare7) + (x.latime / 2 < x.miscare7 ? " (mai mult decât jumătatea gridului)" : ""));   /* revizia: jumătatea gridului față de mișcarea într-o parte */
+    else if (x.latime != null) p.push("gridul are " + pc1(x.latime) + " lățime");
+    if (x.oprit) p.push("reluarea arată botul deja oprit, deci fără șansele pe drumuri (vezi Simulatorul)");
+    if (x.pIesire != null) p.push("prețul iese din grid în " + prMic(x.pIesire) + " din drumuri");
+    if (laStop != null && isFinite(laStop) && x.pStop != null && x.pStop >= 0.005) p.push("dacă stopul e atins (" + pr(x.pStop) + "): " + bani1(laStop));
+    return p.length ? "Pe 7 zile, fără tendință: " + p.join(" · ") : "";
+  }
   function verdictScurt(rez, st, plan, bot) {
     if (!rez || rez.eroare) return { stare: "info", text: rez && rez.eroare ? String(rez.eroare) : "fără rezultat" };
     var i7 = -1, i1 = -1; (rez.orizonturi || []).forEach(function (o, i) { if (o.zile === 7) i7 = i; if (o.zile === 1) i1 = i; });
@@ -391,6 +418,6 @@ var GridSim = (function () {
     var stare = atins === "minus" ? "rau" : atins === "plus" ? "bine" : rau ? "rau" : v.culoare === "good" ? "bine" : v.culoare === "bad" ? "rau" : "atentie";
     return { stare: stare, text: parti.join(" · "), culoare: v.culoare, faCe: v.faCe, rand: v.rand, atins: atins };
   }
-  return { riscScurt: riscScurt, ORIZ_SCURT: ORIZ_SCURT, LICHIDARI_ACCEPTATE: LICHIDARI_ACCEPTATE, lichidareAcceptata: lichidareAcceptata, starturiRegim: starturiRegim, dinCod: dinCod, inCod: inCod, setariDinBot: setariDinBot, tpValid: tpValid, simuleaza: simuleaza, compara: compara, comparaLa: comparaLa, verdict: verdict, verdictScurt: verdictScurt, rataFunding: rataFunding, marja: marja, bani1: bani1, pr: pr, NUME: NUME, textCalibrareMc: textCalibrareMc };
+  return { riscSaptamana: riscSaptamana, textSaptamana: textSaptamana, riscScurt: riscScurt, ORIZ_SCURT: ORIZ_SCURT, LICHIDARI_ACCEPTATE: LICHIDARI_ACCEPTATE, lichidareAcceptata: lichidareAcceptata, starturiRegim: starturiRegim, dinCod: dinCod, inCod: inCod, setariDinBot: setariDinBot, tpValid: tpValid, simuleaza: simuleaza, compara: compara, comparaLa: comparaLa, verdict: verdict, verdictScurt: verdictScurt, rataFunding: rataFunding, marja: marja, bani1: bani1, pr: pr, NUME: NUME, textCalibrareMc: textCalibrareMc };
 })();
 if (typeof globalThis !== "undefined") globalThis.GridSim = GridSim;

@@ -313,6 +313,8 @@ const DINAMICE = [
   // v100.291: pastilele verdictului T212 sunt butoane (AsezarePaznic.voceHtml); acțiunea vine din pagT212 („v.act = "t212Deschide('…')"”)
   // v100.292: butoanele fișei din Sugestii (Fișa gridului / Poarta) - acțiunea vine din `act: "<nume>('…')"`
   { fisier: "public/lib/sugestii-ecran.js", re: /^' \+ sugEsc\(a\.act\) \+ '/, nume: () => culege(new RegExp('act: "(' + ID + ')\\(', "g"), LIB.filter(([f]) => f.endsWith("sugestii-ecran.js"))) },
+  // v100.312: pagina Probe - butonul fiecărei probe din „Unde e fiecare probă” (act: ["eticheta", "navTo('…',true)"])
+  { fisier: "public/lib/probe-ecran.js", re: /^' \+ sugEsc\(r\.act\[1\]\) \+ '/, nume: () => culege(new RegExp('act: \\["[^"]*", "(' + ID + ')\\(', "g"), LIB.filter(([f]) => f.endsWith("probe-ecran.js"))) },
   { fisier: "public/lib/asezare-paznic.js", re: /^' \+ String\(v\.act\)/, nume: () => culege(new RegExp('v\\.act = "(' + ID + ')\\(', "g"), LIB.filter(([f]) => f.endsWith("asezare-paznic.js"))) },
   { fisier: "public/lib/statistica-trade.js", re: /^' \+ o\.actiune(Perioada|Ordine|Csv) \+ /, nume: (w) => { const k = /^' \+ o\.actiune(\w+) /.exec(w)[1]; return culege(new RegExp("actiune" + k + "\\s*:\\s*[\"'](" + ID + ")[\"']", "g")); } },
 ];

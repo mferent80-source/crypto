@@ -77,6 +77,14 @@ export async function turaProbaA(d) {
   return { judecat: true, scrise: randuri.length, fara, sarite };
 }
 
+// v101.170 (pagina Probe): stadiul probei, aceleași medii ca rândul de duminică (pe trade, nu pe zile), pentru KV `sugestii:probaA`
+export function stadiuProbaA(text) {
+  const r = []; String(text || "").split("\n").forEach((l) => { try { if (l.trim()) r.push(JSON.parse(l)); } catch {} });
+  const zile = new Set(r.map((x) => x.zi)), cuS = r.filter((x) => x.semnal), rest = r.filter((x) => !x.semnal);
+  const medie = (a) => { const v = a.filter((x) => x.net != null && isFinite(Number(x.net))).map((x) => Number(x.net)); return v.length ? v.reduce((s, x) => s + x, 0) / v.length : null; };
+  const zMax = r.reduce((m, x) => (Number(x.zi) > m ? Number(x.zi) : m), -1);
+  return { din: DIN, verdictDupa: VERDICT_DUPA, zile: zile.size, n: r.length, nSemnal: cuS.length, netSemnal: medie(cuS), netRest: medie(rest), ultima: zMax >= 0 ? new Date(zMax * ZI).toISOString().slice(0, 10) : null };
+}
 // rândul de duminică: descriptiv, FĂRĂ verdict înainte de termen (mediile doar pe zilele în care trade-ul a intrat, ca în Python)
 export function liniaProbaA(text) {
   const r = []; String(text || "").split("\n").forEach((l) => { try { if (l.trim()) r.push(JSON.parse(l)); } catch {} });

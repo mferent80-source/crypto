@@ -38,6 +38,15 @@ const html = readFileSync(new URL("../public/index.html", import.meta.url), "utf
 const meniu = html.slice(html.indexOf('<div class="sideMenu">'), html.indexOf('<div class="sideFooter">'));
 const PAGINI = process.argv[4] ? process.argv[4].split(",") : [...new Set([...meniu.matchAll(/data-nav="([a-z0-9]+)"/g)].map((x) => x[1]))];
 const asteapta = (ms) => new Promise((r) => setTimeout(r, ms));
+// v100.312 (I-845): grupurile în probă (căderi, direcție, caietul, proba A) arătau „aștept tura” pe serverul de probă (KV gol) ⇒ garda de
+// convenții nu le citea niciodată textul. Acum proba le servește corpurile REALE salvate în scripts/date/proba-telefon/ (ora mutată la acum),
+// fără să scrie nimic în KV. PROBA_FARA_DATE=1 ⇒ ce dă serverul.
+const DATE_PROBA = (() => { const o = {}; if (process.env.PROBA_FARA_DATE) return o; try { const D = new URL("./date/proba-telefon/", import.meta.url); for (const f of ["caderi", "directie", "pareri", "probaA"]) { const x = JSON.parse(readFileSync(new URL(f + ".json", D), "utf8")); o[f] = x; } } catch {} return o; })();
+function corpProba(act) {
+  const x = DATE_PROBA[act]; if (!x) return null;
+  const d = Date.now() - (Number(x._acum) || Date.now()), muta = (v) => { if (Array.isArray(v)) return v.map(muta); if (v && typeof v === "object") { const o = {}; for (const [k, w] of Object.entries(v)) o[k] = (k === "la" || k === "creat") && typeof w === "number" ? w + d : muta(w); return o; } return v; };
+  return JSON.stringify(muta(x.raspuns));
+}
 
 if (!BROWSER) { console.log("PICA: nu găsesc Chrome sau Edge"); process.exit(1); }
 if (!TOKEN) { console.log("PICA: lipsește APP_API_TOKEN din .dev.vars"); process.exit(1); }
@@ -53,7 +62,9 @@ try {
   ws.onmessage = (e) => { const x = JSON.parse(e.data); if (x.id && m.has(x.id)) { m.get(x.id)(x.result); m.delete(x.id); }
     if (x.method === "Runtime.exceptionThrown") { const d = x.params.exceptionDetails.exception?.description ?? x.params.exceptionDetails.text; exc.push(String(d).slice(0, 200)); }
     // audit 19.10: cererea spre serverul probat, oprită de Fetch.enable, pleacă mai departe cu antetele ei + x-proba-ecran
-    if (x.method === "Fetch.requestPaused") { const h = Object.entries(x.params.request.headers || {}).filter(([k]) => k.toLowerCase() !== "x-proba-ecran").map(([name, value]) => ({ name, value: String(value) })); h.push({ name: "x-proba-ecran", value: "1" });
+    if (x.method === "Fetch.requestPaused") { const u = new URL(x.params.request.url), cp = u.pathname === "/api/istoric-bot" && x.params.request.method === "GET" ? corpProba(u.searchParams.get("action")) : null;
+      if (cp) { ws.send(JSON.stringify({ id: ++id, method: "Fetch.fulfillRequest", params: { requestId: x.params.requestId, responseCode: 200, responseHeaders: [{ name: "Content-Type", value: "application/json; charset=utf-8" }], body: Buffer.from(cp).toString("base64") } })); return; }   /* v100.312 (I-845) */
+      const h = Object.entries(x.params.request.headers || {}).filter(([k]) => k.toLowerCase() !== "x-proba-ecran").map(([name, value]) => ({ name, value: String(value) })); h.push({ name: "x-proba-ecran", value: "1" });
       ws.send(JSON.stringify({ id: ++id, method: "Fetch.continueRequest", params: { requestId: x.params.requestId, headers: h } })); } };
   await new Promise((r) => { ws.onopen = r; });
   await tr("Runtime.enable"); await tr("Page.enable");

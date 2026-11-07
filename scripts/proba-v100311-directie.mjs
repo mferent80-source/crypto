@@ -240,10 +240,10 @@ await test("🔑 serverul: POST directie cere la + zi + lista (≤ 20) + urmarir
 await test("colectorul: importă turaDirectie, o pornește o dată pe zi la turele grele, zilele în data/directie, v101.169", () => {
   const C = citeste("scripts", "colector.mjs");
   assert.match(C, /import \{ turaDirectie as turaDirectieModul \} from "\.\/lib\/tura-directie\.mjs";/);
-  assert.match(C, /const VERSIUNE_COLECTOR = "v101\.169"/);
+  assert.match(C, /const VERSIUNE_COLECTOR = "v101\.(169|1[7-9]\d|[2-9]\d\d)"/);   // v100.312: cel puțin v101.169
   assert.match(C, /const DIRECTIE_DIR = path\.join\(DATA, "directie"\)/);
   // după căderi, nu în paralel: amândouă cer ~520 de bare zilnice (ponderea 2) ⇒ împreună s-ar apropia de 2.400 / minut la Binance
-  assert.match(C, /if \(val\.grele\) turaCaderiColector\(\)\.catch\(\(e\) => jurnal\("caderi", e\.message\)\)\.then\(\(\) => turaDirectieColector\(\)\)\.catch\(\(e\) => jurnal\("directie", e\.message\)\);/);
+  assert.match(C, /if \(val\.grele\) turaCaderiColector\(\)\.catch\(\(e\) => jurnal\("caderi", e\.message\)\)\.then\(\(\) => turaDirectieColector\(\)\)\.catch\(\(e\) => jurnal\("directie", e\.message\)\)(;|\.then\(\(\) => (binancePanou\.goleste|turaProbeColector)\(\)\))/);   // v100.312: apoi tura probelor (caietul, proba A)
   assert.match(C, /stareDeDisc\("directie-stare\.json"\)/);
 });
 
@@ -251,7 +251,9 @@ const J = (x) => JSON.parse(JSON.stringify(x));
 function pagina() {
   const ctx = { console, Intl, Date, Math, JSON, isFinite, Number, String, Array, Object, RegExp, setTimeout, document: undefined };
   vm.createContext(ctx);
-  vm.runInContext(citeste("public", "lib", "text-ro.js") + "\n" + citeste("public", "lib", "sugestii-ecran.js") + "\nthis.sugHtml = sugHtml; this.sugGrupuri = sugGrupuri; this.sugRanduri = sugRanduri; this.sugFisa = sugFisa; this.sugStare = sugStare; this.SUG_GRUPURI = SUG_GRUPURI;", ctx);
+  // v100.312: grupurile „cad” și „dir” sunt pe pagina Probe - aceeași sugHtml, în vederea „probe” (lib/probe-ecran.js)
+  vm.runInContext(["text-ro.js", "sugestii-ecran.js", "caiet.js", "probe-ecran.js"].map((f) => citeste("public", "lib", f)).join("\n") + "\nthis.sugHtml = sugHtml; this.sugGrupuri = sugGrupuri; this.sugRanduri = sugRanduri; this.sugFisa = sugFisa; this.sugStare = sugStare; this.SUG_GRUPURI = SUG_GRUPURI;", ctx);
+  ctx.sugStare.vedere = "probe";
   return ctx;
 }
 const m1 = (s, s1, P1, s2, P2, extra = {}) => ({ s, b: s.replace("_USDT_PERP", "USDT"), mult: 1, c: 1.5, med: 2e8, z28: 1.2, z7: -0.4, r28: 0.15, btc28: 0.3, btcEma: -0.04, fund: 0.0001, vtr: 0.1, s1, P1, s2, P2, ...extra });

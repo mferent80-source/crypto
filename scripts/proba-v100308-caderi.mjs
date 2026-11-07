@@ -224,7 +224,9 @@ const J = (x) => JSON.parse(JSON.stringify(x));   // tablourile din vm vin din a
 function pagina() {
   const ctx = { console, Intl, Date, Math, JSON, isFinite, Number, String, Array, Object, RegExp, setTimeout, document: undefined };
   vm.createContext(ctx);
-  vm.runInContext(citeste("public", "lib", "text-ro.js") + "\n" + citeste("public", "lib", "sugestii-ecran.js") + "\nthis.sugHtml = sugHtml; this.sugGrupuri = sugGrupuri; this.sugRanduri = sugRanduri; this.sugFisa = sugFisa; this.sugStare = sugStare; this.SUG_GRUPURI = SUG_GRUPURI;", ctx);
+  // v100.312: grupurile „cad” și „dir” sunt pe pagina Probe - aceeași sugHtml, în vederea „probe” (lib/probe-ecran.js)
+  vm.runInContext(["text-ro.js", "sugestii-ecran.js", "caiet.js", "probe-ecran.js"].map((f) => citeste("public", "lib", f)).join("\n") + "\nthis.sugHtml = sugHtml; this.sugGrupuri = sugGrupuri; this.sugRanduri = sugRanduri; this.sugFisa = sugFisa; this.sugStare = sugStare; this.SUG_GRUPURI = SUG_GRUPURI;", ctx);
+  ctx.sugStare.vedere = "probe";
   return ctx;
 }
 const CAD = { la: Date.parse("2026-11-08T07:30:00Z"), zi: "2026-11-07", nElig: 188, nE: 3, nPionex: 2, nA: 1, incomplet: false, start: "2026-11-07",

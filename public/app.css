@@ -3413,7 +3413,7 @@ button.pzVoce{width:auto;min-height:0;margin:0;background:transparent;font-weigh
 .sugVerdict-v{background:rgba(233,185,73,.14);color:var(--warn);border-color:rgba(233,185,73,.55)}
 .sugVerdict-p{background:rgba(91,143,199,.16);color:var(--accent);border-color:rgba(91,143,199,.55)}
 .sugVerdict-n{background:rgba(159,179,196,.12);color:var(--text);border-color:rgba(159,179,196,.4)}
-.sugVerdicte{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));border:1px solid var(--tb-linie);border-radius:5px;background:var(--tb-fond);margin:10px 0}
+.sugVerdicte{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--tb-linie);border-radius:5px;background:var(--tb-fond);margin:10px 0}
 .sugVerdicte>div{padding:8px 12px;border-left:1px solid var(--tb-linie);min-width:0;display:flex;flex-direction:column;gap:3px;align-items:flex-start}
 .sugVerdicte>div:first-child{border-left:0}.sugVerdicte>div .tbSub{margin:0}
 .sugRand{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"sim pret" "sub sub";gap:2px 8px;align-items:center;width:100%;text-align:left;color:var(--text);border:1px solid var(--tb-linie);border-radius:5px;padding:7px 10px;margin:0;cursor:pointer;background:var(--tb-fond);font:inherit;font-weight:400;min-height:44px;box-shadow:none}
@@ -3445,6 +3445,45 @@ button.pzVoce{width:auto;min-height:0;margin:0;background:transparent;font-weigh
 .sugLista2 .sugMaiMult{display:flex;align-items:center;width:100%;min-height:44px;margin:0;padding:7px 10px;text-align:left;font:inherit;font-size:13.5px;font-weight:600;color:var(--accent);background:transparent;border:1px dashed var(--tb-linie);border-radius:5px;cursor:pointer;box-shadow:none}
 .sugLista2 .sugMaiMult:hover{border-color:var(--accent);background:rgba(91,143,199,.08);transform:none}
 .sugLista2 .sugMaiMult:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+/* v100.312 (el, 07.11: „pune tot ce am făcut azi pe o pagină separată”): pagina Probe - „Unde e fiecare probă” (drumul până la privirea
+   fixată, cu privirile ca semne pe el), listele în probă (același motor și aceleași clase ca Sugestii: .sugLista2 + fișa), caietul de păreri
+   (formularul stă în afara zonei redesenate). Pe Sugestii, rândul care duce aici. */
+#probe{--tb-r:5px;--tb-linie:rgba(159,179,196,.16);--tb-fond:#141C24;--tb-fond2:#1A242E;font-variant-numeric:tabular-nums}
+#probe .tbEt2{color:var(--muted);font-size:12px}
+#prPagina,#prPagina .sugLista2{container-type:inline-size}
+#prPagina.card{overflow:clip;display:flex;flex-direction:column;gap:10px}
+#prPagina>.rlRasp,#prPagina>[data-pr="nota"]{margin:0;max-width:90ch;line-height:1.45}
+#prPagina .tbBloc,#prCaiet.card{padding:10px 12px;background:var(--tb-fond);border:1px solid var(--tb-linie);border-radius:var(--tb-r);min-width:0}
+#prPagina .sugPandaCap,#prCaiet .sugPandaCap{display:flex;justify-content:space-between;align-items:baseline;gap:4px 10px;flex-wrap:wrap;margin:0 0 6px}
+#prPagina .sugPandaCap h4,#prCaiet .sugPandaCap h4{margin:0}
+.prRanduri{display:flex;flex-direction:column;gap:6px}
+.prRand{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2.2fr) minmax(0,1.3fr);gap:6px 16px;align-items:start;padding:9px 12px;border:1px solid var(--tb-linie);border-radius:5px;background:var(--tb-fond2)}
+.prNume{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;min-width:0}.prNume b{font-size:14px;line-height:1.35}
+.prDu{min-height:32px;padding:3px 10px}
+.prFapte{display:grid;grid-template-columns:minmax(0,.75fr) minmax(0,1.1fr) minmax(0,2fr);gap:4px 14px;margin:0}
+.prFapte>div{min-width:0}.prFapte dt{font-size:11.5px;color:var(--muted);margin:0}.prFapte dd{margin:1px 0 0;font-size:13px;line-height:1.38}
+.prDrum{min-width:0;padding-top:3px}.prDrum p{margin:5px 0 0;font-size:12px;line-height:1.4}
+.prDrumSvg{display:block;width:100%;height:12px;overflow:visible}
+.prDrumFond{fill:rgba(159,179,196,.2)}.prDrumPlin{fill:var(--accent)}.prDrumPriv{stroke:var(--warn);stroke-width:2;vector-effect:non-scaling-stroke}
+@container (max-width:899px){.prRand{grid-template-columns:minmax(0,1fr)}.prFapte{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.prFapte .prSta{grid-column:1/-1}}
+#prCaiet.card{margin-top:10px}
+.prForm{display:grid;grid-template-columns:minmax(80px,.7fr) minmax(130px,1fr) minmax(90px,.7fr) minmax(110px,.8fr) minmax(160px,2fr) auto;gap:8px;align-items:end;margin:4px 0 6px}
+.prCamp{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted);min-width:0}
+.prCamp input,.prCamp select{min-height:40px;font:inherit;font-size:14px;color:var(--text);background:var(--tb-fond2);border:1px solid var(--tb-linie);border-radius:5px;padding:6px 8px;width:100%;box-sizing:border-box;margin:0}
+.prCamp input:focus-visible,.prCamp select:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+#prNoteaza{min-height:40px;white-space:nowrap;background:var(--accent);color:#141C24;border-color:var(--accent);font-weight:600}
+#prNoteaza:disabled{opacity:.6;cursor:progress}
+@media (max-width:760px){.prForm{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.prCampNota,#prNoteaza{grid-column:1/-1}}
+@media (max-width:640px){.prCamp input,.prCamp select,#prNoteaza,.prDu,.prSterge{min-height:44px}}
+#prCaietLista .prScor{margin:8px 0;grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
+.prMesaj{margin:6px 0;padding:6px 10px;border-left:3px solid var(--accent);background:rgba(91,143,199,.08);border-radius:3px}.prMesaj.prMesajRau{border-left-color:var(--warn);background:rgba(233,185,73,.08)}
+.prPareri{list-style:none;margin:6px 0;padding:0;display:flex;flex-direction:column;gap:5px}
+.prParere{border:1px solid var(--tb-linie);border-left-width:3px;border-radius:5px;padding:7px 10px;background:var(--tb-fond2)}
+.prParere.prNimerit{border-left-color:var(--good)}.prParere.prGresit{border-left-color:var(--bad)}
+.prParCap{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}.prParCap b{font-size:14.5px}
+.prParere p{margin:3px 0 0}
+.prSterge{min-height:30px;padding:2px 8px;margin-left:auto}
+.sugSpreProbe{margin-left:6px;min-height:32px;padding:3px 10px;vertical-align:baseline}
 @container (max-width:899px){.sugVerdicte{grid-template-columns:repeat(2,minmax(0,1fr))}.sugVerdicte>div:nth-child(odd){border-left:0}.sugVerdicte>div:last-child:nth-child(odd){grid-column:1/-1}.sugVerdicte>div:nth-child(n+3){border-top:1px solid var(--tb-linie)}.sugCel>div:last-child{grid-column:1/-1}}
 /* v100.272 (ideile auditului 29.10): paleta Ctrl+K din tastatură - comanda evidențiată (pe care o pornește Enter) și focusul se văd */
 .cmdItem[aria-selected="true"]{border-color:#5B8FC7;background:#1A2633}

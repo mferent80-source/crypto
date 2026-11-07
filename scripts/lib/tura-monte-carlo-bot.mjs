@@ -138,17 +138,18 @@ export async function turaMonteCarloBot(d) {
           }
         } catch (e) { if (d.jurnal) d.jurnal("monte carlo regim", b.id, e && e.message || e); }
       }
-      const prev = st.boti[String(b.id)], fundingZi = set.fundingZi, scurt = d.GridSim.riscScurt ? d.GridSim.riscScurt(rez) : null;   // v100.269: riscul pe 1 h / 4 h / o zi
+      const prev = st.boti[String(b.id)], fundingZi = set.fundingZi, scurt = d.GridSim.riscScurt ? d.GridSim.riscScurt(rez) : null;   // v100.312 (I-842): „Pe 7 zile” - gridul față de mișcarea obișnuită, ieșirea din grid, pierderea la stop (textul din GridSim, ca pe pagină)
+      let sapt = null; try { sapt = d.GridSim.textSaptamana && d.GridSim.riscSaptamana ? d.GridSim.textSaptamana(d.GridSim.riscSaptamana(rez, b15, b), d.laStop ? d.laStop(b) : null) || null : null; } catch { sapt = null; }   // v100.269: riscul pe 1 h / 4 h / o zi
       // v101.90: și culoarea (stare) - KV-ul o duce în Tablou, care arată ultimul text / culoare; felul (cat) rămâne cel confirmat (Discord)
-      if (!prev || !prev.cat) { st.boti[String(b.id)] = { cat, text, stare: v.stare, la: acum, ultima: acum, fundingZi, candidat: null, candidatN: 0, anuntatLa: 0, regim, regimLa, scurt }; continue; }   // prima socotire tace
-      if (cat === prev.cat) { st.boti[String(b.id)] = Object.assign({}, prev, { text, stare: v.stare, ultima: acum, fundingZi, candidat: null, candidatN: 0, regim, regimLa, scurt }); continue; }
-      const candidatN = prev.candidat === cat ? (prev.candidatN || 0) + 1 : 1, nou = Object.assign({}, prev, { text, stare: v.stare, ultima: acum, fundingZi, candidat: cat, candidatN, regim, regimLa, scurt });
+      if (!prev || !prev.cat) { st.boti[String(b.id)] = { cat, text, stare: v.stare, la: acum, ultima: acum, fundingZi, candidat: null, candidatN: 0, anuntatLa: 0, regim, regimLa, scurt, sapt }; continue; }   // prima socotire tace
+      if (cat === prev.cat) { st.boti[String(b.id)] = Object.assign({}, prev, { text, stare: v.stare, ultima: acum, fundingZi, candidat: null, candidatN: 0, regim, regimLa, scurt, sapt }); continue; }
+      const candidatN = prev.candidat === cat ? (prev.candidatN || 0) + 1 : 1, nou = Object.assign({}, prev, { text, stare: v.stare, ultima: acum, fundingZi, candidat: cat, candidatN, regim, regimLa, scurt, sapt });
       if (candidatN >= TURE_PANA_LA_ANUNT && acum - (prev.anuntatLa || 0) >= PAUZA_ANUNT_MS) {
         const ok = await d.anunta({ nivel: cat === "opreste" || cat === "plan" || cat === "reluare" ? "atentie" : "info",
           titlu: "🎰 " + nume + ": Monte Carlo zice acum «" + (NUME_CAT[cat] || cat) + "» (era «" + (NUME_CAT[prev.cat] || prev.cat) + "» " + deCand(prev.la, acum) + ")",
           /* v100.271 (ideile auditului 29.10): fraza veche (cu 14 zile) era falsă - drumurile se trag din toate barele de 15 minute aduse (3000 ≈ 31 de zile) */
           mesaj: text + " · șanse pe drumuri trase din ultima lună de prețuri, nu o predicție" }, b.id, "mc-verdict-" + cat);
-        if (ok) { out.anuntate++; st.boti[String(b.id)] = { cat, text, stare: v.stare, la: acum, ultima: acum, fundingZi, candidat: null, candidatN: 0, anuntatLa: acum, regim, regimLa, scurt }; continue; }
+        if (ok) { out.anuntate++; st.boti[String(b.id)] = { cat, text, stare: v.stare, la: acum, ultima: acum, fundingZi, candidat: null, candidatN: 0, anuntatLa: acum, regim, regimLa, scurt, sapt }; continue; }
       }
       st.boti[String(b.id)] = nou;   // încă nu se anunță (o tură, pauza de o oră sau alerta netrimisă): felul vechi rămâne, candidatul se ține
     } catch (e) { out.erori++; if (d.jurnal) d.jurnal("monte carlo bot", b.id, e && e.message || e); }

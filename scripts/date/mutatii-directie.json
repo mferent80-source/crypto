@@ -1,0 +1,102 @@
+{
+ "_nota": "I-846 (v100.312): mutațiile din 07.11 (scratchpad-ul sesiunii) aduse în repo; fiecare trebuie PRINSĂ de proba listei (ieșire ≠ 0). Proba pre-înregistrată: pine-scripts/_proba-directie-2026-11-07.",
+ "proba": "scripts/proba-v100311-directie.mjs",
+ "mutatii": [
+  {
+   "nume": "ținerea (t0, t1] în loc de [t0, t1)",
+   "fisier": "scripts/lib/tura-directie.mjs",
+   "cauta": "const fh = Array.isArray(fus[q]) ? fundingIn(fus[q], t0, t1).s : 0;",
+   "pune": "const fh = Array.isArray(fus[q]) ? fundingIn(fus[q], t0 + 1000, t1 + 1000).s : 0;"
+  },
+  {
+   "nume": "funding-ul de 72 h mutat cu 8 h",
+   "fisier": "scripts/lib/tura-directie.mjs",
+   "cauta": "const T = Date.parse(p.zile[i] + \"T00:00:00Z\") + ZI, f = fundingIn(fundIst, T - r.fundOre * ORA, T);",
+   "pune": "const T = Date.parse(p.zile[i] + \"T00:00:00Z\") + ZI, f = fundingIn(fundIst, T - r.fundOre * ORA - 8 * ORA, T - 8 * ORA);"
+  },
+  {
+   "nume": "EMA BTC cu bare din viitor (zi recuperată)",
+   "fisier": "scripts/lib/tura-directie.mjs",
+   "cauta": "bE = emaBtc(btcLung.filter((b) => b.t < tk1).map((b) => b.c), r);",
+   "pune": "bE = emaBtc(btcLung.map((b) => b.c), r);"
+  },
+  {
+   "nume": "alegerea pe panoul de azi (zi recuperată)",
+   "fisier": "scripts/lib/tura-directie.mjs",
+   "cauta": "const { cand, jb } = alegeZiua(pk, el, med, pionex, r);",
+   "pune": "const { cand, jb } = alegeZiua(p, el, med, pionex, r);"
+  },
+  {
+   "nume": "Pionex picat ⇒ ziua goală scrisă",
+   "fisier": "scripts/lib/tura-directie.mjs",
+   "cauta": "if (pionexLipsa) { st.esecLa = acum;",
+   "pune": "if (false) { st.esecLa = acum;"
+  },
+  {
+   "nume": "eligibil fără bare la judecată ⇒ închide oricum",
+   "fisier": "scripts/lib/tura-directie.mjs",
+   "cauta": "if ((fara || piata == null || ies.some((x) => x == null)) && !vechi)",
+   "pune": "if ((piata == null || ies.some((x) => x == null)) && !vechi)"
+  },
+  {
+   "nume": "moneda Pionex fără bare ⇒ ziua scrisă cu a 11-a",
+   "fisier": "scripts/lib/tura-directie.mjs",
+   "cauta": "if ((lipsa > 0.1 * toate.length || esecF || lipsaPionex) && k > i - 15)",
+   "pune": "if ((lipsa > 0.1 * toate.length || esecF) && k > i - 15)"
+  },
+  {
+   "nume": "starea pierdută ⇒ start = azi",
+   "fisier": "scripts/lib/tura-directie.mjs",
+   "cauta": "st.start = l.length ? l[0] : ziT;",
+   "pune": "st.start = ziT;"
+  },
+  {
+   "nume": "p pe blocuri cu media blocurilor",
+   "fisier": "scripts/lib/tura-directie.mjs",
+   "cauta": "for (let q = 0; q < n; q++) s += sem[Math.floor(q / r.bloc)] * W[q]; return s / n;",
+   "pune": "for (let q = 0; q < n; q++) s += sem[Math.floor(q / r.bloc)] * W[q] / Math.min(r.bloc, n - Math.floor(q / r.bloc) * r.bloc); return s / nb;"
+  },
+  {
+   "nume": "piața celor 10 uitată",
+   "fisier": "scripts/lib/tura-directie.mjs",
+   "cauta": "m.j7 = judeca(m, c1 / m.c - 1, fh, piata, r, piata10);",
+   "pune": "m.j7 = judeca(m, c1 / m.c - 1, fh, piata, r, null);"
+  },
+  {
+   "nume": "privirea recalculată la fiecare tură",
+   "fisier": "scripts/lib/tura-directie.mjs",
+   "cauta": "const k = \"privire-\" + L, v = d.citesteZi(k); if (v) U2.priviri.push(v); else {",
+   "pune": "const k = \"privire-\" + L, v = null; if (v) U2.priviri.push(v); else {"
+  },
+  {
+   "nume": "long-ul primește funding-ul",
+   "fisier": "scripts/lib/tura-directie.mjs",
+   "cauta": "o[\"y\" + k] = s * r7 - r.cost - s * fh;",
+   "pune": "o[\"y\" + k] = s * r7 - r.cost + s * fh;"
+  },
+  {
+   "nume": "M2 cu prag 0,55",
+   "fisier": "scripts/lib/tura-directie.mjs",
+   "cauta": "s2: P2 > 0.5 ? 1 : -1",
+   "pune": "s2: P2 > 0.55 ? 1 : -1"
+  },
+  {
+   "nume": "coeficient M2 schimbat",
+   "fisier": "scripts/lib/tura-directie.mjs",
+   "cauta": "0.8274675546784901",
+   "pune": "0.8174675546784901"
+  },
+  {
+   "nume": "pagina: fără calibrarea istorică",
+   "fisier": "public/lib/sugestii-ecran.js",
+   "cauta": "\" Probabilitățile M2 nu se țin pe istoric: când a spus ~\"",
+   "pune": "\" M2: când a spus ~\""
+  },
+  {
+   "nume": "pagina: Poartă în fișă",
+   "fisier": "public/lib/sugestii-ecran.js",
+   "cauta": "f.actNota = \"În probă: fără Poartă și fără sumă. Fișa îți dă proba gridului pe monedă; Busola, imaginea pe 4h.\";\n  } else if (r.grup === \"revUS\"",
+   "pune": "f.actNota = \"În probă: fără Poartă și fără sumă. Fișa îți dă proba gridului pe monedă; Busola, imaginea pe 4h.\"; f.actiuni.push({ et: \"Poarta\", act: \"x()\" });\n  } else if (r.grup === \"revUS\""
+  }
+ ]
+}
