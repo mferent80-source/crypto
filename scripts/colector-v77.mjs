@@ -1,5 +1,6 @@
 // Probele pentru alertele botului (public/lib/alerte.js) si pentru istoricul
 // de pe serverul de acasa (functions/api/istoric-bot.js).
+import "./lib/text-ro-global.mjs";   // v100.314: modulele scriu rezultatele prin TextRo (o zecimală), ca în pagină și în colector
 import assert from "node:assert/strict";
 import fs from "node:fs";
 

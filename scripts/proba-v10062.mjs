@@ -195,11 +195,11 @@ await test("avertismentele: prețul lichidării rotunjit (nu 16 zecimale), virgu
   const l = avertismenteBot({ x: {}, pret: 0.3806, jos: 0.37, sus: 0.38, lich: { pretLichidare: 0.3382876201448984, lichidarePartea: "jos", distantaLichidarePct: 10.93, lichidareDepasita: false },
     comisioane: -1.21, gridProfitBrut: 10.91, profitNet: -1.6 });
   assert.deepEqual(l, ["Botul n-are nici stop, nici țintă în Pionex.", "Prețul 0.3806 a ieșit din grid pe sus (0.37–0.38): botul nu mai face perechi cât stă afară.",
-    "Lichidarea la 10,9% (0.33829, partea de jos).", "Grilele +10,91 USDT; poziția și funding-ul −11,30, comisioanele −1,21: botul e pe minus."]);   /* v100.65: mai scurt (BTC: 116 > 110) */
+    "Lichidarea la 10,9% (0.33829, partea de jos).", "Grilele +10,9 USDT; poziția și funding-ul −11,3, comisioanele −1,2: botul e pe minus."]);   /* v100.65: mai scurt (BTC: 116 > 110) */
   const d = avertismenteBot({ x: { lossStop: "0.36" }, pret: 0.3301, jos: 0.37, sus: 0.38, lich: { pretLichidare: 0.3382876201448984, lichidarePartea: "jos", distantaLichidarePct: -2.4, lichidareDepasita: true },
     comisioane: -2.5, gridProfitBrut: 1.2, profitNet: -9 });
   assert.ok(d.includes("Lichidarea estimată (0.33829, partea de jos) e depășită la prețul 0.3301: aș verifica botul în Pionex."), d.join(" | "));
-  assert.ok(d.includes("Comisioanele (−2,50 USDT) depășesc câștigul grilelor (+1,20 USDT)."), d.join(" | "));
+  assert.ok(d.includes("Comisioanele (−2,5 USDT) depășesc câștigul grilelor (+1,2 USDT)."), d.join(" | "));
   assert.ok((await modul("scripts", "garda-texte.mjs")).STRICT.has("server"));
 });
 await test("„Ce ai de făcut acum”: avertismentul lichidării înghite alertele „Lichidarea la …” (un rând, cu numărul lor), nu două rânduri", async () => {
@@ -273,11 +273,11 @@ await test("I2: avertismentul de acum (10,9%) înghite alerta mai veche și mai 
 });
 await test("I3: costurile - comisioanele și funding-ul plătit fără minus dublu; funding-ul încasat nu e citit ca un cost", () => {
   const p = cod(sfaturi(CRV(), { peste: { costuri: { netZi: -0.42, grile24h: 0.3, comisionZi: -0.12, fundingZi: -0.6, fundingMananca: true } } }), "costuri");
-  assert.equal(p.text, "Grilele aduc 0,30 USDT în 24 h; comisioanele iau 0,12 și funding-ul ia 0,60 pe zi.");
+  assert.equal(p.text, "Grilele aduc 0,3 USDT în 24 h; comisioanele iau 0,1 și funding-ul ia 0,6 pe zi.");
   const i = cod(sfaturi(CRV(), { peste: { costuri: { netZi: -0.07, grile24h: 0.05, comisionZi: -0.17, fundingZi: 0.05, fundingMananca: false } } }), "costuri");
-  assert.equal(i.text, "Grilele aduc 0,05 USDT în 24 h; comisioanele iau 0,17 și funding-ul aduce 0,05 pe zi.");
+  assert.equal(i.text, "Grilele aduc 0,05 USDT în 24 h; comisioanele iau 0,2 și funding-ul aduce 0,05 pe zi.");
   const z = cod(sfaturi(CRV(), { peste: { costuri: { netZi: -0.12, grile24h: 0.05, comisionZi: -0.17, fundingZi: 0, fundingMananca: false } } }), "costuri");
-  assert.equal(z.text, "Grilele aduc 0,05 USDT în 24 h; comisioanele iau 0,17 pe zi.");   /* fara funding (spot) nu „aduce 0,00” */
+  assert.equal(z.text, "Grilele aduc 0,05 USDT în 24 h; comisioanele iau 0,2 pe zi.");   /* fara funding (spot) nu „aduce 0,00” */
 });
 await test("M1: motivul pieței din Consilier păstrează concluzia direcției („piața merge cu botul”), nu doar dovezile", () => {
   const R = [{ tf: "4H", eticheta: "4 ore", dir: "urca", fata: { ton: "bine" } }, { tf: "1D", eticheta: "1 zi", dir: "urca", fata: { ton: "bine" } }];

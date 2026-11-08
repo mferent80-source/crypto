@@ -131,7 +131,7 @@ var IndicatoriBot = (function () {
       var botPlateste = plateste && botDir === plateste, botIncaseaza = plateste && (botDir === "long" || botDir === "short") && botDir !== plateste;
       var raport = med && med * rate > 0 ? Math.abs(rate / med) : null;
       var fata = raport === null ? "" : raport >= 2 ? " · " + Math.round(raport) + "× față de obicei" : raport <= 0.5 ? " · sub obicei" : " · ca de obicei";
-      var fz = nr(o.fundingZi), cost = fz !== null ? " · botul: " + (fz >= 0 ? "+" : "−") + Math.abs(fz).toFixed(2).replace(".", ",") + " USDT pe zi" : "";
+      var fz = nr(o.fundingZi), cost = fz !== null ? " · botul: " + TextRo.usdt(fz, TextRo.zecMici(fz)) + " pe zi" : "";
       var cine = plateste ? "plătesc " + plateste + (botPlateste ? " (tu plătești)" : botIncaseaza ? " (tu încasezi)" : "") : "zero";
       // v100.70 (revizia pachetului 3, garda pe producatorii reali): minusul tipografic („−0,060%”), nu cratima din toFixed
       out.push({ k: "funding", eticheta: "Funding", text: (rate < 0 ? "−" : "") + Math.abs(rate * 100).toFixed(3).replace(".", ",") + "% la " + ore + "h · " + cine + fata + cost,

@@ -2,6 +2,7 @@
 // 3 ore - cat si alerta de prag rosu sau schimbare de regim, piata, directie impotriva botului; 4 cu
 // praguri puse de tine in app la fiecare bot cat si cand atinge un grid".
 // Rulare: node scripts/alerte-v9111.mjs
+import "./lib/text-ro-global.mjs";   // v100.314: modulele scriu rezultatele prin TextRo (o zecimală), ca în pagină și în colector
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";

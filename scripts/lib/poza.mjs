@@ -346,7 +346,7 @@ export function alertaBotPas(b, ref, acum) {
 //   - simbol urmarit: pretul a ajuns la intrarea sugerata (+0,5 %) - niciodata la trend in jos (intrare null) sau fara date.
 export function alerteSLTP(poza, acum) {
   const out = []; if (!poza) return out;
-  const zi = (x) => ziSesiune(acum, x), pr = (v) => (v >= 1 ? v.toFixed(2) : v.toFixed(4));   // v100.40: ziua sesiunii; v100.175: a bursei simbolului
+  const zi = (x) => ziSesiune(acum, x), pr = (v) => (v >= 1 ? v.toFixed(2) : v.toFixed(4)).replace(".", ",");   // v100.40: ziua sesiunii; v100.175: a bursei simbolului
   for (const p of Array.isArray(poza.t212) ? poza.t212 : []) {
     if (!p || !p.s) continue;
     const pl = p.plan && nr(p.plan.stop) !== null ? p.plan : null, sg = p.sugestie && nr(p.sugestie.stop) !== null && nr(p.sugestie.tinta) !== null ? p.sugestie : null;

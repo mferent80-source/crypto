@@ -410,7 +410,7 @@ var Acasa = (function () {
     if (o.latime) L.push("🌐 Lățimea crypto (150 perp-uri): " + o.latime);
     if (o.latimeUs) L.push("🗽 Acțiuni US: " + o.latimeUs);
     var bt = nr(o.botiTotal), tp = nr(o.t212Ppl);
-    if (bt !== null || tp !== null) L.push("💼 Tu: boți " + (bt === null ? "—" : (bt >= 0 ? "+" : "−") + Math.abs(bt).toFixed(2).replace(".", ",") + " USDT") + " · acțiuni deschise " + (tp === null ? "—" : (tp >= 0 ? "+" : "−") + Math.abs(Math.round(tp)).toLocaleString("ro-RO") + " lei"));
+    if (bt !== null || tp !== null) L.push("💼 Tu: boți " + (bt === null ? "—" : TextRo.usdt(bt, TextRo.zecMici(bt))) + " · acțiuni deschise " + (tp === null ? "—" : (tp >= 0 ? "+" : "−") + Math.abs(Math.round(tp)).toLocaleString("ro-RO") + " lei"));
     var cal = (o.calendar || []).filter(function (x) { return x && x.mare; }).slice(0, 5);
     if (cal.length) randuri("📅 Săptămâna asta: ", cal.map(function (x) { return x.cand + " " + x.titlu; }), " · ", 160).forEach(function (l) { L.push(l); });
     else L.push("📅 Săptămâna asta: nimic mare anunțat încă în SUA");

@@ -16,7 +16,7 @@ var JurnalTrade = (function () {
     var x = Number(v); return isFinite(x) ? x : null;
   }
   function moneda(base) { return String(base || "").toUpperCase().replace(/\.PERP$/, ""); }
-  var P = function (v) { return (v * 100).toFixed(2).replace(".", ",") + "%"; };
+  var P = function (v) { return TextRo.pct(v * 100, Math.abs(v * 100) >= 1 ? 1 : 2); };   /* v100.314: o zecimală de la 1% în sus */
   // audit 19.10: rezultatele cu O zecimală și virgulă („−0,5 USDT”, „0,5% din investiție”); pasul grilei (P) rămâne cu 2 - e un parametru
   var U = function (v) { var s = Math.abs(v).toFixed(1); return (Number(s) === 0 ? "" : v >= 0 ? "+" : "−") + s.replace(".", ",") + " USDT"; };
   var P1 = function (v) { return Math.abs(v * 100).toFixed(1).replace(".", ",") + "%"; };   // mărimea: semnul îl spune deja suma de lângă

@@ -79,7 +79,7 @@ function alDeseneaza() {
   var rows = (rest ? fl.slice(0, AL_PRIMELE) : fl).map(function (x) {
     var z = AlCentru.zi(x.t, acum), d = AlCentru.drum(x), h = "";
     if (z !== ziAnt) { h += '<div class="alZi">' + escapeHtml(z) + '</div>'; ziAnt = z; }
-    return h + '<div class="alRand ' + (x.nivel || "info") + (x.t > vazut ? " nou" : "") + '"><span class="alPunct"></span><div class="alText"><b>' + escapeHtml(x.titlu) + '</b>' + (x.mesaj ? '<p>' + escapeHtml(x.mesaj) + '</p>' : '')
+    return h + '<div class="alRand ' + (x.nivel || "info") + (x.t > vazut ? " nou" : "") + '"><span class="alPunct"></span><div class="alText"><b>' + escapeHtml(TextRo.cifreNoi(x.titlu)) + '</b>' + (x.mesaj ? '<p>' + escapeHtml(TextRo.cifreNoi(x.mesaj)) + '</p>' : '')
       + '<span class="alMeta">' + new Date(x.t).toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Bucharest" }) + ' · ' + AlCentru.CAT[AlCentru.categorie(x)] + (x.t > vazut ? ' · <b class="alNou">nou</b>' : '') + '</span></div>'
       + '<button class="alBtn" type="button" data-alpag="' + d.pag + '">' + d.et + '</button></div>';
   }).join("");

@@ -422,7 +422,7 @@ var Alerte = (function () {
     if (!u || contra || (dist !== null && Math.abs(dist) < 15)) return { mesaje: [], stare: vechi || null };
     var treapta = Math.max(1, pl.prag / 4), baza = Math.max(pl.prag, vechi && nr(vechi.anuntat) !== null ? vechi.anuntat : -Infinity, u.opritorPastreaza !== null ? u.opritorPastreaza : -Infinity);
     if (u.pastrezi < baza + treapta) return { mesaje: [], stare: vechi || null };
-    var U = function (v) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(Math.abs(v) < 0.095 && v !== 0 ? 2 : 1).replace(".", ",") + " USDT"; };   // v100.196: o zecimală (regula lui), sub 0,1 două
+    var U = function (v) { return TextRo.usdt(v, TextRo.zecMici(v)); };   // v100.196: o zecimală (regula lui), sub 0,1 două
     var mtU = griliMoarte(b, u.pret);   // v100.259 (auditul 23.10): la 1,5% de preț stopul stă de obicei ÎN grid ⇒ acțiunea spune grilele tăiate
     return { stare: { anuntat: u.pastrezi }, mesaje: [{ cheie: "podea-urca", nivel: "info", titlu: "🪜 " + nume + ": poți urca stopul — păstrezi " + U(u.pastrezi),
       mesaj: msg("Stopul la " + pret(u.pret) + " (" + vg(u.perna * 100) + "% de preț) îți păstrează " + U(u.pastrezi) + " dacă piața se întoarce" + (u.opritorPastreaza !== null ? ", cel de acum (" + pret(u.opritor) + ") " + U(u.opritorPastreaza) : "") + ".",
@@ -434,7 +434,7 @@ var Alerte = (function () {
     if (!vechi || c.u === null || vechi.u === null || vechi.u === undefined || c.u < vechi.u || (c.per !== null && vechi.per !== null && c.per < vechi.per)) return { mesaje: mesaje, contori: c };
     var noiPer = c.per !== null && vechi.per !== null ? c.per - vechi.per : 0, noiU = c.u - vechi.u, p = nr(b.pretCurent);
     if (noiPer > 0) {
-      var dg = c.g !== null && vechi.g !== null ? c.g - vechi.g : null, U = function (v) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(Math.abs(v) < 0.1 ? 2 : 1).replace(".", ",") + " USDT"; };
+      var dg = c.g !== null && vechi.g !== null ? c.g - vechi.g : null, U = function (v) { return TextRo.usdt(v, TextRo.zecMici(v)); };   /* v100.314: 0,0999 ⇒ „+0,1”, nu „+0,10” */
       mesaje.push({ cheie: "grila", nivel: "info", perechi: noiPer, usdt: dg, titlu: "✅ " + nume + ": " + (noiPer === 1 ? "pereche încheiată" : cate(noiPer, "pereche încheiată", "perechi încheiate")) + (dg !== null ? " " + U(dg) : ""),
         mesaj: "Grilele au adus " + (c.g !== null ? U(c.g) : "—") + " de la pornire (" + cate(c.per, "pereche", "perechi") + ")" + (p !== null ? "; prețul " + pret(p) : "") + "." });
     } else if (noiU > 0) {

@@ -9,7 +9,8 @@ const nr=v=>{
 const toate=(...a)=>a.every(x=>x!==null);
 const virgula=s=>String(s).replace(".",",");
 // suma cu semn si virgula („+10,91”, „−0,0040”), ca TextRo.usdt (TextRo e doar in pagina si in colector)
-const usdt=v=>{const a=Math.abs(v),s=a.toFixed(a>0&&a<0.01?4:2);return (Number(s)===0?"":v<0?"−":"+")+virgula(s)};
+// v100.314 (el, 08.11): rezultatele cu O zecimală („+2,5”), sub 0,095 două, sub un cent patru (ca să nu iasă „0,0”)
+const usdt=v=>{const a=Math.abs(v),s=a.toFixed(a>=0.095?1:a>=0.0095?2:a>0?4:1);return (Number(s)===0?"":v<0?"−":"+")+virgula(s)};
 // revizia Opus a 2b (5): fara exponent („1.234e-7”) - sub 0,000001 cu toFixed, ~5 cifre semnificative, fara zerourile de la coada
 const faraExp=v=>{if(typeof v!=="number"||!Number.isFinite(v))return String(v);const s=String(v);if(!/e/i.test(s))return s;const a=Math.abs(v);return a===0?"0":v.toFixed(Math.min(20,4-Math.floor(Math.log10(a)))).replace(/0+$/,"").replace(/\.$/,"")};
 // pretul calculat (lichidarea estimata): ~5 cifre semnificative, ca preturile Pionex; peste 1000, 2 zecimale

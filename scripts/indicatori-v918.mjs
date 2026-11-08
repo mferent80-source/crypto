@@ -1,5 +1,6 @@
 // Proba pentru fereastra "Ce spun indicatorii" din Tabloul botului (v91.8, 26.09).
 // Rulare: node scripts/indicatori-v918.mjs
+import "./lib/text-ro-global.mjs";   // v100.314: modulele scriu rezultatele prin TextRo (o zecimală), ca în pagină și în colector
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";

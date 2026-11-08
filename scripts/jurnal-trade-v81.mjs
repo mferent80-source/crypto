@@ -1,5 +1,6 @@
 // Probele v81: jurnalul de trade (public/lib/jurnal-trade.js) pe cei 10 boti REALI inchisi
 // (Pionex status=finished, 24.09.2026; fixtura fara id-uri de cont - depozitul e public).
+import "./lib/text-ro-global.mjs";   // v100.314: modulele scriu rezultatele prin TextRo (o zecimală), ca în pagină și în colector
 import assert from "node:assert/strict";
 import fs from "node:fs";
 

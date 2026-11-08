@@ -139,7 +139,7 @@ await test("FB.1 Comportament: raport vechi și NICIUN bot ⇒ „Niciun bot por
   assert.match(text(ctx.coHtml(r, { acum: ACUM, botiActivi: 2 })), /colectorul pare oprit/);
 });
 await test("FB.2 Tabloul fără bot: „Ce ai de făcut acum” nu mai rămâne „Aștept botul…”; cardul unic spune ultimul bot și duce la Grid", () => {
-  const el = {}, ctx = vm.createContext({ console, Date, Math, JSON, Object, Array, Number, String, Intl, isFinite, escapeHtml: esc, $: (id) => (el[id] = el[id] || { id, innerHTML: "", hidden: false, classList: { toggle() {} } }),
+  const el = {}, ctx = vm.createContext({ console, Date, Math, JSON, Object, Array, Number, String, Intl, isFinite, TextRo: globalThis.TextRo, escapeHtml: esc, $: (id) => (el[id] = el[id] || { id, innerHTML: "", hidden: false, classList: { toggle() {} } }),
     tbStare: { routeOk: true, bot: null, boti: [] }, acUltimInchisText: () => "XMR long 5× −2,1 USDT · joi 11:19", document: { getElementById: (id) => el[id] || null } });
   vm.runInContext(["tbTextFaraBot", "renderTabloSfaturi", "tbRenderTodo", "tbFaraBotHtml"].map(fnApp).join("\n"), ctx);
   ctx.renderTabloSfaturi();
@@ -192,7 +192,7 @@ await test("I-836.3 Futures (deriv) pe pagina nouă: fără bara veche de analiz
   assert.match(APP, /classList\.toggle\("pePaginaNoua",\[[^\]]*"deriv"[^\]]*\]\.includes\(id\)\)/);
 });
 await test("I-836.4 Alerte: cel mult 50 de rânduri, pe zile, restul la un clic; pe telefon „Doar importante” pornit; „info” cu punct neutru", () => {
-  const el = {}, ctx = vm.createContext({ console, Date, Math, JSON, Object, Array, Number, String, Intl, isFinite, escapeHtml: esc, innerWidth: 412, localStorage: { getItem: () => null, setItem() {} },
+  const el = {}, ctx = vm.createContext({ console, Date, Math, JSON, Object, Array, Number, String, Intl, isFinite, TextRo: globalThis.TextRo, escapeHtml: esc, innerWidth: 412, localStorage: { getItem: () => null, setItem() {} },
     $: (id) => (el[id] = el[id] || { id, innerHTML: "" }), setInterval() {}, setTimeout() {}, document: { addEventListener() {}, hidden: false }, getJSON: async () => ({ alerte: [] }), navTo() {} });
   vm.runInContext(lib("alerte-ecran.js"), ctx);
   const l = Array.from({ length: 1413 }, (_, i) => ({ t: ACUM - i * 600000, nivel: i % 7 === 0 ? "atentie" : "info", cheie: "grila-" + i, titlu: "alerta " + i }));

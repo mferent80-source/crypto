@@ -435,7 +435,7 @@ var Consiliu = (function () {
       });
     });
     // revizia 01.10 (I4): lei si $ nu se amesteca - clasamentul pe echivalent in lei (cursul median din jurnal), tiparul pe valute separate
-    var F2 = function (v) { return Math.abs(v).toLocaleString("ro-RO", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+    var F2 = function (v) { return Math.abs(v).toLocaleString("ro-RO", { minimumFractionDigits: 1, maximumFractionDigits: 1 }); };
     var Ban = function (x) { return F2(x.cost) + (x.inLei ? " lei" : " $"); };
     var fxL = toate.map(function (x) { return x.fx; }).filter(function (v) { return v > 0; }).sort(function (a, b) { return a - b; }), fxMed = fxL.length ? fxL[Math.floor(fxL.length / 2)] : 1;
     var echiv = function (x) { return x.inLei ? x.cost : x.cost * fxMed; };

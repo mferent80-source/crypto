@@ -1,6 +1,7 @@
 // Probele v95 (26.09: "fa tot si publica"): semaforul T212 fara ziua pierduta in weekend, sectoarele Nasdaq,
 // ziua ta (castig/pierdere fata de ieri), raportul de duminica, socoteala alertelor, dobanzi / dolar / aur / leu.
 // Rulare: node scripts/acasa-v95.mjs
+import "./lib/text-ro-global.mjs";   // v100.314: modulele scriu rezultatele prin TextRo (o zecimală), ca în pagină și în colector
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
@@ -53,7 +54,7 @@ await test("raportSaptamana: crypto, Nasdaq, cine s-a miscat, portofoliul, ce vi
     vremeBursa: { eticheta: "🟡 URCARE ÎNGUSTĂ", faCe: "cumpar doar ce e pe trend" }, sus: [{ s: "MCHP", ch5: 9.1 }], jos: [{ s: "META", ch5: -4 }],
     botiTotal: -7.75, t212Ppl: -1447, calendar: [{ cand: "mie 21:00", titlu: "FOMC Statement", mare: true }], rezultate: [{ simbol: "APLD", data: "2026-10-08" }] });
   assert.match(r.titlu, /Săptămâna pieței/);
-  for (const re of [/BTC \+3,2%/, /Nasdaq \+3,2%/, /VIX 14,9/, /MCHP \+9,1%/, /META −4,0%/, /−7,75 USDT/, /−1\.447 lei/, /FOMC Statement/, /APLD/, /\n👉 (Crypto|Bursă|N-aș|Aș) /]) assert.match(r.mesaj, re);   /* v100.72: acțiunile pe rânduri „👉 ” */
+  for (const re of [/BTC \+3,2%/, /Nasdaq \+3,2%/, /VIX 14,9/, /MCHP \+9,1%/, /META −4,0%/, /−7,8 USDT/, /−1\.447 lei/, /FOMC Statement/, /APLD/, /\n👉 (Crypto|Bursă|N-aș|Aș) /]) assert.match(r.mesaj, re);   /* v100.72: acțiunile pe rânduri „👉 ” */
   const gol = A.raportSaptamana({}); assert.match(gol.titlu, /Săptămâna pieței/); assert.ok(!/NaN|undefined|null/.test(gol.mesaj), gol.mesaj);
 });
 

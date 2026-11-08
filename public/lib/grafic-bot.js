@@ -163,7 +163,7 @@ var GraficBot = (function () {
     var dist = function (x) { return x ? x / p - 1 : null; }, rows = [], dir = String(bot && bot.directie || "").toLowerCase();
     var pr = nr(bot && bot.profitTotal), poz = nr(bot && bot.pozitie), inv = nr(bot && bot.investit);
     if (pr !== null && poz !== null && nr(p0) > 0) pr += (dir === "short" ? -1 : 1) * poz * (p - p0);   /* profitul urmează prețul live */
-    var u = function (v) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(2).replace(".", ",") + " USDT"; };
+    var u = function (v) { return TextRo.usdt(v, TextRo.zecMici(v)); };   /* v100.314: rezultatele cu o zecimală (investiția rămâne la ban) */
     if (pr !== null) rows.push({ ce: "Botul", stare: pr >= 0 ? "bine" : "atentie", text: (pr >= 0 ? "pe plus " : "pe minus ") + u(pr) + (inv ? " · valorează " + (inv + pr).toFixed(1).replace(".", ",") + " din " + inv.toFixed(2).replace(".", ",") + " USDT investiți" : "") });
     var dz = dist(niv.zero);
     if (dz !== null) rows.push({ ce: "Zero-ul botului", stare: (dir === "short" ? dz < 0 : dz > 0) ? "atentie" : "bine", text: fmtP(niv.zero) + " · " + (Math.abs(dz) < 0.0005 ? "prețul e chiar acolo" : "la " + pct(dz) + " de aici" + ((dir === "short" ? dz < 0 : dz > 0) ? " (sub el, închis acum ar ieși pe minus)" : " (peste el, închis acum ar ieși pe plus)")) });
@@ -176,7 +176,7 @@ var GraficBot = (function () {
       var stS = as !== null && as < 0.03 ? "rau" : as !== null && as < 0.07 ? "atentie" : "bine";
       if (peste !== null && peste > 0.05 && stS === "bine") stS = "atentie";
       rows.push({ ce: peste !== null ? "Stopul vs planul" : "Stopul", stare: stS, text: (ds !== null ? "la " + pct(ds) : "nepus") + (ls !== null ? " · la stop pierzi " + u(ls) : "")
-        + (peste !== null ? (peste > 0.05 ? ", planul −" + pg.toFixed(2).replace(".", ",") + " (cu " + peste.toFixed(2).replace(".", ",") + " mai mult)" : ", în plan (−" + pg.toFixed(2).replace(".", ",") + ")") : "")
+        + (peste !== null ? (peste > 0.05 ? ", planul −" + pg.toFixed(2).replace(".", ",") + " (cu " + TextRo.num(peste, TextRo.zecMici(peste)) + " mai mult)" : ", în plan (−" + pg.toFixed(2).replace(".", ",") + ")") : "")
         + (dl !== null ? " · lichidarea la " + pct(dl) : "") });
     }
     var g = o.grila || {}, Lg = liniiPionex(g.jos, g.sus, g.linii, g.geo);
@@ -348,10 +348,10 @@ var GraficBot = (function () {
     pret = nr(pret); pAcum = nr(pAcum); total = nr(total); plan = nr(plan);
     if (pret === null || !(pret > 0)) return null;
     var dist = pAcum > 0 ? pret / pAcum - 1 : null, peste = total !== null && plan > 0 ? -total - plan : null;
-    var u = function (v) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(2).replace(".", ",") + " USDT"; };
+    var u = function (v) { return TextRo.usdt(v, TextRo.zecMici(v)); };
     return { pret: pret, dist: dist, total: total, peste: peste, scurt: fmtP(pret) + (total !== null ? " · " + u(total) : ""),   /* pe telefon */
       text: "stop de probă la " + fmtP(pret) + (dist !== null ? " (" + pct(dist) + ")" : "") + (total !== null ? ": " + (total < 0 ? "pierzi " : "rămâi cu ") + u(total) : "")
-        + (peste !== null ? (Math.abs(peste) <= 0.05 ? ", exact planul" : peste > 0 ? ", cu " + peste.toFixed(2).replace(".", ",") + " peste plan" : ", cu " + (-peste).toFixed(2).replace(".", ",") + " sub plan") : "") };
+        + (peste !== null ? (Math.abs(peste) <= 0.05 ? ", exact planul" : peste > 0 ? ", cu " + TextRo.num(peste, TextRo.zecMici(peste)) + " peste plan" : ", cu " + TextRo.num(-peste, TextRo.zecMici(peste)) + " sub plan") : "") };
   }
   // v100.99 (I-532): intrarea graficului botului, PURĂ - ce construia renderTabloGrafic în app.js (probele verifică ce întoarce, nu textul codului).
   // d = { bot, brut, bare, plan, alerteServer, valoare, profil, consLinii, funding, sanse, proba, pretViu, acum, W, st, simplu, per, TabloExtra? }

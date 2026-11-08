@@ -80,23 +80,23 @@ const pozaA = () => ({ t212: [
     { s: "NOUX", moneda: "$", pret: 5, sugestie: { nivel: "fara-date", motiv: "prea puține zile" } }] });
 await test("alerteSLTP: AVGO aproape de stopul din plan (ultimul sfert) -> atentie, o cheie pe zi; UHS departe -> nimic", () => {
   const l = alerteSLTP(pozaA(), ACUM_A), a = l.find((x) => x.cheie === "sltp-aproape-AVGO-" + ZI_A);
-  assert.ok(a, JSON.stringify(l.map((x) => x.cheie))); assert.equal(a.nivel, "atentie"); assert.match(a.titlu, /^AVGO: chiar la stopul din planul tău \(\$350\.63\)/, "sub 0,05% nu scrie „la 0,0%”");
+  assert.ok(a, JSON.stringify(l.map((x) => x.cheie))); assert.equal(a.nivel, "atentie"); assert.match(a.titlu, /^AVGO: chiar la stopul din planul tău \(\$350,63\)/, "sub 0,05% nu scrie „la 0,0%”");
   const b = alerteSLTP({ t212: [{ s: "MPC", pret: 355, plan: { stop: 344, tinta: 481.72 } }], simboluri: [] }, ACUM_A)[0];
-  assert.match(b.titlu, /^MPC: la 3,1% de stopul din planul tău \(\$344\.00\)/);
+  assert.match(b.titlu, /^MPC: la 3,1% de stopul din planul tău \(\$344,00\)/);
   assert.ok(!l.some((x) => x.cheie.includes("UHS")));
 });
 await test("alerteSLTP: fara plan -> SL / TP sugerat atins (critic / info); CU plan nu se dubleaza alertele existente (APLD sub stop)", () => {
   const l = alerteSLTP(pozaA(), ACUM_A);
   const sl = l.find((x) => x.cheie === "sltp-sl-NOU-" + ZI_A), tp = l.find((x) => x.cheie === "sltp-tp-SUS-" + ZI_A);
-  assert.equal(sl.nivel, "critic"); assert.match(sl.titlu, /NOU: a atins stopul sugerat \(\$90\.00\)/);
-  assert.equal(tp.nivel, "info"); assert.match(tp.titlu, /SUS: a atins ținta sugerată \(\$130\.00\)/);
+  assert.equal(sl.nivel, "critic"); assert.match(sl.titlu, /NOU: a atins stopul sugerat \(\$90,00\)/);
+  assert.equal(tp.nivel, "info"); assert.match(tp.titlu, /SUS: a atins ținta sugerată \(\$130,00\)/);
   assert.ok(!l.some((x) => x.cheie.includes("APLD")), "APLD are plan: „a atins stopul din plan” vine deja din alertePlan");
   assert.ok(!l.some((x) => x.cheie === "sltp-aproape-NOU-" + ZI_A), "sub stop nu e „aproape”");
 });
 await test("alerteSLTP: simbol urmarit la intrarea sugerata -> info cu SL, TP si istoricul; departe / trend in jos / fara-date -> nimic", () => {
   const l = alerteSLTP(pozaA(), ACUM_A), i = l.find((x) => x.cheie === "sltp-intrare-INTC-" + ZI_A);
-  assert.ok(i); assert.equal(i.nivel, "info"); assert.match(i.titlu, /INTC: a ajuns la intrarea sugerată \(\$111\.99\)/);
-  assert.match(i.mesaj, /stop \$94\.68/); assert.match(i.mesaj, /țintă \$146\.61/); assert.match(i.mesaj, /\+7,0% pe trade/);   /* v100.68: vocabularul „stop / țintă” */
+  assert.ok(i); assert.equal(i.nivel, "info"); assert.match(i.titlu, /INTC: a ajuns la intrarea sugerată \(\$111,99\)/);
+  assert.match(i.mesaj, /stop \$94,68/); assert.match(i.mesaj, /țintă \$146,61/); assert.match(i.mesaj, /\+7,0% pe trade/);   /* v100.68: vocabularul „stop / țintă” */
   assert.ok(!l.some((x) => /WDC|RHM|NOUX/.test(x.cheie)));
   assert.deepEqual(alerteSLTP({ t212: [], simboluri: [] }, ACUM_A), []); assert.deepEqual(alerteSLTP(null, ACUM_A), []);
 });

@@ -251,7 +251,7 @@ var Obiceiuri = (function () {
       // v100.72: un rand ≤ 160 - starea de atunci in paranteza, totalul „de la → la”, costul cu virgula
       // v100.75 (ideea 4): raportul pune „• ” în față - peste 158, motivul (citat întreg) rămâne pe primul rând, faptele trec pe al doilea
       var cap = "„" + x.motiv + "”", rest = "pe " + x.moneda + " (" + cand(x.t) + ", " + (x.stare ? (ET[x.stare] || x.stare) : "nenotată înainte de 01.10") +
-        "): " + U(x.total).replace(" USDT", "") + " → " + U(x.totalDupa) + "; urmat, ar fi costat " + Math.abs(x.cost).toFixed(2).replace(".", ",") + " USDT.";
+        "): " + U(x.total).replace(" USDT", "") + " → " + U(x.totalDupa) + "; urmat, ar fi costat " + TextRo.num(Math.abs(x.cost), TextRo.zecMici(x.cost)) + " USDT.";
       return (cap + " " + rest).length <= 158 ? cap + " " + rest : rupe(cap, 158) + "\n" + rest;
     }) : ["Niciun sfat greșit judecat săptămâna asta."];
     // revizia 01.10 (I3): ZILE distincte, nu intrari (acelasi semnal pe 5 boti in aceeasi ora e un singur caz); o zi e „gresita” cand au

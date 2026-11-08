@@ -67,7 +67,7 @@ await test("(6) citirea: botul, zero-ul, planul, stopul, gridul, direcția, ADX,
   assert.equal(r.Stopul.stare, "atentie"); assert.match(r.Stopul.text, /la −6,2%/);
   assert.ok(r.Funding.text.includes("botul plătește ~" + (1139 * p * 0.000114).toFixed(3).replace(".", ",") + " USDT"), r.Funding.text); assert.match(r.Funding.text, /în 35 min/);
   assert.match(r["ADX 14"].text, /stă pe loc/, "zigzagul e pe loc");
-  assert.ok(c.peScurt.startsWith("botul pe minus −1,30 USDT"), c.peScurt);
+  assert.ok(c.peScurt.startsWith("botul pe minus −1,3 USDT"), c.peScurt);
   assert.equal(G.citire(baza(zigzag(10)), BOT, 1), null, "prea puține bare ⇒ null");
 });
 await test("(7) lumânarea live: în perioada ei, ultima lumânare primește prețul (închidere, maxim, minim); după, apare una nouă", () => {

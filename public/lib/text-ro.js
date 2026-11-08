@@ -25,7 +25,8 @@ var TextRo = (function () {
   function usdt(x, z) { z = zec(z, 1); return nr(x) === null ? "—" : cuPlus(x, z, 1) + num(x, z) + " USDT"; }
   // audit 19.10: zecimalele unei sume care poate fi mică (costul pe zi, funding-ul plătit): 1 de la 0,1 în sus, 2 sub 0,1, 3 sub 0,01,
   // ca „0,04 USDT” să nu iasă „0,0 USDT”. Se cere explicit: TextRo.usdt(x, TextRo.zecMici(x)).
-  function zecMici(x) { x = nr(x); if (x === null || x === 0) return 1; var a = Math.abs(x); return a >= 0.1 ? 1 : a >= 0.01 ? 2 : 3; }
+  // v100.314 (08.11): pragul pe cifra ROTUNJITĂ - 0,0999 iese „0,1” (o zecimală), nu „0,10”
+  function zecMici(x) { x = nr(x); if (x === null || x === 0) return 1; var a = Math.abs(x); return a >= 0.095 ? 1 : a >= 0.0095 ? 2 : 3; }
   // „1.234 lei” (rotunjit la leu, mii cu punct); cuSemn -> „+1.234 lei”
   function lei(x, cuSemn) {
     x = nr(x); if (x === null) return "—";
@@ -50,7 +51,20 @@ var TextRo = (function () {
   // „−36.16 USDT” -> „−36,16 USDT”, „-8.17 USDT” -> „−8,17 USDT”, „33.3%” -> „33,3%”. Doar cifrele urmate de USDT / %; cuvintele rămân,
   // leii („+1.052 lei” = mii cu punct) și prețurile nu se ating, iar un text deja nou iese neschimbat.
   function cifreNoi(t) {
-    return String(t == null ? "" : t).replace(/(^|[^\w.,])([+−-]?)(\d+)\.(\d+)(\s?(?:USDT|%))/g, function (m, pre, s, a, b, u) { return pre + (s === "-" ? "−" : s) + a + "," + b + u; });
+    var s = String(t == null ? "" : t).replace(/(^|[^\w.,])([+−-]?)(\d+)\.(\d+)(\s?(?:USDT|%))/g, function (m, pre, s, a, b, u) { return pre + (s === "-" ? "−" : s) + a + "," + b + u; });
+    // v100.314 (el, 08.11: „ok” la alte sume cu două zecimale): textele SALVATE de colector cu codul vechi (raportul de duminică, alertele,
+    // rezumatul de dimineață) arată ca cele noi - prețul în $ cu virgulă („$55.86” -> „$55,86”, zecimalele prețului rămân), iar un REZULTAT
+    // cu 2–3 zecimale (sumă cu semn lângă USDT / lei de la 0,095 în sus, procent de la 1% în sus) cu O zecimală, rotunjit prin cifre, nu prin
+    // virgulă mobilă („−642,85” -> „−642,9”). Ca garda convențiilor: prețurile fără semn, ratele sub 1% și sumele sub 0,1 rămân.
+    s = s.replace(/\$(\d+)\.(\d+)(?!\d|[.,]\d)/g, "$$$1,$2");
+    function o1(sg, a, b, u) {
+      var v = Number(a.replace(/\./g, "") + "." + b);
+      if (!isFinite(v) || (/%/.test(u) ? v < 1 : v < 0.095)) return null;
+      var k = Math.round(Number(a.replace(/\./g, "") + (b + "00").slice(0, 3)) / 100), w = String(Math.floor(k / 10)).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+      return (sg === "-" ? "−" : sg) + w + "," + (k % 10) + u;
+    }
+    s = s.replace(/(^|[^\w.,])([+−-])(\d{1,3}(?:\.\d{3})+|\d+),(\d{2,3})(\s?(?:USDT|lei|%))(?!\w)/g, function (m, pre, sg, a, b, u) { var r = o1(sg, a, b, u); return r === null ? m : pre + r; });
+    return s.replace(/(^|[^\w.,+−-])(\d{1,3}(?:\.\d{3})+|\d+),(\d{2,3})(\s?%)/g, function (m, pre, a, b, u) { var r = o1("", a, b, u); return r === null ? m : pre + r; });
   }
   // v100.78 (ideea 3): ruperea rândurilor lungi, într-un singur loc (autopsiile, raportul de duminică). Un rând peste max (160 implicit)
   // se rupe la granița de sens - după „; ” / „: ”, înainte de „ — ” (cel mai târziu loc, nu în primele 40 de caractere) -, altfel pe

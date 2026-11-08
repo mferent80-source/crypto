@@ -50,10 +50,10 @@ await test("(1) planul CU gridul pe drum: intrarea cere pretTintaPentru(+2,2) ș
   assert.ok(Math.abs(k.planPlus - P * 1.069) < 1e-12 && Math.abs(k.planMinus - P * 0.946) < 1e-12);
   assert.equal(G.intrareBot(D({ plan: null })).niv.some((x) => /^plan/.test(x.k)), false, "fără plan ⇒ fără linii de plan");
 });
-await test("(2) I-527 „Stopul vs planul”: la stop −7,41 cu planul −6,5 ⇒ „cu 0,91 mai mult” (atenție); la −6,50 ⇒ „în plan”; fără plan ⇒ „Stopul” ca înainte", () => {
+await test("(2) I-527 „Stopul vs planul”: la stop −7,41 cu planul −6,5 ⇒ „cu 0,9 mai mult” (v100.314: o zecimală) (atenție); la −6,50 ⇒ „în plan”; fără plan ⇒ „Stopul” ca înainte", () => {
   const o = G.intrareBot(D()); assert.deepEqual(o.stopVsPlan, { laStop: -7.41, plan: 6.5 });
   const r = G.citire(o, BOT, P).randuri.find((x) => /^Stopul/.test(x.ce));
-  assert.equal(r.ce, "Stopul vs planul"); assert.match(r.text, /la stop pierzi −7,41 USDT, planul −6,50 \(cu 0,91 mai mult\)/); assert.equal(r.stare, "atentie");
+  assert.equal(r.ce, "Stopul vs planul"); assert.match(r.text, /la stop pierzi −7,4 USDT, planul −6,50 \(cu 0,9 mai mult\)/); assert.equal(r.stare, "atentie");
   const r2 = G.citire(Object.assign({}, o, { stopVsPlan: { laStop: -6.5, plan: 6.5 } }), BOT, P).randuri.find((x) => /^Stopul/.test(x.ce));
   assert.match(r2.text, /în plan \(−6,50\)/);
   const r3 = G.citire(G.intrareBot(D({ plan: null })), BOT, P).randuri.find((x) => /^Stopul/.test(x.ce)); assert.equal(r3.ce, "Stopul");
@@ -72,14 +72,14 @@ await test("(3) I-528 șansele MĂSURATE pe liniile lor: marginile 24 h, lichida
   { const d0 = G.desen(G.intrareBot(D())); assert.equal((d0.svg.match(/gbSansa/g) || []).length, 0, "fără șanse ⇒ nimic"); assert.doesNotMatch(d0.valori, /<span class="gbVS">[^<]+</, "fără șanse ⇒ coloana șansei goală"); }
 });
 await test("(4) I-529 stopul de probă: textul spune pierderea cu gridul față de plan; linia apare pe grafic; pagina nu mai are legătura (audit 19.10: butonul ieșise în v100.138)", () => {
-  assert.equal(G.stopProba(P * 0.946, P, -6.5, 6.5).text, "stop de probă la " + G.stopProba(P * 0.946, P, -6.5, 6.5).text.split(" la ")[1].split(" (")[0] + " (−5,4%): pierzi −6,50 USDT, exact planul");
-  assert.match(G.stopProba(P * 0.93, P, -7.41, 6.5).text, /pierzi −7,41 USDT, cu 0,91 peste plan$/);
-  assert.match(G.stopProba(P * 0.97, P, -3, 6.5).text, /cu 3,50 sub plan$/);
+  assert.equal(G.stopProba(P * 0.946, P, -6.5, 6.5).text, "stop de probă la " + G.stopProba(P * 0.946, P, -6.5, 6.5).text.split(" la ")[1].split(" (")[0] + " (−5,4%): pierzi −6,5 USDT, exact planul");
+  assert.match(G.stopProba(P * 0.93, P, -7.41, 6.5).text, /pierzi −7,4 USDT, cu 0,9 peste plan$/);
+  assert.match(G.stopProba(P * 0.97, P, -3, 6.5).text, /cu 3,5 sub plan$/);
   assert.equal(G.stopProba(null, P, -1, 6.5), null);
   const pr = G.stopProba(P * 1.002, P, -3, 6.5), svg = G.desen(G.intrareBot(D({ proba: { pret: pr.pret, text: pr.text } }))).svg;
   assert.match(svg, /<g class="gbProba">.*🧪 stop de probă la/);
   const tel = G.desen(G.intrareBot(D({ W: 390, proba: { pret: pr.pret, text: pr.text, scurt: pr.scurt } }))).svg;   // pe telefon textul lung ieșea din grafic
-  assert.ok(/<g class="gbProba"><line [^>]*\/><\/g>/.test(tel) && !tel.includes("🧪"), "pe telefon doar linia - textul e în citirea de sub grafic"); assert.match(pr.scurt, /^[\d.]+ · −3,00 USDT$/);
+  assert.ok(/<g class="gbProba"><line [^>]*\/><\/g>/.test(tel) && !tel.includes("🧪"), "pe telefon doar linia - textul e în citirea de sub grafic"); assert.match(pr.scurt, /^[\d.]+ · −3,0 USDT$/);
   // audit 19.10: legătura din pagină (tbProbaPt / tbProbaStop / tbProbaCopiaza) e scoasă - butonul ei a ieșit din citire în v100.138, deci
   // nu mai putea fi pornită; GraficBot.stopProba și desenul liniei (mai sus) rămân păzite, iar pagina nu mai cere stopul de probă
   assert.ok(!/tbProbaStop|function tbProbaPt\(|function tbProbaCopiaza\(/.test(citeste("public", "app.js")), "legătura stopului de probă a rămas în pagină");

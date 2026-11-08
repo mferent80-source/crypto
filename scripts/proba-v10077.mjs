@@ -55,7 +55,7 @@ await test("(3) autopsia acțiunilor: fiecare rând ≤ 160 pe datele lungi (tre
   const a = LUNG(); assert.ok(a.tipar, "tiparul trebuie să apară");
   const toate = a.linii.join("\n"), lung = toate.split("\n").filter((l) => l.length > 160);
   assert.equal(lung.length, 0, lung.map((l) => l.length + ": " + l).join("\n"));
-  for (const x of ["SUPERMICRO", "trend-jos, stop-atins, miscare-jos", "starea de atunci", "în 5 zile de bursă", "1.234,56 lei", "Regulă propusă pe acțiuni", "ipoteză, n-am schimbat nimic", "în ultimele 30", "-l urmai, te-ar fi costat", "Spune-mi dacă vrei regula"])
+  for (const x of ["SUPERMICRO", "trend-jos, stop-atins, miscare-jos", "starea de atunci", "în 5 zile de bursă", "1.234,6 lei", "Regulă propusă pe acțiuni", "ipoteză, n-am schimbat nimic", "în ultimele 30", "-l urmai, te-ar fi costat", "Spune-mi dacă vrei regula"])
     assert.ok(toate.replace(/\n/g, " ").includes(x), "lipsește: " + x + "\n" + toate);
 });
 

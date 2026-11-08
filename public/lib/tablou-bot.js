@@ -549,7 +549,7 @@ var TabloBot = (function () {
     }
     if (m.basis.stare === "rau") {
       return { nivel: "OPORTUNITATE", titlu: "Perpetua s-a rupt de spot",
-        ceFac: "Diferența e " + m.basis.valoare.toFixed(2) + "%.",
+        ceFac: "Diferența e " + TextRo.pct(m.basis.valoare, Math.abs(m.basis.valoare) >= 1 ? 1 : 2) + ".",
         declansator: d("basis", m.basis.valoare, m.basis.prag) };
     }
     return { nivel: "LINISTE", titlu: "Merge",

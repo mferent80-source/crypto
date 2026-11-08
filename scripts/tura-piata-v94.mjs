@@ -110,7 +110,7 @@ await test("v95 raportul de duminica: dupa ora 20 (Bucuresti), o singura data, c
   await turaPiata(w.d, st, SAMBATA); assert.ok(!w.alerte.some((x) => /Săptămâna/.test(x.titlu)), "a trimis sambata");
   await turaPiata(w.d, st, DUMINICA); await turaPiata(w.d, st, DUMINICA + 2 * ORA);
   const r = w.alerte.filter((x) => /Săptămâna pieței/.test(x.titlu)); assert.equal(r.length, 1);
-  assert.match(r[0].mesaj, /FOMC Statement/); assert.match(r[0].mesaj, /\n👉 (Crypto|Bursă|N-aș|Aș) /);   /* v100.72: acțiunile pe rânduri „👉 ” (era „Ce aș face eu:” cu trei lipite) */ assert.match(r[0].mesaj, /−7,75 USDT/);
+  assert.match(r[0].mesaj, /FOMC Statement/); assert.match(r[0].mesaj, /\n👉 (Crypto|Bursă|N-aș|Aș) /);   /* v100.72: acțiunile pe rânduri „👉 ” (era „Ce aș face eu:” cu trei lipite) */ assert.match(r[0].mesaj, /−7,8 USDT/);
 });
 // v100.166 (12.10, Weekly Review din premarket_scanner mutat aici - el: „completez raportul de duminică”): „Săptămâna pieței” spune și
 // lățimea pieței crypto (150 perp-uri) și a acțiunilor US, cu ACELEAȘI texte ca rândurile din „Ce spune piața acum”, și se salvează

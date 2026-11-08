@@ -71,7 +71,7 @@ function tzCartela(m) {
   if (g) {
     // v100.306 (I-825, 🔴 3): banda e măsurată pe ora UTC, iar fraza spune cât de des a cuprins restul zilei pe zile NEVĂZUTE la învățare
     // (TradeZilei.BANDA_ACOPERIRE); pasul = lățimea / 10 ⇒ cinci grile pe parte; stopul cel puțin la marginea benzii
-    h += '<div class="tzGrid"><div class="tzRand"><span class="tzEt">Grid azi, din mișcare</span><b class="tzCifra">±' + tzPct(g.jumatate, 1) + "</b><span class=\"tzMut tzMic\">" + tzPret(g.jos) + " – " + tzPret(g.sus) + " · pas ~" + tzPct(g.pas, 2) + " la cinci grile pe parte · cuprinde restul zilei UTC în " + tzPct(g.acoperire) + " din zile (măsurat pe zile nevăzute, 75 de monede)" + (cuZiua ? " · lățimea din prognoza de la 00:00 UTC" : "") + "</span></div>";
+    h += '<div class="tzGrid"><div class="tzRand"><span class="tzEt">Grid azi, din mișcare</span><b class="tzCifra">±' + tzPct(g.jumatate, 1) + "</b><span class=\"tzMut tzMic\">" + tzPret(g.jos) + " – " + tzPret(g.sus) + " · pas ~" + tzPct(g.pas, Math.abs(g.pas) >= 0.01 ? 1 : 2) + " la cinci grile pe parte · cuprinde restul zilei UTC în " + tzPct(g.acoperire) + " din zile (măsurat pe zile nevăzute, 75 de monede)" + (cuZiua ? " · lățimea din prognoza de la 00:00 UTC" : "") + "</span></div>";
     h += '<div class="tzRand"><span class="tzEt">Stop, nu mai aproape de</span><b class="tzCifra">' + tzPct(g.stop, 1) + '</b><span class="tzMut tzMic">' + (g.stopLaMargine ? "marginea gridului: mai aproape, grilele de dincolo de stop n-ar mai lucra" : "cât se mișcă o zi obișnuită ca azi") + " · măsurat ca mișcare, nu ca bani</span></div>";
     h += '<div class="tzAct"><button class="acBtn" type="button" data-action-click="tzLaGrid(\'' + tzEsc(m.pionex) + '\')">Grid: ce setez? →</button></div></div>';
   }

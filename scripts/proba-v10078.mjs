@@ -32,12 +32,12 @@ const SALVAT = [
 await test("(1) raportul salvat pe 27.09: sumele cu virgulă și „−” tipografic, cuvintele neatinse; leii („+1.052 lei” = mii) și textul deja nou neschimbate", () => {
   assert.equal(typeof TR.cifreNoi, "function", "TextRo.cifreNoi lipsește");
   assert.deepEqual(SALVAT.map(TR.cifreNoi), [
-    "Săptămâna: 10 boți închiși, total −18,39 USDT, 5 pe plus (50%).",
-    "Din grile +31,46 USDT, din poziție −41,68 USDT, comisioane și funding −8,17 USDT.",
-    "Greșeala cea mai scumpă: „Poziția a mâncat grilele” — 4 boți, −36,16 USDT.",
+    "Săptămâna: 10 boți închiși, total −18,4 USDT, 5 pe plus (50%).",
+    "Din grile +31,5 USDT, din poziție −41,7 USDT, comisioane și funding −8,2 USDT.",
+    "Greșeala cea mai scumpă: „Poziția a mâncat grilele” — 4 boți, −36,2 USDT.",
     SALVAT[3], SALVAT[4], SALVAT[5], SALVAT[6]]);
   assert.deepEqual(["pierdere -8.17 USDT", "(33.3%)", "-0.5%", "1234.56 USDT", "preț 0.3456", "trade-uri 7"].map(TR.cifreNoi),
-    ["pierdere −8,17 USDT", "(33,3%)", "−0,5%", "1234,56 USDT", "preț 0.3456", "trade-uri 7"]);
+    ["pierdere −8,2 USDT", "(33,3%)", "−0,5%", "1234,56 USDT", "preț 0.3456", "trade-uri 7"]);
   // un raport nou (v100.61+) iese neschimbat
   const tr = (i) => ({ id: "n" + i, moneda: "CRV", rezultat: i % 2 ? -3.456 : 2.1, net: i % 2 ? -3.9 : 1.8, inchis: T0 - (i + 1) * ORA, pornit: T0 - (i + 5) * ORA, durataOre: 4, comisioane: -0.3, funding: -0.1, dir: "long", greseli: [] });
   const nou = OB.raportDuminica({ trades: Array.from({ length: 25 }, (_, i) => tr(i)), acum: T0 }).linii;

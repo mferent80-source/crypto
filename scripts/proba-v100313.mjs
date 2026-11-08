@@ -221,7 +221,7 @@ await test("colector: tura probabilităților pune atr1h (CurbaStop.atr14 pe bar
   assert.match(tp, /if \(rez && d\.CurbaStop\) \{ try \{ const a = d\.CurbaStop\.atr14\(bare\); if \(a > 0\) rez\.atr1h = a;/);
   assert.match(co, /const CurbaStop = incarca\("curba-stop\.js", "CurbaStop"\);/);
   assert.match(co, /GridCalcul, Probabilitati, Dovada, TabloExtra, CurbaStop,/);
-  assert.match(co, /const VERSIUNE_COLECTOR = "v101\.171";/);
+  assert.match(co, /const VERSIUNE_COLECTOR = "v101\.(?:17[1-9]|1[89]\d)";/);   /* v100.314: cel puțin v101.171 */
   assert.match(co, /\.then\(\(\) => turaProbeColector\(\)\)\.catch\(\(e\) => jurnal\("probe", e\.message\)\);/, "lanțul vechi neatins");
   assert.match(co, /catch \(e\) \{ jurnal\("caiet ESEC", SR\.motivEroare\(e\)\); \}\n  await turaCurbaStopColector\(\);/, "curba în tura probelor, după direcție");
 });
@@ -286,15 +286,15 @@ await test("pagina: index.html (blocul în .tbCadru, scripturile înaintea app.j
   assert.ok(HTML.includes('<section id="tbMcSus" class="tbBloc" hidden></section><section id="ctAcum" class="ctAcum" hidden aria-label="Contează acum"></section>'));
   const iC = HTML.indexOf('<script src="/lib/curba-stop.js"></script><script src="/lib/conteaza.js"></script>'), iA = HTML.search(/<script[^>]+src="\/app\.js/);
   assert.ok(iC > 0 && iA > iC, "modulele înaintea app.js");
-  assert.equal((HTML.match(/v100\.313/g) || []).length, 4); assert.equal((HTML.match(/v100\.312/g) || []).length, 0);
+  assert.equal((HTML.match(/v100\.31[3-9]/g) || []).length, 4); assert.equal((HTML.match(/v100\.312/g) || []).length, 0);
   assert.match(CSS, /\.pzDemo #tabloubot \.tbCadru>#ctAcum\{order:11\}/); assert.match(CSS, /#tabloubot \.tbCadru>#ctAcum\{grid-column:1\/-1\}/);
   assert.match(CSS, /\.pzDemo #tabloubot \.tbCadru>#pzVerdict\{order:10\}/); assert.match(CSS, /\.pzDemo #tabloubot \.tbCadru>#tbGridLarg\{order:12\}/);
   assert.match(CSS, /@media \(max-width:600px\)\{\.ctRand\{grid-template-columns:70px minmax\(0,1fr\)\}/);
   const SW = citeste("public", "sw.js");
-  assert.match(SW, /const CACHE="crypto-radar-v100-313";/); assert.ok(SW.includes('"/lib/curba-stop.js","/lib/conteaza.js"'));
-  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.313"/);
-  const BI = JSON.parse(citeste("BUILD_INFO.json")); assert.equal(BI.version, "v100.313"); assert.ok(BI.features.conteaza313 && BI.features.probe312);
-  const PK = JSON.parse(citeste("package.json")); assert.equal(PK.version, "100.313.0"); assert.match(PK.scripts.test, /npm run test:v100312 && npm run test:v100313 && node scripts\/mutatii\.mjs --doar-tiparele/);
+  assert.match(SW, /const CACHE="crypto-radar-v100-31[3-9]";/); assert.ok(SW.includes('"/lib/curba-stop.js","/lib/conteaza.js"'));
+  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.31[3-9]"/);
+  const BI = JSON.parse(citeste("BUILD_INFO.json")); assert.match(BI.version, /^v100\.31[3-9]$/); assert.ok(BI.features.conteaza313 && BI.features.probe312);
+  const PK = JSON.parse(citeste("package.json")); assert.match(PK.version, /^100\.31[3-9]\.0$/); assert.match(PK.scripts.test, /npm run test:v100312 && npm run test:v100313 && (?:npm run test:v10031[4-9] && )*node scripts\/mutatii\.mjs --doar-tiparele/);
 });
 await test("grafic: rândul „stopul tău” primește „24 h: ~N%” din stop-24 (cu „~”, e curba pieței); marginile rămân fără „~”", () => {
   const ctx = { console, Math, JSON, Number, String, Array, Object, RegExp, isFinite, Date, Intl };

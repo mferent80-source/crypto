@@ -43,7 +43,7 @@ export function liniiTradeZilei(monede, TradeZilei) {
     const niv = (L, p) => pret(L) + " " + (p.atins ? "✓" : p.p == null ? "—" : pct(p.p));
     // v100.306 (I-825, 🔴 2): ziua deja trecută de ieri ⇒ „>ieri deja”, nu procentul modelului
     let r = `${m.fel === "bot" ? "🤖 " : ""}${m.simbol} ${pret(d.pret)} · >ieri ${d.dejaMaiMult ? "deja" : pct(d.p3)} · azi ~${pct(d.asteptat.med, 1)} (${pct(d.asteptat.p25, 1)}–${pct(d.asteptat.p75, 1)})` +
-      (g ? ` · grid ±${pct(g.jumatate, 1)} pas ${pct(g.pas, 2)} · stop ≥ ${pct(g.stop, 1)}` : "") + ` · max ${niv(d.pdh, d.p1Sus)} · min ${niv(d.pdl, d.p1Jos)}`;
+      (g ? ` · grid ±${pct(g.jumatate, 1)} pas ${pct(g.pas, Math.abs(g.pas) >= 0.01 ? 1 : 2)} · stop ≥ ${pct(g.stop, 1)}` : "") + ` · max ${niv(d.pdh, d.p1Sus)} · min ${niv(d.pdl, d.p1Jos)}`;
     if (r.length > LAT) r = r.slice(0, LAT - 1) + "…";
     linii.push(r);
   });

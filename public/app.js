@@ -6182,7 +6182,7 @@ function jtRender(){
     var dur=t.durataOre<1?Math.round(t.durataOre*60)+" min":t.durataOre.toFixed(1).replace(".",",")+" h";
     return '<div class="jtTrade"><div class="jtCap"><b>'+escapeHtml(t.moneda)+'</b> <span class="tbSub">'+escapeHtml(t.dir+" "+(t.levier||"?")+"× · "+(t.investit!=null?t.investit.toFixed(0):"?")+" USDT · "+data(t.pornit)+" → "+data(t.inchis)+" ("+dur+")")+'</span><b class="jtRez '+cls(t.rezultat)+'">'+U(t.rezultat)+(t.pct!=null?' <span class="tbSub">'+P(t.pct)+'</span>':'')+'</b></div>'
       +'<div class="tbSub">grile '+U(t.grile)+' · poziție '+U(t.pozitie)+' · comisioane '+U(t.comisioane)+' · funding '+U(t.funding)+' · interval '+escapeHtml(t.jos+" – "+t.sus+", "+TextRo.cate(t.grileN,"grilă","grile")+" "+t.mod)+(t.pasNet!=null?", "+P(t.pasNet)+" net/grilă":"")+'</div>'
-      +(cfm[t.id]?'<p class="jtCf">Radarul ar fi zis: <b class="'+(cfm[t.id].nivel==="nu"?"bad":cfm[t.id].nivel==="porneste"?"good":"tbWarn")+'">'+escapeHtml((GR_NIVEL[cfm[t.id].nivel]||[cfm[t.id].nivel])[0])+'</b>'+(cfm[t.id].motive&&cfm[t.id].motive.length?' <span class="tbSub">— '+escapeHtml(cfm[t.id].motive.join("; "))+'</span>':"")+'</p>':"")
+      +(cfm[t.id]?'<p class="jtCf">Radarul ar fi zis: <b class="'+(cfm[t.id].nivel==="nu"?"bad":cfm[t.id].nivel==="porneste"?"good":"tbWarn")+'">'+escapeHtml((GR_NIVEL[cfm[t.id].nivel]||[cfm[t.id].nivel])[0])+'</b>'+(cfm[t.id].motive&&cfm[t.id].motive.length?' <span class="tbSub">— '+escapeHtml(TextRo.cifreNoi(cfm[t.id].motive.join("; ")))+'</span>':"")+'</p>':"")
       +(t.greseli.length?'<ul class="jtGreseli">'+t.greseli.map(function(g){return '<li><b>'+escapeHtml(g.titlu)+':</b> '+escapeHtml(g.text)+'</li>'}).join("")+'</ul>':'<p class="tbSub good">fără greșeli găsite automat</p>')
       +'<textarea class="jtNota" data-id="'+escapeHtml(t.id)+'" rows="2" placeholder="De ce am intrat, ce am simțit, ce aș face altfel…">'+escapeHtml(note[t.id]||"")+'</textarea></div>';
   }).join("")+(l.length>arata?'<button type="button" class="stBtn jtMai" data-action-click="jtArataMai()">Arată încă '+Math.min(30,l.length-arata)+' (ai văzut '+arata+' din '+l.length+')</button>':"");
@@ -6817,7 +6817,7 @@ function tbDeseneazaSemafor(b){
   if(socEl){
     var soc=kv?SemnaleBot.socoteala(kv.log||[]):null,E={tine:"ține",lichidare:"lichidare",plan:"planul tău",trend:"trend contra",miscare:"mișcare mare","ia-profit":"ia profit",muta:"mută gridul",costuri:"costuri",btc:"BTC în mișcare",aglomerare:"aglomerare",podea:"ținta devine podea","cu-botul":"mișcare cu botul"};
     // v97.1: podeaua pe banii lui - daca iesea la prima "tinta atinsa" fata de ce are acum (nerealizat pana inchide)
-    var pb=kv?SemnaleBot.podeaPeBani(kv.log||[],b.profitTotal):null,U2=function(v){return (v>=0?"+":"−")+Math.abs(v).toFixed(2).replace(".",",")+" USDT"},sh="";
+    var pb=kv?SemnaleBot.podeaPeBani(kv.log||[],b.profitTotal):null,U2=function(v){return TextRo.usdt(v,TextRo.zecMici(v))},sh="";
     if(pb)sh+='<p class="tbPodeaBani">🪜 <b>Ținta devine podea, pe banii tăi:</b> dacă ieșeai la prima „țintă atinsă” ('+escapeHtml(new Date(pb.la).toLocaleString("ro-RO",{weekday:"short",hour:"2-digit",minute:"2-digit"}))+') aveai <b>'+U2(pb.laIesire)+'</b>; acum botul are <b>'+U2(pb.acum)+'</b> — ținerea a adus <b class="'+(pb.dif>=0?"good":"bad")+'">'+U2(pb.dif)+'</b> până acum (nerealizat până închizi; opritorul hotărăște cât rămâne sigur).</p>';
     if(soc&&Object.keys(soc).length)sh+='<div class="grTabelWrap"><table class="grTabel"><thead><tr><th>Semnal</th><th>Date</th><th>Judecate</th><th>Au avut dreptate</th><th>Pe bani, urmat</th></tr></thead><tbody>'+Object.keys(soc).map(function(k){var x=soc[k];return '<tr><td>'+escapeHtml(E[k]||k)+'</td><td>'+x.n+'</td><td>'+x.judecate+'</td><td>'+(x.rata==null?"încă nu":GridCalcul.procent(x.rata)+" ("+x.corecte+" din "+x.judecate+")")+'</td><td class="'+(x.baniN?(x.bani>=0?"good":"bad"):"")+'">'+(x.baniN?U2(x.bani):"încă nu")+'</td></tr>'}).join("")+'</tbody></table></div><p class="tbSub">„Pe bani, urmat” = câți USDT ar fi adus semnalul dacă îl urmai, în 24 h (plus = a ajutat, minus = te-ar fi costat). „Ieși/atenție” au avut dreptate dacă în 24 h totalul botului a scăzut (ieșirea ar fi salvat bani); „ține” dacă n-a scăzut. Sub 10 judecate, e doar începutul.</p>';
     if(!ac)sh+='<p class="tbSub">BTC și aglomerarea vin de la colectorul de pe VPS (la 5 min); '+(kv?"ultima lui socoteală e mai veche de 20 de minute.":"n-a trimis încă nimic pentru botul ăsta.")+'</p>';
@@ -7890,7 +7890,7 @@ function renderTabloDovada(){
   var rand=function(nume,x,txt){return '<div class="accountRow"><div class="accountCell">'+escapeHtml(nume)+'</div><div class="accountCell '+(x&&x.valoare!=null?"":"mutedInfo")+'">'+(x&&x.valoare!=null?txt(x):"—")+'</div><div class="accountCell">'+stare(x)+(x&&x.acoperire!=null?' · observat '+x.acoperire+'% din timp':'')+'</div></div>'};
   el.innerHTML=
     rand("Perechi închise pe oră",f.perechiPeOra,function(x){return x.valoare.toFixed(1)})+
-    rand("Profit net pe zi (observat)",f.netPeZi,function(x){return botiBan(x.valoare,2)})+
+    rand("Profit net pe zi (observat)",f.netPeZi,function(x){return botiBan(x.valoare,TextRo.zecMici(x.valoare))})+
     rand("Timp cu prețul în interval",f.timpInInterval,function(x){return Math.round(x.valoare)+"%"})+
     rand("Timp lângă o margine a gridului",f.desLaMargine,function(x){return Math.round(x.valoare)+"%"});
 }
@@ -8247,7 +8247,7 @@ function renderTabloBot(){
     ["oscilație sau trend",m.eficienta],["amplitudine vs treaptă",m.amplitudine],
     ["până la lichidare",m.lichidare],["basis perp Pionex vs spot Binance",m.basis],["comision vs grid",m.comision]];   /* v100.272 (ideile auditului 29.10): perp-ul e al botului (Pionex), spotul vine de la Binance - diferența cuprinde și cea dintre burse, se spune */
   if($("tbMasuri"))$("tbMasuri").innerHTML=randuri.map(function(r){
-    var val=r[1]&&r[1].valoare!=null?(r[1]===m.lichidare?tbLichidareScurt(r[1]):tbCuUnitate(tbFormateazaSemn(+r[1].valoare,2),r[1].unitate)):"—";
+    var val=r[1]&&r[1].valoare!=null?(r[1]===m.lichidare?tbLichidareScurt(r[1]):tbCuUnitate(tbFormateazaSemn(+r[1].valoare,Math.abs(+r[1].valoare)>=1?1:2),r[1].unitate)):"—";
     var cls=r[1]&&(r[1].stare==="rau"||r[1].stare==="afara"||(r[1]===m.lichidare&&(r[1].depasita||+r[1].valoare<0)))?"bad":
       r[1]&&r[1].stare==="margine"?"tbWarn":r[1]&&r[1].stare==="bine"?"good":"mutedInfo";
     return '<div class="accountRow"><div class="accountCell">'+escapeHtml(r[0])+

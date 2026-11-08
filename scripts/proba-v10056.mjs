@@ -89,7 +89,7 @@ await test("autopsia pe actiuni: cele mai scumpe 3 sfaturi gresite ale saptamani
   const a = CS.autopsieActiuni([{ ticker: "INTC_US_EQ", log: intc }, { ticker: "AMD_US_EQ", log: amd }], acum);
   assert.deepEqual(a.scumpe.map((x) => x.cost), [-45, -20, -5]);
   const tx = a.linii.join("\n");
-  assert.match(tx, /INTC/); assert.match(tx, /starea de atunci: nenotată/); assert.match(tx, /trend în jos/); assert.match(tx, /45,00 lei/);
+  assert.match(tx, /INTC/); assert.match(tx, /starea de atunci: nenotată/); assert.match(tx, /trend în jos/); assert.match(tx, /45,0 lei/);
   assert.ok(a.tipar, "tiparul trebuie gasit"); assert.equal(a.tipar.judecate, 12, "zile distincte, nu intrari"); assert.equal(a.tipar.gresite, 12);
   assert.match(a.tipar.text, /ipoteză/); assert.match(a.tipar.text, /n-am schimbat nimic/);
   const putin = CS.autopsieActiuni([{ ticker: "X_US_EQ", log: tip.slice(0, 9) }], acum);
@@ -182,7 +182,7 @@ await test("I4: lei si $ nu se amesteca - clasamentul pe echivalent in lei (curs
   const tx = a.linii.join("\n"); assert.match(tx, /\$192,43/); assert.ok(!/192\.4299/.test(tx));
   const log = []; for (let d = 15; d < 27; d++) log.push(e(d, "z", d % 2 ? -1000 : -10, d % 2 === 0, "sus|calm|departe", d % 2 === 0 ? 4.5 : null));
   const t = CS.autopsieActiuni([{ ticker: "B_US_EQ", log }], acum).tipar;
-  assert.ok(t, "tiparul"); assert.match(t.text, /6\.000,00 \$/); assert.match(t.text, /60,00 lei/);
+  assert.ok(t, "tiparul"); assert.match(t.text, /6\.000,0 \$/); assert.match(t.text, /60,0 lei/);
   assert.match(GB.ziObisnuitaActiune(100, { zile: 500, z1: { jos: q(0.02), sus: q(0.03) }, z5: { jos: q(0.05), sus: q(0.06) } }, 5).sursa, /ale acțiunii/);
 });
 

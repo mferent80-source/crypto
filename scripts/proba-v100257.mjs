@@ -138,21 +138,21 @@ await test("Discord scrie moneda instrumentului; INTC rămâne $, Scan rămâne 
     } }] };
   }
   const gbp = alerteSLTP(intra("ULVR.L", "GBp", 250), ACUM)[0];
-  assert.match(gbp.titlu, /GBp250\.00/);
-  assert.match(gbp.mesaj, /GBp250\.00/);
+  assert.match(gbp.titlu, /GBp250,00/);
+  assert.match(gbp.mesaj, /GBp250,00/);
   assert.match(gbp.mesaj, /1,50 buc/);
   assert.doesNotMatch(gbp.titlu + gbp.mesaj, /\$/);
   const lira = alerteSLTP(intra("ULVR.L", "£", 250), ACUM)[0];
-  assert.match(lira.titlu, /£250\.00/);
+  assert.match(lira.titlu, /£250,00/);
   assert.doesNotMatch(lira.mesaj, /\$/);
   const eur = alerteSLTP(intra("RHM.DE", "€", 800), ACUM)[0];
-  assert.match(eur.titlu, /€800\.00/);
+  assert.match(eur.titlu, /€800,00/);
   assert.doesNotMatch(eur.mesaj, /\$/);
   const usd = alerteSLTP(intra("INTC", "$", 111.99), ACUM)[0];
   assert.match(usd.mesaj, /Aș lua cel mult 3,62 buc, dacă intru \(~1\.870 lei, risc ~289 lei = 1% din cont\); e un reper, decizia e a ta\./);
-  assert.match(usd.titlu, /\$111\.99/);
+  assert.match(usd.titlu, /\$111,99/);
   const gol = alerteSLTP(intra("INTC", "", 111.99), ACUM)[0];
-  assert.match(gol.titlu, /\$111\.99/);
+  assert.match(gol.titlu, /\$111,99/);
   const ecran = citeste("public", "lib", "scan-ecran.js");
   assert.doesNotMatch(ecran, /ziua deschisă|media simplă pe 14 zile/);
   assert.match(ecran, /media a 14 intervale adevărate/);

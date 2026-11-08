@@ -1,5 +1,6 @@
 // Probele v84: obiceiurile (public/lib/obiceiuri.js) - poarta de pornire, portofoliul,
 // raportul de duminica, regulile personale, botul de hartie. Pe botii lui reali unde se poate.
+import "./lib/text-ro-global.mjs";   // v100.314: modulele scriu rezultatele prin TextRo (o zecimală), ca în pagină și în colector
 import assert from "node:assert/strict";
 import fs from "node:fs";
 

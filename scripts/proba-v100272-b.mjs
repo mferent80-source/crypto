@@ -303,7 +303,7 @@ await test("6b grileVsCosturi: taxa de intrare (poziția de la pornire × comisi
 await test("6c eticheta: sfatul „Costurile” și rândul din Tablou spun că taxa de intrare e separată (o dată, estimată)", () => {
   const co = TE.grileVsCosturi(Object.assign({}, BOT_C, { brut: { buOrderData: { initPrice: "100", gridProfit24h: "0.01", trx24h: "1" } } }), T0 + 2 * ZI);
   const s = SF.sfaturi({ bot: BOT_C, costuri: co }).find((x) => x.cod === "costuri");
-  assert.ok(s, "lipsește sfatul de costuri"); assert.match(s.text, /comisioanele iau 0,19 pe zi \(fără taxa de intrare, ≈ 0,13 o dată\)/, s.text);
+  assert.ok(s, "lipsește sfatul de costuri"); assert.match(s.text, /comisioanele iau 0,2 pe zi \(fără taxa de intrare, ≈ 0,1 o dată\)/, s.text);
   const ex = fnApp("tbDeseneazaExtra");
   assert.match(ex, /linie\("Taxa de intrare \(o dată\)"/); assert.match(ex, /"medie de la pornire, fără taxa de intrare"/);
 });
