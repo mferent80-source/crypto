@@ -454,5 +454,17 @@ await test("revizia 🔵: colectorul scrie pe disc DOAR după ce serverul a prim
   assert.equal(cereri, 21, "a doua tură n-a cerut nimic"); assert.equal(st2.la, acum); assert.ok(!st2.inLucru); assert.ok(disc && disc.la === acum);
 });
 
+// ───────────── 7. Consilierul pe bot (el, 08.11: „fa ambele” — și rândul „+24,29 USDT” prins de gardă) ─────────────
+await test("Consilierul pe bot: totalul boților cu O zecimală („+24,3 USDT”, nu „+24,29”); suma mică nu iese „0,0”; la fel și fără TextRo (probele vechi)", () => {
+  const ist = (ctx, trades) => ctx.Consilier.sfaturiBot({ baza: "STX.PERP" }, { trades: trades.map((r) => ({ moneda: "STX", rezultat: r })), acum: ACUM }).find((x) => x.sursa === "istoric").titlu;
+  for (const ctx of [module_("text-ro.js", "consilier.js"), module_("consilier.js")]) {
+    const cu = typeof ctx.TextRo !== "undefined" ? "cu TextRo" : "fără TextRo";
+    assert.equal(ist(ctx, [12.1, 12.19]), "Pe STX: 2 boți, 2 pe plus, total +24,3 USDT", cu);
+    assert.equal(ist(ctx, [1, -2, 1, -2, 1, -2]), "Pe STX: 6 boți, 3 pe plus, total −3,0 USDT", cu);
+    assert.equal(ist(ctx, [0.03, 0.01]), "Pe STX: 2 boți, 2 pe plus, total +0,04 USDT", cu + ": suma mică");
+    assert.equal(ist(ctx, [1, -1]), "Pe STX: 2 boți, 1 pe plus, total 0,0 USDT", cu + ": zero fără semn");
+  }
+});
+
 console.log(`\n${teste - picate}/${teste} ${picate ? "PICĂ" : "trec"}\n`);
 if (picate) process.exit(1);

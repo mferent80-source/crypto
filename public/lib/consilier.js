@@ -13,6 +13,9 @@ var Consilier = (function () {
   // v100.69: „6 trade-uri”, „60 de trade-uri” - v100.71 (revizia pachetului 4, I1): si singularul („1 trade”, „1 bot”), prin TextRo.cate
   // v100.108: procentul cu semnul lui („−2,3%”); rezerva pentru contextele fără TextRo (probele vechi)
   function pctS(f) { f = Number(f); if (!isFinite(f)) return "—"; if (typeof TextRo !== "undefined" && TextRo.pctSemn) return TextRo.pctSemn(100 * f, 1); return (f > 0 ? "+" : f < 0 ? "−" : "") + Math.abs(100 * f).toFixed(1).replace(".", ",") + "%"; }
+  // v100.313 (el, 08.11: „fa ambele”): totalul boților cu O zecimală (regula lui: „+24,3 USDT”, nu „+24,29”), ca sfaturi.js -
+  // o sumă mică nu iese „0,0” (TextRo.zecMici); rezerva fără TextRo face la fel (probele vechi)
+  function usdS(x) { if (typeof TextRo !== "undefined" && TextRo.usdt && TextRo.zecMici) return TextRo.usdt(x, TextRo.zecMici(x)); x = Number(x); if (!isFinite(x)) return "—"; var a = Math.abs(x), z = a === 0 || a >= 0.1 ? 1 : a >= 0.01 ? 2 : 3, s = a.toFixed(z); return (x > 0 && Number(s) !== 0 ? "+" : x < 0 && Number(s) !== 0 ? "−" : "") + s.replace(".", ",") + " USDT"; }
   function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }   // v100.75: rezerva cu regula întreagă
   function ultima(b) { return Array.isArray(b) && b.length ? b[b.length - 1] : null; }
   function stat(l) {
@@ -108,7 +111,7 @@ var Consilier = (function () {
     var acum = ctx.acum || Date.now(), out = [], m = String(b.baza || b.moneda || "").replace(/\.PERP$/, "").replace(/_USDT.*$/, "");
     var ist = stat((Array.isArray(ctx.trades) ? ctx.trades : []).filter(function (t) { return t && t.moneda === m; }));
     // v100.69 (pachetul 4): USDT cu virgula, titlul ≤ 60, „(puține cazuri)”, „stopul” (vocabularul unic), actiunea la persoana I
-    if (ist.n) out.push({ nivel: ist.total < 0 && ist.n >= 2 ? "g" : "n", sursa: "istoric", titlu: "Pe " + m + ": " + cate(ist.n, "bot", "boți") + ", " + ist.pePlus + " pe plus, total " + (ist.total >= 0 ? "+" : "−") + Math.abs(ist.total).toFixed(2).replace(".", ",") + " USDT",
+    if (ist.n) out.push({ nivel: ist.total < 0 && ist.n >= 2 ? "g" : "n", sursa: "istoric", titlu: "Pe " + m + ": " + cate(ist.n, "bot", "boți") + ", " + ist.pePlus + " pe plus, total " + usdS(ist.total),
       text: ist.n < 10 ? "(puține cazuri)" : "", ceAsFace: ist.total < 0 && ist.n >= 3 ? "N-aș mări botul: pe " + m + " boții tăi au pierdut de obicei." : null });
     var fg = ctx.fg;
     if (fg && fgOk(fg.valoare) && (fg.valoare >= 75 || fg.valoare <= 25)) out.push({ nivel: "n", sursa: "piata", titlu: "Frica/lăcomia crypto e la " + fg.valoare + " (" + (FG[fg.clasa] || fg.clasa) + ")",

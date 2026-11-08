@@ -113,7 +113,7 @@ await test("consilierul pe poziție: titlul ≤ 60, acțiunile la persoana I, �
 await test("consilierul pe bot: USDT cu virgulă, „(puține cazuri)”, „stopul” (nu „opritorul”), acțiunea la persoana I", () => {
   const l = CS.sfaturiBot({ baza: "CRV.PERP" }, { trades: Array.from({ length: 6 }, (_, i) => ({ moneda: "CRV", rezultat: i % 2 ? -2 : 1 })), fg: { valoare: 82, clasa: "Extreme Greed" }, stiri: [], acum: T0 });
   const ist = l.find((x) => x.sursa === "istoric"), fg = l.find((x) => x.sursa === "piata");
-  assert.match(ist.titlu, /−3,00 USDT/); assert.ok(ist.titlu.length <= 60, ist.titlu); assert.equal(ist.text, "(puține cazuri)"); persoana(ist.ceAsFace, "istoric bot");
+  assert.match(ist.titlu, /−3,0 USDT/); assert.ok(ist.titlu.length <= 60, ist.titlu); assert.equal(ist.text, "(puține cazuri)"); persoana(ist.ceAsFace, "istoric bot");
   assert.doesNotMatch(fg.ceAsFace, /[Oo]pritor/); assert.match(fg.ceAsFace, /stopul/); persoana(fg.ceAsFace, "frica/lăcomia");
 });
 

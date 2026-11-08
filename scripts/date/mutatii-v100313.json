@@ -313,6 +313,30 @@
    "fisier": "scripts/lib/tura-curba-stop.mjs",
    "cauta": "if (st.inLucru) return { facut: false, motiv: \"inLucru\" };",
    "pune": ""
+  },
+  {
+   "nume": "consilierul: totalul boților iar cu două zecimale",
+   "fisier": "public/lib/consilier.js",
+   "cauta": "return TextRo.usdt(x, TextRo.zecMici(x));",
+   "pune": "return TextRo.usdt(x, 2);"
+  },
+  {
+   "nume": "consilierul: suma mică iese „0,0” (fără zecMici)",
+   "fisier": "public/lib/consilier.js",
+   "cauta": "return TextRo.usdt(x, TextRo.zecMici(x));",
+   "pune": "return TextRo.usdt(x, 1);"
+  },
+  {
+   "nume": "consilierul: rezerva fără TextRo cu două zecimale",
+   "fisier": "public/lib/consilier.js",
+   "cauta": "z = a === 0 || a >= 0.1 ? 1 : a >= 0.01 ? 2 : 3",
+   "pune": "z = 2"
+  },
+  {
+   "nume": "consilierul: zero cu semn („+0,0”)",
+   "fisier": "public/lib/consilier.js",
+   "cauta": "(x > 0 && Number(s) !== 0 ? \"+\"",
+   "pune": "(x >= 0 ? \"+\""
   }
  ]
 }
