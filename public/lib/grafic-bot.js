@@ -330,7 +330,8 @@ var GraficBot = (function () {
 
   // v100.99 (I-528): șansele MĂSURATE (Probabilitati.randuri) pe liniile lor: marginile în 24 h, lichidarea în 7 zile, ținta planului înaintea
   // stopului în 7 zile (cursa). Doar ce s-a măsurat - pe stopul botului nu există o cifră proprie (aceea e la acțiuni), deci nu se inventează.
-  var SANSE = { gridJos: ["iese-jos-24", "24 h"], gridSus: ["iese-sus-24", "24 h"], lich: ["lichidare", "7 zile"], planPlus: ["cursa", "înaintea stopului, 7 zile"] };
+  // v100.313: stopul botului are acum o cifră MĂSURATĂ - curba stopului (CurbaStop, 21 de perechi, 30 de zile), cu „~” (e a pieței, nu a monedei)
+  var SANSE = { gridJos: ["iese-jos-24", "24 h"], gridSus: ["iese-sus-24", "24 h"], lich: ["lichidare", "7 zile"], planPlus: ["cursa", "înaintea stopului, 7 zile"], stop: ["stop-24", "24 h", "~"] };
   function cuSanse(niv, sanse) {
     var dupa = {}; (Array.isArray(sanse) ? sanse : []).forEach(function (r) { if (r && r.cod && nr(r.p) !== null) dupa[r.cod] = r; });
     return niv.map(function (x) {
@@ -338,7 +339,7 @@ var GraficBot = (function () {
       // v100.196 (auditul 14.10, 🔴4 la statistică): niciodată „0%” / „100%” gol (pe walk-forward, unde scria „0%” lichidarea a venit în 2,3%) -
       // „< 1%” / „> 99%”, iar sub 1% și marginea de sus a intervalului (Wilson, pe cazurile independente), cât poate fi de fapt
       var k = Math.round(nr(r.p) * 100), icS = Array.isArray(r.ic) ? nr(r.ic[1]) : null;
-      var p = k < 1 ? "< 1%" : k > 99 ? "> 99%" : k + "%", pana = k < 1 && icS !== null && icS > 0 ? " (până la ~" + Math.max(1, Math.ceil(icS * 100)) + "%)" : "";
+      var p = k < 1 ? "< 1%" : k > 99 ? "> 99%" : (m[2] || "") + k + "%", pana = k < 1 && icS !== null && icS > 0 ? " (până la ~" + Math.max(1, Math.ceil(icS * 100)) + "%)" : "";
       return Object.assign({}, x, { sansa: m[1] + ": " + p + pana, sansaScurt: p, sansaLung: r.titlu + ": " + p + pana + (r.text ? " · " + r.text : "") });
     });
   }

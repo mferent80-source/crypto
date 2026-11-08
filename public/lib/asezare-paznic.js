@@ -123,6 +123,8 @@
     var bl = botLive(b), s = stopDrum(bl);
     add(b.gridJos, "grid jos", "var(--pzInfo)"); add(b.gridSus, "grid sus", "var(--pzInfo)");
     if (s) add(s.p, s.n, "var(--pzJos)", "", s.tit);
+    // v100.313: cifra măsurată a stopului (curba stopului, din Tabloul botului) lângă prețul lui
+    if (s && L.length && typeof tbStopSansaDrum === "function") { var sj = null; try { sj = tbStopSansaDrum(bl); } catch (e) { sj = null; } if (sj) L[L.length - 1].sansa = sj; }
     return L;
   }
   // v100.242: lățimea se cuantifică și nu se mută cât ține o bară de derulare (~15 px). 0 nu mai cade pe 280 (multe rânduri, card înalt).
@@ -141,11 +143,11 @@
     for (var mi = L.length - 1; mi >= 1; mi--) if (Math.abs(L[mi].p - L[mi - 1].p) / (hi - lo) < 0.004) { L[mi - 1].n += " · " + L[mi].n; L[mi - 1].cls += " " + L[mi].cls; L.splice(mi, 1); }
     var W = Math.max(280, latime || 1100), rand = [];   // rândurile etichetelor după lățimea REALĂ a cartelei (revizia I7)
     /* audit 23.10: var w = (x.n.length + 8) * 6.3 … rand[k] > cx - w / 2 - 8 socotea etichete centrate; sub 12% / peste 88% ancora() le lipește de margine ⇒ pe telefon se călcau. Acum: intervalul real (ancora + lungimea prețului). */
-    L.forEach(function (x) { var w = (x.n.length + 1 + fP(x.p).length) * 6.3, xp = +X(x.p), cx = xp * W / 100, a = xp < 12 ? cx - 6 : xp > 88 ? cx + 6 - w : cx - w / 2, k = 0; while (rand[k] != null && rand[k] > a - 8) k++; rand[k] = a + w; x.rand = k; });
+    L.forEach(function (x) { var w = (x.n.length + 1 + fP(x.p).length + (x.sansa ? x.sansa.length + 1 : 0)) * 6.3, xp = +X(x.p), cx = xp * W / 100, a = xp < 12 ? cx - 6 : xp > 88 ? cx + 6 - w : cx - w / 2, k = 0; while (rand[k] != null && rand[k] > a - 8) k++; rand[k] = a + w; x.rand = k; });
     var nrR = Math.max.apply(null, L.map(function (x) { return (x.rand || 0) + 1; })), h = '<div class="pzDrum' + (mic ? " pzDrumMic" : "") + '"' + (mic ? "" : ' style="padding-bottom:' + (14 + nrR * 16) + 'px"') + '><div class="pzDrumPista">';
     var gj = nr(b.gridJos), gs = nr(b.gridSus);
     if (gj && gs) h += '<i class="pzDrumGrid" style="left:' + X(gj) + '%;width:' + (X(gs) - X(gj)).toFixed(2) + '%"></i>';
-    L.forEach(function (x) { h += '<i class="pzDrumNiv ' + x.cls + '" style="left:' + X(x.p) + '%;background:' + x.c + '" title="' + esc(x.n + " " + fP(x.p) + (x.tit ? " · " + x.tit : "")) + '"></i>' + (mic ? "" : '<span class="pzDrumEt" style="left:' + X(x.p) + '%;' + ancora(X(x.p)) + 'top:' + (16 + x.rand * 16) + 'px;color:' + culText(x.c) + '">' + esc(x.n) + ' <b>' + fP(x.p) + '</b></span>'); });
+    L.forEach(function (x) { h += '<i class="pzDrumNiv ' + x.cls + '" style="left:' + X(x.p) + '%;background:' + x.c + '" title="' + esc(x.n + " " + fP(x.p) + (x.tit ? " · " + x.tit : "")) + '"></i>' + (mic ? "" : '<span class="pzDrumEt" style="left:' + X(x.p) + '%;' + ancora(X(x.p)) + 'top:' + (16 + x.rand * 16) + 'px;color:' + culText(x.c) + '">' + esc(x.n) + ' <b>' + fP(x.p) + '</b>' + (x.sansa ? ' <span class="pzDrumSansa">' + esc(x.sansa) + '</span>' : '') + '</span>'); });
     h += '<i class="pzDrumAcum" style="left:' + X(p) + '%" title="acum ' + fP(p) + '"></i>' + (mic ? "" : '<span class="pzDrumAcumEt" style="left:' + X(p) + '%;' + ancora(X(p)) + '">acum ' + fP(p) + '</span>');
     return h + '</div></div>';
   }

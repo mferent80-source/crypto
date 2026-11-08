@@ -685,6 +685,10 @@ function acasaDeseneaza() {
   var boti = typeof tbStare !== "undefined" && tbStare.boti && tbStare.boti.length ? tbStare.boti : (typeof contTot !== "undefined" ? contTot.boti : null);
   var act = (boti || []).filter(function (b) { return b && b.activ; });
   var hb = '<div class="acCap"><h4>Boții tăi</h4><span class="acSub">' + (boti ? acCate(act.length, "activ", "activi") + " · Pionex" : "aduc boții…") + '</span></div>';
+  /* v100.313: „CONTEAZĂ ACUM” și pe Acasă - doar stopul (≥ 30 din 100 într-o zi) sau un rând roșu, pentru botul din Tablou (Conteaza.acasa) */
+  var ctB = typeof tbStare !== "undefined" && tbStare.routeOk !== false && tbStare.bot && act.some(function (b) { return b.id === tbStare.bot.id; }) ? tbStare.bot : null;
+  var ctA = ctB && typeof tbConteazaLista === "function" && typeof Conteaza !== "undefined" ? Conteaza.acasa(tbConteazaLista(ctB), String(ctB.baza || "").replace(/\.PERP$/, "")) : null;
+  if (ctA) hb += '<div class="acCtLinie' + (ctA.ton === "galben" ? ' acCtGalben' : '') + '">⚠ <b>' + escapeHtml(ctA.titlu) + '</b><br>' + escapeHtml(ctA.text) + '</div>';
   act.slice(0, 4).forEach(function (b) {
     var nume = String(b.baza || "").replace(/\.PERP$/, ""), tot = Number(b.profitTotal), pr = Number(b.pretCurent), jo = Number(b.gridJos), su = Number(b.gridSus);
     var inGrid = su > jo && pr > 0 && isFinite(pr) ? Math.round((pr - jo) / (su - jo) * 100) : null, panaJos = jo > 0 && pr > 0 ? (pr / jo - 1) * 100 : null;

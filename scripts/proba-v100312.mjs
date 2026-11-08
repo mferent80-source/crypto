@@ -273,7 +273,7 @@ await test("🔑 I-842: Tablou „Pe 7 zile” - gridul față de mișcarea obi�
   const MC = citeste("scripts", "lib", "tura-monte-carlo-bot.mjs"); assert.equal((MC.match(/regimLa, scurt, sapt \}/g) || []).length, 4);
   assert.match(MC, /sapt = d\.GridSim\.textSaptamana && d\.GridSim\.riscSaptamana \? d\.GridSim\.textSaptamana\(d\.GridSim\.riscSaptamana\(rez, b15, b\), d\.laStop \? d\.laStop\(b\) : null\) \|\| null : null;/);
   assert.match(citeste("scripts", "colector.mjs"), /randuri15: lumanari15M, laStop: \(x\) => \(x && x\.opritorPierdereActiv \? TabloExtra\.totalLaOpritor\(x\) : null\),/);
-  assert.match(A, /\+tbMcScurtHtml\(mc\.scurt\)\+tbMcScurtVerifHtml\([^)]*:null\)\+\(mc\.sapt\?'<span class="tbSub tbMcScurt tbMcSapt">'\+escapeHtml\(mc\.sapt\)\+'<\/span>':''\)\+/);
+  assert.match(A, /\+tbMcScurtHtml\(mc\.scurt(?:,[^+]*)?\)\+tbMcScurtVerifHtml\([^)]*:null\)\+\(mc\.sapt\?'<span class="tbSub tbMcScurt tbMcSapt">'\+escapeHtml\(mc\.sapt\)\+'<\/span>':''\)\+/);
   assert.match(A, /function tbMcSapt\(rez,b15,b\)\{try\{[^}]*GridSim\.riscSaptamana\(rez,b15,b\),ls=b&&b\.opritorPierdereActiv&&typeof TabloExtra!=="undefined"&&TabloExtra\.totalLaOpritor\?TabloExtra\.totalLaOpritor\(b\):null/);
 });
 await test("🔑 I-844: raportul de duminică - un rând pe căderi, direcție și caiet, cu zilele lipsă din săptămână; fără verdict", () => {
@@ -367,8 +367,8 @@ await test("colectorul v101.170: tura probelor după direcție (caietul o dată 
 });
 await test("versiunile v100.312: index ×4, BUILD_INFO, sw, versiune.js, package.json (+ test:v100312 în lanț)", () => {
   const H = citeste("public", "index.html"), B = JSON.parse(citeste("BUILD_INFO.json")), P = JSON.parse(citeste("package.json"));
-  assert.ok((H.match(/v100\.312/g) || []).length >= 4); assert.match(B.version, /^v100\.312/); assert.match(citeste("public", "sw.js"), /crypto-radar-v100-312/);
-  assert.match(citeste("functions", "_shared", "versiune.js"), /v100\.312/); assert.match(P.version, /^100\.312/);
+  assert.ok((H.match(/v100\.31[2-9]/g) || []).length >= 4); assert.match(B.version, /^v100\.31[2-9]/); assert.match(citeste("public", "sw.js"), /crypto-radar-v100-31[2-9]/);   // v100.313: versiunea ≥ v100.312
+  assert.match(citeste("functions", "_shared", "versiune.js"), /v100\.31[2-9]/); assert.match(P.version, /^100\.31[2-9]/);
   assert.equal(P.scripts["test:v100312"], "node scripts/proba-v100312.mjs"); assert.match(P.scripts.test, /npm run test:v100312/);
 });
 

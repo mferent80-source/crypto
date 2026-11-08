@@ -405,7 +405,9 @@ var GridSim = (function () {
     var atins = o7.plan && o7.plan.dejaAtins && plan && (plan.minus > 0 || plan.plus > 0) ? o7.plan.dejaAtins : null;
     if (atins) parti.push("planul atins: " + (atins === "plus" ? "încasează" : "ieși"));
     // revizia (5): sub 0,5% nu se scrie „0%”
-    if (o7.pStop >= 0.005) parti.push("stopul atins " + pr(o7.pStop)); if (o7.pLich >= 0.005) parti.push("lichidare " + pr(o7.pLich)); if (o7.pTp >= 0.005) parti.push("TP atins " + pr(o7.pTp));
+    // v100.313: reluarea arată botul OPRIT ⇒ drumurile stau pe loc și „stopul atins 100%” ar minți (cifra măsurată e pe rândul stopului din grafic)
+    var opritMeu = !!(meu && rez.acum.oprit);
+    if (o7.pStop >= 0.005 && !opritMeu) parti.push("stopul atins " + pr(o7.pStop)); if (o7.pLich >= 0.005 && !opritMeu) parti.push("lichidare " + pr(o7.pLich)); if (o7.pTp >= 0.005 && !opritMeu) parti.push("TP atins " + pr(o7.pTp));
     var faCe = String(v.faCe || "").split(/[.:]/)[0].trim(); if (faCe) parti.push("«" + faCe + "»");
     if (o7 && o7.funding != null && o7.funding !== "" && isFinite(Number(o7.funding))) {
       var fv = Number(o7.funding), fa = Math.abs(fv), fban = fa < 0.05 ? "sub 0,1 USDT" : "≈ " + nrRo(fa, 1) + " USDT";

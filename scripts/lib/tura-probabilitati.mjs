@@ -20,6 +20,8 @@ export async function turaProbabilitati(d) {
       const tinta = plan && nr(plan.plus) > 0 ? d.TabloExtra.pretTintaPentru(b, nr(plan.plus)) : null;
       const stop = b.opritorPierdereActiv && nr(b.opritorPierdere) > 0 ? nr(b.opritorPierdere) : plan && nr(plan.minus) > 0 ? d.TabloExtra.pretOpritorPentru(b, -nr(plan.minus)) : null;
       const rez = d.Probabilitati.pentruBot(bare, { acum: d.acum, pret: nr(b.pretCurent), dir, jos: nr(b.gridJos), sus: nr(b.gridSus), lichidare: dir === "short" ? nr(b.lichidareSus) : nr(b.lichidareJos), tinta, stop });
+      // v101.171 (Radar v100.313): ATR(14) pe barele de 1 h ale monedei - pagina pune stopul botului pe curba stopului (CurbaStop) cu prețul viu
+      if (rez && d.CurbaStop) { try { const a = d.CurbaStop.atr14(bare); if (a > 0) rez.atr1h = a; } catch (e) { d.jurnal("atr1h ESEC", b.id, e.message); } }
       // v101.28 (I-471): indicatorii aprinsi acum, cu dovada din trecutul monedei (Bonferroni)
       if (rez && d.Dovada) { try { rez.indicatori = d.Dovada.peBot(bare, { acum: d.acum, pret: nr(b.pretCurent), dir, jos: nr(b.gridJos), sus: nr(b.gridSus) }); } catch (e) { d.jurnal("dovada ESEC", b.id, e.message); } }
       // v101.56 (rețeaua neuronală, livrarea 1): a doua părere 🧠 - aceleași bare și aceleași niveluri ca 🎲; nimic fără modele

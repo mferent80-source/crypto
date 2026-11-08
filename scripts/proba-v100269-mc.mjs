@@ -187,7 +187,7 @@ await test("15 pe pagina botului: rândul riscului pe termen scurt (riscul, nu c
   assert.match(t, /^Pe termen scurt \(riscul, nu câștigul\): stopul atins în 1 h: 2,0% · în 4 h: 7,0% · într-o zi: 21,3%/);
   assert.match(t, /cele mai proaste 5% într-o zi: −4,4 USDT/); assert.match(t, /lichidare într-o zi: 0,4%/);
   assert.equal(box2.tbMcScurtHtml(null), ""); assert.equal(box2.tbMcScurtHtml([]), "");
-  assert.match(APP, /tbMcScurtHtml\(mc\.scurt\)/, "rândul Monte Carlo nu arată riscul scurt");
+  assert.match(APP, /tbMcScurtHtml\(mc\.scurt[,)]/, "rândul Monte Carlo nu arată riscul scurt");   // v100.313: + al doilea argument (reluarea OPRIT)
   assert.match(fnApp("tbMcRand"), /scurt:tbMc\.rand\.scurt\|\|null/, "tbMcRand nu dă riscul scurt");
 });
 await test("16 textul calibrării spune unde s-a judecat (la închidere, mediana după X h), nu „judecate după 7 zile”", () => {

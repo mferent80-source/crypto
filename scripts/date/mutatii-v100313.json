@@ -1,0 +1,318 @@
+{
+ "_nota": "v100.313 (08.11.2026): mutațiile curbei stopului, ale blocului „CONTEAZĂ ACUM”, ale rutei, colectorului, paginii și ale textului Monte Carlo; fiecare trebuie PRINSĂ de proba listei.",
+ "proba": "scripts/proba-v100313.mjs",
+ "mutatii": [
+  {
+   "nume": "curba: fără fereastra de 30 de zile",
+   "fisier": "public/lib/curba-stop.js",
+   "cauta": "if (!(fin <= acum && fin > acum - zile * ZI) || !(a[i] > 0)) continue;",
+   "pune": "if (!(fin <= acum) || !(a[i] > 0)) continue;"
+  },
+  {
+   "nume": "curba: doar excursia în jos (nu simetrică)",
+   "fisier": "public/lib/curba-stop.js",
+   "cauta": "gr[H].push((b[i].c - mn) / a[i]); gr[H].push((mx - b[i].c) / a[i]);",
+   "pune": "gr[H].push((b[i].c - mn) / a[i]);"
+  },
+  {
+   "nume": "curba: ATR pe 13 în loc de 14",
+   "fisier": "public/lib/curba-stop.js",
+   "cauta": "for (i = 14; i < n; i++) a[i] = (a[i - 1] * 13 + tr[i]) / 14;",
+   "pune": "for (i = 14; i < n; i++) a[i] = (a[i - 1] * 12 + tr[i]) / 13;"
+  },
+  {
+   "nume": "curba: pornirile din 2 în 2 (nu din 4 în 4)",
+   "fisier": "public/lib/curba-stop.js",
+   "cauta": "var zile = o.zile || 30, pas = o.pas || 4,",
+   "pune": "var zile = o.zile || 30, pas = 2,"
+  },
+  {
+   "nume": "curba: o curbă veche de 3 zile tot se arată",
+   "fisier": "public/lib/curba-stop.js",
+   "cauta": "VECHE = 36 * ORA;",
+   "pune": "VECHE = 72 * ORA;"
+  },
+  {
+   "nume": "stop long deja trecut tot primește cifră",
+   "fisier": "public/lib/curba-stop.js",
+   "cauta": "if (dir === \"long\" && !(stop < pret)) return null;",
+   "pune": "if (false) return null;"
+  },
+  {
+   "nume": "stop short deja trecut tot primește cifră",
+   "fisier": "public/lib/curba-stop.js",
+   "cauta": "if (dir === \"short\" && !(stop > pret)) return null;",
+   "pune": "if (false) return null;"
+  },
+  {
+   "nume": "șansa fără interpolare (treptat)",
+   "fisier": "public/lib/curba-stop.js",
+   "cauta": "if (d < g[k + 1]) return p[k] + (p[k + 1] - p[k]) * (d - g[k]) / (g[k + 1] - g[k]);",
+   "pune": "if (d < g[k + 1]) return p[k];"
+  },
+  {
+   "nume": "mutarea stopului în partea greșită",
+   "fisier": "public/lib/curba-stop.js",
+   "cauta": "mut = dm === null ? null : sus ? pret + dm * atr : pret - dm * atr;",
+   "pune": "mut = dm === null ? null : sus ? pret - dm * atr : pret + dm * atr;"
+  },
+  {
+   "nume": "bloc: pragul stopului coborât la 25 din 100",
+   "fisier": "public/lib/conteaza.js",
+   "cauta": "var PRAG = { stop: 0.3, rosu: 0.5 }, MAX = 3;",
+   "pune": "var PRAG = { stop: 0.25, rosu: 0.5 }, MAX = 3;"
+  },
+  {
+   "nume": "bloc: roșul abia de la 60 din 100",
+   "fisier": "public/lib/conteaza.js",
+   "cauta": "var PRAG = { stop: 0.3, rosu: 0.5 }, MAX = 3;",
+   "pune": "var PRAG = { stop: 0.3, rosu: 0.6 }, MAX = 3;"
+  },
+  {
+   "nume": "bloc: 4 rânduri în loc de 3",
+   "fisier": "public/lib/conteaza.js",
+   "cauta": "var PRAG = { stop: 0.3, rosu: 0.5 }, MAX = 3;",
+   "pune": "var PRAG = { stop: 0.3, rosu: 0.5 }, MAX = 4;"
+  },
+  {
+   "nume": "bloc: marginea urcă la fel de sus ca un critic",
+   "fisier": "public/lib/conteaza.js",
+   "cauta": "pune({ cheie: \"margine\", ton: s.ton === \"critic\" ? \"rosu\" : \"galben\", grav: s.ton === \"critic\" ? 0 : 3,",
+   "pune": "pune({ cheie: \"margine\", ton: s.ton === \"critic\" ? \"rosu\" : \"galben\", grav: s.ton === \"critic\" ? 0 : 0,"
+  },
+  {
+   "nume": "bloc: alerta depășită urcă și ea",
+   "fisier": "public/lib/conteaza.js",
+   "cauta": "if (!r || r.c !== \"r\" || r.depasit || !r.titlu) return;",
+   "pune": "if (!r || r.c !== \"r\" || !r.titlu) return;"
+  },
+  {
+   "nume": "bloc: „100 din 100”",
+   "fisier": "public/lib/conteaza.js",
+   "cauta": "function din100(p) { return String(Math.max(1, Math.min(99, Math.round(p * 100)))); }",
+   "pune": "function din100(p) { return String(Math.round(p * 100)); }"
+  },
+  {
+   "nume": "bloc: titlul fără escape",
+   "fisier": "public/lib/conteaza.js",
+   "cauta": "<div class=\"ctTxt\"><b>' + esc(x.titlu) + '</b>'",
+   "pune": "<div class=\"ctTxt\"><b>' + x.titlu + '</b>'"
+  },
+  {
+   "nume": "server: p24 crescătoare acceptată",
+   "fisier": "functions/api/istoric-bot.js",
+   "cauta": "x>=0&&x<=1&&(!k||x<=a[k-1]+1e-12))",
+   "pune": "x>=0&&x<=1)"
+  },
+  {
+   "nume": "tura: scrie și cu 9 perechi",
+   "fisier": "scripts/lib/tura-curba-stop.mjs",
+   "cauta": "export const PAS_TURA = 6 * ORA, REINCERC = ORA, MIN_PERECHI = 10;",
+   "pune": "export const PAS_TURA = 6 * ORA, REINCERC = ORA, MIN_PERECHI = 9;"
+  },
+  {
+   "nume": "tura: cere din nou înainte de 6 ore",
+   "fisier": "scripts/lib/tura-curba-stop.mjs",
+   "cauta": "if (acum - (st.la || 0) < PAS_TURA || acum - (st.esecLa || 0) < REINCERC) return { facut: false };",
+   "pune": "if (acum - (st.esecLa || 0) < REINCERC) return { facut: false };"
+  },
+  {
+   "nume": "prob: atr1h sub alt nume",
+   "fisier": "scripts/lib/tura-probabilitati.mjs",
+   "cauta": "if (a > 0) rez.atr1h = a;",
+   "pune": "if (a > 0) rez.atr = a;"
+  },
+  {
+   "nume": "pagina: blocul se rescrie la fiecare desen (pierde clicul)",
+   "fisier": "public/app.js",
+   "cauta": "if(tbStare.ctHtml!==h){el.innerHTML=h;tbStare.ctHtml=h}",
+   "pune": "{el.innerHTML=h;tbStare.ctHtml=h}"
+  },
+  {
+   "nume": "pagina: rândul stop-24 lipsește din șanse",
+   "fisier": "public/app.js",
+   "cauta": "return s&&Array.isArray(l)?l.concat(",
+   "pune": "return false&&Array.isArray(l)?l.concat("
+  },
+  {
+   "nume": "pagina: stopul inactiv tot primește cifră",
+   "fisier": "public/app.js",
+   "cauta": "function tbStopSansa(b){if(!b||typeof CurbaStop===\"undefined\"||!b.opritorPierdereActiv)return null;",
+   "pune": "function tbStopSansa(b){if(!b||typeof CurbaStop===\"undefined\")return null;"
+  },
+  {
+   "nume": "grafic: stopul fără „~” (pare măsurat pe monedă)",
+   "fisier": "public/lib/grafic-bot.js",
+   "cauta": "stop: [\"stop-24\", \"24 h\", \"~\"] };",
+   "pune": "stop: [\"stop-24\", \"24 h\"] };"
+  },
+  {
+   "nume": "Monte Carlo: „stopul atins 100%” la botul OPRIT în reluare",
+   "fisier": "public/lib/grid-sim.js",
+   "cauta": "var opritMeu = !!(meu && rez.acum.oprit);",
+   "pune": "var opritMeu = false;"
+  },
+  {
+   "nume": "Monte Carlo scurt: „100,0%” la botul OPRIT",
+   "fisier": "public/app.js",
+   "cauta": "if(oprit)par.push(\"reluarea nu se potrivește",
+   "pune": "if(false)par.push(\"reluarea nu se potrivește"
+  },
+  {
+   "nume": "CSS: blocul după panoul de cifre (order 13)",
+   "fisier": "public/app.css",
+   "cauta": ".pzDemo #tabloubot .tbCadru>#ctAcum{order:11}",
+   "pune": ".pzDemo #tabloubot .tbCadru>#ctAcum{order:13}"
+  },
+  {
+   "nume": "revizia 🔴: alt bot cere iar cifrele lui (cererile se calcă pe telefon)",
+   "fisier": "public/app.js",
+   "cauta": "t=tbStare.bot&&tbStare.bot.id===b.id?tbProbPt(b):(tbProb.botId===b.id?tbProb:null)",
+   "pune": "t=tbProbPt(b)"
+  },
+  {
+   "nume": "revizia: drumul socotește cifra pe botul fără prețul viu",
+   "fisier": "public/lib/asezare-paznic.js",
+   "cauta": "sj = tbStopSansaDrum(bl);",
+   "pune": "sj = tbStopSansaDrum(b);"
+  },
+  {
+   "nume": "revizia: stopul dincolo de lichidare tot primește cifră",
+   "fisier": "public/app.js",
+   "cauta": "if(TE&&TE.stopDincoloDeLichidare&&TE.stopDincoloDeLichidare(b))return null;",
+   "pune": ""
+  },
+  {
+   "nume": "revizia: fără plafonul marginii",
+   "fisier": "public/app.js",
+   "cauta": "if(pm!==null&&s.p24>pm){s.p24=pm;s.plafon=parte}",
+   "pune": ""
+  },
+  {
+   "nume": "revizia: plafonul pe partea greșită a marginii",
+   "fisier": "public/app.js",
+   "cauta": "parte=dir===\"long\"&&gj>0&&s.stop<gj?\"jos\"",
+   "pune": "parte=dir===\"long\"&&gj>0&&s.stop>gj?\"jos\""
+  },
+  {
+   "nume": "revizia: mutarea în procente fără împărțirea la investiție",
+   "fisier": "public/app.js",
+   "cauta": "s.mutRaport=tm!==null&&isFinite(tm)?tm/inv:null",
+   "pune": "s.mutRaport=tm!==null&&isFinite(tm)?tm:null"
+  },
+  {
+   "nume": "revizia: stopul în procente spus ca preț",
+   "fisier": "public/lib/conteaza.js",
+   "cauta": "var et = rap !== null ? pct1(rap) + \" din investiție, acum pe la \" + P : P",
+   "pune": "var et = P"
+  },
+  {
+   "nume": "revizia 🟡1: același fapt de două ori în bloc",
+   "fisier": "public/lib/conteaza.js",
+   "cauta": "out.some(function (o) { return acelasi(o.titlu, it.titlu); })",
+   "pune": "false"
+  },
+  {
+   "nume": "revizia: titlul din bloc cu literă mică",
+   "fisier": "public/lib/conteaza.js",
+   "cauta": "it.titlu = cap(it.titlu); ",
+   "pune": ""
+  },
+  {
+   "nume": "revizia: „15 de monede”",
+   "fisier": "public/lib/conteaza.js",
+   "cauta": "cate(perechi, \"monedă\", \"monede\")",
+   "pune": "perechi + \" de monede\""
+  },
+  {
+   "nume": "revizia: pragul pe cifra brută (~30 pe grafic, nimic în bloc)",
+   "fisier": "public/lib/conteaza.js",
+   "cauta": "if (pc < Math.round(PRAG.stop * 100)) return null;",
+   "pune": "if (p < PRAG.stop) return null;"
+  },
+  {
+   "nume": "revizia: Acasă fără tonul rândului",
+   "fisier": "public/lib/conteaza.js",
+   "cauta": ", ton: x.ton };",
+   "pune": " };"
+  },
+  {
+   "nume": "revizia 🟡7: lista nu se redesenează când se schimbă blocul",
+   "fisier": "public/app.js",
+   "cauta": "if(!dinTodo&&vechi!==sus.join(\"\\n\")&&typeof tbRenderTodo===\"function\")tbRenderTodo();",
+   "pune": ""
+  },
+  {
+   "nume": "revizia 🟡7: lista cheamă blocul fără `true`",
+   "fisier": "public/app.js",
+   "cauta": "tbStare.todoLista=l;if(typeof tbRenderConteaza===\"function\")tbRenderConteaza(true);",
+   "pune": "tbStare.todoLista=l;if(typeof tbRenderConteaza===\"function\")tbRenderConteaza();"
+  },
+  {
+   "nume": "revizia 🟡8: Acasă cu citirea picată",
+   "fisier": "public/lib/acasa-ecran.js",
+   "cauta": "typeof tbStare !== \"undefined\" && tbStare.routeOk !== false && tbStare.bot && act.some(",
+   "pune": "typeof tbStare !== \"undefined\" && tbStare.bot && act.some("
+  },
+  {
+   "nume": "revizia 🟡3: „lichidat” spus „oprit”",
+   "fisier": "public/app.js",
+   "cauta": "(oprit===\"LICHIDAT\"?\"lichidat\":\"oprit\")",
+   "pune": "\"oprit\""
+  },
+  {
+   "nume": "revizia 🟡3: trimite la rândul stopului și fără cifră",
+   "fisier": "public/app.js",
+   "cauta": "+(areCifra?\" — șansa",
+   "pune": "+(true?\" — șansa"
+  },
+  {
+   "nume": "revizia 🟡3: lichidarea reluării oprite tot scrisă",
+   "fisier": "public/lib/grid-sim.js",
+   "cauta": "if (o7.pLich >= 0.005 && !opritMeu)",
+   "pune": "if (o7.pLich >= 0.005)"
+  },
+  {
+   "nume": "revizia: drumul „~1%” în loc de „< 1%”",
+   "fisier": "public/app.js",
+   "cauta": "(k<1?\"< 1%\":k>99?\"> 99%\":\"~\"+k+\"%\")",
+   "pune": "\"~\"+Math.max(1,Math.min(99,k))+\"%\""
+  },
+  {
+   "nume": "revizia: curba fără excursii trece de valida",
+   "fisier": "public/lib/curba-stop.js",
+   "cauta": "if (!(nr(c.n24) > 0) || !(nr(c.n72) > 0)) return false;",
+   "pune": ""
+  },
+  {
+   "nume": "revizia: mutarea sub zero se dă",
+   "fisier": "public/lib/curba-stop.js",
+   "cauta": "if (mut !== null && !(mut > 0)) { mut = null; dm = null; }",
+   "pune": ""
+  },
+  {
+   "nume": "revizia: cădere de rețea aruncă curba bună",
+   "fisier": "public/app.js",
+   "cauta": "tbCurba.c=r&&r.curbaStop||null}).catch(function(){})",
+   "pune": "tbCurba.c=r&&r.curbaStop||null}).catch(function(){tbCurba.c=null})"
+  },
+  {
+   "nume": "revizia: serverul primește cifre ca text",
+   "fisier": "functions/api/istoric-bot.js",
+   "cauta": "nu=x=>typeof x===\"number\"&&isFinite(x)",
+   "pune": "nu=x=>nr(x)!==null"
+  },
+  {
+   "nume": "revizia: discul scris și când serverul n-a primit",
+   "fisier": "scripts/lib/tura-curba-stop.mjs",
+   "cauta": "catch (e) { st.esecLa = acum; d.jurnal(\"curba stopului: serverul n-a primit-o",
+   "pune": "catch (e) { d.scrieDisc(c); st.esecLa = acum; d.jurnal(\"curba stopului: serverul n-a primit-o"
+  },
+  {
+   "nume": "revizia: două ture deodată",
+   "fisier": "scripts/lib/tura-curba-stop.mjs",
+   "cauta": "if (st.inLucru) return { facut: false, motiv: \"inLucru\" };",
+   "pune": ""
+  }
+ ]
+}

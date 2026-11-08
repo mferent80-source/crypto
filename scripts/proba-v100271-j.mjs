@@ -244,7 +244,7 @@ await test("16 „strâng date” sub 30 de judecate sau sub 10 zile (fără cif
   assert.doesNotMatch(txt(f(SC, { ore: [RAND(1, { n: 40, zile: 12, nSub5: 0 })] })), /NaN|undefined|null/);
 });
 await test("17 rândul Monte Carlo: verificarea chiar după rândul riscului, din raportul colectorului (tbMcKv.d.calibrareScurt)", () => {
-  assert.match(APP, /tbMcScurtHtml\(mc\.scurt\)\+tbMcScurtVerifHtml\(mc\.scurt,typeof tbMcKv!=="undefined"&&tbMcKv&&tbMcKv\.d\?tbMcKv\.d\.calibrareScurt:null\)/, "apelul lipsește lângă tbMcScurtHtml");
+  assert.match(APP, /tbMcScurtHtml\(mc\.scurt(?:,[^+]*)?\)\+tbMcScurtVerifHtml\(mc\.scurt,typeof tbMcKv!=="undefined"&&tbMcKv&&tbMcKv\.d\?tbMcKv\.d\.calibrareScurt:null\)/, "apelul lipsește lângă tbMcScurtHtml");
   assert.equal((APP.match(/\nfunction tbMcScurtVerifHtml\(/g) || []).length, 1, "o singură funcție cu numele ăsta");
 });
 

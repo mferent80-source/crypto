@@ -200,7 +200,7 @@ var Sfaturi = (function () {
     // F) Punctul de zero.
     var z = x.zero;
     if (z && z.pretZero != null && z.distantaZeroPct != null && tot !== null && tot < 0) {
-      out.push({ cod: "zero", ton: "info", titlu: "Botul iese pe zero la " + pret(z.pretZero) + " (" + proc(100 * z.distantaZeroPct) + " de aici)",
+      out.push({ cod: "zero", ton: "info", pctZero: 100 * z.distantaZeroPct, titlu: "Botul iese pe zero la " + pret(z.pretZero) + " (" + proc(100 * z.distantaZeroPct) + " de aici)",
         text: "Închis acum, ai lua " + (z.iei != null ? TextRo.num(z.iei, 2) + " USDT" : "—") + (inv ? " din " + TextRo.num(inv, 2) + " investiți" : "") + ".",
         // v100.40 (audit 30.09): pe minus, prețul de zero e DINCOLO de pretul de acum (deasupra la long, dedesubt la short) -> e un
         // TAKE-PROFIT; un stop pus acolo s-ar executa pe loc (contrar cartelei „Stopul” de pe acelasi ecran)
