@@ -91,6 +91,8 @@ await test("foaia de stil: rândul pliat nu-și desenează copiii (rămân în p
   ]) assert.ok(CSS.includes(s), "lipsește: " + s);
   assert.ok(!/\[data-rand="pliat"\]\{/.test(CSS) && !/\[data-rand="deschis"\]\{/.test(CSS), "fără :not([hidden]) o secțiune ascunsă ar apărea ca rând gol");
   assert.equal(pandaInainteaCozii(CSS), "");
+  /* cele patru butoane ale antetului se rup pe rânduri: pe un singur rând pagina ieșea din telefon (proba de telefon: 414 px pe 390) */
+  assert.ok(CSS.includes("html.pzDemo #tabloubot .tbAntet{flex-wrap:wrap;gap:8px}") && CSS.includes("html.pzDemo #tabloubot .tbAntet .tbActiuni{flex-wrap:wrap;min-width:0;justify-content:flex-end}"));
   assert.ok(CSS.indexOf("/* v100.317 (el, 10.11.2026") > CSS.indexOf("/* ==== v100.316 TEMA TABLOULUI: sfârșit ==== */"));
 });
 await test("pagina: butoanele „Deschide tot” și „Strânge tot” în antet, acțiunea permisă, codul pornește la DOMContentLoaded și se reîmprospătează doar pe Tablou", () => {

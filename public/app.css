@@ -4569,6 +4569,9 @@ html.pzDemo #tabloubot .tbCadru>details.tbPl>summary::before{color:var(--pzT0);w
 html.pzDemo #tabloubot .tbCadru>details.tbPl>summary>b{flex:0 0 250px;max-width:60%;font-weight:600}
 html.pzDemo #tabloubot .tbCadru>details.tbPl>summary>.tbSub{margin-left:0;text-align:left;font-size:13.5px;color:var(--pzT1);min-width:0}
 html.pzDemo #tabloubot [data-rand="pliat"]::before{box-sizing:border-box}
+/* antetul are acum patru butoane: se rup pe rânduri, altfel pagina iese din ecranul telefonului (proba de telefon: 414 px pe 390) */
+html.pzDemo #tabloubot .tbAntet{flex-wrap:wrap;gap:8px}
+html.pzDemo #tabloubot .tbAntet .tbActiuni{flex-wrap:wrap;min-width:0;justify-content:flex-end}
 html.pzDemo #tabloubot #tbRandDeschide,html.pzDemo #tabloubot #tbRandStrange{border-color:transparent;color:var(--pzT1);padding-left:8px;padding-right:8px}
 html.pzDemo #tabloubot{font-variant-emoji:text}
 @media (max-width:640px){
