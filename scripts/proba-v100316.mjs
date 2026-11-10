@@ -74,13 +74,14 @@ await test("stratul scris de mână stă DUPĂ blocul generat și ÎNAINTEA pân
     "html.pzDemo #tabloubot *{font-family:inherit!important}", "html.pzDemo #tabloubot{color:var(--pzT0)}",
     "html.pzDemo #tabloubot .tbCadru:has(>#tbMcSus:not([hidden])) #tbCitire .tbCitMc>*{display:none}",
   ]) assert.ok(strat.includes(s), "lipsește: " + s);
-  assert.ok(!/display:none/.test(strat.replace(/#tbCitire \.tbCitMc>\*\{display:none\}/, "")), "stratul nu ascunde nimic în afară de dublura Monte Carlo");
+  /* v100.317: rândurile pliate nu-și desenează copiii (rămân în pagină) - a doua și ultima ascundere din strat */
+  assert.ok(!/display:none/.test(strat.replace(/#tbCitire \.tbCitMc>\*\{display:none\}/, "").replace(/\[data-rand="pliat"\]>\*\{display:none!important\}/, "")), "stratul nu ascunde nimic în afară de dublura Monte Carlo și de copiii rândurilor pliate");
   assert.ok(CSS.includes("#tabloubot .tbCadru:has(>#tbMcSus:not([hidden])) #tbCitireMobil .tbCitMc{display:none}"), "regula veche de pe telefon rămâne");
 });
 await test("tema: implicit deschisă, butonul o comută și se ține minte; clasa tbZi pe #tabloubot; graficul primește paleta ei", () => {
-  assert.ok(HTML.includes('<button type="button" class="actionGhost" id="tbTemaBtn" aria-pressed="false" data-action-click="tbTemaComuta()">Temă închisă</button>'));
+  assert.ok(HTML.includes('<button type="button" class="actionGhost" id="tbTemaBtn" aria-pressed="false" data-action-click="tbTemaComuta()">Temă închisă</button>'));   /* v100.317: înaintea lui stau „Deschide tot” / „Strânge tot” */
   assert.ok(HTML.includes('<section class="panel" id="tabloubot">'), "eticheta panoului rămâne cum o citesc probele vechi");
-  assert.match(APP, /var ACTIUNI_PERMISE=new Set\("tbTemaComuta /);
+  assert.match(APP, /var ACTIUNI_PERMISE=new Set\("(?:tbRandToate )?tbTemaComuta /);
   const i = APP.indexOf('var TB_TEMA_KEY="tbTema";'), j = APP.indexOf("function tbComutaInd(k){"); assert.ok(i > 0 && j > i);
   const cod = APP.slice(i, j).replace(/if\(typeof window!=="undefined"\)window\.addEventListener\("DOMContentLoaded"[^\n]*/, "");
   const mem = {}, clase = new Set(), buton = { textContent: "", attrs: {}, setAttribute(k, v) { this.attrs[k] = v; } }; let temaGrafic = null, desene = 0;
