@@ -15,6 +15,11 @@ var GraficBot = (function () {
   function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
   var COL = { good: "#26A96C", bad: "#E0524A", warn: "#E9B949", accent: "#5B8FC7", text: "#E6EDF3", mut: "#8799AA", info: "#9FB3C4",
     ema20: "#C25E98", ema50: "#C9824A", bb: "#9B7FE0", fond: "#0E141A", grila: "#26333F", intrare: "#9FB3C4" };   /* demo tema PAZNIC */
+  /* v100.316 (el, 10.11.2026: „aplică desenul nou”): paleta de ZI a graficului, pentru Tabloul pe fundal deschis. COL rămâne obiectul citit la desen;
+     tema("zi") îi schimbă valorile, tema("noapte") le pune la loc pe cele de mai sus. */
+  var COL_NOAPTE = {}, COL_ZI = { good: "#0E9F6E", bad: "#D8433B", warn: "#B7791F", accent: "#2456E6", text: "#16202B", mut: "#5F6F84", info: "#44546A", ema20: "#B0357F", ema50: "#A85D1E", bb: "#6A49C2", fond: "#FFFFFF", grila: "#E3E8EF", intrare: "#44546A" };
+  Object.keys(COL).forEach(function (k) { COL_NOAPTE[k] = COL[k]; });
+  function tema(nume) { var zi = nume === "zi", S = zi ? COL_ZI : COL_NOAPTE; Object.keys(COL_NOAPTE).forEach(function (k) { COL[k] = S[k] || COL_NOAPTE[k]; }); return zi ? "zi" : "noapte"; }
   var RANG = { critic: 2, atentie: 1, info: 0 };
 
   function nr(v) { if (typeof v === "number") return isFinite(v) ? v : null; if (typeof v !== "string" || !v.trim()) return null; var x = Number(v); return isFinite(x) ? x : null; }
@@ -794,6 +799,6 @@ var GraficBot = (function () {
     return h;
   }
 
-  return { COL: COL, fmtP: fmtP, fereastraBot: fereastraBot, bilantUmpleri: bilantUmpleri, ziObisnuita: ziObisnuita, ziObisnuitaActiune: ziObisnuitaActiune, niveluriActiune: niveluriActiune, bare: bare, umpleri: umpleri, liniiPionex: liniiPionex, ema: ema, bollinger: bollinger, rsi: rsi, niveluriBot: niveluriBot, grupeaza: grupeaza, desen: desen, tip: tip, esc: esc, adx: adx, citire: citire, pretLaY: pretLaY, cuPretViu: cuPretViu, intrareBot: intrareBot, cuSanse: cuSanse, stopProba: stopProba, semafor: semafor, trendTabel: trendTabel, trendSumar: trendSumar, TF_SEM: TF_SEM, semZi: semZi };   /* v100.252: fmtP e aceeași scriere ca scara */
+  return { COL: COL, fmtP: fmtP, fereastraBot: fereastraBot, bilantUmpleri: bilantUmpleri, ziObisnuita: ziObisnuita, ziObisnuitaActiune: ziObisnuitaActiune, niveluriActiune: niveluriActiune, bare: bare, umpleri: umpleri, liniiPionex: liniiPionex, ema: ema, bollinger: bollinger, rsi: rsi, niveluriBot: niveluriBot, grupeaza: grupeaza, desen: desen, tip: tip, tema: tema, esc: esc, adx: adx, citire: citire, pretLaY: pretLaY, cuPretViu: cuPretViu, intrareBot: intrareBot, cuSanse: cuSanse, stopProba: stopProba, semafor: semafor, trendTabel: trendTabel, trendSumar: trendSumar, TF_SEM: TF_SEM, semZi: semZi };   /* v100.252: fmtP e aceeași scriere ca scara */
 })();
 if (typeof globalThis !== "undefined") globalThis.GraficBot = GraficBot;

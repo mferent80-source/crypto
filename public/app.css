@@ -3532,6 +3532,1026 @@ button.pzVoce{width:auto;min-height:0;margin:0;background:transparent;font-weigh
 .acCtLinie b{color:var(--pzJos);font-size:15px}
 .acCtLinie.acCtGalben{background:color-mix(in srgb,var(--pzAur) 12%,transparent);border-color:color-mix(in srgb,var(--pzAur) 45%,transparent)}.acCtLinie.acCtGalben b{color:var(--pzAur)}
 @media (max-width:600px){.ctRand{grid-template-columns:70px minmax(0,1fr)}.ctNr{font-size:24px}.ctTxt>b{font-size:15.5px}.ctFac{font-size:13.5px}}
+/* ==== v100.316 TEMA TABLOULUI: GENERAT de scripts/face-tema-tablou.mjs - nu se scrie de mână ==== */
+/* scara de litere: 12 / 13,5 / 15 / 20 / 30 */
+#tabloubot .logo{font-size:20px}
+#tabloubot h1{font-size:20px}
+#tabloubot .badge{font-size:13.5px}
+#tabloubot .metaChip{font-size:13.5px}
+#tabloubot .pill{font-size:13.5px}
+#tabloubot .status{font-size:13.5px}
+#tabloubot .tab{font-size:13.5px}
+#tabloubot .hero .value{font-size:30px}
+#tabloubot .label{font-size:13.5px}
+#tabloubot .value{font-size:20px}
+#tabloubot .muted{font-size:13.5px}
+#tabloubot .legend{font-size:13.5px}
+#tabloubot .mini b{font-size:13.5px}
+#tabloubot .note{font-size:13.5px}
+@media(max-width:760px){#tabloubot h1{font-size:15px}#tabloubot .tab{font-size:13.5px}#tabloubot .hero .value{font-size:20px}#tabloubot .value{font-size:15px}}
+#tabloubot .metricBox .n{font-size:15px}
+#tabloubot .gaugeInner b{font-size:30px}
+#tabloubot .gaugeInner span{font-size:13.5px}
+#tabloubot .hmHead,#tabloubot .hmLabel{font-size:13.5px}
+#tabloubot .chartToolbar button{font-size:13.5px}
+#tabloubot .small{font-size:13.5px}
+#tabloubot .signalCard .big{font-size:20px}
+#tabloubot .journalRow{font-size:13.5px}
+#tabloubot .perfBox strong{font-size:15px}
+#tabloubot .sideLogo{font-size:15px}
+#tabloubot .topCoin{font-size:15px}
+#tabloubot .statusChip{font-size:13.5px}
+#tabloubot .heroCoin{font-size:20px}
+#tabloubot .heroPrice{font-size:20px}
+#tabloubot .heroSignal{font-size:20px}
+#tabloubot .quickCard .qv{font-size:15px}
+#tabloubot .toast{font-size:13.5px}
+#tabloubot .sectionHead h3{font-size:13.5px}
+#tabloubot .kpi .delta{font-size:13.5px}
+#tabloubot .actionGhost{font-size:13.5px}
+@media(max-width:980px){#tabloubot .mobileNavBtn b{font-size:15px}}
+@media(max-width:520px){#tabloubot .heroCoin{font-size:20px}#tabloubot .heroSignal{font-size:20px}#tabloubot .heroPrice{font-size:15px}}
+#tabloubot .levelBox b{font-size:13.5px}
+#tabloubot .levelBox span{font-size:13.5px}
+#tabloubot .flowBox strong{font-size:15px}
+#tabloubot .srHeat .hc{font-size:13.5px}
+#tabloubot .flowSide .flowBig{font-size:20px}
+#tabloubot .marketTile .coinName{font-size:13.5px}
+#tabloubot .marketTile .marketPrice{font-size:15px}
+#tabloubot .alertItem strong{font-size:13.5px}
+#tabloubot .alertItem p{font-size:13.5px}
+#tabloubot .presetBtn{font-size:13.5px}
+#tabloubot .calBox b{font-size:15px}
+#tabloubot .ctxBox b{font-size:15px}
+#tabloubot .depthRow{font-size:13.5px}
+#tabloubot .healthBox b{font-size:13.5px}
+#tabloubot .decisionBig{font-size:30px}
+#tabloubot .corrCell{font-size:13.5px}
+#tabloubot .volBox b{font-size:15px}
+#tabloubot .proxyLvl{font-size:13.5px}
+#tabloubot .paperBox b{font-size:15px}
+#tabloubot .paperRow{font-size:13.5px}
+#tabloubot .analyticsBox b{font-size:15px}
+#tabloubot .mxCell{font-size:13.5px}
+#tabloubot .mcBox b{font-size:15px}
+#tabloubot .scenarioBox{font-size:13.5px}
+#tabloubot .freshBox b{font-size:13.5px}
+#tabloubot .edgeState{font-size:20px}
+#tabloubot .validBox b{font-size:15px}
+#tabloubot .oosBox b{font-size:15px}
+#tabloubot .execHint{font-size:13.5px}
+#tabloubot .forwardState{font-size:20px}
+#tabloubot .guardBox b{font-size:15px}
+#tabloubot .segmentBox b{font-size:15px}
+#tabloubot .foldCell{font-size:13.5px}
+#tabloubot .qualityBox b{font-size:15px}
+#tabloubot .scanStat span{font-size:12px}
+#tabloubot .moreBtn{font-size:13.5px}
+#tabloubot .moreBtn b{font-size:15px}
+#tabloubot .flowBox b,#tabloubot .bandBox b,#tabloubot .oiBox b,#tabloubot .liqBox b{font-size:15px}
+#tabloubot .proxyNotice{font-size:13.5px}
+#tabloubot .microBias{font-size:20px}
+#tabloubot .microBox b{font-size:15px}
+#tabloubot .tapeRow{font-size:13.5px}
+#tabloubot .sourceBox b{font-size:13.5px}
+#tabloubot .providerNote{font-size:13.5px}
+#tabloubot .pwaInstall{font-size:13.5px}
+#tabloubot .deskBox b,#tabloubot .oppBox b,#tabloubot .calBox2 b,#tabloubot .acctBox b{font-size:15px}
+#tabloubot .oppCell{font-size:13.5px}
+#tabloubot .calCell2{font-size:13.5px}
+#tabloubot .accountCell{font-size:13.5px}
+#tabloubot .stockMetric b{font-size:15px}
+#tabloubot .stockScannerNote{font-size:13.5px}
+#tabloubot .robustBox b,#tabloubot .portBox b,#tabloubot .lifeBox b{font-size:15px}
+#tabloubot .robustCell{font-size:13.5px}
+#tabloubot .lifeState{font-size:20px}
+#tabloubot .riskMult{font-size:20px}
+#tabloubot .cloudCell,#tabloubot .profileCell,#tabloubot .footCell{font-size:13.5px}
+#tabloubot .cloudState{font-size:15px}
+#tabloubot .structureCell{font-size:13.5px}
+#tabloubot .ladderCell{font-size:13.5px}
+#tabloubot .newsItem b{font-size:13.5px}
+#tabloubot .liqCell,#tabloubot .mlCell{font-size:13.5px}
+#tabloubot .contextScore{font-size:20px!important}
+#tabloubot .govCell,#tabloubot .driftCell,#tabloubot .waterCell{font-size:13.5px}
+#tabloubot .piCell,#tabloubot .clusterCell,#tabloubot .familyCell{font-size:13.5px}
+#tabloubot .scanRecovery{font-size:13.5px}
+#tabloubot .rgCell,#tabloubot .coefCell,#tabloubot .leakCell,#tabloubot .expCell{font-size:13.5px}
+#tabloubot .masterHero .big{font-size:30px}
+#tabloubot .diCell{font-size:13.5px}
+#tabloubot .heatCell{font-size:13.5px}
+#tabloubot .cmdBox input{font-size:15px}
+#tabloubot .ldCell{font-size:13.5px}
+#tabloubot .reportHero .big{font-size:20px}
+#tabloubot .pv3Cell,#tabloubot .stressCell{font-size:13.5px}
+#tabloubot .ensCell{font-size:13.5px}
+#tabloubot .extCell{font-size:13.5px}
+#tabloubot .vcKpi b{font-size:15px}
+#tabloubot .vcKpi .label{font-size:13.5px}
+#tabloubot .vcGroup .vcChip{font-size:13.5px}
+#tabloubot .vcCell{font-size:13.5px}
+#tabloubot .volStateBig{font-size:20px}
+#tabloubot .volCell{font-size:13.5px}
+@media(min-width:981px){#tabloubot .sideTitle{font-size:13.5px}#tabloubot .sideSub{font-size:12px}#tabloubot .sideBtn{font-size:13.5px}#tabloubot .topCoin{font-size:15px}#tabloubot .heroCoin{font-size:20px}#tabloubot .heroSignal{font-size:20px}#tabloubot .heroPrice{font-size:15px}#tabloubot .masterHero .big{font-size:20px}#tabloubot .vcKpi b{font-size:13.5px}}
+#tabloubot .decisionCall{font-size:30px}
+#tabloubot .decisionKpi b{font-size:15px}
+#tabloubot .decisionExplain>b{font-size:13.5px}
+#tabloubot .decisionListItem{font-size:13.5px}
+@media(max-width:700px){#tabloubot .decisionCall{font-size:30px}}
+#tabloubot .prState{font-size:20px}
+#tabloubot .prHeadline{font-size:15px}
+#tabloubot .prVerify{font-size:13.5px}
+#tabloubot .prCriterion{font-size:13.5px}
+#tabloubot .prCriterion .prIcon{font-size:15px}
+#tabloubot .prCriterion b{font-size:13.5px}
+#tabloubot .prMarketCard>b{font-size:20px}
+@media(max-width:980px){#tabloubot .prState{font-size:20px}}
+#tabloubot .replayKpi span{font-size:13.5px}
+#tabloubot .replayComp span{font-size:13.5px}
+#tabloubot .replayLogRow{font-size:13.5px}
+#tabloubot .histScanCell{font-size:13.5px}
+#tabloubot .paperRowV3{font-size:13.5px}
+#tabloubot .paperRowV3 small{font-size:12px}
+#tabloubot .edgeProKpis span,#tabloubot .edgeProMetric span{font-size:13.5px}
+#tabloubot .edgeProRow.head .edgeProCell{font-size:13.5px}
+#tabloubot .breadthState{font-size:20px}
+#tabloubot .breadthScoreWrap b{font-size:20px}
+#tabloubot .breadthBox span{font-size:13.5px}
+#tabloubot .scanBreadthStrip>span:first-child{font-size:13.5px}
+#tabloubot .decisionOsKpi b{font-size:15px}
+#tabloubot .decisionOsState{font-size:20px}
+#tabloubot .decisionToolNum{font-size:13.5px}
+#tabloubot .decisionToolState{font-size:13.5px}
+#tabloubot .decisionToolScore{font-size:20px}
+#tabloubot .decisionToolDetail{font-size:13.5px}
+#tabloubot .decisionToolAction{font-size:13.5px}
+#tabloubot .decisionOsFooter{font-size:13.5px}
+#tabloubot .edgeCalKpi b{font-size:15px}
+#tabloubot .edgeCalState{font-size:20px}
+#tabloubot .edgeCalTables>.label,#tabloubot .edgeCalTables .label{font-size:13.5px}
+#tabloubot .edgeCalRow>span,#tabloubot .edgeCalRow>b{font-size:13.5px}
+#tabloubot .noticeBad{font-size:13.5px}
+#tabloubot .tbRezumat{font-size:15px}
+#tabloubot .tbTvBtn{font-size:13.5px}
+#tabloubot .tbPretViu b{font-size:15px}
+#tabloubot .tbIdent h3{font-size:20px}
+#tabloubot #tbNivel{font-size:13.5px}
+#tabloubot #tbTitlu{font-size:20px}
+#tabloubot .tbKpiVal{font-size:30px}
+#tabloubot .tbKpiCel:first-child .tbKpiVal{font-size:30px}
+#tabloubot .grPlanCap{font-size:13.5px}
+#tabloubot .grPlanBani{font-size:13.5px}
+#tabloubot .grPlanProba{font-size:13.5px}
+#tabloubot .grPlanPornire{font-size:13.5px}
+#tabloubot .tbLinie{font-size:13.5px}
+#tabloubot .tbLinieTotal{font-size:15px}
+#tabloubot .tbAvert{font-size:13.5px}
+@media(max-width:560px){#tabloubot #tbTitlu{font-size:20px}#tabloubot .tbKpiVal{font-size:20px}#tabloubot .tbKpiCel:first-child .tbKpiVal{font-size:20px}}
+@media(max-width:560px){#tabloubot .tbIdent h3{font-size:15px}#tabloubot .tbActiuni .actionGhost{font-size:13.5px}}
+#tabloubot .tbSfat p{font-size:13.5px}
+#tabloubot .tbScenCap{font-size:13.5px}
+#tabloubot .tbPropriu input{font-size:13.5px}
+#tabloubot .tbIntBtn{font-size:13.5px}
+#tabloubot .tbCmp{font-size:13.5px}
+#tabloubot .tbSemNivel{font-size:20px}
+#tabloubot .tbPodeaBani{font-size:13.5px}
+#tabloubot .grTabel{font-size:13.5px}
+#tabloubot .tbPill{font-size:13.5px}
+#tabloubot .t212Val{font-size:20px}
+#tabloubot .t212Cal{font-size:12px}
+#tabloubot .t212Rest>summary{font-size:13.5px}
+#tabloubot .t212Sim{font-size:15px}
+#tabloubot .t212Rez{font-size:15px}
+#tabloubot .t212Plan label{font-size:13.5px}
+#tabloubot .t212PretGrid b{font-size:15px}
+#tabloubot .t212Verdict b{font-size:15px}
+#tabloubot .t212CapCard h3{font-size:20px}
+#tabloubot .t212Et{font-size:12px}
+#tabloubot .t212Val{font-size:20px}
+#tabloubot .t212TodoCap h4{font-size:13.5px}
+#tabloubot .t212TodoRand p{font-size:12px}
+#tabloubot .t212PanouCap h4{font-size:13.5px}
+#tabloubot .t212Tab th{font-size:12px}
+#tabloubot .t212Sim b{font-size:13.5px}
+#tabloubot .t212Tab .t212Pill{font-size:12px}
+#tabloubot .t212Mic{font-size:12px}
+#tabloubot .t212StopulMeu summary{font-size:12px}
+@media (max-width:640px){#tabloubot .t212Tab tr.t212Rand td.c-stop,#tabloubot .t212Tab tr.t212Rand td.c-tinta{font-size:12px}}
+#tabloubot .t212CapCard h3{font-size:15px}
+#tabloubot .t212Val{font-size:15px}
+#tabloubot .t212Et{font-size:12px}
+#tabloubot .t212Tab .t212Pill{font-size:12px}
+#tabloubot .t212Card h3{font-size:15px}
+#tabloubot .t212Tab .t212Mic{font-size:12px}
+@media (max-width:640px){#tabloubot .t212Kpi .tbSub{font-size:12px}}
+#tabloubot .tbKpiVal,#tabloubot .tbKpiCel:first-child .tbKpiVal{font-size:15px}
+#tabloubot .tbTodoCap h4{font-size:13.5px}
+#tabloubot .tbOra{font-size:12px}
+#tabloubot .tbNr{font-size:12px}
+@media (max-width:640px){#tabloubot .tbKpiVal,#tabloubot .tbKpiCel:first-child .tbKpiVal{font-size:15px}}
+#tabloubot .contTot{font-size:13.5px}
+#tabloubot .tbConsEt{font-size:13.5px}
+#tabloubot .tbConsSt h3{font-size:15px}
+#tabloubot .tbConsExplica{font-size:13.5px}
+#tabloubot .tbConsInc{font-size:12px}
+#tabloubot .tbConsDr h4{font-size:12px}
+#tabloubot .tbConsL{font-size:12px}
+#tabloubot .tbConsCip{font-size:12px}
+#tabloubot .tbConsRest>summary{font-size:13.5px}
+@media (max-width:760px){#tabloubot .tbConsSt h3{font-size:15px}}
+#tabloubot .tbCcBani{font-size:12px}
+#tabloubot .tbCcDeCe,#tabloubot .tbCcSursa{font-size:12px}
+#tabloubot .piataAzi{font-size:12px}
+#tabloubot .t212Sursa{font-size:12px}
+#tabloubot .tbIndTab{font-size:12px}
+#tabloubot .tbIndTab th{font-size:12px}
+#tabloubot .tbMediuCap{font-size:12px}
+#tabloubot .tbMediuR{font-size:12px}
+#tabloubot .tbIndPred{font-size:12px}
+#tabloubot .tbPregTitlu{font-size:13.5px}
+#tabloubot .tbMotiveCap{font-size:12px}
+#tabloubot .tbMotiveAlte{font-size:12px}
+#tabloubot .tbTag{font-size:12px}
+#tabloubot .tbCcMare{font-size:20px}
+#tabloubot .tbCcMare small{font-size:13.5px}
+#tabloubot .tbCcDet{font-size:12px}
+#tabloubot .tbCitScurt{font-size:13.5px}
+#tabloubot .grPlanAleg{font-size:13.5px}
+#tabloubot .gbBilant{font-size:12px}
+#tabloubot .gbUlt{font-size:12px}
+#tabloubot .gbValGrid{font-size:12px}
+#tabloubot .tbGrup{font-size:13.5px}
+#tabloubot .tbKpiGrid{font-size:13.5px}
+#tabloubot .stStat .stCap h3{font-size:20px}
+#tabloubot .stStat .stSub{font-size:13.5px}
+#tabloubot .stStat .stEt{font-size:13.5px}
+#tabloubot .stStat .stVal{font-size:20px}
+#tabloubot .stStat .stAx{font-size:12px}
+#tabloubot .stStat .stTabel{font-size:13.5px}
+#tabloubot .stStat .stBtn{font-size:13.5px}
+#tabloubot .tbProbH{font-size:13.5px}
+#tabloubot .tbDecBtn{font-size:13.5px}
+#tabloubot .t212Graf .tbIntBtn{font-size:13.5px}
+#tabloubot .t212File .tbIntBtn{font-size:13.5px}
+#tabloubot .tbTrendTab{font-size:13.5px}
+#tabloubot .tbTrendDet>summary{font-size:13.5px}
+#tabloubot .grPlanSariTx{font-size:13.5px}
+#tabloubot .sugDir{font-size:12px}
+#tabloubot #sugPagina .rlSec>h3{font-size:13.5px}
+#tabloubot .saltCampuri label,#tabloubot .saltCautaEt{font-size:13.5px}
+#tabloubot #mcsPagina .mcsCap h4{font-size:15px}
+#tabloubot #mcsPagina .mcsCif span{font-size:12px}
+#tabloubot #mcsPagina .mcsCif b{font-size:15px}
+#tabloubot #mcsPagina .mcsRand{font-size:13.5px}
+#tabloubot #mcsPagina .mcsHist text,#tabloubot #gsPagina .mcsHist text{font-size:12px}
+#tabloubot #mcsPagina .mcsAvert{font-size:13.5px}
+@media (max-width:760px){#tabloubot #mcsPagina .mcsCif b{font-size:13.5px}}
+#tabloubot #mcsPagina .mcsForm button small{font-size:12px}
+#tabloubot .mcsRevBtn{font-size:12px}
+#tabloubot #gsPagina .gsCodOut code{font-size:12px}
+#tabloubot #gsPagina .gsVerdict b{font-size:20px}
+#tabloubot #gsPagina .gsSub{font-size:13.5px}
+#tabloubot #gsPagina .mcsRand{font-size:13.5px}
+#tabloubot #gsPagina .mcsAvert{font-size:13.5px}
+@media (max-width:760px){#tabloubot #gsPagina .gsVerdict b{font-size:20px}}
+#tabloubot .tbMcNota{font-size:12px}
+#tabloubot .pzCap b{font-size:12px}
+#tabloubot .pzCap span{font-size:12px}
+#tabloubot .pzDin{font-size:12px}
+#tabloubot .pzCel>span{font-size:12px}
+#tabloubot .pzCel>b{font-size:13.5px}
+#tabloubot .pzCel>b small{font-size:12px}
+@media (max-width:550px){#tabloubot #pzKpi .pzCel>span{font-size:12px}#tabloubot #pzKpi .pzCel>b{font-size:12px}}
+#tabloubot .pzVerbTxt b{font-size:13.5px}
+#tabloubot .pzVerbTxt p{font-size:13.5px}
+#tabloubot .pzVoce{font-size:12px}
+@media (max-width:550px){#tabloubot .pzVerb{font-size:30px}}
+#tabloubot .pzDrumEt{font-size:12px}
+#tabloubot .pzDrumAcumEt{font-size:12px}
+#tabloubot .pzAcumGrila .pzCel>b{font-size:13.5px}
+#tabloubot .pzRandBot>b{font-size:13.5px}
+#tabloubot #tbCitire>.pzFoldOk::after{font-size:12px}
+#tabloubot .pzRangeAx{font-size:12px}
+#tabloubot .pzChip{font-size:12px}
+#tabloubot .pzColRand{font-size:12px}
+#tabloubot .pzMotiv b{font-size:13.5px}
+#tabloubot .pzMotiv p{font-size:12px}
+#tabloubot .gbValori{font-size:13.5px}
+#tabloubot .luScor{font-size:20px}
+#tabloubot .rzEt{font-size:12px}
+@media (max-width:640px){#tabloubot .rzIstTab td:nth-child(3)::before{font-size:12px}#tabloubot .rzIstTab td:nth-child(4)::before{font-size:12px}#tabloubot .rzIstTab td:nth-child(5)::before{font-size:12px}}
+#tabloubot .jtRaportPiata h5{font-size:13.5px}
+#tabloubot .srQt{font-size:12px}
+#tabloubot .srEt{font-size:12px}
+@media (max-width:640px){#tabloubot .srTab td:nth-child(2)::before{font-size:12px}#tabloubot .srTab td:nth-child(3)::before{font-size:12px}#tabloubot .srTab td:nth-child(4)::before{font-size:12px}#tabloubot .srTab td:nth-child(5)::before{font-size:12px}#tabloubot .srTab td:nth-child(7)::before{font-size:12px}}
+#tabloubot .mcVerdict b{font-size:30px}
+#tabloubot .mcAx{font-size:12px}
+#tabloubot .mcTxt{font-size:12px}
+#tabloubot .mbH{font-size:12px}
+#tabloubot .mbSursa{font-size:12px}
+#tabloubot .mbMic{font-size:12px}
+#tabloubot .mbZona{font-size:12px}
+#tabloubot .mbSc{font-size:12px}
+#tabloubot .mbRand{font-size:12px}
+#tabloubot .acLink{font-size:12px}
+#tabloubot .szVal{font-size:20px}
+#tabloubot .szPiesa{font-size:12px}
+#tabloubot .szChip{font-size:12px}
+#tabloubot .scCap .acSub{font-size:12px}
+#tabloubot .scCap .actionGhost{font-size:12px}
+#tabloubot .scEt{font-size:12px}
+#tabloubot .scVal{font-size:30px}
+#tabloubot #acasa .scVal.scMare{font-size:20px}
+#tabloubot .scObiectiv{font-size:13.5px}
+#tabloubot .scInainte{font-size:13.5px}
+#tabloubot .scForm input{font-size:13.5px}
+#tabloubot .scIst h4{font-size:13.5px}
+#tabloubot .scIstTab{font-size:13.5px}
+#tabloubot .scIstTab th{font-size:12px}
+#tabloubot .scOprit{font-size:13.5px}
+@media (max-width:640px){#tabloubot .scVal{font-size:20px}}
+@media (max-width:640px){#tabloubot #acasa .scVal{font-size:13.5px}#tabloubot #acasa .scVal.scMare{font-size:20px}#tabloubot .mcVerdict b{font-size:30px}}
+#tabloubot .pzPret{font-size:20px}
+@media (max-width:550px){#tabloubot .pzPret{font-size:20px}}
+#tabloubot .gbValCap{font-size:13.5px}
+#tabloubot .tbMcScorCifre{font-size:20px}
+#tabloubot #t212Continut tr.t212Rand td.c-rez b{font-size:13.5px}
+#tabloubot #t212Continut tr.t212Rand .t212Modele{font-size:12px}
+#tabloubot .t212FisaSim b{font-size:20px}
+#tabloubot .sugVerdict{font-size:12px}
+#tabloubot .sugRandSim b{font-size:15px}
+#tabloubot .sugFisaSim{font-size:20px}
+#tabloubot .sugFisaPret b{font-size:30px}
+#tabloubot .sugBloc h5,#tabloubot .sugBlocA h5{font-size:13.5px}
+#tabloubot .prNume b{font-size:13.5px}
+#tabloubot .prFapte dt{font-size:12px}
+#tabloubot .prFapte dd{font-size:13.5px}
+#tabloubot .prCamp input,#tabloubot .prCamp select{font-size:13.5px}
+#tabloubot .prParCap b{font-size:15px}
+#tabloubot .ctNr small{font-size:12px}
+#tabloubot .ctTxt>b{font-size:20px}
+#tabloubot .ctTxt>span{font-size:12px}
+#tabloubot .ctFac{font-size:15px}
+#tabloubot .ctSus{font-size:12px}
+@media (max-width:600px){#tabloubot .ctNr{font-size:30px}#tabloubot .ctTxt>b{font-size:15px}}
+@media (max-width:640px){html.pzDemo #tabloubot #pzVerdict .pzPret{font-size:30px}}
+/* tema zi: variabilele rădăcinii, apoi regulile cu culoare */
+#tabloubot.tbZi{--bg:#F2F4F7;--panel:#FFFFFF;--panel-2:#F5F7FA;--panel-3:#E9EDF3;--line:#E0E5EC;--line-soft:#F5F7FA;--text:#0E1A2B;--muted:#48586E;--accent:#2456E6;--accent-2:#2456E6;--good:#0B8A5F;--bad:#CC3A32;--warn:#8A5A00;--pzF0:#F2F4F7;--pzF1:#FFFFFF;--pzF2:#F5F7FA;--pzF3:#E9EDF3;--pzLi:#E0E5EC;--pzLi2:#C3CCD8;--pzT0:#0E1A2B;--pzT1:#48586E;--pzT2:#66768B;--pzSus:#0B8A5F;--pzJos:#CC3A32;--pzAur:#8A5A00;--pzInfo:#2456E6}
+#tabloubot.tbZi body:before{background-image:linear-gradient(rgba(14,26,43,.015) 1px,transparent 1px),linear-gradient(90deg,rgba(14,26,43,.015) 1px,transparent 1px)}
+#tabloubot.tbZi .logo{background:linear-gradient(135deg,rgba(36,86,230,.2),rgba(36,86,230,.18));border:1px solid rgba(36,86,230,.28)}
+#tabloubot.tbZi .badge{border:1px solid rgba(36,86,230,.28);background:rgba(36,86,230,.08);color:#0E1A2B}
+#tabloubot.tbZi .metaChip{background:rgba(245,247,250,.75)}
+#tabloubot.tbZi .toolbar{background:linear-gradient(rgba(245,247,250,.92),rgba(245,247,250,.92))}
+#tabloubot.tbZi input,#tabloubot.tbZi select,#tabloubot.tbZi button{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi input:focus,#tabloubot.tbZi select:focus{border-color:#2456E6;box-shadow:0 0 0 3px rgba(36,86,230,.12)}
+#tabloubot.tbZi button:hover{border-color:#C3CCD8;background:#F5F7FA}
+#tabloubot.tbZi #analyzeBtn{background:linear-gradient(135deg,#2456E6,#2456E6)}
+#tabloubot.tbZi .pill{background:#F5F7FA;border-color:#E0E5EC;color:#0E1A2B}
+#tabloubot.tbZi .status:before{background:#66768B;box-shadow:0 0 0 3px rgba(102,118,139,.10)}
+#tabloubot.tbZi .tabs{border:1px solid rgba(224,229,236,.9);background:rgba(255,255,255,.82)}
+#tabloubot.tbZi .tab{color:#48586E}
+#tabloubot.tbZi .tab:hover{background:#F5F7FA}
+#tabloubot.tbZi .tab.active{background:linear-gradient(135deg,rgba(36,86,230,.14),rgba(36,86,230,.14));border-color:#C3CCD8}
+#tabloubot.tbZi .card{background:linear-gradient(rgba(245,247,250,.93),rgba(245,247,250,.93))}
+#tabloubot.tbZi .card:after{background:linear-gradient(135deg,rgba(14,26,43,.022),transparent 38%)}
+#tabloubot.tbZi .bar{background:#E9EDF3;border:1px solid rgba(14,26,43,.025)}
+#tabloubot.tbZi .fill{background:linear-gradient(90deg,#2456E6,#2456E6)}
+#tabloubot.tbZi .kpi:before{background:radial-gradient(circle,rgba(36,86,230,.10),transparent 70%)}
+#tabloubot.tbZi .row span:first-child{color:#48586E}
+#tabloubot.tbZi canvas{background:linear-gradient(#FFFFFF,#FFFFFF);border:1px solid #E9EDF3}
+#tabloubot.tbZi .coin:hover{background:#F5F7FA}
+#tabloubot.tbZi .mini{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi .note{color:#66768B}
+#tabloubot.tbZi .sectionTitle{color:#0E1A2B}
+#tabloubot.tbZi .metricBox{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi .gauge{--gc:#8A5A00;background:conic-gradient(var(--gc) calc(var(--p)*1%),#E9EDF3 0)}
+#tabloubot.tbZi .gauge:before{background:#F5F7FA;border:1px solid #E0E5EC}
+#tabloubot.tbZi .hmCell{border:1px solid #E0E5EC;background:#FFFFFF}
+#tabloubot.tbZi .hmBull{background:rgba(11,138,95,.10);border-color:rgba(11,138,95,.22)}
+#tabloubot.tbZi .hmBear{background:rgba(204,58,50,.10);border-color:rgba(204,58,50,.22)}
+#tabloubot.tbZi .hmNeu{background:rgba(224,165,38,.08);border-color:rgba(224,165,38,.18)}
+#tabloubot.tbZi .sentimentBand{background:linear-gradient(90deg,#CC3A32,#E0A526,#0B8A5F)}
+#tabloubot.tbZi .signalCard{background:linear-gradient(#F5F7FA,#F5F7FA);border:1px solid #E0E5EC}
+#tabloubot.tbZi .levelBox{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi .tag{border:1px solid #C3CCD8}
+#tabloubot.tbZi .tagLong{background:rgba(11,138,95,.08);border-color:rgba(11,138,95,.25)}
+#tabloubot.tbZi .tagShort{background:rgba(204,58,50,.08);border-color:rgba(204,58,50,.25)}
+#tabloubot.tbZi .scoreBar{background:#E9EDF3}
+#tabloubot.tbZi .longFill{background:linear-gradient(90deg,#0B8A5F,#0B8A5F)}
+#tabloubot.tbZi .shortFill{background:linear-gradient(90deg,#CC3A32,#CC3A32)}
+#tabloubot.tbZi .perfBox{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi .sideNav{background:linear-gradient(#FFFFFF,#FFFFFF);border-right:1px solid #E9EDF3}
+#tabloubot.tbZi .sideLogo{background:linear-gradient(135deg,#2456E6,#2456E6);border:1px solid #C3CCD8}
+#tabloubot.tbZi .sideBtn{color:#48586E}
+#tabloubot.tbZi .sideBtn:hover{background:#F5F7FA}
+#tabloubot.tbZi .sideBtn.active{background:linear-gradient(135deg,rgba(36,86,230,.11),rgba(36,86,230,.11));border-color:#E0E5EC}
+#tabloubot.tbZi .sideFooter{border:1px solid #2456E6;background:#FFFFFF}
+#tabloubot.tbZi .topStatus{background:rgba(255,255,255,.86);border-bottom:1px solid rgba(224,229,236,.85)}
+#tabloubot.tbZi .statusChip{border:1px solid #E0E5EC;background:#F5F7FA;color:#48586E}
+#tabloubot.tbZi .heroSummary{background:linear-gradient(135deg,rgba(36,86,230,.10),rgba(36,86,230,.08));border:1px solid #C3CCD8}
+#tabloubot.tbZi .quickCard{background:#F5F7FA;border:1px solid #E0E5EC}
+#tabloubot.tbZi .toast{background:#F5F7FA;border:1px solid #E0E5EC;color:#0E1A2B}
+#tabloubot.tbZi .toast.good{border-color:rgba(11,138,95,.34)}
+#tabloubot.tbZi .toast.bad{border-color:rgba(204,58,50,.34)}
+#tabloubot.tbZi .toast.warn{border-color:rgba(224,165,38,.34)}
+@media(max-width:980px){#tabloubot.tbZi .mobileBottom{background:#FFFFFF;border:1px solid #E0E5EC}#tabloubot.tbZi .mobileNavBtn{color:#48586E}#tabloubot.tbZi .mobileNavBtn.active{background:#E9EDF3}}
+#tabloubot.tbZi .levelBox{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi .flowBox{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi .zoneChip{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi .srHeat .hc{border:1px solid #E0E5EC;background:#FFFFFF}
+#tabloubot.tbZi .srHeat .sup{background:rgba(11,138,95,.09);color:#0B8A5F;border-color:rgba(11,138,95,.22)}
+#tabloubot.tbZi .srHeat .res{background:rgba(204,58,50,.09);color:#CC3A32;border-color:rgba(204,58,50,.22)}
+#tabloubot.tbZi .srHeat .pivot{background:rgba(36,86,230,.09);color:#2456E6;border-color:rgba(36,86,230,.24)}
+#tabloubot.tbZi .srHeat .near{box-shadow:0 0 0 2px rgba(224,165,38,.45) inset;color:#8A5A00}
+#tabloubot.tbZi .flowSide{border:1px solid #E0E5EC;background:#FFFFFF}
+#tabloubot.tbZi .flowMeter{background:#E9EDF3}
+#tabloubot.tbZi .flowMeter .buy{background:linear-gradient(90deg,#0B8A5F,#0B8A5F)}
+#tabloubot.tbZi .flowMeter .sell{background:linear-gradient(90deg,#CC3A32,#CC3A32)}
+#tabloubot.tbZi .ofRow{border-bottom:1px solid #E9EDF3}
+#tabloubot.tbZi .marketTile{background:linear-gradient(#F5F7FA,#F5F7FA);border:1px solid #E0E5EC}
+#tabloubot.tbZi .marketTile:hover{border-color:#C3CCD8}
+#tabloubot.tbZi .alertItem{border:1px solid #E0E5EC;background:#FFFFFF}
+#tabloubot.tbZi .alertIcon{background:#E9EDF3}
+#tabloubot.tbZi .settingsCard{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi .settingRow{border-bottom:1px solid #E9EDF3}
+#tabloubot.tbZi .toggle{background:#E0E5EC;border:1px solid #C3CCD8}
+#tabloubot.tbZi .toggle:after{background:#48586E}
+#tabloubot.tbZi .toggle.on{background:rgba(11,138,95,.16);border-color:rgba(11,138,95,.35)}
+#tabloubot.tbZi .toggle.on:after{background:#0B8A5F}
+#tabloubot.tbZi .calBox{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi .chartZoneLegend .lz:before{background:rgba(11,138,95,.35)}
+#tabloubot.tbZi .chartZoneLegend .rz:before{background:rgba(204,58,50,.35)}
+#tabloubot.tbZi .chartZoneLegend .pz:before{background:rgba(36,86,230,.35)}
+#tabloubot.tbZi .vpTrack{background:#E9EDF3}
+#tabloubot.tbZi .vpFill{background:linear-gradient(90deg,#2456E6,#2456E6)}
+#tabloubot.tbZi .ctxBox{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi .explainRow{border-bottom:1px solid #E9EDF3}
+#tabloubot.tbZi .lifeStep{background:#FFFFFF;border:1px solid #E0E5EC;color:#66768B}
+#tabloubot.tbZi .lifeStep.on{border-color:#66768B;background:#E9EDF3}
+#tabloubot.tbZi .depthSide{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi .depthBid{background:linear-gradient(90deg,#0B8A5F,#0B8A5F)}
+#tabloubot.tbZi .depthAsk{background:linear-gradient(90deg,#CC3A32,#CC3A32)}
+#tabloubot.tbZi .wsDot{background:#66768B}
+#tabloubot.tbZi .healthBox{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi .fullscreenChart{background:#FFFFFF!important}
+#tabloubot.tbZi .decisionHero{background:linear-gradient(135deg,rgba(36,86,230,.12),rgba(36,86,230,.08));border:1px solid #C3CCD8}
+#tabloubot.tbZi .reason{border:1px solid #E0E5EC;background:#FFFFFF}
+#tabloubot.tbZi .corrCell{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi .corrPos{background:rgba(11,138,95,.07)}
+#tabloubot.tbZi .corrNeg{background:rgba(204,58,50,.07)}
+#tabloubot.tbZi .proxyLvl{border:1px solid #E0E5EC;background:#FFFFFF}
+#tabloubot.tbZi .proxyLvl.hot{background:rgba(204,58,50,.11);border-color:rgba(204,58,50,.28);color:#CC3A32}
+#tabloubot.tbZi .proxyLvl.mid{background:rgba(224,165,38,.08);border-color:rgba(224,165,38,.22);color:#8A5A00}
+#tabloubot.tbZi .proxyLvl.cool{background:rgba(11,138,95,.07);border-color:rgba(11,138,95,.2);color:#0B8A5F}
+#tabloubot.tbZi .paperBox{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi .paperRow{border-top:1px solid #E9EDF3}
+#tabloubot.tbZi .analyticsBox{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi .mxCell{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi .mxGood{background:rgba(11,138,95,.07)}
+#tabloubot.tbZi .mxBad{background:rgba(204,58,50,.07)}
+#tabloubot.tbZi .mcBox{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi .scenarioBox{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi .freshBox{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi .calibrationLine{border-bottom:1px solid #E9EDF3}
+#tabloubot.tbZi .calibrationTrack{background:#E9EDF3}
+#tabloubot.tbZi .calibrationFill{background:linear-gradient(90deg,#2456E6,#2456E6)}
+#tabloubot.tbZi .edgeCard{background:linear-gradient(135deg,rgba(36,86,230,.10),rgba(36,86,230,.07));border:1px solid #C3CCD8}
+#tabloubot.tbZi .validBox{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi .curveWrap{border:1px solid #E0E5EC;background:#FFFFFF}
+#tabloubot.tbZi .oosBox{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi .execHint{border:1px solid #E0E5EC;background:#FFFFFF}
+#tabloubot.tbZi .validationBadge{border:1px solid #C3CCD8;background:#FFFFFF}
+#tabloubot.tbZi .forwardCard{background:linear-gradient(135deg,rgba(36,86,230,.11),rgba(36,86,230,.08));border:1px solid #C3CCD8}
+#tabloubot.tbZi .guardBox{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi .segmentBox{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi .foldCell{border:1px solid #E0E5EC;background:#FFFFFF}
+#tabloubot.tbZi .qualityBox{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi .guardCaution{color:#8A5A00}
+#tabloubot.tbZi .pionexBadge{border:1px solid rgba(36,86,230,.28);background:rgba(36,86,230,.08);color:#2456E6}
+#tabloubot.tbZi .pionexBadge:before{background:#2456E6}
+#tabloubot.tbZi .scanMeta span{border:1px solid #E0E5EC;background:#FFFFFF}
+#tabloubot.tbZi .scanProgress{background:#E9EDF3}
+#tabloubot.tbZi .scanProgress>div{background:linear-gradient(90deg,#2456E6,#2456E6)}
+#tabloubot.tbZi .scanStat{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi .moreDrawer{background:rgba(242,244,247,.74)}
+#tabloubot.tbZi .moreSheet{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi .moreBtn{background:#F5F7FA;border:1px solid #E0E5EC;color:#48586E}
+#tabloubot.tbZi .cacheBox{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi .wsStale{color:#8A5A00!important;border-color:rgba(224,165,38,.3)!important}
+#tabloubot.tbZi .flowBox,#tabloubot.tbZi .bandBox,#tabloubot.tbZi .oiBox,#tabloubot.tbZi .liqBox{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi .regimeHero{border:1px solid #C3CCD8;background:linear-gradient(135deg,rgba(36,86,230,.10),rgba(36,86,230,.07))}
+#tabloubot.tbZi .proxyNotice{border:1px solid rgba(224,165,38,.25);background:rgba(224,165,38,.06);color:#8A5A00}
+#tabloubot.tbZi .microBiasCard{border:1px solid #C3CCD8;background:linear-gradient(135deg,rgba(36,86,230,.10),rgba(36,86,230,.07))}
+#tabloubot.tbZi .microBox{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi .tapeWrap{border:1px solid #E0E5EC;background:#FFFFFF}
+#tabloubot.tbZi .tapeRow{border-bottom:1px solid #E9EDF3}
+#tabloubot.tbZi .tapeHead{background:#F5F7FA}
+#tabloubot.tbZi .microChart{border:1px solid #E0E5EC;background:#FFFFFF}
+#tabloubot.tbZi .depthMeter{background:#E9EDF3}
+#tabloubot.tbZi .depthMeter .bid{background:#0B8A5F}
+#tabloubot.tbZi .depthMeter .ask{background:#CC3A32}
+#tabloubot.tbZi .slipBox{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi .sourcePill{border:1px solid rgba(36,86,230,.28);background:rgba(36,86,230,.08);color:#2456E6}
+#tabloubot.tbZi .sourceBox{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi .sourceExternal{color:#8A5A00}
+#tabloubot.tbZi .sourceLock{border:1px solid rgba(36,86,230,.28);background:rgba(36,86,230,.08);color:#2456E6}
+#tabloubot.tbZi .providerNote{border:1px solid #E0E5EC;background:#FFFFFF}
+#tabloubot.tbZi .pwaInstall{border:1px solid rgba(36,86,230,.34);background:#F5F7FA}
+#tabloubot.tbZi .pwaBanner{border:1px solid #C3CCD8;background:#F5F7FA}
+#tabloubot.tbZi .deskBox,#tabloubot.tbZi .oppBox,#tabloubot.tbZi .calBox2,#tabloubot.tbZi .acctBox{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi .oppCell{border:1px solid #E0E5EC;background:#FFFFFF}
+#tabloubot.tbZi .gradeA{color:#0B8A5F}
+#tabloubot.tbZi .gradeB{color:#2456E6}
+#tabloubot.tbZi .gradeC{color:#8A5A00}
+#tabloubot.tbZi .gradeD{color:#CC3A32}
+#tabloubot.tbZi .qualityMeter{background:#E9EDF3}
+#tabloubot.tbZi .qualityMeter>div{background:linear-gradient(90deg,#2456E6,#2456E6)}
+#tabloubot.tbZi .calCell2{border:1px solid #E0E5EC;background:#FFFFFF}
+#tabloubot.tbZi .accountCell{border:1px solid #E0E5EC;background:#FFFFFF}
+#tabloubot.tbZi .readOnlyBadge{border:1px solid rgba(36,86,230,.28);background:rgba(36,86,230,.08);color:#2456E6}
+#tabloubot.tbZi .stockBadge{border:1px solid rgba(36,86,230,.34);background:rgba(36,86,230,.08);color:#2456E6}
+#tabloubot.tbZi .stockMetric{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi .stockProviderBox{border:1px solid #C3CCD8;background:linear-gradient(135deg,rgba(36,86,230,.08),rgba(36,86,230,.04))}
+#tabloubot.tbZi .stockScannerNote{border:1px solid #E0E5EC;background:#FFFFFF}
+#tabloubot.tbZi .stockUniverseBox{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi .sessionOpen{color:#0B8A5F}
+#tabloubot.tbZi .sessionPre,#tabloubot.tbZi .sessionAfter{color:#8A5A00}
+#tabloubot.tbZi .sessionClosed{color:#48586E}
+#tabloubot.tbZi .robustBox,#tabloubot.tbZi .portBox,#tabloubot.tbZi .lifeBox{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi .robustCell{border:1px solid #E0E5EC;background:#FFFFFF}
+#tabloubot.tbZi .corrTable td,#tabloubot.tbZi .corrTable th{border:1px solid #E0E5EC;background:#FFFFFF}
+#tabloubot.tbZi .lifePromoted{color:#0B8A5F}
+#tabloubot.tbZi .lifeWatch{color:#8A5A00}
+#tabloubot.tbZi .lifeRetired{color:#CC3A32}
+#tabloubot.tbZi .lifeLearning{color:#2456E6}
+#tabloubot.tbZi .cloudBox,#tabloubot.tbZi .profileBox,#tabloubot.tbZi .liqMapBox{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi .cloudCell,#tabloubot.tbZi .profileCell,#tabloubot.tbZi .footCell{border:1px solid #E0E5EC;background:#FFFFFF}
+#tabloubot.tbZi .profileBarTrack{background:#E9EDF3}
+#tabloubot.tbZi .profileBarFill{background:linear-gradient(90deg,#2456E6,#2456E6)}
+#tabloubot.tbZi .liqChip{border:1px solid #C3CCD8;background:#FFFFFF}
+#tabloubot.tbZi .liqChip.buy{color:#0B8A5F}
+#tabloubot.tbZi .liqChip.sell{color:#CC3A32}
+#tabloubot.tbZi .cloudOk{color:#0B8A5F}
+#tabloubot.tbZi .cloudWarn{color:#8A5A00}
+#tabloubot.tbZi .sessionBox,#tabloubot.tbZi .structureBox,#tabloubot.tbZi .costBox{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi .structureCell{border:1px solid #E0E5EC;background:#FFFFFF}
+#tabloubot.tbZi .zoneBull{color:#0B8A5F}
+#tabloubot.tbZi .zoneBear{color:#CC3A32}
+#tabloubot.tbZi .sessionActive{color:#0B8A5F}
+#tabloubot.tbZi .sessionInactive{color:#48586E}
+#tabloubot.tbZi .ladderCell{border:1px solid #E0E5EC;background:#FFFFFF}
+#tabloubot.tbZi .intelBox,#tabloubot.tbZi .mlBox,#tabloubot.tbZi .liqBox{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi .newsItem{border:1px solid #E0E5EC;background:#FFFFFF}
+#tabloubot.tbZi .riskHigh{color:#CC3A32}
+#tabloubot.tbZi .riskMed{color:#8A5A00}
+#tabloubot.tbZi .riskLow{color:#0B8A5F}
+#tabloubot.tbZi .liqCell,#tabloubot.tbZi .mlCell{border:1px solid #E0E5EC;background:#FFFFFF}
+#tabloubot.tbZi .contribPos{color:#0B8A5F}
+#tabloubot.tbZi .contribNeg{color:#CC3A32}
+#tabloubot.tbZi .govBox,#tabloubot.tbZi .driftBox,#tabloubot.tbZi .ensBox{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi .govCell,#tabloubot.tbZi .driftCell,#tabloubot.tbZi .waterCell{border:1px solid #E0E5EC;background:#FFFFFF}
+#tabloubot.tbZi .stateStable{color:#0B8A5F}
+#tabloubot.tbZi .stateWatch{color:#8A5A00}
+#tabloubot.tbZi .stateDrift{color:#CC3A32}
+#tabloubot.tbZi .barTiny{background:#E9EDF3}
+#tabloubot.tbZi .barTiny>i{background:linear-gradient(90deg,#2456E6,#2456E6)}
+#tabloubot.tbZi .execBox{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi .execPending{color:#8A5A00}
+#tabloubot.tbZi .execPartial{color:#2456E6}
+#tabloubot.tbZi .execLive{color:#0B8A5F}
+#tabloubot.tbZi .execClosed{color:#48586E}
+#tabloubot.tbZi .execBad{color:#CC3A32}
+#tabloubot.tbZi .execCell{border:1px solid #E0E5EC;background:#FFFFFF}
+#tabloubot.tbZi .piBox,#tabloubot.tbZi .budgetBox,#tabloubot.tbZi .familyBox{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi .piCell,#tabloubot.tbZi .clusterCell,#tabloubot.tbZi .familyCell{border:1px solid #E0E5EC;background:#FFFFFF}
+#tabloubot.tbZi .budgetTrack{background:#E9EDF3}
+#tabloubot.tbZi .budgetFill{background:linear-gradient(90deg,#2456E6,#2456E6)}
+#tabloubot.tbZi .budgetWarn{background:linear-gradient(90deg,#E0A526,#E0A526)}
+#tabloubot.tbZi .budgetBad{background:linear-gradient(90deg,#CC3A32,#CC3A32)}
+#tabloubot.tbZi .riskPass{color:#0B8A5F}
+#tabloubot.tbZi .riskWatch{color:#8A5A00}
+#tabloubot.tbZi .riskBlock{color:#CC3A32}
+#tabloubot.tbZi .familyChip{border:1px solid #C3CCD8;background:#FFFFFF}
+#tabloubot.tbZi .scanRecovery{border:1px solid #C3CCD8;background:#FFFFFF}
+#tabloubot.tbZi .scanLive{color:#0B8A5F}
+#tabloubot.tbZi .scanSaved{color:#2456E6}
+#tabloubot.tbZi .scanSnapshot{color:#8A5A00}
+#tabloubot.tbZi .rgBox,#tabloubot.tbZi .auditBox,#tabloubot.tbZi .expBox{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi .rgCell,#tabloubot.tbZi .coefCell,#tabloubot.tbZi .leakCell,#tabloubot.tbZi .expCell{border:1px solid #E0E5EC;background:#FFFFFF}
+#tabloubot.tbZi .auditPass{color:#0B8A5F}
+#tabloubot.tbZi .auditWarn{color:#8A5A00}
+#tabloubot.tbZi .auditFail{color:#CC3A32}
+#tabloubot.tbZi .expPromoted{color:#0B8A5F}
+#tabloubot.tbZi .expCandidate{color:#2456E6}
+#tabloubot.tbZi .expRejected{color:#CC3A32}
+#tabloubot.tbZi .expResearch{color:#8A5A00}
+#tabloubot.tbZi .masterVerdict{border:1px solid #C3CCD8;background:linear-gradient(#FFFFFF,#FFFFFF)}
+#tabloubot.tbZi .masterHero{border:1px solid #C3CCD8;background:#FFFFFF}
+#tabloubot.tbZi .masterMetric{border:1px solid #E0E5EC;background:#FFFFFF}
+#tabloubot.tbZi .masterReasonBox{border:1px solid #E0E5EC;background:#FFFFFF}
+#tabloubot.tbZi .reasonChip{border:1px solid #C3CCD8}
+#tabloubot.tbZi .reasonGood{color:#0B8A5F}
+#tabloubot.tbZi .reasonBad{color:#CC3A32}
+#tabloubot.tbZi .reasonWarn{color:#8A5A00}
+#tabloubot.tbZi .diBox{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi .diCell{border:1px solid #E0E5EC;background:#FFFFFF}
+#tabloubot.tbZi .heatCell{border:1px solid #E0E5EC;background:#FFFFFF}
+#tabloubot.tbZi .heatBar{background:#E9EDF3}
+#tabloubot.tbZi .cmdBox{background:#FFFFFF;border:1px solid #C3CCD8}
+#tabloubot.tbZi .cmdItem{border:1px solid #E0E5EC;background:#FFFFFF}
+#tabloubot.tbZi .ldBox{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi .ldCell{border:1px solid #E0E5EC;background:#FFFFFF}
+#tabloubot.tbZi .reportHero{border:1px solid #C3CCD8;background:#FFFFFF}
+#tabloubot.tbZi .reportSection{border:1px solid #E0E5EC;background:#FFFFFF}
+#tabloubot.tbZi .syncReady{color:#0B8A5F}
+#tabloubot.tbZi .syncWarn{color:#8A5A00}
+#tabloubot.tbZi .syncBad{color:#CC3A32}
+#tabloubot.tbZi .pv3Box,#tabloubot.tbZi .stressBox{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi .pv3Cell,#tabloubot.tbZi .stressCell{border:1px solid #E0E5EC;background:#FFFFFF}
+#tabloubot.tbZi .stressLoss{color:#CC3A32}
+#tabloubot.tbZi .stressGood{color:#0B8A5F}
+#tabloubot.tbZi .ensBox{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi .ensCell{border:1px solid #E0E5EC;background:#FFFFFF}
+#tabloubot.tbZi .ensUsable{color:#0B8A5F}
+#tabloubot.tbZi .ensWeak{color:#8A5A00}
+#tabloubot.tbZi .ensSkip{color:#CC3A32}
+#tabloubot.tbZi .disagreeTrack{background:#E9EDF3}
+#tabloubot.tbZi .disagreeTrack i{background:#2456E6}
+#tabloubot.tbZi .extBox{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi .extCell{border:1px solid #E0E5EC;background:#FFFFFF}
+#tabloubot.tbZi .extGood{color:#0B8A5F}
+#tabloubot.tbZi .extWarn{color:#8A5A00}
+#tabloubot.tbZi .extBad{color:#CC3A32}
+#tabloubot.tbZi .heatTrack{background:#E9EDF3}
+#tabloubot.tbZi .heatTrack i{background:#2456E6}
+#tabloubot.tbZi .vcKpi{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi .vcAgreementTrack{background:#E9EDF3}
+#tabloubot.tbZi .vcAgreementTrack i{background:#2456E6}
+#tabloubot.tbZi .vcGroup{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi .vcGroup .vcChip{border:1px solid #C3CCD8}
+#tabloubot.tbZi .vcBull .vcChip{border-color:#0B8A5F;color:#0B8A5F}
+#tabloubot.tbZi .vcBear .vcChip{border-color:#CC3A32;color:#CC3A32}
+#tabloubot.tbZi .vcNeutral .vcChip{border-color:#66768B;color:#48586E}
+#tabloubot.tbZi .vcBlock .vcChip{border-color:#E0A526;color:#8A5A00}
+#tabloubot.tbZi .vcFamily{border:1px solid #E0E5EC;background:#FFFFFF}
+#tabloubot.tbZi .vcCell{border:1px solid #E0E5EC;background:#FFFFFF}
+#tabloubot.tbZi .vcBiasBull{color:#0B8A5F}
+#tabloubot.tbZi .vcBiasBear{color:#CC3A32}
+#tabloubot.tbZi .vcBiasNeutral{color:#48586E}
+#tabloubot.tbZi .vcBiasBlock{color:#8A5A00}
+#tabloubot.tbZi .vcSummary{border:1px solid #C3CCD8;background:#FFFFFF}
+#tabloubot.tbZi .volHeroBox{background:linear-gradient(135deg,rgba(36,86,230,.11),rgba(36,86,230,.07));border:1px solid #C3CCD8}
+#tabloubot.tbZi .volBox{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi .volCell{border:1px solid #E0E5EC;background:#FFFFFF}
+#tabloubot.tbZi .volGauge{background:#E9EDF3}
+#tabloubot.tbZi .volGauge i{background:#2456E6}
+#tabloubot.tbZi .volTf{background:#FFFFFF;border:1px solid #E0E5EC}
+#tabloubot.tbZi .volGood{color:#0B8A5F}
+#tabloubot.tbZi .volWarn{color:#8A5A00}
+#tabloubot.tbZi .volBad{color:#CC3A32}
+#tabloubot.tbZi .volNeutral{color:#48586E}
+#tabloubot.tbZi td,#tabloubot.tbZi th{border:1px solid #E0E5EC}
+#tabloubot.tbZi .offlineBanner{background:#E0A526;color:#0E1A2B;border-bottom:1px solid #E0A526}
+#tabloubot.tbZi .vcDetails{border:1px solid #E0E5EC;background:#FFFFFF}
+#tabloubot.tbZi .vcDetails>summary{color:#0E1A2B}
+#tabloubot.tbZi .vcDetails>summary:focus-visible{box-shadow:0 0 0 2px #2456E6}
+#tabloubot.tbZi .refStale{color:#CC3A32}
+#tabloubot.tbZi .refAging{color:#8A5A00}
+#tabloubot.tbZi .refFresh{color:#0B8A5F}
+@media(min-width:981px){#tabloubot.tbZi .sideMenu{scrollbar-color:#C3CCD8 transparent}}
+#tabloubot.tbZi .decisionPrimary{border:1px solid #C3CCD8;background:linear-gradient(#FFFFFF,#FFFFFF)}
+#tabloubot.tbZi .decisionHeadline{color:#0E1A2B}
+#tabloubot.tbZi .decisionActionLine{background:#E9EDF3;border:1px solid #C3CCD8}
+#tabloubot.tbZi .decisionRisk{border:1px solid #C3CCD8}
+#tabloubot.tbZi .decisionRisk.good{color:#0B8A5F;border-color:#0B8A5F;background:rgba(11,138,95,.12)}
+#tabloubot.tbZi .decisionRisk.bad{color:#CC3A32;border-color:#66768B;background:rgba(102,118,139,.12)}
+#tabloubot.tbZi .decisionRisk.warn{color:#8A5A00;border-color:#E0A526;background:rgba(224,165,38,.12)}
+#tabloubot.tbZi .decisionRisk.neutral{color:#0E1A2B}
+#tabloubot.tbZi .decisionKpi{border:1px solid #E0E5EC;background:#FFFFFF}
+#tabloubot.tbZi .decisionExplain{border:1px solid #E0E5EC;background:#FFFFFF}
+#tabloubot.tbZi .decisionExplain.support>b{color:#0B8A5F}
+#tabloubot.tbZi .decisionExplain.oppose>b{color:#CC3A32}
+#tabloubot.tbZi .decisionExplain.unlock>b{color:#8A5A00}
+#tabloubot.tbZi .decisionListItem{background:#F5F7FA;border:1px solid #E0E5EC}
+#tabloubot.tbZi .decisionListItem.support i{color:#0B8A5F}
+#tabloubot.tbZi .decisionListItem.oppose i{color:#CC3A32}
+#tabloubot.tbZi .decisionListItem.unlock i{color:#8A5A00}
+#tabloubot.tbZi .decisionListItem.neutral i{color:#48586E}
+#tabloubot.tbZi .decisionTrade{border:1px solid #C3CCD8;background:#FFFFFF}
+#tabloubot.tbZi .prGateDash,#tabloubot.tbZi .prPrimary,#tabloubot.tbZi .prCurrent,#tabloubot.tbZi .prBox,#tabloubot.tbZi .prMarketCard{border:1px solid #C3CCD8;background:#FFFFFF}
+#tabloubot.tbZi .prDashHero>div{border:1px solid #E0E5EC;background:#FFFFFF}
+#tabloubot.tbZi .prNotReady{color:#CC3A32}
+#tabloubot.tbZi .prPaperReady{color:#8A5A00}
+#tabloubot.tbZi .prLiveReady{color:#0B8A5F}
+#tabloubot.tbZi .prTrack{background:#E9EDF3}
+#tabloubot.tbZi .prTrack i{background:linear-gradient(90deg,#66768B,#2456E6)}
+#tabloubot.tbZi .prMini{border:1px solid #E0E5EC;background:#FFFFFF}
+#tabloubot.tbZi .prCriterion{border:1px solid #E0E5EC;background:#FFFFFF}
+#tabloubot.tbZi .prCriterion.pass .prIcon{color:#0B8A5F}
+#tabloubot.tbZi .prCriterion.fail .prIcon{color:#CC3A32}
+#tabloubot.tbZi .prCriterion.warn .prIcon{color:#8A5A00}
+#tabloubot.tbZi .replayStepper input[type=range]{accent-color:#0B8A5F}
+#tabloubot.tbZi .replayKpi{border:1px solid #2456E6;background:#FFFFFF}
+#tabloubot.tbZi .replayKpi span{color:#66768B}
+#tabloubot.tbZi .replayComp{border:1px solid #2456E6;background:#FFFFFF}
+#tabloubot.tbZi .replayComp span{color:#66768B}
+#tabloubot.tbZi .replayLog{border:1px solid #2456E6}
+#tabloubot.tbZi .replayLogRow{border-bottom:1px solid #E9EDF3}
+#tabloubot.tbZi #replayChart{background:#FFFFFF;border:1px solid #2456E6}
+#tabloubot.tbZi .histProgress>div{background:#FFFFFF}
+#tabloubot.tbZi .histProgress i{background:linear-gradient(90deg,#2456E6,#0B8A5F)}
+#tabloubot.tbZi .histScanTable{border:1px solid #2456E6}
+#tabloubot.tbZi .histScanRow{border-bottom:1px solid #E9EDF3}
+#tabloubot.tbZi .histScanHead{background:#F5F7FA;color:#0E1A2B}
+#tabloubot.tbZi .histRank{color:#0B8A5F}
+#tabloubot.tbZi .paperBlotterWrap{border:1px solid #E9EDF3;background:#FFFFFF}
+#tabloubot.tbZi .paperRowV3{border-top:1px solid #E9EDF3}
+#tabloubot.tbZi .paperRowV3Head{background:#FFFFFF;color:#48586E}
+#tabloubot.tbZi .edgeProKpis>div,#tabloubot.tbZi .edgeProMetric{background:rgba(14,26,43,.018)}
+#tabloubot.tbZi .edgeProRow.head .edgeProCell{background:rgba(14,26,43,.025)}
+#tabloubot.tbZi .providerHealthPanel{border-top:1px solid var(--border,#E0E5EC)}
+#tabloubot.tbZi .providerHealthRow{background:rgba(14,26,43,.025)}
+#tabloubot.tbZi .providerHealthHead{color:var(--muted,#48586E);background:rgba(14,26,43,.05)}
+#tabloubot.tbZi .marketBreadthCard{border-color:#C3CCD8;background:linear-gradient(rgba(245,247,250,.98),rgba(245,247,250,.98))}
+#tabloubot.tbZi .breadthHero>div{background:rgba(14,26,43,.018)}
+#tabloubot.tbZi .breadthState.neutral{color:#8A5A00}
+#tabloubot.tbZi .breadthTrack{background:#E9EDF3}
+#tabloubot.tbZi .breadthTrack i{background:linear-gradient(90deg,#CC3A32,#E0A526 50%,#0B8A5F)}
+#tabloubot.tbZi .breadthBox{background:rgba(14,26,43,.018)}
+#tabloubot.tbZi .scanBreadthStrip{border:1px solid #C3CCD8;background:#FFFFFF}
+#tabloubot.tbZi .decisionOsCard,#tabloubot.tbZi .decisionOsVerdictCard{border:1px solid rgba(11,138,95,.18);background:linear-gradient(rgba(245,247,250,.98),rgba(245,247,250,.98))}
+#tabloubot.tbZi .decisionOsKpi,#tabloubot.tbZi .decisionTool{border:1px solid rgba(102,118,139,.15);background:rgba(14,26,43,.025)}
+#tabloubot.tbZi .decisionOsState.good,#tabloubot.tbZi .decisionTool.good .decisionToolState{color:#0B8A5F}
+#tabloubot.tbZi .decisionOsState.bad,#tabloubot.tbZi .decisionTool.bad .decisionToolState{color:#CC3A32}
+#tabloubot.tbZi .decisionOsState.neutral,#tabloubot.tbZi .decisionTool.warn .decisionToolState{color:#8A5A00}
+#tabloubot.tbZi .decisionToolDetail{color:var(--muted,#48586E)}
+#tabloubot.tbZi .decisionOsFooter{background:rgba(14,26,43,.025);color:var(--muted,#48586E)}
+#tabloubot.tbZi .edgeCalCard,#tabloubot.tbZi .edgeCalVerdictCard{border:1px solid rgba(36,86,230,.22);background:linear-gradient(rgba(245,247,250,.98),rgba(245,247,250,.98))}
+#tabloubot.tbZi .edgeCalKpi{border:1px solid rgba(102,118,139,.15);background:rgba(14,26,43,.025)}
+#tabloubot.tbZi .edgeCalState.good{color:#0B8A5F}
+#tabloubot.tbZi .edgeCalState.bad{color:#CC3A32}
+#tabloubot.tbZi .edgeCalState.neutral{color:#8A5A00}
+#tabloubot.tbZi .edgeCalRow.head{background:rgba(14,26,43,.035)}
+#tabloubot.tbZi .edgeCalRow.warn b{color:#8A5A00}
+body #tabloubot.tbZi .dashOperations .decisionTool.bad{outline:1px solid rgba(204,58,50,.28)}
+#tabloubot.tbZi .noticeBad{border:1px solid rgba(204,58,50,.34);background:rgba(204,58,50,.07)}
+#tabloubot.tbZi #tbNivel.tbOprit{color:#2456E6}
+#tabloubot.tbZi .lipsa,#tabloubot.tbZi b.lipsa,#tabloubot.tbZi .n.lipsa{color:#66768B!important}
+#tabloubot.tbZi{--tb-linie:rgba(14,26,43,.16);--tb-fond:#FFFFFF;--tb-fond2:#F5F7FA}
+#tabloubot.tbZi .tbGauge{background:rgba(14,26,43,.14)}
+#tabloubot.tbZi .tbGaugeGrid{background:linear-gradient(90deg,rgba(36,86,230,.18),rgba(36,86,230,.18))}
+#tabloubot.tbZi .tbAvert{background:rgba(204,58,50,.07)}
+#tabloubot.tbZi .tbSfat-critic{background:rgba(204,58,50,.07)}
+#tabloubot.tbZi .tbScenGol{background:rgba(204,58,50,.07)}
+#tabloubot.tbZi .tbZi i{background:#0B8A5F}
+#tabloubot.tbZi .tbZi i.neg{background:#CC3A32}
+#tabloubot.tbZi .tbFac{background:rgba(36,86,230,.08)}
+#tabloubot.tbZi .tbSemNivel.neutral{color:var(--tb-mut,#48586E)}
+#tabloubot.tbZi .tbPodeaBani{background:rgba(36,86,230,.06)}
+#tabloubot.tbZi .tbPill-bine{background:#0B8A5F}
+#tabloubot.tbZi .tbPill-atentie{background:#E0A526}
+#tabloubot.tbZi .tbPill-rau{background:#CC3A32}
+#tabloubot.tbZi .t212Card{--tb-linie:rgba(14,26,43,.16);--tb-fond:#FFFFFF;--tb-fond2:#F5F7FA;border:1px solid rgba(36,86,230,.35);background:linear-gradient(135deg,rgba(36,86,230,.07),rgba(255,255,255,.6))}
+#tabloubot.tbZi .t212BtnPlin{color:#FFFFFF}
+#tabloubot.tbZi .t212Fac{background:rgba(36,86,230,.08)}
+#tabloubot.tbZi .t212Pill-tine{background:#0B8A5F}
+#tabloubot.tbZi .t212Pill-atentie{background:#E0A526}
+#tabloubot.tbZi .t212Pill-iesi{background:#CC3A32}
+#tabloubot.tbZi .t212Pill-fara{background:#66768B}
+#tabloubot.tbZi .t212Preturi{border:1px solid rgba(36,86,230,.28);background:rgba(36,86,230,.05)}
+#tabloubot.tbZi .t212Dunga.n{background:#66768B}
+#tabloubot.tbZi .t212PlanChip.ok{border-color:rgba(11,138,95,.45)}
+#tabloubot.tbZi .t212Plan input.calc{border-color:rgba(36,86,230,.5)}
+#tabloubot.tbZi .t212Side .t212Preturi{border:1px solid rgba(36,86,230,.28);background:rgba(36,86,230,.05)}
+#tabloubot.tbZi .tbSus>#tbSemaforCard{background:linear-gradient(135deg,rgba(11,138,95,.12),transparent)}
+#tabloubot.tbZi .tbDunga.n{background:#66768B}
+#tabloubot.tbZi .t212Link{border:1px solid rgba(36,86,230,.35);background:rgba(36,86,230,.06)}
+#tabloubot.tbZi .t212Sfat{border-left:3px solid #66768B;background:rgba(14,26,43,.06)}
+#tabloubot.tbZi .tbIndTab th{color:var(--muted,#48586E)}
+#tabloubot.tbZi .tbIndTab td{border-top:1px solid var(--tb-linie,#E0E5EC)}
+#tabloubot.tbZi .tbIndTab td:first-child{color:var(--muted,#48586E)}
+#tabloubot.tbZi .tbMediu{border:1px solid var(--tb-linie,#E0E5EC);background:rgba(102,118,139,.05)}
+#tabloubot.tbZi .tbMediuCap{color:var(--muted,#48586E)}
+#tabloubot.tbZi .tbMediuR>span{color:var(--muted,#48586E)}
+#tabloubot.tbZi .tbIndEst td{border-top:2px solid var(--tb-linie,#E0E5EC)}
+#tabloubot.tbZi .tbIndPred{background:rgba(102,118,139,.07);border:1px dashed rgba(102,118,139,.3)}
+#tabloubot.tbZi .tbFaraPlan{background:rgba(224,165,38,.07)}
+#tabloubot.tbZi .tbPregBloc{border-top:1px solid rgba(14,26,43,.16)}
+#tabloubot.tbZi .tbPregMon{border-bottom:1px dashed rgba(14,26,43,.12)}
+#tabloubot.tbZi .tbTag.good{border-color:rgba(11,138,95,.45);background:rgba(11,138,95,.08)}
+#tabloubot.tbZi .tbTag.warn{border-color:rgba(224,165,38,.45);background:rgba(224,165,38,.08)}
+#tabloubot.tbZi .tbTag.bad{border-color:rgba(204,58,50,.45);background:rgba(204,58,50,.08)}
+#tabloubot.tbZi .gbTip{background:#FFFFFF}
+#tabloubot.tbZi .tbCitTx{color:#0E1A2B}
+#tabloubot.tbZi .tbCitR.bine .tbCitIc{background:rgba(11,138,95,.15)}
+#tabloubot.tbZi .tbCitR.atentie .tbCitIc{background:rgba(224,165,38,.15)}
+#tabloubot.tbZi .tbCitR.rau .tbCitIc{background:rgba(204,58,50,.16)}
+#tabloubot.tbZi .tbCitR.info .tbCitIc{background:rgba(14,26,43,.14)}
+#tabloubot.tbZi .grPlanDe ul{color:#0E1A2B}
+#tabloubot.tbZi .tbGridLarg{background:rgba(204,58,50,.08)}
+#tabloubot.tbZi .stStat .stCurba{stroke:#2456E6}
+#tabloubot.tbZi .stStat .stPunct{fill:#2456E6}
+#tabloubot.tbZi .stStat .stPlus{fill:#0B8A5F}
+#tabloubot.tbZi .stStat .stMinus{fill:#CC3A32}
+#tabloubot.tbZi .tbRetea{border-top:1px dashed rgba(14,26,43,.35)}
+#tabloubot.tbZi .tbRezumat{background:rgba(14,26,43,.05);border:1px solid rgba(14,26,43,.08);color:var(--text,#0E1A2B)}
+#tabloubot.tbZi .tbTrendTab th{color:var(--muted,#48586E)}
+#tabloubot.tbZi .tbTrendTab td{border-top:1px solid var(--tb-linie,#E0E5EC)}
+#tabloubot.tbZi .tbTrendBec{color:#FFFFFF;background:var(--muted,#48586E)}
+#tabloubot.tbZi .grPlanSariTx{background:rgba(204,58,50,.08)}
+#tabloubot.tbZi .bsTot{background:#F5F7FA}
+@media (max-width:760px){#tabloubot.tbZi .botStrip::after{background:linear-gradient(#F5F7FA,#F5F7FA)}}
+#tabloubot.tbZi #mcsPagina .mcsBaraSt .n{background:#66768B}
+#tabloubot.tbZi #mcsPagina .mcsAvert{background:rgba(224,165,38,.08)}
+#tabloubot.tbZi .mcsRevBtn:hover,#tabloubot.tbZi .mcsRevBtn:focus-visible{color:var(--text,#0E1A2B)}
+#tabloubot.tbZi #gsPagina .gsVerdict.good b{color:var(--good,#0B8A5F)}
+#tabloubot.tbZi #gsPagina .gsVerdict.bad b{color:var(--bad,#CC3A32)}
+#tabloubot.tbZi #gsPagina .gsVerdict.mijl b{color:var(--warn,#8A5A00)}
+#tabloubot.tbZi #gsPagina .mcsAvert{background:rgba(224,165,38,.08)}
+#tabloubot.tbZi .tbCitVoci{background:rgba(14,26,43,.08)}
+#tabloubot.tbZi .tbCitVoci.atentie{background:rgba(224,165,38,.08)}
+#tabloubot.tbZi .topStatus{background:#FFFFFF!important;border-bottom:1px solid #E0E5EC}
+#tabloubot.tbZi .pzVoce-da{border-color:rgba(11,138,95,.55)}
+#tabloubot.tbZi .pzVoce-nu{border-color:rgba(204,58,50,.6)}
+#tabloubot.tbZi .pzVoce-atentie{border-color:rgba(224,165,38,.6)}
+#tabloubot.tbZi .pzDrumGrid{background:rgba(36,86,230,.28)}
+#tabloubot.tbZi .pzRangeBanda{background:rgba(14,26,43,.35)}
+#tabloubot.tbZi .pzKv{border-bottom:1px dotted rgba(195,204,216,.6)}
+#tabloubot.tbZi .pzK{text-decoration:underline dotted rgba(14,26,43,.6)}
+#tabloubot.tbZi .tbPill,#tabloubot.tbZi .t212Pill{color:#F2F4F7}
+#tabloubot.tbZi .pzFasiaBtn{background:var(--f1,#FFFFFF);color:#48586E;border:1px solid #E0E5EC}
+#tabloubot.tbZi .pzFasiaBtn:hover{color:#0E1A2B;border-color:#C3CCD8}
+#tabloubot.tbZi .pzFasiaBtn:focus-visible{outline:2px solid #2456E6}
+#tabloubot.tbZi .gbValori{border-top:1px solid #E0E5EC}
+#tabloubot.tbZi .gbValori .gbVN{color:#48586E}
+#tabloubot.tbZi .gbValori .gbVP{color:#0E1A2B}
+#tabloubot.tbZi .gbValori .gbVD,#tabloubot.tbZi .gbValori .gbVS{color:#66768B}
+#tabloubot.tbZi .luGrafic .luUp{stroke:#2456E6}
+#tabloubot.tbZi .luGrafic .luSp{stroke:#E0A526}
+#tabloubot.tbZi .luLegUp{color:#2456E6}
+#tabloubot.tbZi .luLegSp{color:#8A5A00}
+#tabloubot.tbZi .rzTab tr.rzRand[data-action-click]:hover td{background:var(--panel-3,rgba(14,26,43,.03))}
+#tabloubot.tbZi .srQL{fill:#0B8A5F}
+#tabloubot.tbZi .srQI{fill:#2456E6}
+#tabloubot.tbZi .srQG{fill:#CC3A32}
+#tabloubot.tbZi .srQW{fill:#E0A526}
+#tabloubot.tbZi .srCad.cdL{color:#0B8A5F}
+#tabloubot.tbZi .srCad.cdW{color:#8A5A00}
+#tabloubot.tbZi .srCad.cdG{color:#CC3A32}
+#tabloubot.tbZi .srCad.cdI{color:#2456E6}
+#tabloubot.tbZi .mcBara{background:linear-gradient(90deg,#CC3A32,#E0A526 45%,#66768B 58%,#0B8A5F)}
+#tabloubot.tbZi .mbCitat{color:#2B3A4B}
+#tabloubot.tbZi .mbSursa{border-top:1px solid rgba(14,26,43,.08)}
+#tabloubot.tbZi .mbZona{background:rgba(14,26,43,.14);color:#2B3A4B}
+#tabloubot.tbZi .mbZHealthy,#tabloubot.tbZi .mbZStrong{background:rgba(11,138,95,.18);color:#0B8A5F}
+#tabloubot.tbZi .mbZWeakening{background:rgba(224,165,38,.18)}
+#tabloubot.tbZi .mbZCritical{background:rgba(204,58,50,.18);color:#CC3A32}
+#tabloubot.tbZi .mbSc{border-top:1px solid rgba(14,26,43,.08)}
+#tabloubot.tbZi .szBara{background:rgba(14,26,43,.14)}
+#tabloubot.tbZi .szBara i{background:rgba(14,26,43,.5)}
+#tabloubot.tbZi .szPiesa{border-top:1px solid rgba(14,26,43,.08)}
+#tabloubot.tbZi .szP{background:rgba(11,138,95,.18);color:#0B8A5F}
+#tabloubot.tbZi .szN{background:rgba(204,58,50,.18);color:#CC3A32}
+#tabloubot.tbZi .sz0{background:rgba(14,26,43,.14);color:#2B3A4B}
+#tabloubot.tbZi .szW{background:rgba(224,165,38,.18)}
+#tabloubot.tbZi .scIstTab tr.scIstAcum td{background:rgba(36,86,230,.07)}
+#tabloubot.tbZi .gbValori li.gbAproape .gbVN{color:#8A5A00}
+#tabloubot.tbZi .gbValCap{color:#0E1A2B}
+#tabloubot.tbZi input:focus-visible,#tabloubot.tbZi select:focus-visible,#tabloubot.tbZi textarea:focus-visible{outline:2px solid #2456E6}
+#tabloubot.tbZi .vcDetails>summary:focus-visible{outline:2px solid #2456E6}
+#tabloubot.tbZi #t212Continut tr.t212Rand[aria-expanded="true"]{background:rgba(36,86,230,.12)}
+#tabloubot.tbZi .t212Bursa.deschisa{border-color:rgba(11,138,95,.45)}
+#tabloubot.tbZi button.pzVoce:hover{background:rgba(14,26,43,.05)}
+#tabloubot.tbZi .sugVerdict-v{background:rgba(224,165,38,.14);border-color:rgba(224,165,38,.55)}
+#tabloubot.tbZi .sugVerdict-p{background:rgba(36,86,230,.16);border-color:rgba(36,86,230,.55)}
+#tabloubot.tbZi .sugVerdict-n{background:rgba(14,26,43,.12);border-color:rgba(14,26,43,.4)}
+#tabloubot.tbZi .sugRand.ales{background:rgba(36,86,230,.12)}
+#tabloubot.tbZi .sugBlocA{border-color:rgba(224,165,38,.4)}
+#tabloubot.tbZi .sugActiuni .sugBtnPlin{color:#FFFFFF}
+#tabloubot.tbZi .sugLista2 .sugMaiMult:hover{background:rgba(36,86,230,.08)}
+#tabloubot.tbZi .prDrumFond{fill:rgba(14,26,43,.2)}
+#tabloubot.tbZi #prNoteaza{color:#FFFFFF}
+#tabloubot.tbZi .prMesaj{background:rgba(36,86,230,.08)}
+#tabloubot.tbZi .prMesaj.prMesajRau{background:rgba(224,165,38,.08)}
+#tabloubot.tbZi .cmdItem[aria-selected="true"]{border-color:#2456E6;background:#F5F7FA}
+#tabloubot.tbZi .cmdItem:focus-visible{outline:2px solid #2456E6}
+#tabloubot.tbZi .aziNuRand{background:rgba(224,165,38,.08)}
+/* ==== v100.316 TEMA TABLOULUI: sfârșit ==== */
+/* Colțurile rămân de cel mult 5 px și ordinea singură pe rând începe cu „.pzDemo #tabloubot .tbCadru>” (regulile temei PAZNIC, proba v100.151). */
+/* v100.316 (el, 10.11.2026: îl deranjează culorile, ordinea, aglomerația, literele ⇒ „Aplică desenul nou în Radar”): DESENUL NOU al Tabloului botului.
+   Un strat peste DOM-ul existent: nimic nu se mută și nimic nu se ascunde; se schimbă ordinea din grilă, cutiile și literele. Regulile vechi rămân mai sus.
+   Tema (deschisă implicit, clasa tbZi pusă de tbTemaAplica) vine din blocul generat de deasupra; aici sunt doar așezarea și forma. */
+html.pzDemo #tabloubot{--pzMono:"IBM Plex Sans",system-ui,"Segoe UI",sans-serif;font-family:"IBM Plex Sans",system-ui,"Segoe UI",sans-serif;font-variant-numeric:tabular-nums}
+html.pzDemo #tabloubot *{font-family:inherit!important}
+html.pzDemo #tabloubot{--nAtent:#2D2613;--nSus:#143025;--nJos:#3A1E1C;--nGrid:#22304A}
+html.pzDemo #tabloubot.tbZi{--nAtent:#FFF3D6;--nSus:#E2F5EC;--nJos:#FCE8E6;--nGrid:#DCE3F8;--pzInfoTxt:#2456E6;--pzJosTxt:#CC3A32}
+html.pzDemo #tabloubot{color:var(--pzT0)}
+html.pzDemo #tabloubot .actionGhost,html.pzDemo #tabloubot .t212BtnLinie{color:var(--pzT0);background:var(--pzF1);border:1px solid var(--pzLi2);border-radius:5px}
+html.pzDemo #tabloubot .actionGhost:hover,html.pzDemo #tabloubot .t212BtnLinie:hover{background:var(--pzF2)}
+html.pzDemo #tabloubot input,html.pzDemo #tabloubot select,html.pzDemo #tabloubot textarea{color:var(--pzT0);background:var(--pzF1);border:1px solid var(--pzLi2);border-radius:5px}
+html.pzDemo #tabloubot.on{background:var(--pzF1);border:1px solid var(--pzLi);border-radius:5px;padding:10px 24px 28px;box-sizing:border-box}
+html.pzDemo #tabloubot.on .tbCadru{gap:0 24px;grid-auto-flow:row dense}
+/* cutiile: blocurile nu mai au chenar și fond; le desparte o linie subțire și spațiul */
+html.pzDemo #tabloubot .tbCadru>.tbSus,html.pzDemo #tabloubot .tbCadru>#pzDrumCard,html.pzDemo #tabloubot .tbCadru>#tbMcSus,html.pzDemo #tabloubot .tbCadru>.contTot,html.pzDemo #tabloubot .tbCadru>.piataAzi,html.pzDemo #tabloubot .tbCadru>#tbSemaforCard,html.pzDemo #tabloubot .tbCadru>#tbIdei,html.pzDemo #tabloubot .tbCadru>#tbAcumCard,html.pzDemo #tabloubot .tbCadru>details,html.pzDemo #tabloubot .tbBloc,html.pzDemo #tabloubot .tbTodo,html.pzDemo #tabloubot .tbCc{background:none;border:0;border-radius:0;box-shadow:none}
+html.pzDemo #tabloubot .tbCadru>#tbMcSus,html.pzDemo #tabloubot .tbCadru>.contTot,html.pzDemo #tabloubot .tbCadru>.piataAzi,html.pzDemo #tabloubot .tbCadru>#tbSemaforCard,html.pzDemo #tabloubot .tbCadru>#tbIdei,html.pzDemo #tabloubot .tbCadru>#tbAcumCard,html.pzDemo #tabloubot .tbCadru>details,html.pzDemo #tabloubot .tbCadru>#tbConcret,html.pzDemo #tabloubot .tbCadru>.tbGrilaNoua,html.pzDemo #tabloubot .tbCadru>#tbGridNou,html.pzDemo #tabloubot .tbGrStanga>#tbTodo,html.pzDemo #tabloubot .tbGrStanga>#tbCitireCard{border-top:1px solid var(--pzLi);padding:16px 0;margin:0}
+html.pzDemo #tabloubot .tbCadru>#tbGridNou{border:0;border-top:1px solid var(--pzLi);border-radius:0;background:none}
+html.pzDemo #tabloubot .tbBloc,html.pzDemo #tabloubot .tbTodo{padding-left:0;padding-right:0}
+html.pzDemo #tabloubot .tbCadru>details>summary,html.pzDemo #tabloubot .tbTodo .tbTodoCap,html.pzDemo #tabloubot .tbTodo .tbTodoRand,html.pzDemo #tabloubot .tbTodo>p,html.pzDemo #tabloubot .tbCadru>details>.tbBloc{padding-left:0;padding-right:0}
+html.pzDemo #tabloubot .tbCadru>details{padding-top:0;padding-bottom:0}
+html.pzDemo #tabloubot .tbCadru>details>summary{padding-top:13px;padding-bottom:13px;font-weight:600}
+html.pzDemo #tabloubot .tbCc{padding:0 20px 0 0}
+html.pzDemo #tabloubot .tbBlocCap>b,html.pzDemo #tabloubot .tbBlocCap>h3,html.pzDemo #tabloubot .tbTodoCap>b,html.pzDemo #tabloubot .pzCap>b{font-size:15px;font-weight:600;letter-spacing:0}
+/* capul paginii: numele și prețul, banda de verdict, cele patru cifre, rigla */
+.pzDemo #tabloubot .tbCadru>.sectionHead{order:1}
+html.pzDemo #tabloubot.on .tbCadru>.sectionHead{grid-column:1 / -1!important;grid-row:auto!important;padding:10px 0 12px;align-items:center}
+html.pzDemo #tabloubot .tbAntet h3{font-size:20px;font-weight:600;color:var(--pzT0);background:none;-webkit-text-fill-color:currentColor}
+html.pzDemo #tabloubot .tbAntet .stockBadge{border:0;background:var(--pzF2);border-radius:5px;font-size:12px;font-weight:500;color:var(--pzT1)}
+html.pzDemo #tabloubot .tbAntet .actionGhost,html.pzDemo #tabloubot .tbAntet .tbSimBtn{min-height:0;height:auto;padding:8px 14px;border-radius:5px;font-size:13.5px;font-weight:500;background:var(--pzF1);border:1px solid var(--pzLi);color:var(--pzT0)}
+html.pzDemo #tabloubot .tbActiuni{gap:8px}
+html.pzDemo #tabloubot .tbAntet .actionGhost,html.pzDemo #tabloubot .tbAntet .tbSimBtn{white-space:nowrap}
+html.pzDemo #tabloubot #tbKpi .pzKv>b{min-width:0;overflow-wrap:anywhere}
+.pzDemo #tabloubot .tbCadru>#pzVerdict{order:2}
+html.pzDemo #tabloubot.on .tbCadru>#pzVerdict{grid-column:1 / -1!important;grid-row:auto!important;align-self:auto;border:0;border-radius:5px;padding:12px 16px;background:var(--pzF2)}
+html.pzDemo #tabloubot.on .tbCadru>#pzVerdict:has(.pzVerb-aur){background:var(--nAtent)}
+html.pzDemo #tabloubot.on .tbCadru>#pzVerdict:has(.pzVerb-rosu){background:var(--nJos)}
+html.pzDemo #tabloubot.on .tbCadru>#pzVerdict:has(.pzVerb-verde){background:var(--nSus)}
+html.pzDemo #tabloubot.on .tbCadru>#pzVerdict:has(.pzVerb-sus){background:var(--nSus)}
+html.pzDemo #tabloubot.on .tbCadru>#pzVerdict:has(.pzVerb-jos){background:var(--nJos)}
+html.pzDemo #tabloubot #pzVerdict .pzVerbRand{align-items:baseline;gap:6px 16px;flex-wrap:wrap}
+html.pzDemo #tabloubot #pzVerdict .pzVerb{font-size:15px;font-weight:600;letter-spacing:0;text-transform:lowercase;display:inline-block;padding:0;border:0;background:none;line-height:1.4}
+html.pzDemo #tabloubot #pzVerdict .pzVerb::first-letter{text-transform:uppercase}
+html.pzDemo #tabloubot #pzVerdict .pzVerbTxt{flex:1 1 420px;min-width:0}
+html.pzDemo #tabloubot #pzVerdict .pzVerbTxt>b{font-size:15px;font-weight:500;color:var(--pzT0)}
+html.pzDemo #tabloubot #pzVerdict .pzVerbTxt>p{margin:2px 0 0;font-size:13.5px;color:var(--pzT1)}
+html.pzDemo #tabloubot #pzVerdict .pzVerbTxt>p.pzDin{font-size:12px;color:var(--pzT2)}
+html.pzDemo #tabloubot #pzVerdict .pzPret{font-size:30px;font-weight:600;line-height:1;letter-spacing:-.01em;color:var(--pzT0)}
+html.pzDemo #tabloubot #pzVerdict .pzPret.sus{color:var(--pzSus)}
+html.pzDemo #tabloubot #pzVerdict .pzPret.jos{color:var(--pzJos)}
+html.pzDemo #tabloubot #pzVerdict .pzVoci{border-top:0;padding-top:8px;gap:4px 14px}
+html.pzDemo #tabloubot #pzVerdict .pzVoce{border:0;background:none;padding:0;font-size:12px;color:var(--pzT1)}
+html.pzDemo #tabloubot #pzVerdict .pzVoce-da{color:var(--pzSus)}
+html.pzDemo #tabloubot #pzVerdict .pzVoce-nu{color:var(--pzJos)}
+.pzDemo #tabloubot .tbCadru>.tbSus{order:3}
+html.pzDemo #tabloubot.on .tbCadru>.tbSus{grid-column:1 / -1!important;grid-row:auto!important;padding:18px 0 4px}
+html.pzDemo #tabloubot.on .tbCadru>.tbSus>#tbKpi{grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:0}
+html.pzDemo #tabloubot #tbKpi>.tbKpiCel{border:0;border-left:1px solid var(--pzLi);background:none;padding:0 18px;border-radius:0}
+html.pzDemo #tabloubot #tbKpi>.tbKpiCel:first-child{border-left:0;padding-left:0}
+html.pzDemo #tabloubot #tbKpi .tbEt2{font-size:12px;color:var(--pzT2);letter-spacing:0;text-transform:none;font-weight:400}
+html.pzDemo #tabloubot #tbKpi .tbKpiVal{font-size:20px;font-weight:600;line-height:1.25}
+.pzDemo #tabloubot .tbCadru>#tbGridLarg{order:4}
+.pzDemo #tabloubot .tbCadru>#pzDrumCard{order:5}
+html.pzDemo #tabloubot.on .tbCadru>#pzDrumCard{padding:6px 0 10px}
+html.pzDemo #tabloubot #pzDrumCard .pzCap>span{font-size:12px;color:var(--pzT2)}
+html.pzDemo #tabloubot #pzDrumCard .pzDrumPista{height:6px;border-radius:3px;background:var(--pzLi)}
+html.pzDemo #tabloubot #pzDrumCard .pzDrumGrid{top:-6px;height:18px;border-radius:4px;background:var(--nGrid);border-left:2px solid var(--pzInfo);border-right:2px solid var(--pzInfo);box-sizing:border-box;opacity:1}
+html.pzDemo #tabloubot #pzDrumCard .pzDrumNiv{top:-9px;height:24px;width:2px}
+html.pzDemo #tabloubot #pzDrumCard .pzDrumAcum{top:-10px;width:12px;height:26px;border-radius:5px;background:var(--pzT0);box-shadow:0 0 0 3px var(--pzF1);margin-left:-4px;border:0}
+html.pzDemo #tabloubot #pzDrumCard .pzDrumEt{font-size:12px}
+html.pzDemo #tabloubot #pzDrumCard .pzDrumEt b{font-size:13.5px;font-weight:600}
+.pzDemo #tabloubot .tbCadru>#ctAcum{order:6}
+html.pzDemo #tabloubot.on .tbCadru>#ctAcum{border:0;border-radius:5px;background:var(--pzF2);padding:12px 16px 6px;margin:10px 0 4px}
+html.pzDemo #tabloubot #ctAcum .ctCap>b{font-size:15px;font-weight:600;letter-spacing:0;text-transform:lowercase;display:inline-block;color:var(--pzT0)}
+html.pzDemo #tabloubot #ctAcum .ctCap>b::first-letter{text-transform:uppercase}
+html.pzDemo #tabloubot #ctAcum .ctCap>span{font-size:12px;color:var(--pzT2)}
+html.pzDemo #tabloubot #ctAcum .ctNr{border:0;background:none;padding:0;font-size:20px;font-weight:600;line-height:1.1;text-align:left}
+html.pzDemo #tabloubot #ctAcum .ctNr small{display:block;font-size:12px;font-weight:400;color:var(--pzT2)}
+html.pzDemo #tabloubot #ctAcum .ctTxt>b{font-size:13.5px;font-weight:600;color:var(--pzT0)}
+html.pzDemo #tabloubot #ctAcum .ctTxt>span{font-size:12px;color:var(--pzT1)}
+html.pzDemo #tabloubot #ctAcum .ctTxt>.ctFac{font-size:13.5px;font-weight:500;margin:4px 0 0}
+html.pzDemo #tabloubot #ctAcum .ctRand{padding:8px 0;gap:4px 12px;grid-template-columns:64px minmax(0,1fr)}
+.pzDemo #tabloubot .tbCadru>.tbGraficRand{order:8}
+html.pzDemo #tabloubot.on .tbCadru>.tbGraficRand{border-top:1px solid var(--pzLi);padding-top:16px;margin-top:8px;gap:0 24px}
+.pzDemo #tabloubot .tbCadru>#tbMcSus{order:34}
+html.pzDemo #tabloubot #tbMcSus .tbCitR{background:none;padding-left:0;padding-right:0}
+/* I-850: Monte Carlo o singură dată - cât cardul lui (#tbMcSus, chiar dedesubt) e pe ecran, rândul din „Ce spune piața acum” rămâne o trimitere de o linie */
+html.pzDemo #tabloubot .tbCadru:has(>#tbMcSus:not([hidden])) #tbCitire .tbCitMc>*{display:none}
+html.pzDemo #tabloubot .tbCadru:has(>#tbMcSus:not([hidden])) #tbCitire .tbCitMc{display:block;background:none;padding:8px 0}
+html.pzDemo #tabloubot .tbCadru:has(>#tbMcSus:not([hidden])) #tbCitire .tbCitMc::before{content:"Monte Carlo: scorul și șansele sunt în blocul de mai jos, o singură dată.";font-size:13.5px;color:var(--pzT1)}
+/* butoanele de interval și de mod: un grup lipit, cel ales plin */
+html.pzDemo #tabloubot .tbInterval{gap:0;border:1px solid var(--pzLi);border-radius:5px;overflow:hidden}
+html.pzDemo #tabloubot .tbInterval .tbIntBtn{border:0;border-right:1px solid var(--pzLi);border-radius:0;background:none;color:var(--pzT1);font-size:13.5px;font-weight:400;padding:6px 12px;min-height:0}
+html.pzDemo #tabloubot .tbInterval .tbIntBtn:last-child{border-right:0}
+html.pzDemo #tabloubot .tbInterval .tbIntBtn[aria-pressed="true"]{background:var(--pzT0);color:var(--pzF1);font-weight:500}
+/* ecran lat: „Contează acum” stă lângă cifre și riglă, ca graficul să încapă pe primul ecran */
+@media (min-width:1181px){
+html.pzDemo #tabloubot.on .tbCadru:has(>#ctAcum:not([hidden]))>#pzVerdict,html.pzDemo #tabloubot.on .tbCadru:has(>#ctAcum:not([hidden]))>.tbSus,html.pzDemo #tabloubot.on .tbCadru:has(>#ctAcum:not([hidden]))>#pzDrumCard{grid-column:1 / 5!important}
+.pzDemo #tabloubot .tbCadru>#ctAcum{order:2}
+html.pzDemo #tabloubot.on .tbCadru>#ctAcum{grid-column:5 / -1;grid-row:span 3;margin:0;padding:12px 16px 6px;align-self:stretch}
+}
+@media (max-width:640px){
+html.pzDemo #tabloubot.on{padding:6px 12px 20px;border-radius:5px}
+html.pzDemo #tabloubot.on .tbCadru>.sectionHead{padding:6px 0 8px;gap:6px}
+html.pzDemo #tabloubot .tbAntet .actionGhost,html.pzDemo #tabloubot .tbAntet .tbSimBtn{padding:6px 10px;font-size:12px}
+html.pzDemo #tabloubot .tbAntet .tbIdent{gap:6px}
+html.pzDemo #tabloubot.on .tbCadru>#pzVerdict{padding:10px 12px}
+/* pe telefon bucățile graficului intră direct în grila mare (ordinea 11, 12, 24…): cifrele botului rămân pe 14, sub grafic, ca până acum */
+.pzDemo #tabloubot .tbCadru>.tbSus{order:14}
+html.pzDemo #tabloubot.on .tbCadru>.tbSus{padding-top:12px;border-top:1px solid var(--pzLi);margin-top:12px}
+html.pzDemo #tabloubot.on .tbCadru>.tbSus>#tbKpi{grid-template-columns:repeat(2,minmax(0,1fr))!important;row-gap:14px}
+html.pzDemo #tabloubot #tbKpi>.tbKpiCel:nth-child(3){border-left:0;padding-left:0}
+html.pzDemo #tabloubot #pzVerdict .pzPret{font-size:24px}
+}
+/* v100.316: sfârșitul desenului nou */
 @media (max-width:640px){.sugPandaTab thead{display:table-header-group}.sugPandaTab{display:table}.sugPandaTab tbody{display:table-row-group}.sugPandaTab tr{display:table-row}.sugPandaTab td,.sugPandaTab th{display:table-cell}}
 /* v100.224: pe paginile de zi rămân alertele, banda botului și versiunea. Cipurile de cercetare revin la analiza monedei și în laborator. */
 body.peAcasa:not(.acMonedaDeschisa) .topLeft,body.peTablou .topLeft,body.peT212 .topLeft,body.peJurnal .topLeft,body.peGrid .topLeft,body.pePaginaNoua .topLeft,

@@ -276,7 +276,9 @@ await test("pagina: lista „Ce ai de făcut acum” cheamă blocul ÎNAINTE de 
   assert.ok(f.indexOf(ap) >= 0 && f.indexOf(ap) < f.indexOf("box.innerHTML=(tbStare.citireGoala"));
   assert.match(f, /\(!x\.depasit&&typeof tbEsteSus==="function"&&tbEsteSus\(t\)\?'<span class="ctSus">↑ e și sus<\/span>':''\)/);
   assert.match(f, /tbStare\.todoLista=\[\];if\(typeof tbRenderConteaza==="function"\)tbRenderConteaza\(true\);return\}/, "fără bot: blocul se golește");
-  const css = CSS.slice(CSS.indexOf("/* v100.313"), CSS.indexOf("@media (max-width:640px){.sugPandaTab thead"));
+  /* v100.316: între blocul v100.313 și pândă a intrat tema Tabloului (bloc generat, cu culorile temei de zi) - bucata v100.313 se oprește la marcajul ei */
+  const iTema = CSS.indexOf("/* ==== v100.316 TEMA TABLOULUI: GENERAT"), iPanda = CSS.indexOf("@media (max-width:640px){.sugPandaTab thead");
+  const css = CSS.slice(CSS.indexOf("/* v100.313"), iTema > 0 && iTema < iPanda ? iTema : iPanda);
   assert.ok(css.length > 500 && css.indexOf("#ctAcum") > 0, "stilurile blocului stau ÎNAINTEA pândei (blocul v100.224 rămâne ultimul)");
   assert.doesNotMatch(css, /border-radius:\s*\d{2,}px|border-radius:\s*[6-9]px|#[0-9a-fA-F]{6}/, "jetoanele temei: colțuri ≤ 5 px, fără culori noi");
   assert.match(functie(APP, "tbProbPt"), /tbRenderConteaza\(\);if\(typeof acasaPe==="function"&&acasaPe\(\)&&typeof acasaDeseneaza==="function"\)acasaDeseneaza\(\)/);
