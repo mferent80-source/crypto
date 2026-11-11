@@ -34,31 +34,33 @@ await test("paleta: fundalul închis devine alb, textul deschis devine cerneală
   assert.equal(culoareNoua("color", "#123456"), "#123456", "o culoare din afara paletei rămâne");
   for (const [k, v] of Object.entries(PALETA)) assert.match(typeof v === "string" ? v : v.text + v.fond, /^(#[0-9A-F]{6})+$/, k);
 });
-await test("selectorii: totul intră sub rădăcina Tabloului; regulile altor pagini și ale rădăcinii se sar", () => {
-  const S = ["dash", "t212"];
-  assert.equal(selectorSub(".tbBloc", "#tabloubot.tbZi", S), "#tabloubot.tbZi .tbBloc");
+// v100.326 (el: „pagina Trading 212 … în aceleași condiții ca și pagina botului”): două rădăcini - comunele sub :is(#tabloubot,#t212), T212 sub #t212
+await test("selectorii: totul intră sub rădăcina Tabloului (și a paginii T212, v100.326); regulile altor pagini și ale rădăcinii se sar", () => {
+  const S = ["dash"], C = ":is(#tabloubot,#t212).tbZi";
+  assert.equal(selectorSub(".tbBloc", "#tabloubot.tbZi", S), C + " .tbBloc");
   assert.equal(selectorSub("#tabloubot .gbTip", "#tabloubot.tbZi", S), "#tabloubot.tbZi .gbTip");
   assert.equal(selectorSub(".pzDemo #tabloubot .tbCadru>#tbMcSus", "#tabloubot.tbZi", S), ".pzDemo #tabloubot.tbZi .tbCadru>#tbMcSus");
-  assert.equal(selectorSub("html.pzDemo .pzCel", "#tabloubot.tbZi", S), "html.pzDemo #tabloubot.tbZi .pzCel");
-  assert.equal(selectorSub("#dash .acVerd, .x", "#tabloubot.tbZi", S), "#tabloubot.tbZi .x", "selectorul paginii Piața azi cade, vecinul lui rămâne");
-  assert.equal(selectorSub("#t212 .a", "#tabloubot.tbZi", S), ""); assert.equal(selectorSub(":root", "#tabloubot.tbZi", S), "");
-  assert.equal(selectorSub("#tabloubotX .a", "#tabloubot.tbZi", S), "#tabloubot.tbZi #tabloubotX .a", "alt id care doar începe la fel nu e Tabloul");
+  assert.equal(selectorSub("html.pzDemo .pzCel", "#tabloubot.tbZi", S), "html.pzDemo " + C + " .pzCel");
+  assert.equal(selectorSub("#dash .acVerd, .x", "#tabloubot.tbZi", S), C + " .x", "selectorul paginii Piața azi cade, vecinul lui rămâne");
+  assert.equal(selectorSub("#t212 .a", "#tabloubot.tbZi", S), "#t212.tbZi .a"); assert.equal(selectorSub(":root", "#tabloubot.tbZi", S), "");
+  assert.equal(selectorSub("#tabloubotX .a", "#tabloubot.tbZi", S), C + " #tabloubotX .a", "alt id care doar începe la fel nu e Tabloul");
 });
 await test("generatorul: variabilele rădăcinii, scara de litere pe 5 trepte, @media păstrat, doar declarațiile schimbate", () => {
   const g = genereaza(":root{--pzF1:#141C24;--x:4px} .a{color:#E6EDF3;margin:0;font-size:11px} @media (max-width:640px){.a{font-size:17px;background:#141C24}} #dash .b{color:#E6EDF3} .c{font-size:13.5px;color:red}", '<section class="panel" id="dash"></section><section class="panel" id="tabloubot"></section>');
   assert.ok(g.startsWith(INCEPUT) && g.endsWith(SFARSIT));
-  assert.ok(g.includes("#tabloubot.tbZi{--pzF1:#FFFFFF}")); assert.ok(g.includes("#tabloubot.tbZi .a{color:#0E1A2B}")); assert.ok(g.includes("#tabloubot .a{font-size:12px}"));
-  assert.ok(g.includes("@media (max-width:640px){#tabloubot .a{font-size:20px}}")); assert.ok(g.includes("@media (max-width:640px){#tabloubot.tbZi .a{background:#FFFFFF}}"));
+  // v100.326: rădăcina comună :is(#tabloubot,#t212)
+  assert.ok(g.includes(":is(#tabloubot,#t212).tbZi{--pzF1:#FFFFFF}")); assert.ok(g.includes(":is(#tabloubot,#t212).tbZi .a{color:#0E1A2B}")); assert.ok(g.includes(":is(#tabloubot,#t212) .a{font-size:12px}"));
+  assert.ok(g.includes("@media (max-width:640px){:is(#tabloubot,#t212) .a{font-size:20px}}")); assert.ok(g.includes("@media (max-width:640px){:is(#tabloubot,#t212).tbZi .a{background:#FFFFFF}}"));
   assert.ok(!g.includes(".b{") && !g.includes(".c{") && !g.includes("margin"), "nimic din pagina Piața azi, nimic neschimbat");
   const o = genereaza(".offlineBanner{background:#E9B949;color:#0E141A} .x{background:#141C24;color:#E6EDF3}", "");
-  assert.ok(o.includes("#tabloubot.tbZi .offlineBanner{background:#E0A526;color:#0E1A2B}"), "pe fond galben textul rămâne închis: " + o);
-  assert.ok(o.includes("#tabloubot.tbZi .x{background:#FFFFFF;color:#0E1A2B}"));
+  assert.ok(o.includes(":is(#tabloubot,#t212).tbZi .offlineBanner{background:#E0A526;color:#0E1A2B}"), "pe fond galben textul rămâne închis: " + o);
+  assert.ok(o.includes(":is(#tabloubot,#t212).tbZi .x{background:#FFFFFF;color:#0E1A2B}"));
 });
 await test("blocul generat din public/app.css e cel produs acum din restul foii (altfel: node scripts/face-tema-tablou.mjs)", () => {
   assert.equal(CSS.split(INCEPUT).length, 2); assert.equal(CSS.split(SFARSIT).length, 2);
   const NL = CSS.includes("\r\n") ? "\r\n" : "\n";
   assert.equal(blocDin(CSS), genereaza(faraBloc(CSS), HTML).split("\n").join(NL));
-  const bloc = blocDin(CSS); assert.ok(bloc.length > 20000, "blocul are " + bloc.length + " caractere"); assert.ok(!/#(dash|t212|sugestii|comportament)\b/.test(bloc), "în bloc nu intră alte pagini");
+  const bloc = blocDin(CSS); assert.ok(bloc.length > 20000, "blocul are " + bloc.length + " caractere"); assert.ok(!/#(dash|sugestii|comportament)\b/.test(bloc), "în bloc nu intră alte pagini (T212 da, din v100.326)");
   assert.equal((bloc.match(/{/g) || []).length, (bloc.match(/}/g) || []).length, "acolade pereche");
 });
 await test("stratul scris de mână stă DUPĂ blocul generat și ÎNAINTEA pândei (coada foii rămâne a ei) și ține așezarea: capul paginii, graficul, Monte Carlo o singură dată, telefonul", () => {
@@ -84,13 +86,15 @@ await test("tema: implicit deschisă, butonul o comută și se ține minte; clas
   assert.match(APP, /var ACTIUNI_PERMISE=new Set\("(?:tbRandToate )?tbTemaComuta /);
   const i = APP.indexOf('var TB_TEMA_KEY="tbTema";'), j = APP.indexOf("function tbComutaInd(k){"); assert.ok(i > 0 && j > i);
   const cod = APP.slice(i, j).replace(/if\(typeof window!=="undefined"\)window\.addEventListener\("DOMContentLoaded"[^\n]*/, "");
-  const mem = {}, clase = new Set(), buton = { textContent: "", attrs: {}, setAttribute(k, v) { this.attrs[k] = v; } }; let temaGrafic = null, desene = 0;
-  const ctx = { localStorage: { getItem: (k) => (k in mem ? mem[k] : null), setItem: (k, v) => { mem[k] = String(v); } }, GraficBot: { tema: (n) => { temaGrafic = n; } }, renderTabloGrafic: () => { desene++; },
+  const mem = {}, clase = new Set(), buton = { textContent: "", attrs: {}, setAttribute(k, v) { this.attrs[k] = v; } }; let temaGrafic = null, desene = 0, vizibil = true;
+  // v100.326 (revizia): comutatorul desenează graficul Tabloului doar cât Tabloul se vede (de pe T212 nu)
+  const ctx = { localStorage: { getItem: (k) => (k in mem ? mem[k] : null), setItem: (k, v) => { mem[k] = String(v); } }, GraficBot: { tema: (n) => { temaGrafic = n; } }, renderTabloGrafic: () => { desene++; }, tbPanouVizibil: () => vizibil,
     document: { getElementById: (id) => (id === "tabloubot" ? { classList: { toggle: (c, on) => { on ? clase.add(c) : clase.delete(c); } } } : id === "tbTemaBtn" ? buton : null) } };
   vm.createContext(ctx); vm.runInContext(cod + ";this.tbTemaAplica=tbTemaAplica;this.tbTemaComuta=tbTemaComuta;this.tbTemaZi=tbTemaZi", ctx);
   assert.equal(ctx.tbTemaAplica(), true); assert.ok(clase.has("tbZi")); assert.equal(temaGrafic, "zi"); assert.equal(buton.textContent, "Temă închisă"); assert.equal(buton.attrs["aria-pressed"], "false");
   ctx.tbTemaComuta(); assert.equal(mem.tbTema, "noapte"); assert.ok(!clase.has("tbZi")); assert.equal(temaGrafic, "noapte"); assert.equal(buton.textContent, "Temă deschisă"); assert.equal(desene, 1);
   ctx.tbTemaComuta(); assert.equal(mem.tbTema, "zi"); assert.ok(clase.has("tbZi")); assert.equal(desene, 2);
+  vizibil = false; ctx.tbTemaComuta(); assert.equal(mem.tbTema, "noapte"); assert.equal(desene, 2, "Tabloul ascuns: tema se schimbă, graficul lui nu se desenează");
   assert.ok(APP.includes("  tbTemaAplica();   /* v100.316: tema e pusă înaintea desenului"), "renderTabloGrafic pune tema înaintea desenului");
 });
 await test("graficul: tema(\"zi\") schimbă paleta citită la desen, tema(\"noapte\") o pune la loc exact; rândul vechi al paletei rămâne", () => {

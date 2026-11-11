@@ -7909,8 +7909,10 @@ function tbCitireLive(b,pa){
    butonul din antet o comută și alegerea se ține minte. Citită din funcții, nu la încărcarea fișierului. */
 var TB_TEMA_KEY="tbTema";
 function tbTemaZi(){try{return localStorage.getItem(TB_TEMA_KEY)!=="noapte"}catch(e){return true}}
-function tbTemaAplica(){var p=document.getElementById("tabloubot"),zi=tbTemaZi();if(p)p.classList.toggle("tbZi",zi);if(typeof GraficBot!=="undefined"&&GraficBot.tema)GraficBot.tema(zi?"zi":"noapte");var b=document.getElementById("tbTemaBtn");if(b){b.textContent=zi?"Temă închisă":"Temă deschisă";b.setAttribute("aria-pressed",String(!zi));b.title=zi?"Acum: temă deschisă. Apasă pentru cea închisă.":"Acum: temă închisă. Apasă pentru cea deschisă."}return zi}
-function tbTemaComuta(){try{localStorage.setItem(TB_TEMA_KEY,tbTemaZi()?"noapte":"zi")}catch(e){}tbTemaAplica();try{renderTabloGrafic()}catch(e){}}
+/* v100.326 (el, 11.11.2026: „pagina Trading 212 … în aceleași condiții ca și pagina botului”): aceeași temă și pe T212 - un singur comutator,
+   aceeași alegere ținută minte; butonul e în ambele antete, comutarea redesenează și graficele T212 (fără să ceară date noi) */
+function tbTemaAplica(){var zi=tbTemaZi();["tabloubot","t212"].forEach(function(id){var p=document.getElementById(id);if(p)p.classList.toggle("tbZi",zi)});if(typeof GraficBot!=="undefined"&&GraficBot.tema)GraficBot.tema(zi?"zi":"noapte");["tbTemaBtn","t212TemaBtn"].forEach(function(id){var b=document.getElementById(id);if(b){b.textContent=zi?"Temă închisă":"Temă deschisă";b.setAttribute("aria-pressed",String(!zi));b.title=zi?"Acum: temă deschisă. Apasă pentru cea închisă.":"Acum: temă închisă. Apasă pentru cea deschisă."}});return zi}
+function tbTemaComuta(){try{localStorage.setItem(TB_TEMA_KEY,tbTemaZi()?"noapte":"zi")}catch(e){}tbTemaAplica();try{if(tbPanouVizibil())renderTabloGrafic()}catch(e){}try{if(typeof t212GraficeDeseneaza==="function")t212GraficeDeseneaza(true)}catch(e){}}
 if(typeof window!=="undefined")window.addEventListener("DOMContentLoaded",function(){tbTemaAplica()});
 /* v100.317 (el, 10.11.2026: „păi nu o faci ca în demo?”): RÂNDURILE Tabloului. Secțiunile de sub grafic stau pliate pe o linie - titlul (data-titlu) și un rezumat
    luat din conținutul lor de ACUM (data-rezumat) - și se deschid la clic; ce ai lăsat deschis se ține minte. Nimic nu se mută și nimic nu se șterge: starea e un

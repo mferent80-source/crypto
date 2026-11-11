@@ -75,15 +75,21 @@ export function textCitibil(D) {   // D = [{p, v}] deja trecute prin paletă; î
 }
 
 // ---- selectorul ----
-function panouriStraine(html) { return [...html.matchAll(/<section[^>]*class="panel[^"]*"[^>]*id="([A-Za-z0-9_-]+)"|<section[^>]*id="([A-Za-z0-9_-]+)"[^>]*class="panel/g)].map((m) => m[1] || m[2]).filter((x) => x !== "tabloubot"); }
-export function selectorSub(sel, radacina, straine) {
-  const o = [];
+// v100.326 (el, 11.11.2026: „pagina Trading 212 … în aceleași condiții ca și pagina botului”): două rădăcini. Regulile comune intră sub
+// :is(#tabloubot,#t212) (aceeași putere ca #tabloubot), ale fiecărei pagini sub ea; restul paginilor se sar.
+export const RADACINI = ["tabloubot", "t212"];
+const COMUN = ":is(" + RADACINI.map((r) => "#" + r).join(",") + ")";
+function panouriStraine(html) { return [...html.matchAll(/<section[^>]*class="panel[^"]*"[^>]*id="([A-Za-z0-9_-]+)"|<section[^>]*id="([A-Za-z0-9_-]+)"[^>]*class="panel/g)].map((m) => m[1] || m[2]).filter((x) => !RADACINI.includes(x)); }
+export function selectorSub(sel, radacina, straine) {   // radacina: „#tabloubot” (scara) sau „#tabloubot.tbZi” (tema zi) - partea de după id se pune pe orice rădăcină
+  const o = [], sufix = radacina.replace(/^#tabloubot/, "");
   for (const s of imparte(sel, ",")) {
     if (straine.some((id) => new RegExp("#" + id + "(?![A-Za-z0-9_-])").test(s))) continue;
     if (/^(:root|html|body)\s*$/.test(s) || /^(\*|::?[a-z-]+)$/.test(s)) continue;   // variabilele rădăcinii se dau separat
-    if (/#tabloubot(?![A-Za-z0-9_-])/.test(s)) { o.push(s.replace(/#tabloubot(?![A-Za-z0-9_-])/, radacina)); continue; }
-    const m = s.match(/^((?:html|body|:root)[^\s>+~]*|\.pzDemo)(\s+)(.*)$/s);
-    o.push(m ? m[1] + " " + radacina + " " + m[3] : radacina + " " + s);
+    if (s.includes(COMUN)) { o.push(s.split(COMUN).join(COMUN + sufix)); continue; }   // revizia: ambele rădăcini deodată, nu doar prima
+    const proprie = RADACINI.find((r) => new RegExp("#" + r + "(?![A-Za-z0-9_-])").test(s));
+    if (proprie) { o.push(s.replace(new RegExp("#" + proprie + "(?![A-Za-z0-9_-])"), "#" + proprie + sufix)); continue; }
+    const rad = COMUN + sufix, m = s.match(/^((?:html|body|:root)[^\s>+~]*|\.pzDemo)(\s+)(.*)$/s);
+    o.push(m ? m[1] + " " + rad + " " + m[3] : rad + " " + s);
   }
   return o.join(",");
 }
@@ -109,7 +115,7 @@ export function genereaza(css, html) {
   };
   trece(arbore, scara, zi);
   const uniceVars = [...new Map(vars.map((v) => [v.slice(0, v.indexOf(":")), v])).values()];
-  return [INCEPUT, "/* scara de litere: 12 / 13,5 / 15 / 20 / 30 */", scara.join("\n"), "/* tema zi: variabilele rădăcinii, apoi regulile cu culoare */", "#tabloubot.tbZi{" + uniceVars.join(";") + "}", zi.join("\n"), SFARSIT].join("\n");
+  return [INCEPUT, "/* scara de litere: 12 / 13,5 / 15 / 20 / 30 */", scara.join("\n"), "/* tema zi: variabilele rădăcinii, apoi regulile cu culoare */", COMUN + ".tbZi{" + uniceVars.join(";") + "}", zi.join("\n"), SFARSIT].join("\n");
 }
 
 export function faraBloc(css) { const a = css.indexOf(INCEPUT), b = css.indexOf(SFARSIT); return a >= 0 && b > a ? css.slice(0, a) + css.slice(b + SFARSIT.length) : css; }

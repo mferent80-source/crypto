@@ -479,6 +479,9 @@ function t212Alege(tk) {
   t212.ales = tk; t212.alesDeEl = true; t212.inchisDeEl = false; t212.deschis = {}; t212.deschis[tk] = true;
   [].forEach.call(document.querySelectorAll("#t212Continut tr.t212Det"), function (d) { d.hidden = d.id !== "t212Det-" + tk; });
   [].forEach.call(document.querySelectorAll("#t212Continut tr.t212Rand"), function (r) { r.setAttribute("aria-expanded", String(r.id === "t212R-" + tk)); });
+  // v100.326 (revizia): pe lat, aleasă din lista lipicioasă când ești jos în fișă ⇒ pagina urcă la începutul fișei noi (sub bara de sus)
+  var d = $("t212Det-" + tk);
+  if (d && !t212Ingust() && d.getBoundingClientRect && typeof window !== "undefined") { var bara = (document.querySelector(".topStatus") || {}).offsetHeight || 0, sus = d.getBoundingClientRect().top; if (sus < bara) window.scrollTo(0, sus + window.scrollY - bara - 8); }
   t212AduTf(tk); t212GraficeDeseneaza();   // revizia 01.10 (I1): „Vezi X” si legatura din Alerte deschid detaliul fara randare - graficul se deseneaza aici
 }
 function t212Comuta(tk) {
@@ -703,8 +706,24 @@ function t212Render(viu) {   // v100.291: viu = recitirea la 30 s ⇒ doar ce de
   // 3) pozitiile: un rand pe actiune, detaliile la clic
   var pastr = t212PastreazaCiteste(box, document.activeElement);   // v100.291: ce ai scris nesalvat + pliurile deschise rămân și după recitirea la 30 s
   if (!poz.length) box.innerHTML = '<p class="tbSub t212Gol">N-ai poziții deschise în Trading 212.</p>';
-  else box.innerHTML = '<div class="t212TabWrap" style="--n:' + poz.length + '"><table class="t212Tab"><thead><tr><th>Acțiune</th><th>Acum</th><th>Rezultat</th><th>Stop calculat</th><th>Țintă</th><th>Trend</th><th>Din cont</th><th>Plan</th><th>30 de zile</th></tr></thead><tbody>'
-    + poz.map(t212RandPozitie).join("") + '</tbody></table></div>';
+  else {
+    // v100.326 (el, 11.11.2026: T212 „în aceleași condiții ca și pagina botului” - fără goluri): pe LAT rândurile într-un tabel (lista, lipicioasă), fișele în al
+    // doilea; pe ÎNGUST un singur tabel, fișa imediat după rândul ei (revizia: Tab-ul și cititorul de ecran merg ca ochiul). Dacă fereastra se micșorează între
+    // două recitiri, order 2i / 2i+1 ține „rând, fișa lui” pe ecran. Rândurile se citesc la fel (#t212Continut tr.t212Rand / tr.t212Det).
+    var cap212 = '<thead><tr><th>Acțiune</th><th>Acum</th><th>Rezultat</th><th>Stop calculat</th><th>Țintă</th><th>Trend</th><th>Din cont</th><th>Plan</th><th>30 de zile</th></tr></thead>';
+    var lst0 = box.querySelector ? box.querySelector(".t212PozLista") : null, stL = lst0 ? lst0.scrollTop : 0;   // revizia: derularea listei rămâne la recitirea de 30 s
+    if (t212Ingust()) box.innerHTML = '<div class="t212TabWrap" style="--n:' + poz.length + '"><table class="t212Tab">' + cap212 + '<tbody>' + poz.map(t212RandPozitie).join("") + '</tbody></table></div>';
+    else {
+      var bucati = poz.map(t212RandPozitie).map(function (h) { var k = h.indexOf('<tr class="t212Det"'); return k < 0 ? [h, ""] : [h.slice(0, k), h.slice(k)]; });
+      box.innerHTML = '<div class="t212TabWrap" style="--n:' + poz.length + '"><table class="t212Tab t212PozLista">' + cap212 + '<tbody>'
+        + bucati.map(function (b) { return b[0]; }).join("") + '</tbody></table><table class="t212Tab t212Fise"><tbody>' + bucati.map(function (b) { return b[1]; }).join("") + '</tbody></table></div>';
+      if (box.querySelectorAll) {
+        [].forEach.call(box.querySelectorAll(".t212PozLista tr.t212Rand"), function (r, i) { r.style.order = String(2 * i); });
+        [].forEach.call(box.querySelectorAll(".t212Fise tr.t212Det"), function (d, i) { d.style.order = String(2 * i + 1); });
+        if (stL) { var lst1 = box.querySelector(".t212PozLista"); if (lst1) lst1.scrollTop = stL; }
+      }
+    }
+  }
   t212PastreazaPune(box, pastr);
   t212GraficeDeseneaza(viu);   // v100.291: la recitire, fără lumânări Twelve Data noi (revizia 🟡6) · v100.56: graficele detaliilor deschise (latimea reala, dupa randare)
 
@@ -1207,6 +1226,9 @@ function t212GraficHtml(p, W) {
   d.semafor = sem; d.tf = X; d.viu = desch && !!b[b.length - 1].viu;
   return d;
 }
+// v100.326 (revizia): la redimensionare graficul T212 se redesenează (fără date noi) - coloana „Ce e pe grafic” din dreapta urmează lățimea fișei
+var t212RzT = null;
+if (typeof window !== "undefined" && window.addEventListener) window.addEventListener("resize", function () { clearTimeout(t212RzT); t212RzT = setTimeout(function () { try { if (t212LaVedere()) t212GraficeDeseneaza(true); } catch (e) {} }, 200); });
 function t212GraficeDeseneaza(faraAducere) {
   if (!t212LaVedere()) return;   /* v100.318 (I-848): pe pagina ascunsă nu se desenează nimic (nici lumânările pe alte intervale); deschiderea redesenează */
   (t212.pozPregatite || []).forEach(function (p) {
@@ -1214,7 +1236,9 @@ function t212GraficeDeseneaza(faraAducere) {
     if (!faraAducere) t212AduTf(p.ticker);   // revizia v100.108 (R5): reîmprospătarea lumânărilor TF-urilor (limita de 5 min o ține în frâu, fără buclă)
     // poza 01.10: tabelul pozitiilor poate fi mai lat decat panoul (defileaza) - graficul ia latimea VIZIBILA, nu pe a randului
     var wr = el.closest(".t212TabWrap"), vis = wr ? wr.clientWidth - 28 : 0; if (el.style) el.style.maxWidth = vis > 200 ? vis + "px" : "";   /* v100.291: fișa aleasă se desenează din prima randare */
-    var W = Math.round(Math.min(el.getBoundingClientRect().width || el.clientWidth || 700, vis > 200 ? vis : 1e9)), d = t212GraficHtml(p, Math.max(300, W)), s = t212IndStare();
+    /* v100.326: fișa lată (≥ 980 px) ⇒ „Ce e pe grafic” stă în dreapta graficului, ca pe Tablou (340 px + 16 de aer); graficul se desenează pe lățimea lui */
+    var lat = el.clientWidth >= 980; if (el.classList) el.classList.toggle("t212GrafLat", lat);
+    var W = Math.round(Math.min(el.getBoundingClientRect().width || el.clientWidth || 700, vis > 200 ? vis : 1e9)), d = t212GraficHtml(p, Math.max(300, lat ? W - 356 : W)), s = t212IndStare();
     // v100.291 (R3): intervalele graficului, deasupra comutatoarelor; alegerea se ține pe poziție
     var X = t212TfAles(p.ticker), tkS = String(p.ticker).replace(/[^A-Za-z0-9._-]/g, "");
     var tfB = '<div class="tbInterval t212TfGrup" role="group" aria-label="Intervalul graficului ' + escapeHtml(p.simbol) + '">' + T212_TFS.map(function (x) { return '<button type="button" class="tbIntBtn" aria-pressed="' + (x[0] === X[0]) + '" data-action-click="t212AlegeTf(\'' + tkS + '\',\'' + x[0] + '\')">' + x[0] + '</button>'; }).join("") + '</div>';

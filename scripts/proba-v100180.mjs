@@ -28,10 +28,11 @@ await test("adresa după context: botul din Tablou bate moneda din Radar; 1000X 
   assert.equal(B.adresaBusola({}), URL0);
   assert.equal(B.adresaBusola(null), URL0);
 });
-await test("meniul: „🧭 Busola ↗” imediat după Tabloul botului, cu deschideBusola(), fără data-nav (nu e o pagină a Radarului)", () => {
+// v100.326 (el, 11.11.2026: Trading 212 „să o urcăm în meniu sub Tabloul botului”): Busola coboară un loc - imediat după Trading 212, care stă sub Tablou
+await test("meniul: „🧭 Busola ↗” imediat după Tabloul botului și Trading 212 (v100.326), cu deschideBusola(), fără data-nav (nu e o pagină a Radarului)", () => {
   const html = citeste("public", "index.html");
-  const m = /<button class="sideBtn" data-action-click="navTo\('tabloubot',true\)" data-nav="tabloubot">[^\n]*?<\/button>\n?(<button[^>]*>.*?<\/button>)/.exec(html);
-  assert.ok(m, "butonul de după Tabloul botului");
+  const m = /<button class="sideBtn" data-action-click="navTo\('tabloubot',true\)" data-nav="tabloubot">[^\n]*?<\/button>\n?<button class="sideBtn" data-action-click="deschideT212\(\)" data-nav="t212">[^\n]*?<\/button>\n?(<button[^>]*>.*?<\/button>)/.exec(html);
+  assert.ok(m, "butonul de după Tabloul botului și Trading 212");
   assert.match(m[1], /data-action-click="deschideBusola\(\)"/); assert.match(m[1], /🧭/); assert.match(m[1], /Busola ↗/); assert.doesNotMatch(m[1], /data-nav=/);
 });
 await test("telefon: sertarul „⋯ More” are și el „🧭 Busola ↗”, imediat după „Tablou bot” (meniul lateral e ascuns pe telefon)", () => {   /* v100.214: foaia pe grupe, un buton pe rând ⇒ spațiu alb permis între ele */
