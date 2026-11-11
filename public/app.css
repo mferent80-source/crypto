@@ -4585,6 +4585,41 @@ html.pzDemo #tabloubot button{min-height:40px}
 html.pzDemo #tabloubot .tbAntet .actionGhost,html.pzDemo #tabloubot .tbAntet .tbSimBtn,html.pzDemo #tabloubot .tbInterval .tbIntBtn{min-height:40px}
 html.pzDemo #tabloubot .tbProbFara>summary{min-height:40px;box-sizing:border-box;padding-top:10px;padding-bottom:10px}
 }
+/* v100.319 (el, 11.11.2026: „compară pagina botului cu o pagină a unui soft profesional și îmbunătățește”). Ce face un tablou profesional
+   (pagina de bot din Pionex / Binance, TradingView) și aici nu se făcea - măsurat pe pagina vie v100.318. Nimic scos: doar așezare, culoare, grosime, colțuri. */
+/* (1) antetul: „Deschide tot | Strânge tot” = un singur comutator (chenar comun, colțuri doar la capete); tema și modul = comenzi liniștite */
+html.pzDemo #tabloubot #tbRandDeschide,html.pzDemo #tabloubot #tbRandStrange{border:1px solid var(--pzLi2);background:var(--pzF1);color:var(--pzT0);padding-left:12px;padding-right:12px}
+html.pzDemo #tabloubot #tbRandDeschide{border-radius:4px 0 0 4px;margin-right:-8px}
+html.pzDemo #tabloubot #tbRandStrange{border-radius:0 4px 4px 0;border-left-color:var(--pzLi)}
+html.pzDemo #tabloubot #tbRandDeschide:hover,html.pzDemo #tabloubot #tbRandStrange:hover{background:var(--pzF2)}
+html.pzDemo #tabloubot #tbTemaBtn,html.pzDemo #tabloubot #tbSchimbaModulBtn{border-color:transparent;background:none;color:var(--pzT1)}
+html.pzDemo #tabloubot #tbTemaBtn:hover,html.pzDemo #tabloubot #tbSchimbaModulBtn:hover{background:var(--pzF2);color:var(--pzT0)}
+/* pe telefon: două coloane egale, aliniate la stânga (înainte se rupeau în dreapta, pe trei rânduri); comutatorul rămâne lipit */
+@media (max-width:640px){
+html.pzDemo #tabloubot .tbAntet .tbActiuni{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:0;row-gap:4px;width:100%}
+html.pzDemo #tabloubot .tbAntet .tbActiuni>select{grid-column:1 / -1}
+html.pzDemo #tabloubot .tbAntet .tbActiuni>button{width:100%}
+html.pzDemo #tabloubot #tbRandDeschide{margin-right:0}
+}
+/* (2) cifrele de sus: la 641–1699 px patru coloane aveau ~185 px și etichetele se rupeau pe 2–3 rânduri ⇒ două coloane (~370 px); peste 1700 rămân patru */
+@media (min-width:641px) and (max-width:1699px){
+html.pzDemo #tabloubot.on .tbCadru>.tbSus>#tbKpi{grid-template-columns:repeat(2,minmax(0,1fr))!important;row-gap:16px}
+html.pzDemo #tabloubot #tbKpi>.tbKpiCel:nth-child(3){border-left:0;padding-left:0}
+}
+/* (3) culoarea e pentru stare, nu pentru fapte: în blocurile cheie-valoare ale cifrelor doar primul rând (semnul / starea) e colorat */
+html.pzDemo #tabloubot #tbKpi .pzKvBloc.good .pzKv b,html.pzDemo #tabloubot #tbKpi .pzKvBloc.bad .pzKv b,html.pzDemo #tabloubot #tbKpi .pzKvBloc.tbWarn .pzKv b{color:var(--pzT0)}
+html.pzDemo #tabloubot #tbKpi .pzKvBloc.good .pzKv:first-child b{color:var(--pzSus)}
+html.pzDemo #tabloubot #tbKpi .pzKvBloc.bad .pzKv:first-child b{color:var(--pzJos)}
+html.pzDemo #tabloubot #tbKpi .pzKvBloc.tbWarn .pzKv:first-child b{color:var(--pzAur)}
+/* (4) sfatul „☞” din Contează acum: propoziția în cerneală, semnalul de atenție rămâne ca bară aurie în stânga */
+html.pzDemo #tabloubot #ctAcum .ctTxt>.ctFac{color:var(--pzT0);border-left:2px solid var(--pzAur);padding-left:8px}
+/* (5) o grosime pentru butoane și etichete (600, erau 500 și 750) și un colț (4 px, erau 2/3/5) pentru același fel de lucru */
+html.pzDemo #tabloubot.on :is(button.actionGhost,button.t212BtnLinie,button.tbMcBtn,button.tbIntBtn,.stockBadge){font-weight:600}
+html.pzDemo #tabloubot.on .tbMcScorCifre{font-weight:700}
+html.pzDemo #tabloubot.on :is(.actionGhost,.t212BtnLinie,.stockBadge,.ctNr,.tbInterval,.pzVoce,.pzChip,.tbNr,.tbTag,.tbPill,.tbConsEt,.tbConsCip,.tbCitR,.tbCitScurt,.tbCitVoci,.tbFaraPlan,.tbConsFac,.ctSus){border-radius:4px}
+html.pzDemo #tabloubot.on .tbCadru>:is(#ctAcum,#pzVerdict){border-radius:4px}
+/* (6) rândurile de text: cel mult 80 de caractere (pe 1440 px se întindeau pe 1.142 px, ≈180 de caractere la 12 px) */
+html.pzDemo #tabloubot.on :is(p,li,.tbCitTx,.tbMcScurt,.tbMcNota,.tbMcScorTx){max-width:80ch}
 /* v100.316: sfârșitul desenului nou */
 @media (max-width:640px){.sugPandaTab thead{display:table-header-group}.sugPandaTab{display:table}.sugPandaTab tbody{display:table-row-group}.sugPandaTab tr{display:table-row}.sugPandaTab td,.sugPandaTab th{display:table-cell}}
 /* v100.224: pe paginile de zi rămân alertele, banda botului și versiunea. Cipurile de cercetare revin la analiza monedei și în laborator. */
