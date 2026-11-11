@@ -600,6 +600,92 @@ function t212SedintaDeschisa(acum) {
 }
 function t212ZiRanduri(tk) { return (t212.bare[tk] || []).map(function (x) { return { time: x.t, open: x.o, high: x.h, low: x.l, close: x.c, volume: x.v }; }); }
 function t212PeTf(tk) { var c = t212Tf[tk], pe = Object.assign({}, c && c.pe || {}), z = t212ZiRanduri(tk); if (z.length) pe["1D"] = z; return pe; }
+/* v100.328 (el, 11.11.2026: „nu poți pune detaliile indicatorilor și în Trading 212 la fel ca la bot?” ⇒ propunerea ⇒ „da, fă așa”): „Detaliile indicatorilor”
+   în fișa deschisă, sub grafic - aceleași calcule ca la Tabloul botului (calc „Analizează piața” pe bare ÎNCHISE: 15 min, 1 oră, 4 ore, 1 zi), direcția long
+   (verde = cu poziția ta). Zero cereri în plus: lumânările sunt cele ale graficului fișei (t212PeTf: 15M / 60M / 4H aduse pentru fișa deschisă - Twelve Data
+   are 8 cereri pe minut - și ziua din barele zilnice). Fără „Mediul botului” (funding, BTC: nu țin de acțiuni). La bursă o zi are 2 bare de 4 ore ⇒
+   orizonturile și istoria pe 4 ore în ședințe (IndicatoriBot.VORBE_POZITIE). */
+var T212_IND_TF = [{ tf: "15M", eticheta: "15 min", min: 15 }, { tf: "60M", eticheta: "1 oră", min: 60 }, { tf: "4H", eticheta: "4 ore", min: 240 }, { tf: "1D", eticheta: "1 zi", min: 1440 }];
+var t212IndUlt = {}, t212IndMem = {}, t212Ist4h = {};
+t212.indDeschis = t212.indDeschis || {};
+// deschis / închis, ținut pe poziție (fișa se redesenează la 30 s; <details> nu poartă singur starea prin innerHTML)
+if (typeof document !== "undefined" && document.addEventListener) document.addEventListener("toggle", function (e) {
+  var d = e && e.target; if (!d || !d.classList || !d.classList.contains("t212IndDet")) return;
+  var tk = d.getAttribute("data-tk"); t212.indDeschis[tk] = !!d.open; if (d.parentNode) t212IndUlt[tk] = d.parentNode.innerHTML;
+}, true);
+// barele închise: cu bursa închisă nicio bară nu mai e în formare (fără orele extinse - bara de 13:30 se închide la 16:00, nu la 17:30); deschisă (sau
+// necunoscut) ⇒ ultima scoasă cât îi curge intervalul, ca la bot. Ziua vine deja fără bara de azi în formare (GridCalcul.bareBursa).
+function t212IndInchise(j, minute, acum, deschisa) {
+  if (!Array.isArray(j) || !j.length) return [];
+  if (deschisa === false) return j;
+  var t = +j[j.length - 1][0];
+  return isFinite(t) && t + minute * 60000 > acum ? j.slice(0, -1) : j;
+}
+// pe fiecare interval: calcul nou doar când s-au schimbat barele închise (fișa se redesenează des; calc + istoricul sunt zeci de ms)
+function t212IndCalc(tk, acum) {
+  if (typeof IndicatoriBot === "undefined" || typeof calc !== "function") return null;
+  var pe = t212PeTf(tk), des = t212SedintaDeschisa(acum), m = t212IndMem[tk] || (t212IndMem[tk] = {}), are = false;
+  var l = T212_IND_TF.map(function (x) {
+    var rows = pe[x.tf] || [], j = [];
+    if (rows.length) are = true;
+    try { j = IndicatoriBot.dinPionex(rows); if (x.tf !== "1D") j = t212IndInchise(j, x.min, acum, des); } catch (e) { j = []; }
+    var u = j.length ? j[j.length - 1] : null, cheie = j.length + ":" + (u ? u[0] + "/" + u[4] : "") + ":" + rows.length;
+    if (m[x.tf] && m[x.tf].cheie === cheie) return m[x.tf].r;
+    var q = null, hp = null, eroare = null;
+    try {
+      if (j.length >= 60) q = calc(j, "auto"); else eroare = rows.length ? "doar " + TextRo.cate(j.length, "bară închisă", "bare închise") : "fără lumânări încă";
+      hp = j.length >= 260 ? historicalProbability(j, 4) : null;
+      if (x.tf === "4H" && q) t212Istoric4h(j, tk);
+    } catch (e) { q = null; eroare = String(e && e.message || e); }
+    var r = { tf: x.tf, eticheta: x.eticheta, q: q, hp: hp, eroare: eroare };
+    m[x.tf] = { cheie: cheie, r: r };
+    return r;
+  });
+  return are ? l : null;
+}
+// istoria scorului pe 4 ore, ca la Tabloul botului (tbIstoric4h), dar cu starea PE TICKER: ultimele 24 de bare închise, pe bucăți după desen; gata ⇒ fișa se redesenează
+function t212Istoric4h(j, tk) {
+  var st = t212Ist4h[tk] || (t212Ist4h[tk] = { sc: {}, ordine: [], lucru: false }), o = [], lipsa = [];
+  for (var k = 23; k >= 0; k--) { var len = j.length - k; if (len < 60) continue; var t = j[len - 1][0]; o.push(t); if (!(t in st.sc)) lipsa.push({ t: t, len: len }); }
+  var paz = {}; o.forEach(function (t) { if (t in st.sc) paz[t] = st.sc[t]; }); st.sc = paz; st.ordine = o;
+  if (!lipsa.length || st.lucru) return;
+  st.lucru = true;
+  var pas = function () {
+    lipsa.splice(0, 4).forEach(function (x) { var r = IndicatoriBot.istoricScor(j.slice(0, x.len), 1, function (a) { return calc(a, "auto"); }); st.sc[x.t] = r[0] || null; });
+    if (lipsa.length) setTimeout(pas, 0); else { st.lucru = false; try { t212IndDeseneaza(tk); } catch (e) {} }
+  };
+  setTimeout(pas, 0);
+}
+function t212Istoric4hGata(tk) {
+  var st = t212Ist4h[tk]; if (!st) return null;
+  var r = st.ordine.map(function (t) { return st.sc[t]; }).filter(Boolean); return r.length >= 2 ? r : null;
+}
+// blocul întreg; tot ce desenează vine prin parametri (proba îl rulează fără pagină). Ca la bot: închis - banda, rigla, istoria; deschis - tabelul.
+function t212IndHtml(tk, l, ist, tvN, sch, deschis) {
+  var V = IndicatoriBot.VORBE_POZITIE, sum = "", corp;
+  var cap = "Detaliile indicatorilor · ca „Analizează piața”, pe bare închise (medii, Supertrend, MACD, Stochastic, Bollinger, MFI, estimarea și predicția)";
+  if (!l) corp = '<p class="tbSub">Aștept lumânările: 15 min, 1 oră și 4 ore vin pentru fișa deschisă, ziua din prețurile zilnice…</p>';
+  else {
+    var bd = IndicatoriBot.banda(l, "long"), tvb = tvN && tvN.iv && typeof TvNote !== "undefined" ? IndicatoriBot.tvBanda(tvN, bd, TvNote.clasa) : null;
+    var b4 = bd.filter(function (x) { return x.eticheta === "4 ore"; })[0], is = b4 && !b4.lipsa ? ist : null;
+    var gr = IndicatoriBot.riglaHtml(bd, "long", escapeHtml, V) + (is ? IndicatoriBot.sparkHtml(is, "long", escapeHtml, V) : "");
+    sum = IndicatoriBot.bandaHtml(bd, tvb, sch, "long", escapeHtml, V) + (gr ? '<span class="ibGrafice">' + gr + '</span>' : "");
+    corp = tbIndTabelHtml(l, "long", { vorbe: V, orizont: V.orizont });
+  }
+  return '<details class="tbTrendDet t212IndDet" data-tk="' + escapeHtml(tk) + '"' + (deschis ? " open" : "") + '><summary>' + escapeHtml(cap)
+    + '<span class="tbIndSumar" aria-hidden="true"' + (sum ? "" : " hidden") + '>' + sum + '</span></summary>' + corp + '</details>';
+}
+function t212VazAcum() {
+  return t212LaVedere() && !(typeof document !== "undefined" && document.hidden);
+}
+function t212IndDeseneaza(tk) {
+  var el = $("t212Ind-" + tk); if (!el || !t212.deschis[tk]) return;
+  var l = t212IndCalc(tk, Date.now()), bd = l ? IndicatoriBot.banda(l, "long") : null;
+  var sch = bd && typeof tbIndSchimbari === "function" ? tbIndSchimbari({ id: "t212:" + tk }, bd, t212VazAcum) : null;
+  var h = t212IndHtml(tk, l, t212Istoric4hGata(tk), t212.tv && t212.tv.note ? t212.tv.note[tk] : null, sch, !!t212.indDeschis[tk]);
+  t212IndUlt[tk] = h;
+  if (el._h !== h) { el.innerHTML = h; el._h = h; }
+}
 // trendul zilnic după regula semaforului (bare închise) - Consilierul spune diferența când mediile lui zic altceva (AVGO, 06.10)
 function t212SemZi(tk) { return /_US_EQ$/.test(tk) && typeof GraficBot !== "undefined" && GraficBot.semZi ? GraficBot.semZi(t212.bare[tk], "long") : null; }   /* revizia: doar listările din SUA */   /* v100.110: regula comună cu colectorul */
 function t212TfCitHtml(sem) {
@@ -1038,7 +1124,7 @@ function t212RandPozitie(p) {
   var cap = '<div class="t212FisaCap">' + cel("Acțiune", '<div class="t212FisaSim">' + iSim + '</div>', "t212FisaCelSim") + cel("Acum", '<b class="t212FisaPret">' + Pr(p.pret) + '</b>') + cel("Rezultat", iRez)
     + cel("Stop calculat", iStop) + cel("Țintă", iTinta) + cel("Trend", iTrend) + cel("Din cont", iPond) + cel("Plan", iPlan) + '</div>'
     + (fTodo.length ? '<section class="t212FisaTodo" aria-label="Ce ai de făcut cu ' + escapeHtml(p.simbol) + '"><h5>Ce ai de făcut cu ' + escapeHtml(p.simbol) + '</h5>' + fTodo.map(function (x) { return '<div class="t212TodoRand"><span class="t212Dunga ' + x.c + '"></span><div><b>' + escapeHtml(x.t) + '</b>' + (x.s ? '<p>' + escapeHtml(x.s) + '</p>' : '') + '</div></div>'; }).join("") + '</section>' : '');
-  return rand + '<tr class="t212Det" id="t212Det-' + tk + '"' + (des ? '' : ' hidden') + '><td colspan="9">' + cap + '<div class="t212Graf" id="t212Graf-' + tk + '"></div><div class="t212DetGrila">' + stanga + dreapta + '</div></td></tr>';
+  return rand + '<tr class="t212Det" id="t212Det-' + tk + '"' + (des ? '' : ' hidden') + '><td colspan="9">' + cap + '<div class="t212Graf" id="t212Graf-' + tk + '"></div><div class="t212IndBloc" id="t212Ind-' + tk + '">' + (des ? t212IndUlt[p.ticker] || "" : "") + '</div><div class="t212DetGrila">' + stanga + dreapta + '</div></td></tr>';
 }
 
 /* v100.196 (auditul sever, 🔵10): t212PuneNiveluri scos - nu-l chema niciun buton (doar o probă de ecran, care face acum același lucru prin câmpuri) */
@@ -1234,6 +1320,7 @@ function t212GraficeDeseneaza(faraAducere) {
   (t212.pozPregatite || []).forEach(function (p) {
     var el = $("t212Graf-" + p.ticker); if (!el || !t212.deschis[p.ticker]) return;
     if (!faraAducere) t212AduTf(p.ticker);   // revizia v100.108 (R5): reîmprospătarea lumânărilor TF-urilor (limita de 5 min o ține în frâu, fără buclă)
+    try { t212IndDeseneaza(p.ticker); } catch (e) {}   /* v100.328: „Detaliile indicatorilor” din aceleași lumânări, înaintea ieșirilor graficului (fără zile ⇒ tot apare blocul) */
     // poza 01.10: tabelul pozitiilor poate fi mai lat decat panoul (defileaza) - graficul ia latimea VIZIBILA, nu pe a randului
     var wr = el.closest(".t212TabWrap"), vis = wr ? wr.clientWidth - 28 : 0; if (el.style) el.style.maxWidth = vis > 200 ? vis + "px" : "";   /* v100.291: fișa aleasă se desenează din prima randare */
     /* v100.326: fișa lată (≥ 980 px) ⇒ „Ce e pe grafic” stă în dreapta graficului, ca pe Tablou (340 px + 16 de aer); graficul se desenează pe lățimea lui */

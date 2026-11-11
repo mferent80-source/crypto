@@ -203,14 +203,14 @@ await test("revizia I-861: tbCalculeazaIndicatorii cere istoria într-un try SEP
 await test("pagina: „ultima ta privire” la indicatori se ține în browser (indVazut:<bot>) și se reia după ≥ 30 min cu pagina ascunsă, ca la Contează acum", () => {
   const APP = citeste("public", "app.js");
   assert.match(APP, /function tbVazutAscultator\(\)\{if\(tbVazutAscultator\.pus\|\|typeof document==="undefined"\|\|!document\.addEventListener\)return;tbVazutAscultator\.pus=1;document\.addEventListener\("visibilitychange",function\(\)\{if\(document\.hidden\)\{tbStare\.ctAscunsLa=Date\.now\(\);return\}if\(tbStare\.ctAscunsLa&&Date\.now\(\)-tbStare\.ctAscunsLa>=1800000\)\{tbStare\.ctMem=null;tbStare\.ctHtml=null;tbStare\.indMem=null;tbStare\.indSumarHtml=null\}tbStare\.ctAscunsLa=0\}\)\}/);
-  assert.match(APP, /function tbIndSchimbari\(b,bd\)\{/);
+  assert.match(APP, /function tbIndSchimbari\(b,bd,vaz\)\{/);   // v100.328: „vaz” - fișa T212 își trimite „se vede”
   assert.match(APP, /"indVazut:"\+b\.id/);
 });
 await test("revizia: „ultima privire” se scrie doar cât VEZI Tabloul (nu cât ești pe altă pagină) și păstrează intervalele care lipsesc la un desen", () => {
   const APP = citeste("public", "app.js");
   assert.match(APP, /function tbVazAcum\(\)\{return \(typeof tbPanouVizibil!=="function"\|\|tbPanouVizibil\(\)\)&&!\(typeof document!=="undefined"&&document\.hidden\)\}/);
   const i = APP.indexOf("function tbIndSchimbari("), f = APP.slice(i, APP.indexOf("\nfunction ", i + 10));
-  assert.match(f, /var tot=Object\.assign\(\{\},o\.stocat\|\|\{\},acum\),sv=JSON\.stringify\(tot\);if\(o\.scris!==sv&&tbVazAcum\(\)\)/);
+  assert.match(f, /var tot=Object\.assign\(\{\},o\.stocat\|\|\{\},acum\),sv=JSON\.stringify\(tot\);if\(o\.scris!==sv&&\(vaz\|\|tbVazAcum\)\(\)\)/);
   const c = APP.indexOf("function tbConteazaImbogateste("), g = APP.slice(c, APP.indexOf("\nfunction ", c + 10));
   assert.match(g, /if\(mem\.o\.scris!==sv&&\(typeof tbVazAcum!=="function"\|\|tbVazAcum\(\)\)\)/, "și la Contează acum");
 });
@@ -224,12 +224,12 @@ await test("stilul: blocul v100.324 are banda, rigla, nota TV, schimbarea și is
   // revizia: în afara scării (11 px, 14 px) stratul generat nu le prindea (stătea înaintea blocului)
   for (const m of B.matchAll(/font-size:([\d.]+)px/g)) assert.ok(["12", "13.5", "15", "20", "30"].includes(m[1]), "mărime în afara scării: " + m[1] + " px");
   // 4 pe rând când e loc; 2 × 2 în jumătatea cardului Trend la 1181–1699 (~446–700 px) și pe telefon (~366 px) — nu 3 + 1
-  assert.match(B, /#tabloubot \.ibBanda\{display:grid;grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
+  assert.match(B, /:is\(#tabloubot,#t212\) \.ibBanda\{display:grid;grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
   assert.match(B, /@media \(min-width:1181px\) and \(max-width:1699px\)\{\n#tabloubot \.ibBanda\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)\}/);
-  assert.match(B, /@media \(max-width:640px\)\{\n#tabloubot \.ibBanda\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+  assert.match(B, /@media \(max-width:640px\)\{\n:is\(#tabloubot,#t212\) \.ibBanda\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
   assert.match(B, /\.ibNr\{[^}]*white-space:normal/); assert.match(B, /\.ibTv\{[^}]*white-space:normal/);
   // singurul „ascuns”: atributul hidden (fără bot / fără lumânări), pe care display:flex îl bătea
-  assert.deepEqual(B.match(/[^\n{}]*\{display:none[^}]*\}/g).map((r) => r.trim()), ["#tabloubot .tbIndSumar[hidden]{display:none}"]);
+  assert.deepEqual(B.match(/[^\n{}]*\{display:none[^}]*\}/g).map((r) => r.trim()), [":is(#tabloubot,#t212) .tbIndSumar[hidden]{display:none}"]);
   assert.doesNotMatch(B, /visibility:hidden/);
 });
 

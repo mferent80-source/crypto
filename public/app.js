@@ -7277,6 +7277,21 @@ function tbCalculeazaIndicatorii(d){
     return {tf:x.tf,eticheta:x.eticheta,q:q,hp:hp,eroare:eroare};
   });
 }
+/* v100.328 (el, 11.11.2026: „detaliile indicatorilor și în Trading 212, la fel ca la bot” ⇒ „da, fă așa”): tabelul „Detaliilor indicatorilor” (rândurile
+   indicatorilor, estimarea, predicția, nota), scos din renderTabloIndicatori ca să-l folosească și fișa T212. Tabloul îl cheamă fără opt ⇒ exact ca înainte;
+   fișa cu opt.vorbe (IndicatoriBot.VORBE_POZITIE: „poziția”, istoricul acțiunii) și opt.orizont (4 bare de 4 ore la bursă = 2 ședințe) */
+function tbIndTabelHtml(l,dir,opt){
+  opt=opt||{};var cel=l.map(function(x){return IndicatoriBot.celule(x.q)}),OR=opt.orizont||IndicatoriBot.ORIZONT;
+  return '<div class="tbIndWrap"><table class="tbIndTab"><thead><tr><th></th>'+l.map(function(x){return '<th>'+escapeHtml(x.eticheta.replace(" min","m").replace(" oră","h").replace(" ore","h").replace(" zi","z"))+'</th>'}).join("")+'</tr></thead><tbody>'+
+    IndicatoriBot.RANDURI.map(function(r){
+      return '<tr><td title="'+escapeHtml(r.titlu)+'">'+escapeHtml(r.eticheta)+'</td>'+cel.map(function(c,i){
+        var v=c&&c[r.k];if(!v)return '<td class="mutedInfo" title="prea puține bare închise">—</td>';
+        return '<td class="'+(v.c==="lipsa"||v.c==="neutral"?"mutedInfo":v.c)+'" title="'+escapeHtml(r.eticheta+" · "+l[i].eticheta+": "+(v.titlu||v.t))+'">'+escapeHtml(v.t)+'</td>'}).join("")+'</tr>'}).join("")+
+    '<tr class="tbIndEst"><td title="Estimarea din istoric: situații asemănătoare cu acum și ce a făcut prețul după 4 bare. Nedovedită.">Estimare</td>'+l.map(function(x){
+      var e=IndicatoriBot.estimare(x.hp,OR[x.eticheta]||"4 bare",opt.vorbe);
+      return '<td class="'+(e.c==="lipsa"||e.c==="neutral"?"mutedInfo":e.c)+'" title="'+escapeHtml("Estimare · "+x.eticheta+": "+e.titlu)+'">'+escapeHtml(e.t)+'</td>'}).join("")+'</tr>'+
+    '</tbody></table></div><p class="tbIndPred">🔮 '+escapeHtml(IndicatoriBot.predictie(l,dir,opt.vorbe).text)+'</p><p class="tbSub tbIndNota">Indicatorii arată ce e acum pe grafic; doar rândul „Estimare” privește înainte. Ține mouse-ul pe o celulă ca să vezi ce înseamnă.</p>';
+}
 function renderTabloIndicatori(){
   var el=$("tbIndicatori"),rz=$("tbIndicatoriRezumat"),mm=$("tbTrendMediu");if(!el||!rz||typeof IndicatoriBot==="undefined")return;
   renderTabloTrend();   // v100.111 (I-542): tabelul unic folosește aceleași calcule
@@ -7285,21 +7300,12 @@ function renderTabloIndicatori(){
   if(!l){rz.className="tbRezumat mutedInfo";rz.textContent="Aștept lumânările…";el.innerHTML="";if(mm)mm.innerHTML="";tbIndSumarGol();return}
   var z=IndicatoriBot.rezumat(l,b.directie);
   rz.className="tbRezumat "+tbTon(z.ton);rz.textContent=z.text;
-  var cel=l.map(function(x){return IndicatoriBot.celule(x.q)});
   var cost=TabloExtra.grileVsCosturi(b,Date.now());
   var med=IndicatoriBot.mediu(Object.assign({fundingZi:cost&&cost.fundingZi},d.mediu||{}),b.directie);
   var TON={bine:"good",rau:"bad",atentie:"tbWarn",neutru:"mutedInfo"};
   if(mm)mm.innerHTML='<div class="tbMediu"><div class="tbMediuCap">Mediul botului</div>'+med.map(function(m){
       return '<div class="tbMediuR" title="'+escapeHtml(m.titlu)+'"><span>'+escapeHtml(m.eticheta)+'</span><b class="'+(TON[m.ton]||"mutedInfo")+'">'+escapeHtml(m.text)+'</b></div>'}).join("")+'</div>';
-  el.innerHTML='<div class="tbIndWrap"><table class="tbIndTab"><thead><tr><th></th>'+l.map(function(x){return '<th>'+escapeHtml(x.eticheta.replace(" min","m").replace(" oră","h").replace(" ore","h").replace(" zi","z"))+'</th>'}).join("")+'</tr></thead><tbody>'+
-    IndicatoriBot.RANDURI.map(function(r){
-      return '<tr><td title="'+escapeHtml(r.titlu)+'">'+escapeHtml(r.eticheta)+'</td>'+cel.map(function(c,i){
-        var v=c&&c[r.k];if(!v)return '<td class="mutedInfo" title="prea puține bare închise">—</td>';
-        return '<td class="'+(v.c==="lipsa"||v.c==="neutral"?"mutedInfo":v.c)+'" title="'+escapeHtml(r.eticheta+" · "+l[i].eticheta+": "+(v.titlu||v.t))+'">'+escapeHtml(v.t)+'</td>'}).join("")+'</tr>'}).join("")+
-    '<tr class="tbIndEst"><td title="Estimarea din istoric: situații asemănătoare cu acum și ce a făcut prețul după 4 bare. Nedovedită.">Estimare</td>'+l.map(function(x){
-      var e=IndicatoriBot.estimare(x.hp,IndicatoriBot.ORIZONT[x.eticheta]||"4 bare");
-      return '<td class="'+(e.c==="lipsa"||e.c==="neutral"?"mutedInfo":e.c)+'" title="'+escapeHtml("Estimare · "+x.eticheta+": "+e.titlu)+'">'+escapeHtml(e.t)+'</td>'}).join("")+'</tr>'+
-    '</tbody></table></div><p class="tbIndPred">🔮 '+escapeHtml(IndicatoriBot.predictie(l,b.directie).text)+'</p><p class="tbSub tbIndNota">Indicatorii arată ce e acum pe grafic; doar rândul „Estimare” privește înainte. Ține mouse-ul pe o celulă ca să vezi ce înseamnă.</p>';
+  el.innerHTML=tbIndTabelHtml(l,b.directie);
   /* v100.324 (el, 11.11.2026: „detaliile indicatorilor când e închis să arate un grafic sau o bară cu direcția sau scorul” ⇒ I-857..I-861, „fă toate”):
      în rândul închis - banda celor 4 intervale (cu botul / neutri / împotrivă), nota TradingView și „≠”, „era ↔”, rigla scorului cu pragul lui, istoria pe 4 ore */
   var sm=$("tbIndSumar");if(sm){var bd=IndicatoriBot.banda(l,b.directie),tvb=d.tv&&d.tv.n&&typeof TvNote!=="undefined"?IndicatoriBot.tvBanda(d.tv.n,bd,TvNote.clasa):null,sch=tbIndSchimbari(b,bd),b4=bd.filter(function(x){return x.eticheta==="4 ore"})[0],ist=b4&&!b4.lipsa?tbIstoric4hGata(d.simbol):null;
@@ -7325,9 +7331,10 @@ function tbIstoric4hGata(simbol){if(tbIst4h.simbol!==simbol)return null;var r=tb
 /* revizia 11.11: „ultima privire” se scrie doar cât VEZI Tabloul (renderTabloBot merge și cât ești pe altă pagină a aplicației) */
 function tbVazAcum(){return (typeof tbPanouVizibil!=="function"||tbPanouVizibil())&&!(typeof document!=="undefined"&&document.hidden)}
 /* v100.324 (I-860): ce ai văzut ultima oară pe fiecare interval (săgeata), ținut în browser pe bot; „schimbat” = față de vizita de DINAINTE, ca la Contează acum */
-function tbIndSchimbari(b,bd){try{if(typeof tbVazutAscultator==="function")tbVazutAscultator();var k="indVazut:"+b.id,m=tbStare.indMem||(tbStare.indMem={});if(!m[k]){var v=null;try{v=JSON.parse(localStorage.getItem(k)||"null")}catch(e){}m[k]={prev:v&&v.r?v.r:null,stocat:v&&v.r?v.r:null,scris:v&&v.r?JSON.stringify(v.r):null}}
+/* v100.328: vaz = „se vede acum” (implicit Tabloul; fișa T212 trimite t212VazAcum și cheia „t212:<ticker>”) */
+function tbIndSchimbari(b,bd,vaz){try{if(typeof tbVazutAscultator==="function")tbVazutAscultator();var k="indVazut:"+b.id,m=tbStare.indMem||(tbStare.indMem={});if(!m[k]){var v=null;try{v=JSON.parse(localStorage.getItem(k)||"null")}catch(e){}m[k]={prev:v&&v.r?v.r:null,stocat:v&&v.r?v.r:null,scris:v&&v.r?JSON.stringify(v.r):null}}
   /* revizia: doar cât vezi Tabloul; intervalele care lipsesc la un desen rămân cum le-ai văzut */
-  var o=m[k],acum=IndicatoriBot.amintire(bd);var tot=Object.assign({},o.stocat||{},acum),sv=JSON.stringify(tot);if(o.scris!==sv&&tbVazAcum()){o.scris=sv;o.stocat=tot;try{localStorage.setItem(k,JSON.stringify({r:tot,la:Date.now()}))}catch(e){}}
+  var o=m[k],acum=IndicatoriBot.amintire(bd);var tot=Object.assign({},o.stocat||{},acum),sv=JSON.stringify(tot);if(o.scris!==sv&&(vaz||tbVazAcum)()){o.scris=sv;o.stocat=tot;try{localStorage.setItem(k,JSON.stringify({r:tot,la:Date.now()}))}catch(e){}}
   return IndicatoriBot.schimbari(o.prev,bd)}catch(e){return null}}
 async function tbAduGraficul(){
   var b=tbStare.bot;if(!b)return;

@@ -91,23 +91,32 @@ var IndicatoriBot = (function () {
   // MASURAT in v74.6: nimereste directia in 48,8% din cazuri (cat dat cu banul) - de aceea eticheta merge MEREU cu ea.
   var ORIZONT = { "15 min": "1 oră", "1 oră": "4 ore", "4 ore": "16 ore", "1 zi": "4 zile" };
   var CINSTIT = "Nedovedit: măsurată, metoda asta a nimerit direcția în 48,8% din cazuri — cât dat cu banul. O frecvență din trecut, nu o promisiune.";
-  function estimare(hp, orizont) {
-    var up = hp ? nr(hp.up) : null;
+  // v100.328 (el, 11.11.2026: „nu poți pune detaliile indicatorilor și în Trading 212 la fel ca la bot?” ⇒ „da, fă așa”): vorbele textelor - ale botului
+  // (implicite, neschimbate) sau ale unei poziții în acțiuni (long; la bursă o zi are 2 bare de 4 ore ⇒ orizonturile și istoria în ședințe, nu în ore / zile)
+  var VORBE_BOT = { tau: "botul tău", cu: "cu botul", gen: "botului", ajuta: "botul", lui: "lui", istoric: "monedei", orizont: ORIZONT, pred: "16 ore", sedinte: false,
+    surse: "Radarul (bare închise, Pionex) și TradingView (bara în curs, Binance)" };
+  var VORBE_POZITIE = { tau: "poziția ta", cu: "cu poziția", gen: "poziției", ajuta: "poziția", lui: "ei", istoric: "acțiunii",
+    orizont: { "15 min": "1 oră", "1 oră": "4 ore de bursă", "4 ore": "2 ședințe", "1 zi": "4 ședințe" }, pred: "2 ședințe", sedinte: true,
+    surse: "Radarul (bare închise, Twelve Data) și TradingView (bara în curs)" };
+  function vorbe(v) { return v && v.tau ? v : VORBE_BOT; }
+  function estimare(hp, orizont, v) {
+    var V = vorbe(v), up = hp ? nr(hp.up) : null;
     if (up === null) return { t: "—", c: "lipsa", titlu: "prea puține bare pentru estimare (îi trebuie cel puțin 260)" };
     var sus = up >= 50, pct = Math.round(sus ? up : 100 - up), b = nr(hp.banda);
     return { t: (sus ? "↑" : "↓") + pct + "%", c: hp.inBanda ? "neutral" : sus ? "good" : "bad",
-      titlu: "în " + (hp.k ? cate(hp.k, "situație", "situații") : "? situații") + " asemănătoare din istoricul monedei, după " + orizont + " prețul a " + (sus ? "urcat" : "coborât") + " în " + pct + "% din cazuri" +
+      titlu: "în " + (hp.k ? cate(hp.k, "situație", "situații") : "? situații") + " asemănătoare din istoricul " + V.istoric + ", după " + orizont + " prețul a " + (sus ? "urcat" : "coborât") + " în " + pct + "% din cazuri" +
         (b !== null ? " (zgomotul e ±" + Math.round(b) + (hp.inBanda ? ": e în zgomot, fără semn" : "") + ")" : "") + ". " + CINSTIT };
   }
   // predictia pe orizontul botului: bara de 4 ore (16 ore inainte); botul tine zile
-  function predictie(randuri, botDir) {
+  function predictie(randuri, botDir, v) {
+    var V = vorbe(v), pe = "Estimare pe " + V.pred + ": ";
     var r = (Array.isArray(randuri) ? randuri : []).filter(function (x) { return x && x.eticheta === "4 ore"; })[0], hp = r && r.hp, up = hp ? nr(hp.up) : null;
-    if (up === null) return { ton: "neutru", text: "Estimare pe 16 ore: n-am destule bare de 4 ore în istoric. " + CINSTIT };
+    if (up === null) return { ton: "neutru", text: pe + "n-am destule bare de 4 ore în istoric. " + CINSTIT };
     var sus = up >= 50, pct = Math.round(sus ? up : 100 - up), avg = nr(hp.avg);
     var bz = nr(hp.banda);
-    if (hp.inBanda) return { ton: "neutru", text: "Estimare pe 16 ore: fără semn — în situații asemănătoare a " + (sus ? "urcat" : "coborât") + " în " + pct + "% din cazuri, dar sunt prea puține ca să conteze" + (bz !== null ? " (zgomotul e ±" + Math.round(bz) + ")" : "") + ". " + CINSTIT };
-    var fata = botDir === "long" ? (sus ? " — în favoarea botului" : " — împotriva botului") : botDir === "short" ? (sus ? " — împotriva botului" : " — în favoarea botului") : "";
-    return { ton: "neutru", text: "Estimare pe 16 ore: " + (sus ? "urcare" : "coborâre") + " în " + pct + "% din situațiile asemănătoare" + (avg !== null ? " (în medie " + (avg >= 0 ? "+" : "−") + Math.abs(avg).toFixed(1).replace(".", ",") + "%)" : "") + fata + ". " + CINSTIT };
+    if (hp.inBanda) return { ton: "neutru", text: pe + "fără semn — în situații asemănătoare a " + (sus ? "urcat" : "coborât") + " în " + pct + "% din cazuri, dar sunt prea puține ca să conteze" + (bz !== null ? " (zgomotul e ±" + Math.round(bz) + ")" : "") + ". " + CINSTIT };
+    var fata = botDir === "long" ? (sus ? " — în favoarea " + V.gen : " — împotriva " + V.gen) : botDir === "short" ? (sus ? " — împotriva " + V.gen : " — în favoarea " + V.gen) : "";
+    return { ton: "neutru", text: pe + (sus ? "urcare" : "coborâre") + " în " + pct + "% din situațiile asemănătoare" + (avg !== null ? " (în medie " + (avg >= 0 ? "+" : "−") + Math.abs(avg).toFixed(1).replace(".", ",") + "%)" : "") + fata + ". " + CINSTIT };
   }
 
   // ---- v91.9: "Mediul botului" - trei lucruri care NU vin din acelasi pret ca tabelul ----
@@ -206,11 +215,11 @@ var IndicatoriBot = (function () {
   function schimbari(prev, b) {
     return (Array.isArray(b) ? b : []).map(function (x) { var p = prev && !x.lipsa ? prev[x.eticheta] : undefined; return p && p !== x.sageata ? { era: p, acum: x.sageata } : null; });
   }
-  function bandaHtml(b, tv, sch, botDir, esc) {
+  function bandaHtml(b, tv, sch, botDir, esc, v) {
     esc = esc || escImplicit;
-    var dir = directional(botDir);
-    var pe = "Indicatorii pe " + cate(b.length, "interval", "intervale"), lab = dir ? pe + ", față de botul tău (" + botDir + ")" : pe + " (botul n-are direcție: sus / jos)";
-    var nCu = dir ? "cu botul" : "sus", nContra = dir ? "împotrivă" : "jos";
+    var dir = directional(botDir), V = vorbe(v);
+    var pe = "Indicatorii pe " + cate(b.length, "interval", "intervale"), lab = dir ? pe + ", față de " + V.tau + " (" + botDir + ")" : pe + " (botul n-are direcție: sus / jos)";
+    var nCu = dir ? V.cu : "sus", nContra = dir ? "împotrivă" : "jos";
     return '<span class="ibBanda" role="group" aria-label="' + esc(lab) + '">' + b.map(function (x, i) {
       if (x.lipsa) return '<span class="ibCel ibLipsa" title="' + esc(x.eticheta + ": " + (x.eroare || "prea puține bare închise")) + '"><span class="ibTf">' + esc(x.scurt) + '</span><span class="ibVer">—</span></span>';
       var s = sch && sch[i], t = tv && tv[i];
@@ -223,7 +232,7 @@ var IndicatoriBot = (function () {
       if (t) {
         var tcls = dir ? (t.dir === "neutru" ? "ibTvNeutru" : (t.dir === "sus") === (botDir === "long") ? "ibTvCu" : "ibTvContra") : (t.dir === "sus" ? "ibTvSus" : t.dir === "jos" ? "ibTvJos" : "ibTvNeutru");
         tvH = '<span class="ibTv ' + tcls + '" title="' + esc("TradingView " + x.eticheta + ": " + t.text + " (" + fmt1(t.v) + ")") + '">TV ' + esc(t.text) + '</span>' +
-          (t.diferit ? '<em class="ibDif" title="' + esc("Radarul (bare închise, Pionex) și TradingView (bara în curs, Binance) arată direcții opuse pe " + x.eticheta) + '">≠</em>' : "");
+          (t.diferit ? '<em class="ibDif" title="' + esc(V.surse + " arată direcții opuse pe " + x.eticheta) + '">≠</em>' : "");
       }
       return '<span class="' + cls + '" title="' + esc(tit) + '"><span class="ibTf">' + esc(x.scurt) + '</span><span class="ibVer">' + esc(x.sageata + (x.scorTxt !== null ? " " + x.scorTxt : "")) + '</span>' +
         '<span class="ibBara" aria-hidden="true">' + seg("ibBCu", x.cu) + seg("ibBNeutru", x.neutru - x.incinsi) + seg("ibBIncins", x.incinsi) + seg("ibBContra", x.contra) + '</span>' +
@@ -233,14 +242,14 @@ var IndicatoriBot = (function () {
   }
   // I-858: rigla scorului 0–100 pe 1 oră (subțire), 4 ore, 1 zi, cu pragul ADEVĂRAT al intervalului (calc: p.signal, 64–67): sub 100 − prag coboară,
   // peste prag urcă. Zona care ajută botul verde, cea opusă roșie. Fără prag (calc vechi) ⇒ doar semnul, fără zone inventate.
-  function riglaHtml(b, botDir, esc) {
+  function riglaHtml(b, botDir, esc, v) {
     esc = esc || escImplicit;
-    var dir = directional(botDir), alese = (Array.isArray(b) ? b : []).filter(function (x) { return !x.lipsa && x.scor !== null && /1 oră|4 ore|1 zi/.test(x.eticheta); });
+    var V = vorbe(v), dir = directional(botDir), alese = (Array.isArray(b) ? b : []).filter(function (x) { return !x.lipsa && x.scor !== null && /1 oră|4 ore|1 zi/.test(x.eticheta); });
     if (!alese.length) return "";
     // v100.327 (el, 11.11.2026, cu poza riglei: „fă mai explicit, că nu prea înțeleg direcția la ce arată”): sensul la vedere, nu doar în titlul de la mouse
     // (pe telefon nu se vede) - titlul riglei, cuvântul lângă cifră, capetele sub bare, legenda culorilor față de direcția botului
     var cuvant = function (x) { return x.ver === "BEARISH" ? "↓ jos" : x.ver === "BULLISH" ? "↑ sus" : "neutru"; };
-    var leg = '<span class="ibRleg">' + (dir ? '<span><i class="ibLbun"></i>verde = cu botul tău (' + (botDir === "short" ? "short: câștigă când coboară" : "long: câștigă când urcă") + ')</span><span><i class="ibLrau"></i>roșu = împotriva lui</span>' : "")
+    var leg = '<span class="ibRleg">' + (dir ? '<span><i class="ibLbun"></i>verde = cu ' + V.tau + ' (' + (botDir === "short" ? "short: câștigă când coboară" : "long: câștigă când urcă") + ')</span><span><i class="ibLrau"></i>roșu = împotriva ' + V.lui + '</span>' : "")
       + '<span><i class="ibLsemn"></i>liniuța = scorul acum</span></span>';
     var capete = '<span class="ibRax" aria-hidden="true"><i></i><span class="ibRaxB"><span>0 · ↓ jos</span><span>neutru</span><span>sus ↑ · 100</span></span><i></i></span>';
     return '<span class="ibRigle"><span class="ibRcap">Scorul indicatorilor, 0–100</span>' + alese.map(function (x) {
@@ -248,7 +257,7 @@ var IndicatoriBot = (function () {
       if (p !== null && p > 50 && p < 100) {
         var jos = 100 - p, mij = p - jos, zj = dir ? (botDir === "short" ? " ibZbun" : " ibZrau") : "", zs = dir ? (botDir === "long" ? " ibZbun" : " ibZrau") : "";
         zone = '<i class="ibZ ibZjos' + zj + '" style="width:' + jos + '%"></i><i class="ibZ ibZneutru" style="width:' + mij + '%"></i><i class="ibZ ibZsus' + zs + '" style="width:' + jos + '%"></i>';
-        tit += " · până la " + jos + " coboară, de la " + p + " urcă (pragul acestui interval)" + (dir ? " · zona care ajută botul e marcată" : "");   // regula calc: ≥ prag / ≤ 100 − prag
+        tit += " · până la " + jos + " coboară, de la " + p + " urcă (pragul acestui interval)" + (dir ? " · zona care ajută " + V.ajuta + " e marcată" : "");   // regula calc: ≥ prag / ≤ 100 − prag
       } else tit += " · pragul nu e cunoscut";
       var poz = Math.max(0, Math.min(100, Math.round((x.scorBrut !== null && x.scorBrut !== undefined ? x.scorBrut : x.scor) * 10) / 10));
       return '<span class="ibRigla' + (x.eticheta === "1 oră" ? " ibRsubtire" : "") + '" title="' + esc(tit) + '"><span class="ibRtf">' + esc(x.scurt) + '</span><span class="ibRbara">' + zone +
@@ -266,9 +275,10 @@ var IndicatoriBot = (function () {
     return out;
   }
   function f2(x) { return String(Math.round(x * 100) / 100); }
-  function sparkHtml(ist, botDir, esc) {
+  function sparkHtml(ist, botDir, esc, v) {
     esc = esc || escImplicit;
     if (!Array.isArray(ist) || ist.length < 2) return "";
+    var V = vorbe(v);
     // v100.327 (el: „fă și graficul micuț la fel”): ca rigla - desenul mai mare (220 × 56), liniile punctate își scriu pragul și sensul („≥ 64 sus” /
     // „≤ 36 jos”, în coloana din dreapta), cifra de la început și cea de acum lângă punct; zona verde a botului are legenda sub desen
     // el: „mărește scorul pe 4 h pe lățime cât e panoul”: desenul ia toată lățimea cartelei - pe lățime procente (linia în desenul întins, x 0..100;
@@ -280,15 +290,16 @@ var IndicatoriBot = (function () {
     if (p !== null && p > 50 && p < 100) {
       linii = '<line class="ibSpPrag" x1="0" x2="100%" y1="' + f2(y(p)) + '" y2="' + f2(y(p)) + '"></line><line class="ibSpPrag" x1="0" x2="100%" y1="' + f2(y(100 - p)) + '" y2="' + f2(y(100 - p)) + '"></line>';
       etP = '<svg class="ibSpPr" width="56" height="' + H + '" aria-hidden="true"><text class="ibSpEtP" x="0" y="' + f2(y(p) + 4) + '">≥ ' + p + ' sus</text><text class="ibSpEtP" x="0" y="' + f2(y(100 - p) + 4) + '">≤ ' + (100 - p) + ' jos</text></svg>';
-      if (botDir === "short") { bun = '<rect class="ibSpBun" x="0" y="' + f2(y(100 - p)) + '" width="100%" height="' + f2(H - y(100 - p)) + '"></rect>'; legBun = "verde = cu botul tău (short: ≤ " + (100 - p) + ")"; }
-      else if (botDir === "long") { bun = '<rect class="ibSpBun" x="0" y="0" width="100%" height="' + f2(y(p)) + '"></rect>'; legBun = "verde = cu botul tău (long: ≥ " + p + ")"; }
+      if (botDir === "short") { bun = '<rect class="ibSpBun" x="0" y="' + f2(y(100 - p)) + '" width="100%" height="' + f2(H - y(100 - p)) + '"></rect>'; legBun = "verde = cu " + V.tau + " (short: ≤ " + (100 - p) + ")"; }
+      else if (botDir === "long") { bun = '<rect class="ibSpBun" x="0" y="0" width="100%" height="' + f2(y(p)) + '"></rect>'; legBun = "verde = cu " + V.tau + " (long: ≥ " + p + ")"; }
     }
     var pts = ist.map(function (o, i) { return f2(x(i)) + "," + f2(y(o.s)); }).join(" "), u = ist[n - 1];
     var cifre = '<text class="ibSpVal" x="0" y="' + f2(yEt(ist[0].s)) + '">' + ist[0].s + '</text><text class="ibSpVal" x="100%" y="' + f2(yEt(u.s)) + '" text-anchor="end">' + u.s + '</text>';
     var tit = "Scorul pe 4 ore, ultimele " + cate(n, "bară închisă", "bare închise") + ": de la " + ist[0].s + " la " + u.s + (p !== null ? " · liniile = pragurile (" + (100 - p) + " / " + p + ")" : "");
     // v100.327: sub desen, în cuvinte - ce e, câte bare (≈ zile; 6 bare de 4 h = o zi), de unde până unde și încotro; ce sunt liniile punctate și zona verde
     var d = u.s - ist[0].s, merge = d >= 3 ? "urcă" : d <= -3 ? "coboară" : "stă pe loc", ore = n * 4;
-    var cat = ore < 24 ? cate(ore, "oră", "ore") : "≈ " + cate(Math.round(ore / 24), "zi", "zile");   // sub o zi orele (3 bare = 12 ore, nu „≈ 1 zi”)
+    var cat = V.sedinte ? "≈ " + cate(Math.max(1, Math.round(n / 2)), "ședință", "ședințe")   // v100.328: la bursă 2 bare de 4 ore pe ședință (9:30–13:30, 13:30–16:00)
+      : ore < 24 ? cate(ore, "oră", "ore") : "≈ " + cate(Math.round(ore / 24), "zi", "zile");   // sub o zi orele (3 bare = 12 ore, nu „≈ 1 zi”)
     // încadrare: titlul sus, ca la riglă; sub desen „de unde → unde, încotro” și legenda zonei
     var titlu = "Scorul pe 4h, ultimele " + cate(n, "bară", "bare") + " (" + cat + ")";
     return '<span class="ibSpark" title="' + esc(tit) + '"><span class="ibRcap">' + esc(titlu) + '</span><span class="ibSpDes"><svg class="ibSpG" width="100%" height="' + H + '" aria-hidden="true">' + bun + linii +
@@ -297,6 +308,6 @@ var IndicatoriBot = (function () {
   }
 
   return { dinPionex: dinPionex, celule: celule, rezumat: rezumat, estimare: estimare, predictie: predictie, mediu: mediu, ORIZONT: ORIZONT, RANDURI: RANDURI,
-    banda: banda, bandaHtml: bandaHtml, tvBanda: tvBanda, amintire: amintire, schimbari: schimbari, riglaHtml: riglaHtml, istoricScor: istoricScor, sparkHtml: sparkHtml };
+    banda: banda, bandaHtml: bandaHtml, tvBanda: tvBanda, amintire: amintire, schimbari: schimbari, riglaHtml: riglaHtml, istoricScor: istoricScor, sparkHtml: sparkHtml, VORBE_POZITIE: VORBE_POZITIE };
 })();
 if (typeof globalThis !== "undefined") globalThis.IndicatoriBot = IndicatoriBot;

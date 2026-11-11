@@ -1737,20 +1737,20 @@ body.peGrid .toolbar,body.peGrid .heroStrip,body.peGrid .tabs{display:none}
 /* v91.8: "Ce spun indicatorii" langa grafic */
 #tabloubot .tbGraficRand{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:8px;align-items:stretch}
 #tabloubot .tbGraficRand>.tbBloc{min-width:0}
-#tabloubot .tbIndWrap{overflow-x:auto;max-width:100%}
-#tabloubot .tbIndTab{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums}
-#tabloubot .tbIndTab th{font-weight:600;color:var(--muted,#9FB3C4);text-align:right;padding:3px 4px;font-size:11.5px}
-#tabloubot .tbIndTab td{padding:3px 4px;text-align:right;white-space:nowrap;border-top:1px solid var(--tb-linie,#26333F)}
-#tabloubot .tbIndTab td:first-child{text-align:left;color:var(--muted,#9FB3C4)}
-#tabloubot .tbIndTab tr:first-child td{font-weight:600}
-#tabloubot .tbIndNota{margin:6px 0 0}
+:is(#tabloubot,#t212) .tbIndWrap{overflow-x:auto;max-width:100%}
+:is(#tabloubot,#t212) .tbIndTab{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums}
+:is(#tabloubot,#t212) .tbIndTab th{font-weight:600;color:var(--muted,#9FB3C4);text-align:right;padding:3px 4px;font-size:11.5px}
+:is(#tabloubot,#t212) .tbIndTab td{padding:3px 4px;text-align:right;white-space:nowrap;border-top:1px solid var(--tb-linie,#26333F)}
+:is(#tabloubot,#t212) .tbIndTab td:first-child{text-align:left;color:var(--muted,#9FB3C4)}
+:is(#tabloubot,#t212) .tbIndTab tr:first-child td{font-weight:600}
+:is(#tabloubot,#t212) .tbIndNota{margin:6px 0 0}
 #tabloubot .tbMediu{margin:0 0 8px;padding:6px 8px;border-radius:4px;border:1px solid var(--tb-linie,#26333F);background:rgba(135,153,170,.05)}
 #tabloubot .tbMediuCap{font-size:11px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--muted,#9FB3C4);margin-bottom:3px}
 #tabloubot .tbMediuR{display:grid;grid-template-columns:72px minmax(0,1fr);gap:6px;padding:2px 0;font-size:12.5px;line-height:1.35}
 #tabloubot .tbMediuR>span{color:var(--muted,#9FB3C4)}
 #tabloubot .tbMediuR>b{font-weight:600;overflow-wrap:anywhere}
-#tabloubot .tbIndEst td{border-top:2px solid var(--tb-linie,#26333F);font-style:italic}
-#tabloubot .tbIndPred{margin:8px 0 0;font-size:12.5px;line-height:1.45;padding:7px 9px;border-radius:4px;background:rgba(135,153,170,.07);border:1px dashed rgba(135,153,170,.3)}
+:is(#tabloubot,#t212) .tbIndEst td{border-top:2px solid var(--tb-linie,#26333F);font-style:italic}
+:is(#tabloubot,#t212) .tbIndPred{margin:8px 0 0;font-size:12.5px;line-height:1.45;padding:7px 9px;border-radius:4px;background:rgba(135,153,170,.07);border:1px dashed rgba(135,153,170,.3)}
 
 /* v92: Home "Piata azi" - acelasi limbaj ca Tabloul botului (demo aprobat 26.09) */
 body.peAcasa .heroStrip,body.peAcasa .tabs{display:none}
@@ -2242,7 +2242,7 @@ details.grAlte>summary{cursor:pointer;color:var(--muted);font-size:13.5px}
 #gridset .tbTrendTf{white-space:nowrap;font-weight:600}
 #gridset .tbTrendBec{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;margin-right:8px;font-size:12px;font-weight:600;color:#141C24;vertical-align:-4px;background:var(--muted,#9FB3C4)}
 #gridset .tbTrendBec.bine{background:var(--good)}#gridset .tbTrendBec.rau{background:var(--bad)}#gridset .tbTrendBec.atentie{background:var(--warn)}
-#tabloubot .tbTrendDet{margin-top:8px}#tabloubot .tbTrendDet>summary{cursor:pointer;color:var(--accent);font-size:13px}
+:is(#tabloubot,#t212) .tbTrendDet{margin-top:8px}:is(#tabloubot,#t212) .tbTrendDet>summary{cursor:pointer;color:var(--accent);font-size:13px}
 #tabloubot #tbTrendMediu .tbMediu{margin:10px 0 0}
 .grPlanPill.grPlanSari{border-color:var(--bad);color:var(--bad)}
 .grPlanSariTx{margin:6px 0 8px;padding:6px 10px;border-left:3px solid var(--bad);background:rgba(224,82,74,.08);font-size:13px}
@@ -3765,11 +3765,11 @@ button.pzVoce{width:auto;min-height:0;margin:0;background:transparent;font-weigh
 #tabloubot .tbCcDeCe,#tabloubot .tbCcSursa{font-size:12px}
 :is(#tabloubot,#t212) .piataAzi{font-size:12px}
 :is(#tabloubot,#t212) .t212Sursa{font-size:12px}
-#tabloubot .tbIndTab{font-size:12px}
-#tabloubot .tbIndTab th{font-size:12px}
+:is(#tabloubot,#t212) .tbIndTab{font-size:12px}
+:is(#tabloubot,#t212) .tbIndTab th{font-size:12px}
 #tabloubot .tbMediuCap{font-size:12px}
 #tabloubot .tbMediuR{font-size:12px}
-#tabloubot .tbIndPred{font-size:12px}
+:is(#tabloubot,#t212) .tbIndPred{font-size:12px}
 #tabloubot .tbPregTitlu{font-size:13.5px}
 #tabloubot .tbMotiveCap{font-size:12px}
 #tabloubot .tbMotiveAlte{font-size:12px}
@@ -3796,7 +3796,7 @@ button.pzVoce{width:auto;min-height:0;margin:0;background:transparent;font-weigh
 :is(#tabloubot,#t212) .t212Graf .tbIntBtn{font-size:13.5px}
 :is(#tabloubot,#t212) .t212File .tbIntBtn{font-size:13.5px}
 #tabloubot .tbTrendTab{font-size:13.5px}
-#tabloubot .tbTrendDet>summary{font-size:13.5px}
+:is(#tabloubot,#t212) .tbTrendDet>summary{font-size:13.5px}
 :is(#tabloubot,#t212) .grPlanSariTx{font-size:13.5px}
 :is(#tabloubot,#t212) .sugDir{font-size:12px}
 :is(#tabloubot,#t212) #sugPagina .rlSec>h3{font-size:13.5px}
@@ -4329,14 +4329,14 @@ body :is(#tabloubot,#t212).tbZi .dashOperations .decisionTool.bad{outline:1px so
 #tabloubot.tbZi .tbDunga.n{background:#66768B}
 :is(#tabloubot,#t212).tbZi .t212Link{border:1px solid rgba(36,86,230,.35);background:rgba(36,86,230,.06)}
 :is(#tabloubot,#t212).tbZi .t212Sfat{border-left:3px solid #66768B;background:rgba(14,26,43,.06)}
-#tabloubot.tbZi .tbIndTab th{color:var(--muted,#48586E)}
-#tabloubot.tbZi .tbIndTab td{border-top:1px solid var(--tb-linie,#E0E5EC)}
-#tabloubot.tbZi .tbIndTab td:first-child{color:var(--muted,#48586E)}
+:is(#tabloubot,#t212).tbZi .tbIndTab th{color:var(--muted,#48586E)}
+:is(#tabloubot,#t212).tbZi .tbIndTab td{border-top:1px solid var(--tb-linie,#E0E5EC)}
+:is(#tabloubot,#t212).tbZi .tbIndTab td:first-child{color:var(--muted,#48586E)}
 #tabloubot.tbZi .tbMediu{border:1px solid var(--tb-linie,#E0E5EC);background:rgba(102,118,139,.05)}
 #tabloubot.tbZi .tbMediuCap{color:var(--muted,#48586E)}
 #tabloubot.tbZi .tbMediuR>span{color:var(--muted,#48586E)}
-#tabloubot.tbZi .tbIndEst td{border-top:2px solid var(--tb-linie,#E0E5EC)}
-#tabloubot.tbZi .tbIndPred{background:rgba(102,118,139,.07);border:1px dashed rgba(102,118,139,.3)}
+:is(#tabloubot,#t212).tbZi .tbIndEst td{border-top:2px solid var(--tb-linie,#E0E5EC)}
+:is(#tabloubot,#t212).tbZi .tbIndPred{background:rgba(102,118,139,.07);border:1px dashed rgba(102,118,139,.3)}
 #tabloubot.tbZi .tbFaraPlan{background:rgba(224,165,38,.07)}
 #tabloubot.tbZi .tbPregBloc{border-top:1px solid rgba(14,26,43,.16)}
 #tabloubot.tbZi .tbPregMon{border-bottom:1px dashed rgba(14,26,43,.12)}
@@ -4769,55 +4769,55 @@ html.pzDemo #tabloubot #ctAcum .ctGol{margin:6px 0 2px;color:var(--pzT2)}
    vino cu idei” ⇒ I-857..I-861 ⇒ „fă toate”). Sub titlul lui „Detaliile indicatorilor” (#tbIndSumar, în <summary>, se vede și închis):
    banda celor 4 intervale (marginea și bara = față de bot: verde cu botul, roșu împotrivă, gri neutru, auriu încins; cifrele în text, nu doar culoare),
    nota TradingView și „≠”, „era ↔” (conturul albastru), rigla scorului cu pragul intervalului, istoria scorului pe 4 ore. Pe orice lățime. */
-#tabloubot .tbIndSumar{display:flex;flex-wrap:wrap;align-items:flex-start;gap:10px 20px;margin:8px 0 2px;font-size:12px;font-weight:400;line-height:1.35;color:var(--pzT1);cursor:pointer}
-#tabloubot .tbIndSumar[hidden]{display:none}
-#tabloubot .ibBanda{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;min-width:0;flex:1 1 520px;max-width:760px}
-#tabloubot .ibCel{display:flex;flex-direction:column;gap:3px;padding:5px 8px;border:1px solid var(--pzLi);border-left:3px solid var(--pzLi2);border-radius:4px;min-width:0;font-variant-numeric:tabular-nums}
-#tabloubot .ibCu,#tabloubot .ibSus{border-left-color:var(--pzSus)}
-#tabloubot .ibContra,#tabloubot .ibJos{border-left-color:var(--pzJos)}
-#tabloubot .ibNeutru,#tabloubot .ibLipsa{border-left-color:var(--pzLi2)}
-#tabloubot .ibSchimbat{outline:2px solid var(--pzInfo);outline-offset:1px}
-#tabloubot .ibTf{font-size:12px;color:var(--pzT2)}
-#tabloubot .ibVer{font-size:13.5px;font-weight:600;color:var(--pzT0)}
-#tabloubot .ibBara{display:flex;gap:1px;height:6px;border-radius:3px;overflow:hidden;background:var(--pzLi)}
-#tabloubot .ibB{display:block;min-width:3px}
-#tabloubot .ibBCu{background:var(--pzSus)}
-#tabloubot .ibBContra{background:var(--pzJos)}
-#tabloubot .ibBNeutru{background:var(--pzLi2)}
-#tabloubot .ibBIncins{background:var(--pzAur)}
-#tabloubot .ibNr{font-size:12px;color:var(--pzT1);white-space:normal}
-#tabloubot .ibTv{font-size:12px;color:var(--pzT1);white-space:normal}
-#tabloubot .ibTv::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:4px;vertical-align:1px;background:var(--pzLi2)}
-#tabloubot .ibTvCu::before,#tabloubot .ibTvSus::before{background:var(--pzSus)}
-#tabloubot .ibTvContra::before,#tabloubot .ibTvJos::before{background:var(--pzJos)}
-#tabloubot .ibDif{font-style:normal;font-weight:700;color:var(--pzAur);margin-left:2px}
-#tabloubot .ibEra{font-size:12px;color:var(--pzInfo)}
-#tabloubot .ibRigle{display:flex;flex-direction:column;gap:6px;flex:1 1 200px;min-width:180px;max-width:340px;padding-top:2px}
-#tabloubot .ibRigla{display:grid;grid-template-columns:22px minmax(0,1fr) 26px;align-items:center;gap:6px}
-#tabloubot .ibRtf{font-size:12px;color:var(--pzT2)}
-#tabloubot .ibRbara{position:relative;display:flex;height:9px;border-radius:3px;background:var(--pzLi)}
-#tabloubot .ibRsubtire .ibRbara{height:5px}
-#tabloubot .ibZ{display:block;height:100%}
-#tabloubot .ibZjos,#tabloubot .ibZsus{background:var(--pzLi2)}
-#tabloubot .ibZneutru{background:var(--pzLi)}
-#tabloubot .ibZbun{background:color-mix(in srgb,var(--pzSus) 45%,transparent)}
-#tabloubot .ibZrau{background:color-mix(in srgb,var(--pzJos) 35%,transparent)}
-#tabloubot .ibRsemn{position:absolute;top:-3px;width:3px;height:calc(100% + 6px);margin-left:-1px;border-radius:1px;background:var(--pzT0)}
-#tabloubot .ibRnr{font-size:12px;font-weight:600;color:var(--pzT0);text-align:right;font-variant-numeric:tabular-nums}
-#tabloubot .ibSpark{display:inline-flex;flex-direction:column;gap:2px}
-#tabloubot .ibSpark svg{display:block;overflow:visible}
-#tabloubot .ibSpLinie{fill:none;stroke:var(--pzT0);stroke-width:1.5;stroke-linejoin:round}
-#tabloubot .ibSpPrag{stroke:var(--pzT2);stroke-width:1;stroke-dasharray:3 3}
-#tabloubot .ibSpBun{fill:color-mix(in srgb,var(--pzSus) 16%,transparent)}
-#tabloubot .ibSpAcum{fill:var(--pzT0)}
-#tabloubot .ibSpEt{font-size:12px;color:var(--pzT2)}
+:is(#tabloubot,#t212) .tbIndSumar{display:flex;flex-wrap:wrap;align-items:flex-start;gap:10px 20px;margin:8px 0 2px;font-size:12px;font-weight:400;line-height:1.35;color:var(--pzT1);cursor:pointer}
+:is(#tabloubot,#t212) .tbIndSumar[hidden]{display:none}
+:is(#tabloubot,#t212) .ibBanda{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;min-width:0;flex:1 1 520px;max-width:760px}
+:is(#tabloubot,#t212) .ibCel{display:flex;flex-direction:column;gap:3px;padding:5px 8px;border:1px solid var(--pzLi);border-left:3px solid var(--pzLi2);border-radius:4px;min-width:0;font-variant-numeric:tabular-nums}
+:is(#tabloubot,#t212) .ibCu,:is(#tabloubot,#t212) .ibSus{border-left-color:var(--pzSus)}
+:is(#tabloubot,#t212) .ibContra,:is(#tabloubot,#t212) .ibJos{border-left-color:var(--pzJos)}
+:is(#tabloubot,#t212) .ibNeutru,:is(#tabloubot,#t212) .ibLipsa{border-left-color:var(--pzLi2)}
+:is(#tabloubot,#t212) .ibSchimbat{outline:2px solid var(--pzInfo);outline-offset:1px}
+:is(#tabloubot,#t212) .ibTf{font-size:12px;color:var(--pzT2)}
+:is(#tabloubot,#t212) .ibVer{font-size:13.5px;font-weight:600;color:var(--pzT0)}
+:is(#tabloubot,#t212) .ibBara{display:flex;gap:1px;height:6px;border-radius:3px;overflow:hidden;background:var(--pzLi)}
+:is(#tabloubot,#t212) .ibB{display:block;min-width:3px}
+:is(#tabloubot,#t212) .ibBCu{background:var(--pzSus)}
+:is(#tabloubot,#t212) .ibBContra{background:var(--pzJos)}
+:is(#tabloubot,#t212) .ibBNeutru{background:var(--pzLi2)}
+:is(#tabloubot,#t212) .ibBIncins{background:var(--pzAur)}
+:is(#tabloubot,#t212) .ibNr{font-size:12px;color:var(--pzT1);white-space:normal}
+:is(#tabloubot,#t212) .ibTv{font-size:12px;color:var(--pzT1);white-space:normal}
+:is(#tabloubot,#t212) .ibTv::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:4px;vertical-align:1px;background:var(--pzLi2)}
+:is(#tabloubot,#t212) .ibTvCu::before,:is(#tabloubot,#t212) .ibTvSus::before{background:var(--pzSus)}
+:is(#tabloubot,#t212) .ibTvContra::before,:is(#tabloubot,#t212) .ibTvJos::before{background:var(--pzJos)}
+:is(#tabloubot,#t212) .ibDif{font-style:normal;font-weight:700;color:var(--pzAur);margin-left:2px}
+:is(#tabloubot,#t212) .ibEra{font-size:12px;color:var(--pzInfo)}
+:is(#tabloubot,#t212) .ibRigle{display:flex;flex-direction:column;gap:6px;flex:1 1 200px;min-width:180px;max-width:340px;padding-top:2px}
+:is(#tabloubot,#t212) .ibRigla{display:grid;grid-template-columns:22px minmax(0,1fr) 26px;align-items:center;gap:6px}
+:is(#tabloubot,#t212) .ibRtf{font-size:12px;color:var(--pzT2)}
+:is(#tabloubot,#t212) .ibRbara{position:relative;display:flex;height:9px;border-radius:3px;background:var(--pzLi)}
+:is(#tabloubot,#t212) .ibRsubtire .ibRbara{height:5px}
+:is(#tabloubot,#t212) .ibZ{display:block;height:100%}
+:is(#tabloubot,#t212) .ibZjos,:is(#tabloubot,#t212) .ibZsus{background:var(--pzLi2)}
+:is(#tabloubot,#t212) .ibZneutru{background:var(--pzLi)}
+:is(#tabloubot,#t212) .ibZbun{background:color-mix(in srgb,var(--pzSus) 45%,transparent)}
+:is(#tabloubot,#t212) .ibZrau{background:color-mix(in srgb,var(--pzJos) 35%,transparent)}
+:is(#tabloubot,#t212) .ibRsemn{position:absolute;top:-3px;width:3px;height:calc(100% + 6px);margin-left:-1px;border-radius:1px;background:var(--pzT0)}
+:is(#tabloubot,#t212) .ibRnr{font-size:12px;font-weight:600;color:var(--pzT0);text-align:right;font-variant-numeric:tabular-nums}
+:is(#tabloubot,#t212) .ibSpark{display:inline-flex;flex-direction:column;gap:2px}
+:is(#tabloubot,#t212) .ibSpark svg{display:block;overflow:visible}
+:is(#tabloubot,#t212) .ibSpLinie{fill:none;stroke:var(--pzT0);stroke-width:1.5;stroke-linejoin:round}
+:is(#tabloubot,#t212) .ibSpPrag{stroke:var(--pzT2);stroke-width:1;stroke-dasharray:3 3}
+:is(#tabloubot,#t212) .ibSpBun{fill:color-mix(in srgb,var(--pzSus) 16%,transparent)}
+:is(#tabloubot,#t212) .ibSpAcum{fill:var(--pzT0)}
+:is(#tabloubot,#t212) .ibSpEt{font-size:12px;color:var(--pzT2)}
 /* 2 × 2 în jumătatea cardului Trend (1181–1699: ~446–700 px) și pe telefon (~366 px); textul din căsuțe se rupe pe rânduri (revizia: la 412 px se încăleca) */
 @media (min-width:1181px) and (max-width:1699px){
 #tabloubot .ibBanda{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media (max-width:640px){
-#tabloubot .ibBanda{grid-template-columns:repeat(2,minmax(0,1fr));max-width:none}
-#tabloubot .ibRigle{max-width:none}
+:is(#tabloubot,#t212) .ibBanda{grid-template-columns:repeat(2,minmax(0,1fr));max-width:none}
+:is(#tabloubot,#t212) .ibRigle{max-width:none}
 }
 /* v100.324: sfârșitul indicatorilor în rândul închis */
 /* v100.325 · meniul ca pagina botului (el, 11.11.2026: „fă și meniul la fel ca pagina botului”). Cât ești pe Tablou, meniul din stânga (și bara de jos
@@ -4903,39 +4903,55 @@ html.pzDemo #t212 .t212Plan input.calc{border-color:var(--pzInfo)}
 /* v100.327 · rigla și istoria scorului spuse în cuvinte (el, 11.11.2026, cu poza riglei 1h / 4h / 1z: „fă mai explicit, că nu prea înțeleg direcția la ce
    arată”): titlul riglei, cuvântul lângă cifră (jos / neutru / sus), capetele sub bare, legenda culorilor față de bot; sub istoria pe 4h, încotro merge.
    Totul la vedere (titlul de la mouse nu se vede pe telefon); mărimile pe scara Tabloului, culorile legendei = ale zonelor riglei. */
-#tabloubot .ibRigla{grid-template-columns:22px minmax(0,1fr) 44px}
-#tabloubot .ibRnr{display:flex;flex-direction:column;align-items:flex-end;line-height:1.15}
-#tabloubot .ibRnr small{font-size:12px;font-weight:400;color:var(--pzT2);white-space:nowrap}
-#tabloubot .ibRcap{font-size:12px;color:var(--pzT2)}
-#tabloubot .ibRax{display:grid;grid-template-columns:22px minmax(0,1fr) 44px;gap:6px;font-size:12px;color:var(--pzT2);margin-top:-2px}
-#tabloubot .ibRaxB{display:flex;justify-content:space-between;gap:4px}
-#tabloubot .ibRaxB>span{white-space:nowrap}
-#tabloubot .ibRleg{display:flex;flex-wrap:wrap;gap:2px 10px;font-size:12px;color:var(--pzT2);line-height:1.4}
-#tabloubot .ibRleg>span{min-width:0}   /* se rupe pe rânduri: pe calculator rigla are ~210 px (nowrap ieșea din cutie la 1440–2560, +12 px peste pagină la 1920) */
-#tabloubot .ibRleg i{display:inline-block;width:10px;height:8px;border-radius:2px;margin-right:4px}
-#tabloubot .ibLbun{background:color-mix(in srgb,var(--pzSus) 45%,transparent)}
-#tabloubot .ibLrau{background:color-mix(in srgb,var(--pzJos) 35%,transparent)}
-#tabloubot .ibRleg i.ibLsemn{width:3px;height:12px;border-radius:1px;background:var(--pzT0);vertical-align:-2px}
+:is(#tabloubot,#t212) .ibRigla{grid-template-columns:22px minmax(0,1fr) 44px}
+:is(#tabloubot,#t212) .ibRnr{display:flex;flex-direction:column;align-items:flex-end;line-height:1.15}
+:is(#tabloubot,#t212) .ibRnr small{font-size:12px;font-weight:400;color:var(--pzT2);white-space:nowrap}
+:is(#tabloubot,#t212) .ibRcap{font-size:12px;color:var(--pzT2)}
+:is(#tabloubot,#t212) .ibRax{display:grid;grid-template-columns:22px minmax(0,1fr) 44px;gap:6px;font-size:12px;color:var(--pzT2);margin-top:-2px}
+:is(#tabloubot,#t212) .ibRaxB{display:flex;justify-content:space-between;gap:4px}
+:is(#tabloubot,#t212) .ibRaxB>span{white-space:nowrap}
+:is(#tabloubot,#t212) .ibRleg{display:flex;flex-wrap:wrap;gap:2px 10px;font-size:12px;color:var(--pzT2);line-height:1.4}
+:is(#tabloubot,#t212) .ibRleg>span{min-width:0}   /* se rupe pe rânduri: pe calculator rigla are ~210 px (nowrap ieșea din cutie la 1440–2560, +12 px peste pagină la 1920) */
+:is(#tabloubot,#t212) .ibRleg i{display:inline-block;width:10px;height:8px;border-radius:2px;margin-right:4px}
+:is(#tabloubot,#t212) .ibLbun{background:color-mix(in srgb,var(--pzSus) 45%,transparent)}
+:is(#tabloubot,#t212) .ibLrau{background:color-mix(in srgb,var(--pzJos) 35%,transparent)}
+:is(#tabloubot,#t212) .ibRleg i.ibLsemn{width:3px;height:12px;border-radius:1px;background:var(--pzT0);vertical-align:-2px}
 /* graficul micuț la fel (el: „fă și graficul micuț la fel”): etichetele din desen - pragurile cu sensul lor, cifra de la început și cea de acum */
-#tabloubot .ibSpEtP{font-size:12px;fill:var(--pzT2)}
-#tabloubot .ibSpVal{font-size:12px;font-weight:600;fill:var(--pzT0)}
-#tabloubot .ibSpEt i{display:inline-block;width:10px;height:8px;border-radius:2px;margin-right:4px}
-#tabloubot :is(.ibSpVal,.ibSpEtP){paint-order:stroke;stroke:var(--pzF1);stroke-width:3px;stroke-linejoin:round}   /* contur în culoarea fondului: cifra se citește și peste linia punctată (poza copiei la 1920) */
+:is(#tabloubot,#t212) .ibSpEtP{font-size:12px;fill:var(--pzT2)}
+:is(#tabloubot,#t212) .ibSpVal{font-size:12px;font-weight:600;fill:var(--pzT0)}
+:is(#tabloubot,#t212) .ibSpEt i{display:inline-block;width:10px;height:8px;border-radius:2px;margin-right:4px}
+:is(#tabloubot,#t212) :is(.ibSpVal,.ibSpEtP){paint-order:stroke;stroke:var(--pzF1);stroke-width:3px;stroke-linejoin:round}   /* contur în culoarea fondului: cifra se citește și peste linia punctată (poza copiei la 1920) */
 /* încadrarea (el: „încadrează frumos”): rigla și istoria în două cartele egale, pe rândul lor sub banda celor 4 intervale (aceeași lățime maximă, același
    chenar ca celulele benzii); când rândul e îngust (telefon, coloana din dreapta a Trendului la 1181–1699) - una sub alta. Decide lățimea rândului (container). */
-#tabloubot .tbIndSumar{container-type:inline-size}
-#tabloubot .ibGrafice{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;flex:1 1 100%;max-width:760px;min-width:0}
-@container (min-width:620px){#tabloubot .ibGrafice{grid-template-columns:repeat(2,minmax(0,1fr))}}
-#tabloubot .ibGrafice>:is(.ibRigle,.ibSpark){display:flex;flex-direction:column;gap:6px;min-width:0;max-width:none;padding:8px 10px;border:1px solid var(--pzLi);border-radius:4px}
+:is(#tabloubot,#t212) .tbIndSumar{container-type:inline-size}
+:is(#tabloubot,#t212) .ibGrafice{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;flex:1 1 100%;max-width:760px;min-width:0}
+@container (min-width:620px){:is(#tabloubot,#t212) .ibGrafice{grid-template-columns:repeat(2,minmax(0,1fr))}}
+:is(#tabloubot,#t212) .ibGrafice>:is(.ibRigle,.ibSpark){display:flex;flex-direction:column;gap:6px;min-width:0;max-width:none;padding:8px 10px;border:1px solid var(--pzLi);border-radius:4px}
 /* el: „mărește scorul pe 4 h pe lățime cât e panoul”: desenul istoriei crește cât cartela; coloana etichetelor pragurilor 56 px; sub 120 px nu se strânge */
-#tabloubot .ibSpDes{display:flex;gap:8px;align-items:flex-start;min-width:0}
-#tabloubot .ibSpG{flex:1 1 0;min-width:120px;height:56px}
-#tabloubot .ibSpPr{flex:0 0 56px}
+:is(#tabloubot,#t212) .ibSpDes{display:flex;gap:8px;align-items:flex-start;min-width:0}
+:is(#tabloubot,#t212) .ibSpG{flex:1 1 0;min-width:120px;height:56px}
+:is(#tabloubot,#t212) .ibSpPr{flex:0 0 56px}
 /* tabelul TradingView din fișa T212 (el, poza de pe telefon: notele cădeau una sub alta în „Rezumat”, „Medii” și „Oscilatoare” goale): regulile tabelului
    pozițiilor - „.t212Tab tr.t212Det td{display:block}” sub 640 px, „.t212Tab td{padding;text-align:right;13,5 px}” - prindeau și celulele lui */
 #t212 .t212Det .tvNoteTab :is(td,th){display:table-cell;padding:4px 3px;text-align:center;background:transparent;font-size:12px;white-space:nowrap}
 #t212 .t212Det .tvNoteTab tbody th{text-align:left}
 /* v100.327: sfârșitul riglei spuse în cuvinte */
+/* v100.328 · „Detaliile indicatorilor” și în fișa Trading 212 (el, 11.11.2026: „nu poți pune detaliile indicatorilor și în Trading 212 la fel ca la bot?”
+   ⇒ „da, fă așa”): blocul stă sub graficul fișei deschise, pe toată lățimea ei; banda, rigla, istoria și tabelul folosesc regulile Tabloului (mai sus,
+   :is(#tabloubot,#t212)). Tabelul stă în celula fișei: regulile tabelului pozițiilor - „.t212Tab tr.t212Det td{display:block}” și „.t212Tab thead{display:none}”
+   sub 640 px, „#t212Continut .t212Tab thead{display:none}”, „.t212Tab td{13,5 px, chenar jos}” - l-ar strica, ca pe tabelul TradingView (v100.327) */
+#t212 .t212IndBloc{margin:10px 0 4px;min-width:0}
+#t212 .t212IndBloc:empty{display:none}
+#t212 .t212Det .tbIndTab{display:table}
+#t212 .t212Det .tbIndTab thead{display:table-header-group}
+#t212 .t212Det .tbIndTab tbody{display:table-row-group}
+#t212 .t212Det .tbIndTab tr{display:table-row}
+#t212 .t212Det .tbIndTab :is(td,th){display:table-cell;font-size:12px;border-bottom:0;background:transparent}
+/* banda 2 × 2 când rândul închis e îngust (fișa pe telefon); Tabloul își are regula lui, după lățimea ecranului */
+@container (max-width:560px){#t212 .ibBanda{grid-template-columns:repeat(2,minmax(0,1fr));max-width:none}}
+/* poza copiei la 1920: fișa are 1312 px - tabelul întins pe toată lățimea ținea cifrele departe de nume; cât banda și cartelele */
+#t212 .t212IndDet>:is(.tbIndWrap,.tbIndPred,.tbIndNota){max-width:760px}
+/* v100.328: sfârșitul detaliilor indicatorilor în T212 */
 @media (max-width:640px){.sugPandaTab thead{display:table-header-group}.sugPandaTab{display:table}.sugPandaTab tbody{display:table-row-group}.sugPandaTab tr{display:table-row}.sugPandaTab td,.sugPandaTab th{display:table-cell}}
 /* v100.224: pe paginile de zi rămân alertele, banda botului și versiunea. Cipurile de cercetare revin la analiza monedei și în laborator. */
 body.peAcasa:not(.acMonedaDeschisa) .topLeft,body.peTablou .topLeft,body.peT212 .topLeft,body.peJurnal .topLeft,body.peGrid .topLeft,body.pePaginaNoua .topLeft,

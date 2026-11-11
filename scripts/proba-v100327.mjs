@@ -70,33 +70,33 @@ await test("graficul micuț la fel de explicit (el: „fă și graficul micuț l
 });
 await test("stilul lățimii: desenul crește cât cartela (flex), coloana etichetelor 56 px, cel puțin 120 px de desen", () => {
   const C2 = citeste("public", "app.css"), i = C2.indexOf("/* v100.327 · rigla și istoria scorului spuse în cuvinte"), B = C2.slice(i, C2.indexOf("/* v100.327: sfârșitul riglei spuse în cuvinte */"));
-  for (const r of ["#tabloubot .ibSpDes{display:flex;gap:8px;align-items:flex-start;min-width:0}", "#tabloubot .ibSpG{flex:1 1 0;min-width:120px;height:56px}", "#tabloubot .ibSpPr{flex:0 0 56px}"])
+  for (const r of [":is(#tabloubot,#t212) .ibSpDes{display:flex;gap:8px;align-items:flex-start;min-width:0}", ":is(#tabloubot,#t212) .ibSpG{flex:1 1 0;min-width:120px;height:56px}", ":is(#tabloubot,#t212) .ibSpPr{flex:0 0 56px}"])
     assert.ok(B.includes(r), "lipsește: " + r);
 });
 const CSS = citeste("public", "app.css");
 await test("stilul: coloana cifrei încape cuvântul; capetele, legenda, titlul pe scara Tabloului (12 px), culorile legendei = culorile zonelor", () => {
   const i = CSS.indexOf("/* v100.327 · rigla și istoria scorului spuse în cuvinte"), B = CSS.slice(i, CSS.indexOf("/* v100.327: sfârșitul riglei spuse în cuvinte */"));
   assert.ok(i > 0);
-  for (const r of ["#tabloubot .ibRigla{grid-template-columns:22px minmax(0,1fr) 44px}", "#tabloubot .ibRnr{display:flex;flex-direction:column;align-items:flex-end;line-height:1.15}",
-    "#tabloubot .ibRnr small{font-size:12px;font-weight:400;color:var(--pzT2);white-space:nowrap}", "#tabloubot .ibRcap{font-size:12px;color:var(--pzT2)}",
-    "#tabloubot .ibRax{display:grid;grid-template-columns:22px minmax(0,1fr) 44px;gap:6px;font-size:12px;color:var(--pzT2);margin-top:-2px}", "#tabloubot .ibRaxB{display:flex;justify-content:space-between;gap:4px}",
-    "#tabloubot .ibRleg{display:flex;flex-wrap:wrap;gap:2px 10px;font-size:12px;color:var(--pzT2);line-height:1.4}",
-    "#tabloubot .ibLbun{background:color-mix(in srgb,var(--pzSus) 45%,transparent)}", "#tabloubot .ibLrau{background:color-mix(in srgb,var(--pzJos) 35%,transparent)}",
-    "#tabloubot .ibSpEtP{font-size:12px;fill:var(--pzT2)}", "#tabloubot .ibSpVal{font-size:12px;font-weight:600;fill:var(--pzT0)}", "#tabloubot .ibSpEt i{display:inline-block;width:10px;height:8px;border-radius:2px;margin-right:4px}"])
+  for (const r of [":is(#tabloubot,#t212) .ibRigla{grid-template-columns:22px minmax(0,1fr) 44px}", ":is(#tabloubot,#t212) .ibRnr{display:flex;flex-direction:column;align-items:flex-end;line-height:1.15}",
+    ":is(#tabloubot,#t212) .ibRnr small{font-size:12px;font-weight:400;color:var(--pzT2);white-space:nowrap}", ":is(#tabloubot,#t212) .ibRcap{font-size:12px;color:var(--pzT2)}",
+    ":is(#tabloubot,#t212) .ibRax{display:grid;grid-template-columns:22px minmax(0,1fr) 44px;gap:6px;font-size:12px;color:var(--pzT2);margin-top:-2px}", ":is(#tabloubot,#t212) .ibRaxB{display:flex;justify-content:space-between;gap:4px}",
+    ":is(#tabloubot,#t212) .ibRleg{display:flex;flex-wrap:wrap;gap:2px 10px;font-size:12px;color:var(--pzT2);line-height:1.4}",
+    ":is(#tabloubot,#t212) .ibLbun{background:color-mix(in srgb,var(--pzSus) 45%,transparent)}", ":is(#tabloubot,#t212) .ibLrau{background:color-mix(in srgb,var(--pzJos) 35%,transparent)}",
+    ":is(#tabloubot,#t212) .ibSpEtP{font-size:12px;fill:var(--pzT2)}", ":is(#tabloubot,#t212) .ibSpVal{font-size:12px;font-weight:600;fill:var(--pzT0)}", ":is(#tabloubot,#t212) .ibSpEt i{display:inline-block;width:10px;height:8px;border-radius:2px;margin-right:4px}"])
     assert.ok(B.includes(r), "lipsește: " + r);
   assert.deepEqual((B.match(/font-size:[\d.]+px/g) || []).filter((x) => !/font-size:(12|13\.5|15|20|30)px/.test(x)), [], "mărimi în afara scării");
   assert.doesNotMatch(B, /\.ibRleg>span\{white-space:nowrap\}/, "legenda se rupe pe rânduri (pe calculator rigla are ~210 px; pagina copiei: 280 px ieșeau din cutie, +12 px peste lățime la 1920)");
   // aceleași culori ca zonele riglei
-  assert.ok(CSS.includes("#tabloubot .ibZbun{background:color-mix(in srgb,var(--pzSus) 45%,transparent)}") && CSS.includes("#tabloubot .ibZrau{background:color-mix(in srgb,var(--pzJos) 35%,transparent)}"));
+  assert.ok(CSS.includes(":is(#tabloubot,#t212) .ibZbun{background:color-mix(in srgb,var(--pzSus) 45%,transparent)}") && CSS.includes(":is(#tabloubot,#t212) .ibZrau{background:color-mix(in srgb,var(--pzJos) 35%,transparent)}"));
 });
 
 const APP = citeste("public", "app.js");
 await test("încadrare (el: „încadrează frumos”): rigla și istoria în DOUĂ cartele egale, pe rândul lor sub bandă (ibGrafice); înguste ⇒ una sub alta, după lățimea rândului (container), nu a ecranului", () => {
   assert.match(APP, /var gr=IndicatoriBot\.riglaHtml\(bd,b\.directie,escapeHtml\)\+\(ist\?IndicatoriBot\.sparkHtml\(ist,b\.directie,escapeHtml\):""\),hs=IndicatoriBot\.bandaHtml\(bd,tvb,sch,b\.directie,escapeHtml\)\+\(gr\?'<span class="ibGrafice">'\+gr\+'<\/span>':""\);/);
   const C2 = citeste("public", "app.css"), i = C2.indexOf("/* v100.327 · rigla și istoria scorului spuse în cuvinte"), B = C2.slice(i, C2.indexOf("/* v100.327: sfârșitul riglei spuse în cuvinte */"));
-  for (const r of ["#tabloubot .tbIndSumar{container-type:inline-size}", "#tabloubot .ibGrafice{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;flex:1 1 100%;max-width:760px;min-width:0}",
-    "@container (min-width:620px){#tabloubot .ibGrafice{grid-template-columns:repeat(2,minmax(0,1fr))}}",
-    "#tabloubot .ibGrafice>:is(.ibRigle,.ibSpark){display:flex;flex-direction:column;gap:6px;min-width:0;max-width:none;padding:8px 10px;border:1px solid var(--pzLi);border-radius:4px}"])
+  for (const r of [":is(#tabloubot,#t212) .tbIndSumar{container-type:inline-size}", ":is(#tabloubot,#t212) .ibGrafice{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;flex:1 1 100%;max-width:760px;min-width:0}",
+    "@container (min-width:620px){:is(#tabloubot,#t212) .ibGrafice{grid-template-columns:repeat(2,minmax(0,1fr))}}",
+    ":is(#tabloubot,#t212) .ibGrafice>:is(.ibRigle,.ibSpark){display:flex;flex-direction:column;gap:6px;min-width:0;max-width:none;padding:8px 10px;border:1px solid var(--pzLi);border-radius:4px}"])
     assert.ok(B.includes(r), "lipsește: " + r);
 });
 await test("tabelul TradingView din fișa T212 rămâne TABEL și pe telefon (poza lui: notele cădeau una sub alta în „Rezumat”, „Medii” și „Oscilatoare” goale) - regulile tabelului pozițiilor nu-l mai prind", () => {
