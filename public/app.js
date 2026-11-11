@@ -3400,10 +3400,30 @@ function renderApiAuthStatus(){const t=apiSessionToken();
 // minut (cat tine blocarea serverului): apoi mai incearca o data, ca o
 // retea cazuta sau un server repornit sa nu para "parola gresita" la nesfarsit.
 let apiTokenRespins=null,apiTokenRespinsLa=0;const API_TOKEN_RESPINS_MS=60000;
-function apiFetch(url,opt={}){const u=String(url),same=u.startsWith("/api/")||(()=>{try{return new URL(u,location.href).origin===location.origin&&new URL(u,location.href).pathname.startsWith("/api/")}catch{return false}})(),headers=new Headers(opt.headers||{});let token="";if(same){token=apiSessionToken();if(token&&token===apiTokenRespins&&Date.now()-apiTokenRespinsLa<API_TOKEN_RESPINS_MS)return Promise.resolve(new Response(JSON.stringify({error:"AUTH_INVALID",detail:"parola a fost respinsă de server - nu o mai trimit până nu o schimbi în Setări"}),{status:401,headers:{"content-type":"application/json"}}));if(token)headers.set("authorization",`Bearer ${token}`);headers.set("x-client-version",APP_VERSION)}return fetch(url,{...opt,headers,credentials:same?"same-origin":opt.credentials,signal:opt.signal||(typeof AbortSignal!=="undefined"&&AbortSignal.timeout?AbortSignal.timeout(opt.timeoutMs||60000):undefined)}).catch(e=>{if(e&&(e.name==="TimeoutError"||e.name==="AbortError"))throw Error("serverul n-a răspuns în "+Math.round((opt.timeoutMs||60000)/1000)+" s");throw e}).then(r=>{if(same&&token&&r.status===401)return r.clone().json().then(d=>{if(d&&d.error==="AUTH_INVALID"){apiTokenRespins=token;apiTokenRespinsLa=Date.now()}return r},()=>r);return r})}
+function apiFetch(url,opt={}){const scrie=!!(opt&&opt.method&&!/^(GET|HEAD)$/i.test(opt.method));if(scrie&&typeof getJsonGoleste==="function")getJsonGoleste();const u=String(url),same=u.startsWith("/api/")||(()=>{try{return new URL(u,location.href).origin===location.origin&&new URL(u,location.href).pathname.startsWith("/api/")}catch{return false}})(),headers=new Headers(opt.headers||{});let token="";if(same){token=apiSessionToken();if(token&&token===apiTokenRespins&&Date.now()-apiTokenRespinsLa<API_TOKEN_RESPINS_MS)return Promise.resolve(new Response(JSON.stringify({error:"AUTH_INVALID",detail:"parola a fost respinsă de server - nu o mai trimit până nu o schimbi în Setări"}),{status:401,headers:{"content-type":"application/json"}}));if(token)headers.set("authorization",`Bearer ${token}`);headers.set("x-client-version",APP_VERSION)}return fetch(url,{...opt,headers,credentials:same?"same-origin":opt.credentials,signal:opt.signal||(typeof AbortSignal!=="undefined"&&AbortSignal.timeout?AbortSignal.timeout(opt.timeoutMs||60000):undefined)}).catch(e=>{if(e&&(e.name==="TimeoutError"||e.name==="AbortError"))throw Error("serverul n-a răspuns în "+Math.round((opt.timeoutMs||60000)/1000)+" s");throw e}).then(r=>{if(scrie&&typeof getJsonGoleste==="function")getJsonGoleste();if(same&&token&&r.status===401)return r.clone().json().then(d=>{if(d&&d.error==="AUTH_INVALID"){apiTokenRespins=token;apiTokenRespinsLa=Date.now()}return r},()=>r);return r})}
+/* v100.318 (I-848): cererile identice. Măsurat la deschiderea Tabloului (11.11): aceeași adresă cerută de module diferite la câteva secunde
+   (contul T212 de 2 ori în aceeași secundă, funding de 4 ori, lumânările de 1 h de 3 ori). Acum o adresă are o singură cerere pe drum, un
+   răspuns bun rămâne 3 s, iar fiecare apelant își parsează copia lui (o sortare pe loc nu strică vecinul). Orice scriere (apiFetch cu altă
+   metodă decât GET) golește plasa și rupe cererile aflate pe drum (generația), ca după „Salvează” să nu vină cifra de dinainte. var, nu let:
+   se pot chema înainte să fi trecut execuția pe aici. */
+var getJsonDrum=null,getJsonProaspat=null,getJsonGen=0,GET_PROASPAT_MS=3000;
+function getJsonGoleste(){getJsonGen=(getJsonGen||0)+1;if(getJsonDrum)getJsonDrum.clear();if(getJsonProaspat)getJsonProaspat.clear()}
+function getJsonBrut(url){
+  getJsonDrum=getJsonDrum||new Map();getJsonProaspat=getJsonProaspat||new Map();
+  const k=String(url),p=getJsonProaspat.get(k);
+  if(p&&Date.now()-p.la<GET_PROASPAT_MS)return Promise.resolve(p);
+  let d=getJsonDrum.get(k);if(d)return d;
+  const gen=getJsonGen||0;
+  d=(async()=>{const r=await apiFetch(url,{method:"GET",mode:"cors",cache:"no-store",headers:{"accept":"application/json"}});return {ok:r.ok,status:r.status,raw:await r.text(),la:Date.now()}})();
+  getJsonDrum.set(k,d);
+  /* revizia: refuzul Pionex vine cu HTTP 200 + result:false - nu se ține minte (ca serverul, v100.173), altfel reîncercarea primea același refuz;
+     la fiecare intrare nouă ies cele mai vechi de 3 s, ca plasa să nu crească toată ziua (lumânările de 1 min cer adrese noi la 2 min) */
+  d.then(v=>{if(getJsonDrum.get(k)===d)getJsonDrum.delete(k);if(v.ok&&gen===(getJsonGen||0)&&!/"result"\s*:\s*false/.test(String(v.raw).slice(0,300))){const acum=Date.now();getJsonProaspat.forEach((x,kk)=>{if(acum-x.la>=GET_PROASPAT_MS)getJsonProaspat.delete(kk)});getJsonProaspat.set(k,v)}},()=>{if(getJsonDrum.get(k)===d)getJsonDrum.delete(k)});
+  return d;
+}
 async function getJSON(url){
-  const r=await apiFetch(url,{method:"GET",mode:"cors",cache:"no-store",headers:{"accept":"application/json"}});
-  const raw=await r.text();
+  const r=await getJsonBrut(url);
+  const raw=r.raw;
   let data;
   try{data=JSON.parse(raw)}catch{throw Error("Răspuns invalid · HTTP "+r.status)}
   if(!r.ok){
@@ -5258,10 +5278,28 @@ function grBareTbMc(simbol){
 function grBare15Tinute(simbol){var m=grLum15[simbol],acum=Date.now();if(!m||!m.intreg||!m.r||!m.r.length||acum-grTimp15(m.r[m.r.length-1])>=480*900000)return null;return GridCalcul.bareToate(m.r).filter(function(b){return b.t+900000<=acum})}   /* închise = sfertul de oră s-a terminat (memoria poate avea și bara în formare) */
 /* barele întregi aduse de alții (mcsAduCoin) ⇒ memoria fișei, ca lumânări Pionex (închise; pagina nouă adaugă bara în formare) */
 function grTine15(simbol,bare){if(!simbol||!Array.isArray(bare)||!bare.length)return;var ks=Object.keys(grLum15);if(!grLum15[simbol]&&ks.length>=6)delete grLum15[ks[0]];grLum15[simbol]={r:bare.slice(-3000).map(function(b){return {time:b.t,open:b.o,high:b.h,low:b.l,close:b.c,volume:b.v}}),la:Date.now(),intreg:true}}
+/* v100.318 (I-854): istoria pe 15 min ținută minte și ÎNTRE deschideri. „SOCOTESC” stătea 5–13 s la fiecare deschidere a Radarului (măsurat
+   11.11): fișa își citea istoria pagină cu pagină - 5–6 cereri în șir, cu pauză, ca Pionex să nu blocheze IP-ul - iar memoria ei (grLum15)
+   trăia doar cât pagina. Acum barele întregi stau și pe dispozitiv - în magazia „meta” a bazei IndexedDB existente (localDbMetaGet / Set), NU în
+   localStorage: cota aceea de ~5 MB e comună cu notele din Jurnal, care s-ar fi pierdut tăcut (revizia 🟡5); cel mult 3 monede; la redeschidere
+   se cere doar ultima pagină și se îmbină, ca la a doua fișă din aceeași sesiune. Barele închise nu se schimbă, deci cifrele rămân aceleași;
+   mai vechi de ~5 zile nu se leagă ⇒ citire întreagă, ca înainte. Fără loc pe dispozitiv fișa merge ca înainte. */
+var GR15_DISC="grLum15:",GR15_DISC_MAX=3;
+async function gr15DinDisc(simbol){try{if(typeof localDbMetaGet!=="function")return null;var o=await localDbMetaGet(GR15_DISC+simbol);if(!o||o.v!==1||!Array.isArray(o.r)||!o.r.length)return null;return {r:o.r.map(function(x){return {time:x[0],open:x[1],high:x[2],low:x[3],close:x[4],volume:x[5]}}),la:o.la,intreg:true}}catch(e){return null}}
+/* în fundal: fișa nu așteaptă scrierea; o scriere picată (baza indisponibilă, mod privat) lasă fișa ca înainte */
+function gr15PeDisc(simbol,r){
+  if(!simbol||!Array.isArray(r)||!r.length||typeof localDbMetaGet!=="function"||typeof localDbMetaSet!=="function")return;
+  var rr=r.map(function(x){return Array.isArray(x)?x.slice(0,6):[x.time,x.open,x.high,x.low,x.close,x.volume]});
+  (async function(){try{
+    var lista=await localDbMetaGet(GR15_DISC+"lista");if(!Array.isArray(lista))lista=[];
+    lista=lista.filter(function(x){return x!==simbol});lista.push(simbol);while(lista.length>GR15_DISC_MAX)await localDbMetaSet(GR15_DISC+lista.shift(),null);
+    await localDbMetaSet(GR15_DISC+simbol,{v:1,la:Date.now(),r:rr});await localDbMetaSet(GR15_DISC+"lista",lista);
+  }catch(e){}})();
+}
 async function grAdu15(simbol,baza,dupaPrima){
-  var MAX=3000,m=grLum15[simbol],vechi=m&&m.intreg&&m.r&&m.r.length?m.r:null,tb=grBareTbMc(simbol);
+  var MAX=3000,m=grLum15[simbol]||await gr15DinDisc(simbol),vechi=m&&m.intreg&&m.r&&m.r.length?m.r:null,tb=grBareTbMc(simbol);
   if(tb&&(!vechi||grTimp15(tb[tb.length-1])>grTimp15(vechi[vechi.length-1])))vechi=tb;
-  var gata=function(r,intreg){var z=GridCalcul.bare(r).length/96,ks=Object.keys(grLum15);if(!grLum15[simbol]&&ks.length>=6)delete grLum15[ks[0]];grLum15[simbol]={r:r,la:Date.now(),intreg:intreg};return {r15:r,istoric15:{zile:z,motiv:!intreg?"pagina":z<30?"nou":null}}};
+  var gata=function(r,intreg){var z=GridCalcul.bare(r).length/96,ks=Object.keys(grLum15);if(!grLum15[simbol]&&ks.length>=6)delete grLum15[ks[0]];grLum15[simbol]={r:r,la:Date.now(),intreg:intreg};if(intreg)gr15PeDisc(simbol,r);return {r15:r,istoric15:{zile:z,motiv:!intreg?"pagina":z<30?"nou":null}}};
   if(vechi&&Date.now()-grTimp15(vechi[vechi.length-1])<480*900000){
     var k=await getJSON(baza+"&interval=15M&limit=500"),r=grRanduri(k);
     if(!r)throw Error((k&&(k.error||k.detail||k.message||k.code))||"Pionex nu a dat lumânări");
@@ -7798,7 +7836,9 @@ if(typeof window!=="undefined")window.addEventListener("DOMContentLoaded",functi
 var TB_RAND_KEY="tbRanduri";
 var TB_RANDURI={tbTodo:"Ce ai de făcut acum",tbCitireCard:"Ce spune piața acum",tbMcSus:"Monte Carlo",tbConcret:"Stopul, gridul, mișcarea",tbScenariiCard:"Dacă prețul ajunge la…",tbBaniCard:"Banii botului",tbGridNou:"Gridul de acum, pentru TradingView",tbIdei:"Candidatele pentru un bot",tbSemaforCard:"Consilierul",tbAcumCard:"Pe zi, la închidere, ce știm"};
 function tbRandStare(){try{var o=JSON.parse(localStorage.getItem(TB_RAND_KEY)||"{}");return o&&typeof o==="object"?o:{}}catch(e){return {}}}
-function tbRandRezumat(el,titlu){var t="",SAR={SCRIPT:1,STYLE:1,BUTTON:1,INPUT:1,SELECT:1,TEXTAREA:1,svg:1,SVG:1};(function merge(n){for(var c=n.firstChild;c&&t.length<320;c=c.nextSibling){if(c.nodeType===3)t+=c.nodeValue+" ";else if(c.nodeType===1&&!c.hidden&&!SAR[c.tagName])merge(c)}})(el);var CAP=/^[^0-9A-Za-zĂÂÎȘȚăâîșț+−]+/;t=t.replace(/\s+/g," ").trim().replace(CAP,"");if(t.toLowerCase().indexOf(String(titlu).toLowerCase())===0)t=t.slice(titlu.length).replace(CAP,"");return t.length>150?t.slice(0,147).replace(/\s+\S*$/,"")+"…":t}
+/* v100.318: rezumatul se citește ca propoziții - fiecare bloc (paragraf, rând, celulă) e o parte, despărțită cu „ · ”; antetul tabelului,
+   etichetele câmpurilor și capetele (.tbBlocCap, .tbScenCap, .tbTodoCap - repetă titlul sau numesc coloanele) nu intră. Înainte: „alt preț Dacă prețul ajunge la Poziția Totalul…”. */
+function tbRandRezumat(el,titlu){var parti=[],cur="",n=0,SAR={SCRIPT:1,STYLE:1,BUTTON:1,INPUT:1,SELECT:1,TEXTAREA:1,LABEL:1,THEAD:1,TH:1,svg:1,SVG:1},BLOC={DIV:1,P:1,LI:1,UL:1,OL:1,TABLE:1,TBODY:1,TR:1,TD:1,H3:1,H4:1,H5:1,SECTION:1,ARTICLE:1,DETAILS:1,SUMMARY:1},taie=function(){var s=cur.replace(/\s+/g," ").trim();if(s)parti.push(s);cur=""};(function merge(x){for(var c=x.firstChild;c&&n<400;c=c.nextSibling){if(c.nodeType===3){cur+=c.nodeValue+" ";n+=c.nodeValue.length}else if(c.nodeType===1&&!c.hidden&&!SAR[c.tagName]&&!/(^|\s)(tbBlocCap|tbScenCap|tbTodoCap)(\s|$)/.test(typeof c.className==="string"?c.className:"")){var b=BLOC[c.tagName];if(b)taie();merge(c);if(b)taie()}}})(el);taie();var t=parti.join(" · "),CAP=/^[^0-9A-Za-zĂÂÎȘȚăâîșț+−]+/;t=t.replace(CAP,"");if(t.toLowerCase().indexOf(String(titlu).toLowerCase())===0)t=t.slice(titlu.length).replace(CAP,"");return t.length>150?t.slice(0,147).replace(/\s+\S*$/,"")+"…":t}
 function tbRandAplica(){var st=tbRandStare(),pune=function(e,k,v){if(e.getAttribute(k)!==v)e.setAttribute(k,v)};Object.keys(TB_RANDURI).forEach(function(id){var e=document.getElementById(id);if(!e)return;var deschis=st[id]===true;pune(e,"data-rand",deschis?"deschis":"pliat");pune(e,"data-titlu",TB_RANDURI[id]);pune(e,"aria-expanded",String(deschis));if(deschis){if(e.hasAttribute("tabindex"))e.removeAttribute("tabindex")}else{pune(e,"tabindex","0");pune(e,"data-rezumat",tbRandRezumat(e,TB_RANDURI[id])||"—")}})}
 function tbRandComuta(id,deschis){if(!Object.prototype.hasOwnProperty.call(TB_RANDURI,id))return;var st=tbRandStare();if(deschis==null)deschis=st[id]!==true;if(deschis)st[id]=true;else delete st[id];try{localStorage.setItem(TB_RAND_KEY,JSON.stringify(st))}catch(e){}tbRandAplica()}
 function tbRandToate(deschis){var st={};if(deschis)Object.keys(TB_RANDURI).forEach(function(id){st[id]=true});try{localStorage.setItem(TB_RAND_KEY,JSON.stringify(st))}catch(e){}tbRandAplica();var p=document.getElementById("tabloubot");if(p)[].forEach.call(p.querySelectorAll("details.tbPl"),function(d){d.open=!!deschis})}
@@ -7892,10 +7932,12 @@ function renderTabloGrafic(){
     punePret();
   };
   // pe ecran tactil, eticheta ramane dupa ce ridici degetul (se muta la urmatoarea atingere)
-  var fixat=false;
-  zona.addEventListener("pointermove",function(e){if(e.pointerType==="mouse"||!fixat)arata(e.clientX,e.clientY)});
-  zona.addEventListener("pointerdown",function(e){if(e.target&&e.target.closest&&e.target.closest(".gbSem"))return;fixat=e.pointerType!=="mouse";arata(e.clientX,e.clientY)});
-  zona.addEventListener("pointerleave",function(){if(!fixat)ascunde()});
+  /* v100.318 (I-853): mișcarea mouse-ului mută crucea cel mult o dată pe cadru, la ultima poziție (înainte: la fiecare eveniment, ~8 ms pe pas -
+     dimensiunea se recitea după fiecare mutare). Apăsarea și focusul rămân pe loc. Fără requestAnimationFrame (probele în node) merge pe loc. */
+  var fixat=false,cadru=0,ultim=null,raf=typeof requestAnimationFrame==="function"?requestAnimationFrame:function(f){f();return 0};
+  zona.addEventListener("pointermove",function(e){if(e.pointerType==="mouse"||!fixat){ultim=[e.clientX,e.clientY];if(!cadru)cadru=raf(function(){cadru=0;if(ultim){var u=ultim;ultim=null;arata(u[0],u[1])}})||0}});
+  zona.addEventListener("pointerdown",function(e){if(e.target&&e.target.closest&&e.target.closest(".gbSem"))return;fixat=e.pointerType!=="mouse";ultim=null;arata(e.clientX,e.clientY)});
+  zona.addEventListener("pointerleave",function(){if(!fixat){ultim=null;ascunde()}});
   svg.addEventListener("focusin",function(e){var t=e.target&&e.target.closest?e.target.closest(".gbE"):null;if(!t)return;var c=t.querySelector("circle").getBoundingClientRect();arata(c.left+c.width/2,c.top)});
   svg.addEventListener("focusout",ascunde);
 }

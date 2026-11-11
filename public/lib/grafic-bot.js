@@ -631,7 +631,8 @@ var GraficBot = (function () {
           + (eu ? '<circle cx="' + f1(cx) + '" cy="' + f1(cy) + '" r="13.5" fill="none" stroke="' + COL.text + '" stroke-width="1.6"/>' : '')
           + '<circle cx="' + f1(cx) + '" cy="' + f1(cy) + '" r="10" fill="' + c + '"/>'
           + '<text x="' + f1(cx) + '" y="' + f1(cy + 4.5) + '" text-anchor="middle" font-size="13" font-weight="800" fill="#0E141A">' + (SAGEATA[x.dir] || "–") + '</text>'
-          + '<text x="' + f1(ingust ? cx : cx + 17) + '" y="' + f1(ingust ? cy + 25 : cy + 4.5) + '"' + (ingust ? ' text-anchor="middle"' : '') + ' font-size="' + (ingust ? 11.5 : 13) + '"' + (eu ? ' font-weight="700"' : '') + ' fill="' + (eu ? COL.text : COL.info) + '">' + esc(x.sc) + '</text></g>');
+          + '<text x="' + f1(ingust ? cx : cx + 17) + '" y="' + f1(ingust ? cy + 25 : cy + 4.5) + '"' + (ingust ? ' text-anchor="middle"' : '') + ' font-size="' + (ingust ? 11.5 : 13) + '"' + (eu ? ' font-weight="700"' : '') + ' fill="' + (eu ? COL.text : COL.info) + '">' + esc(x.sc) + '</text>'
+          + '<rect class="gbSemTinta" x="' + f1(sx0 + 4 + i * CS) + '" y="' + sy0 + '" width="' + CS + '" height="' + (HS + 8) + '" fill="#000" fill-opacity="0"/></g>'   /* v100.318 (I-855): zona de atins = toată celula (pe telefon becul avea ~20 px) */);
       });
     }
     var ys = 17 + semH, yj = mainH - 9;

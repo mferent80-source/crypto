@@ -4578,6 +4578,13 @@ html.pzDemo #tabloubot{font-variant-emoji:text}
 html.pzDemo #tabloubot [data-rand="pliat"]:not([hidden]){grid-template-columns:minmax(0,1fr)}
 html.pzDemo #tabloubot [data-rand="pliat"]::after{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 }
+/* v100.318 (I-855): pe telefon „detalii” din Stopul / Gridul / Mișcarea avea 18 px înălțime; ținta de atins are acum 40 px; la fel butoanele paginii (antetul, Simplu / Complet / Scara, copiază, Fișa aveau 29–31 px; Monte Carlo avea deja 44) - doar înălțimea */
+@media (max-width:640px){
+html.pzDemo #tabloubot .tbCcDet>summary{min-height:40px;box-sizing:border-box;padding-top:10px;padding-bottom:10px}
+html.pzDemo #tabloubot button{min-height:40px}
+html.pzDemo #tabloubot .tbAntet .actionGhost,html.pzDemo #tabloubot .tbAntet .tbSimBtn,html.pzDemo #tabloubot .tbInterval .tbIntBtn{min-height:40px}
+html.pzDemo #tabloubot .tbProbFara>summary{min-height:40px;box-sizing:border-box;padding-top:10px;padding-bottom:10px}
+}
 /* v100.316: sfârșitul desenului nou */
 @media (max-width:640px){.sugPandaTab thead{display:table-header-group}.sugPandaTab{display:table}.sugPandaTab tbody{display:table-row-group}.sugPandaTab tr{display:table-row}.sugPandaTab td,.sugPandaTab th{display:table-cell}}
 /* v100.224: pe paginile de zi rămân alertele, banda botului și versiunea. Cipurile de cercetare revin la analiza monedei și în laborator. */

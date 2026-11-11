@@ -20,7 +20,7 @@ function t212Eroare(e) { var m = e && e.message || String(e); return /503|PUNE-C
 
 async function t212Porneste(forta) {
   if (t212.inLucru) return;
-  if (!forta && t212.la && Date.now() - t212.la < 60000) { t212Render(); return; }
+  if (!forta && t212.la && Date.now() - t212.la < 60000) { t212Render(); if (t212LaVedere()) t212IdeiRejudeca(); return; }
   if (forta) t212.ideiRe = null;
   t212.inLucru = true; t212.eroare = null; t212Stare("citesc contul din Trading 212…");
   // v100.272 (ideile auditului 29.10): citirile independente pleacă deodată (erau 9 una după alta, apoi 4 pe fiecare poziție, tot în șir);
@@ -67,7 +67,7 @@ async function t212Porneste(forta) {
   if (forta || !t212.ziCitire) t212.ziCitire = t212ZiNY(Date.now());   // v100.291 (revizia 🟡3): ziua barelor zilnice
   t212.inLucru = false; t212Render();
   t212ViuPorneste();   // v100.291 (R1): de acum, cât bursa e deschisă și pagina la vedere, pozițiile se recitesc la 30 s
-  t212IdeiRejudeca();
+  if (t212LaVedere()) t212IdeiRejudeca();   /* v100.318 (I-848): ideile se rejudecă doar cu pagina la vedere; la deschidere le rejudecă t212Porneste (o dată pe citire, t212.ideiRe) */
   if (typeof jtRenderActiuni === "function") jtRenderActiuni();
 }
 // v100.231: filtrul imediat, pe regimul deja adus (lipsește ⇒ nu se inventează un blocaj)
@@ -388,9 +388,21 @@ function t212SocAct() {
   if (!t212SocActC.inLucru && Date.now() - t212SocActC.la > 10 * 60000) { t212SocActC.inLucru = true; getJSON("/api/istoric-bot?action=socotealaAct").then(function (d) { t212SocActC.v = d && d.peCod || {}; }).catch(function () {}).then(function () { t212SocActC.la = Date.now(); t212SocActC.inLucru = false; }); }
   return t212SocActC.v;
 }
+/* v100.318 (I-848): pagina T212 ascunsă. Banda contului de pe Tablou o pornește în fundal pentru semaforul pozițiilor (deci „N acțiuni de
+   ieșit”); desenul ei ascuns mai cerea graficele pe alte intervale, ideile rejudecate și istoria Consilierului pe fiecare rând (~40 de cereri
+   la deschiderea Tabloului, măsurate 11.11). Acum ele se fac doar cu pagina la vedere; datele semaforului se aduc ca înainte. */
+/* Ascunsă DOAR când panoul #t212 există și n-are „on”; fără știre (fără document, fără panou, DOM parțial - probele) ⇒ ca înainte, la vedere. */
+function t212LaVedere() {
+  try {
+    if (typeof document === "undefined" || !document || typeof document.getElementById !== "function") return true;
+    var p = document.getElementById("t212");
+    if (!p || !p.classList || typeof p.classList.contains !== "function") return true;
+    return p.classList.contains("on");
+  } catch (e) { return true; }
+}
 function t212ConsKvPt(tk) {
   var c = t212ConsKv[tk] || (t212ConsKv[tk] = { la: 0, cons: null, decizii: [], inLucru: false });
-  if (!c.inLucru && Date.now() - c.la > 2 * 60000) {
+  if (!c.inLucru && Date.now() - c.la > 2 * 60000 && t212LaVedere()) {
     c.inLucru = true;
     Promise.all([getJSON("/api/istoric-bot?action=cons&bot=t212-" + encodeURIComponent(tk)).catch(function () { return null; }), getJSON("/api/istoric-bot?action=decizie&bot=t212-" + encodeURIComponent(tk)).catch(function () { return null; })])
       .then(function (r) { var vechi = JSON.stringify([c.cons, c.decizii]); c.cons = r[0] && r[0].cons || null; c.decizii = r[1] && Array.isArray(r[1].decizii) ? r[1].decizii : []; c.la = Date.now(); c.inLucru = false; if (JSON.stringify([c.cons, c.decizii]) !== vechi) t212Render(); });
@@ -1172,6 +1184,7 @@ function t212GraficHtml(p, W) {
   return d;
 }
 function t212GraficeDeseneaza(faraAducere) {
+  if (!t212LaVedere()) return;   /* v100.318 (I-848): pe pagina ascunsă nu se desenează nimic (nici lumânările pe alte intervale); deschiderea redesenează */
   (t212.pozPregatite || []).forEach(function (p) {
     var el = $("t212Graf-" + p.ticker); if (!el || !t212.deschis[p.ticker]) return;
     if (!faraAducere) t212AduTf(p.ticker);   // revizia v100.108 (R5): reîmprospătarea lumânărilor TF-urilor (limita de 5 min o ține în frâu, fără buclă)

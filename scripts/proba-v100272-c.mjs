@@ -236,7 +236,8 @@ function pionexProba(o = {}) {
   };
   return { log, zbor, getJSON, n15: () => log.filter((x) => /interval=15M/.test(x)).length };
 }
-const GR_FN = ["grRanduri", "grTimp15", "grBareTbMc", "grBare15Tinute", "grTine15", "grAdu15", "grAduRest", "grAduLumanari"];
+/* v100.318 (I-854): gr15DinDisc / gr15PeDisc țin istoria și pe dispozitiv; aici, fără localStorage, nu găsesc și nu scriu nimic ⇒ proba verifică memoria din sesiune, ca înainte (pe dispozitiv o verifică proba v100318) */
+const GR_FN = ["grRanduri", "grTimp15", "grBareTbMc", "grBare15Tinute", "grTine15", "gr15DinDisc", "gr15PeDisc", "grAdu15", "grAduRest", "grAduLumanari"];
 function ctxGrid(px, extra) {
   const box = Object.assign({ getJSON: px.getJSON, grPauza: () => Promise.resolve(), GridCalcul: GC, GridSim: G.GridSim, grLum15: {}, console }, extra || {});
   vm.createContext(box); vm.runInContext(GR_FN.map(fnApp).join("\n"), box, { filename: "app-gr.js" }); return box;
