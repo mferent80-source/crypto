@@ -4640,10 +4640,12 @@ html.pzDemo #tabloubot.on :is(p,li,.tbCitTx,.tbMcScurt,.tbMcNota,.tbMcScorTx){ma
 #t212Continut .tvNoteTab thead{display:table-header-group}
 .tvNoteTab tbody{display:table-row-group}
 .tvNoteTab th,.tvNoteTab td{font-size:12px}
-/* pe telefon coloana Trend a pozițiilor e ascunsă: „TV 1D” stă și sub numele acțiunii - doar în rândul tabelului (în capul fișei e deja în
-   celula Trend); regula paginii „#t212Continut tr.t212Rand .t212Sim .t212Mic:not(.t212Modele){display:none}” are aceeași greutate ⇒ o bate fiind mai jos */
+/* „TV 1D” sub numele acțiunii, în rândul / cartela listei: lista n-are coloana Trend nici pe telefon, nici pe calculator (v100.321 - pozele de
+   pe Radarul live: pe calculator lista nu-l arăta). Regula paginii „#t212Continut tr.t212Rand .t212Sim .t212Mic:not(.t212Modele){display:none}”
+   are aceeași greutate ⇒ o bate fiind mai jos. În capul fișei nu (nota e deja în celula Trend): „.t212FisaVal .t212Mic{display:block}” o arăta. */
 .tvMicTel{display:none}
-@media (max-width:640px){#t212Continut tr.t212Rand .t212Sim .t212Mic.tvMicTel{display:block}}
+#t212Continut tr.t212Rand .t212Sim .t212Mic.tvMicTel{display:block}
+.t212FisaVal .t212Mic.tvMicTel{display:none}
 /* v100.320: sfârșitul notei TradingView */
 @media (max-width:640px){.sugPandaTab thead{display:table-header-group}.sugPandaTab{display:table}.sugPandaTab tbody{display:table-row-group}.sugPandaTab tr{display:table-row}.sugPandaTab td,.sugPandaTab th{display:table-cell}}
 /* v100.224: pe paginile de zi rămân alertele, banda botului și versiunea. Cipurile de cercetare revin la analiza monedei și în laborator. */

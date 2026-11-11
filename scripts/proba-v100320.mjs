@@ -177,7 +177,8 @@ await test("foaia de stil: blocul notei TradingView DUPĂ stratul desenului (v10
   assert.ok(/\.tvNoteTab\{/.test(b) && /font-variant-numeric:tabular-nums/.test(b));
   // în fișa T212 tabelul stă ÎN tabelul pozițiilor: „#t212Continut .t212Tab thead{display:none}” și, pe telefon, „.t212Tab tbody{display:block}” îl atingeau
   assert.ok(b.includes("#t212Continut .tvNoteTab thead{display:table-header-group}") && b.includes(".tvNoteTab tbody{display:table-row-group}"), "capul și corpul tabelului înapoi în fișa T212");
-  assert.ok(b.includes(".tvMicTel{display:none}") && b.includes("@media (max-width:640px){#t212Continut tr.t212Rand .t212Sim .t212Mic.tvMicTel{display:block}}"), "linia de sub nume doar pe telefon, doar în rândul tabelului");
+  /* v100.321: lista n-are coloana Trend nici pe calculator ⇒ linia de sub nume la orice lățime (proba-v100321), tot doar în rândul listei */
+  assert.ok(b.includes(".tvMicTel{display:none}") && b.includes("#t212Continut tr.t212Rand .t212Sim .t212Mic.tvMicTel{display:block}"), "linia de sub nume doar în rândul listei");
   // regula paginii care ascunde liniile mici de sub nume pe telefon trebuie să stea MAI SUS (aceeași greutate ⇒ câștigă ultima)
   assert.ok(CSS.indexOf("#t212Continut tr.t212Rand .t212Sim .t212Mic:not(.t212Modele){display:none}") < CSS.indexOf("#t212Continut tr.t212Rand .t212Sim .t212Mic.tvMicTel{display:block}"));
   assert.ok(!/#[0-9a-fA-F]{3,8}\b|rgb\(/.test(b.replace(/var\([^)]*\)/g, "")), "fără culori scrise de mână");
