@@ -125,6 +125,8 @@
     if (s) add(s.p, s.n, "var(--pzJos)", "", s.tit);
     // v100.313: cifra măsurată a stopului (curba stopului, din Tabloul botului) lângă prețul lui
     if (s && L.length && typeof tbStopSansaDrum === "function") { var sj = null; try { sj = tbStopSansaDrum(bl); } catch (e) { sj = null; } if (sj) L[L.length - 1].sansa = sj; }
+    // v100.322 (el, 11.11.2026: „am pus TP dar pagina botului nu îl vede”): take-profit-ul pus, pe drum ca pe grafic (în procente: socotit live)
+    if (bl && bl.opritorProfitActiv) { var TEp = window.TabloExtra, tp = TEp && TEp.pretTpLive ? TEp.pretTpLive(bl) : nr(bl.opritorProfit); if (tp > 0) add(tp, "take-profit", "var(--pzSus)", "", "take-profit-ul tău din Pionex"); }
     return L;
   }
   // v100.242: lățimea se cuantifică și nu se mută cât ține o bară de derulare (~15 px). 0 nu mai cade pe 280 (multe rânduri, card înalt).

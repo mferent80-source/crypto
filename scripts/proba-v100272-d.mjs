@@ -316,6 +316,8 @@ const DINAMICE = [
   // v100.312: pagina Probe - butonul fiecărei probe din „Unde e fiecare probă” (act: ["eticheta", "navTo('…',true)"])
   { fisier: "public/lib/probe-ecran.js", re: /^' \+ sugEsc\(r\.act\[1\]\) \+ '/, nume: () => culege(new RegExp('act: \\["[^"]*", "(' + ID + ')\\(', "g"), LIB.filter(([f]) => f.endsWith("probe-ecran.js"))) },
   { fisier: "public/lib/asezare-paznic.js", re: /^' \+ String\(v\.act\)/, nume: () => culege(new RegExp('v\\.act = "(' + ID + ')\\(', "g"), LIB.filter(([f]) => f.endsWith("asezare-paznic.js"))) },
+  // v100.322: butoanele potrivite din „Contează acum” (Conteaza.html, `x.butoane`) - acțiunea vine DOAR din tbConteazaImbogateste (app.js, `click:"<nume>(…)"`)
+  { fisier: "public/lib/conteaza.js", re: /^' \+ esc\(q\.click\) \+ '/, nume: () => { const i = APP.indexOf("function tbConteazaImbogateste("), j = APP.indexOf("function tbRenderConteaza(", i); assert.ok(i > 0 && j > i, "lipsește tbConteazaImbogateste"); return [...APP.slice(i, j).matchAll(new RegExp('click:"(' + ID + ')\\(', "g"))].map((m) => m[1]); } },
   { fisier: "public/lib/statistica-trade.js", re: /^' \+ o\.actiune(Perioada|Ordine|Csv) \+ /, nume: (w) => { const k = /^' \+ o\.actiune(\w+) /.exec(w)[1]; return culege(new RegExp("actiune" + k + "\\s*:\\s*[\"'](" + ID + ")[\"']", "g")); } },
 ];
 function actiuniFolosite() {

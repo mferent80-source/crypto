@@ -46,10 +46,12 @@ await test("(2) cifrele de sus: între 641 și 1699 px pe două coloane (≈370 
 
 await test("(3) culoarea în blocurile cheie-valoare ale cifrelor: doar primul rând (semnul / starea) e colorat; restul faptelor în cerneală", () => {
   const b = reguli(bloc());
-  assert.ok(b.includes("html.pzDemo #tabloubot #tbKpi .pzKvBloc.good .pzKv b,html.pzDemo #tabloubot #tbKpi .pzKvBloc.bad .pzKv b,html.pzDemo #tabloubot #tbKpi .pzKvBloc.tbWarn .pzKv b{color:var(--pzT0)}"));
-  assert.ok(b.includes("html.pzDemo #tabloubot #tbKpi .pzKvBloc.good .pzKv:first-child b{color:var(--pzSus)}"));
-  assert.ok(b.includes("html.pzDemo #tabloubot #tbKpi .pzKvBloc.bad .pzKv:first-child b{color:var(--pzJos)}"));
-  assert.ok(b.includes("html.pzDemo #tabloubot #tbKpi .pzKvBloc.tbWarn .pzKv:first-child b{color:var(--pzAur)}"));
+  // v100.322 (revizia 11.11): aceeași regulă și pe rândurile mutate sub grafic (#tbKpiDetalii), ca „culoarea pe semn” să nu se piardă la așezare
+  const K = "html.pzDemo #tabloubot :is(#tbKpi,#tbKpiDetalii)";
+  assert.ok(b.includes(K + " .pzKvBloc.good .pzKv b," + K + " .pzKvBloc.bad .pzKv b," + K + " .pzKvBloc.tbWarn .pzKv b{color:var(--pzT0)}"));
+  assert.ok(b.includes(K + " .pzKvBloc.good .pzKv:first-child b{color:var(--pzSus)}"));
+  assert.ok(b.includes(K + " .pzKvBloc.bad .pzKv:first-child b{color:var(--pzJos)}"));
+  assert.ok(b.includes(K + " .pzKvBloc.tbWarn .pzKv:first-child b{color:var(--pzAur)}"));
 });
 
 await test("(4) sfatul „☞” din Contează acum: text în cerneală, semnalul de atenție rămâne ca bară aurie în stânga", () => {

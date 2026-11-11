@@ -275,6 +275,7 @@ var GraficBot = (function () {
     if (o.planMinus && nr(o.planMinus.pret)) ad("planMinus", o.planMinus.pret, "plan −" + o.planMinus.usdt + " USDT", COL.bad, "dash", "−" + o.planMinus.usdt);
     ad("gridJos", b.gridJos, "grid jos", COL.accent, "fine", "grid↓");
     if (b.opritorPierdereActiv) ad("stop", o.stopLive != null ? o.stopLive : b.opritorPierdere, "stopul tău", COL.bad, "solid", "stop");   // audit 19.10: stopul în procente socotit live (TabloExtra.pretStopLive)
+    if (b.opritorProfitActiv) ad("tp", o.tpLive != null ? o.tpLive : b.opritorProfit, "take-profit-ul tău", COL.good, "solid", "TP");   // v100.322 (el: „am pus TP dar pagina botului nu îl vede”); în procente: socotit live (TabloExtra.pretTpLive)
     ad("lich", b.pretLichidare, "lichidare", COL.bad, "lich", "lich.");
     return l;
   }
@@ -367,7 +368,7 @@ var GraficBot = (function () {
     var z = TE ? TE.dacaInchizi(b) : null, plus = pl ? nr(pl.plus) : null, minus = pl ? nr(pl.minus) : null;
     // v100.98: planul CU gridul pe drum (pretTintaPentru / pretOpritorPentru)
     var pPl = TE && plus > 0 ? TE.pretTintaPentru(b, plus) : null, pMi = TE && minus > 0 ? TE.pretOpritorPentru(b, -minus) : null;
-    var niv = cuSanse(niveluriBot({ bot: b, zero: z && z.pretZero, planPlus: pPl ? { pret: pPl, usdt: plus } : null, planMinus: pMi ? { pret: pMi, usdt: minus } : null, stopLive: TE && TE.pretStopLive ? TE.pretStopLive(b) : null }), d.sanse);
+    var niv = cuSanse(niveluriBot({ bot: b, zero: z && z.pretZero, planPlus: pPl ? { pret: pPl, usdt: plus } : null, planMinus: pMi ? { pret: pMi, usdt: minus } : null, stopLive: TE && TE.pretStopLive ? TE.pretStopLive(b) : null, tpLive: TE && TE.pretTpLive ? TE.pretTpLive(b) : null }), d.sanse);
     var xo = d.brut && d.brut.buOrderData || {}, gj = nr(xo.bottom), gs = nr(xo.top);
     var grila = { jos: gj !== null ? gj : nr(b.gridJos), sus: gs !== null ? gs : nr(b.gridSus), linii: nr(xo.row), geo: String(xo.gridType || "").toLowerCase() === "geometric" };
     var zi = ziObisnuita(viu || (raw.length ? raw[raw.length - 1].c : null), d.profil);   // v100.51 (I-470, I-476)
@@ -431,6 +432,13 @@ var GraficBot = (function () {
     // nu peste lumânări - prețurile iau tot graficul; pe ecran lat rămâne în colț, cu loc rezervat sus
     var bandaSem = 0;
     var inBanda = ingust && !o.actiune;   /* revizia Opus: doar graficul botului; acțiunile (T212) rămân cu becurile în colț */
+    /* v100.322 (el, 11.11.2026: „la deschidere să se vadă chartul întreg”): o.inaltMax = locul de pe ecran pentru tot desenul (Tabloul îl dă pe
+       calculator). Cedează prețul, până la 220 px; volumul și alertele rămân; RSI și ADX rămân, mai scunde când locul e strâmt. Fără o.inaltMax ⇒ exact ca înainte. */
+    if (!ingust && o.inaltMax > 0) {
+      var restH = function () { return gap + (trH ? trH + gap : 0) + volH + gap + laneH + (rsiH ? gap + rsiH : 0) + (adxH ? gap + adxH : 0) + axH; };
+      if (o.inaltMax - restH() < 300) { if (rsiH) rsiH = 60; if (adxH) adxH = 54; }   /* loc strâmt (Full HD, laptop): RSI și ADX mai scunde, ca prețul să nu scadă prea mult */
+      mainH = Math.max(220, Math.min(mainH, Math.round(o.inaltMax - restH())));
+    }
     if (!inBanda && Array.isArray(o.semafor) && o.semafor.length) { var rez = (ingust ? 54 : 44) / mainH; hi += (hi - lo) * rez / (1 - rez); }   /* v100.106: sus rămâne loc gol pentru semafor - prețul nu intră sub el */
     var Y = function (p) { return (1 - (p - lo) / (hi - lo)) * mainH; }, X = function (bi) { return bi * cw + cw / 2; };
     var q = [], H = mainH + gap + (trH ? trH + gap : 0) + volH + gap + laneH + (rsiH ? gap + rsiH : 0) + (adxH ? gap + adxH : 0) + axH, f1 = function (x) { return x.toFixed(1); };
@@ -716,6 +724,7 @@ var GraficBot = (function () {
     if (are("planMinus")) Lg.push('<span><i class="gbDash" style="border-color:' + COL.bad + '"></i>planul, pe minus</span>');
     var nivStop = niv.filter(function (x) { return x.k === "stop"; })[0];   // v100.292: eticheta nivelului (Sugestii: „stopul propus”), altfel „stopul tău”
     if (nivStop) Lg.push('<span><i style="border-color:' + COL.bad + '"></i>' + esc(nivStop.t || "stopul tău") + '</span>');
+    if (are("tp")) Lg.push('<span><i style="border-color:' + COL.good + '"></i>take-profit-ul tău</span>');
     if (spP !== null && spP > 0 && !(spA !== null && Math.abs(spP - spA) / spA < 0.0005)) Lg.push('<span><i class="gbDash" style="border-color:' + COL.bad + '"></i>' + esc(cl.etLung || "stopul planului (Consilierul)") + '</span>');
     if (st.zi5 && o.zi5) Lg.push('<span><i style="border-color:' + COL.info + '"></i>' + esc(o.zi5.sursa || "5 zile obișnuite") + ': jumătate din săptămâni (plin) / trei sferturi (punctat)</span>');
     if (st.zi && o.zi) Lg.push('<span><i class="gbPct" style="background:rgba(233,185,73,.45)"></i>ziua obișnuită de la prețul de acum: jumătate din zile (plin) / trei sferturi (punctat) · ' + esc(o.zi.sursa || "") + '</span>');
@@ -730,6 +739,7 @@ var GraficBot = (function () {
     if (LgFer) Lg.push(LgFer);
     if (simplu && !o.actiune) {   /* v100.98: un singur rând, cu ce e pe grafic */
       Lg = ['<span><i class="gbDash" style="border-color:' + COL.warn + '"></i>zero</span>', '<span><i class="gbDash" style="border-color:' + COL.good + '"></i>plan +</span>', '<span><i class="gbDash" style="border-color:' + COL.bad + '"></i>plan −</span>', '<span><i style="border-color:' + COL.bad + '"></i>stop</span>',
+        are("tp") ? '<span><i style="border-color:' + COL.good + '"></i>take-profit</span>' : '',   /* v100.322: take-profit-ul pus, și pe rândul scurt */
         '<span><i style="border-color:' + COL.ema20 + '"></i>EMA 20</span>', '<span><i style="border-color:' + COL.ema50 + '"></i>EMA 50</span>',
         (S.tr ? '<span><i class="gbPct" style="background:' + COL.good + '"></i><i class="gbPct" style="background:' + COL.bad + '"></i><i class="gbPct" style="background:' + COL.mut + '"></i>trend: urcă · coboară · lateral</span><span>semafor: culoarea = față de bot, săgeata = piața</span>' : ''),
         '<span>▲▼ umpleri deschise: gri · galben = de peste o oră · <i class="gbPct" style="background:' + COL.good + '"></i>perechi închise, jos (' + (o.umpleri ? o.umpleri.perechi : 0) + ')</span>',

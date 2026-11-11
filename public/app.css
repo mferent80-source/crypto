@@ -3521,6 +3521,8 @@ button.pzVoce{width:auto;min-height:0;margin:0;background:transparent;font-weigh
 .ctNr small{display:block;font-size:11px;font-weight:600;margin-top:4px;opacity:.85;font-family:"IBM Plex Sans",system-ui,"Segoe UI",sans-serif;text-wrap:balance}
 .ctRosu .ctNr{background:color-mix(in srgb,var(--pzJos) 16%,transparent);color:var(--pzJos);border:1px solid color-mix(in srgb,var(--pzJos) 45%,transparent)}
 .ctGalben .ctNr{background:color-mix(in srgb,var(--pzAur) 14%,transparent);color:var(--pzAur);border:1px solid color-mix(in srgb,var(--pzAur) 40%,transparent)}
+.ctVerde .ctNr{background:color-mix(in srgb,var(--pzSus) 14%,transparent);color:var(--pzSus);border:1px solid color-mix(in srgb,var(--pzSus) 40%,transparent)}
+.ctVerde .ctFac{color:var(--muted);font-weight:500}
 .ctTxt{min-width:0}
 .ctTxt>b{display:block;font-size:17px;line-height:1.3;color:var(--text);overflow-wrap:anywhere}
 .ctTxt>span{display:block;font-size:12.5px;color:var(--muted);margin-top:3px}
@@ -4469,7 +4471,7 @@ html.pzDemo #tabloubot .tbAntet .stockBadge{border:0;background:var(--pzF2);bord
 html.pzDemo #tabloubot .tbAntet .actionGhost,html.pzDemo #tabloubot .tbAntet .tbSimBtn{min-height:0;height:auto;padding:8px 14px;border-radius:5px;font-size:13.5px;font-weight:500;background:var(--pzF1);border:1px solid var(--pzLi);color:var(--pzT0)}
 html.pzDemo #tabloubot .tbActiuni{gap:8px}
 html.pzDemo #tabloubot .tbAntet .actionGhost,html.pzDemo #tabloubot .tbAntet .tbSimBtn{white-space:nowrap}
-html.pzDemo #tabloubot #tbKpi .pzKv>b{min-width:0;overflow-wrap:anywhere}
+html.pzDemo #tabloubot :is(#tbKpi,#tbKpiDetalii) .pzKv>b{min-width:0;overflow-wrap:anywhere}
 .pzDemo #tabloubot .tbCadru>#pzVerdict{order:2}
 html.pzDemo #tabloubot.on .tbCadru>#pzVerdict{grid-column:1 / -1!important;grid-row:auto!important;align-self:auto;border:0;border-radius:5px;padding:12px 16px;background:var(--pzF2)}
 html.pzDemo #tabloubot.on .tbCadru>#pzVerdict:has(.pzVerb-aur){background:var(--nAtent)}
@@ -4607,10 +4609,10 @@ html.pzDemo #tabloubot.on .tbCadru>.tbSus>#tbKpi{grid-template-columns:repeat(2,
 html.pzDemo #tabloubot #tbKpi>.tbKpiCel:nth-child(3){border-left:0;padding-left:0}
 }
 /* (3) culoarea e pentru stare, nu pentru fapte: în blocurile cheie-valoare ale cifrelor doar primul rând (semnul / starea) e colorat */
-html.pzDemo #tabloubot #tbKpi .pzKvBloc.good .pzKv b,html.pzDemo #tabloubot #tbKpi .pzKvBloc.bad .pzKv b,html.pzDemo #tabloubot #tbKpi .pzKvBloc.tbWarn .pzKv b{color:var(--pzT0)}
-html.pzDemo #tabloubot #tbKpi .pzKvBloc.good .pzKv:first-child b{color:var(--pzSus)}
-html.pzDemo #tabloubot #tbKpi .pzKvBloc.bad .pzKv:first-child b{color:var(--pzJos)}
-html.pzDemo #tabloubot #tbKpi .pzKvBloc.tbWarn .pzKv:first-child b{color:var(--pzAur)}
+html.pzDemo #tabloubot :is(#tbKpi,#tbKpiDetalii) .pzKvBloc.good .pzKv b,html.pzDemo #tabloubot :is(#tbKpi,#tbKpiDetalii) .pzKvBloc.bad .pzKv b,html.pzDemo #tabloubot :is(#tbKpi,#tbKpiDetalii) .pzKvBloc.tbWarn .pzKv b{color:var(--pzT0)}
+html.pzDemo #tabloubot :is(#tbKpi,#tbKpiDetalii) .pzKvBloc.good .pzKv:first-child b{color:var(--pzSus)}
+html.pzDemo #tabloubot :is(#tbKpi,#tbKpiDetalii) .pzKvBloc.bad .pzKv:first-child b{color:var(--pzJos)}
+html.pzDemo #tabloubot :is(#tbKpi,#tbKpiDetalii) .pzKvBloc.tbWarn .pzKv:first-child b{color:var(--pzAur)}
 /* (4) sfatul „☞” din Contează acum: propoziția în cerneală, semnalul de atenție rămâne ca bară aurie în stânga */
 html.pzDemo #tabloubot #ctAcum .ctTxt>.ctFac{color:var(--pzT0);border-left:2px solid var(--pzAur);padding-left:8px}
 /* (5) o grosime pentru butoane și etichete (600, erau 500 și 750) și un colț (4 px, erau 2/3/5) pentru același fel de lucru */
@@ -4647,6 +4649,102 @@ html.pzDemo #tabloubot.on :is(p,li,.tbCitTx,.tbMcScurt,.tbMcNota,.tbMcScorTx){ma
 #t212Continut tr.t212Rand .t212Sim .t212Mic.tvMicTel{display:block}
 .t212FisaVal .t212Mic.tvMicTel{display:none}
 /* v100.320: sfârșitul notei TradingView */
+/* v100.322 · așezarea Tabloului (11.11.2026, demo aprobat: „arată bine, aplică și livrează dar verifică să nu se piardă nimic”; el: „sub grafic e mult spațiu gol … ce e sub grafic în dreapta, celelalte dedesubt” ⇒ „arată bine, mai îngustează și zona
+   de deasupra chartului, ca la deschidere să se vadă chartul întreg” ⇒ ales „sus compact + grafic adaptat”, ecranul lui 2560 × 1440, „să se adapteze
+   și la restul”). Doar pe calculator (≥ 1181 px), doar CU bot (fără bot rămâne „un singur card”, regula de mai sus) și doar cât mutarea detaliilor
+   e activă (#tbKpiDetalii fără hidden, tbKpiAsezare în app.js). Rândul graficului devine „transparent”: bucățile lui stau direct în grila mare a
+   Tabloului (6 coloane): graficul pe 4, ce e pe grafic pe 2.
+   Ordinea: antetul · verdictul · cele 4 cifre · avertismentul de levier (ca în live) · graficul + dreapta · detaliile cifrelor · Drumul botului ·
+   Trendul · Ce ai de făcut acum · Ce spune piața acum · Monte Carlo și restul cartelelor (ordinea lor din live).
+   Revizia 11.11 (înainte de livrare): fără bot regulile de aici nu se mai aplică (display:contents bătea „display:none” al stării fără bot); sub grafic
+   nimic nu mai are rând fix (un rând fix lăsat liber se umplea, prin „dense”, cu ce se nimerea - Monte Carlo ajunsese între Drum și Trend); la
+   1181–1699 px coloana din dreapta era de ~310 px ⇒ un rând „ultimele umpleri” ieșea din pagină (1.441 px la 1280) și „Contează acum” lungă lăsa goluri sus. */
+#tabloubot.tbFaraBot #tbKpiDetalii{display:none!important}
+@media (min-width:1181px){
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden]))>:is(.tbGraficRand),html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) :is(.tbGrStanga,.tbGrCol,#tbGraficCard,#tbGrafic){display:contents!important}
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden]))>.sectionHead{grid-row:1!important}
+/* sus: verdictul și cele 4 cifre; „Contează acum” (ce pune bani în joc azi) în dreapta lor, la vedere de la deschidere
+   (el, 11.11: „nu văd partea cu Contează acum” - în demo-ul v2 coborâse sub grafic); coboară și lângă avertisment și capul graficului (rândurile 2–5) */
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden]))>#pzVerdict{grid-column:1 / 5!important;grid-row:2!important}
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden]))>.tbSus{grid-column:1 / 5!important;grid-row:3!important;padding:12px 0 6px}
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden]))>#tbGridLarg{grid-column:1 / 5!important;grid-row:4!important}
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden]))>#ctAcum:not([hidden]){grid-column:5 / -1!important;grid-row:2 / span 4!important;margin:0 0 6px;align-self:stretch}
+/* graficul: capul („Prețul” + intervalele) și desenul pe 4 coloane; dreapta pe 2 */
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbGraficCard>.tbBlocCap{grid-column:1 / 5;grid-row:5;border-top:1px solid var(--pzLi);padding-top:12px;margin-top:6px}
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbGrafic>.gbZona{grid-column:1 / 5;grid-row:6 / span 7;align-self:start}
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbGrafic>.emptyState{grid-column:1 / 5;grid-row:6}
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbGrafic>:is(.gbValCap,.gbValori,.gbBilant,.gbUlt,.gbValGrid,.gbLeg),html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbGraficCard>#pzUltimii{grid-column:5 / -1;min-width:0;max-width:100%;overflow-wrap:anywhere;align-self:start}
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbGrafic>.gbValCap{grid-row:6;align-self:start;margin:0;border-top:1px solid var(--pzLi);padding-top:12px}
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbGrafic>.gbValori{grid-row:7;width:auto;grid-template-columns:auto minmax(0,1fr) auto auto;column-gap:8px}
+/* nota în plus a unui nivel („7 zile: 8%”, „24 h: ~63%”) coboară sub nume, pe tot rândul; căsuțele ei goale nu mai ocupă loc */
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbGrafic>.gbValori .gbVS{grid-column:2 / -1;text-align:left;font-size:12px;margin-top:-2px}
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbGrafic>.gbValori .gbVS:empty{display:none}
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbGrafic>.gbBilant{grid-row:8;margin:4px 0 0}
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbGrafic>.gbUlt{grid-row:9;flex-direction:column;align-items:flex-start;gap:2px}
+/* „ultimele umpleri”: în coloana din dreapta rândul se rupe (era o linie tăiată cu „…” sub grafic; pe coloană ieșea din pagină - 527 px într-o coloană de 365 la 1440) */
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbGrafic>.gbUlt span{white-space:normal;overflow:visible;text-overflow:clip;max-width:100%}
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbGrafic>.gbValGrid{grid-row:10;margin:4px 0 0}
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbGrafic>.gbLeg{grid-row:11;flex-direction:column;align-items:flex-start;gap:4px}
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbGraficCard>#pzUltimii{grid-row:12;flex-wrap:wrap}
+/* sub grafic, în ORDINE și fără rânduri fixe (ca nimic să nu cadă într-un rând rămas liber): detaliile cifrelor (pe coloana fiecărei cifre), Drumul
+   botului, Trendul, Ce ai de făcut acum, Ce spune piața acum; după ele Monte Carlo (34) și restul cartelelor, cu ordinea lor din live */
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru>#tbKpiDetalii:not([hidden]){grid-column:1 / -1;grid-row:auto;order:20;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));column-gap:0;border-top:1px solid var(--pzLi);padding:12px 0 6px;margin-top:10px}
+html.pzDemo #tabloubot.on .tbCadru>#tbKpiDetalii>.tbKpiDetCol{min-width:0;padding:0 18px;border-left:1px solid var(--pzLi)}
+html.pzDemo #tabloubot.on .tbCadru>#tbKpiDetalii>.tbKpiDetCol:first-child{padding-left:0;border-left:0}
+html.pzDemo #tabloubot.on .tbCadru>#tbKpiDetalii .tbEt2{font-size:12px;color:var(--pzT2)}
+/* în detaliile cifrelor, eticheta și proza pe rânduri separate (descrierea pieței se lipea de etichetă) */
+html.pzDemo #tabloubot.on .tbCadru>#tbKpiDetalii .tbKpiDetCol>span{display:block}
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden]))>#pzDrumCard{grid-column:1 / -1!important;grid-row:auto!important;order:21}
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbTrendCard{grid-column:1 / -1!important;grid-row:auto!important;order:23;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:repeat(6,auto) 1fr;column-gap:32px;row-gap:8px;align-items:start;border-top:1px solid var(--pzLi);padding-top:14px;margin-top:8px;width:auto}
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbTrendCard>*{grid-column:1 / -1;min-width:0}
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbTrendCard>#tbTvNote{grid-column:1;grid-row:5 / span 3;margin-top:0}
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbTrendCard>#tbTrendBoti{grid-column:2;grid-row:5}
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbTrendCard>#tbTrendMediu{grid-column:2;grid-row:6}
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbTrendCard>#tbTrendDet{grid-column:2;grid-row:7}
+/* rândurile care stăteau în rândul graficului: o regulă veche („#tabloubot #tbCitireCard{grid-column:2;grid-row:1}”, ≥ 1181 px) îl punea sub antet
+   când cutia rândului devenea transparentă ⇒ „Ce spune piața acum” dispărea (demo v2, el: „s-au pierdut elemente”). Acum: pe tot rândul, în ordine. */
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) .tbGrStanga>#tbTodo{grid-column:1 / -1!important;grid-row:auto!important;order:24}
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) .tbGrCol>#tbCitireCard{grid-column:1 / -1!important;grid-row:auto!important;order:25;align-self:auto}
+/* v5 (poza 1920: cu două rânduri, „Contează acum” era mai înaltă decât verdictul + cifrele ⇒ gol între ele): semnele pe rândul titlului,
+   butoanele cât textul lor */
+html.pzDemo #tabloubot.on #ctAcum .ctTxt>b{display:inline}
+html.pzDemo #tabloubot.on #ctAcum .ctTxt>.ctSemne{display:inline-flex;margin:0 0 0 8px;vertical-align:2px}
+html.pzDemo #tabloubot.on #ctAcum .ctCopiere>.ctBtn{width:auto;flex:0 0 auto}
+}
+/* ≥ 1700 px: cele 4 cifre pe un singur rând (sub 1700 rămân 2×2, regula v100.319 de la 641–1699) */
+@media (min-width:1700px){
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden]))>.tbSus>#tbKpi{grid-template-columns:repeat(4,minmax(0,1fr))!important;row-gap:0}
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden]))>.tbSus #tbKpi>.tbKpiCel:nth-child(3){border-left:1px solid var(--pzLi);padding-left:18px}
+}
+/* 1181–1699 px (revizia geometriei, 11.11: la 1280 / 1440 coloana din dreapta are ~310–360 px ⇒ „Contează acum” se lungea și lăsa goluri de 53–63 px
+   între verdict și cifre): verdictul și cifrele 2×2 pe jumătatea din stânga, „Contează acum” pe jumătatea din dreapta, la înălțimi apropiate */
+@media (min-width:1181px) and (max-width:1699px){
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden]))>#pzVerdict,html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden]))>.tbSus{grid-column:1 / 4!important}
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden]))>#ctAcum:not([hidden]){grid-column:4 / -1!important;grid-row:2 / span 3!important}
+/* rândul 4 (avertismentul de levier, de obicei ascuns) nu rămâne niciodată liber pe toată lățimea: altfel „dense” urca acolo detaliile cifrelor,
+   deasupra graficului (poza 1280 / 1440 după prima reparație) */
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden]))>#tbGridLarg{grid-column:1 / 4!important}
+}
+/* „Contează acum” îmbogățit (el, 11.11.2026: „îmbunătățește Contează acum”, ales tot): bara gravității în stânga (roșu = acționează azi, auriu =
+   urmărește, verde = pus), semnele mici după titlu (gravitatea, „nou”, cifra de data trecută, de când), banii în USDT, butoanele pe un rând; pe orice lățime */
+html.pzDemo #tabloubot #ctAcum .ctRand{border-left:3px solid var(--pzLi2);padding-left:10px}
+html.pzDemo #tabloubot #ctAcum .ctRand.ctRosu{border-left-color:var(--pzJos)}
+html.pzDemo #tabloubot #ctAcum .ctRand.ctGalben{border-left-color:var(--pzAur)}
+html.pzDemo #tabloubot #ctAcum .ctRand.ctVerde{border-left-color:var(--pzSus)}
+html.pzDemo #tabloubot #ctAcum .ctSemne em.ctGravVerde{color:var(--pzSus);border-color:var(--pzSus)}
+html.pzDemo #tabloubot #ctAcum .ctSemne{display:flex;flex-wrap:wrap;gap:4px;margin:3px 0 2px}
+html.pzDemo #tabloubot #ctAcum .ctSemne em{font-style:normal;font-size:12px;font-weight:600;line-height:1.5;padding:0 6px;border:1px solid var(--pzLi2);border-radius:4px;color:var(--pzT1)}
+html.pzDemo #tabloubot #ctAcum .ctSemne em.ctGravRosu{color:var(--pzJos);border-color:var(--pzJos)}
+html.pzDemo #tabloubot #ctAcum .ctSemne em.ctGravGalben{color:var(--pzAur);border-color:var(--pzAur)}
+html.pzDemo #tabloubot #ctAcum .ctSemne em.ctNou{color:var(--pzInfo);border-color:var(--pzInfo)}
+/* .ctTxt>.ctBani: același rang ca „#ctAcum .ctTxt>span” (altfel culoarea și grosimea nu se aplicau - revizia 11.11) */
+html.pzDemo #tabloubot #ctAcum .ctTxt>.ctBani{display:block;font-weight:600;color:var(--pzT0);font-variant-numeric:tabular-nums;margin-top:2px}
+html.pzDemo #tabloubot #ctAcum .ctTxt>.ctSemne{color:var(--pzT1)}
+/* rândul „pus” (verde): propoziția „☞” nu mai cere nimic ⇒ fără bara aurie de atenție */
+html.pzDemo #tabloubot #ctAcum .ctVerde .ctTxt>.ctFac{color:var(--pzT1);border-left-color:var(--pzLi2)}
+html.pzDemo #tabloubot #ctAcum .ctCopiere{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+html.pzDemo #tabloubot #ctAcum .ctGol{margin:6px 0 2px;color:var(--pzT2)}
+/* v100.322: sfârșitul așezării Tabloului */
 @media (max-width:640px){.sugPandaTab thead{display:table-header-group}.sugPandaTab{display:table}.sugPandaTab tbody{display:table-row-group}.sugPandaTab tr{display:table-row}.sugPandaTab td,.sugPandaTab th{display:table-cell}}
 /* v100.224: pe paginile de zi rămân alertele, banda botului și versiunea. Cipurile de cercetare revin la analiza monedei și în laborator. */
 body.peAcasa:not(.acMonedaDeschisa) .topLeft,body.peTablou .topLeft,body.peT212 .topLeft,body.peJurnal .topLeft,body.peGrid .topLeft,body.pePaginaNoua .topLeft,

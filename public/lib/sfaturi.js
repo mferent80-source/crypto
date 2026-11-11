@@ -199,7 +199,19 @@ var Sfaturi = (function () {
 
     // F) Punctul de zero.
     var z = x.zero;
-    if (z && z.pretZero != null && z.distantaZeroPct != null && tot !== null && tot < 0) {
+    // v100.322 (el, 11.11.2026: „am pus TP dar Contează acum și pagina botului nu îl vede”): cu take-profit-ul PUS în Pionex sfatul nu mai cere
+    // „aș pune”: spune că e pus, câți bani iei acolo (TabloExtra.totalLaTinta, aceeași socoteală ca zero-ul) și, dacă iese sub zero, unde e zero-ul exact
+    var tpRap = b.opritorProfitActiv && b.opritorProfitTip === "raport" ? nr(b.opritorProfitRaport) : null, tpPret = b.opritorProfitActiv ? nr(b.opritorProfit) : null;
+    if (tpPret !== null && nr(x.tpLive) > 0) tpPret = nr(x.tpLive);   // revizia 11.11: în procente, prețul socotit live (TabloExtra.pretTpLive), ca pe grafic
+    if (z && z.pretZero != null && z.distantaZeroPct != null && tot !== null && tot < 0 && (tpRap !== null || tpPret > 0)) {
+      var laT = nr(x.laTinta), etTp = tpRap !== null ? proc(100 * tpRap) + " din investiție" + (tpPret > 0 ? ", acum pe la " + pret(tpPret) : "") : pret(tpPret);
+      // zero-ul se mută la fiecare umplere (0.3018 … 0.3025 în aceeași dimineață) ⇒ sub 0,1 USDT (~ două perechi de grile la botul lui) e „practic pe zero”
+      var peZero = laT !== null && Math.abs(laT) < 0.1;
+      out.push({ cod: "zero", ton: laT !== null && (laT >= 0 || peZero) ? "bine" : "info", tpPus: true, pctZero: 100 * z.distantaZeroPct,
+        titlu: "Take-profit-ul tău e pus la " + etTp + " (zero-ul e la " + pret(z.pretZero) + ")",
+        text: (laT !== null ? "Când se atinge, ieși " + (peZero ? "practic pe zero (" + usdt(laT) + ")" : "cu " + usdt(laT) + " în total") + "; închis acum, ai lua " : "Închis acum, ai lua ") + (z.iei != null ? TextRo.num(z.iei, 1) + " USDT" : "—") + (inv ? " din " + TextRo.num(inv, 2) + " investiți" : "") + ".",
+        faCe: laT !== null && laT < 0 && !peZero ? "Ieșirea exact fără pierdere e la " + pret(z.pretZero) + "; la take-profit-ul de acum lași " + usdt(-laT).replace(/^\+/, "") + "." : "" });
+    } else if (z && z.pretZero != null && z.distantaZeroPct != null && tot !== null && tot < 0) {
       out.push({ cod: "zero", ton: "info", pctZero: 100 * z.distantaZeroPct, titlu: "Botul iese pe zero la " + pret(z.pretZero) + " (" + proc(100 * z.distantaZeroPct) + " de aici)",
         text: "Închis acum, ai lua " + (z.iei != null ? TextRo.num(z.iei, 2) + " USDT" : "—") + (inv ? " din " + TextRo.num(inv, 2) + " investiți" : "") + ".",
         // v100.40 (audit 30.09): pe minus, prețul de zero e DINCOLO de pretul de acum (deasupra la long, dedesubt la short) -> e un
@@ -291,7 +303,8 @@ var Sfaturi = (function () {
     var fp = o.fundingPionex && nr(o.fundingPionex.rataZi) !== null ? o.fundingPionex : null;
     var fundingPionex = fp ? { rataZi: nr(fp.rataZi), rata: nr(fp.rata) !== null ? nr(fp.rata) : nr(fp.rate), intervalOre: nr(fp.intervalOre), veche: fp.veche === true } : null;
     return { bot: b, scen: scen, sanse: sanse, rezumat: o.rezumat || null, funding: o.funding, fundingOre: oreFunding(o.fundingHist), fundingPionex: fundingPionex, fata4h: o.fata4h || null, dir4h: o.dir4h, fisa: o.fisa || null,
-      costuri: TE ? TE.grileVsCosturi(b, acum) : null, zero: TE ? TE.dacaInchizi(b) : null, geom: TE ? TE.geometrieBot(b) : null, ritm: ritm };
+      costuri: TE ? TE.grileVsCosturi(b, acum) : null, zero: TE ? TE.dacaInchizi(b) : null, geom: TE ? TE.geometrieBot(b) : null, ritm: ritm,
+      laTinta: TE && TE.totalLaTinta ? TE.totalLaTinta(b) : null, tpLive: TE && TE.pretTpLive ? TE.pretTpLive(b) : null };   // v100.322: banii și prețul la take-profit-ul pus (sfatul „zero”)
   }
   return { sfaturi: sfaturi, intrare: intrare };
 })();

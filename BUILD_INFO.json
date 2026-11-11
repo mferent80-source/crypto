@@ -1,6 +1,7 @@
 {
-  "version": "v100.321",
-  "badge": "v100.321 · NOTA TRADINGVIEW ȘI ÎN LISTA T212",
+  "version": "v100.322",
+  "badge": "v100.322 · TAKE-PROFIT-UL SE VEDE + TABLOUL AȘEZAT",
+    "asezare322": "11.11.2026 (el: „am pus TP dar Contează acum și pagina botului nu îl vede” ⇒ take-profit-ul pus în sfatul zero, în Contează acum, pe grafic, în scenarii; „îmbunătățește Contează acum” ⇒ banii în USDT, butonul potrivit, ce s-a schimbat, gravitatea; „sub grafic e mult spațiu gol” ⇒ ce e pe grafic în dreapta, detaliile cifrelor sub grafic, graficul întreg la deschidere pe calculator; aprobat: „arată bine, aplică și livrează dar verifică să nu se piardă nimic”)",
   "engineContract": "54.1",
   "dataSchema": 54,
   "baseRelease": "v77.4 · TABLOUL BOTULUI",

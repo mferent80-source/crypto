@@ -6985,6 +6985,7 @@ function tbTinteScenariu(b){
   if(sus!==null)t.push({eticheta:"marginea de sus",pret:sus});
   if(jos!==null)t.push({eticheta:"jos",pret:jos});
   if(opr!==null&&opr!==jos)t.push({eticheta:"opritorul",pret:opr});
+  var tpS=!b.opritorProfitActiv?null:typeof TabloExtra!=="undefined"&&TabloExtra.pretTpLive?TabloExtra.pretTpLive(b):botiNr(b.opritorProfit);if(tpS!==null&&tpS>0)t.push({eticheta:"take-profit-ul",pret:tpS});   // v100.322: take-profit-ul pus (în procente: socotit live, ca stopul)
   var propriu=tbStare.scenariuPropriu;if(propriu>0)t.push({eticheta:"prețul tău",pret:propriu});
   return t;
 }
@@ -7099,7 +7100,18 @@ function tbKpiLichDeseneaza(b0){
   var bara=$("tbKpiLichBara");
   if(bara){var f=dep?0:dist===null?0:Math.min(1,Math.abs(dist)/40);bara.style.width=(f*100).toFixed(1)+"%";bara.className="tbGaugeUmplut "+nivel}
 }
-function tbDeseneazaKpi(){
+// v100.322 (el, 11.11.2026: „sus compact, detaliile cifrelor sub grafic”): pe calculator (≥ 1181 px) proza fiecărei cifre + rândurile ei stau sub
+// grafic, în #tbKpiDetalii (pe coloana cifrei); sub 1181 px, înapoi în celulă. Se mută PERECHEA (proza + rândurile, regula `:has(+.pzKvBloc)`
+// le ține legate); codul le găsește după id oriunde ar sta (app.js scrie proza, asezare-paznic.js rândurile). Nimic scos, nimic dublat.
+var TB_KPI_DET=[["tbKpiGrid","tbKpiTotalSub"],["tbKpiLichSub"],["tbKpiPretSub"],["tbKpiPiataSub"]];
+function tbKpiAsezare(){
+  var dest=$("tbKpiDetalii"),kpi=$("tbKpi");if(!dest||!kpi)return;
+  if(!tbKpiAsezare.rz){tbKpiAsezare.rz=1;window.addEventListener("resize",function(){tbKpiAsezare()})}
+  var lat=typeof matchMedia==="function"&&matchMedia("(min-width:1181px)").matches,cel=kpi.children;
+  TB_KPI_DET.forEach(function(ids,i){var t=lat?dest.children[i]:cel[i];if(!t)return;ids.forEach(function(id){var s=$(id);if(!s)return;var r=$(id+"Kv");if(s.parentNode!==t)t.appendChild(s);if(r&&r.previousElementSibling!==s)s.parentNode.insertBefore(r,s.nextSibling)})});
+  if(dest.hidden!==!lat)dest.hidden=!lat;   /* revizia 11.11: atributul doar când se schimbă (altfel o mutație + recalculul :has() la fiecare desen) */
+}
+function tbDeseneazaKpi(){if(typeof tbKpiAsezare==="function")tbKpiAsezare();
   var b=tbStare.routeOk===false?null:tbStare.bot;
   var pune=function(id,text,cls){var e=$(id);if(!e)return;if(e.textContent!==text)e.textContent=text;if(cls!=null){var c=(e.classList.contains("tbKpiVal")?"tbKpiVal ":"tbSub ")+cls;if(e.className!==c)e.className=c}};   /* audit 23.10: doar ce s-a schimbat (1.114 mutații / 20 s în repaus) */
   if(!b){["tbKpiTotal","tbKpiLich","tbKpiPret","tbKpiPiata"].forEach(function(id){pune(id,"—","")});pune("tbKpiGrid","—","tbKpiGrid");
@@ -7400,7 +7412,33 @@ function tbStopSansa(b){if(!b||typeof CurbaStop==="undefined"||!b.opritorPierder
   return s}
 function tbStopSansaDrum(b){var s=tbStopSansa(b);if(!s)return null;var k=Math.round(s.p24*100);return "24 h: "+(k<1?"< 1%":k>99?"> 99%":"~"+k+"%")}   /* ca graficul (grafic-bot.js cuSanse) */
 function tbConteazaLista(b){if(!b||typeof Conteaza==="undefined")return [];try{return Conteaza.alege({stop:tbStopSansa(b),sfaturi:tbStare.sfaturiLista||[],lista:tbStare.todoLista||[],sanse:tbSansePt(b)||[]})}catch(e){return []}}
-function tbRenderConteaza(dinTodo){var el=$("ctAcum");if(!el)return [];var b=tbStare.routeOk===false?null:tbStare.bot,l=b?tbConteazaLista(b):[],h=typeof Conteaza!=="undefined"?Conteaza.html(l,escapeHtml):"";if(tbStare.ctHtml!==h){el.innerHTML=h;tbStare.ctHtml=h}if(el.hidden!==!h)el.hidden=!h;var sus=typeof Conteaza!=="undefined"?Conteaza.titluriSus(l).map(function(t){return String(t).toLowerCase()}):[],vechi=(tbStare.conteazaSus||[]).join("\n");tbStare.conteazaSus=sus;
+// v100.322 (el, 11.11.2026: „îmbunătățește Contează acum” ⇒ ales: banii în USDT pe rând, butonul potrivit, ce s-a schimbat de la ultima privire,
+// gravitatea și „de când”). Pe o COPIE a rândurilor (Conteaza.alege rămâne neatins): banii la prețul rândului din ACEEAȘI socoteală ca
+// „Dacă prețul ajunge la…” (Scenariu.scenarii), butonul potrivit, semnele. Ce ai văzut ultima oară se ține în browserul tău (ctVazut:<bot>);
+// semnele se socotesc față de vizita de dinainte și rămân aceleași toată sesiunea (fără rescrieri la fiecare tură).
+function tbCtOra(t){var d=new Date(t),z=function(n){return String(n).padStart(2,"0")};return (Date.now()-t>86400000?z(d.getDate())+"."+z(d.getMonth()+1)+" ":"")+z(d.getHours())+":"+z(d.getMinutes())}
+function tbCtUsdt(v){if(typeof TextRo!=="undefined"&&TextRo.usdt&&TextRo.zecMici)return TextRo.usdt(v,TextRo.zecMici(v));return (v<0?"−":v>0?"+":"")+Math.abs(v).toFixed(1).replace(".",",")+" USDT"}   /* revizia 11.11: ca sfaturile (o zecimală, o sumă mică nu iese „0,0”, miile grupate) */
+function tbCtBani(b,px){try{if(!(px>0)||typeof Scenariu==="undefined")return null;var s=Scenariu.scenarii(tbStare.botBrut,b,[{pret:px,eticheta:""}]),r=s&&s.ok&&s.randuri&&s.randuri[0];return r&&isFinite(r.total)?r.total:null}catch(e){return null}}
+function tbCtCheie(x){return x.cheie+"|"+String(x.titlu||"").toLowerCase().replace(/[0-9]+([.,][0-9]+)?/g,"#").replace(/\s+/g," ").trim()}
+/* revizia 11.11: „de la ultima privire” = de la ultima ta privire, nu de la încărcarea paginii: după ≥ 30 min cu pagina ascunsă (alt tab, telefonul
+   blocat) memoria se reia din browser (ce ai văzut ultima oară) și blocul se redesenează la tura următoare */
+function tbCtMemorie(b){if(!tbCtMemorie.vz&&typeof document!=="undefined"&&document.addEventListener){tbCtMemorie.vz=1;document.addEventListener("visibilitychange",function(){if(document.hidden){tbStare.ctAscunsLa=Date.now();return}if(tbStare.ctAscunsLa&&Date.now()-tbStare.ctAscunsLa>=1800000){tbStare.ctMem=null;tbStare.ctHtml=null}tbStare.ctAscunsLa=0})}
+  var k="ctVazut:"+b.id,m=tbStare.ctMem||(tbStare.ctMem={});if(!m[k]){var v=null;try{v=JSON.parse(localStorage.getItem(k)||"null")}catch(e){}m[k]={prev:v&&v.r?v.r:null,acum:v&&v.r?v.r:{}}}return {k:k,o:m[k]}}
+function tbConteazaImbogateste(b,l){
+  var mem=null,g=null,acum=Date.now(),vazut={};try{mem=tbCtMemorie(b)}catch(e){}
+  try{if(typeof Scenariu!=="undefined"){var s0=Scenariu.scenarii(tbStare.botBrut,b,[]);g=s0&&s0.ok?s0.grid:null}}catch(e){}
+  var out=l.map(function(x0){var x=Object.assign({},x0),semne=[x.ton==="rosu"?{cls:"ctGrav ctGravRosu",text:"acționează azi"}:x.ton==="verde"?{cls:"ctGrav ctGravVerde",text:"pus"}:{cls:"ctGrav ctGravGalben",text:"urmărește"}],but=[],px=null,cand="";
+    if(x.cheie==="stop"){var st=null;try{st=tbStopSansa(b)}catch(e){}if(st&&st.raport==null&&st.stop>0){px=st.stop;cand="dacă se atinge stopul"}if(st&&st.raport==null&&st.mut20>0)but.push({text:"copiază stopul propus "+Conteaza.pret(st.mut20),click:"gridCopiaza(this.value)",value:Conteaza.pret(st.mut20)})}
+    else if(x.cheie==="margine"&&g){px=/de sus/i.test(x.titlu)?g.sus:g.jos;cand="dacă atinge marginea";but.push({text:"deschide în Simulator",click:"gsDeschideBot()"})}
+    if(px){var t=tbCtBani(b,px);if(t!==null)x.bani=cand+": "+tbCtUsdt(t)+" în total, ca în „Dacă prețul ajunge la…”"}
+    if(mem){var ck=tbCtCheie(x),p=mem.o.prev&&mem.o.prev[ck],a=mem.o.acum[ck],prima=a&&a.prima?a.prima:p&&p.prima?p.prima:acum;vazut[ck]={nr:x.nr,prima:prima};
+      if(mem.o.prev&&!p)semne.push({cls:"ctNou",text:"nou"});else if(p&&String(p.nr)!==String(x.nr))semne.push({cls:"ctDelta",text:p.nr+" → "+x.nr});
+      if(prima<acum-60000)semne.push({cls:"ctDeCand",text:"de la "+tbCtOra(prima)})}
+    x.semne=semne;if(but.length)x.butoane=but;return x});
+  if(mem){mem.o.acum=vazut;var sv=JSON.stringify(vazut);if(mem.o.scris!==sv){mem.o.scris=sv;try{localStorage.setItem(mem.k,JSON.stringify({r:vazut,la:acum}))}catch(e){}}}   /* scrie doar ce s-a schimbat */
+  return out;
+}
+function tbRenderConteaza(dinTodo){var el=$("ctAcum");if(!el)return [];var b=tbStare.routeOk===false?null:tbStare.bot,l=b?tbConteazaLista(b):[],h=typeof Conteaza!=="undefined"?(l.length?Conteaza.html(typeof tbConteazaImbogateste==="function"?tbConteazaImbogateste(b,l):l,escapeHtml):b&&Array.isArray(tbStare.sfaturiLista)&&typeof Conteaza.gol==="function"&&typeof tbCtOra==="function"?Conteaza.gol(tbCtOra(Date.now())):""):"";if(tbStare.ctHtml!==h){el.innerHTML=h;tbStare.ctHtml=h}if(el.hidden!==!h)el.hidden=!h;var sus=typeof Conteaza!=="undefined"?Conteaza.titluriSus(l).map(function(t){return String(t).toLowerCase()}):[],vechi=(tbStare.conteazaSus||[]).join("\n");tbStare.conteazaSus=sus;
   /* revizia 🟡7: blocul și-a schimbat rândurile după ce s-a desenat lista (curba / cifrele sosesc mai târziu) ⇒ lista o dată, ca „↑ e și sus” să fie la zi; din listă nu se cheamă înapoi */
   if(!dinTodo&&vechi!==sus.join("\n")&&typeof tbRenderTodo==="function")tbRenderTodo();return l}
 function tbEsteSus(t){return (tbStare.conteazaSus||[]).indexOf(String(t||"").toLowerCase())>=0}
@@ -7897,6 +7935,22 @@ function tbGridLargRender(b){
   el.innerHTML='<b>⚠️ '+escapeHtml(nume)+': gridul e mai larg decât îi permite levierul</b><span>La marginea de '+r.parte+' −'+V(r.laMargine)+' USDT'+(r.procent!=null?' ('+Math.round(r.procent*100)+'% din bani)':'')+', pragul de pierdere −'+V(pl.minus)+(pl.nota!=="planul botului"?' <span class="tbSub">('+(pl.sursa==="prag"?'pragul tău, % din sumă':'propunerea mea, −15% din sumă: botul n-are plan scris')+(pl.sursa==="prag"?': botul n-are plan scris':'')+')</span>':'')+'.'
     +(r.stopPlan?' Stopul la prag: '+escapeHtml(tbPretScurt(r.stopPlan))+(r.moarte!=null&&r.intervale?' · '+r.moarte+' din '+TextRo.cate(r.intervale,"grilă","grile")+' n-ar lucra':'')+'.':'')+'</span><span>👉 Ce aș face eu: lași stopul la plan și închizi aproape de zero; botul următor îl pornești ÎNGUST sau LARG din fișă.</span>';
 }
+// v100.322 (așezarea nouă pe calculator): #tbGrafic poate fi „transparent” (display:contents, bucățile lui stau direct în grila rândului) ⇒ n-are
+// lățime; graficul se desenează pe lățimea coloanei lui: întâi cutia, apoi desenul de dinainte, apoi prima coloană a grilei rândului
+function tbLatimeGrafic(el){
+  var w=el.getBoundingClientRect().width;if(w>0)return w;
+  var z=el.querySelector(".gbZona");if(z&&z.getBoundingClientRect().width>0)return z.getBoundingClientRect().width;
+  /* revizia 11.11: la primul desen zona nu există încă; capul graficului („Prețul” + intervalele) stă pe aceleași coloane (1 / 5) ⇒ lățimea lui,
+     nu 800 până la desenul următor (înainte: grid-template-columns citit cu parseFloat - „minmax(…” dădea NaN) */
+  var cap=document.querySelector("#tbGraficCard>.tbBlocCap");if(cap&&cap.getBoundingClientRect().width>0)return cap.getBoundingClientRect().width;
+  return el.clientWidth||0;
+}
+// v100.322: pe calculator (≥ 1181 px) graficul încape întreg în fereastră la deschidere: înălțimea ferestrei minus locul de deasupra lui
+function tbInaltMaxGrafic(ingust){
+  if(ingust||typeof matchMedia!=="function"||!matchMedia("(min-width:1181px)").matches)return 0;
+  var cap=document.querySelector("#tbGraficCard>.tbBlocCap");if(!cap)return 0;
+  return Math.max(0,Math.round(window.innerHeight-(cap.getBoundingClientRect().bottom+(window.scrollY||0))-14));
+}
 function renderTabloGrafic(){
   var el=$("tbGrafic");if(!el)return;
   tbTemaAplica();   /* v100.316: tema e pusă înaintea desenului, ca graficul să iasă pe paleta ei */
@@ -7913,11 +7967,12 @@ function renderTabloGrafic(){
   var bare=GraficBot.bare(g.randuri);
   if(bare.length<10){el.innerHTML='<div class="emptyState">Prea puține prețuri pentru grafic.</div>';return}
   tbSincInd();
-  if(!tbGrafRz){tbGrafRz={t:null,w:0};window.addEventListener("resize",function(){clearTimeout(tbGrafRz.t);tbGrafRz.t=setTimeout(function(){var e=$("tbGrafic");if(tbPanouVizibil()&&e&&Math.round(e.getBoundingClientRect().width)!==tbGrafRz.w)renderTabloGrafic()},150)})}
-  var W=Math.round(el.getBoundingClientRect().width||el.clientWidth||800),ingust=W<560;tbGrafRz.w=W;
+  if(!tbGrafRz){tbGrafRz={t:null,w:0};window.addEventListener("resize",function(){clearTimeout(tbGrafRz.t);tbGrafRz.t=setTimeout(function(){var e=$("tbGrafic");if(tbPanouVizibil()&&e&&(Math.round(tbLatimeGrafic(e))!==tbGrafRz.w||window.innerHeight!==tbGrafRz.h))renderTabloGrafic()},150)})}
+  var W=Math.round(tbLatimeGrafic(el)||800),ingust=W<560;tbGrafRz.w=W;
   // v100.99 (I-532): intrarea graficului e PURĂ (GraficBot.intrareBot) - planul cu gridul, lumânarea live, șansele (I-528), stopul vs planul (I-527), stopul de probă (I-529)
   tbAdu1m(b);   /* v100.146: lumânările de 1 min ale ferestrei botului, din spate; când vin, se redesenează o dată */
   var oG=GraficBot.intrareBot({bot:b,brut:brut,bare:bare,plan:tbPlan.botId===b.id?tbPlan.plan:null,alerteServer:tbStare.alerteServer,valoare:tbValoarePt(b),profil:tbProfilPt(b),consLinii:tbStare.consLinii,funding:tbFundingPt(),sanse:tbSansePt(b),adxPeBoti:(tbCazuriAdu(),tbCazuri.adx||null),pretViu:pvPretViuAcum(b),acum:Date.now(),W:W,st:tbIndStare(),scara:tbIndStare().scara,simplu:tbModSimplu(),per:TB_PERIOADE[tbTf()].per,fereastraToata:tbFereastraToataE(),fereastraCat:TB_PERIOADE[tbTf()].cat,bare1m:tbBare1m(b),semafor:tbSemaforTf(b),tfGrafic:TB_PERIOADE[tbTf()].i,trendIstoric:tbTrendIstoric(b),semClic:{"5M":"tbAlegeInterval('5M')","15M":"tbAlegeInterval('15M')","60M":"tbAlegeInterval('60M')","4H":"tbAlegeInterval('4H')","1D":"tbAlegeInterval('1D')"},semPeBoti:tbCazuri.sem||null});
+  oG.inaltMax=tbInaltMaxGrafic(ingust);tbGrafRz.h=window.innerHeight;   /* v100.322: graficul încape întreg în ecran pe calculator */
   var d=GraficBot.desen(oG);tbFereastraButon(oG);tbDeseneazaCitire(oG,b);
   window.tbGraficUltim={botId:b.id,niv:Array.isArray(oG.niv)?oG.niv:[],stopPlan:oG.consLinii&&oG.consLinii.stopPlan,la:Date.now()};   /* v100.151: drumul botului (lib/asezare-paznic.js) citește ACELEAȘI niveluri ca graficul, din date */
   var pAcum=pvPretViuAcum(b)||bare[bare.length-1].c;

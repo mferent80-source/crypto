@@ -56,6 +56,11 @@ var Conteaza = (function () {
         pune({ cheie: "margine", ton: s.ton === "critic" ? "rosu" : "galben", grav: s.ton === "critic" ? 0 : 3,
           nr: are ? din100(ps) : nr(s.pctJos) !== null ? num1(s.pctJos) : "!", nrSub: are ? "din 100 · 24 h" : "% până la margine",
           titlu: s.titlu, sub: are ? "o atinge într-o zi în " + din100(ps) + " din 100 de cazuri (istoria monedei)" : "", faCe: String(s.faCe || ""), copiaza: s.copiaza });
+      } else if (s.cod === "zero" && s.tpPus) {
+        // v100.322 (el: „am pus TP dar Contează acum nu îl vede”): take-profit-ul pus = hotărârea e luată ⇒ rândul confirmă, verde, ultimul
+        // revizia 11.11: verde doar când ieși pe plus sau practic pe zero (sfatul „bine”); dacă take-profit-ul închide sub zero, rămâne auriu, de urmărit
+        var bine = s.ton === "bine";
+        pune({ cheie: "zero", ton: bine ? "verde" : "galben", grav: bine ? 6 : 5, nr: "✓", nrSub: "take-profit pus", titlu: s.titlu, sub: String(s.text || ""), faCe: String(s.faCe || "") });
       } else if (s.cod === "zero") {
         var z = nr(s.pctZero);
         pune({ cheie: "zero", ton: "galben", grav: 5, nr: z === null ? "0" : (z > 0 ? "+" : z < 0 ? "−" : "") + num1(Math.abs(z)), nrSub: "% până la zero",
@@ -78,22 +83,30 @@ var Conteaza = (function () {
     esc = esc || function (s) { return String(s); };
     return '<div class="ctCap"><b>CONTEAZĂ ACUM</b><span>doar ce pune bani în joc azi, cu cifra măsurată · toate sfaturile rămân în lista de mai jos</span></div>'
       + l.map(function (x) {
-        var cop = Array.isArray(x.copiaza) && x.copiaza.length ? '<div class="ctCopiere">' + x.copiaza.map(function (c) {
-          return '<button type="button" class="tbBtnLinie tbTodoCopiaza ctBtn" value="' + esc(c.pret) + '" data-action-click="gridCopiaza(this.value)" aria-label="Copiază prețul pentru ' + esc(c.ce) + ': ' + esc(c.pret) + '">copiază ' + esc(c.ce) + ' ' + esc(c.pret) + '</button>'; }).join("") + '</div>' : "";
-        return '<div class="ctRand ' + (x.ton === "rosu" ? "ctRosu" : "ctGalben") + '"><div class="ctNr">' + esc(x.nr) + '<small>' + esc(x.nrSub) + '</small></div><div class="ctTxt"><b>' + esc(x.titlu) + '</b>'
-          + (x.sub ? '<span>' + esc(x.sub) + '</span>' : "") + (x.faCe ? '<p class="ctFac">👉 ' + esc(x.faCe) + '</p>' : "") + cop + '</div></div>';
+        var cop = Array.isArray(x.copiaza) && x.copiaza.length ? x.copiaza.map(function (c) {
+          return '<button type="button" class="tbBtnLinie tbTodoCopiaza ctBtn" value="' + esc(c.pret) + '" data-action-click="gridCopiaza(this.value)" aria-label="Copiază prețul pentru ' + esc(c.ce) + ': ' + esc(c.pret) + '">copiază ' + esc(c.ce) + ' ' + esc(c.pret) + '</button>'; }).join("") : "";
+        /* v100.322 (el, 11.11.2026: „îmbunătățește Contează acum”): câmpurile puse de app.js (tbConteazaImbogateste) - semnele (gravitatea, „nou”,
+           cifra de data trecută, de când), banii la prețul rândului, butoanele potrivite. Fără ele, rândul e ca înainte. */
+        var sem = Array.isArray(x.semne) && x.semne.length ? '<span class="ctSemne">' + x.semne.map(function (q) { return '<em class="' + esc(q.cls) + '">' + esc(q.text) + '</em>'; }).join("") + '</span>' : "";
+        var but = Array.isArray(x.butoane) && x.butoane.length ? x.butoane.map(function (q) { return '<button type="button" class="tbBtnLinie ctBtn" data-action-click="' + esc(q.click) + '"' + (q.value != null ? ' value="' + esc(q.value) + '"' : "") + '>' + esc(q.text) + '</button>'; }).join("") : "";
+        return '<div class="ctRand ' + (x.ton === "rosu" ? "ctRosu" : x.ton === "verde" ? "ctVerde" : "ctGalben") + '"><div class="ctNr">' + esc(x.nr) + '<small>' + esc(x.nrSub) + '</small></div><div class="ctTxt"><b>' + esc(x.titlu) + '</b>' + sem
+          + (x.sub ? '<span>' + esc(x.sub) + '</span>' : "") + (x.bani ? '<span class="ctBani">' + esc(x.bani) + '</span>' : "") + (x.faCe ? '<p class="ctFac">👉 ' + esc(x.faCe) + '</p>' : "") + (cop || but ? '<div class="ctCopiere">' + cop + but + '</div>' : "") + '</div></div>';
       }).join("");
   }
+
+  /* v100.322: cu bot, fără nimic de pus aici - cartela rămâne la locul ei (partea de sus nu mai sare) și spune când a verificat */
+  function gol(ora) { return '<div class="ctCap"><b>CONTEAZĂ ACUM</b><span>doar ce pune bani în joc azi, cu cifra măsurată · toate sfaturile rămân în lista de mai jos</span></div><p class="ctGol">Nimic nu pune bani în joc acum' + (ora ? " · verificat la " + String(ora).replace(/[<>&"]/g, "") : "") + '</p>'; }
 
   // Acasă: doar stopul sau un rând roșu (ce cere o hotărâre azi); restul îl vezi în Tablou
   function acasa(l, nume) {
     if (!Array.isArray(l) || !l.length) return null;
     var x = l.filter(function (q) { return q.cheie === "stop" || q.ton === "rosu"; })[0]; if (!x) return null;
-    var t = x.cheie === "stop" ? x.titlu.replace(/^Stopul tău \(/, "stopul (") : x.titlu.charAt(0).toLowerCase() + x.titlu.slice(1), rest = l.length - 1;
+    // revizia 11.11: rândul verde („take-profit pus”) e o confirmare, nu ceva „de văzut” ⇒ nu se numără
+    var t = x.cheie === "stop" ? x.titlu.replace(/^Stopul tău \(/, "stopul (") : x.titlu.charAt(0).toLowerCase() + x.titlu.slice(1), rest = l.filter(function (q) { return q !== x && q.ton !== "verde"; }).length;
     return { titlu: String(nume || "botul") + ": " + t, text: "👉 hotărăște în Tablou" + (rest > 0 ? " · încă " + rest + " de văzut acolo" : ""), ton: x.ton };
   }
 
   function titluriSus(l) { return (Array.isArray(l) ? l : []).filter(function (x) { return x.cheie !== "stop"; }).map(function (x) { return x.titlu; }); }
 
-  return { PRAG: PRAG, alege: alege, html: html, acasa: acasa, titluriSus: titluriSus, pret: pret };
+  return { PRAG: PRAG, alege: alege, html: html, gol: gol, acasa: acasa, titluriSus: titluriSus, pret: pret };
 })();
