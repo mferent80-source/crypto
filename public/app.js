@@ -7303,7 +7303,8 @@ function renderTabloIndicatori(){
   /* v100.324 (el, 11.11.2026: „detaliile indicatorilor când e închis să arate un grafic sau o bară cu direcția sau scorul” ⇒ I-857..I-861, „fă toate”):
      în rândul închis - banda celor 4 intervale (cu botul / neutri / împotrivă), nota TradingView și „≠”, „era ↔”, rigla scorului cu pragul lui, istoria pe 4 ore */
   var sm=$("tbIndSumar");if(sm){var bd=IndicatoriBot.banda(l,b.directie),tvb=d.tv&&d.tv.n&&typeof TvNote!=="undefined"?IndicatoriBot.tvBanda(d.tv.n,bd,TvNote.clasa):null,sch=tbIndSchimbari(b,bd),b4=bd.filter(function(x){return x.eticheta==="4 ore"})[0],ist=b4&&!b4.lipsa?tbIstoric4hGata(d.simbol):null;
-    var hs=IndicatoriBot.bandaHtml(bd,tvb,sch,b.directie,escapeHtml)+IndicatoriBot.riglaHtml(bd,b.directie,escapeHtml)+(ist?IndicatoriBot.sparkHtml(ist,b.directie,escapeHtml):"");
+    /* v100.327 (el: „încadrează frumos”): rigla și istoria în două cartele, pe rândul lor sub bandă */
+    var gr=IndicatoriBot.riglaHtml(bd,b.directie,escapeHtml)+(ist?IndicatoriBot.sparkHtml(ist,b.directie,escapeHtml):""),hs=IndicatoriBot.bandaHtml(bd,tvb,sch,b.directie,escapeHtml)+(gr?'<span class="ibGrafice">'+gr+'</span>':"");
     if(tbStare.indSumarHtml!==hs){sm.innerHTML=hs;tbStare.indSumarHtml=hs}if(sm.hidden!==!hs)sm.hidden=!hs}
 }
 function tbIndSumarGol(){var sm=$("tbIndSumar");if(sm){if(sm.innerHTML)sm.innerHTML="";sm.hidden=true}tbStare.indSumarHtml=""}

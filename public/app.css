@@ -4900,6 +4900,42 @@ html.pzDemo #t212 .t212Plan input.calc{border-color:var(--pzInfo)}
 #t212 .t212Graf.t212GrafLat>.gbValori{grid-column:2;grid-row:4;width:auto}
 #t212 .t212Graf.t212GrafLat>.gbLeg{grid-column:2;grid-row:5;flex-direction:column;align-items:flex-start;gap:4px}
 /* v100.326: sfârșitul paginii Trading 212 */
+/* v100.327 · rigla și istoria scorului spuse în cuvinte (el, 11.11.2026, cu poza riglei 1h / 4h / 1z: „fă mai explicit, că nu prea înțeleg direcția la ce
+   arată”): titlul riglei, cuvântul lângă cifră (jos / neutru / sus), capetele sub bare, legenda culorilor față de bot; sub istoria pe 4h, încotro merge.
+   Totul la vedere (titlul de la mouse nu se vede pe telefon); mărimile pe scara Tabloului, culorile legendei = ale zonelor riglei. */
+#tabloubot .ibRigla{grid-template-columns:22px minmax(0,1fr) 44px}
+#tabloubot .ibRnr{display:flex;flex-direction:column;align-items:flex-end;line-height:1.15}
+#tabloubot .ibRnr small{font-size:12px;font-weight:400;color:var(--pzT2);white-space:nowrap}
+#tabloubot .ibRcap{font-size:12px;color:var(--pzT2)}
+#tabloubot .ibRax{display:grid;grid-template-columns:22px minmax(0,1fr) 44px;gap:6px;font-size:12px;color:var(--pzT2);margin-top:-2px}
+#tabloubot .ibRaxB{display:flex;justify-content:space-between;gap:4px}
+#tabloubot .ibRaxB>span{white-space:nowrap}
+#tabloubot .ibRleg{display:flex;flex-wrap:wrap;gap:2px 10px;font-size:12px;color:var(--pzT2);line-height:1.4}
+#tabloubot .ibRleg>span{min-width:0}   /* se rupe pe rânduri: pe calculator rigla are ~210 px (nowrap ieșea din cutie la 1440–2560, +12 px peste pagină la 1920) */
+#tabloubot .ibRleg i{display:inline-block;width:10px;height:8px;border-radius:2px;margin-right:4px}
+#tabloubot .ibLbun{background:color-mix(in srgb,var(--pzSus) 45%,transparent)}
+#tabloubot .ibLrau{background:color-mix(in srgb,var(--pzJos) 35%,transparent)}
+#tabloubot .ibRleg i.ibLsemn{width:3px;height:12px;border-radius:1px;background:var(--pzT0);vertical-align:-2px}
+/* graficul micuț la fel (el: „fă și graficul micuț la fel”): etichetele din desen - pragurile cu sensul lor, cifra de la început și cea de acum */
+#tabloubot .ibSpEtP{font-size:12px;fill:var(--pzT2)}
+#tabloubot .ibSpVal{font-size:12px;font-weight:600;fill:var(--pzT0)}
+#tabloubot .ibSpEt i{display:inline-block;width:10px;height:8px;border-radius:2px;margin-right:4px}
+#tabloubot :is(.ibSpVal,.ibSpEtP){paint-order:stroke;stroke:var(--pzF1);stroke-width:3px;stroke-linejoin:round}   /* contur în culoarea fondului: cifra se citește și peste linia punctată (poza copiei la 1920) */
+/* încadrarea (el: „încadrează frumos”): rigla și istoria în două cartele egale, pe rândul lor sub banda celor 4 intervale (aceeași lățime maximă, același
+   chenar ca celulele benzii); când rândul e îngust (telefon, coloana din dreapta a Trendului la 1181–1699) - una sub alta. Decide lățimea rândului (container). */
+#tabloubot .tbIndSumar{container-type:inline-size}
+#tabloubot .ibGrafice{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;flex:1 1 100%;max-width:760px;min-width:0}
+@container (min-width:620px){#tabloubot .ibGrafice{grid-template-columns:repeat(2,minmax(0,1fr))}}
+#tabloubot .ibGrafice>:is(.ibRigle,.ibSpark){display:flex;flex-direction:column;gap:6px;min-width:0;max-width:none;padding:8px 10px;border:1px solid var(--pzLi);border-radius:4px}
+/* el: „mărește scorul pe 4 h pe lățime cât e panoul”: desenul istoriei crește cât cartela; coloana etichetelor pragurilor 56 px; sub 120 px nu se strânge */
+#tabloubot .ibSpDes{display:flex;gap:8px;align-items:flex-start;min-width:0}
+#tabloubot .ibSpG{flex:1 1 0;min-width:120px;height:56px}
+#tabloubot .ibSpPr{flex:0 0 56px}
+/* tabelul TradingView din fișa T212 (el, poza de pe telefon: notele cădeau una sub alta în „Rezumat”, „Medii” și „Oscilatoare” goale): regulile tabelului
+   pozițiilor - „.t212Tab tr.t212Det td{display:block}” sub 640 px, „.t212Tab td{padding;text-align:right;13,5 px}” - prindeau și celulele lui */
+#t212 .t212Det .tvNoteTab :is(td,th){display:table-cell;padding:4px 3px;text-align:center;background:transparent;font-size:12px;white-space:nowrap}
+#t212 .t212Det .tvNoteTab tbody th{text-align:left}
+/* v100.327: sfârșitul riglei spuse în cuvinte */
 @media (max-width:640px){.sugPandaTab thead{display:table-header-group}.sugPandaTab{display:table}.sugPandaTab tbody{display:table-row-group}.sugPandaTab tr{display:table-row}.sugPandaTab td,.sugPandaTab th{display:table-cell}}
 /* v100.224: pe paginile de zi rămân alertele, banda botului și versiunea. Cipurile de cercetare revin la analiza monedei și în laborator. */
 body.peAcasa:not(.acMonedaDeschisa) .topLeft,body.peTablou .topLeft,body.peT212 .topLeft,body.peJurnal .topLeft,body.peGrid .topLeft,body.pePaginaNoua .topLeft,

@@ -93,7 +93,7 @@ await test("I-858 rigla: pe 1h, 4h, 1z, cu pragul ADEVĂRAT al intervalului (q.p
   assert.match(h, /^<span class="ibRigle">/);
   // 4 ore: prag 64 ⇒ coboară sub 36, urcă peste 64; botul short ⇒ zona de jos e „bună”
   // revizia: regula e ≥ prag / ≤ 100 − prag ⇒ „până la 36 coboară, de la 64 urcă”
-  assert.match(h, /<span class="ibRigla" title="4 ore: scor 30 · până la 36 coboară, de la 64 urcă \(pragul acestui interval\) · zona care ajută botul e marcată"><span class="ibRtf">4h<\/span><span class="ibRbara"><i class="ibZ ibZjos ibZbun" style="width:36%"><\/i><i class="ibZ ibZneutru" style="width:28%"><\/i><i class="ibZ ibZsus ibZrau" style="width:36%"><\/i><b class="ibRsemn" style="left:30%"><\/b><\/span><span class="ibRnr">30<\/span><\/span>/);
+  assert.match(h, /<span class="ibRigla" title="4 ore: scor 30 · până la 36 coboară, de la 64 urcă \(pragul acestui interval\) · zona care ajută botul e marcată"><span class="ibRtf">4h<\/span><span class="ibRbara"><i class="ibZ ibZjos ibZbun" style="width:36%"><\/i><i class="ibZ ibZneutru" style="width:28%"><\/i><i class="ibZ ibZsus ibZrau" style="width:36%"><\/i><b class="ibRsemn" style="left:30%"><\/b><\/span><span class="ibRnr"><b>30<\/b><small>↓ jos<\/small><\/span><\/span>/);   // v100.327: cuvântul direcției lângă cifră
   assert.match(h, /<span class="ibRigla" title="1 zi: scor 72 · până la 34 coboară, de la 66 urcă/);
   assert.doesNotMatch(h, /1 oră: scor/, "1 oră fără date ⇒ fără riglă");
   const fp = IB.riglaHtml(IB.banda([{ eticheta: "4 ore", q: Object.assign(Q_JOS(), { prag: undefined }) }], "short"), "short", esc);
@@ -143,11 +143,11 @@ await test("I-861 desenul: linia scorului, pragurile ca linii, punctul de acum, 
   const ist = [{ s: 50, prag: 64 }, { s: 45, prag: 64 }, { s: 38, prag: 64 }];
   const h = IB.sparkHtml(ist, "short", esc);
   assert.match(h, /^<span class="ibSpark" title="Scorul pe 4 ore, ultimele 3 bare închise: de la 50 la 38 · liniile = pragurile \(36 \/ 64\)">/);
-  assert.match(h, /<svg viewBox="0 0 120 32" width="120" height="32" aria-hidden="true">/);
-  assert.match(h, /<rect class="ibSpBun" x="0" y="20\.48" width="120" height="11\.52"><\/rect>/, "short: zona de sub 36 (coboară) e cea bună");
-  assert.match(h, /<line class="ibSpPrag" x1="0" x2="120" y1="11\.52" y2="11\.52"><\/line><line class="ibSpPrag" x1="0" x2="120" y1="20\.48" y2="20\.48"><\/line>/);
-  assert.match(h, /<polyline class="ibSpLinie" points="2,16 60,17\.6 118,19\.84"><\/polyline><circle class="ibSpAcum" cx="118" cy="19\.84" r="2\.5"><\/circle>/);
-  assert.match(h, /<span class="ibSpEt">4h · 24 bare<\/span>|<span class="ibSpEt">4h · 3 bare<\/span>/);
+  assert.match(h, /<svg class="ibSpG" width="100%" height="56" aria-hidden="true">/);   // v100.327: desenul cât cartela, cu etichete (coordonatele în proba v100327)
+  assert.match(h, /<rect class="ibSpBun" x="0" y="[\d.]+" width="100%" height="[\d.]+"><\/rect>/, "short: zona de sub 36 (coboară) e cea bună");
+  assert.equal((h.match(/<line class="ibSpPrag"/g) || []).length, 2, "cele două praguri");
+  assert.match(h, /<polyline class="ibSpLinie" points="[\d.]+,[\d.]+ [\d.]+,[\d.]+ [\d.]+,[\d.]+" vector-effect="non-scaling-stroke"><\/polyline><\/svg><circle class="ibSpAcum"/);
+  assert.match(h, /<span class="ibRcap">Scorul pe 4h, ultimele 3 bare \(12 ore\)<\/span>/); assert.match(h, /<span class="ibSpEt"><b>50 → 38<\/b>, coboară<\/span>/);   // v100.327: în cuvinte, titlul sus   // v100.327: în cuvinte
   assert.equal(IB.sparkHtml([{ s: 50, prag: 64 }], "short", esc), "", "un singur punct nu e o istorie");
 });
 
@@ -157,7 +157,7 @@ await test("pagina: rândul închis are locul lui (#tbIndSumar în <summary>, as
   assert.match(HTML, /<details class="tbTrendDet" id="tbTrendDet"><summary>Detaliile indicatorilor · ca „Analizează piața”, pe bare închise \(medii, Supertrend, MACD, Stochastic, Bollinger, MFI, estimarea și predicția\)<span class="tbIndSumar" id="tbIndSumar" aria-hidden="true" hidden><\/span><\/summary>/);
   const APP = citeste("public", "app.js");
   const i = APP.indexOf("function renderTabloIndicatori("), f = APP.slice(i, APP.indexOf("\nfunction ", i + 10));
-  assert.match(f, /IndicatoriBot\.bandaHtml\(bd,tvb,sch,b\.directie,escapeHtml\)\+IndicatoriBot\.riglaHtml\(bd,b\.directie,escapeHtml\)/);
+  assert.match(f, /var gr=IndicatoriBot\.riglaHtml\(bd,b\.directie,escapeHtml\)/); assert.match(f, /hs=IndicatoriBot\.bandaHtml\(bd,tvb,sch,b\.directie,escapeHtml\)\+\(gr\?'<span class="ibGrafice">'/);   // v100.327: rigla și istoria în cartele
   assert.match(f, /if\(tbStare\.indSumarHtml!==hs\)\{sm\.innerHTML=hs;tbStare\.indSumarHtml=hs\}/);
   assert.equal((f.match(/tbIndSumarGol\(\)/g) || []).length, 2, "fără bot și fără lumânări ⇒ golit");
   // revizia: istoria pe 4 ore doar când 4 ore e în bandă (altfel desenul vechi lângă „—”)
