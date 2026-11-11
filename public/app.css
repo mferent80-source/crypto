@@ -4654,8 +4654,8 @@ html.pzDemo #tabloubot.on :is(p,li,.tbCitTx,.tbMcScurt,.tbMcNota,.tbMcScorTx){ma
    și la restul”). Doar pe calculator (≥ 1181 px), doar CU bot (fără bot rămâne „un singur card”, regula de mai sus) și doar cât mutarea detaliilor
    e activă (#tbKpiDetalii fără hidden, tbKpiAsezare în app.js). Rândul graficului devine „transparent”: bucățile lui stau direct în grila mare a
    Tabloului (6 coloane): graficul pe 4, ce e pe grafic pe 2.
-   Ordinea: antetul · verdictul · cele 4 cifre · avertismentul de levier (ca în live) · graficul + dreapta · detaliile cifrelor · Drumul botului ·
-   Trendul · Ce ai de făcut acum · Ce spune piața acum · Monte Carlo și restul cartelelor (ordinea lor din live).
+   Ordinea: antetul · verdictul · cele 4 cifre · avertismentul de levier (ca în live) · Drumul botului (v100.323, el: „pune drumul botului deasupra
+   graficului”) · graficul + dreapta · detaliile cifrelor · Trendul · Ce ai de făcut acum · Ce spune piața acum · Monte Carlo și restul cartelelor.
    Revizia 11.11 (înainte de livrare): fără bot regulile de aici nu se mai aplică (display:contents bătea „display:none” al stării fără bot); sub grafic
    nimic nu mai are rând fix (un rând fix lăsat liber se umplea, prin „dense”, cu ce se nimerea - Monte Carlo ajunsese între Drum și Trend); la
    1181–1699 px coloana din dreapta era de ~310 px ⇒ un rând „ultimele umpleri” ieșea din pagină (1.441 px la 1280) și „Contează acum” lungă lăsa goluri sus. */
@@ -4668,33 +4668,34 @@ html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidde
 html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden]))>#pzVerdict{grid-column:1 / 5!important;grid-row:2!important}
 html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden]))>.tbSus{grid-column:1 / 5!important;grid-row:3!important;padding:12px 0 6px}
 html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden]))>#tbGridLarg{grid-column:1 / 5!important;grid-row:4!important}
+/* v100.323 (el, 11.11.2026: „pune drumul botului deasupra graficului”): Drumul sub cifre și avertisment, pe coloanele lor; Contează acum îl însoțește în dreapta */
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden]))>#pzDrumCard{grid-column:1 / 5!important;grid-row:5!important;order:0;margin-top:4px}
 html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden]))>#ctAcum:not([hidden]){grid-column:5 / -1!important;grid-row:2 / span 4!important;margin:0 0 6px;align-self:stretch}
 /* graficul: capul („Prețul” + intervalele) și desenul pe 4 coloane; dreapta pe 2 */
-html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbGraficCard>.tbBlocCap{grid-column:1 / 5;grid-row:5;border-top:1px solid var(--pzLi);padding-top:12px;margin-top:6px}
-html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbGrafic>.gbZona{grid-column:1 / 5;grid-row:6 / span 7;align-self:start}
-html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbGrafic>.emptyState{grid-column:1 / 5;grid-row:6}
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbGraficCard>.tbBlocCap{grid-column:1 / 5;grid-row:6;border-top:1px solid var(--pzLi);padding-top:12px;margin-top:6px}
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbGrafic>.gbZona{grid-column:1 / 5;grid-row:7 / span 7;align-self:start}
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbGrafic>.emptyState{grid-column:1 / 5;grid-row:7}
 html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbGrafic>:is(.gbValCap,.gbValori,.gbBilant,.gbUlt,.gbValGrid,.gbLeg),html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbGraficCard>#pzUltimii{grid-column:5 / -1;min-width:0;max-width:100%;overflow-wrap:anywhere;align-self:start}
-html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbGrafic>.gbValCap{grid-row:6;align-self:start;margin:0;border-top:1px solid var(--pzLi);padding-top:12px}
-html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbGrafic>.gbValori{grid-row:7;width:auto;grid-template-columns:auto minmax(0,1fr) auto auto;column-gap:8px}
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbGrafic>.gbValCap{grid-row:7;align-self:start;margin:0;border-top:1px solid var(--pzLi);padding-top:12px}
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbGrafic>.gbValori{grid-row:8;width:auto;grid-template-columns:auto minmax(0,1fr) auto auto;column-gap:8px}
 /* nota în plus a unui nivel („7 zile: 8%”, „24 h: ~63%”) coboară sub nume, pe tot rândul; căsuțele ei goale nu mai ocupă loc */
 html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbGrafic>.gbValori .gbVS{grid-column:2 / -1;text-align:left;font-size:12px;margin-top:-2px}
 html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbGrafic>.gbValori .gbVS:empty{display:none}
-html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbGrafic>.gbBilant{grid-row:8;margin:4px 0 0}
-html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbGrafic>.gbUlt{grid-row:9;flex-direction:column;align-items:flex-start;gap:2px}
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbGrafic>.gbBilant{grid-row:9;margin:4px 0 0}
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbGrafic>.gbUlt{grid-row:10;flex-direction:column;align-items:flex-start;gap:2px}
 /* „ultimele umpleri”: în coloana din dreapta rândul se rupe (era o linie tăiată cu „…” sub grafic; pe coloană ieșea din pagină - 527 px într-o coloană de 365 la 1440) */
 html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbGrafic>.gbUlt span{white-space:normal;overflow:visible;text-overflow:clip;max-width:100%}
-html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbGrafic>.gbValGrid{grid-row:10;margin:4px 0 0}
-html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbGrafic>.gbLeg{grid-row:11;flex-direction:column;align-items:flex-start;gap:4px}
-html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbGraficCard>#pzUltimii{grid-row:12;flex-wrap:wrap}
-/* sub grafic, în ORDINE și fără rânduri fixe (ca nimic să nu cadă într-un rând rămas liber): detaliile cifrelor (pe coloana fiecărei cifre), Drumul
-   botului, Trendul, Ce ai de făcut acum, Ce spune piața acum; după ele Monte Carlo (34) și restul cartelelor, cu ordinea lor din live */
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbGrafic>.gbValGrid{grid-row:11;margin:4px 0 0}
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbGrafic>.gbLeg{grid-row:12;flex-direction:column;align-items:flex-start;gap:4px}
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbGraficCard>#pzUltimii{grid-row:13;flex-wrap:wrap}
+/* sub grafic, în ORDINE și fără rânduri fixe (ca nimic să nu cadă într-un rând rămas liber): detaliile cifrelor (pe coloana fiecărei cifre),
+   Trendul, Ce ai de făcut acum, Ce spune piața acum; după ele Monte Carlo (34) și restul cartelelor, cu ordinea lor din live */
 html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru>#tbKpiDetalii:not([hidden]){grid-column:1 / -1;grid-row:auto;order:20;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));column-gap:0;border-top:1px solid var(--pzLi);padding:12px 0 6px;margin-top:10px}
 html.pzDemo #tabloubot.on .tbCadru>#tbKpiDetalii>.tbKpiDetCol{min-width:0;padding:0 18px;border-left:1px solid var(--pzLi)}
 html.pzDemo #tabloubot.on .tbCadru>#tbKpiDetalii>.tbKpiDetCol:first-child{padding-left:0;border-left:0}
 html.pzDemo #tabloubot.on .tbCadru>#tbKpiDetalii .tbEt2{font-size:12px;color:var(--pzT2)}
 /* în detaliile cifrelor, eticheta și proza pe rânduri separate (descrierea pieței se lipea de etichetă) */
 html.pzDemo #tabloubot.on .tbCadru>#tbKpiDetalii .tbKpiDetCol>span{display:block}
-html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden]))>#pzDrumCard{grid-column:1 / -1!important;grid-row:auto!important;order:21}
 html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbTrendCard{grid-column:1 / -1!important;grid-row:auto!important;order:23;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:repeat(6,auto) 1fr;column-gap:32px;row-gap:8px;align-items:start;border-top:1px solid var(--pzLi);padding-top:14px;margin-top:8px;width:auto}
 html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbTrendCard>*{grid-column:1 / -1;min-width:0}
 html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbTrendCard>#tbTvNote{grid-column:1;grid-row:5 / span 3;margin-top:0}
@@ -4720,7 +4721,8 @@ html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidde
    între verdict și cifre): verdictul și cifrele 2×2 pe jumătatea din stânga, „Contează acum” pe jumătatea din dreapta, la înălțimi apropiate */
 @media (min-width:1181px) and (max-width:1699px){
 html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden]))>#pzVerdict,html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden]))>.tbSus{grid-column:1 / 4!important}
-html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden]))>#ctAcum:not([hidden]){grid-column:4 / -1!important;grid-row:2 / span 3!important}
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden]))>#ctAcum:not([hidden]){grid-column:4 / -1!important;grid-row:2 / span 4!important}
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden]))>#pzDrumCard{grid-column:1 / 4!important}
 /* rândul 4 (avertismentul de levier, de obicei ascuns) nu rămâne niciodată liber pe toată lățimea: altfel „dense” urca acolo detaliile cifrelor,
    deasupra graficului (poza 1280 / 1440 după prima reparație) */
 html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden]))>#tbGridLarg{grid-column:1 / 4!important}
