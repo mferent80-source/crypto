@@ -184,6 +184,24 @@ await test("I-854: istoria mai veche de ~5 zile nu se mai leagă ⇒ citire înt
   assert.equal([...disc.keys()].filter((k) => k.startsWith(B.disc) && !k.endsWith("lista")).length, 3, "cel mult 3 monede"); assert.ok(!disc.has(B.disc + "STX_USDT_PERP"), "cea mai veche a ieșit");
   const C = lumeFisa(new Map(), [], ACUM, toate, () => true); const r = await C.grAdu15("STX_USDT_PERP", "/b", () => {}); await asteapta(5); assert.equal(r.r15.length, 700, "fără bază pe dispozitiv fișa merge ca înainte");
 });
+await test("lanțul `npm test` încape în cmd.exe: pașii vechi (fără probă care să-i citească) stau în sub-lanțuri test:lant-NN, fiecare bucată sub 6.000 de caractere; desfăcut = aceiași pași, o dată fiecare", () => {
+  // 11.11.2026: lanțul ajunsese la 8.168 de caractere ⇒ cmd.exe (limita 8.191, cu ce adaugă npm) a dat „The command line is too long.”
+  // și livrarea v100.318 n-a publicat nimic. NU .npmrc cu script-shell=bash: îl citește și `npx`, deci ar fi schimbat felul în care
+  // pornește Radarul (npx wrangler dev în PORNESTE-CRYPTO-RADAR.bat și în scripts/vps/porneste-radar.ps1).
+  const P = JSON.parse(citeste("package.json"));
+  assert.ok(P.scripts.test.length < 6000, "test are " + P.scripts.test.length + " de caractere");
+  assert.ok(!fs.existsSync(path.join(RAD, ".npmrc")) || !/script-shell/.test(citeste(".npmrc")), "script-shell în .npmrc ar trece și npx pe alt shell");
+  const subl = Object.keys(P.scripts).filter((k) => /^test:lant-\d\d$/.test(k));
+  assert.ok(subl.length >= 1, "niciun sub-lanț");
+  const desfa = (s) => s.split(" && ").flatMap((p) => { const m = /^npm run (test:lant-\d\d)$/.exec(p); return m ? (assert.ok(P.scripts[m[1]], "lipsește " + m[1]), P.scripts[m[1]].split(" && ")) : [p]; });
+  const tot = desfa(P.scripts.test);
+  for (const k of subl) { assert.ok(P.scripts[k].length < 6000, k + " are " + P.scripts[k].length); assert.equal(tot.filter((p) => p === "npm run " + k).length, 0); assert.equal((P.scripts.test.match(new RegExp("npm run " + k + "( |$)", "g")) || []).length, 1, k + " o dată în test"); }
+  assert.ok(tot.length >= 340, "pași desfăcuți: " + tot.length);
+  for (const p of tot) { const m = /^npm run (test:[\w-]+)$/.exec(p); if (m) assert.ok(P.scripts[m[1]], "pas fără script: " + p); }
+  assert.equal(new Set(tot).size, tot.length, "un pas apare de două ori");
+  for (const n of ["test:syntax", "test:garzi", "test:security", "test:server", "test:v100", "test:v100216", "test:scorsezon", "test:v100318"]) assert.ok(tot.includes("npm run " + n), "lipsește " + n);
+});
+
 await test("versiunile: pagina (de exact 4 ori), SW, serverul, BUILD_INFO, package.json; coada foii neatinsă", () => {
   const B = JSON.parse(citeste("BUILD_INFO.json")), P = JSON.parse(citeste("package.json")), V = "3(?:1[89]|[2-9]\\d)";
   assert.equal((HTML.match(new RegExp("v100\\." + V, "g")) || []).length, 4); assert.equal((HTML.match(/v100\.317/g) || []).length, 0);

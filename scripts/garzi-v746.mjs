@@ -422,14 +422,20 @@ function gardaPackage() {
   if (/npm (run )?(test|predeploy)|npm test/.test(s.deploy || "")) pica(G, `deploy cheama din nou testele ("${s.deploy}") - predeploy le ruleaza deja; asa rulau de doua ori`);
   if (!/pages deploy public\b/.test(s.deploy || "") || !/--project-name crypto\b/.test(s.deploy || "")) pica(G, `deploy trebuie sa fie "wrangler pages deploy public --project-name crypto" (e "${s.deploy}")`);
   if ((pkg.engines || {}).node !== ">=22") pica(G, `engines.node trebuie ">=22" (e ${JSON.stringify((pkg.engines || {}).node)})`);
-  const test = String(s.test || "");
+  // v100.318: lanțul a trecut de limita lui cmd.exe (8.191 de caractere, „The command line is too long.”) ⇒ pașii vechi stau
+  // în sub-lanțuri test:lant-NN chemate din npm test; garda le desface (un nivel), ca un pas mutat acolo să conteze ca chemat.
+  const testBrut = String(s.test || "");
+  const test = testBrut.split(" && ").map((p) => { const m = /^npm run (test:lant-\d\d)$/.exec(p.trim()); return m && s[m[1]] ? s[m[1]] : p; }).join(" && ");
+  for (const n of Object.keys(s).filter((k) => /^test:lant-\d\d$/.test(k))) {
+    if (!new RegExp(`npm run ${n}(\\s|$)`).test(testBrut)) pica(G, `sub-lanțul ${n} exista dar npm test nu il cheama - pașii lui nu ruleaza la livrare`);
+  }
   for (const n of ["test:syntax", "test:garzi", "test:security", "test:server", "test:bots", "test:tablou", "test:fifo"]) {
     if (!new RegExp(`npm run ${n}(\\s|$)`).test(test)) pica(G, `npm test nu cheama ${n}`);
     if (!s[n]) pica(G, `lipseste scriptul ${n}`);
   }
   // Regula generala: ORICE test:* din scripts (in afara de test:ecran*, care cer Chrome
   // + server) e in lantul npm test. O proba noua nelegata nu ruleaza niciodata la livrare.
-  for (const n of Object.keys(s).filter((k) => /^test:/.test(k) && !/^test:ecran(-|$)/.test(k))) {
+  for (const n of Object.keys(s).filter((k) => /^test:/.test(k) && !/^test:ecran(-|$)/.test(k) && !/^test:lant-\d\d$/.test(k))) {
     if (!new RegExp(`npm run ${n}(\\s|$)`).test(test)) pica(G, `scriptul ${n} exista dar npm test nu il cheama - proba nu ruleaza la livrare`);
   }
   if (!/security-v57\.mjs/.test(s["test:security"] || "")) pica(G, "test:security nu mai cheama scripts/security-v57.mjs (proba tokenului gresit)");
