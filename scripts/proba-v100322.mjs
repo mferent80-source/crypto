@@ -283,8 +283,11 @@ await test("revizia: take-profit pus care închide SUB zero ⇒ rândul rămâne
 });
 await test("revizia: „de la ultima privire” = ultima TA privire (după ≥ 30 min cu pagina ascunsă memoria se reia); în browser se scrie doar ce s-a schimbat", () => {
   const f = functie(APP, "tbCtMemorie");
-  assert.match(f, /document\.addEventListener\("visibilitychange"/);
-  assert.match(f, /Date\.now\(\)-tbStare\.ctAscunsLa>=1800000\)\{tbStare\.ctMem=null;tbStare\.ctHtml=null\}/);
+  // v100.324: ascultătorul de vizibilitate e comun cu memoria indicatorilor (I-860) - tbVazutAscultator, pus o singură dată
+  assert.match(f, /tbVazutAscultator\(\);/);
+  const a = functie(APP, "tbVazutAscultator");
+  assert.match(a, /document\.addEventListener\("visibilitychange"/);
+  assert.match(a, /Date\.now\(\)-tbStare\.ctAscunsLa>=1800000\)\{tbStare\.ctMem=null;tbStare\.ctHtml=null;/);
   const { ctx, mag } = imbogatire();
   let scrieri = 0; const set0 = ctx.localStorage.setItem; ctx.localStorage.setItem = (k, v) => { scrieri++; set0(k, v); };
   ctx.f(BOT(), [RAND_MARG()]); ctx.f(BOT(), [RAND_MARG()]); ctx.f(BOT(), [RAND_MARG()]);

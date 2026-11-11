@@ -150,7 +150,11 @@ await test("Tabloul: cererea vine cu lumânările direcției (același ritm, sim
 await test("pagina și cache-ul aplicației încarcă biblioteca; nota NU intră în verdict / semafor (nimeni în afară de desen nu citește d.tv)", () => {
   assert.ok(HTML.includes('<script src="/lib/indicatori-bot.js"></script><script src="/lib/tv-note.js"></script>'));
   assert.ok(SW.includes('"/lib/indicatori-bot.js","/lib/tv-note.js",'));
-  const cititori = (APP.match(/\.tv\b(?!_)/g) || []).length; assert.ok(cititori <= 4, "d.tv citit în " + cititori + " locuri");
+  // v100.324 (I-859): banda din rândul închis al indicatorilor desenează și ea nota ⇒ în loc de un număr de citiri, FIECARE citire stă într-o funcție
+  // care aduce sau desenează (tbAduDirectie, renderTabloTv, renderTabloIndicatori) - niciuna în verdict / semafor / sfaturi
+  const unde = []; for (const m of APP.matchAll(/\.tv\b(?!_)/g)) { const inainte = APP.slice(0, m.index), k = inainte.lastIndexOf("function "); unde.push(/^function (?:\s*)([\w$]+)/.exec(APP.slice(k))?.[1] || "?"); }
+  assert.ok(unde.length >= 3, "citirile notei: " + unde.join(", "));
+  for (const f of unde) assert.ok(["tbAduDirectie", "renderTabloTv", "renderTabloIndicatori"].includes(f), "nota TradingView citită în " + f + " (doar adus / desen)");
   assert.ok(!/TvNote/.test(APP.slice(APP.indexOf("function tbVerdict"), APP.indexOf("function tbVerdict") + 4000)), "verdictul nu vede nota");
 });
 
