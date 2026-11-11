@@ -20,7 +20,7 @@ var IndicatoriBot = (function () {
   // randurile ferestrei, in ordinea in care se citesc; titlul = ce inseamna indicatorul, in cuvinte
   var RANDURI = [
     { k: "verdict", eticheta: "Verdict", titlu: "Scorul Radarului din toți indicatorii (0-100): peste ~60 urcă, sub ~40 coboară." },
-    { k: "ema", eticheta: "Medii EMA", titlu: "Mediile de 20, 50 și 200 de bare: 20 peste 50 peste 200 = trend de urcare așezat." },
+    { k: "ema", eticheta: "Medii EMA", titlu: "Mediile de 20, 50 și 200 de bare: 20 peste 50 peste 200 = urcare așezată; 20 sub 50 sub 200 = coborâre așezată; altfel neutru." },
     { k: "supertrend", eticheta: "Supertrend", titlu: "Urmăritorul de trend: ↑ cât prețul stă peste linia lui, ↓ sub ea." },
     { k: "macd", eticheta: "MACD", titlu: "Impulsul: histograma peste 0 = împinge în sus, sub 0 = în jos." },
     { k: "adx", eticheta: "ADX", titlu: "Tăria trendului: sub 20 = fără trend (bun pentru grid), peste 25 = trend. Culoarea = cine trage (+DI / −DI)." },
@@ -40,7 +40,13 @@ var IndicatoriBot = (function () {
     var sc = nr(q.score), scTxt = sc !== null ? " " + Math.round(sc) : "";
     o.verdict = q.ver === "BULLISH" ? { t: "↑" + scTxt, c: "good", titlu: "urcă" } : q.ver === "BEARISH" ? { t: "↓" + scTxt, c: "bad", titlu: "coboară" } : { t: "↔" + scTxt, c: "neutral", titlu: "neutru" };
     if (sc !== null) o.verdict.titlu += ", scor " + Math.round(sc) + " din 100";
-    o.ema = q.ema ? { t: "↑", c: "good", titlu: "așezat pe urcare: 20 > 50 > 200" } : q.emaDir === "UP" ? { t: "↗", c: "neutral", titlu: "20 peste 50, dar nu peste 200" } : q.emaDir === "DOWN" ? { t: "↓", c: "bad", titlu: "20 sub 50: pe coborâre" } : LIPSA;
+    // v100.325 (el, 11.11.2026: „aplică regula simetrică și în tabel”): urcarea și coborârea „așezate” cer toate trei mediile în ordine, în oglindă;
+    // înainte „20 sub 50” era ↓ și când 50 > 200, iar oglinda lui doar ↗ neutru (un short câștiga un „jos” pe care un long nu-l primea)
+    var e20 = nr(q.e20Now), e50 = nr(q.e50Now), e200 = nr(q.e200Now);
+    if (e20 !== null && e50 !== null && e200 !== null) o.ema = e20 > e50 && e50 > e200 ? { t: "↑", c: "good", titlu: "așezat pe urcare: 20 > 50 > 200" } : e20 < e50 && e50 < e200 ? { t: "↓", c: "bad", titlu: "așezat pe coborâre: 20 < 50 < 200" }
+      : e20 > e50 ? { t: "↗", c: "neutral", titlu: "20 peste 50, dar 50 nu e peste 200" } : e20 < e50 ? { t: "↘", c: "neutral", titlu: "20 sub 50, dar 50 nu e sub 200" } : { t: "↔", c: "neutral", titlu: "20 și 50 egale" };
+    // fără cifre (calc vechi): tot în oglindă - fără 200 nu știm „coborâre așezată” ⇒ „20 sub 50” e neutru, ca „20 peste 50”
+    else o.ema = q.ema ? { t: "↑", c: "good", titlu: "așezat pe urcare: 20 > 50 > 200" } : q.emaDir === "UP" ? { t: "↗", c: "neutral", titlu: "20 peste 50, dar nu peste 200" } : q.emaDir === "DOWN" ? { t: "↘", c: "neutral", titlu: "20 sub 50" } : LIPSA;
     o.supertrend = q.supertrend === "BULL" ? { t: "↑", c: "good", titlu: "prețul peste linie" } : q.supertrend === "BEAR" ? { t: "↓", c: "bad", titlu: "prețul sub linie" } : LIPSA;
     o.macd = q.macd === true ? { t: "↑", c: "good", titlu: "histograma peste 0: împinge în sus" } : q.macd === false ? { t: "↓", c: "bad", titlu: "histograma sub 0: împinge în jos" } : LIPSA;
     var a = nr(q.adx), pd = nr(q.pdi), md = nr(q.mdi);
@@ -161,8 +167,6 @@ var IndicatoriBot = (function () {
   function escImplicit(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
   // revizia 11.11: lângă prag scorul cu o zecimală (63,6 cu pragul 64 nu e „64” cu ↔)
   function scorText(sc, p) { if (sc === null) return null; return p !== null && (Math.abs(sc - p) < 0.5 || Math.abs(sc - (100 - p)) < 0.5) ? (Math.round(sc * 10) / 10).toFixed(1).replace(".", ",") : String(Math.round(sc)); }
-  // revizia 11.11: mediile numărate SIMETRIC în bandă (tabelul: „20 sub 50” = jos și când 50 > 200, dar oglinda lui = neutru ⇒ short-ul câștiga un „cu”)
-  function emaSimetric(q) { var a = nr(q.e20Now), b = nr(q.e50Now), c = nr(q.e200Now); if (a === null || b === null || c === null) return null; return a > b && b > c ? "good" : a < b && b < c ? "bad" : "neutral"; }
   // I-857: pe fiecare interval, săgeata și scorul verdictului + câți din cei 8 indicatori sunt cu botul / neutri / împotrivă. La short „jos” e cu
   // botul. „Încinsul” (RSI / Stochastic / Bollinger / MFI la extreme) nu e nici cu, nici împotrivă: intră la neutri, cu bucata lui. Lipsa nu se numără.
   function banda(randuri, botDir) {
@@ -176,7 +180,7 @@ var IndicatoriBot = (function () {
       o.faraDirectie = !dir; o.fata = !dir ? null : o.ver === vrea ? "cu" : o.ver === opus ? "contra" : "neutru";
       o.cu = 0; o.contra = 0; o.neutru = 0; o.incinsi = 0; o.numeCu = []; o.numeContra = []; o.numeNeutru = []; o.numeIncinsi = [];
       IND8.forEach(function (r) {
-        var v = cel[r.k], c = v && v.c; if (r.k === "ema") { var es = emaSimetric(q); if (es) c = es; } if (!c || c === "lipsa") return;
+        var v = cel[r.k], c = v && v.c; if (!c || c === "lipsa") return;   // mediile: simetric chiar în celule (v100.325)
         if (c === "tbWarn") { o.neutru++; o.incinsi++; o.numeIncinsi.push(r.eticheta); return; }
         if (c === "neutral") { o.neutru++; o.numeNeutru.push(r.eticheta); return; }
         var sus = c === "good", cu = !dir || botDir === "long" ? sus : !sus;

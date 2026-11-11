@@ -318,7 +318,8 @@
     var L = inchisi.filter(function (b) { return nr(b.inchisLa); }).sort(function (a, b) { return b.inchisLa - a.inchisLa; }).slice(0, 5);
     var h = '<span class="pzUltEt">ultimii boți închiși:</span> ' + L.map(function (b) { var t = nr(b.profitTotal); return '<span class="pzChip"><b>' + esc((b.baza || "").replace(".PERP", "")) + '</b> <span class="' + (t >= 0 ? "pzV" : "pzR") + '">' + semn(t) + '</span></span>'; }).join(" ") + ' <button type="button" class="pzLink" data-pz-nav="jurnaltrade">vezi toate ↗</button>';
     var el = $("pzUltimii"); if (!el) { el = document.createElement("div"); el.id = "pzUltimii"; g.appendChild(el); }
-    if (el._h !== h) { el.innerHTML = h; el._h = h; }
+    // v100.325 (revizia): coloana din dreapta a graficului s-a lungit ⇒ Tabloul potrivește graficul acum, nu la următorul preț
+    if (el._h !== h) { el.innerHTML = h; el._h = h; if (typeof window.tbPotrivesteGraficul === "function") window.tbPotrivesteGraficul(); }
   }
 
   // ---------- I-597: avertismentul cu sursa ----------

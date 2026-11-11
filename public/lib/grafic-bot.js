@@ -434,10 +434,17 @@ var GraficBot = (function () {
     var inBanda = ingust && !o.actiune;   /* revizia Opus: doar graficul botului; acțiunile (T212) rămân cu becurile în colț */
     /* v100.322 (el, 11.11.2026: „la deschidere să se vadă chartul întreg”): o.inaltMax = locul de pe ecran pentru tot desenul (Tabloul îl dă pe
        calculator). Cedează prețul, până la 220 px; volumul și alertele rămân; RSI și ADX rămân, mai scunde când locul e strâmt. Fără o.inaltMax ⇒ exact ca înainte. */
-    if (!ingust && o.inaltMax > 0) {
+    if (!ingust && (o.inaltMax > 0 || o.inaltEcran > 0)) {   /* v100.325 (revizia): și cu titlul sub marginea ecranului (inaltMax 0) */
       var restH = function () { return gap + (trH ? trH + gap : 0) + volH + gap + laneH + (rsiH ? gap + rsiH : 0) + (adxH ? gap + adxH : 0) + axH; };
-      if (o.inaltMax - restH() < 300) { if (rsiH) rsiH = 60; if (adxH) adxH = 54; }   /* loc strâmt (Full HD, laptop): RSI și ADX mai scunde, ca prețul să nu scadă prea mult */
-      mainH = Math.max(220, Math.min(mainH, Math.round(o.inaltMax - restH())));
+      var rsi0 = rsiH, adx0 = adxH, strange = function (loc) { rsiH = rsi0; adxH = adx0; if (loc - restH() < 300) { if (rsiH) rsiH = 60; if (adxH) adxH = 54; } };   /* loc strâmt (Full HD, laptop): RSI și ADX mai scunde, ca prețul să nu scadă prea mult */
+      var loc = o.inaltMax > 0 ? o.inaltMax : 0; strange(loc);
+      /* v100.325 (el, 11.11.2026: „verifică pagina de spații goale și rezolvă dacă sunt în plus”): când desenul nu încape la deschidere nici cu prețul
+         la 220 px (de când Drumul stă deasupra: 1920 × 950, 1440, 1280), strânsul nu mai câștigă nimic - lăsa doar 320–410 px albi sub grafic. Atunci
+         desenul ia cât încape pe UN ecran când ajungi la el (o.inaltEcran). o.inaltLoc = înălțimea coloanei din dreapta: graficul crește până la ea,
+         nu peste locul ales. Fără ele ⇒ exact ca înainte. */
+      if (loc - restH() < 220 && o.inaltEcran > loc) { loc = o.inaltEcran; strange(loc); }
+      var tinta = o.inaltLoc > 0 ? Math.max(mainH, Math.round(o.inaltLoc - restH())) : mainH;
+      mainH = Math.max(220, Math.min(tinta, Math.round(loc - restH())));
     }
     if (!inBanda && Array.isArray(o.semafor) && o.semafor.length) { var rez = (ingust ? 54 : 44) / mainH; hi += (hi - lo) * rez / (1 - rez); }   /* v100.106: sus rămâne loc gol pentru semafor - prețul nu intră sub el */
     var Y = function (p) { return (1 - (p - lo) / (hi - lo)) * mainH; }, X = function (bi) { return bi * cw + cw / 2; };

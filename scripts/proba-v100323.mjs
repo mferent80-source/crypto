@@ -26,17 +26,19 @@ await test("≥ 1181 px: Drumul botului stă sus, pe rândul 5, pe coloanele cif
   assert.doesNotMatch(B, /#pzDrumCard\{[^}]*order:21/, "nu mai e în ordinea de sub grafic");
 });
 await test("graficul coboară un rând: capul pe 6, desenul 7 / span 7, „Ce e pe grafic” 7–13, textul gol pe 7", () => {
-  for (const r of [P + " #tbGraficCard>.tbBlocCap{grid-column:1 / 5;grid-row:6;", P + " #tbGrafic>.gbZona{grid-column:1 / 5;grid-row:7 / span 7;",
-    P + " #tbGrafic>.emptyState{grid-column:1 / 5;grid-row:7}", P + " #tbGrafic>.gbValCap{grid-row:7;", P + " #tbGrafic>.gbValori{grid-row:8;",
-    P + " #tbGrafic>.gbBilant{grid-row:9;", P + " #tbGrafic>.gbUlt{grid-row:10;", P + " #tbGrafic>.gbValGrid{grid-row:11;", P + " #tbGrafic>.gbLeg{grid-row:12;",
-    P + " #tbGraficCard>#pzUltimii{grid-row:13;"])
+  // v100.325 (golurile): „Ce e pe grafic” urcă pe 6, lângă titlul „Prețul” (64 px goi deasupra lui); desenul 7 / span 6, coloana 7–12
+  for (const r of [P + " #tbGraficCard>.tbBlocCap{grid-column:1 / 5;grid-row:6;", P + " #tbGrafic>.gbZona{grid-column:1 / 5;grid-row:7 / span 6;",
+    P + " #tbGrafic>.emptyState{grid-column:1 / 5;grid-row:7 / span 6}"   /* v100.325 (revizia): ține rândurile 7–12, ca nimic să nu urce acolo cât așteaptă prețurile */, P + " #tbGrafic>.gbValCap{grid-row:6;", P + " #tbGrafic>.gbValori{grid-row:7;",
+    P + " #tbGrafic>.gbBilant{grid-row:8;", P + " #tbGrafic>.gbUlt{grid-row:9;", P + " #tbGrafic>.gbValGrid{grid-row:10;", P + " #tbGrafic>.gbLeg{grid-row:11;",
+    P + " #tbGraficCard>#pzUltimii{grid-row:12;"])
     assert.ok(B.includes(r), "lipsește: " + r.slice(P.length));
 });
 await test("„Contează acum” coboară în dreapta până la Drum (rândurile 2–5), pe ambele intervale ⇒ niciun rând de sus liber pe toată lățimea", () => {
   assert.ok(B.includes(P + ">#ctAcum:not([hidden]){grid-column:5 / -1!important;grid-row:2 / span 4!important;"));
   const M = media("@media (min-width:1181px) and (max-width:1699px){");
-  assert.ok(M.includes(P + ">#ctAcum:not([hidden]){grid-column:4 / -1!important;grid-row:2 / span 4!important}"), "1181–1699: Contează acum 2 / span 4");
-  assert.ok(M.includes(P + ">#pzDrumCard{grid-column:1 / 4!important}"), "1181–1699: Drumul pe jumătatea din stânga, cu verdictul și cifrele");
+  // v100.325 (golurile): la 1181–1699 „Contează acum” pe rândurile 2–4 și Drumul pe toată lățimea (rândul Drumului o întindea cu 90–265 px)
+  assert.ok(M.includes(P + ">#ctAcum:not([hidden]){grid-column:4 / -1!important;grid-row:2 / span 3!important}"), "1181–1699: Contează acum 2 / span 3");
+  assert.ok(M.includes(P + ">#pzDrumCard{grid-column:1 / -1!important}"), "1181–1699: Drumul pe toată lățimea");
   assert.ok(M.includes(P + ">#tbGridLarg{grid-column:1 / 4!important}"));
 });
 await test("sub grafic rămân, în ordine: detaliile cifrelor (20), Trendul (23), Ce ai de făcut (24), Ce spune piața (25), apoi Monte Carlo (34)", () => {

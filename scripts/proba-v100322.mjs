@@ -204,8 +204,9 @@ await test("așezarea: blocul v100.322 e doar pe calculator (≥ 1181 px) și pu
     P + ">#tbGridLarg{grid-column:1 / 5!important;grid-row:4!important}",
     // v100.323 (el: „pune drumul botului deasupra graficului”): Drumul pe rândul 5 ⇒ graficul coboară un rând (capul 6, desenul 7 / span 7, dreapta 7–13)
     P + ">#pzDrumCard{grid-column:1 / 5!important;grid-row:5!important;order:0",
-    P + " #tbGraficCard>.tbBlocCap{grid-column:1 / 5;grid-row:6;", P + " #tbGrafic>.gbZona{grid-column:1 / 5;grid-row:7 / span 7;",
-    P + " #tbGrafic>.emptyState{grid-column:1 / 5;grid-row:7}", P + " #tbGrafic>.gbValCap{grid-row:7;", P + " #tbGraficCard>#pzUltimii{grid-row:13;",
+    // v100.325 (golurile): „Ce e pe grafic” urcă pe 6, lângă titlul „Prețul”; desenul 7 / span 6, dreapta 7–12
+    P + " #tbGraficCard>.tbBlocCap{grid-column:1 / 5;grid-row:6;", P + " #tbGrafic>.gbZona{grid-column:1 / 5;grid-row:7 / span 6;",
+    P + " #tbGrafic>.emptyState{grid-column:1 / 5;grid-row:7 / span 6}", P + " #tbGrafic>.gbValCap{grid-row:6;", P + " #tbGraficCard>#pzUltimii{grid-row:12;",
     // sub grafic: în ORDINE, fără rânduri fixe (un rând fix rămas liber se umplea prin „dense” cu ce se nimerea - Monte Carlo între Drum și Trend)
     "html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru>#tbKpiDetalii:not([hidden]){grid-column:1 / -1;grid-row:auto;order:20;",
     P + " #tbTrendCard{grid-column:1 / -1!important;grid-row:auto!important;order:23;",
@@ -218,7 +219,7 @@ await test("așezarea: blocul v100.322 e doar pe calculator (≥ 1181 px) și pu
   // Monte Carlo rămâne după „Ce spune piața acum” (trimiterea I-850: „scorul și șansele sunt în blocul de mai jos”): ordinea lui din live, 34 > 25
   assert.match(CSS, /\.pzDemo #tabloubot \.tbCadru>#tbMcSus\{order:34\}/);
   // 1181–1699: verdictul + cifrele 2×2 în stânga, Contează acum în dreapta; cele 4 cifre pe un rând doar de la 1700 (sub, regula v100.319 2×2)
-  assert.match(B, /@media \(min-width:1181px\) and \(max-width:1699px\)\{\nhtml[^\n]*>#pzVerdict,html[^\n]*>\.tbSus\{grid-column:1 \/ 4!important\}\nhtml[^\n]*>#ctAcum:not\(\[hidden\]\)\{grid-column:4 \/ -1!important;grid-row:2 \/ span 4!important\}/);   // v100.323: până la Drum (rândurile 2–5)
+  assert.match(B, /@media \(min-width:1181px\) and \(max-width:1699px\)\{\nhtml[^\n]*>#pzVerdict,html[^\n]*>\.tbSus\{grid-column:1 \/ 4!important\}\nhtml[^\n]*>#ctAcum:not\(\[hidden\]\)\{grid-column:4 \/ -1!important;grid-row:2 \/ span 3!important\}/);   // v100.325: rândurile 2–4, Drumul pe toată lățimea (la 1280 / 1440 o întindea peste conținut)
   // rândul 4 nu rămâne liber pe toată lățimea (altfel „dense” urca detaliile cifrelor deasupra graficului - poza 1280 / 1440): Contează acum îl acoperă în dreapta
   assert.ok(B.includes(P + ">#tbGridLarg{grid-column:1 / 4!important}"));
   assert.match(B, /@media \(min-width:1700px\)\{\nhtml[^\n]*>\.tbSus>#tbKpi\{grid-template-columns:repeat\(4,minmax\(0,1fr\)\)!important;row-gap:0\}/);
@@ -246,8 +247,9 @@ await test("graficul la deschidere: lățimea din cutia lui (și când e „tran
   assert.doesNotMatch(functie(APP, "tbLatimeGrafic"), /parseFloat\(getComputedStyle\(gr\)\.gridTemplateColumns\)/, "„minmax(…” dădea NaN");
   assert.match(functie(APP, "tbInaltMaxGrafic"), /matchMedia\("\(min-width:1181px\)"\)/);
   const GBs = citeste("public", "lib", "grafic-bot.js");
-  assert.match(GBs, /if \(!ingust && o\.inaltMax > 0\) \{/);
-  assert.match(GBs, /mainH = Math\.max\(220, Math\.min\(mainH, Math\.round\(o\.inaltMax - restH\(\)\)\)\);/);
+  assert.match(GBs, /if \(!ingust && \(o\.inaltMax > 0 \|\| o\.inaltEcran > 0\)\) \{/);   // v100.325 (revizia): și cu titlul sub marginea ecranului
+  assert.match(GBs, /var loc = o\.inaltMax > 0 \? o\.inaltMax : 0; strange\(loc\);/);
+  assert.match(GBs, /mainH = Math\.max\(220, Math\.min\(tinta, Math\.round\(loc - restH\(\)\)\)\);/);   // v100.325: o.inaltEcran / o.inaltLoc (proba v100.325)
 });
 
 // ───────────── 7. reparațiile reviziei (11.11, înainte de livrare) ─────────────

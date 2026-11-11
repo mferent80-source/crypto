@@ -7982,6 +7982,29 @@ function tbInaltMaxGrafic(ingust){
   var cap=document.querySelector("#tbGraficCard>.tbBlocCap");if(!cap)return 0;
   return Math.max(0,Math.round(window.innerHeight-(cap.getBoundingClientRect().bottom+(window.scrollY||0))-14));
 }
+// v100.325: cât încape desenul pe UN ecran când ajungi la el: fereastra minus bara de sus lipicioasă și titlul graficului (când nu încape la deschidere)
+function tbInaltEcranGrafic(ingust){
+  if(ingust||typeof matchMedia!=="function"||!matchMedia("(min-width:1181px)").matches)return 0;
+  var cap=document.querySelector("#tbGraficCard>.tbBlocCap");if(!cap)return 0;
+  var bara=document.querySelector(".topStatus"),hb=0;if(bara){var ps=getComputedStyle(bara).position;if(ps==="sticky"||ps==="fixed")hb=bara.getBoundingClientRect().height||0}
+  return Math.max(0,Math.round(window.innerHeight-hb-cap.getBoundingClientRect().height-14));
+}
+// v100.325: înălțimea coloanei din dreapta a graficului pe calculator (valorile, umplerile, ultimele alerte, gridul vs zona, legenda, ultimii boți), din
+// înălțimile bucăților + golurile dintre rânduri. Pozițiile lor se lungesc după grafic (rândurile 7–12 sunt împărțite cu el) și l-ar crește la nesfârșit.
+function tbInaltColoanaGrafic(){
+  if(typeof matchMedia!=="function"||!matchMedia("(min-width:1181px)").matches)return 0;
+  var c=document.querySelector("html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru");if(!c||!c.querySelector("#tbKpiDetalii:not([hidden])"))return 0;   // doar în așezarea pe coloane (v100.322)
+  var h=0,n=0;
+  document.querySelectorAll("#tbGrafic>:is(.gbValori,.gbBilant,.gbUlt,.gbValGrid,.gbLeg),#tbGraficCard>#pzUltimii").forEach(function(e){var r=e.getBoundingClientRect();if(r.height>0){var cs=getComputedStyle(e);h+=r.height+(parseFloat(cs.marginTop)||0)+(parseFloat(cs.marginBottom)||0);n++}});
+  if(!n)return 0;
+  return Math.round(h+(parseFloat(getComputedStyle(c).rowGap)||0)*5);   // rândurile 7–12 ⇒ 5 goluri, și când un rând e gol
+}
+// v100.325 (revizia): „ultimii boți închiși” se umplu DUPĂ desen (asezare-paznic, ~1,5 s) ⇒ coloana crește ⇒ graficul se potrivește atunci, într-un
+// singur desen (loc pus înainte), nu abia la următorul preț (≥ 5 s, un salt vizibil)
+function tbPotrivesteGraficul(){
+  if(!tbGrafRz||tbGrafRz.reluat||(tbGrafRz.w||0)<560||!tbPanouVizibil())return;
+  var col=tbInaltColoanaGrafic();if(col>0&&Math.abs(col-(tbGrafRz.loc||0))>24){tbGrafRz.loc=col;renderTabloGrafic()}
+}
 function renderTabloGrafic(){
   var el=$("tbGrafic");if(!el)return;
   tbTemaAplica();   /* v100.316: tema e pusă înaintea desenului, ca graficul să iasă pe paleta ei */
@@ -8003,17 +8026,26 @@ function renderTabloGrafic(){
   // v100.99 (I-532): intrarea graficului e PURĂ (GraficBot.intrareBot) - planul cu gridul, lumânarea live, șansele (I-528), stopul vs planul (I-527), stopul de probă (I-529)
   tbAdu1m(b);   /* v100.146: lumânările de 1 min ale ferestrei botului, din spate; când vin, se redesenează o dată */
   var oG=GraficBot.intrareBot({bot:b,brut:brut,bare:bare,plan:tbPlan.botId===b.id?tbPlan.plan:null,alerteServer:tbStare.alerteServer,valoare:tbValoarePt(b),profil:tbProfilPt(b),consLinii:tbStare.consLinii,funding:tbFundingPt(),sanse:tbSansePt(b),adxPeBoti:(tbCazuriAdu(),tbCazuri.adx||null),pretViu:pvPretViuAcum(b),acum:Date.now(),W:W,st:tbIndStare(),scara:tbIndStare().scara,simplu:tbModSimplu(),per:TB_PERIOADE[tbTf()].per,fereastraToata:tbFereastraToataE(),fereastraCat:TB_PERIOADE[tbTf()].cat,bare1m:tbBare1m(b),semafor:tbSemaforTf(b),tfGrafic:TB_PERIOADE[tbTf()].i,trendIstoric:tbTrendIstoric(b),semClic:{"5M":"tbAlegeInterval('5M')","15M":"tbAlegeInterval('15M')","60M":"tbAlegeInterval('60M')","4H":"tbAlegeInterval('4H')","1D":"tbAlegeInterval('1D')"},semPeBoti:tbCazuri.sem||null});
-  oG.inaltMax=tbInaltMaxGrafic(ingust);tbGrafRz.h=window.innerHeight;   /* v100.322: graficul încape întreg în ecran pe calculator */
-  var d=GraficBot.desen(oG);tbFereastraButon(oG);tbDeseneazaCitire(oG,b);
-  window.tbGraficUltim={botId:b.id,niv:Array.isArray(oG.niv)?oG.niv:[],stopPlan:oG.consLinii&&oG.consLinii.stopPlan,la:Date.now()};   /* v100.151: drumul botului (lib/asezare-paznic.js) citește ACELEAȘI niveluri ca graficul, din date */
+  /* v100.325: prețul din capul graficului se scrie ÎNAINTE de măsurarea locului - la 1280 „acum 0.3197” trecea capul pe 2 rânduri (46 → 71 px) după
+     măsurare și graficul ieșea cu 25 px peste ecran (pagina copiei, 11.11) */
   var pAcum=pvPretViuAcum(b)||bare[bare.length-1].c;
   if($("tbGraficPret"))$("tbGraficPret").textContent="acum "+tbPretScurt(pAcum);
+  oG.inaltMax=tbInaltMaxGrafic(ingust);tbGrafRz.h=window.innerHeight;   /* v100.322: graficul încape întreg în ecran pe calculator */
+  oG.inaltEcran=tbInaltEcranGrafic(ingust);oG.inaltLoc=tbGrafRz.loc||0;   /* v100.325: nu încape la deschidere ⇒ cât încape pe un ecran; crește până la coloana din dreapta */
+  var d=GraficBot.desen(oG);tbFereastraButon(oG);tbDeseneazaCitire(oG,b);
+  window.tbGraficUltim={botId:b.id,niv:Array.isArray(oG.niv)?oG.niv:[],stopPlan:oG.consLinii&&oG.consLinii.stopPlan,la:Date.now()};   /* v100.151: drumul botului (lib/asezare-paznic.js) citește ACELEAȘI niveluri ca graficul, din date */
   // ultimele 3 alerte ale botului si ca text (pe telefon punctele de pe banda se citesc greu)
   var ult=oG.alerte.slice().sort(function(x,y){return y.t-x.t}).slice(0,3),Cn={critic:"bad",atentie:"neutral",info:"mutedInfo"};
   var ultHtml=ult.length?'<div class="gbUlt">'+ult.map(function(a){var dt=new Date(a.t);return '<span><b class="'+(Cn[a.nivel]||"mutedInfo")+'">●</b> '+escapeHtml(String(dt.getHours()).padStart(2,"0")+":"+String(dt.getMinutes()).padStart(2,"0"))+' '+escapeHtml(String(a.titlu||"").replace(/^[A-Z0-9._-]+: /,""))+'</span>'}).join("")+'</div>':"";
   var fg=oG.val&&oG.val.zona?Valoare.fataDeGrid(oG.val.zona,oG.grila.jos,oG.grila.sus):null;   // v100.51 (I-470): gridul tau fata de zona de valoare
   var bl=GraficBot.bilantUmpleri(oG.umpleri,b,{eticheta:oG.umpleriEticheta||TB_PERIOADE[tbTf()].eticheta,pornitInFereastra:oG.pornitInFereastra,lo:d.harta.lo,hi:d.harta.hi,pas:oG.umpleriPas||(bare.length>1?bare[1].t-bare[0].t:0),acum:Date.now()});   // v100.145: bilanțul umplerilor - primul rând sub grafic (intervalul, de unde numără, ce e în afara cadrului)
   el.innerHTML='<div class="gbZona">'+d.svg+'<div class="gbTip" hidden></div></div>'+(d.valori||'')+(bl?'<p class="tbSub gbBilant"><b>▲▼ umpleri:</b> '+escapeHtml(bl.text)+'</p>':'')+ultHtml+(fg?'<p class="tbSub gbValGrid">📊 Gridul vs zona de valoare: '+escapeHtml(fg.text)+'</p>':'')+'<div class="gbLeg">'+d.legenda+'</div>';
+  /* v100.325 (el, 11.11.2026: „verifică pagina de spații goale”): coloana din dreapta s-a schimbat (primul desen, alt bot, altă lățime) ⇒ graficul se
+     redesenează O dată, pe loc (înainte să se vadă ceva), la înălțimea ei; cererile din desen au gărzile lor (inLucru), nu pleacă de două ori.
+     Stă ÎNAINTEA legăturilor mouse-ului: la redesen ele se pun o singură dată (și proba v100.315 rulează doar bucata legăturilor) */
+  var col=ingust?0:tbInaltColoanaGrafic();
+  if(col>0&&!tbGrafRz.reluat&&Math.abs(col-(tbGrafRz.loc||0))>24){tbGrafRz.loc=col;tbGrafRz.reluat=true;try{renderTabloGrafic()}finally{tbGrafRz.reluat=false}return}
+  tbGrafRz.loc=col;
   var zona=el.querySelector(".gbZona"),svg=zona.querySelector("svg"),tip=zona.querySelector(".gbTip"),cr=svg.querySelector(".gbCruce");
   var crY=svg.querySelector(".gbCruceY"),crP=svg.querySelector(".gbCrucePret"),ascunde=function(){tip.hidden=true;if(cr)cr.style.display="none";if(crY)crY.style.display="none";if(crP)crP.style.display="none"};
   var arata=function(cx,cy){
