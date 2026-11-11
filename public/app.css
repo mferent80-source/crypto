@@ -4621,6 +4621,30 @@ html.pzDemo #tabloubot.on .tbCadru>:is(#ctAcum,#pzVerdict){border-radius:4px}
 /* (6) rândurile de text: cel mult 80 de caractere (pe 1440 px se întindeau pe 1.142 px, ≈180 de caractere la 12 px) */
 html.pzDemo #tabloubot.on :is(p,li,.tbCitTx,.tbMcScurt,.tbMcNota,.tbMcScorTx){max-width:80ch}
 /* v100.316: sfârșitul desenului nou */
+/* v100.320 (el, 11.11.2026: „Technicals și Technical Ratings din TradingView în pagina botului și în pagina Trade 212”): nota TradingView -
+   un tabel mic (6 intervale × rezumat / medii / oscilatoare) în cardul „Trendul pe TF-uri” și în fișa poziției T212. Doar variabile și
+   clasele de stare existente (.good / .bad / .mutedInfo), ca tema deschisă să le ia singură; pe telefon tabelul alunecă în cutia lui. */
+.tvNote{margin:10px 0 4px;display:grid;gap:4px;min-width:0}
+.tvNoteCap{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px}
+.tvNoteCap b{font-size:13.5px;font-weight:600}
+.tvNoteWrap{overflow-x:auto;min-width:0;max-width:100%}
+.tvNoteTab{border-collapse:collapse;width:100%;font-size:12px;font-variant-numeric:tabular-nums}
+.tvNoteTab th,.tvNoteTab td{padding:4px 3px;text-align:center;border-bottom:1px solid var(--pzLi,rgba(127,127,127,.25));white-space:nowrap;vertical-align:top}
+.tvNoteTab thead th{font-weight:600;color:var(--pzT2,inherit);white-space:normal;vertical-align:bottom}
+.tvNoteTab tbody th{text-align:left;font-weight:400;color:var(--pzT1,inherit)}
+.tvNoteTab td b{font-weight:600}
+.tvNoteVal{display:block;font-size:12px;color:var(--pzT2,inherit)}
+.tvNoteNota{margin:0}
+.tvMic{display:block}
+/* în fișa T212 tabelul stă ÎN tabelul pozițiilor: regulile acestuia (capul ascuns, celulele la dreapta pe 13,5 px, pe telefon corpul pe bloc) nu-l mai ating */
+#t212Continut .tvNoteTab thead{display:table-header-group}
+.tvNoteTab tbody{display:table-row-group}
+.tvNoteTab th,.tvNoteTab td{font-size:12px}
+/* pe telefon coloana Trend a pozițiilor e ascunsă: „TV 1D” stă și sub numele acțiunii - doar în rândul tabelului (în capul fișei e deja în
+   celula Trend); regula paginii „#t212Continut tr.t212Rand .t212Sim .t212Mic:not(.t212Modele){display:none}” are aceeași greutate ⇒ o bate fiind mai jos */
+.tvMicTel{display:none}
+@media (max-width:640px){#t212Continut tr.t212Rand .t212Sim .t212Mic.tvMicTel{display:block}}
+/* v100.320: sfârșitul notei TradingView */
 @media (max-width:640px){.sugPandaTab thead{display:table-header-group}.sugPandaTab{display:table}.sugPandaTab tbody{display:table-row-group}.sugPandaTab tr{display:table-row}.sugPandaTab td,.sugPandaTab th{display:table-cell}}
 /* v100.224: pe paginile de zi rămân alertele, banda botului și versiunea. Cipurile de cercetare revin la analiza monedei și în laborator. */
 body.peAcasa:not(.acMonedaDeschisa) .topLeft,body.peTablou .topLeft,body.peT212 .topLeft,body.peJurnal .topLeft,body.peGrid .topLeft,body.pePaginaNoua .topLeft,

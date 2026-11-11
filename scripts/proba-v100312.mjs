@@ -367,8 +367,8 @@ await test("colectorul v101.170: tura probelor după direcție (caietul o dată 
 });
 await test("versiunile v100.312: index ×4, BUILD_INFO, sw, versiune.js, package.json (+ test:v100312 în lanț)", () => {
   const H = citeste("public", "index.html"), B = JSON.parse(citeste("BUILD_INFO.json")), P = JSON.parse(citeste("package.json"));
-  assert.ok((H.match(/v100\.31[2-9]/g) || []).length >= 4); assert.match(B.version, /^v100\.31[2-9]/); assert.match(citeste("public", "sw.js"), /crypto-radar-v100-31[2-9]/);   // v100.313: versiunea ≥ v100.312
-  assert.match(citeste("functions", "_shared", "versiune.js"), /v100\.31[2-9]/); assert.match(P.version, /^100\.31[2-9]/);
+  assert.ok((H.match(/v100\.3(?:1[2-9]|[2-9]\d)/g) || []).length >= 4); assert.match(B.version, /^v100\.3(?:1[2-9]|[2-9]\d)/); assert.match(citeste("public", "sw.js"), /crypto-radar-v100-3(?:1[2-9]|[2-9]\d)/);   // v100.313: versiunea ≥ v100.312
+  assert.match(citeste("functions", "_shared", "versiune.js"), /v100\.3(?:1[2-9]|[2-9]\d)/); assert.match(P.version, /^100\.3(?:1[2-9]|[2-9]\d)/);
   assert.equal(P.scripts["test:v100312"], "node scripts/proba-v100312.mjs"); assert.match(P.scripts.test, /npm run test:v100312/);
 });
 

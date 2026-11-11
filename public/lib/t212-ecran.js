@@ -608,6 +608,28 @@ function t212TfCitHtml(sem) {
   }).join("") + '</div>';
 }
 
+/* v100.320 (el, 11.11.2026: „Technicals și Technical Ratings din TradingView … în pagina Trade 212”): nota TradingView pe 1D lângă fiecare
+   poziție (coloana Trend) și toate intervalele în fișă. O cerere pentru toate pozițiile (serverul ⇒ scannerul TradingView, nu Trading 212),
+   doar cu pagina la vedere, cel mult o dată la 5 minute (sau când apar simboluri noi); simbolul de bursă e cel cu care au venit prețurile
+   zilnice (t212.simbolPret). INFORMAȚIE: semaforul și consilierul nu o folosesc. */
+function t212TvAdu(forta) {
+  if (!t212LaVedere()) return;
+  var tv = t212.tv || (t212.tv = { note: {}, la: 0, laNote: 0, cheie: "", inLucru: false });
+  var sim = {}; (t212.poz || []).forEach(function (x) { var y = x && x.ticker && t212.simbolPret && t212.simbolPret[x.ticker]; if (y) sim[x.ticker] = y; });
+  var lista = Object.keys(sim).map(function (tk) { return sim[tk]; }), cheie = lista.slice().sort().join(",");
+  if (!lista.length || tv.inLucru || (!forta && cheie === tv.cheie && Date.now() - tv.la < 5 * 60000)) return;
+  tv.inLucru = true; tv.la = Date.now(); tv.cheie = cheie;
+  (async function () {
+    var note = {};
+    try {
+      var r = await getJSON("/api/market?type=tv_rating&piata=actiuni&simboluri=" + encodeURIComponent(lista.join(",")));
+      Object.keys(sim).forEach(function (tk) { note[tk] = r && r.result !== false ? (r.note && r.note[sim[tk]]) || {} : { eroare: "TradingView nu răspunde" + (r && r.detail ? " (" + r.detail + ")" : "") }; });
+    } catch (e) { Object.keys(sim).forEach(function (tk) { note[tk] = { eroare: "TradingView nu răspunde" }; }); }
+    finally { tv.inLucru = false; }
+    tv.note = note; tv.laNote = Date.now();
+    if (t212LaVedere()) t212Render(true);
+  })();
+}
 function t212Render(viu) {   // v100.291: viu = recitirea la 30 s ⇒ doar ce depinde de preț (revizia 🔴1)
   var sus = $("t212Sus"), box = $("t212Continut"), pfBox = $("t212Pf"); if (!box) return;
   if (typeof reteaAdu === "function") reteaAdu(function () { t212Render(); });   /* v100.94 (L2): modelele 🧠/🌳 din KV pentru poziții și poartă (o dată la 30 de minute) */
@@ -626,6 +648,7 @@ function t212Render(viu) {   // v100.291: viu = recitirea la 30 s ⇒ doar ce de
   brute.forEach(function (x) { pond[x.ticker] = pond[T212.simbol(x.ticker)]; });
   var poz = brute.map(function (x) { return t212PregatesteP(x, pond); }).sort(function (a, b) { return (T212_ORDINE[a.sem.nivel] - T212_ORDINE[b.sem.nivel]) || (a.ppl - b.ppl); });
   t212.pozPregatite = poz;   // v100.54: butoanele „am făcut / n-am făcut” găsesc poziția
+  t212TvAdu();   /* v100.320: notele TradingView (cel mult o dată la 5 minute, doar la vedere) */
   // v100.40 (audit 30.09, CRITIC): cate pozitii sunt pe IESI, din DATE (Acasa si banda de cont le citeau din DOM-ul paginii T212 -
   // „nimic roșu” pana deschideai T212). null cat preturile nu sunt aduse pentru toate (semaforul ar fi „fără date”, nu „țin”).
   t212.nrIesi = brute.length && brute.every(function (x) { return t212.bare[x.ticker]; }) ? poz.filter(function (p) { return p.sem.nivel === "iesi"; }).length : brute.length ? null : 0;
@@ -943,11 +966,11 @@ function t212RandPozitie(p) {
   var planTxt = p.plan ? [pl.trailPct ? "−" + String(pl.trailPct).replace(".", ",") + "% de la max" : "", pl.stop ? "stop " + Pr(pl.stop) : "", pl.tinta ? "țintă " + Pr(pl.tinta) : ""].filter(Boolean).join(" · ") : "";
   var w = p.pond > 0.2 ? " rau" : p.pond > 0.15 ? " atentie" : "", rv = t212RevineHtml(p);
   // v100.291: bucățile rândului, folosite și de capul fișei (aceleași cifre, același scris)
-  var iSim = '<span class="t212Pill ' + niv[1] + '">' + niv[0] + '</span><div><b>' + escapeHtml(p.simbol) + '</b><span class="t212Mic">' + t212Bucati(p.qty, p.pret > 0 ? p.pret : p.pretMediu) + ' · mediu ' + Pr(p.pretMediu) + (rz && rz.data ? ' · rezultate ' + t212ZiScurta(rz.data) : rz && /_US_EQ$/.test(p.ticker) ? ' · rezultate: dată necunoscută' : '') + '</span>' + t212ModeleRand(p) + '</div>';
+  var iSim = '<span class="t212Pill ' + niv[1] + '">' + niv[0] + '</span><div><b>' + escapeHtml(p.simbol) + '</b><span class="t212Mic">' + t212Bucati(p.qty, p.pret > 0 ? p.pret : p.pretMediu) + ' · mediu ' + Pr(p.pretMediu) + (rz && rz.data ? ' · rezultate ' + t212ZiScurta(rz.data) : rz && /_US_EQ$/.test(p.ticker) ? ' · rezultate: dată necunoscută' : '') + '</span>' + t212ModeleRand(p) + (typeof TvNote !== "undefined" && t212.tv ? TvNote.mic(t212.tv.note[p.ticker], "1D", "tvMicTel") : '') + '</div>';   /* v100.320: pe telefon coloana Trend e ascunsă ⇒ „TV 1D” și sub nume */
   var iRez = '<b class="' + t212Cls(p.ppl) + '">' + t212Lei(p.ppl) + '</b><span class="t212Mic">' + (p.pctLei !== null ? t212Pct(p.pctLei) + ' · preț ' + t212Pct(pctPret) : 'preț ' + t212Pct(pctPret)) + '</span>';
   var iStop = n ? '<span class="' + (n.stopAtins ? "bad" : "") + '">' + Pr(n.stopPozitie) + '</span><span class="t212Mic">' + (n.stopAtins ? "DEPĂȘIT" : Math.abs(n.stopPozitie / p.pret - 1) < 0.0005 ? "la stop" : t212Pct(n.stopPozitie / p.pret - 1) + " de acum") + '</span>' + rv.mic : '—';   /* v100.196 (UI 🔵5): nu „−0,0%” */
   var iTinta = n ? '<span class="good">' + Pr(n.tintaPozitie) + '</span><span class="t212Mic">' + t212Pct(n.tintaPozitie / p.pret - 1) + '</span>' : '—';
-  var iTrend = '<b class="' + (tr === "sus" ? "good" : tr === "jos" ? "bad" : "t212Estompat") + '">' + (tr === "sus" ? "↑ sus" : tr === "jos" ? "↓ jos" : tr === "lateral" ? "→ lateral" : "—") + '</b>' + (dif ? '<span class="t212Mic">1z: ' + NZ[sz.dir] + '</span>' : '');
+  var iTrend = '<b class="' + (tr === "sus" ? "good" : tr === "jos" ? "bad" : "t212Estompat") + '">' + (tr === "sus" ? "↑ sus" : tr === "jos" ? "↓ jos" : tr === "lateral" ? "→ lateral" : "—") + '</b>' + (dif ? '<span class="t212Mic">1z: ' + NZ[sz.dir] + '</span>' : '') + (typeof TvNote !== "undefined" && t212.tv ? TvNote.mic(t212.tv.note[p.ticker]) : '');   /* v100.320: nota TradingView pe 1D */
   var iPond = p.pond !== null ? Math.round(p.pond * 100) + '%<span class="t212MiniBara"><i class="' + w + '" style="width:' + Math.min(100, p.pond / 0.3 * 100).toFixed(0) + '%"></i></span>' : '—';
   var iPlan = p.plan ? '<span class="t212PlanChip ok">✓ ' + escapeHtml(planTxt) + '</span>' : '<span class="t212PlanChip">fără plan</span>';
   var rand = '<tr class="t212Rand" id="t212R-' + tk + '" tabindex="0" aria-expanded="' + des + '" data-action-click="t212Comuta(\'' + tk + '\')">'
@@ -970,6 +993,7 @@ function t212RandPozitie(p) {
     + '<p class="t212Fac">' + escapeHtml(p.sem.ceAsFace) + '</p>' + t212SfaturiHtml(p.sfaturi))
     + (!p.cons && n && n.stopAtins ? '<p class="t212Fac">👉 <b>Ce aș face eu:</b> Aș ieși (măcar jumătate), fără să aștept să „își revină”: ' + escapeHtml(p.simbol) + ' e deja sub stopul calculat.</p>' : '')
     + '<p class="tbSub">' + escapeHtml(info || (t212.inLucru ? "aduc prețurile zilnice…" : "fără prețuri zilnice pentru " + p.simbol)) + '</p>'
+    + (typeof TvNote !== "undefined" ? '<div class="tvNote">' + TvNote.tabel(t212.tv && t212.tv.note[p.ticker] || (t212.tv && t212.tv.laNote ? {} : null), { directie: "long", cu: "poziția", la: t212.tv && t212.tv.laNote }) + '</div>' : '')   /* v100.320: toate intervalele TradingView */
     + (n ? '<p class="tbSub"><b>Adaug doar la:</b> ' + (n.intrare && p.pret >= p.pretMediu ? Pr(n.intrare.pret) + " — " + escapeHtml(n.intrare.motiv) : escapeHtml(p.pret < p.pretMediu ? "— ești pe minus: nu adaug (așa a crescut NPA la 33.000 de lei)" : "— " + n.intrareMotiv)) + '</p>' : '')
     + rv.det
     + (typeof mcsPozButon === "function" ? '<p class="tbSub">' + mcsPozButon(t212.simbolPret[p.ticker] || p.simbol, p.pret, p.pretMediu, n ? n.stopPozitie : null) + '</p>' : '') + '</div>';

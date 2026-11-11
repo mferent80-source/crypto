@@ -2,6 +2,7 @@ import { VERSIUNE } from "../_shared/versiune.js";
 import {requireApiAuth,authErrorResponse} from "../_shared/auth.js";
 import {dupaCelDinFata,abandonata,eroareAbandon} from "../_shared/poarta.js";
 import {lacatRamasMs,lacatDinRaspuns,eroareLacat} from "../_shared/lacat-pionex.js";   // audit 19.10: lacatul comun cu poarta privata
+import * as TV from "../_shared/tv-note.js";   // v100.320: notele TradingView (Technicals / Technical Ratings)
 const FUT="https://fapi.binance.com";
 const PIONEX="https://api.pionex.com";
 let pionexGate=Promise.resolve(),pionexNextAt=0;
@@ -60,6 +61,23 @@ async function jBinance(url){
   catch(e){if(e&&(e.status===429||e.status===418)){const sec=Math.max(e.status===418?300:60,Number(e.retryAfter)||0);binancePauzaPana=Math.max(binancePauzaPana,Date.now()+sec*1000)}throw e}
 }
 
+// v100.320: notele TradingView, ținute minte 2 minute pe aceeași listă (cel mult 100 de liste); doar răspunsurile bune
+const tvMemorie=new Map(),TV_MEMORIE_MS=120000;
+async function tvNoteDinMemorie(piata,tinte){
+  const cheie=piata+"|"+tinte.map(t=>t.cheie).sort().join(","),m=tvMemorie.get(cheie);
+  if(m&&Date.now()-m.la<TV_MEMORIE_MS)return m.v;
+  const raspunsuri=[];
+  for(const c of TV.tvCereri(tinte)){
+    const r=await fetch("https://scanner.tradingview.com/"+c.piata+"/scan",{method:"POST",headers:{"content-type":"application/json","accept":"application/json","user-agent":"Mozilla/5.0 CryptoRadar/43"},body:JSON.stringify(c.corp),signal:AbortSignal.timeout(8000)});
+    if(!r.ok)throw Error("TradingView HTTP "+r.status);
+    const j=await r.json().catch(()=>null);if(!j||!Array.isArray(j.data))throw Error("TradingView: răspuns fără date");
+    raspunsuri.push(j);
+  }
+  const v={result:true,note:TV.tvPotriveste(tinte,raspunsuri),la:Date.now()};
+  if(tvMemorie.size>=100)tvMemorie.delete(tvMemorie.keys().next().value);
+  tvMemorie.set(cheie,{la:Date.now(),v});
+  return v;
+}
 async function pionexCached(url,ttl=30,env=null,opt={}){
   const cache=(globalThis.caches&&globalThis.caches.default)||null;
   const key=new Request(url,{method:"GET"});
@@ -119,6 +137,17 @@ export async function onRequestGet({request,env}){
   if(type==="pionex_depth"){
     const ps=(u.searchParams.get("symbol")||"BTC_USDT").toUpperCase().replace(/[^A-Z0-9_]/g,""),limit=limita(u,100,1,1000);
     try{return ok(await pionexCached(`${PIONEX}/api/v1/market/depth?symbol=${encodeURIComponent(ps)}&limit=${limit}`,5,env,opt))}catch(e){return esec("Pionex depth unavailable",e)}
+  }
+  // v100.320 (el, 11.11.2026: „Technicals și Technical Ratings din TradingView în pagina botului și în pagina Trade 212”): notele de la scannerul
+  // public TradingView, pentru botul (simbolul Pionex ⇒ Binance) sau pentru pozițiile T212 (simbolul de bursă). Cu cheia, ca restul; cel mult
+  // 30 de simboluri, cel mult 2 cereri, ținute minte 2 minute (eșecul nu se ține minte). Pionex NU e întrebat aici.
+  if(type==="tv_rating"){
+    {const auth=await requireApiAuth(request,env,"tv-rating",60);if(!auth.ok)return authErrorResponse(auth,H)}
+    const piata=u.searchParams.get("piata");
+    if(piata!=="crypto"&&piata!=="actiuni")return new Response(JSON.stringify({result:false,error:"piață necunoscută (crypto | actiuni)"}),{status:400,headers:H});
+    const simb=[...new Set(String(u.searchParams.get("simboluri")||"").split(",").map(x=>x.trim().replace(/[^A-Za-z0-9._-]/g,"").slice(0,24)).filter(Boolean))].slice(0,30);
+    const tinte=simb.map(s=>{const t=piata==="crypto"?(TV.tvDinPionex(s)?{ticker:TV.tvDinPionex(s)}:null):TV.tvDinYahoo(s);return Object.assign({cheie:s},t||{})});
+    try{return ok(await tvNoteDinMemorie(piata,tinte))}catch(e){return softFail("TradingView nu răspunde",String(e&&e.message||e))}
   }
   if(type!=="futures")return new Response(JSON.stringify({error:"Spot data is fetched directly by the browser"}),{status:400,headers:H});
   // futures trage 5 cereri Binance pe fiecare apel: fara autentificare, oricine putea folosi serverul ca proxy.

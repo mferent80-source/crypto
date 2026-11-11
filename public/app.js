@@ -7229,6 +7229,10 @@ async function tbAduDirectie(){
     // v91.9: "Mediul botului" - rata de funding a monedei si lumanarile de 4h ale BTC (2 cereri in plus la 5 min)
     try{var fr=await getJSON("/api/market?type=pionex_funding&symbol="+encodeURIComponent(s));d.fundingRates=fr&&fr.data&&Array.isArray(fr.data.rates)?fr.data.rates:null}catch(e){d.fundingRates=null}
     try{var kb=await getJSON("/api/market?type=pionex_klines&symbol=BTC_USDT_PERP&interval=4H&limit=200");d.btc4h=kb&&kb.data&&Array.isArray(kb.data.klines)?kb.data.klines:null}catch(e){d.btc4h=null}
+    // v100.320 (el, 11.11.2026): notele TradingView (Technicals / Technical Ratings) pe moneda botului - o cerere la server (scannerul TradingView,
+    // nu Pionex), în același ritm cu lumânările direcției; desenate de renderTabloTv în cardul „Trendul pe TF-uri”. Nu intră în verdict.
+    var tvN;try{var tvR=await getJSON("/api/market?type=tv_rating&piata=crypto&simboluri="+encodeURIComponent(s));tvN=tvR&&tvR.result!==false?(tvR.note&&tvR.note[s])||{}:{eroare:"TradingView nu răspunde"+(tvR&&tvR.detail?" ("+tvR.detail+")":"")}}catch(e){tvN={eroare:"TradingView nu răspunde ("+textEroare(e)+")"}}
+    d.tv={n:tvN,la:Date.now()};
     d.rez=t.rez;d.randuriPe=t.pe;d.simbol=cheie;d.la=Date.now();d.eroare=t.eroare;
     // revizia v100.110 (R2): reluarea se programează abia acum (după d.randuriPe), și doar dacă n-au căzut toate (atunci se reia toată tura la 30 s)
     d.lipsa=t.lipsa;d.reiaProgramat=t.reiaProgramat;d.aDouaOara=false;if(d.reiaProgramat)setTimeout(tbReiaLipsa,30000);
@@ -7310,6 +7314,7 @@ function tbTon(ton){return ton==="rau"?"bad":ton==="bine"?"good":ton==="atentie"
 function renderTabloDirectia(){
   var rz=$("tbDirectieRezumat");if(!rz)return;
   renderTabloTrend();   // v100.111 (I-542): rândurile pe TF (cât de des s-a întors, bara de acum) stau în tabelul unic
+  if(typeof renderTabloTv==="function")renderTabloTv();   // v100.320: nota TradingView, în același card (garda: probele rulează bucata singură)
   /* v100.267 (auditul 29.10): rezumatul doar din direcția monedei botului de acum (garda din renderTabloTrend) */
   var b=tbStare.routeOk===false?null:tbStare.bot,d=b&&tbStare.directie&&tbStare.directie.simbol===tbCheieDir(b)?tbStare.directie:null;
   if($("tbDirectieBot"))$("tbDirectieBot").textContent=b?("botul e "+(b.directie||"?")+(b.levier!=null?" "+b.levier+"×":"")):"—";
@@ -7318,6 +7323,14 @@ function renderTabloDirectia(){
   var z=Directie.rezumat(d.rez,b.directie);
   rz.className="tbRezumat "+tbTon(z.ton);rz.textContent=z.text;
   tbDeseneazaKpi();tbActualizeazaBanda();
+}
+// v100.320 (el, 11.11.2026: „Technicals și Technical Ratings din TradingView în pagina botului”): nota TradingView pe 5m…1W (rezumat, medii,
+// oscilatoare) în cardul „Trendul pe TF-uri”, doar pentru moneda botului de acum (aceeași gardă ca rezumatul direcției). Informație, nu verdict.
+function renderTabloTv(){
+  var el=$("tbTvNote");if(!el||typeof TvNote==="undefined")return;
+  var b=tbStare.routeOk===false?null:tbStare.bot,d=b&&tbStare.directie&&tbStare.directie.simbol===tbCheieDir(b)?tbStare.directie:null,t=d&&d.tv;
+  if(!b){el.innerHTML='<p class="tbSub">Fără bot, n-am pe ce monedă să citesc notele TradingView.</p>';return}
+  el.innerHTML=TvNote.tabel(t?t.n:null,{directie:b.directie,la:t?t.la:null});
 }
 // v100.111 (I-542, demo aprobat 06.10, el: „ok”): UN tabel „Trendul pe TF-uri” în locul a trei liste (rândurile din „Ce spune graficul acum”,
 // „Ce spun indicatorii”, „Direcția pieței”) - becul e regula; scorul, cât de des s-a întors și bara de acum sunt dovezi lângă el
