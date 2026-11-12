@@ -184,6 +184,9 @@
       V.push({ n: (t.split(":")[0] || "").trim(), ton: ton, tit: t });
     });
     var cit = $("tbCitire"); if (cit) [].forEach.call(cit.children, function (x) {
+      // v100.332 (12.11, pe pagina vie: „✓ Monte Carlo” și „– Monte Carlo” sub verdict): rândul 🎰 (tbCitMc) începe cu „Scorul Monte Carlo 83 – 79”
+      // - e scorul, nu o voce; vocea Monte Carlo e cea din fraza vocilor (cu botul / contra botului)
+      if (x.classList && x.classList.contains("tbCitMc")) return;
       var t = (x.textContent || "").trim(), cap = t.slice(0, 40);   // rândul începe cu iconița (🎰/✓) - căutăm în cap, nu cu ^ (revizia, minor)
       if (/Monte Carlo/.test(cap)) V.push({ n: "Monte Carlo", ton: /contra botului/i.test(t) ? "nu" : /cu botul/i.test(t) ? "da" : "neutru", tit: t.split("\n")[0].slice(0, 200) });
       else if (/^\W*Busola/.test(cap)) V.push({ n: "Busola", ton: /invers/i.test(t) ? "nu" : /ca botul/i.test(t) ? "da" : "neutru", tit: t.split("\n")[0].slice(0, 200) });

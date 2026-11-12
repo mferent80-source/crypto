@@ -101,15 +101,21 @@ function scanContext() {
   var ad = typeof acasa !== "undefined" && acasa.d && acasa.d.clasament ? acasa.d : d, p = d.piata || {};
   var cl = acClasamentSumar(ad.clasament);
   var v = acVremeCrypto(ad) || { nivel: "fara-date", eticheta: "FĂRĂ DATE", faCe: "" };
-  var ndxL = ad.ndx && Array.isArray(ad.ndx.actiuni) ? Acasa.largimeNdx(ad.ndx.actiuni) : null;
+  // v100.332 (auditul 12.11, 🔴2): lățimea Nasdaq mai veche de 30 h nu stă lângă verdict ca de azi (verdictul nu o mai folosește, Acasa.ndxVechi)
+  var ndxL = ad.ndx && Array.isArray(ad.ndx.actiuni) && !(Acasa.ndxVechi && Acasa.ndxVechi(ad.ndx, Date.now())) ? Acasa.largimeNdx(ad.ndx.actiuni) : null;
+  // v100.332 (🔴2): ora clasamentului lângă etichetă, ca pe Piața azi
+  var clLa = ad.clasament && Number(ad.clasament.la) > 0 ? ' · clasamentul de la ' + new Date(Number(ad.clasament.la)).toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" }) : '';
   var vb = acVremeBursa(ad && ad.piata ? ad : d) || { nivel: "fara-date", eticheta: "FĂRĂ DATE", faCe: "" };
   var R = scanRanduri(), cr = R.filter(function (x) { return x.fel === "c"; }), btc = cr.find(function (x) { return x.s === "BTC"; }), f = d.piataCol && d.piataCol.funding;
   var col = function (niv) { return /liniste|larga/.test(niv) ? "good" : /miscare|scade|frica/.test(niv) ? "bad" : "warn"; };
   // v100.330 (el: „nu voiam verdicte la fel crypto și nasdaq”): frâna contului o singură dată, pe rândul de sus; fiecare piață își spune fraza ei
   var fcS = typeof acFranaContText === "function" ? acFranaContText() : "";
-  el.innerHTML = (fcS ? '<div class="scFrana">⛔ <b>Frâna contului azi</b> <span class="scSub">· la ambele piețe</span><span class="scFranaTxt">' + escapeHtml(fcS) + '</span></div>' : '')
+  // v100.332 (auditul 12.11, 🟡8): frâna NECUNOSCUTĂ (raportul / calendarul încă pe drum sau căzute, riscul pe o zi lipsă) are rândul ei - înainte lipsea, ca atunci când nu e trasă
+  var necS = !fcS && typeof acFranaContStiut === "function" && !acFranaContStiut() ? (typeof acFranaContNec === "function" && acFranaContNec()) || "încă verific raportul contului și calendarul" : "";
+  el.innerHTML = (fcS ? '<div class="scFrana">⛔ <b>Frâna contului azi</b> <span class="scSub">· la ambele piețe</span><span class="scFranaTxt">' + escapeHtml(fcS) + '</span></div>'
+    : necS ? '<div class="scFrana"><b>Frâna contului: ' + escapeHtml(necS) + '.</b></div>' : '')
     + '<div><span class="scPiata">Crypto · ' + (cr.length ? scCate(cr.length, "monedă", "monede") : "— monede") + ' Pionex</span><span class="scNiv ' + col(v.nivel) + '">' + escapeHtml(v.eticheta) + '</span>'
-    + '<span class="scSub">' + (cl ? cl.evita + ' din ' + (cl.evita + cl.candidati) + ' în mișcare · ' : '') + (btc ? 'BTC ' + scPct(btc.ch7) + ' pe 7 zile' : '') + (f && f.text ? ' · ' + escapeHtml(f.text) : '') + '</span>'
+    + '<span class="scSub">' + (cl ? cl.evita + ' din ' + (cl.evita + cl.candidati) + ' în mișcare · ' : '') + (btc ? 'BTC ' + scPct(btc.ch7) + ' pe 7 zile' : '') + (f && f.text ? ' · ' + escapeHtml(f.text) : '') + clLa + '</span>'
     + (v.faCe ? '<div class="scFac">👉 <b>Ce aș face eu:</b> ' + escapeHtml(v.faCe) + '</div>' : '') + '</div>'
     + '<div><span class="scPiata">Nasdaq 100' + (ndxL ? ' · ' + scCate(ndxL.n, "acțiune", "acțiuni") : '') + '</span><span class="scNiv ' + col(vb.nivel) + '">' + escapeHtml(vb.eticheta) + '</span>'
     + '<span class="scSub">' + (scQqq7() !== null ? 'QQQ ' + scPct(scQqq7()) + ' pe 7 zile' : '') + (ndxL ? ' · ' + Math.round(ndxL.e50 / ndxL.n * 100) + '% din acțiuni peste media de 50 de zile' : '')

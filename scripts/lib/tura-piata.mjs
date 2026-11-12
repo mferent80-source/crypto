@@ -68,6 +68,16 @@ async function franaAzi(d, acum, evenimente) {
   return o;
 }
 function aplicaFrana(A, v, fel, f) { return A && A.franaVerb ? A.franaVerb(v, Object.assign({ fel }, f || {})) : v; }
+// v100.332 (auditul 12.11, 🔴1): ruta calendarului întoarce HTTP 200 cu `evenimente: []` și `eroare` când faireconomy nu răspunde - înainte asta
+// devenea „azi nu e nimic mare” (frâna evenimentului ridicată într-o zi de CPI). Acum calendarul căzut e NECUNOSCUT (undefined), ca cererea picată.
+export function evenimenteStiute(A, ca, acum) { return !ca || ca.eroare || !A || !A.calendar ? undefined : A.calendar(ca.evenimente, acum).urmatoare; }
+// v100.332 (auditul 12.11, 🔵): „BTC în mișcare” ca pe pagină (acBtcMiscare) - lumânările de 1 h, altfel regimul BTC din clasament (înainte: lumânările
+// picate ⇒ „liniștit” aici, „în mișcare” pe pagină). reg = GridCalcul.regimPeBare(...) sau null; clRaw = clasamentul întreg (cu monede)
+export function btcInMiscare(reg, clRaw) {
+  if (reg) return !!reg.miscare;
+  const b = (clRaw && Array.isArray(clRaw.monede) ? clRaw.monede : []).find((x) => x && x.simbol === "BTC_USDT_PERP");
+  return !!(b && b.regim && b.regim.miscare);
+}
 // v95: socoteala alertelor - fiecare alerta de miscare, tinuta minte cu pretul ei (ultimele 300)
 function noteaza(st, o) { st.soc = (st.soc || []).concat([o]).slice(-300); }
 async function trimiteToate(d, mesaje) { let toate = true; for (const m of mesaje) if (!(await d.trimiteAlerta(m, null, m.cheie))) toate = false; return toate; }
@@ -75,17 +85,20 @@ async function trimiteToate(d, mesaje) { let toate = true; for (const m of mesaj
 // ---- 1. vremea pietei (crypto + Nasdaq + legatura BTC - bursa), la 10 minute ----
 async function vreme(d, st, acum) {
   const A = d.Acasa, G = d.GridCalcul;
-  const cl = await incearca(d, "clasament", async () => sumarClasament((await d.cere("/api/istoric-bot?action=clasament")).clasament));
+  const clRaw = await incearca(d, "clasament", async () => (await d.cere("/api/istoric-bot?action=clasament")).clasament), cl = sumarClasament(clRaw);
   const p = await incearca(d, "bursele", () => d.cere("/api/stiri?action=piata")) || {};
   const nd = await incearca(d, "ndx", () => d.cere("/api/t212?action=ndx"));
   const b1h = await incearca(d, "BTC 1h", async () => G.bare((await d.cere("/api/market?type=pionex_klines&symbol=BTC_USDT_PERP&interval=60M&limit=500")).data.klines));
   const b1d = await incearca(d, "BTC 1z", async () => G.bareToate((await d.cere("/api/market?type=pionex_klines&symbol=BTC_USDT_PERP&interval=1D&limit=200")).data.klines));
   const reg = b1h && b1h.length ? G.regimPeBare(b1h, 4, 24) : null, fg = p.fg ? p.fg.valoare : null;
   const qqq = p.qqq ? G.bareToate(p.qqq) : null, vixB = p.vix ? G.bareToate(p.vix) : null, vix = vixB && vixB.length ? vixB[vixB.length - 1].c : null;
-  const ndL = nd && Array.isArray(nd.actiuni) ? A.largimeNdx(nd.actiuni) : null;
-  const v0 = A.vreme({ clasament: cl, btc: { miscare: reg ? !!reg.miscare : false }, fg }), vb0 = A.vremeBursa({ qqq, vix, ndx: ndL });
+  // v100.332 (auditul 12.11, 🔴2): aceeași vârstă ca pagina - lățimea Nasdaq peste 30 h (A.ndxVechi) nu intră în verdict; clasamentul cu `la` peste ~100 de
+  // minute dă „fara-date” (Alerte.schimbareVreme îl sare: nicio alertă de vreme din date vechi)
+  const ndV = !!(nd && A.ndxVechi && A.ndxVechi(nd, acum));
+  const ndL = nd && Array.isArray(nd.actiuni) && !ndV ? A.largimeNdx(nd.actiuni) : null;
+  const v0 = A.vreme({ clasament: cl, btc: { miscare: btcInMiscare(reg, clRaw) }, fg, la: clRaw && clRaw.la, acum }), vb0 = A.vremeBursa({ qqq, vix, ndx: ndL, ndxVechi: ndV });
   const caV = await incearca(d, "calendar vreme", () => d.cere("/api/stiri?action=calendar"));
-  const fr = await franaAzi(d, acum, caV ? A.calendar(caV.evenimente, acum).urmatoare : undefined);
+  const fr = await franaAzi(d, acum, evenimenteStiute(A, caV, acum));
   const sideF = A.fundingAtentie ? A.fundingAtentie(st.funding) : "";
   if (sideF) fr.fundingAtentie = sideF;
   const v = aplicaFrana(A, v0, "crypto", fr), vb = aplicaFrana(A, vb0, "bursa", fr);
@@ -270,7 +283,7 @@ async function raportSaptamana(d, st, acum) {
   rz.sort((a, b) => (a.data < b.data ? -1 : 1));
   const b1h = await incearca(d, "raport BTC 1h", async () => G.bare((await d.cere("/api/market?type=pionex_klines&symbol=BTC_USDT_PERP&interval=60M&limit=500")).data.klines));
   const regB = b1h && b1h.length ? G.regimPeBare(b1h, 4, 24) : null;
-  const fr = await franaAzi(d, acum, ca ? cal : undefined);
+  const fr = await franaAzi(d, acum, evenimenteStiute(A, ca, acum));   /* v100.332 (🔴1): calendarul cu `eroare` = necunoscut */
   const vS = aplicaFrana(A, A.vreme({ clasament: cl, btc: { miscare: regB ? !!regB.miscare : false }, fg: p.fg ? p.fg.valoare : null }), "crypto", fr);
   const vbS = aplicaFrana(A, A.vremeBursa({ qqq, vix, ndx: A.largimeNdx(l) }), "bursa", fr);
   const m = A.raportSaptamana({ btc7: b1d && b1d.length > 7 ? (b1d[b1d.length - 1].c / b1d[b1d.length - 8].c - 1) * 100 : null,

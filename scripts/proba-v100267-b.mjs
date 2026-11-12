@@ -221,7 +221,8 @@ await test("4a tbAlegeBot golește direcția și partea botului din extra (fundi
 });
 function sfaturi(tbStare) {
   let intrare = null; const { $ } = pagina();
-  ruleaza(["tbCheieDir", "renderTabloSfaturi"], {
+  // v100.332 (auditul 12.11, 🟡4): sfaturile se socotesc o dată, în tbSfaturiAcum; renderTabloSfaturi o refolosește
+  ruleaza(["tbCheieDir", "tbSfaturiAcum", "renderTabloSfaturi"], {
     $, tbStare, TabloBot, Directie, Scenariu: {}, escapeHtml: String, tbTextFaraBot: () => "fără bot", tbFisa: { botId: null }, tbRenderTodo: () => {},
     Sfaturi: { intrare: (x) => { intrare = x; return x; }, sfaturi: () => [] },
   }).renderTabloSfaturi();

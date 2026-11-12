@@ -542,7 +542,10 @@ var Alerte = (function () {
     [["crypto", "Crypto"], ["bursa", "Nasdaq"]].forEach(function (p) {
       var v = o[p[0]], niv = v && v.nivel; if (!niv || niv === "fara-date") return;
       var c = n[p[0]] || null;
-      if (init || !c) { n[p[0]] = { nivel: niv, cand: null }; return; }
+      /* revizia Opus v100.332: o sursă căzută (lățimea / VIX-ul) nu e vreme nouă - starea de dinainte rămâne; fără stare încă, se ține una marcată
+         `nec`, pe care prima citire cu date adevărate o înlocuiește FĂRĂ alertă (tura colectorului citește st.vreme.bursa) */
+      if (v.latime === "necunoscuta" || v.faraVix) { if (init || !c) n[p[0]] = { nivel: niv, cand: null, nec: true }; return; }
+      if (init || !c || c.nec) { n[p[0]] = { nivel: niv, cand: null }; return; }
       if (bd && p[0] === "crypto" && nr(bd.intrare) !== null && nr(bd.iesire) !== null) niv = nivelInBanda(c.nivel, niv, v, bd);
       if (niv === c.nivel) { c.cand = null; return; }
       if (c.cand === niv) {

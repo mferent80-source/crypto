@@ -238,6 +238,29 @@ var TabloExtra = (function () {
     if (!(op > 0) || !(lq > 0)) return false;
     return dir === "long" ? op <= lq : dir === "short" ? op >= lq : false;
   }
+  // v100.332 (auditul 12.11, 🔴1): stopul PROPUS de „Contează acum” (CurbaStop: unde șansa într-o zi coboară la ~20 din 100) se verifică înainte
+  // să fie arătat. La / dincolo de lichidarea estimată (sau unde modelul zice că marja e deja pierdută) nu se mai propune: acolo stopul nu apucă
+  // să lucreze - se ține motivul și prețul lichidării. Altfel i se pun alături totalul de acolo (cu grilele de pe drum) și, dacă pică în grid,
+  // câte grile nu mai lucrează dincolo de el (regula lui: niciun stop în mijlocul gridului fără partea care moare). s = CurbaStop.pentruStop(...).
+  function grileDincolo(b, x) {
+    var u = bu(b), row = nr(u.row), N = row > 1 ? row - 1 : null, jos = nr(b && b.gridJos), sus = nr(b && b.gridSus), dir = String(b && b.directie || "").toLowerCase();
+    x = nr(x);
+    if (!N || x === null || !(jos > 0) || !(sus > jos) || !(x > jos && x < sus) || (dir !== "long" && dir !== "short")) return null;
+    var geo = String(u.gridType || "").toLowerCase() === "geometric";
+    var fr = dir === "long" ? (geo ? Math.log(x / jos) / Math.log(sus / jos) : (x - jos) / (sus - jos)) : (geo ? Math.log(sus / x) / Math.log(sus / jos) : (sus - x) / (sus - jos));
+    var k = Math.round(fr * N);
+    return k >= 1 ? { moarte: k, intervale: N } : null;
+  }
+  function stopPropus(b, s) {
+    if (!b || !s || nr(s.mut20) === null) return s;
+    var x = nr(s.mut20), subPret = !s.sus, inv = nr(b.investit), lq = nr(subPret ? b.lichidareJos : b.lichidareSus);
+    if (!(lq > 0)) { var pl = nr(b.pretLichidare), pS = nr(s.pret); lq = pl > 0 && (b.lichidarePartea ? b.lichidarePartea === (subPret ? "jos" : "sus") : pS !== null && (subPret ? pl < pS : pl > pS)) ? pl : null; }
+    var t = totalCuGridLa(b, x);
+    if ((lq !== null && (subPret ? x <= lq : x >= lq)) || (t !== null && inv > 0 && t <= -inv)) { s.mut20 = null; s.dMut20 = null; s.mutOprit = "lichidare"; s.mutLich = lq; return s; }
+    s.mutTotal = t;
+    var g = grileDincolo(b, x); if (g) s.mutGrile = g;
+    return s;
+  }
   // v100.43 (I-467, el: „ce aș face eu” cu banii pe masă): cifrele de langa actiunile propuse in „Acum, concret”.
   //   stop.laOpritor - totalul daca se atinge opritorul LUI de acum (null = n-are opritor activ)
   //   stop.laPropus  - totalul cu stopul propus (o.protectie), cu grilele umplute pe drum (modelul care a prins LIGHTER)
@@ -646,8 +669,25 @@ var TabloExtra = (function () {
     // („Lichidarea la 2.7%” de la 13:00 și „Lichidarea la 14.8%” de la 15:41 = un singur rând): rămâne CEA MAI NOUĂ - titlul,
     // textul și culoarea ei (starea de acum, nu cea mai gravă din trecut); câte au fost se vede în „×N”.
     function fel(x) { return norm(x).replace(/[0-9]+/g, " ").replace(/\s+/g, " ").trim(); }
+    // v100.332 (auditul 12.11, 🔴2): alerta mai NOUĂ cu aceeași cheie (pe același bot) o stinge pe cea veche - trecerea („info”: „stopul se
+    // potrivește acum cu planul”, „lichidarea e din nou departe”) sau alt fapt pe aceeași regulă („n-ai stop activ” ⇒ „stopul pierde ≈ 20”).
+    // Alertele de același fel rămân împreună (×N), dar doar cele de după ultima trecere. Cheia comună „colector” nu stinge nimic (are regula ei,
+    // alertaRezolvata). Înainte, o alertă critică a cărei condiție trecuse rămânea roșie 24 h și urca în „Contează acum”.
+    var faraNume = function (x) { return String(x || "").replace(/^[A-Z0-9._-]+: /, ""); }, grav = function (a) { return a.nivel === "critic" || a.nivel === "atentie"; };
+    var chA = function (a) { return a && a.cheie && a.cheie !== "colector" && a.t > 0 ? String(a.bot || "") + "|" + a.cheie : null; }, ultima = {}, trecere = {};
+    (Array.isArray(o.alerte) ? o.alerte : []).forEach(function (a) {
+      var k = chA(a); if (!k || !a.titlu) return;
+      if (!ultima[k] || a.t > ultima[k].t) ultima[k] = a;
+      if (!grav(a) && (!trecere[k] || a.t > trecere[k])) trecere[k] = a.t;
+    });
+    var stinsa = function (a) {
+      var k = chA(a), u = k && ultima[k]; if (!u || u === a) return false;
+      if (trecere[k] > a.t) return true;
+      return u.t > a.t && grav(u) && fel(faraNume(u.titlu)) !== fel(faraNume(a.titlu));
+    };
     (Array.isArray(o.alerte) ? o.alerte : []).slice().sort(function (x, y) { return (x && x.t || 0) - (y && y.t || 0); }).forEach(function (a) {
       if (!a || !a.titlu || !(a.t > 0) || acum - a.t > 86400000 || (a.nivel !== "critic" && a.nivel !== "atentie")) return;
+      if (stinsa(a)) return;
       var t = String(a.titlu).replace(/^[A-Z0-9._-]+: /, ""), g = null;
       for (var i = 0; i < gr.length; i++) if (fel(gr[i].titlu) === fel(t)) { g = gr[i]; break; }
       if (!g) { g = { c: a.nivel === "critic" ? "r" : "g", titlu: t, text: String(a.mesaj || ""), n: 0, ultima: a.t, cheie: a.cheie || null, nivelA: a.nivel }; gr.push(g); }
@@ -778,7 +818,7 @@ var TabloExtra = (function () {
     return Object.keys(pe).map(function (k) { var g = pe[k]; g.text = "«" + (NUME_ALERTA[k] || k) + "»: prețul a scăzut în " + g.peMinus + " din " + g.n + " după 24 h" + (g.n < 10 ? " (prea puține)" : ""); return g; }).sort(function (a, b) { return b.n - a.n; });
   }
 
-  return { stopDincoloDeLichidare: stopDincoloDeLichidare, dupaAlerta: dupaAlerta, bilantAlerte: bilantAlerte, cifreActiuni: cifreActiuni, textBani: textBani, frecventaAtingere: frecventaAtingere, codTVBot: codTVBot, gridDiferitDeBot: gridDiferitDeBot, alertaRezolvata: alertaRezolvata, alerteleBotului: alerteleBotului, marcheazaDepasite: marcheazaDepasite, ritmRecuperare: ritmRecuperare, comisionDinUmplere: comisionDinUmplere, ceAiDeFacut: ceAiDeFacut, oraSfat: oraSfat, distanteGrid: distanteGrid, geometrieBot: geometrieBot, profitPeGrila: profitPeGrila, fundingBot: fundingBot, fundingPct: fundingPct, notaTotal: notaTotal, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, pretPentruTotal: pretPentruTotal, totalLaPret: totalLaPret, totalCuGridLa: totalCuGridLa, gridVsPlan: gridVsPlan, pragDinPlanuri: pragDinPlanuri, totalLaOpritor: totalLaOpritor, pretOpritorPentru: pretOpritorPentru, pretStopLive: pretStopLive, pretTpLive: pretTpLive, totalLaTinta: totalLaTinta, pretTintaPentru: pretTintaPentru, miscareZi: miscareZi, podeaUrca: podeaUrca, propunePlan: propunePlan, fisaInchidere: fisaInchidere, legaturaJurnal: legaturaJurnal,
+  return { stopDincoloDeLichidare: stopDincoloDeLichidare, stopPropus: stopPropus, grileDincolo: grileDincolo, dupaAlerta: dupaAlerta, bilantAlerte: bilantAlerte, cifreActiuni: cifreActiuni, textBani: textBani, frecventaAtingere: frecventaAtingere, codTVBot: codTVBot, gridDiferitDeBot: gridDiferitDeBot, alertaRezolvata: alertaRezolvata, alerteleBotului: alerteleBotului, marcheazaDepasite: marcheazaDepasite, ritmRecuperare: ritmRecuperare, comisionDinUmplere: comisionDinUmplere, ceAiDeFacut: ceAiDeFacut, oraSfat: oraSfat, distanteGrid: distanteGrid, geometrieBot: geometrieBot, profitPeGrila: profitPeGrila, fundingBot: fundingBot, fundingPct: fundingPct, notaTotal: notaTotal, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, pretPentruTotal: pretPentruTotal, totalLaPret: totalLaPret, totalCuGridLa: totalCuGridLa, gridVsPlan: gridVsPlan, pragDinPlanuri: pragDinPlanuri, totalLaOpritor: totalLaOpritor, pretOpritorPentru: pretOpritorPentru, pretStopLive: pretStopLive, pretTpLive: pretTpLive, totalLaTinta: totalLaTinta, pretTintaPentru: pretTintaPentru, miscareZi: miscareZi, podeaUrca: podeaUrca, propunePlan: propunePlan, fisaInchidere: fisaInchidere, legaturaJurnal: legaturaJurnal,
     peZile: peZile, marjaNoua: marjaNoua, vsPozitie: vsPozitie, planStare: planStare, evenimente: evenimente };
 })();
 if (typeof globalThis !== "undefined") globalThis.TabloExtra = TabloExtra;

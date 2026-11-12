@@ -2,7 +2,7 @@
 // probat în scripts/proba-v100175.mjs. Îl folosesc pagina și colectorul (ziua sesiunii, „bursa e deschisă”, ultima zi închisă).
 // Sărbătorile sunt CALCULATE (Paștele catolic, „a treia zi de luni din ianuarie”…), nu scrise de mână pe ani: NYSE (cu mutarea pe vineri /
 // luni când pică în weekend, Anul Nou de sâmbătă NU se mută pe 31.12), Xetra (fără mutări) și Londra (cu zilele înlocuitoare).
-// Zilele scurte (24.12 la NYSE, ziua de după Thanksgiving) sunt tratate ca zile întregi: barele lor sunt tot bare de zi.
+// Zilele scurte NYSE (ziua de după Thanksgiving, 24.12, 3.07) se închid la 13:00 (inchideMin, v100.332); barele lor sunt tot bare de zi.
 var CalendarBursa = (function () {
   "use strict";
   var ZI = 86400000;
@@ -69,6 +69,13 @@ var CalendarBursa = (function () {
     var d = new Date(zi + "T12:00:00Z"), w = d.getUTCDay();
     return w !== 0 && w !== 6 && !sarbatori(d.getUTCFullYear(), bursa || "NYSE")[zi];
   }
+  // v100.332 (auditul 12.11, 🔵 zilele scurte): la NYSE a doua zi după Thanksgiving, 24.12 și 3.07 (când sunt zile de bursă) se închid la 13:00;
+  // înainte erau zile întregi, deci între 13:00 și 16:00 pagina zicea „bursa deschisă”. Celelalte burse și zilele obișnuite: ca până acum.
+  function inchideMin(zi, bursa) {
+    var b = bursa || "NYSE", B = BURSE[b]; if (b !== "NYSE") return B.inchide;
+    var an = Number(String(zi).slice(0, 4)), dupaTg = dinUtc(new Date(Date.parse(aNa(an, 11, 4, 4) + "T12:00:00Z") + ZI));
+    return zi === dupaTg || zi === ymd(an, 7, 3) || zi === ymd(an, 12, 24) ? 780 : B.inchide;
+  }
   function inapoi(zi, bursa) { var t = Date.parse(zi + "T12:00:00Z"); do { t -= ZI; } while (!eZiDeBursa(dinUtc(new Date(t)), bursa)); return dinUtc(new Date(t)); }
   // ziua sesiunii: înainte de deschidere (ora locală a bursei), în weekend sau de sărbătoare ⇒ sesiunea precedentă
   function ziSesiune(acum, simbol) {
@@ -78,19 +85,21 @@ var CalendarBursa = (function () {
   // ultima zi a cărei ședință s-a ÎNCHIS (pentru „azi” față de „ieri” pe bare de zi)
   function ultimaZiInchisa(acum, simbol) {
     var b = bursaSimbol(simbol), B = BURSE[b], c = ceas(acum, B.tz);
-    return eZiDeBursa(c.zi, b) && c.min >= B.inchide ? c.zi : inapoi(c.zi, b);
+    return eZiDeBursa(c.zi, b) && c.min >= inchideMin(c.zi, b) ? c.zi : inapoi(c.zi, b);
   }
   function stare(acum, simbol) {
-    var b = bursaSimbol(simbol), B = BURSE[b], c = ceas(acum, B.tz), lucru = eZiDeBursa(c.zi, b);
-    return { bursa: b, zi: c.zi, ziDeBursa: lucru, deschisa: lucru && c.min >= B.deschide && c.min < B.inchide, dupaInchidere: lucru && c.min >= B.inchide + 5 && c.min < B.inchide + 120, minut: c.min };
+    var b = bursaSimbol(simbol), B = BURSE[b], c = ceas(acum, B.tz), lucru = eZiDeBursa(c.zi, b), inc = inchideMin(c.zi, b);
+    return { bursa: b, zi: c.zi, ziDeBursa: lucru, deschisa: lucru && c.min >= B.deschide && c.min < inc, dupaInchidere: lucru && c.min >= inc + 5 && c.min < inc + 120, minut: c.min };
   }
   // ora (ms UTC) la care se închide ședința din ziua `zi` (YYYY-MM-DD) a bursei simbolului - pentru „bara era închisă atunci?”
   function inchidereLa(zi, simbol) {
     var b = bursaSimbol(simbol), B = BURSE[b], t = Date.parse(zi + "T00:00:00Z") + B.inchide * 60000;
+    /* v100.332: rămâne ora închiderii OBIȘNUITE și în zilele scurte - e o margine prudentă pentru „bara era închisă atunci?”, iar ora redeschiderii de pe
+       Piața azi (acOraRedeschidere) se socotește ca închiderea − 6 h 30 min; „deschisă acum” o spun stare() și ultimaZiInchisa() (cu inchideMin) */
     for (var i = 0; i < 3; i++) { var c = ceas(t, B.tz), dif = (Date.parse(c.zi + "T00:00:00Z") - Date.parse(zi + "T00:00:00Z")) / 60000 + c.min - B.inchide; if (!dif) break; t -= dif * 60000; }
     return t;
   }
   // ziua calendaristică a momentului `t` la bursa simbolului (o bară de zi cu `t` la deschidere ⇒ ziua ei de ședință)
   function ziLocala(t, simbol) { return ceas(t, BURSE[bursaSimbol(simbol)].tz).zi; }
-  return { BURSE: BURSE, ziLocala: ziLocala, sarbatori: sarbatori, paste: paste, bursaSimbol: bursaSimbol, eZiDeBursa: eZiDeBursa, ziSesiune: ziSesiune, ultimaZiInchisa: ultimaZiInchisa, stare: stare, inchidereLa: inchidereLa };
+  return { BURSE: BURSE, ziLocala: ziLocala, sarbatori: sarbatori, paste: paste, bursaSimbol: bursaSimbol, eZiDeBursa: eZiDeBursa, ziSesiune: ziSesiune, ultimaZiInchisa: ultimaZiInchisa, stare: stare, inchidereLa: inchidereLa, inchideMin: inchideMin };
 })();

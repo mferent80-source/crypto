@@ -50,7 +50,8 @@ await test("vremeBursa: VIX >= 30 -> FRICA; Nasdaq pe coborare -> SCADE; fara da
   assert.equal(A.vremeBursa({ qqq: urca, vix: 32, ndx: A.largimeNdx(NDX) }).nivel, "frica");
   assert.equal(A.vremeBursa({ qqq: coboara, vix: 18, ndx: A.largimeNdx(NDX) }).nivel, "scade");
   assert.equal(A.vremeBursa({}).nivel, "fara-date");
-  assert.equal(A.vremeBursa({ qqq: urca, vix: 15 }).nivel, "larga", "fara largime: judeca din indice");
+  // v100.332 (auditul 12.11, 🔴3): fără lățime, trendul sus NU mai e „URCARE LARGĂ… o urmează majoritatea” — nu știm câte o urmează ⇒ treapta galbenă
+  assert.equal(A.vremeBursa({ qqq: urca, vix: 15 }).nivel, "ingusta", "fara largime: nu pretinde ca e larga");
 });
 
 // ---------------- corelatia BTC - Nasdaq ----------------

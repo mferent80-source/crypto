@@ -31,7 +31,8 @@ async function acasaPorneste(fortat) {
   acasa.inLucru = true;
   var d = acasa.d;
   // v100.202: fiecare cerere reușită își ține ora (k + "La") — „actualizat” și „ultima citire bună” spun adevărul, nu ora încercării
-  var pas = async function (k, fn) { try { d[k] = await fn(); d[k + "Err"] = null; d[k + "La"] = Date.now(); } catch (e) { d[k + "Err"] = typeof textEroare === "function" ? textEroare(e) : String(e && e.message || e); } acasaDeseneaza(); };
+  // v100.332 (auditul 12.11, 🟡7): redesenarea după fiecare cerere e grupată (acasaDeseneazaGrupat) - ~30 de cereri sosite una după alta rescriau toată pagina de ~30 de ori
+  var pas = async function (k, fn) { try { d[k] = await fn(); d[k + "Err"] = null; d[k + "La"] = Date.now(); } catch (e) { d[k + "Err"] = typeof textEroare === "function" ? textEroare(e) : String(e && e.message || e); } if (typeof acasaDeseneazaGrupat === "function") acasaDeseneazaGrupat(); else acasaDeseneaza(); };
   try {
     await Promise.all([
       pas("clasament", async function () { var c = await getJSON("/api/istoric-bot?action=clasament"); d.clasamentStare = c && c.stare || null; return c && c.clasament || null; }),   /* v100.276: + de ce lipsește */
@@ -55,7 +56,8 @@ async function acasaPorneste(fortat) {
       pas("verdicte", function () { return getJSON("/api/istoric-bot?action=verdicteCalibrare").then(function (r) { return r && r.calibrare || null; }); }),
       // v100.193 (demo aprobat 14.10): Market Breadth SUA (robotul de pe GitHub), Trend 12 luni + topul pe sectoare (KV, colectorul),
       // lățimea crypto pe 150 perp-uri (KV, la 15 min) — pentru cardurile noi și Scorul zilei
-      pas("mbUs", function () { return typeof LatimeUS === "undefined" ? null : fetch(LatimeUS.SURSA, { cache: "no-store" }).then(function (r) { return r.ok ? r.json() : null; }); }),
+      /* v100.332 (auditul 12.11, 🟡6): cu limită de timp - fără ea, robotul care nu răspunde ținea pe loc tot ce urmează (lumânările BTC, lărgimea, ideile) și pagina nu se mai reîmprospăta */
+      pas("mbUs", function () { return typeof LatimeUS === "undefined" ? null : fetch(LatimeUS.SURSA, { cache: "no-store", signal: typeof AbortSignal !== "undefined" && AbortSignal.timeout ? AbortSignal.timeout(12000) : undefined }).then(function (r) { return r.ok ? r.json() : null; }); }),
       pas("trend12", function () { return getJSON("/api/istoric-bot?action=trend12").then(function (r) { return r && r.trend || null; }); }),
       pas("sectoareTop", function () { return getJSON("/api/istoric-bot?action=sectoareTop").then(function (r) { return r && r.sectoare || null; }); }),
       pas("latimeKv", function () { return getJSON("/api/istoric-bot?action=latime").then(function (r) { return r && r.latime || null; }); })
@@ -68,7 +70,10 @@ async function acasaPorneste(fortat) {
     // „Calculez lărgimea…”; dacă lipsește sau are peste 90 de minute, pagina o socotește singură, ca înainte
     await pas("largime", async function () {
       try { var r = await getJSON("/api/istoric-bot?action=largimeCrypto"); if (r && r.largime && r.la > 0 && Date.now() - r.la < 90 * 60000) return acLargimeDinServer(r.largime); } catch (e) {}
-      return typeof refreshMarketBreadthV64 === "function" ? refreshMarketBreadthV64(false, false) : null;
+      var lr = typeof refreshMarketBreadthV64 === "function" ? await refreshMarketBreadthV64(false, false) : null;
+      /* v100.332 (auditul 12.11, 🔵): rezerva socotește „Piața analizată”; cu acțiunile alese, lărgimea Nasdaq nu se scrie sub titlul „Lărgimea crypto” */
+      if (lr && lr.market && lr.market !== "CRYPTO") throw Error("lărgimea crypto vine de la colector, iar acum n-o am (în „Piața analizată” sunt alese acțiunile)");
+      return lr;
     });
     // mediul botilor pe monede care nu sunt in top 100 (clasamentul nu le are): miscarea din barele de 1 ora
     await pas("regimBoti", async function () {
@@ -93,11 +98,24 @@ async function acasaPorneste(fortat) {
       o.l.sort(function (a, b) { return a.data < b.data ? -1 : 1; });
       return o;
     });
-    acasa.la = d.clasament && d.piata && d.tickers ? Date.now() : Date.now() - ACASA_MS + 30000;
+    /* v100.332 (auditul 12.11, 🔵): și când tura de acum a picat peste date vechi rămase pe ecran (înainte reîncerca abia peste 5 minute) */
+    /* revizia Opus v100.332 (🟡3): reîncercarea la fiecare minut refăcea toată tura (~30 de cereri, și la Pionex, care blochează IP-ul) cât o sursă pica ⇒
+       pauză crescătoare după eșecuri la rând: 1, 2, 4, apoi cel mult 5 minute (cât tura obișnuită); o tură reușită o pune la zero */
+    acasa.la = d.clasament && d.piata && d.tickers && !d.clasamentErr && !d.piataErr && !d.tickersErr ? (acasa.esec = 0, Date.now()) : (acasa.esec = (acasa.esec || 0) + 1, Date.now() - ACASA_MS + Math.min(ACASA_MS, 60000 * Math.pow(2, acasa.esec - 1)));
   } finally { acasa.inLucru = false; }
   acasaDeseneaza();
 }
 setInterval(function () { if (acasaPe() && !document.hidden) acasaPorneste(false); }, 60000);
+// v100.332 (auditul 12.11, 🟡7): redesenarea grupată - cererile care sosesc la mai puțin de 120 ms una de alta fac o singură desenare (la deschidere
+// pagina se rescria întreagă după fiecare din cele ~30 de cereri, cu socotelile pe toți boții închiși de fiecare dată). Desenarea de la începutul și
+// de la sfârșitul turei rămâne pe loc (acasaPorneste); fără setTimeout (probele în vm) desenează imediat, ca înainte.
+var acasaDesenProgramat = false;
+function acasaDeseneazaGrupat() {
+  if (typeof setTimeout !== "function") { acasaDeseneaza(); return; }
+  if (acasaDesenProgramat) return;
+  acasaDesenProgramat = true;
+  setTimeout(function () { acasaDesenProgramat = false; try { acasaDeseneaza(); } catch (e) {} }, 120);
+}
 
 // ---------------- desenarea ----------------
 var AC_TON = { bine: "good", rau: "bad", atentie: "warn", neutru: "acMut", lipsa: "acMut" };
@@ -115,6 +133,7 @@ function acBare(n, perechi) { var tot = 0; perechi.forEach(function (x) { tot +=
 function acClasamentSumar(c) {
   var m = c && Array.isArray(c.monede) ? c.monede : null; if (!m) return null;
   var o = { evita: 0, candidati: 0, faraDate: 0, dir: { long: 0, neutru: 0, short: 0 }, deEvitat: [], buni: [] };
+  if (Number(c.la) > 0) o.la = Number(c.la);   /* v100.332 (🔴2): ora la care l-a făcut colectorul - Acasa.vreme o citește pentru „DATE VECHI” */
   m.forEach(function (x) { if (x.stare === "evita") { o.evita++; o.deEvitat.push(x); } else if (x.stare === "candidat") { o.candidati++; o.buni.push(x); } else o.faraDate++; if (o.dir[x.dir] != null) o.dir[x.dir]++; });
   o.deEvitat.sort(function (a, b) { var ra = a.regim ? a.regim.r24h || 0 : 0, rb = b.regim ? b.regim.r24h || 0 : 0; return rb - ra; });   /* v100.272: după mișcarea pe 24 h (definiția comună), nu după maximul 4 h / 24 h */
   o.buni.sort(function (a, b) { return (b.scor || 0) - (a.scor || 0); });
@@ -225,7 +244,7 @@ function acasaCumpar(d, aziNu) {
   var col = function (et, corp, b, extra) { return '<div class="acCumparCol"><p class="acCumparEt">' + et + '</p><p>' + corp + '</p>' + (extra ? '<p class="tbWarn">' + escapeHtml(extra) + '</p>' : '') + b + '</div>'; };
   // v100.119: drumul spre pagina cu TOATE sugestiile (boți, US, EU)
   return '<p class="acCumparCap">💡 <b>Ce aș cumpăra azi</b></p><div class="acCumparCol3">' + col("Boți", bh, btn("tabloubot", "tbIdei", null, an && an.nu ? "Lista candidatelor" : "Pe ce aș porni un bot"))
-    + col("Monede pe revenire", monede(p && p.monede, p && p.etM, p && p.urmM, "long"), "") + col("Monede pentru short", monede(p && p.short, p && p.etS, p && p.urmS, "short"), "", p && p.nota)
+    + col("Monede pe revenire", monede(p && p.monede, p && p.etM, p && p.urmM, "long"), "", p && p.notaRev) + col("Monede pentru short", monede(p && p.short, p && p.etS, p && p.urmS, "short"), "", p && p.nota)
     + col("Acțiuni pe revenire", ch, btn("t212", "t212Idei", "revenire", "Pe revenire")) + '</div>'
     + '<p class="acCumparToate"><button class="acBtn" type="button" data-action-click="navTo(\'sugestii\',true)">💡 Toate sugestiile: boți, acțiuni US și EU</button></p>';   // v100.119: sub cartelă, titlul rămâne același
 }
@@ -238,8 +257,12 @@ function acasaCumpar2Parti(d) {
   var cm = d && d.clasament && d.clasament.monede, faraStare = Array.isArray(cm) && cm.length > 0 && !cm.some(function (x) { return x && x.revenire; });
   // revizia Opus (🔵6): `moneda` e deja curățat (Idei); simbolul tăiat de mână doar când lipsește (BTC_USDT ar fi ieșit „BTCUSDT” în buton)
   var mo = function (x) { return String(x.moneda || String(x.simbol || "").replace(/_USDT(_PERP)?$/, "")); }, ac = function (x) { return x.simbol || String(x.ticker || "").split("_")[0]; };
-  var rm = I && d && d.clasament && !faraStare ? I.reveniriBoti(d.clasament, [], 3).map(mo) : null, rs = I && d && d.clasament ? I.shortBoti(d.clasament, [], 3).map(mo) : null;
+  var rmL = I && d && d.clasament && !faraStare ? I.reveniriBoti(d.clasament, [], 3) : null;
+  var rm = rmL ? rmL.map(mo) : null, rs = I && d && d.clasament ? I.shortBoti(d.clasament, [], 3).map(mo) : null;
   if (!ra && !rm && !rs) return null;
+  // v100.332 (auditul 12.11, 🔵): o monedă „pe revenire” care e și „în mișcare” în clasament stătea îngroșată aici și, mai jos, la „De ocolit pentru grid”
+  var miscaR = (rmL || []).filter(function (x) { return x && x.stare === "evita"; }).map(mo);
+  var notaRev = miscaR.length ? "⚠ " + miscaR.join(", ") + (miscaR.length === 1 ? " e și în mișcare (de ocolit pentru grid)" : " sunt și în mișcare (de ocolit pentru grid)") : "";
   // v100.89 (ideea 1): moneda aflată în AMBELE liste (cele de 5) - semnalele se bat cap în cap
   var nota = "";
   if (rm && rs) {
@@ -251,13 +274,21 @@ function acasaCumpar2Parti(d) {
     monede: rm, short: rs, sg: !!sg, etM: dv.revenire && dv.revenire.piata && dv.revenire.piata.eticheta || "", etS: dv.short && dv.short.piata && dv.short.piata.eticheta || "",
     // v100.331 (el, 12.11): urmărirea FAȚĂ DE PIAȚĂ, pe zile, când colectorul a făcut-o; altfel cea veche (de la prețul sugestiei) + când vine cea nouă
     urmM: um.revenireFata ? acFataPiata(um.revenireFata) : um.revenire && um.revenire.text ? um.revenire.text + " · față de piață: vine la tura de dimineață" : "",
-    urmS: um.shortFata ? acFataPiata(um.shortFata, true) :um.short && um.short.text ? um.short.text + " · față de piață: vine la tura de dimineață" : "", nota: nota };
+    urmS: um.shortFata ? acFataPiata(um.shortFata, true) :um.short && um.short.text ? um.short.text + " · față de piață: vine la tura de dimineață" : "", nota: nota, notaRev: notaRev };
 }
 // v100.331 (revizia Opus 🔴2): lărgimea de la server umple și ce umplea calculul din pagină - pliul „Lărgimea pieței, pe larg” (renderMarketBreadthV64),
 // starea globală (marketBreadthV64State / window.__marketBreadthV64); null din JSON ⇒ NaN, ca pagina să scrie „—”, nu „0%”
 function acLargimeDinServer(x) {
   var o = Object.assign({}, x);
   ["score", "participation", "trend", "above20", "above50", "above200", "momentum", "volume", "highLow", "coverage", "altParticipation", "benchmarkReturn"].forEach(function (k) { if (typeof o[k] !== "number" || !isFinite(o[k])) o[k] = NaN; });
+  // v100.332 (auditul 12.11, 🔵): starea globală e a „Pieței analizate” (27 de cititori: alinierea semnalelor, validarea). Cu acțiunile alese acolo,
+  // lărgimea CRYPTO de la server nu se mai scrie peste ea: cardul „Lărgimea crypto” o primește oricum (valoarea întoarsă), iar pliul „Lărgimea pieței,
+  // pe larg” se umple cu piața aleasă, din calculul lui (ca înainte de v100.331). Pe crypto (implicit): ca până acum.
+  var peCrypto = typeof assetClass !== "function" || String(assetClass() || "CRYPTO").toUpperCase() === "CRYPTO";
+  if (!peCrypto) {
+    if (typeof refreshMarketBreadthV64 === "function") { try { Promise.resolve(refreshMarketBreadthV64(false, false)).catch(function () {}); } catch (e) {} }
+    return o;
+  }
   try { if (typeof marketBreadthV64State !== "undefined") marketBreadthV64State = o; } catch (e) {}
   if (typeof window !== "undefined") window.__marketBreadthV64 = o;
   if (typeof renderMarketBreadthV64 === "function") { try { renderMarketBreadthV64(o); } catch (e) {} }
@@ -346,6 +377,11 @@ function acTopSector(s) {
 }
 // v100.231: pauza sezonului crypto, doar după ce socoteala a rulat (necunoscut ≠ pauză). 0 = se știe că nu e pauză.
 function acPauzaSezon() {
+  // v100.332 (auditul 12.11, 🟡7): într-o desenare a paginii (acasa.memo, pus de acasaDeseneaza) socoteala pe toți boții închiși se face o dată -
+  // era chemată de patru ori (poza zilei, cardul Crypto, „azi nu”, „Ce aș cumpăra azi”). În afara desenării (Scan, Tablou, probe): ca înainte.
+  var M = typeof acasa !== "undefined" && acasa && acasa.memo && (acasa.memo.la === undefined || Date.now() - acasa.memo.la < 1000) ? acasa.memo : null;
+  if (M && "pz" in M) return M.pz;
+  var r = (function () {
   try {
     if (typeof ScorSezon === "undefined" || typeof scTrades !== "function") return null;
     var tr = scTrades("pionex"); if (!tr) return null;
@@ -354,6 +390,9 @@ function acPauzaSezon() {
     if (!s.pauza) return 0;
     return s.serie && s.serie.n > 0 ? s.serie.n : 3;
   } catch (e) { return null; }
+  })();
+  if (M) M.pz = r;
+  return r;
 }
 function acFrazaPauza(n) {
   if (typeof Acasa !== "undefined" && Acasa.frazaPauza) return Acasa.frazaPauza(n);
@@ -372,6 +411,10 @@ function acAziNuDin(o) {
   if (f && f.activa) m.push({ cod: "frana", text: "frâna zilei e trasă: " + ((f.depasit || []).map(dep).filter(Boolean).join(", ") || "pragurile tale") });
   if (Number(o.pauzaN) > 0) m.push({ cod: "pauza", text: acCate(o.pauzaN, "pierdere", "pierderi") + " la rând (pauza sezonului)" });
   if (v && v.nivel === "miscare") m.push({ cod: "piata", text: "piața e în MIȘCARE" + (Number(v.total) > 0 ? " (" + v.inMiscare + " din " + acCate(v.total, "monedă", "monede") + " mari)" : "") });
+  // v100.332 (auditul 12.11, 🔴2): clasamentul vechi (Acasa.vreme cu `la`) - candidatele rămân la vedere, fără bold: sunt cele de acum câteva ore
+  if (v && v.vechi) m.push({ cod: "vechi", text: "clasamentul pieței e vechi" + (Number(v.dateLa) > 0 ? " (de la " + new Date(Number(v.dateLa)).toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" }) + ")" : "") });
+  // v100.332 (auditul 12.11, 🟡3): citirea boților închiși a PICAT (nu „încă în zbor”) ⇒ frâna zilei nu se poate socoti; lista nu mai stă îngroșată ca și cum n-ar fi trasă
+  if (o.franaNec === true && !(f && f.activa)) m.push({ cod: "necunoscut", text: "nu știu frâna zilei (boții închiși n-au venit)" });
   return { nu: m.length > 0, motive: m, motiv: m.map(function (x) { return x.text; }).join("; ") };
 }
 // verdictul pieței din aceeași sursă ca Piața azi: clasamentul + BTC pe barele de 1 h (Acasă); fără ele, BTC din clasament (ca pregătirea Tabloului)
@@ -381,20 +424,21 @@ function acVremeAziNu() {
   var c = d.clasament || (typeof sugStare !== "undefined" && sugStare.d && sugStare.d.clasament) || (typeof contTot !== "undefined" && contTot.clasament) || null;
   var cl = acClasamentSumar(c); if (!cl) return null;
   var btcMis = acBtcMiscare({ btc1h: d.btc1h, clasament: c });   /* v100.329: aceeași regulă ca vremea paginii (lumânările 1 h, altfel clasamentul) */
-  return Acasa.vreme({ clasament: cl, btc: { miscare: btcMis } });
+  return Acasa.vreme({ clasament: cl, btc: { miscare: btcMis } });   /* v100.332 (🔴2): vârsta clasamentului vine în `cl.la` (acClasamentSumar) */
 }
 // regula, din ce are pagina acum: frâna = boții închiși (contTot) + boții activi + pragurile tale (config), ca pe cardul „Boții tăi”
 function acAziNu(acum) {
-  var t = acum || Date.now(), fr = null, v = null, pz = null;
+  var t = acum || Date.now(), fr = null, v = null, pz = null, nec = false;
   try { pz = acPauzaSezon(); } catch (e) { pz = null; }
   try {
     var ct = typeof contTot !== "undefined" ? contTot : null, inchise = ct && ct.inchiseOk ? ct.inchise : null;
+    nec = !!(ct && ct.inchise && !ct.inchiseOk && Number(ct.inchiseLa) > 0);   /* v100.332 (🟡3): citirea a picat (t212-ecran pune `inchiseLa` și la picare; în zbor nu e) */
     var boti = typeof tbStare !== "undefined" && tbStare.boti && tbStare.boti.length ? tbStare.boti : ct ? ct.boti : null;
     var cfg = typeof acasa !== "undefined" && acasa.d && acasa.d.franaCfg || (typeof grFrana !== "undefined" && grFrana.praguri) || null;
     if (typeof Obiceiuri !== "undefined" && Obiceiuri.frana && Array.isArray(inchise)) fr = Obiceiuri.frana({ trades: inchise, deschise: (boti || []).filter(function (b) { return b && b.activ; }), acum: t, praguri: cfg });
   } catch (e) { fr = null; }
   try { v = acVremeAziNu(); } catch (e) { v = null; }
-  return acAziNuDin({ pauzaN: pz, frana: fr, vreme: v });
+  return acAziNuDin({ pauzaN: pz, frana: fr, vreme: v, franaNec: nec });
 }
 function acAziNuHtml(an) { return an && an.nu ? '<span class="aziNuRand">⛔ <b>Azi nu:</b> ' + escapeHtml(an.motiv) + ".</span>" : ""; }   /* span (bloc din CSS): stă și în <p> */
 // v100.306: ultimul bot închis, pe un rând („XMR long 5× −2,1 USDT · joi 11:19”) - Tabloul fără bot, „Acum” pe telefon, Comportament
@@ -417,12 +461,34 @@ function acRaportStare() {
   return { stare: "ok", raport: c };
 }
 // undefined = calendarul încă nu e știut (în zbor, null sau eroare). "" = a venit și azi nu e nimic mare.
-function acEvenimentAzi() {
+// v100.332 (auditul 12.11, 🔴1): calendarul venit cu `eroare` (ruta întoarce 200 cu `evenimente: []` când faireconomy nu răspunde) e tot NECUNOSCUT -
+// înainte ieșea „azi nu e nimic mare”, iar banda scria „azi nu e trasă” într-o zi de CPI. (🟡2) evenimentul abia trecut rămâne frână 2 ore
+// (Acasa.evenimentAzi). Cu `cuStare` întoarce { titlu, trecut } / null în loc de titlu / "" (aceeași funcție: probele vechi o încarcă după nume).
+function acEvenimentAzi(cuStare) {
   var d = acasa.d || {};
-  if (d.calendar === undefined || d.calendar === null || typeof Acasa === "undefined" || !Acasa.calendar) return undefined;
+  if (d.calendar === undefined || d.calendar === null || d.calendar.eroare || typeof Acasa === "undefined" || !Acasa.calendar) return undefined;
+  if (Acasa.evenimentAzi) { var eo = Acasa.evenimentAzi(d.calendar.evenimente, Date.now()); return cuStare === true ? eo : eo ? eo.titlu : ""; }
   var cal = Acasa.calendar(d.calendar.evenimente, Date.now()), azi = acZiBuc();
   var ev = (cal.urmatoare || []).filter(function (x) { return x && x.mare && x.t && new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Bucharest", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(x.t)) === azi; })[0];
-  return ev ? ev.titlu : "";
+  return cuStare === true ? (ev ? { titlu: ev.titlu, trecut: false } : null) : ev ? ev.titlu : "";
+}
+// v100.332 (🟡2): evenimentul de azi a trecut deja (fraza frânei devine „imediat după”); un acEvenimentAzi înlocuit de o probă întoarce text ⇒ fals
+function acEvenimentTrecut() {
+  var e; try { e = acEvenimentAzi(true); } catch (x) { e = null; }
+  return !!(e && typeof e === "object" && e.trecut === true);
+}
+// v100.332 (🔴1 / 🟡1 / 🟡8): de ce NU se poate spune „azi nu e trasă” - raportul sau calendarul încă pe drum, calendarul căzut, raportul fără riscul
+// pe o zi. "" = totul e știut. Aceeași frază în bandă, în Scan și (prin app.js) în Tabloul fără bot.
+function acFranaContNec() {
+  var d = acasa.d || {}, rs = acRaportStare(), ev = acEvenimentAzi(), p = [];
+  var rapZbor = !rs.stare || rs.stare === "necunoscut", calErr = d.calendarErr || (d.calendar && d.calendar.eroare) || "", calZbor = ev === undefined && !calErr;
+  if (rapZbor && calZbor) return "încă verific raportul contului și calendarul";
+  if (rapZbor) p.push("încă verific raportul contului");
+  if (calZbor) p.push("încă verific calendarul");
+  if (ev === undefined && calErr) p.push("n-am calendarul de azi (" + String(calErr).replace(/[.\s]+$/, "") + "), deci nu știu dacă e un eveniment mare");
+  var rn = typeof Acasa !== "undefined" && Acasa.riscNecunoscut ? Acasa.riscNecunoscut({ raportStare: rs.stare, raport: rs.raport }) : "";
+  if (rn) p.push(rn);
+  return p.join("; ");
 }
 function acExportNePotrivit() {
   try { var o = JSON.parse(localStorage.getItem("radar-export-t212-v1") || "null"); return !!(o && o.nePotrivit === true); }
@@ -495,17 +561,28 @@ function acVremeCrypto(d) {
   if (typeof Acasa === "undefined") return null;
   var fgO = d.piata && d.piata.fg, fgI = Acasa.fg(fgO && fgO.istoric && fgO.istoric.length ? fgO.istoric : fgO ? [fgO.valoare] : []);
   // v100.330 (el: „nu voiam verdicte la fel crypto și nasdaq”): pe card doar frânele pieței (pauza, funding-ul); frâna contului are banda ei
+  // v100.332 (auditul 12.11, 🔴2): + ora clasamentului (`la`, pusă de colector) - peste ~100 de minute verdictul spune „DATE VECHI” și nu invită
+  //   (ora vine prin acClasamentSumar: `la` din sumar, citit de Acasa.vreme)
   return acFraneaza(Acasa.vreme({ clasament: acClasamentSumar(d.clasament), btc: { miscare: acBtcMiscare(d) }, fg: fgI.acum, stare: d.clasamentStare }), "crypto", AC_FARA_CONT);
 }
 var AC_FARA_CONT = { faraCont: true };
 function acVremeBursa(d) {
   d = d || {};
   if (typeof Acasa === "undefined" || typeof GridCalcul === "undefined") return null;
-  var p = d.piata || {}, qqq = p.qqq ? GridCalcul.bareToate(p.qqq) : null, vixB = p.vix ? GridCalcul.bareToate(p.vix) : null, ndxL = d.ndx && Array.isArray(d.ndx.actiuni) ? Acasa.largimeNdx(d.ndx.actiuni) : null;
-  return acFraneaza(Acasa.vremeBursa({ qqq: qqq, vix: vixB && vixB.length ? vixB[vixB.length - 1].c : null, ndx: ndxL }), "bursa", AC_FARA_CONT);   /* v100.330: doar exportul T212, frâna contului în bandă */
+  // v100.332 (auditul 12.11, 🔴2): lățimea Nasdaq mai veche de 30 h (Acasa.ndxVechi, pragul Scorului zilei) nu intră în verdict - iese „lățime necunoscută”
+  var ndxV = !!(d.ndx && Acasa.ndxVechi && Acasa.ndxVechi(d.ndx, Date.now()));
+  var p = d.piata || {}, qqq = p.qqq ? GridCalcul.bareToate(p.qqq) : null, vixB = p.vix ? GridCalcul.bareToate(p.vix) : null, ndxL = d.ndx && Array.isArray(d.ndx.actiuni) && !ndxV ? Acasa.largimeNdx(d.ndx.actiuni) : null;
+  /* v100.332 (🔴1 / 🔴2): lățimea veche și eroarea rutei burselor (Yahoo n-a dat indicele) ajung la acFraneaza, care le spune în text */
+  return acFraneaza(Acasa.vremeBursa({ qqq: qqq, vix: vixB && vixB.length ? vixB[vixB.length - 1].c : null, ndx: ndxL }), "bursa", ndxV || p.eroare ? { faraCont: true, ndxVechi: ndxV, piataEroare: p.eroare || "" } : AC_FARA_CONT);   /* v100.330: doar exportul T212, frâna contului în bandă */
 }
 function acFraneaza(v, fel, extra) {   /* v100.330: extra = { faraCont: true } pe cardurile paginii (frâna contului are banda ei) */
   if (!v || typeof Acasa === "undefined" || !Acasa.franaVerb) return v;
+  if (extra && (extra.ndxVechi || extra.piataEroare)) {   /* v100.332 (🔴1 / 🔴2): de ce lipsește lățimea sau indicele, spus pe card */
+    v = Object.assign({}, v);
+    if (extra.ndxVechi && v.latime === "necunoscuta") v.text = String(v.text || "").replace("Lățimea Nasdaq 100 n-a venit.", "Lățimea Nasdaq 100 e veche (peste 30 de ore), n-o folosesc.");
+    if (extra.piataEroare && v.nivel === "fara-date" && !v.text) v.text = String(extra.piataEroare).slice(0, 200);
+    extra = { faraCont: extra.faraCont };
+  }
   var o = { fel: fel }, rs = acRaportStare(), ev = acEvenimentAzi();
   if (acExportNePotrivit()) o.exportNePotrivit = true;   // audit 23.10: exportul T212 nepotrivit e frâna cardului Nasdaq (Acasa.franaVerb o aplică doar la bursă)
   if (fel === "crypto") {
@@ -515,6 +592,7 @@ function acFraneaza(v, fel, extra) {   /* v100.330: extra = { faraCont: true } p
   }
   if (rs.stare && rs.stare !== "necunoscut") { o.raportStare = rs.stare; if (rs.ore) o.raportOre = rs.ore; if (rs.raport) o.raport = rs.raport; }
   if (ev !== undefined) o.eveniment = ev;
+  if (ev && typeof acEvenimentTrecut === "function" && acEvenimentTrecut()) o.evenimentTrecut = true;   /* v100.332 (🟡2) */
   if (extra) for (var k in extra) o[k] = extra[k];
   return Acasa.franaVerb(v, o);
 }
@@ -546,20 +624,24 @@ function acFranaContText() {
   var o = {}, rs = acRaportStare(), ev = acEvenimentAzi();
   if (rs.stare && rs.stare !== "necunoscut") { o.raportStare = rs.stare; if (rs.ore) o.raportOre = rs.ore; if (rs.raport) o.raport = rs.raport; }
   if (ev !== undefined) o.eveniment = ev;
+  if (ev && typeof acEvenimentTrecut === "function" && acEvenimentTrecut()) o.evenimentTrecut = true;   /* v100.332 (🟡2): „imediat după”, încă 2 ore */
   return Acasa.franaCont(o);
 }
 // banda: fraza frânei + măsura ei (mutată de pe cardul Crypto); fără frână azi spune asta; fără nimic de spus, goală (ascunsă)
 // revizia Opus (🔵4): „azi nu e trasă” doar când știm - raportul contului a venit și calendarul s-a citit; altfel spune că încă verifică
 function acFranaContStiut() {
   var rs = acRaportStare(), ev = acEvenimentAzi();
-  return !!rs.stare && rs.stare !== "necunoscut" && ev !== undefined;
+  return !!rs.stare && rs.stare !== "necunoscut" && ev !== undefined && !(typeof Acasa !== "undefined" && Acasa.riscNecunoscut && Acasa.riscNecunoscut({ raportStare: rs.stare, raport: rs.raport }));   /* v100.332 (🟡1): + riscul pe o zi știut */
 }
+// v100.332 (auditul 12.11, 🟡8): frâna NECUNOSCUTĂ rămâne la vedere și fără măsură (browser nou, calendar căzut) - înainte banda era goală, exact ca
+// atunci când frâna nu e trasă, iar cardul invita; spune și DE CE nu se știe (acFranaContNec). Știută și netrasă, fără măsură: ascunsă, ca până acum.
 function acFranaContHtml(fc, masura) {
-  if (!fc && !masura) return "";
   var stiut = typeof acFranaContStiut === "function" ? acFranaContStiut() : true;
+  if (!fc && !masura && stiut) return "";
+  var nec = !fc && !stiut && typeof acFranaContNec === "function" ? acFranaContNec() : "";
   return (fc ? '<div class="acFrCap">⛔ Frâna contului azi <span class="acMut">· la ambele piețe, Crypto și Nasdaq</span></div><div class="acFrTxt">' + escapeHtml(fc) + "</div>"
     : stiut ? '<div class="acFrCap acFrLiber">Frâna contului: azi nu e trasă.</div>'
-    : '<div class="acFrCap acFrLiber">Frâna contului: încă verific raportul contului și calendarul.</div>') + (masura || "");
+    : '<div class="acFrCap acFrLiber">Frâna contului: ' + escapeHtml(nec || "încă verific raportul contului și calendarul") + '.</div>') + (masura || "");
 }
 // v100.277 (30.10, el: „boții tăi - față de ieri pare blocat, aș pune mai multe date, statistici”): el pornește ~8 boți pe zi, mulți ținuți
 // minute; cardul arăta doar boții activi (des „Niciun bot pornit acum”). Acum: ultimul închis, ziua de azi și ultimele 7 zile (cu cele 7
@@ -579,7 +661,9 @@ function acUltimInchis(t) {
 function acFranaZileiHtml(inchise, boti, praguri, acum) {
   if (typeof Obiceiuri === "undefined" || !Obiceiuri.frana || !Array.isArray(inchise)) return "";
   var f = Obiceiuri.frana({ trades: inchise, deschise: Array.isArray(boti) ? boti : [], acum: acum, praguri: praguri }), P = f.praguri, nrP = function (x) { return String(x).replace(".", ","); };
-  return '<div class="acLin"><span>Frâna zilei <span class="acMut">· pragurile tale</span></span><b class="' + (f.activa ? "bad" : "") + '">' + f.pornitiAzi + " din " + escapeHtml(acCate(P.boti, "bot", "boți")) + " · " + f.rand + " din " + P.rand + " la rând</b></div>"
+  // v100.332 (auditul 12.11, 🟡3): când cererea configurației a picat, frâna merge pe pragurile implicite (−20 / −60 / 3 / 7) - nu le mai numește „ale tale”
+  var implicite = !praguri && typeof acasa !== "undefined" && acasa && acasa.d && !!acasa.d.franaCfgErr;
+  return '<div class="acLin"><span>Frâna zilei <span class="acMut">· ' + (implicite ? "pragurile implicite (ale tale n-au venit)" : "pragurile tale") + '</span></span><b class="' + (f.activa ? "bad" : "") + '">' + f.pornitiAzi + " din " + escapeHtml(acCate(P.boti, "bot", "boți")) + " · " + f.rand + " din " + P.rand + " la rând</b></div>"
     + '<p class="acMut acLinSub">Azi ' + escapeHtml(acSemn(f.netZi)) + " din −" + nrP(P.zi) + " · pe 7 zile " + escapeHtml(acSemn(f.netSapt)) + " din −" + nrP(P.sapt) + "\u00a0USDT" + (f.activa ? ". Trasă: n-aș mai porni boți azi." : ".") + "</p>";
 }
 // inchise: lista citită / false = citirea a picat (v100.278: nu „niciun bot”) / null = încă nu s-a citit
@@ -659,12 +743,15 @@ function acZileHtml(zile) {
   var buna = zile.filter(function (z) { return z.n && z.net > 0; }).sort(function (a, b) { return b.net - a.net; })[0], rea = zile.filter(function (z) { return z.n && z.net < 0; }).sort(function (a, b) { return a.net - b.net; })[0];
   var cap = [rea ? "cea mai proastă zi " + acZiScurta(rea.zi) + " " + acUsd(rea.net) : "", buna ? "cea mai bună " + acZiScurta(buna.zi) + " " + acUsd(buna.net) : ""].filter(Boolean).join(" · ");
   var rand = zile.slice().reverse().map(function (z) { return "<tr><td>" + escapeHtml(z.azi ? "azi" : acZiScurta(z.zi)) + "</td><td>" + (z.n || "—") + '</td><td class="' + (z.n ? acClsUsd(z.net) : "") + '">' + (z.n ? acUsd(z.net) : "—") + "</td></tr>"; }).join("");
+  /* v100.332 (auditul 12.11, 🔵): pliul deschis rămâne deschis la redesenare (cardul se rescrie întreg la 60 s), ca „Orele celor N zile” din banda frânei */
+  var deschis = typeof document !== "undefined" && document.querySelector && !!document.querySelector("#acBoti details.acZileTab[open]");
   return '<div class="acEt" style="margin-top:6px">Pe zile · ultimele ' + zile.length + "</div>" + acZileSvg(zile)
     + (cap ? '<p class="acMut acLinSub">' + escapeHtml(cap.charAt(0).toUpperCase() + cap.slice(1)) + ".</p>" : "")
-    + '<details class="acZileTab"><summary>Fiecare zi</summary><table><thead><tr><th>Ziua</th><th>Boți</th><th>Net</th></tr></thead><tbody>' + rand + "</tbody></table></details>";
+    + '<details class="acZileTab"' + (deschis ? " open" : "") + '><summary>Fiecare zi</summary><table><thead><tr><th>Ziua</th><th>Boți</th><th>Net</th></tr></thead><tbody>' + rand + "</tbody></table></details>";
 }
 function acasaDeseneaza() {
   if (!$("acasa") || typeof Acasa === "undefined") return;
+  acasa.memo = { la: Date.now() };   /* v100.332 (🟡7): socotelile grele (pauza sezonului) o dată pe desenare; se golește la sfârșit (și singur, după o secundă) */
   acPiataInit();
   acFranaSalveaza();
   if (typeof scDeseneaza === "function") scDeseneaza();   // v100.217: scorul sezonului (din starea de acum; nu se ascunde când cardurile de mai jos își așteaptă datele)
@@ -678,7 +765,7 @@ function acasaDeseneaza() {
   // v100.202 (15.10, ideea 5): „actualizat” = ora ultimei citiri BUNE a clasamentului (înainte: ora încercării, și când picase);
   // când serverul de acasă nu răspunde, rândul o spune
   var faraServer = acFaraServer(d), bunLa = d.clasamentLa || 0;
-  if ($("acCand")) $("acCand").textContent = acum.toLocaleDateString("ro-RO", { weekday: "long", day: "numeric", month: "long" }) + " · actualizat " + (bunLa ? new Date(bunLa).toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" }) : "acum…") + (faraServer ? " · serverul Radarului nu răspunde acum" : "");
+  if ($("acCand")) $("acCand").textContent = acCandText(d, acum, faraServer, bunLa);   /* v100.332 (🔴2): + ora clasamentului, nu doar ora cererii */
   var deschis = acBursaDeschisa(acum), ultZi = qqq && qqq.length ? new Date(qqq[qqq.length - 1].t).toLocaleDateString("ro-RO", { weekday: "long" }) : "";
   if ($("acBursaCand")) $("acBursaCand").textContent = deschis ? "bursa e deschisă · ultimele cifre de azi" : "închiderea de " + (ultZi || "ieri") + " · bursa se redeschide în zilele lucrătoare la " + acOraRedeschidere(acum);   /* v100.272: ora din CalendarBursa */
 
@@ -696,7 +783,8 @@ function acasaDeseneaza() {
   acasaVerd($("acVremeCrypto"), "Crypto", v, (faraParola ? AC_BUTON_PAROLA : cl ? acBare(0, [[cl.candidati, "var(--good)", "liniștite"], [cl.evita, "var(--bad)", "în mișcare"]])
     + '<div class="acLeg"><span><b class="good">' + cl.candidati + '</b> liniștite</span><span><b class="bad">' + cl.evita + '</b> în mișcare' + acIeri(sc, "inMiscare", 0, true) + '</span><span class="acMut">top 100 futures</span></div>' : ""));
   var vb = faraParola ? AC_FARA_PAROLA : faraServer && !ndxL && !qqq ? acFaraServerVerd(d) : acVremeBursa(d);
-  acasaVerd($("acVremeBursa"), "Nasdaq", vb, faraParola ? "" : (ndxL ? acBare(0, [[ndxL.e50, "var(--good)", "peste media de 50"], [ndxL.n - ndxL.e50, "var(--bad)", "sub"]])
+  var ndxV = !!(d.ndx && Acasa.ndxVechi && Acasa.ndxVechi(d.ndx, Date.now()));   /* v100.332 (🔴2): lățimea mai veche de 30 h nu stă sub verdict ca de azi */
+  acasaVerd($("acVremeBursa"), "Nasdaq", vb, faraParola ? "" : (ndxL && !ndxV ? acBare(0, [[ndxL.e50, "var(--good)", "peste media de 50"], [ndxL.n - ndxL.e50, "var(--bad)", "sub"]])
     + '<div class="acLeg"><span><b class="good">' + ndxL.e50 + '</b> peste media de 50' + acIeri(sc, "ndxE50") + '</span><span><b class="bad">' + (ndxL.n - ndxL.e50) + '</b> sub</span><span class="acMut">Nasdaq 100</span></div>' : ""));
   // v100.82 (03.10, ideea 2): „💡 Ce aș cumpăra azi” - primele idei de acțiuni și monedele pentru un bot, cu drumul la cele două panouri
   var aziNu = acAziNu();   /* v100.306 (I-824): o singură regulă pentru „Ce aș cumpăra azi” și „Idei de azi” */
@@ -740,7 +828,7 @@ function acasaDeseneaza() {
       + '<div class="acLin"><span>S&amp;P 500</span><b>' + (spy ? acNr(ultim(spy), 2) + ' <span class="' + ((ch(spy, 1) || 0) >= 0 ? "good" : "bad") + '">' + acPct(ch(spy, 1)) + '</span>' : "—") + '</b></div>'
       + '<div class="acLin"><span>Ultimele 5 zile</span><b>Nasdaq <span class="' + ((ch(qqq, 5) || 0) >= 0 ? "good" : "bad") + '">' + acPct(ch(qqq, 5), 1) + '</span></b></div>'
       + (ndxL && ndxL.mag7.length ? '<div class="acLin"><span>Cele 7 mari</span><b>' + escapeHtml(ndxL.mag7Text) + '</b></div><div class="acMag">' + ndxL.mag7.map(function (x) { return '<span>' + escapeHtml(x.s) + ' <b class="' + (x.ch >= 0 ? "good" : "bad") + '">' + acPct(x.ch, 1) + '</b></span>'; }).join("") + '</div>' : '')
-      : '<p class="acMut">' + escapeHtml(d.piataErr ? "Bursele n-au venit: " + d.piataErr : "Aduc bursele…") + '</p>');
+      : '<p class="acMut">' + escapeHtml(d.piataErr ? "Bursele n-au venit: " + d.piataErr : p.eroare ? "Bursele n-au venit: " + p.eroare : "Aduc bursele…") + '</p>');
   // VIX = frica bursei
   // v100.268 (29.10, el: „Cele din macro.js”): treapta din Macro.vixTreapta - aceeași ca rândul VIX din scorul macro (înainte „liniște” verde până la 20,
   // iar macro zicea „prudență” de la 18)
@@ -749,7 +837,7 @@ function acasaDeseneaza() {
   var v31 = serie(vixB, 31), vmin = v31.length ? Math.min.apply(null, v31) : null, vmax = v31.length ? Math.max.apply(null, v31) : null;
   $("acVix").innerHTML = '<div class="acCap"><h4>VIX · frica bursei</h4><span class="acSub">zilnic</span></div>'
     + acCadran(vixU, vixU == null ? null : (vixU - 10) / 30, "#26A96C", "#E0524A", "10", "40", "VIX " + (vixU == null ? "fără date" : vixU.toFixed(1).replace(".", ",") + ", " + vnume))
-    + '<div class="acFgv"><b class="' + vcls + '">' + (vixU == null ? "—" : acNr(vixU, 2)) + '</b> ' + escapeHtml(vnume) + acIeri(sc, "vix", 1, true) + '</div>' + acSpark(v31, "#9FB3C4")
+    + '<div class="acFgv"><b class="' + vcls + '">' + (vixU == null ? "—" : acNr(vixU, 1)) + '</b> ' + escapeHtml(vnume) + acIeri(sc, "vix", 1, true) + '</div>' + acSpark(v31, "#9FB3C4")
     + (vmin != null ? '<p class="acEt">' + v31.length + ' de zile: între ' + acNr(vmin, 1) + ' și ' + acNr(vmax, 1) + '; sub 18 e calm, 18–25 prudență, 25–30 frică, peste 30 panică.</p>' : '');
   // largimea Nasdaq 100
   var lb = function (et, n, tot, slab) { var pc = tot ? Math.round(n / tot * 100) : null; return '<div class="acLb"><span>' + et + '</span><i><b class="' + (pc != null && pc < (slab || 50) ? "w" : "") + '" style="width:' + (pc || 0) + '%"></b></i><em>' + (pc == null ? "—" : pc + "%") + '</em></div>'; };
@@ -757,11 +845,13 @@ function acasaDeseneaza() {
   var ndxZi = qqq && qqq.length ? new Date(qqq[qqq.length - 1].t).toLocaleDateString("ro-RO", { weekday: "long", day: "numeric", month: "short" }) : "";
   // v94: cat e bursa deschisa, colectorul reface Nasdaq 100 o data pe ora
   if (deschis && d.ndx && d.ndx.la && Date.now() - d.ndx.la < 2 * 3600000) ndxZi = "azi, la " + new Date(d.ndx.la).toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" });
-  $("acLargNdx").innerHTML = '<div class="acCap"><h4>Lărgimea Nasdaq 100</h4>' + (ndxL ? '<span class="' + (vb.nivel === "larga" ? "good" : vb.nivel === "ingusta" || vb.nivel === "lateral" ? "warn" : "bad") + '" style="font-weight:800">' + (vb.nivel === "larga" ? "largă" : vb.nivel === "ingusta" ? (vb.latime === "mixta" ? "mixtă" : "îngustă") : vb.nivel === "scade" ? "slabă" : "împărțită") + '</span>' : '') + '</div>'   /* v100.269: 40–60% „mixtă”, ca verdictul și Scorul zilei */
+  /* v100.332 (🔴2): lățimea mai veche de 30 h rămâne la vedere, dar cu ziua ei și „veche” - verdictul de sus nu o mai folosește */
+  if (ndxV && d.ndx.la) ndxZi = new Date(d.ndx.la).toLocaleDateString("ro-RO", { weekday: "long", day: "numeric", month: "short" });
+  $("acLargNdx").innerHTML = '<div class="acCap"><h4>Lărgimea Nasdaq 100</h4>' + (ndxL && ndxV ? '<span class="warn" style="font-weight:800">veche</span>' : ndxL ? '<span class="' + (vb.nivel === "larga" ? "good" : vb.nivel === "ingusta" || vb.nivel === "lateral" ? "warn" : "bad") + '" style="font-weight:800">' + (vb.nivel === "larga" ? "largă" : vb.nivel === "ingusta" ? (vb.latime === "mixta" ? "mixtă" : "îngustă") : vb.nivel === "scade" ? "slabă" : "împărțită") + '</span>' : '') + '</div>'   /* v100.269: 40–60% „mixtă”, ca verdictul și Scorul zilei */
     + (ndxL ? '<div class="acLb"><span>Au urcat</span><i><b style="width:' + Math.round(ndxL.urca / ndxL.n * 100) + '%"></b></i><em>' + ndxL.urca + ' / ' + ndxL.n + '</em></div>'
       + lb("Peste media de 50", ndxL.e50, ndxL.n) + lb("Peste media de 200", ndxL.e200, ndxL.n) + lb("RSI peste 50", ndxL.rsi, ndxL.n)
       + '<div class="acLin" style="margin-top:4px"><span>În mișcare mare</span><b>' + ndxL.inMiscare.length + (ndxL.inMiscare.length ? ' · ' + escapeHtml(ndxL.inMiscare.slice(0, 3).join(", ")) + (ndxL.inMiscare.length > 3 ? "…" : "") : "") + '</b></div>'
-      + '<p class="acEt">' + escapeHtml(vb.nivel === "ingusta" && vb.latime === "mixta" ? "Indicele urcă, dar cam jumătate din acțiuni sunt sub media de 50: urcarea nu e încă largă." : vb.nivel === "ingusta" ? "Indicele urcă, dar o bună parte din acțiuni sunt sub medii: urcarea e dusă de câteva acțiuni mari." : vb.nivel === "larga" ? "Majoritatea acțiunilor urcă odată cu indicele." : vb.nivel === "scade" ? "Majoritatea acțiunilor coboară." : "") + (ndxZi ? (/^azi/.test(ndxZi) ? " Actualizat " + ndxZi + ", o dată pe oră cât e bursa deschisă." : " Calculat la închiderea din " + ndxZi.replace(/\.$/, "") + ".") : "") + '</p>'
+      + '<p class="acEt">' + escapeHtml(ndxV ? "Datele au peste 30 de ore: verdictul de sus nu le folosește." : vb.latime === "necunoscuta" ? "" : vb.faraVix && vb.latime === "larga" ? "Majoritatea acțiunilor urcă odată cu indicele; verdictul de sus e galben doar fiindcă VIX-ul n-a venit." : vb.nivel === "ingusta" && vb.latime === "mixta" ? "Indicele urcă, dar cam jumătate din acțiuni sunt sub media de 50: urcarea nu e încă largă." : vb.nivel === "ingusta" ? "Indicele urcă, dar o bună parte din acțiuni sunt sub medii: urcarea e dusă de câteva acțiuni mari." : vb.nivel === "larga" ? "Majoritatea acțiunilor urcă odată cu indicele." : vb.nivel === "scade" ? "Majoritatea acțiunilor coboară." : "") + (ndxZi ? (/^azi/.test(ndxZi) ? " Actualizat " + ndxZi + ", o dată pe oră cât e bursa deschisă." : " Calculat la închiderea din " + ndxZi.replace(/\.$/, "") + ".") : "") + '</p>'
       : '<p class="acMut">' + escapeHtml(d.ndxErr ? "N-am lărgimea Nasdaq: " + d.ndxErr : "Lărgimea Nasdaq o calculează colectorul de pe VPS în fiecare dimineață, după ora 8.") + '</p>');
 
   // v95: dobanzi, dolar, aur, dolar/leu
@@ -813,7 +903,7 @@ function acasaDeseneaza() {
   var cal = Acasa.calendar(d.calendar && d.calendar.evenimente, Date.now());
   $("acCalendar").innerHTML = '<div class="acCap"><h4>Calendarul săptămânii</h4><span class="acSub">SUA · impact mare și mediu</span></div>'
     + (cal.urmatoare.length ? '<div class="acCal">' + cal.urmatoare.map(function (x) { return '<span class="acMut">' + escapeHtml(x.cand) + '</span><b>' + (x.mare ? "⚠️ " : "") + escapeHtml(x.titlu) + '</b><span class="acMut">' + escapeHtml(x.prognoza ? "estimat " + String(x.prognoza).replace(/(\d)\.(\d)/g, "$1,$2") : "") + '</span>'; }).join("") + '</div>' : '')
-    + '<p class="acEt">' + escapeHtml(d.calendarErr ? "Calendarul n-a venit: " + d.calendarErr : cal.text) + '</p>';
+    + '<p class="acEt">' + escapeHtml(acCalendarNota(d, cal)) + '</p>';
   var st = function (l) { return (l || []).slice(0, 3).map(function (x) { var cand = x.la ? new Date(x.la).toLocaleString("ro-RO", { weekday: "short", hour: "2-digit", minute: "2-digit" }) : ""; return '<a class="acStire" href="' + escapeHtml(x.link) + '" target="_blank" rel="noopener noreferrer"><span class="acMut">' + escapeHtml(cand) + '</span><span data-conv-citat>' + escapeHtml(x.titlu) + '</span></a>'; }).join(""); };   /* v100.309: titlul e CITAT (al agenției, în limba ei) - garda convențiilor nu-l judecă drept rezultat */
   var sb = d.stiriBursa && d.stiriBursa.stiri, sc = d.stiriCrypto && d.stiriCrypto.general;
   $("acStiri").innerHTML = '<div class="acCap"><h4>Știri</h4><span class="acSub">titlurile cele mai noi · nu le interpretez</span></div>'
@@ -847,11 +937,11 @@ function acasaDeseneaza() {
   hb += acBotiStatHtml(typeof contTot === "undefined" || !contTot.inchise ? null : contTot.inchiseOk ? contTot.inchise : false, Date.now());   /* v100.277: azi + 7 zile, pe net; v100.278: picat ≠ zero boți */
   $("acBoti").innerHTML = hb + '<button class="acBtn" type="button" data-action-click="navTo(\'tabloubot\',true)">Deschide Tabloul</button>';
 
-  var c = typeof t212 !== "undefined" && t212.cont && t212.cont.cash, iesi = typeof t212 !== "undefined" ? t212.nrIesi : null, rz = d.rezultate && d.rezultate.l || [];
+  var c = typeof t212 !== "undefined" && t212.cont && t212.cont.cash, iesi = typeof t212 !== "undefined" ? t212.nrIesi : null, fdT = typeof t212 !== "undefined" && t212.nrFaraDate || 0, rz =d.rezultate && d.rezultate.l || [];
   var azi = new Date(new Date().toISOString().slice(0, 10) + "T00:00:00Z").getTime(), zile = function (z) { return Math.round((Date.parse(z + "T00:00:00Z") - azi) / 86400000); };
   $("acT212").innerHTML = '<div class="acCap"><h4>Acțiunile tale</h4><span class="acSub">Trading 212 · ' + (deschis ? "bursa e deschisă" : "bursa e închisă") + '</span></div>'
     + (c ? '<div class="acLin"><span>Contul</span><b>' + escapeHtml(acLei(c.total)) + '</b></div><div class="acLin"><span>Pozițiile deschise</span><b class="' + (Number(c.ppl) >= 0 ? "good" : "bad") + '">' + escapeHtml(typeof t212Lei === "function" ? t212Lei(c.ppl) : String(c.ppl)) + '</b></div>'
-      + '<div class="acLin"><span>Semafoare</span><b class="' + (iesi == null ? "acMut" : iesi ? "bad" : "good") + '">' + (iesi == null ? "aduc prețurile…" : iesi ? iesi + " de ieșit" : "nimic roșu") + '</b></div>'   /* v100.40: null = inca nu stiu, nu „nimic roșu” */
+      + '<div class="acLin"><span>Semafoare</span><b class="' + (iesi == null ? (fdT ? "warn" : "acMut") : iesi ? "bad" : "good") + '">' + (iesi == null ? (fdT ? "⚠ " + TextRo.cate(fdT, "poziție", "poziții") + " fără date" : "aduc prețurile…") : iesi ? iesi + " de ieșit" + (fdT ? " · " + TextRo.cate(fdT, "poziție", "poziții") + " fără date" : "") : "nimic roșu") + '</b></div>'   /* v100.40: null = inca nu stiu, nu „nimic roșu”; v100.332 (🔴 R1): după reîncercări, pozițiile fără prețuri se spun, nu „aduc prețurile…” la nesfârșit */
       + (zt && zt.t212 !== null ? '<div class="acLin acZi"><span>Față de ieri dimineață</span><b class="' + (zt.t212 >= 0 ? "good" : "bad") + '">' + (zt.t212 >= 0 ? "+" : "−") + escapeHtml(acLei(Math.abs(zt.t212))) + '</b></div>' : '') : '<p class="acMut">Aduc contul…</p>')
     + (rz.length ? '<div class="acEt" style="margin-top:4px">Următoarele rezultate financiare' + (rz.some(function (x) { return !x.sigur; }) ? " (estimate)" : "") + ':</div><div class="acRez">' + rz.slice(0, 3).map(function (x) { var z = zile(x.data); return '<b>' + escapeHtml(x.simbol) + '</b><span>' + escapeHtml(acZiRo(x.data)) + '</span><b class="' + (z <= 14 ? "warn" : "acMut") + '">' + (z <= 0 ? "azi" : z === 1 ? "mâine" : "peste " + acCate(z, "zi", "zile")) + '</b>'; }).join("") + '</div>' : '')
     + '<button class="acBtn" type="button" data-action-click="navTo(\'t212\',true)">Deschide T212</button>'
@@ -864,6 +954,19 @@ function acasaDeseneaza() {
   if ($("acSocoteala")) { $("acSocoteala").hidden = !(so && so.n); if (so && so.n) $("acSocoteala").innerHTML = '📏 <b>Socoteala alertelor:</b> ' + escapeHtml(so.text) + (so.textVreme ? ' ' + escapeHtml(so.textVreme) : ''); }
 
   acasaRezumate(larg);
+  acasa.memo = null;
+}
+// v100.332 (auditul 12.11, 🔴2): rândul de sub titlu - „actualizat” rămâne ora ultimei citiri BUNE de la server (v100.202), iar lângă ea stă ora la care
+// colectorul a FĂCUT clasamentul (serverul îl ține 6 ore: „actualizat 07:30” putea sta peste un clasament de la 02:00)
+function acCandText(d, acum, faraServer, bunLa) {
+  var ora = function (t) { return new Date(t).toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" }); }, citit = bunLa || (d && d.clasamentLa) || 0, facut = d && d.clasament ? Number(d.clasament.la) : 0;
+  return acum.toLocaleDateString("ro-RO", { weekday: "long", day: "numeric", month: "long" }) + " · actualizat " + (citit ? ora(citit) : "acum…") + (facut > 0 ? " · clasamentul de la " + ora(facut) : "") + (faraServer ? " · serverul Radarului nu răspunde acum" : "");
+}
+// v100.332 (auditul 12.11, 🔴1): textul de sub calendar - cererea picată SAU calendarul venit cu `eroare` (faireconomy n-a răspuns) spun că n-a venit,
+// nu „Nimic important de aici până la sfârșitul săptămânii”
+function acCalendarNota(d, cal) {
+  var er = d && (d.calendarErr || (d.calendar && d.calendar.eroare));
+  return er ? "Calendarul n-a venit: " + String(er).replace(/[.\s]+$/, "") + ". Nu știu dacă azi e un eveniment mare." : cal ? cal.text : "";
 }
 // bursa din SUA (ora New York): luni-vineri 9:30-16:00
 // v100.272 (ideile auditului 29.10): din CalendarBursa - sărbătorile NYSE (Thanksgiving, 4 iulie…) nu mai par zile cu bursa deschisă

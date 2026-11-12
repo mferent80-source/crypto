@@ -31,14 +31,15 @@ export function stopuriDinOrdine(lista) {
 }
 const cache = new Map(); // cheie -> {pana, valoare} (in memoria serverului de acasa)
 
-function dinCache(k) { const c = cache.get(k); return c && c.pana > Date.now() ? c.valoare : null; }
-function inCache(k, v, sec) { cache.set(k, { pana: Date.now() + sec * 1000, valoare: v }); if (cache.size > 300) cache.delete(cache.keys().next().value); }
+// v100.332 (auditul 12.11, 🟡 Y8): maxSec = cea mai veche copie pe care o primește cine cere „proaspăt” (Poarta, în ședință); 0 = oricât ține copia
+function dinCache(k, maxSec) { const c = cache.get(k); return c && c.pana > Date.now() && !(maxSec > 0 && Date.now() - c.la > maxSec * 1000) ? c.valoare : null; }
+function inCache(k, v, sec) { cache.set(k, { pana: Date.now() + sec * 1000, valoare: v, la: Date.now() }); if (cache.size > 300) cache.delete(cache.keys().next().value); }
 // v98.2 (audit 28.09, #1): cererile IDENTICE in zbor se leaga - trei ture ale colectorului care cer `pozitii` in aceeasi secunda
 // = UN apel la Trading 212 (limitele lor: 1 la 5 s pe portofoliu, 1 la 30 s pe account/info; 88 de 429 in 36 de ore inainte).
 // Toti chematorii primesc acelasi raspuns (sau aceeasi eroare); o eroare NU ramane in cache, urmatorul reincearca.
 const inZbor = new Map();
-function prinCache(k, sec, fn) {
-  const c = dinCache(k); if (c) return Promise.resolve(c);
+function prinCache(k, sec, fn, maxSec) {
+  const c = dinCache(k, maxSec); if (c) return Promise.resolve(c);
   if (inZbor.has(k)) return inZbor.get(k);
   const p = Promise.resolve().then(fn).then((v) => { if (v !== null && v !== undefined) inCache(k, v, typeof sec === "function" ? sec(v) : sec); return v; })   /* v100.196: durata poate depinde de răspuns */.finally(() => inZbor.delete(k));
   inZbor.set(k, p); return p;
@@ -198,7 +199,7 @@ export async function onRequestPost({ request, env }) {
   if (act === "idei") {
     // v90: ideile de cumparare ale zilei (colectorul) + istoricul lor, ca sa se poata URMARI cum ies (o data pe zi pe simbol)
     const sim = (v) => txt(v, 16).replace(/[^A-Za-z0-9.-]/g, ""), tk = (v) => txt(v, 40).replace(/[^A-Za-z0-9._]/g, "");
-    const curata = (x) => ({ ticker: tk(x && x.ticker), simbol: sim(x && x.simbol), pret: nr(x && x.pret), intrare: nr(x && x.intrare), stop: nr(x && x.stop), tinta: nr(x && x.tinta), scor: nr(x && x.scor), pePlusProba: nr(x && x.pePlusProba), nProba: nr(x && x.nProba), rezultate: txt(x && x.rezultate, 10) || null,
+    const curata = (x) => ({ ticker: tk(x && x.ticker), simbol: sim(x && x.simbol), pret: nr(x && x.pret), intrare: nr(x && x.intrare), stop: nr(x && x.stop), tinta: nr(x && x.tinta), riscPct: ((r) => (r !== null && r > 0 && r < 1 ? r : null))(nr(x && x.riscPct)) /* v100.332 (🔵): pagina îl arată („−x%, din probă”), dar aici se pierdea */, scor: nr(x && x.scor), pePlusProba: nr(x && x.pePlusProba), nProba: nr(x && x.nProba), rezultate: txt(x && x.rezultate, 10) || null,
       motive: (Array.isArray(x && x.motive) ? x.motive : []).slice(0, 5).map((z) => txt(z, 200)), istoric: x && x.istoric ? { n: nr(x.istoric.n), pePlus: nr(x.istoric.pePlus), total: nr(x.istoric.total) } : null,
       // v100.55: starea ideii (aceeasi cheie ca t212:cf) si probabilitatile actiunii
       sit: /^(sus|lateral|jos)\|(calm|dupa-miscare)\|(departe|langa-max)$/.test(String(x && x.sit)) ? x.sit : null, prob: x && x.prob && typeof x.prob === "object" ? { tinta5: nr(x.prob.tinta5), stop1: nr(x.prob.stop1) } : null,
@@ -360,17 +361,17 @@ export async function onRequestGet({ request, env }) {
           let rows = null, sursa = null;
           if (env.TWELVE_DATA_API_KEY && !pp && !yh) { rows = await twelve(env, s, iv); sursa = "twelvedata"; }   // simbolurile Yahoo (Salt) - doar Yahoo
           if (!rows) { rows = await yahoo(s, iv, null, pp); sursa = "yahoo"; }
-          if (rows) return { ticker: tk, simbol: s, sursa, interval: iv, randuri: rows };
+          if (rows) return { ticker: tk, simbol: s, sursa, interval: iv, randuri: rows, la: Date.now() };   // v100.332 (🟡 Y8): ora aducerii, ca pagina să o poată spune
         }
         if (nume.length >= 3) {
           for (const s of await dupaNume(nume)) {
             if (cand.includes(s)) continue;
             const rows = await yahoo(s, iv);
-            if (rows) return { ticker: tk, simbol: s, sursa: "yahoo", interval: iv, randuri: rows, gasitDupaNume: true };
+            if (rows) return { ticker: tk, simbol: s, sursa: "yahoo", interval: iv, randuri: rows, gasitDupaNume: true, la: Date.now() };
           }
         }
         return null;
-      });
+      }, u.searchParams.get("proaspat") === "1" ? 120 : 0);   // v100.332 (auditul 12.11, 🟡 Y8): Poarta, în ședință, nu primește o copie mai veche de 2 minute (barele zilnice se țin 30)
       if (v) return json(v);
       return json({ error: "Fără prețuri pentru " + tk + " (poate a fost delistată sau redenumită)." }, 404);
     }

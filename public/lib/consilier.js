@@ -97,10 +97,13 @@ var Consilier = (function () {
         ceAsFace: "N-aș aștepta să „își revină” fără stop: aș pune stopul care urcă (−15% de la maxim) sau aș ieși." });
     }
     // 3) profitul: aproape de tinta sau peste +15%
-    var n = p.niv;
-    if (p.pret > 0 && p.pretMediu > 0 && ((n && n.tintaPozitie > 0 && p.pret >= n.tintaPozitie * 0.97) || (p.pctLei !== null && p.pctLei >= 0.15)))
-      out.push({ nivel: "v", sursa: "pozitie", titlu: p.simbol + " e pe " + P(p.pctLei !== null ? p.pctLei : p.pret / p.pretMediu - 1) + (n && n.tintaPozitie ? ", ținta e " + U(n.tintaPozitie) : ""), text: "",
-        ceAsFace: "Aș lua jumătate" + (n && n.tintaPozitie ? " la " + U(Math.max(p.pret, n.tintaPozitie)) : " acum") + " și aș muta stopul pe rest la intrare (" + U(p.pretMediu) + "): de acolo nu mai pierzi pe ea." });
+    // v100.332 (auditul 12.11, 🟡 Y4): prețurile în moneda poziției (p.moneda: € / £ / pence), nu mereu „$”; fără monedă dată, dolari ca până acum.
+    // Ținta = cea din planul lui când a scris una (aceeași pe care o arată pagina și pe care sună colectorul), altfel cea calculată.
+    var n = p.niv, PU = function (v) { return p.moneda !== undefined && AS.pretIn ? AS.pretIn(v, p.moneda) : U(v); };
+    var tz = p.plan && p.plan.tinta > 0 ? p.plan.tinta : n && n.tintaPozitie > 0 ? n.tintaPozitie : null;
+    if (p.pret > 0 && p.pretMediu > 0 && ((tz && p.pret >= tz * 0.97) || (p.pctLei !== null && p.pctLei >= 0.15)))
+      out.push({ nivel: "v", sursa: "pozitie", titlu: p.simbol + " e pe " + P(p.pctLei !== null ? p.pctLei : p.pret / p.pretMediu - 1) + (tz ? ", ținta e " + PU(tz) : ""), text: "",
+        ceAsFace: "Aș lua jumătate" + (tz ? " la " + PU(Math.max(p.pret, tz)) : " acum") + " și aș muta stopul pe rest la intrare (" + PU(p.pretMediu) + "): de acolo nu mai pierzi pe ea." });
     // 4) plusul care nu acopera comisionul - un fapt, nu o actiune („Dacă ieși acum, ieși de fapt pe minus” intra in explicatie, v100.69)
     var pp = p.pret > 0 && p.pretMediu > 0 ? p.pret / p.pretMediu - 1 : null;
     if (pp !== null && pp >= 0 && pp < COST_CONV) out.push({ nivel: "n", sursa: "pozitie", titlu: "Încă nu acoperă comisionul de 0,30%",

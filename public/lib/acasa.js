@@ -9,6 +9,10 @@ var Acasa = (function () {
   // aceleași valori - proba v100268 le compară cu cele din Macro
   // v100.269 (ideile auditului 29.10): + latime (cota Nasdaq 100 peste media de 50), aceeași în Scorul zilei
   function praguri() { var p = typeof Macro !== "undefined" && Macro.PRAGURI ? Macro.PRAGURI : null; return { vix: p && p.vix || [12, 18, 25, 30], btc: p && p.btc || [0.6, 0.2, -0.2], latime: p && p.latime || [0.4, 0.6] }; }
+  // v100.332 (auditul 12.11, 🔴2): vârsta de la care datele colectorului nu mai intră în verdict. Clasamentul: o tură pe oră, reîncercare la 10 minute
+  // ⇒ 100 de minute. Lățimea Nasdaq 100: 30 de ore, pragul pe care îl folosea deja Scorul zilei (scor-zi.js) pe aceeași pagină.
+  var CLASAMENT_VECHI_MS = 100 * 60000, NDX_VECHI_MS = 30 * 3600000;
+  function ndxVechi(ndx, acum) { var la = ndx ? nr(ndx.la) : null; return la !== null && la > 0 && (nr(acum) || Date.now()) - la > NDX_VECHI_MS; }
   function textCorelatie(r) {
     var p = praguri().btc, rt = (r < -0.005 ? "−" : "") + Math.abs(r).toFixed(2).replace(".", ",");   // v100.72: minusul „−”
     return r > p[0] ? "BTC urmează bursa acum (" + rt + "): o scădere a Nasdaq trage și crypto."
@@ -42,6 +46,16 @@ var Acasa = (function () {
     o = o || {};
     var c = o.clasament, ev = c ? nr(c.evita) : null, ca = c ? nr(c.candidati) : null;
     if (ev === null || ca === null || ev + ca <= 0) { var ls = clasamentLipsa(o.stare); return { nivel: "fara-date", eticheta: "FĂRĂ DATE", titlu: ls ? ls.titlu : "Clasamentul pieței n-a venit încă.", text: ls ? ls.text : "Îl face colectorul de pe VPS o dată pe oră, pe primele 100 de monede după volum.", faCe: "" }; }
+    // v100.332 (auditul 12.11, 🔴2): clasamentul trăiește 6 ore pe server, iar pagina îl arăta ca de acum („🟢 LINIȘTE · actualizat 07:30” din date de
+    // la 02:00, cu colectorul oprit). Cu `la` (ora la care l-a făcut colectorul) dat de pagină: peste ~100 de minute (o tură pe oră + reîncercările de
+    // 10 minute) nu mai e un verdict - spune de când e, de ce n-a venit altul (starea turelor) și nu invită. Fără `la` (colectorul, probele vechi): ca înainte.
+    var laCl = nr(o.la) !== null ? nr(o.la) : nr(c.la), acumCl = nr(o.acum) || Date.now();   /* `la` dat de pagină sau din sumarul clasamentului (acClasamentSumar) */
+    if (laCl !== null && laCl > 0 && acumCl - laCl > CLASAMENT_VECHI_MS) {
+      var lsV = clasamentLipsa(o.stare);
+      return { nivel: "fara-date", vechi: true, dateLa: laCl, eticheta: "DATE VECHI", titlu: "Clasamentul pieței e vechi: de la " + oraScurta(laCl) + " (acum " + cate(Math.round((acumCl - laCl) / 3600000), "oră", "ore") + ").",
+        text: (lsV ? lsV.text : "Colectorul n-a mai adus unul nou.") + " La ultima citire, " + ev + " din " + cate(ev + ca, "monedă mare", "monede mari") + " erau în mișcare.",
+        faCe: "N-aș porni un bot pe clasamentul ăsta; aștept unul nou.", inMiscare: ev, total: ev + ca };
+    }
     var n = ev + ca, cota = ev / n, btcMis = !!(o.btc && o.btc.miscare), fg = fgValid(o.fg);   // v100.259: 0–100, ca regimul macro
     var d = c.dir || {}, lo = nr(d.long) || 0, sh = nr(d.short) || 0, tot = lo + sh + (nr(d.neutru) || 0);
     var sens = tot > 0 && lo / tot >= 0.6 ? "urca" : tot > 0 && sh / tot >= 0.6 ? "coboara" : "imp";
@@ -182,12 +196,28 @@ var Acasa = (function () {
     var partNd = nd && nd.n ? " Doar " + nd.e50 + " din " + cate(nd.n, "acțiune", "acțiuni") + " sunt peste media de 50 de zile." : "";
     if (vix !== null && vix >= 30) return { nivel: "frica", eticheta: "🔴 FRICĂ PE BURSĂ", titlu: "VIX e la " + vix.toFixed(1).replace(".", ",") + ": bursa e în panică.", text: "Peste 30, mișcările sunt mari în ambele sensuri.", faCe: "N-aș cumpăra acum; aș aștepta ca VIX să coboare sub 25." };
     if (sens === "jos") return { nivel: "scade", eticheta: "🔴 BURSA SCADE", titlu: "Nasdaq e în trend de coborâre.", text: "Prețul e sub mediile de 50 și 200 de zile" + (vx ? ", " + vx : "") + "." + (partNd ? partNd.replace("Doar ", "") : ""), faCe: "N-aș cumpăra contra trendului; aș ține doar ce are stopul pus." };
-    if (sens === "lateral") return { nivel: "lateral", eticheta: "🟡 LATERAL", titlu: "Nasdaq n-are o direcție clară.", text: (vx ? vx + ". " : "") + partNd.trim(), faCe: "Aș cumpăra doar ce e deja pe trend, cu stop; restul aș aștepta." };
+    // v100.332 (auditul 12.11, 🔴3): verdictul ieșea verde din LIPSĂ de date. Fără VIX (Yahoo a dat indicele, nu și ^VIX) treapta „FRICĂ” de mai sus nu
+    // poate ieși ⇒ fraza nu mai invită la cumpărat; fără lățime (ruta ndx picată, KV gol, date vechi) nu se mai scrie „o urmează majoritatea acțiunilor”
+    // și „mediul e bun”: nivelul rămâne „ingusta” (galben; alerta și fâșia îl știu), treapta în `latime: "necunoscuta"` - ca „mixta” la v100.269.
+    var faraVix = function (r) {
+      if (vix !== null) return r;
+      r.faraVix = true; r.text = (r.text ? r.text + " " : "") + "VIX-ul n-a venit."; r.faCe = "N-aș cumpăra până nu văd VIX-ul: fără el nu pot spune dacă bursa e în panică.";
+      // revizia Opus v100.332 (🟡2): pastila verde („🟢 URCARE LARGĂ”) rămânea lângă „n-aș cumpăra până nu văd VIX-ul” (card, Scan, alerta colectorului) ⇒
+      // fără VIX treapta coboară la galben, ca la lățimea lipsă; lățimea rămâne știută în `latime: "larga"`
+      if (r.nivel === "larga") { r.nivel = "ingusta"; r.latime = "larga"; r.eticheta = "🟡 URCARE · FĂRĂ VIX"; r.titlu = "Bursa urcă, și o urmează majoritatea acțiunilor, dar VIX-ul n-a venit."; }
+      return r;
+    };
+    if (sens === "lateral") return faraVix({ nivel: "lateral", eticheta: "🟡 LATERAL", titlu: "Nasdaq n-are o direcție clară.", text: (vx ? vx + ". " : "") + partNd.trim(), faCe: "Aș cumpăra doar ce e deja pe trend, cu stop; restul aș aștepta." });
     // v100.269 (ideile auditului 29.10): pragurile lățimii din Macro.PRAGURI.latime - sub 0,4 ÎNGUSTĂ, 0,4–0,6 MIXTĂ (cum zice și Scorul zilei);
     // codul nivelului rămâne „ingusta” pentru amândouă (alerta „vremii” și cardul îl citesc), treapta e în `latime`
     var pl = praguri().latime;
-    if (cota !== null && cota < pl[1]) return { nivel: "ingusta", latime: cota < pl[0] ? "ingusta" : "mixta", eticheta: cota < pl[0] ? "🟡 URCARE ÎNGUSTĂ" : "🟡 URCARE MIXTĂ", titlu: "Indicele urcă" + (vix !== null && vix < praguri().vix[1] ? " liniștit" : "") + ", dar doar o parte din acțiuni îl urmează.", text: "Nasdaq 100 în trend de urcare" + (vx ? ", " + vx : "") + ". Doar " + nd.e50 + " din " + cate(nd.n, "acțiune", "acțiuni") + " sunt peste media de 50 de zile.", faCe: "Aș cumpăra doar ce e deja pe trend, ca ideile de azi; n-aș prinde acțiunile de sub media de 200." };
-    return { nivel: "larga", eticheta: "🟢 URCARE LARGĂ", titlu: "Bursa urcă, și o urmează majoritatea acțiunilor.", text: "Nasdaq 100 în trend de urcare" + (vx ? ", " + vx : "") + "." + (nd && nd.n ? " " + nd.e50 + " din " + cate(nd.n, "acțiune", "acțiuni") + " sunt peste media de 50 de zile." : ""), faCe: "Aș cumpăra ideile pe trend, mereu cu stop: mediul e bun." };
+    if (cota === null) return faraVix({ nivel: "ingusta", latime: "necunoscuta", eticheta: "🟡 URCARE · LĂȚIME NECUNOSCUTĂ", titlu: "Indicele urcă, dar nu știu câte acțiuni îl urmează.", text: "Nasdaq 100 în trend de urcare" + (vx ? ", " + vx : "") + ". " + (o.ndxVechi ? "Lățimea Nasdaq 100 e veche, n-o folosesc." : "Lățimea Nasdaq 100 n-a venit."), faCe: "Aș cumpăra doar ce e deja pe trend, cu stop: nu știu câte acțiuni urmează indicele." });
+    if (cota < pl[1]) return faraVix({ nivel: "ingusta", latime: cota < pl[0] ? "ingusta" : "mixta", eticheta: cota < pl[0] ? "🟡 URCARE ÎNGUSTĂ" : "🟡 URCARE MIXTĂ", titlu: "Indicele urcă" + (vix !== null && vix < praguri().vix[1] ? " liniștit" : "") + ", dar doar o parte din acțiuni îl urmează.", text: "Nasdaq 100 în trend de urcare" + (vx ? ", " + vx : "") + ". Doar " + nd.e50 + " din " + cate(nd.n, "acțiune", "acțiuni") + " sunt peste media de 50 de zile.", faCe: "Aș cumpăra doar ce e deja pe trend, ca ideile de azi; n-aș prinde acțiunile de sub media de 200." });
+    // v100.332 (auditul 12.11, 🟡4): cu VIX între 25 și 30 cadranul de alături scrie „frică” (roșu), iar fraza zicea „mediul e bun”. Pragurile și
+    // nivelul NU se mută (sunt comune cu Macro și cu alertele); se schimbă doar fraza, de la pragul „frică” din Macro.PRAGURI.vix.
+    var vixFrica = vix !== null && vix >= praguri().vix[2];
+    return faraVix({ nivel: "larga", eticheta: "🟢 URCARE LARGĂ", titlu: "Bursa urcă, și o urmează majoritatea acțiunilor.", text: "Nasdaq 100 în trend de urcare" + (vx ? ", " + vx : "") + "." + (nd && nd.n ? " " + nd.e50 + " din " + cate(nd.n, "acțiune", "acțiuni") + " sunt peste media de 50 de zile." : ""),
+      faCe: vixFrica ? "Aș cumpăra ideile pe trend, mereu cu stop; VIX e la " + vix.toFixed(1).replace(".", ",") + ", în zona de frică." : "Aș cumpăra ideile pe trend, mereu cu stop: mediul e bun." });
   }
   // corelatia randamentelor zilnice BTC - Nasdaq pe ultimele n zile COMUNE (bursa n-are weekend)
   function corelatie(btc, qqq, n) {
@@ -217,6 +247,18 @@ var Acasa = (function () {
       : mari ? cate(mari, "eveniment mare", "evenimente mari") + " în SUA de aici până la sfârșitul săptămânii: în ziua lor piețele se mișcă mai tare, n-aș porni boți noi chiar înainte." : "Doar evenimente de impact mediu în SUA săptămâna asta.";
     u.forEach(function (x) { var d = new Date(x.t); x.cand = ZILE[d.getDay()] + " " + d.toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" }); });
     return { urmatoare: u, text: text };
+  }
+  // v100.332 (auditul 12.11, 🟡2): evenimentul MARE de azi (ziua României) care trage frâna contului: cel care urmează sau, după ce a trecut, cel din
+  // ultimele 2 ore - frâna se ridica în minutul datelor (CPI la 15:30 ⇒ „azi nu e trasă” la 15:31), tocmai când piața se mișcă cel mai tare.
+  // Cele 2 ore sunt ALESE, nu măsurate. l = evenimentele brute ale rutei (date, title, impact, country). null = nimic de frânat acum.
+  var EVENIMENT_DUPA_MS = 2 * 3600000;
+  function evenimentAzi(l, acum) {
+    acum = acum || Date.now();
+    var azi = ziBucMs(acum), e = (Array.isArray(l) ? l : []).filter(function (x) { return x && x.country === "USD" && x.impact === "High"; })
+      .map(function (x) { return { t: Date.parse(x.date), titlu: String(x.title || "") }; })
+      .filter(function (x) { return isFinite(x.t) && x.t > acum - EVENIMENT_DUPA_MS && ziBucMs(x.t) === azi; }).sort(function (a, b) { return a.t - b.t; });
+    var urm = e.filter(function (x) { return x.t > acum; })[0], tr = e.filter(function (x) { return x.t <= acum; }).pop();
+    return urm ? { titlu: urm.titlu, t: urm.t, trecut: false } : tr ? { titlu: tr.titlu, t: tr.t, trecut: true } : null;
   }
 
   // ======================= v94 =======================
@@ -345,6 +387,9 @@ var Acasa = (function () {
   function botiStatistici(inchise, acum) {
     var a = nr(acum) || Date.now(), z = ziBucMs(a), m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(z), zi0 = null;
     if (m) { var u = Date.UTC(+m[1], +m[2] - 1, +m[3], 0), n9 = ora9Ro(z); zi0 = n9 !== null ? n9 - 9 * 3600000 : u; }
+    // v100.332 (auditul 12.11, 🔵): în ziua schimbării orei (29.03, 25.10) „ora 9 minus 9 ore” nu e miezul nopții ⇒ ±1 h până la prima clipă a zilei
+    // (aceeași regulă ca Obiceiuri.inceputZiRo); pe 25.10 un bot închis la 00:30 lipsea din „Azi”, dar era în „Pe zile”
+    if (zi0 !== null) { var dz = [0, -3600000, 3600000]; for (var iz = 0; iz < dz.length; iz++) { var cz = zi0 + dz[iz]; if (ziBucMs(cz) === z && ziBucMs(cz - 1) !== z) { zi0 = cz; break; } } }
     var l = Array.isArray(inchise) ? inchise : [], ult = null;
     l.forEach(function (t) { var ti = t ? nr(t.inchis) : null; if (ti !== null && ti <= a && netTrade(t) !== null && (!ult || ti > ult.inchis)) ult = t; });
     var d7 = a - 7 * 86400000;
@@ -477,6 +522,8 @@ var Acasa = (function () {
     var ev = o.eveniment ? String(o.eveniment).replace(/[.!?]+$/g, "").trim() : "";
     if (ev) {
       var prefix = "N-aș porni boți noi și n-aș cumpăra chiar înainte de ";
+      /* v100.332 (auditul 12.11, 🟡2): evenimentul abia trecut (pagina îl ține frână încă 2 ore - evenimentAzi) */
+      if (o.evenimentTrecut === true) prefix = "N-aș porni boți noi și n-aș cumpăra imediat după ";
       var fraza = prefix + ev + ".";
       if (fraza.length > 110) {
         var loc = 110 - prefix.length - 1;
@@ -487,6 +534,17 @@ var Acasa = (function () {
       return fraza;
     }
     return "";
+  }
+  // v100.332 (auditul 12.11, 🟡1): raportul proaspăt, dar fără riscul pe o zi (VaR-ul n-a ieșit) sau făcut fără o sursă (`lipsuri`: boții Pionex,
+  // pozițiile Trading 212 - citiri picate în tura contului) ⇒ frâna de 4 % nu se poate judeca. franaCont rămâne cum e (Discord neschimbat); pagina
+  // întreabă aici și scrie „n-o pot judeca”, nu „azi nu e trasă”. "" = riscul e știut (sau raportul lipsește / e vechi: frâna lui e deja trasă).
+  function riscNecunoscut(o) {
+    o = o || {};
+    if (o.raportStare !== "ok") return "";
+    var rap = o.raport || {}, tot = rap.valoare ? nr(rap.valoare.total) : null, va = rap.risc ? nr(rap.risc.var95) : null;
+    var lp = (Array.isArray(rap.lipsuri) ? rap.lipsuri : []).filter(function (x) { return typeof x === "string" && x; }).slice(0, 4);
+    if (!(tot > 0) || va === null) return "raportul contului n-are riscul pe o zi" + (lp.length ? " (lipsesc: " + lp.join(", ") + ")" : "");
+    return lp.length ? "riscul pe o zi e socotit fără " + lp.join(", ") : "";
   }
   function franaText(v, o) {
     o = o || {};
@@ -508,8 +566,11 @@ var Acasa = (function () {
   // Sub 10 boți pe o parte nouă: n-am aflat, fără sumă. Zilele fără oră rămân în suma veche. `la` nu e obligatoriu: ziua veche rămâne completă.
   // v100.238: când `la` există, măsura spune ora HH:MM, ora României. Partea liniștită își spune numărul de zile; sub 10 zile, eșantionul stă și acolo. Fără oră inventată.
   // Nu reconstruiește VaR-ul din prețuri și nu amestecă frâna veche din obiceiuri. Nu e dovadă că frâna face bani.
+  // v100.332 (auditul 12.11, 🟡7): formatorul se creează o dată (ca în obiceiuri.js) - înainte unul nou la FIECARE bot închis, la fiecare redesenare
+  // (botiPeZile, botiScurtiLungi, masuraFranei): la 1.500 de boți ~260 ms pe redesenare, de ~30 de ori la o deschidere
+  var fZiBuc = null;
   function ziBucMs(t) {
-    try { return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Bucharest", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(t)); }
+    try { if (!fZiBuc) fZiBuc = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Bucharest", year: "numeric", month: "2-digit", day: "2-digit" }); return fZiBuc.format(new Date(t)); }
     catch (e) { return ""; }
   }
   function ziFranaCompleta(z) {
@@ -640,6 +701,7 @@ var Acasa = (function () {
     return o;
   }
 
-  return { botiPeMonede: botiPeMonede, botiScurtiLungi: botiScurtiLungi, botiCosturi: botiCosturi, botiPeZile: botiPeZile, PRAG_SCURT_MIN: PRAG_SCURT_MIN, perioadaBoti: perioadaBoti, botiStatistici: botiStatistici, durataScurta: durataScurta, ora9Ro: ora9Ro, clasamentLipsa: clasamentLipsa, textCorelatie: textCorelatie, SECTOR: SECTOR, sectoare: sectoare, ziuaTa: ziuaTa, raportSaptamana: raportSaptamana, socotealaAlerte: socotealaAlerte, miscareTipica: miscareTipica, fundingPiata: fundingPiata, fundingAtentie: fundingAtentie, schimbari: schimbari, vreme: vreme, miscari: miscari, fg: fg, fgValid: fgValid, largime: largime, ro: ro, rezumatActiune: rezumatActiune, largimeNdx: largimeNdx, vremeBursa: vremeBursa, sensBursa: sensBursa, fgNume: fgNume, corelatie: corelatie, calendar: calendar, MAG7: MAG7, franaVerb: franaVerb, franaCont: franaCont, frazaPauza: frazaPauza, masuraFranei: masuraFranei, unesteZileFrana: unesteZileFrana };
+  return { botiPeMonede: botiPeMonede, botiScurtiLungi: botiScurtiLungi, botiCosturi: botiCosturi, botiPeZile: botiPeZile, PRAG_SCURT_MIN: PRAG_SCURT_MIN, perioadaBoti: perioadaBoti, botiStatistici: botiStatistici, durataScurta: durataScurta, ora9Ro: ora9Ro, clasamentLipsa: clasamentLipsa, textCorelatie: textCorelatie, SECTOR: SECTOR, sectoare: sectoare, ziuaTa: ziuaTa, raportSaptamana: raportSaptamana, socotealaAlerte: socotealaAlerte, miscareTipica: miscareTipica, fundingPiata: fundingPiata, fundingAtentie: fundingAtentie, schimbari: schimbari, vreme: vreme, miscari: miscari, fg: fg, fgValid: fgValid, largime: largime, ro: ro, rezumatActiune: rezumatActiune, largimeNdx: largimeNdx, vremeBursa: vremeBursa, sensBursa: sensBursa, fgNume: fgNume, corelatie: corelatie, calendar: calendar, MAG7: MAG7, franaVerb: franaVerb, franaCont: franaCont, frazaPauza: frazaPauza, masuraFranei: masuraFranei, unesteZileFrana: unesteZileFrana,
+    ndxVechi: ndxVechi, evenimentAzi: evenimentAzi, riscNecunoscut: riscNecunoscut, CLASAMENT_VECHI_MS: CLASAMENT_VECHI_MS, NDX_VECHI_MS: NDX_VECHI_MS };   /* v100.332 (auditul 12.11) */
 })();
 if (typeof globalThis !== "undefined") globalThis.Acasa = Acasa;

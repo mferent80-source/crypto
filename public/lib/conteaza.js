@@ -17,6 +17,13 @@ var Conteaza = (function () {
   function cate(n, u, m) { var T = TR(); return T && T.cate ? T.cate(n, u, m) : n + " " + m; }
   function pct1(f) { return (f < 0 ? "−" : f > 0 ? "+" : "") + num1(Math.abs(f * 100)) + "%"; }
   function cap(t) { t = String(t || ""); return t.charAt(0).toUpperCase() + t.slice(1); }
+  function usdt1(v) { var T = TR(); return T && T.usdt ? T.usdt(v, 1) : (v < 0 ? "−" : v > 0 ? "+" : "") + num1(Math.abs(v)) + " USDT"; }
+  // v100.332 (auditul 12.11, 🔴2): ora alertei urcate în bloc („05:00”; din altă zi „11.11 23:10”) - un rând din alertă nu mai arată ca socotit acum
+  function oraAlerta(la, acum) {
+    la = nr(la); if (la === null || !(la > 0)) return "";
+    var d = new Date(la), a = new Date(nr(acum) || Date.now()), z = function (n) { return (n < 10 ? "0" : "") + n; }, o = z(d.getHours()) + ":" + z(d.getMinutes());
+    return d.toDateString() === a.toDateString() ? o : z(d.getDate()) + "." + z(d.getMonth() + 1) + " " + o;
+  }
   // revizia 🟡1 (08.11): același fapt = același FEL de titlu (fără cifre) sau aceleași cuvinte - ca TabloExtra.ceAiDeFacut, care unește
   // alerta „Lichidarea la 12.0%” cu sfatul „lichidarea la 7.0%” într-un rând; în bloc rămâne primul pus (sfatul de acum)
   function norm(t) { return String(t || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim(); }
@@ -32,13 +39,18 @@ var Conteaza = (function () {
     var rosu = pc >= Math.round(PRAG.rosu * 100), P = pret(s.stop), perechi = nr(s.perechi), zile = nr(s.zile) || 30, rap = nr(s.raport), mR = nr(s.mutRaport);
     // revizia 🟡4: stopul pus în procente din investiție se spune ca procent (prețul e doar cel de acum, se mută cu grilele)
     var et = rap !== null ? pct1(rap) + " din investiție, acum pe la " + P : P, iesire = rap !== null ? pct1(rap) : P;
-    var mut = nr(s.mut20) === null ? null : rap === null ? "~" + pret(s.mut20) + " (acolo ~20 din 100 într-o zi)"
-      : mR !== null ? "~" + pct1(mR) + " din investiție (acum pe la ~" + pret(s.mut20) + "; acolo ~20 din 100 într-o zi)" : null;
+    // v100.332 (auditul 12.11, 🔴1): propunerea vine verificată (TabloExtra.stopPropus). Dincolo de lichidare nu se mai propune și se spune de ce;
+    // altfel poartă totalul de acolo (la stopul pe preț; la cel în procente procentul îl spune deja) și, în grid, câte grile nu mai lucrează dincolo de el
+    var oprit = s.mutOprit === "lichidare", bani = rap === null && nr(s.mutTotal) !== null ? ", totalul acolo ≈ " + usdt1(s.mutTotal) : "";
+    var gr = s.mutGrile && nr(s.mutGrile.moarte) >= 1 && nr(s.mutGrile.intervale) >= 1 ? "; " + (s.sus ? "peste" : "sub") + " el nu mai lucrează " + s.mutGrile.moarte + " din " + cate(s.mutGrile.intervale, "grilă", "grile") : "";
+    var mut = nr(s.mut20) === null ? null : rap === null ? "~" + pret(s.mut20) + " (acolo ~20 din 100 într-o zi" + bani + gr + ")"
+      : mR !== null ? "~" + pct1(mR) + " din investiție (acum pe la ~" + pret(s.mut20) + "; acolo ~20 din 100 într-o zi" + gr + ")" : null;
     return { cheie: "stop", ton: rosu ? "rosu" : "galben", grav: rosu ? 1 : 4, nr: din100(p), nrSub: "din 100 · 24 h",
       titlu: "Stopul tău (" + et + ") e atins într-o zi în ~" + din100(p) + " din 100 de cazuri",
       sub: "e la " + num1(s.d) + " ATR de preț" + (nr(s.p72) !== null ? " · în 3 zile: ~" + din100(s.p72) + " din 100" : "") + " · măsurat pe " + (perechi > 0 ? cate(perechi, "monedă", "monede") : "monedele mari")
         + ", ultimele " + cate(zile, "zi", "zile") + ", jos și sus la un loc (direcția nu se știe)" + (s.plafon ? " · plafonat la șansa marginii de " + (s.plafon === "sus" ? "sus" : "jos") + " (stopul e dincolo de ea)" : ""),
       faCe: mut !== null ? "Hotărăște acum: ori accepți ieșirea la " + iesire + ", ori muți stopul la " + mut + "."
+        : oprit ? "Hotărăște acum dacă accepți ieșirea la " + iesire + ": mai departe nu propun, acolo vine întâi lichidarea" + (nr(s.mutLich) !== null ? " (" + pret(s.mutLich) + ")" : "") + "."
         : "Hotărăște acum: ori accepți ieșirea la " + iesire + ", ori pui stopul mult mai departe." };
   }
 
@@ -71,8 +83,8 @@ var Conteaza = (function () {
     });
     (Array.isArray(x.lista) ? x.lista : []).forEach(function (r) {
       if (!r || r.c !== "r" || r.depasit || !r.titlu) return;
-      var t = despartePrin(r.text);
-      pune({ cheie: "alerta", ton: "rosu", grav: 0, nr: "!", nrSub: "alertă", titlu: String(r.titlu), sub: t.sub, faCe: t.faCe, copiaza: r.copiaza });
+      var t = despartePrin(r.text), oa = oraAlerta(r.ultima, x.acum);   // v100.332: doar rândurile venite din alerte au `ultima` (ora celei mai noi)
+      pune({ cheie: "alerta", ton: "rosu", grav: 0, nr: "!", nrSub: "alertă", titlu: String(r.titlu), sub: (oa ? "alertă de la " + oa + (t.sub ? " · " : "") : "") + t.sub, faCe: t.faCe, copiaza: r.copiaza });
     });
     var st = randStop(x.stop); if (st) out.push(st);
     out.forEach(function (it, i) { it.ord = i; });

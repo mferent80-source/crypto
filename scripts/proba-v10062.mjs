@@ -191,8 +191,11 @@ await test("fiecare probă care cheamă ritmRecuperare încarcă întâi TextRo"
 });
 await test("panoul planului și portofoliul (app.js): „închide botul”, o acțiune la persoana I, cifre cu virgulă; mesajele pe două rânduri rămân pe două rânduri", async () => {
   const app = citeste("public", "app.js"), css = citeste("public", "app.css");
-  for (const s of ['"atinsă: închide botul"', '"atins: închide botul"', "Aș închide botul acum, cum ai hotărât la rece.", "Niciun plan încă: scrie-l acum, la rece, nu când prețul fuge.",
+  // v100.332 (auditul 12.11, 🟡1): pe plus, cartela „Planul tău” ia fraza semaforului (SemnaleBot.planPeCartela), nu mai scrie fix „atinsă: închide botul”
+  for (const s of ['"atins: închide botul"', "Niciun plan încă: scrie-l acum, la rece, nu când prețul fuge.",
     "N-aș mai porni unul pe partea asta, ci unul neutru sau pe partea cealaltă.", "var U=function(v){return TextRo.usdt(v)}"]) assert.ok(app.includes(s), "lipsește: " + s);
+  // v100.332: fraza acțiunii pe minus stă acum în SemnaleBot.planPeCartela (cartela „Planul tău” o ia de acolo, ca semaforul)
+  assert.ok(citeste("public", "lib", "semnale-bot.js").includes("Aș închide botul acum, cum ai hotărât la rece."), "lipsește fraza din semnale-bot.js");
   for (const s of ["ATINSĂ — ieși", "ATINS — ieși", "exact ce ți-ai propus — ieși acum"]) assert.ok(!app.includes(s), "a rămas: " + s);
   assert.match(css, /#tabloubot \.tbTodoRand p\{[^}]*white-space:pre-line/);
   assert.ok((await modul("scripts", "garda-texte.mjs")).STRICT.has("todo"));

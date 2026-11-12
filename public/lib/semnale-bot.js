@@ -506,6 +506,20 @@ var SemnaleBot = (function () {
     return { nivel: iesi.length ? "iesi" : "atentie", cod: prim.cod, motiv: prim.motiv, faCe: prim.faCe, deCe: prim.deCe || "", componente: c };
   }
 
+  // v100.332 (auditul 12.11, 🟡1): cartela „Planul tău” spune ce spune semaforul - o singură voce. Înainte scria fix „atinsă: închide botul” +
+  // „Aș închide botul acum”, iar Consilierul, pe aceeași țintă atinsă, „păstreaz-o” / „L-aș lăsa să lucreze” (ținta devine podea).
+  // st = TabloExtra.planStare(...), sm = semaforul de acum (null = încă nedesenat) ⇒ { plus: eticheta țintei atinse, faCe: fraza semaforului | null }
+  function planPeCartela(st, sm) {
+    var at = st && Array.isArray(st.atins) ? st.atins : [], out = { plus: null, faCe: null };
+    if (!at.length) return out;
+    var comp = sm ? [sm].concat(Array.isArray(sm.componente) ? sm.componente : []) : [];
+    var cu = function (cod) { for (var i = 0; i < comp.length; i++) if (comp[i] && comp[i].cod === cod && comp[i].faCe) return comp[i]; return null; };
+    var pod = cu("podea"), pl = cu("plan");
+    if (at.indexOf("minus") >= 0) { out.faCe = "Aș închide botul acum, cum ai hotărât la rece."; if (at.indexOf("plus") >= 0) out.plus = "atinsă"; return out; }
+    if (at.indexOf("plus") >= 0) { out.plus = pod ? (pod.nivel === "atentie" ? "atinsă: păstreaz-o" : "atinsă, la adăpost") : pl ? "atinsă: încasează" : "atinsă"; out.faCe = pod ? pod.faCe : pl ? pl.faCe : null; }
+    return out;
+  }
+
   // ---- socoteala: fiecare semnal se noteaza cand apare si se judeca dupa 24 h ----
   // v100.51 (I-478): extra.stare = starea pietei de atunci (regimul fisei x directia), pentru autopsia de duminica
   function noteaza(log, sem, total, acum, extra) {
@@ -641,7 +655,7 @@ var SemnaleBot = (function () {
     return { la: prima.t, laIesire: prima.total, acum: t, dif: t - prima.total };
   }
 
-  return { distantaLaOra: distantaLaOra, laMargine: laMargine, judecaLaInchidere: judecaLaInchidere, socotealaToti: socotealaToti, tacute: tacute, textIncredere: textIncredere, NUME_SFAT: NUME_SFAT, podeaPeBani: podeaPeBani, sensFata: sensFata, pasiCuBotul: pasiCuBotul, semafor: semafor, mutaGridul: mutaGridul, btcAvertizare: btcAvertizare, aglomerare: aglomerare, iaProfit: iaProfit, noteaza: noteaza, judeca: judeca, socoteala: socoteala,
+  return { planPeCartela: planPeCartela, distantaLaOra: distantaLaOra, laMargine: laMargine, judecaLaInchidere: judecaLaInchidere, socotealaToti: socotealaToti, tacute: tacute, textIncredere: textIncredere, NUME_SFAT: NUME_SFAT, podeaPeBani: podeaPeBani, sensFata: sensFata, pasiCuBotul: pasiCuBotul, semafor: semafor, mutaGridul: mutaGridul, btcAvertizare: btcAvertizare, aglomerare: aglomerare, iaProfit: iaProfit, noteaza: noteaza, judeca: judeca, socoteala: socoteala,
     gridMaiDes: gridMaiDes, fisaOpreste: fisaOpreste, textTrend: textTrend, acumConcret: acumConcret, pasBot: pasBot, celelalteMotive: celelalteMotive, pretStopEcran: pretStopEcran, etichetaStopProc: etichetaStopProc };
 })();
 if (typeof globalThis !== "undefined") globalThis.SemnaleBot = SemnaleBot;

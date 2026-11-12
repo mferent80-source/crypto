@@ -183,6 +183,22 @@ var ActiuniSemnale = (function () {
     for (t = Math.floor(ultima / ZI) * ZI + ZI; t < Math.floor(a / ZI) * ZI; t += ZI) { var w = new Date(t).getUTCDay(); if (w !== 0 && w !== 6) n++; }
     return n;
   }
+  // v100.332 (auditul 12.11, 🟡 Y1): barele zilnice ale unei POZIȚII se verifică înainte de semafor și de stop, ca la Poartă (zileLipsa > 3) și ca în
+  // jurnal (pretPotrivit). Înainte, barele altei firme / fără split (închideri ~500, poziția la 52) dădeau „IEȘI · sub stopul care urcă ($437,75)”,
+  // iar barele oprite de 14 ședințe dădeau un verdict obișnuit. pret = prețul din Trading 212. Întoarce { judec, cod, motiv }:
+  //   „vechi” (lipsesc peste 3 ședințe închise) și „nepotrivit” (preț / ultima închidere în afara 0,4–2,5: alt simbol sau split) ⇒ nu judec;
+  //   „departe” (în afara 0,7–1,43, dar înăuntrul 0,4–2,5: poate fi și o zi cu o mișcare foarte mare) ⇒ judec, dar o spun. Pragurile sunt ipoteze.
+  function verificaBare(bare, pret, simbol, acum) {
+    var b = Array.isArray(bare) ? bare : [], u = b.length ? b[b.length - 1] : null;
+    if (!u || !(u.c > 0)) return { judec: false, cod: "lipsa", motiv: null };
+    var zl = zileLipsa(u.t, acum, simbol), d = new Date(u.t).toISOString();
+    if (zl !== null && zl > 3) return { judec: false, cod: "vechi", motiv: "ultimele prețuri zilnice sunt din " + d.slice(8, 10) + "." + d.slice(5, 7) + ", lipsesc " + cate(zl, "zi de bursă", "zile de bursă") + ": nu judec pe ele" };
+    if (!(pret > 0)) return { judec: true, cod: "ok", motiv: null };
+    var r = pret / u.c, mon = monedaTicker(simbol), fata = "ultima închidere găsită e " + pretIn(u.c, mon) + ", iar Trading 212 dă " + pretIn(pret, mon);
+    if (r < 0.4 || r > 2.5) return { judec: false, cod: "nepotrivit", motiv: "prețurile zilnice găsite nu se potrivesc cu Trading 212 (" + fata + "): alt simbol sau split, nu judec pe ele" };
+    if (r < 0.7 || r > 1.43) return { judec: true, cod: "departe", motiv: "prețul e departe de ultima închidere găsită (" + fata + "): dacă nu e mișcarea de azi, barele sunt ale altui simbol" };
+    return { judec: true, cod: "ok", motiv: null };
+  }
   // v100.196 (🟡3, regime-detection: răspunsul la regim fixat DINAINTE, nu improvizat): r = { macro: codul ținut din Macro (KV piata, cel mult
   // 2 h vechime) | null, mb: { stare, vechi } din LatimeUS (Market Breadth SUA) | null }. Fuga de risc / stres / MB „risk-off” ⇒ aștept;
   // prudent / MB „prudență” ⇒ risc 0,5% din cont; necunoscut ⇒ se spune, riscul rămâne 1% (nu blochez pe lipsa unei surse externe)
@@ -794,6 +810,6 @@ var ActiuniSemnale = (function () {
   }
   // „Regulile tale”: grupa cea mai scumpa
   function facReguli(grupa) { return "Aș evita deocamdată trade-urile " + grupa + "."; }
-  return { monedaTicker: monedaTicker, pretIn: pretIn, inParalel: inParalel, unitateBare: unitateBare, inchisaInainte: inchisaInainte, zileLipsa: zileLipsa, regimPoarta: regimPoarta, PLAFON: PLAFON, usd: usd,facPoarta: facPoarta, facStop: facStop, sfatStop: sfatStop, facPoartaIstoric: facPoartaIstoric, facReguli: facReguli, notaReguli: notaReguli, stopPoarta: stopPoarta, cheieSituatie: cheieSituatie, situatiiCaAsta: situatiiCaAsta, textSituatie: textSituatie, trailPozitie: trailPozitie, alegeTrail: alegeTrail, maxDupaCumparare: maxDupaCumparare, cuStopUrcator: cuStopUrcator, cumparariInJos: cumparariInJos, alertaFrana: alertaFrana, cuStop: cuStop, rezumatStop: rezumatStop, reguliPersonale: reguliPersonale, atr: atr, niveluri: niveluri, marime: marime, planulMeu: planulMeu, laCumparare: laCumparare, raportSaptamana: raportSaptamana, alertePlan: alertePlan, stare: stare, semafor: semafor, greseli: greseli, rezumatJurnal: rezumatJurnal, poarta: poarta, portofoliu: portofoliu, beta: beta, TEXT: TEXT };
+  return { monedaTicker: monedaTicker, pretIn: pretIn, inParalel: inParalel, unitateBare: unitateBare, inchisaInainte: inchisaInainte, zileLipsa: zileLipsa, verificaBare: verificaBare, regimPoarta: regimPoarta, PLAFON: PLAFON, usd: usd,facPoarta: facPoarta, facStop: facStop, sfatStop: sfatStop, facPoartaIstoric: facPoartaIstoric, facReguli: facReguli, notaReguli: notaReguli, stopPoarta: stopPoarta, cheieSituatie: cheieSituatie, situatiiCaAsta: situatiiCaAsta, textSituatie: textSituatie, trailPozitie: trailPozitie, alegeTrail: alegeTrail, maxDupaCumparare: maxDupaCumparare, cuStopUrcator: cuStopUrcator, cumparariInJos: cumparariInJos, alertaFrana: alertaFrana, cuStop: cuStop, rezumatStop: rezumatStop, reguliPersonale: reguliPersonale, atr: atr, niveluri: niveluri, marime: marime, planulMeu: planulMeu, laCumparare: laCumparare, raportSaptamana: raportSaptamana, alertePlan: alertePlan, stare: stare, semafor: semafor, greseli: greseli, rezumatJurnal: rezumatJurnal, poarta: poarta, portofoliu: portofoliu, beta: beta, TEXT: TEXT };
 })();
 if (typeof globalThis !== "undefined") globalThis.ActiuniSemnale = ActiuniSemnale;

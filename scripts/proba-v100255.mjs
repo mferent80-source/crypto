@@ -63,14 +63,15 @@ await test("frica în afara 0–100 nu adună scor și nu se numără; lipsa ră
   assert.equal(gol.ok, false); assert.equal(gol.scor, 0); assert.equal(gol.valoare, "—"); assert.equal(gol.text, "lipsește");
 });
 
-await test("0, 20, 50, 69, 75 și 100 rămân pe benzile vechi", () => {
+// v100.332 (auditul 12.11, 🔵): SCORURILE rămân pe benzile vechi; CUVÂNTUL vine acum din scara cardului „Frică / lăcomie” (Acasa.fgNume: 25 / 45 / 55 / 75)
+await test("0, 20, 50, 69, 75 și 100 rămân pe benzile vechi (scorul), cu cuvântul cardului", () => {
   const band = (fg) => { const x = frica({ fg }); return [x.ok, x.scor, x.text, x.valoare]; };
-  assert.deepEqual(band(0), [true, -2, "frică", "0"]);
-  assert.deepEqual(band(20), [true, -2, "frică", "20"]);
+  assert.deepEqual(band(0), [true, -2, "frică extremă", "0"]);
+  assert.deepEqual(band(20), [true, -2, "frică extremă", "20"]);
   assert.deepEqual(band(50), [true, 0, "neutru", "50"]);
-  assert.deepEqual(band(69), [true, 1, "spre lăcomie", "69"]);
-  assert.deepEqual(band(75), [true, 2, "lăcomie", "75"]);
-  assert.deepEqual(band(100), [true, 2, "lăcomie", "100"]);
+  assert.deepEqual(band(69), [true, 1, "lăcomie", "69"]);
+  assert.deepEqual(band(75), [true, 2, "lăcomie extremă", "75"]);
+  assert.deepEqual(band(100), [true, 2, "lăcomie extremă", "100"]);
 });
 
 await test("sub prețul 10, poziția și trade-ul închis scriu 144 buc, nu 144,118", () => {

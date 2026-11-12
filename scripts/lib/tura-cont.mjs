@@ -45,7 +45,8 @@ export async function campuriZiFrana(d, acum, raport) {
     } catch (e) { if (d.jurnal) d.jurnal("cont frana zi", e.message); }
   }
   const cal = await incearca(d, "calendar zi", () => d.cere("/api/stiri?action=calendar"));
-  if (cal && d.Acasa.calendar) {
+  // v100.332 (auditul 12.11, 🔴1): calendarul venit cu `eroare` (faireconomy n-a răspuns) e necunoscut - ziua nu se mai salvează „fără eveniment”
+  if (cal && !cal.eroare && d.Acasa.calendar) {
     try {
       const urm = d.Acasa.calendar(cal.evenimente, acum).urmatoare || [];
       const azi = ziRo(acum);

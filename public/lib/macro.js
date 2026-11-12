@@ -57,6 +57,14 @@
   }
   function treaptaDin(s) { for (const t of TREPTE) if (s >= t.min) return t; return TREPTE[TREPTE.length - 1]; }
 
+  // v100.332 (auditul 12.11, 🔵): pe aceeași pagină cardul scria „40 · frică”, iar rândul regimului „40 · spre frică” (trei scări de cuvinte pentru
+  // aceeași cifră). Cuvântul vine din scara cardului (Acasa.fgNume: 25 / 45 / 55 / 75); fără acasa.js încărcat, aceleași trepte. Scorul semnului
+  // (pragurile 30 / 45 / 55 / 70, comune cu regimul și alertele) NU se schimbă.
+  function fgCuvant(v) {
+    const AC = typeof Acasa !== "undefined" ? Acasa : typeof globalThis !== "undefined" ? globalThis.Acasa : null;
+    if (AC && AC.fgNume) return AC.fgNume(v);
+    return v >= 75 ? "lăcomie extremă" : v >= 55 ? "lăcomie" : v <= 25 ? "frică extremă" : v <= 45 ? "frică" : "neutru";
+  }
   // d = { vix, tnx, dxy, spy, btc (bare), fg: {valoare} }
   function scor(d) {
     if (!d || typeof d !== "object") return null;
@@ -79,7 +87,8 @@
     const fg = fgOk ? fgRaw : null;
     semne.push(!fgOk
       ? { cod: "frica", ce: "Frica / lăcomia crypto", ok: false, scor: 0, valoare: fgRaw === null ? "—" : String(Math.round(fgRaw)), text: fgRaw === null ? "lipsește" : "în afara 0–100" }
-      : Object.assign({ cod: "frica", ce: "Frica / lăcomia crypto", ok: true, valoare: String(Math.round(fg)), v: fg }, fg > 70 ? { scor: 2, text: "lăcomie" } : fg > 55 ? { scor: 1, text: "spre lăcomie" } : fg >= 45 ? { scor: 0, text: "neutru" } : fg >= 30 ? { scor: -1, text: "spre frică" } : { scor: -2, text: "frică" }));
+      : Object.assign({ cod: "frica", ce: "Frica / lăcomia crypto", ok: true, valoare: String(Math.round(fg)), v: fg }, fg > 70 ? { scor: 2, text: "lăcomie" } : fg > 55 ? { scor: 1, text: "spre lăcomie" } : fg >= 45 ? { scor: 0, text: "neutru" } : fg >= 30 ? { scor: -1, text: "spre frică" } : { scor: -2, text: "frică" },
+        { text: fgCuvant(fg) }));   /* v100.332 (auditul 12.11, 🔵): cuvântul de pe cardul „Frică / lăcomie” (o singură scară); SCORURILE de mai sus rămân */
     const valide = semne.filter((x) => x.ok).length, s = semne.reduce((a, x) => a + x.scor, 0), partial = valide < 3;
     return { semne, scor: s, valide, partial, treapta: partial ? PARTIAL : treaptaDin(s) };
   }

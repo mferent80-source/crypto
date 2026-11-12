@@ -5040,6 +5040,9 @@ function tbAlegeBot(id){
   /* v100.267 (auditul 29.10): direcția, lumânările de 4 h și funding-ul botului vechi stăteau 5–20 s lângă botul nou; obiecte noi, ca o tură în lucru pe moneda veche să nu țină pe loc tura nouă.
      Din extra rămân doar soldul futures al CONTULUI și starea serverului Radarului (nu țin de bot; altfel „sold” dispărea din portofoliu până la aducerea nouă) */
   var exVechi=tbStare.extra;tbStare.directie=null;tbStare.extra=exVechi?{la:0,bot:null,inLucru:false,futures:exVechi.futures,futuresEroare:exVechi.futuresEroare,istoricEroare:exVechi.istoricEroare}:null;
+  /* v100.332 (auditul 12.11, 🟡4): sfaturile, lista „Ce ai de făcut” și verdictul botului VECHI nu intră în primul desen al botului nou
+     (un „lichidarea la 6%” al lui A ajungea motiv de IEȘI în Consilierul lui B până venea citirea) */
+  tbStare.sfaturiLista=[];tbStare.todoLista=[];tbStare.consUlt=null;tbStare.sfaturiMemo=null;tbStare.semUlt=null;
   renderTabloBot();
   tbAduDate().then(renderTabloBot);
 }
@@ -5077,6 +5080,22 @@ function tbSchimbaModul(){
   }
   toast("Mod: "+alegeri[sid],"good");renderTabloBot();
 }
+/* v100.332 (optimizare): lumânările de 5 min pe care graficul le are deja pentru moneda asta (cel mult 2,5 minute vechi) - ultimele 100, în ordinea timpului */
+function tbKlineDinCache(sim,acum){
+  var c=tbStare.graficCache&&tbStare.graficCache[sim+"|5M"];
+  if(!c||!Array.isArray(c.randuri)||c.randuri.length<100||!(acum-c.la<150000)||!c.randuri[0]||Array.isArray(c.randuri[0])||!(Number(c.randuri[0].time)>0))return null;
+  return c.randuri.slice().sort(function(a,b){return Number(a.time)-Number(b.time)}).slice(-100);
+}
+/* v100.332 (auditul 12.11, 🟡7): cheile din localStorage ținute PE BOT. tbCurataChei le șterge pe ale boților care nu mai sunt în listă (vii = id-urile
+   de acum); cheile altor pagini (indVazut:t212:… al fișei Trading 212) și tot ce n-are unul din prefixele astea rămân. Întoarce câte a șters. */
+var TB_CHEI_BOT=["tabloBotIstoric_v1_","ctVazut:","indVazut:","tbTvGrid:"];
+function tbCurataChei(st,vii){
+  var n=0,tin={},are=false;(Array.isArray(vii)?vii:[]).forEach(function(id){if(id!=null&&id!==""){tin[String(id)]=1;are=true}});
+  if(!st||!are)return n;
+  try{var chei=[];for(var i=0;i<st.length;i++){var k=st.key(i);if(typeof k==="string")chei.push(k)}
+    chei.forEach(function(k){for(var j=0;j<TB_CHEI_BOT.length;j++){var p=TB_CHEI_BOT[j],id=k.slice(p.length);if(k.indexOf(p)===0){if(id&&id.indexOf(":")<0&&!tin[id]){st.removeItem(k);n++}break}}})}catch(e){}
+  return n;
+}
 async function tbAduDate(){
   // v100.40 (audit 30.09): o citire mai noua (alt bot ales intre timp) o anuleaza pe cea veche - altfel ecranul arata botul nou
   // cu lumanarile si WebSocket-ul celui vechi, cand raspunsul vechi vine al doilea
@@ -5105,6 +5124,9 @@ async function tbAduDate(){
       var alegere=TabloBot.alegeBot(d.bots,tbCiteste(TB_BOT_ALES));
       tbStare.bot=alegere.bot;tbStare.motivAlegere=alegere.motiv;
       tbStare.botBrut=tbStare.bot?tbStare.bot.brut||null:null;
+      /* v100.332 (auditul 12.11, 🟡7): o dată la 10 minute, cheile ținute pe bot ale boților care nu mai sunt în listă se șterg (istoricul de o zi are
+         până la ~245 kB pe bot și nu se ștergea niciodată). Doar cu o listă întreagă și nevidă: o citire goală sau tăiată nu șterge nimic. */
+      if(d.bots.length&&!(d.probleme&&d.probleme.trunchiat)&&Date.now()-(tbStare.curatLa||0)>=600000){tbStare.curatLa=Date.now();try{tbCurataChei(localStorage,d.bots.map(function(x){return x&&x.id}))}catch(eC){}}
     }
     tbStare.routeOk=true;if(!tineGoala)tbStare.botLa=Date.now();   /* v100.267 (auditul 29.10): citirea goală ținută = boții de DINAINTE - nu „citit acum” */
   }catch(e){
@@ -5117,7 +5139,13 @@ async function tbAduDate(){
   }
   if(tbStare.bot){
     var s=TabloBot.simboluri(tbStare.bot.baza,tbStare.bot.quote,tbStare.bot.simbolPionex);
-    try{
+    /* v100.332 (optimizare, auditul 12.11): lumânările de 5 min ale măsurilor se cereau la FIECARE tură (la 8 s; la 60 s în fundal), deși se schimbă
+       o dată la 5 minute. Acum: întâi cele pe care le are deja graficul (aceeași monedă, 5 min, sub 2,5 minute); altfel cele aduse aici rămân bune
+       45 s cât vezi Tabloul și 5 minute în fundal. Măsurat în probă pe 10 ture: 10 cereri ⇒ 2 (0 cu graficul pe 5 min). O citire picată se reia la tura următoare. */
+    var kc=tbKlineDinCache(s.pionex,Date.now());
+    if(kc){tbStare.klinePerp=kc;tbStare.klineStare="ok"}
+    else if(tbStare.klineSim===s.pionex&&tbStare.klineStare==="ok"&&tbStare.klinePerp.length&&Date.now()-(tbStare.klineLa||0)<(tbPanouVizibil()?45000:300000)){}
+    else try{
       var k=await getJSON("/api/market?type=pionex_klines&symbol="+encodeURIComponent(s.pionex)+"&interval=5M&limit=100");
       if(gen!==tbStare.gen)return;   // v100.40: alt bot ales cat astepta lumanarile
       // Sortam dupa timp, nu presupunem ordinea - la fel ca pionexKlines() mai
@@ -5125,7 +5153,7 @@ async function tbAduDate(){
       // Pionex ar intoarce vreodata crescator, seria s-ar inversa tacut si
       // pretPerp ar deveni lumanarea cea mai VECHE.
       tbStare.klinePerp=((k.data&&k.data.klines)||[]).slice().sort(function(a,b){return Number(a.time)-Number(b.time)});
-      tbStare.klineStare="ok";
+      tbStare.klineStare="ok";tbStare.klineSim=s.pionex;tbStare.klineLa=Date.now();
     }catch(e){
       // Pastram lumanarile vechi (mai bine decat nimic), dar le marcam invechite.
       tbStare.klineStare="invechit";
@@ -5163,7 +5191,10 @@ async function tbAduDate(){
         investit:b.investit!=null?Number(b.investit):null},Date.now());
       var srv=tbStare.istoricServer;
       if(srv&&srv.bot===tbStare.bot.id&&srv.intrari.length)ist=TabloBot.imbinaIstoric(ist,srv.intrari,Date.now());
-      tbStare.stocareStricata=!tbScrie(cheie,ist);
+      /* v100.332 (auditul 12.11, 🟡7): scrierea picată ⇒ întâi curățenia cheilor boților dispăruți, apoi încă o încercare (cota plină arăta ca „browserul blochează”) */
+      var scris=tbScrie(cheie,ist);
+      if(!scris){try{if(tbCurataChei(localStorage,(tbStare.boti||[]).map(function(x){return x&&x.id})))scris=tbScrie(cheie,ist)}catch(eC){}}
+      tbStare.stocareStricata=!scris;
       tbStare.istoric=ist;
     }else{
       // Lipsa lui `id` opreste DOAR istoricul (n-avem pe ce cheie sa-l tinem) -
@@ -6674,13 +6705,35 @@ function tbConsHtml(c){
 }
 var tbConsRestDeschis=false;
 function tbIncredere(cod){tbAduSocoteala();if(!tbSoc.peCod||!cod||cod==="fara-fisa")return "";var x=tbSoc.peCod[cod];return '<p class="tbSub tbIncredere">🎯 '+escapeHtml((x&&x.nume?x.nume+": ":"")+SemnaleBot.textIncredere(x||null))+(x&&x.stare==="ajuta"?' <b class="good">merită ascultat</b>':'')+'</p>'}   // v100.39: pragul de minus atins, pe bot (histerezis)
+/* v100.332 (auditul 12.11, 🟡3): planul are stări, nu doar „e / nu e”. Înainte cererea picată era înghițită (catch gol) și pagina zicea 10 minute
+   „Nu ai un plan pentru bot”, iar semaforul lucra fără „pragul tău e atins”. „neadus” = încă n-a venit · „eroare” = cererea a picat (se reia la 30 s;
+   pe Radarul publicat, fără KV, nu) · „gol” = citit, n-are plan · „pus”. Un plan deja citit nu se aruncă la o reîmprospătare picată. */
+function tbPlanCitire(b){
+  if(!b||tbPlan.botId!==b.id)return "neadus";
+  if(tbPlan.eroare)return "eroare";
+  if(!(tbPlan.la>0))return "neadus";
+  return tbPlan.plan&&(tbPlan.plan.plus||tbPlan.plan.minus||tbPlan.plan.afaraOre)?"pus":"gol";
+}
+async function tbAduPlan(b){
+  try{var p=await getJSON("/api/istoric-bot?action=plan&bot="+encodeURIComponent(b.id));tbPlan={botId:b.id,plan:p&&p.plan||null,la:Date.now()};tbPlanInForm()}
+  catch(e){if(!(tbPlan.botId===b.id&&tbPlan.la>0))tbPlan={botId:b.id,plan:null,la:0,eroare:e&&e.status===503?"planul se ține doar pe Radarul de pe server":textEroare(e),eroareLa:Date.now(),faraServer:!!(e&&e.status===503)}}
+}
 async function tbAduSaptamana(b){
-  if(!b||!b.id||tbSapt.inLucru||(tbSapt.botId===b.id&&Date.now()-tbSapt.la<10*60000))return;
+  if(!b||!b.id||tbSapt.inLucru)return;
+  if(tbSapt.botId===b.id&&Date.now()-tbSapt.la<10*60000){
+    /* planul picat se cere din nou la 30 s, fără istoricul de 7 zile (acela are ritmul lui, 10 minute) */
+    if(tbPlanCitire(b)!=="eroare"||tbPlan.faraServer||Date.now()-(tbPlan.eroareLa||0)<30000)return;
+    tbSapt.inLucru=true;
+    try{await tbAduPlan(b)}finally{tbSapt.inLucru=false}
+    if(tbPanouVizibil()&&tbStare.bot&&tbStare.bot.id===b.id){tbDeseneazaSemafor(tbStare.bot);tbDeseneazaSaptPlan(tbStare.bot)}
+    return;
+  }
   tbSapt.inLucru=true;
-  try{var d=await getJSON("/api/istoric-bot?action=citeste&ore=168&bot="+encodeURIComponent(b.id));tbSapt={botId:b.id,la:Date.now(),intrari:Array.isArray(d.intrari)?d.intrari:[],eroare:null,inLucru:false}}
-  catch(e){tbSapt={botId:b.id,la:Date.now(),intrari:null,eroare:e&&e.status===503?"doar pe Radarul de pe server":textEroare(e),inLucru:false}}
-  try{var p=await getJSON("/api/istoric-bot?action=plan&bot="+encodeURIComponent(b.id));tbPlan={botId:b.id,plan:p&&p.plan||null,la:Date.now()};tbPlanInForm()}catch(e){}
-  if(tbPanouVizibil()&&tbStare.bot&&tbStare.bot.id===b.id)tbDeseneazaSaptPlan(tbStare.bot);
+  try{var d=await getJSON("/api/istoric-bot?action=citeste&ore=168&bot="+encodeURIComponent(b.id));tbSapt={botId:b.id,la:Date.now(),intrari:Array.isArray(d.intrari)?d.intrari:[],eroare:null,inLucru:true}}
+  catch(e){tbSapt={botId:b.id,la:Date.now(),intrari:null,eroare:e&&e.status===503?"doar pe Radarul de pe server":textEroare(e),inLucru:true}}
+  try{await tbAduPlan(b)}finally{tbSapt.inLucru=false}
+  /* planul sosit schimbă și verdictul (pragul atins, podeaua): semaforul întâi, cartela planului îi ia fraza (🟡1) */
+  if(tbPanouVizibil()&&tbStare.bot&&tbStare.bot.id===b.id){tbDeseneazaSemafor(tbStare.bot);tbDeseneazaSaptPlan(tbStare.bot)}
 }
 // v97.6 (27.09, ICP pornit fara plan): propunerea de plan pentru botul care n-are, dupa planul lui cel mai nou
 var tbPropPlan={botId:null,p:null,inLucru:false};
@@ -6700,7 +6753,16 @@ function tbPunePlanPropus(){
   [["tbPlanPlus","plus"],["tbPlanMinus","minus"],["tbPlanAfara","afaraOre"]].forEach(function(x){var e=$(x[0]);if(e&&p[x[1]]!=null)e.value=String(p[x[1]]).replace(".",",")});
   tbPlanSalveaza().then(function(){if(tbStare.bot)tbDeseneazaSemafor(tbStare.bot)});
 }
-function tbPlanInForm(){var p=tbPlan.plan||{};[["tbPlanPlus","plus"],["tbPlanMinus","minus"],["tbPlanAfara","afaraOre"]].forEach(function(x){var e=$(x[0]);if(e&&!e.value&&p[x[1]]!=null)e.value=String(p[x[1]])})}
+/* v100.332 (auditul 12.11, 🟡2): formularul planului e al botului de pe ecran. Înainte câmpurile se umpleau doar când erau goale, deci la alt bot
+   rămâneau cifrele celui dinainte, iar „Salvează planul” le scria pe botul nou. tbPlanFormSinc (chemată la fiecare desen al cartelei) rescrie
+   câmpurile când s-a schimbat botul (goale dacă planul lui n-a venit sau n-are); pe același bot, ce tastezi rămâne. */
+function tbPlanFormSinc(b){
+  var id=b&&b.id!=null?String(b.id):null;if(tbStare.planFormBot===id)return;
+  tbStare.planFormBot=id;
+  var p=id&&String(tbPlan.botId)===id&&tbPlan.plan?tbPlan.plan:{};
+  [["tbPlanPlus","plus"],["tbPlanMinus","minus"],["tbPlanAfara","afaraOre"]].forEach(function(x){var e=$(x[0]);if(e)e.value=p[x[1]]!=null?String(p[x[1]]):""});
+}
+function tbPlanInForm(){if(tbStare.planFormBot!=null&&String(tbPlan.botId)!==tbStare.planFormBot)return;var p=tbPlan.plan||{};[["tbPlanPlus","plus"],["tbPlanMinus","minus"],["tbPlanAfara","afaraOre"]].forEach(function(x){var e=$(x[0]);if(e&&!e.value&&p[x[1]]!=null)e.value=String(p[x[1]])})}
 async function tbPlanSalveaza(){
   var b=tbStare.bot;if(!b)return;
   var plan={plus:grNumar($("tbPlanPlus")&&$("tbPlanPlus").value),minus:grNumar($("tbPlanMinus")&&$("tbPlanMinus").value),afaraOre:grNumar($("tbPlanAfara")&&$("tbPlanAfara").value)};
@@ -6708,6 +6770,7 @@ async function tbPlanSalveaza(){
     if(!r.ok)throw Object.assign(new Error(d&&d.error||("HTTP "+r.status)),{status:r.status});
     tbPlan={botId:b.id,plan:d.plan,la:Date.now()};toast("Planul e salvat; colectorul te anunță când atingi un prag","good")}
   catch(e){toast("Nu am putut salva planul: "+(e&&e.status===503?"doar pe Radarul de pe server":textEroare(e)),"bad")}
+  if(tbStare.bot&&tbStare.bot.id===b.id)tbDeseneazaSemafor(b);   /* v100.332 (🟡1): planul nou schimbă verdictul; cartela îi ia fraza */
   tbDeseneazaSaptPlan(b);
 }
 function tbMarjaCalc(v){
@@ -6718,6 +6781,7 @@ function tbMarjaCalc(v){
 }
 function tbDeseneazaSaptPlan(b){
   var el=$("tbSapt"),ps=$("tbPlanStare"),P=(typeof grProc==="function"?grProc:GridCalcul.procent);if(!el||!ps)return;
+  if(typeof tbPlanFormSinc==="function")tbPlanFormSinc(b);   /* v100.332 (🟡2): formularul e al botului de pe ecran */
   tbRenderTodo();
   if(!b){el.innerHTML=ps.innerHTML='<p class="tbSub">Fără bot citit.</p>';return}
   // (1) saptamana
@@ -6730,17 +6794,23 @@ function tbDeseneazaSaptPlan(b){
       el.innerHTML='<div class="tbZile">'+z.map(function(x){var h=x.grile==null?0:Math.round(Math.abs(x.grile)/mx*100);return '<div class="tbZi" title="'+escapeHtml(x.zi)+'"><span class="tbSub">'+(x.grile==null?"—":(x.grile>=0?"+":"−")+Math.abs(x.grile).toFixed(1).replace(".",","))+'</span><i class="'+(x.grile!=null&&x.grile<0?"neg":"poz")+'" style="height:'+h+'%"></i><span class="tbEt2">'+escapeHtml(x.zi.slice(8,10)+"."+x.zi.slice(5,7))+'</span><span class="tbSub '+(x.total==null?"":x.total>=0?"good":"bad")+'">'+(x.total==null?"—":(x.total>=0?"+":"−")+Math.abs(x.total).toFixed(1).replace(".",","))+'</span></div>'}).join("")+'</div><p class="tbSub">Bara = cât au adus grilele în ziua aceea; dedesubt, totalul botului seara. Din istoricul strâns de colectorul de pe VPS (7 zile).</p>';}
   }
   // (3) planul
+  /* v100.332 (auditul 12.11, 🟡3): planul încă neadus sau cu cererea picată nu e „Niciun plan încă” */
+  var stCit=typeof tbPlanCitire==="function"?tbPlanCitire(b):"pus";
+  if(stCit==="neadus"){ps.innerHTML='<p class="tbSub">aduc planul botului…</p>';return}
+  if(stCit==="eroare"){ps.innerHTML='<p class="tbSub">Nu pot citi planul acum: '+escapeHtml(tbPlan.eroare)+(tbPlan.faraServer?"":". Reîncerc singur.")+'</p>';return}
   var st=TabloExtra.planStare(b,tbPlan.botId===b.id?tbPlan.plan:null,{afaraDe:null},Date.now());
   if(!st||(!st.plus&&!st.minus&&!st.afara)){ps.innerHTML='<p class="tbSub">Niciun plan încă: scrie-l acum, la rece, nu când prețul fuge.</p>';return}
+  /* v100.332 (auditul 12.11, 🟡1): fraza cartelei = a semaforului desenat pe ACELAȘI plan (tbStare.semUlt), nu una fixă - o singură voce */
+  var suP=tbStare.semUlt,smP=suP&&suP.bot===b.id&&suP.planLa===(tbPlan.botId===b.id?tbPlan.la:0)?suP.sm:null,pcP=typeof SemnaleBot!=="undefined"&&SemnaleBot.planPeCartela?SemnaleBot.planPeCartela(st,smP):{plus:null,faCe:null};
   var U=function(v){return TextRo.usdt(v)},h="";   // v100.62: cifrele cu virgula, „închide botul” (vocabularul unic)
-  if(st.plus)h+='<div class="tbLinie"><span>Țintă pe plus: '+U(st.plus.prag)+'</span><b class="'+(st.plus.lipsa<=0?"good":"")+'">'+(st.plus.lipsa<=0?"atinsă: închide botul":"mai sunt "+TextRo.num(st.plus.lipsa,2)+" USDT")+'</b></div>';
+  if(st.plus)h+='<div class="tbLinie"><span>Țintă pe plus: '+U(st.plus.prag)+'</span><b class="'+(st.plus.lipsa<=0?"good":"")+'">'+(st.plus.lipsa<=0?escapeHtml(pcP.plus||"atinsă"):"mai sunt "+TextRo.num(st.plus.lipsa,2)+" USDT")+'</b></div>';
   if(st.minus)h+='<div class="tbLinie"><span>Ies dacă pierd '+TextRo.num(st.minus.prag,2)+' USDT</span><b class="'+(st.minus.lipsa<=0?"bad":st.minus.lipsa<st.minus.prag*0.25?"tbWarn":"")+'">'+(st.minus.lipsa<=0?"atins: închide botul":"mai sunt "+TextRo.num(st.minus.lipsa,2)+" USDT")+'</b></div>';
   // v100.45 (I-475): cat de des o zi obisnuita a monedei ajunge la planul pe minus, si pragul atins in cel mult 1 zi din 4
   var prP=tbProfilPt(b),dP=String(b.directie||"").toLowerCase(),pP=botiNr(b.pretCurent);
   if(st.minus&&st.minus.opritorPlan!=null&&pP>0){var pmP=ProfilMoneda.planPeMoneda({profil:prP,dir:dP,dist:Math.abs(st.minus.opritorPlan/pP-1),laDist:function(dd){return TabloExtra.totalCuGridLa(b,dP==="short"?pP*(1+dd):pP*(1-dd))}});
     h+=pmP?'<p class="'+(pmP.avertizare?"tbFac tbWarn":"tbSub")+'">📏 '+escapeHtml(pmP.text)+'</p>':tbProfil.faraServer?'':'<p class="tbSub">📏 Cât de des e atins planul pe moneda asta: profilul monedei vine de la colector (noaptea).</p>'}
   if(st.afara)h+='<div class="tbLinie"><span>Afară din grid peste '+TextRo.oreN(st.afara.prag)+'</span><b>colectorul numără orele</b></div>';
-  ps.innerHTML=h+(st.atins.length?'<p class="tbFac">👉 <b>Ce aș face eu:</b> Aș închide botul acum, cum ai hotărât la rece.</p>':'');
+  ps.innerHTML=h+(pcP.faCe?'<p class="tbFac">👉 <b>Ce aș face eu:</b> '+escapeHtml(pcP.faCe)+'</p>':st.atins.length?'<p class="tbSub">Ce aș face eu e în Consilier, mai sus.</p>':'');
 }
 // ===== v82: semaforul botului + muta gridul + socoteala semnalelor =====
 var tbSem={botId:null,la:0,v:null,inLucru:false};
@@ -6804,7 +6874,9 @@ function tbPregatire(el){
   if(!f&&!v&&!g)return el.innerHTML=h+'<p class="tbSub">'+(tbPreg.inLucru?"aduc ultimul bot închis, vremea și candidații…":"—")+'</p></div>';
   if(f)h+='<div class="tbPregBloc"><h5>Ultimul bot închis</h5><p class="tbPregTitlu '+(f.nivel==="info"?"good":f.nivel==="critic"?"bad":"tbWarn")+'">'+escapeHtml(f.titlu.replace(/^🔍 /,""))+'</p>'+f.mesaj.split("\n").map(function(t){return '<p class="tbPregRand">'+escapeHtml(t)+'</p>'}).join("")+'</div>';
   var fcT=typeof acFranaContText==="function"?acFranaContText():"";   /* v100.330: frâna contului separat de vremea crypto (ca pe Piața azi) */
-  if(v)h+='<div class="tbPregBloc"><h5>Vremea pieței</h5><p class="tbPregTitlu">'+escapeHtml(v.eticheta)+' — '+escapeHtml(v.titlu)+'</p>'+(v.faCe?'<p class="tbFac">👉 <b>Ce aș face eu:</b> '+escapeHtml(v.faCe)+'</p>':'')+(fcT?'<p class="tbWarn">⛔ <b>Frâna contului azi:</b> '+escapeHtml(fcT)+'</p>':'')+'</div>';
+  /* v100.332 (12.11, pe pagina vie): raportul contului sau calendarul încă nevenite ⇒ frâna e NECUNOSCUTĂ, nu netrasă - se spune „încă verific” */
+  var fcStiut=typeof acFranaContStiut==="function"?acFranaContStiut():true;
+  if(v)h+='<div class="tbPregBloc"><h5>Vremea pieței</h5><p class="tbPregTitlu">'+escapeHtml(v.eticheta)+' — '+escapeHtml(v.titlu)+'</p>'+(v.faCe?'<p class="tbFac">👉 <b>Ce aș face eu:</b> '+escapeHtml(v.faCe)+'</p>':'')+(fcT?'<p class="tbWarn">⛔ <b>Frâna contului azi:</b> '+escapeHtml(fcT)+'</p>':!fcStiut?'<p class="tbSub">⏳ Frâna contului: încă verific raportul contului și calendarul zilei.</p>':'')+'</div>';
   if(g&&g.length)h+='<div class="tbPregBloc"><h5>'+(nu?'Bun pentru grid, din Scan (🟦) · azi nu pornesc':'Pe ce aș porni (🟦 Bun pentru grid, din Scan)')+'</h5>'+(nu?acAziNuHtml(an):'')+g.map(function(q){return '<div class="tbPregMon"><b>'+escapeHtml(q.s)+'</b><span class="tbSub">'+(q.grile?TextRo.cate(q.grile+1,"grilă","grile")+" · pas "+(q.pas*100).toFixed(2).replace(".",",")+"% · ~"+(q.traversari||0).toFixed(1).replace(".",",")+" treceri/zi":"")+' · 7 zile '+(q.ch7>=0?"+":"−")+Math.abs(q.ch7).toFixed(1).replace(".",",")+'%</span><button type="button" class="tbBtnLinie" data-action-click="gridDeschideMoneda(\''+argActiune(q.s)+'\')">Fișa</button></div>'}).join("")
     +'</div>';
   el.innerHTML=h+'</div>';
@@ -6824,6 +6896,7 @@ function tbDeseneazaSemafor(b){
   var prT=tbProfilPt(b),pmT=ProfilMoneda.praguriMargine(prT),psT=ProfilMoneda.pragStop(prT,String(b.directie||"").toLowerCase());   // v100.45 (pachetul 1)
   var muta=SemnaleBot.mutaGridul(b,f,ac?ac.afaraOre:0,pmT),iap=SemnaleBot.iaProfit(b,f),zero=TabloExtra.dacaInchizi(b),costuri=TabloExtra.grileVsCosturi(b,Date.now());
   var sm=SemnaleBot.semafor({bot:b,fisa:f,zero:zero,plan:plan,costuri:costuri,btc:ac&&ac.btc&&ac.btc.text?ac.btc:null,aglomerare:ac&&ac.aglomerare&&ac.aglomerare.text?ac.aglomerare:null,muta:muta,iaProfit:iap,distInainte:SemnaleBot.distantaLaOra(tbSapt.botId===b.id?tbSapt.intrari:null,Date.now(),3600000),busola:tbBusolaVerdict(b)});   /* v100.60: lichidarea se apropie sau se indeparteaza; v100.92 (I-523): Busola */
+  tbStare.semUlt={bot:b.id,planLa:tbPlan.botId===b.id?tbPlan.la:0,sm:sm};   /* v100.332 (🟡1): cartela planului ia fraza de aici */
   var N={tine:["🟢 ȚINE","good"],atentie:["🟡 ATENȚIE","tbWarn"],iesi:["🔴 IEȘI","bad"],asteapta:["⏳ SOCOTESC","neutral"]},n=N[sm.nivel]||N.asteapta;
   var CUL={iesi:"var(--bad)",atentie:"var(--warn)",podea:"var(--good)"},mare=function(s){s=String(s||"");return s.charAt(0).toUpperCase()+s.slice(1)};
   // v97.6: botul n-are plan -> sus, inaintea semaforului: propunerea si un singur buton
@@ -6969,12 +7042,13 @@ function tbDeseneazaBanii(b){
     '<div class="tbLinie tbLinieTotal"><span>Total'+(typeof TabloExtra!=="undefined"&&TabloExtra.notaTotal&&TabloExtra.notaTotal(b)?' <span class="tbSub">'+escapeHtml(TabloExtra.notaTotal(b))+'</span>':'')+'</span><b class="'+botiClasa(b.profitTotal)+'">'+escapeHtml(botiBan(b.profitTotal))+'</b></div>'+   /* v100.272: nota neutrului lângă total */
     // v100.4: profitul DOAR din grid (Pionex „Grid profit”) la vedere, colorat, si cat aduce o grila dupa comision (Pionex „Profit/grid”)
     rand("Profit doar din grid",botiBan(b.gridProfitBrut),botiClasa(b.gridProfitBrut),(per!==null?TextRo.cate(per,"pereche încheiată","perechi încheiate")+" · ":"")+"brut, fără comisioane")+
-    (pg?rand("Pe grilă, după comision",GridCalcul.procent(pg.pct)+(pg.usdt!==null?" ≈ "+pg.usdt.toFixed(3)+" USDT":""),"",TextRo.cate(pg.grile,"grilă","grile")+" "+pg.mod):"")+
+    (pg?rand("Pe grilă, după comision",GridCalcul.procent(pg.pct)+(pg.usdt!==null?" ≈ "+TextRo.num(pg.usdt,3)+" USDT":"")/* v100.332 (🔵9): virgula, ca KPI-ul de sus */,"",TextRo.cate(pg.grile,"grilă","grile")+" "+pg.mod):"")+
     rand("Comisioane",botiBan(b.comisioane),"tbSubVal")+
     rand("Finanțare",botiBan(b.finantare),"tbSubVal")+
     tbRandUmpleri(b);
   tbAduUmpleri(b);
-  tbFisaRestaureaza(b);tbDeseneazaExtra(b);tbAduFisaBot(b);tbDeseneazaSaptPlan(b);tbAduSaptamana(b);tbDeseneazaSemafor(b);tbAduSemnale(b);tbDeseneazaPortofoliu();if(typeof gridLaboratorAdu==="function")gridLaboratorAdu();
+  /* v100.332 (auditul 12.11, 🟡1): semaforul înaintea cartelei planului - cartela îi ia fraza, iar lista „Ce ai de făcut” vede verdictul de acum */
+  tbFisaRestaureaza(b);tbDeseneazaExtra(b);tbAduFisaBot(b);tbDeseneazaSemafor(b);tbDeseneazaSaptPlan(b);tbAduSaptamana(b);tbAduSemnale(b);tbDeseneazaPortofoliu();if(typeof gridLaboratorAdu==="function")gridLaboratorAdu();
   var lista=Array.isArray(b.avertismente)?b.avertismente:[];
   if(av)av.innerHTML=lista.length?lista.map(function(a){return '<div class="tbAvert">'+escapeHtml(a)+'</div>'}).join(""):'<p class="tbSub">Niciun avertisment de la server.</p>';
   tbStare.avertLista=lista;tbRenderTodo();
@@ -7006,7 +7080,8 @@ async function tbAduExtra(){
   renderTabloSfaturi();renderTabloScenarii();renderTabloAlerte();
 }
 function tbTinteScenariu(b){
-  var t=[],p=botiNr(b.pretCurent),jos=botiNr(b.gridJos),sus=botiNr(b.gridSus),opr=botiNr(b.opritorPierdere);
+  /* v100.332 (🔵2): stopul în procente = prețul viu (pretStopLive), ca take-profit-ul de mai jos; cel pe preț rămâne prețul lui */
+  var t=[],p=botiNr(b.pretCurent),jos=botiNr(b.gridJos),sus=botiNr(b.gridSus),opr=!b.opritorPierdereActiv?botiNr(b.opritorPierdere):typeof TabloExtra!=="undefined"&&TabloExtra.pretStopLive?TabloExtra.pretStopLive(b):botiNr(b.opritorPierdere);
   if(p!==null){t.push({eticheta:"+5%",pret:p*1.05});t.push({eticheta:"−5%",pret:p*0.95});t.push({eticheta:"−10%",pret:p*0.9})}
   if(sus!==null)t.push({eticheta:"marginea de sus",pret:sus});
   if(jos!==null)t.push({eticheta:"jos",pret:jos});
@@ -7033,10 +7108,12 @@ function renderTabloScenarii(){
 function tbFaraBotHtml(){var u=typeof acUltimInchisText==="function"?acUltimInchisText():"";return '<div class="tbFaraBotRand"><b>🅿️ Niciun bot pornit</b>'+(u?'<span class="tbSub"> · ultimul: '+escapeHtml(u)+'</span>':'')+'<button type="button" class="actionGhost tbFaraBotBtn" data-action-click="navTo(\'gridset\',true)">Grid: ce setez? →</button></div>'}
 // v100.196 (auditul UI 🟡9): fără bot activ, „Aștept botul…” nu se termina niciodată - starea goală spune ce e și ce poți face
 function tbTextFaraBot(){if(tbStare.citireGoala)return "Citirea a venit goală: țin boții de dinainte.";if(tbStare.routeOk===true&&!tbStare.bot)return "Niciun bot activ în Pionex, deci nimic de făcut aici. Un bot nou îl alegi din „Grid: ce setez?”.";if(tbStare.routeOk===false)return "Nu pot citi boții: "+(tbStare.eroare||"eroare necunoscută")+". Reîncerc singur.";return "Aștept botul…"}
-function renderTabloSfaturi(){
-  var el=$("tbSfaturi");if(!el)return;
-  var b=tbStare.routeOk===false?null:tbStare.bot;
-  if(!b||typeof Sfaturi==="undefined"||typeof Scenariu==="undefined"){el.innerHTML='<p class="tbSub">'+escapeHtml(b?"Aștept botul…":tbTextFaraBot())+'</p>';if(!b)tbRenderTodo();return}   /* v100.306: fără bot și lista „Ce ai de făcut” spune starea (rămânea „Aștept botul…”) */
+/* v100.332 (auditul 12.11, 🟡4): sfaturile botului, socotite într-un singur loc. renderTabloBot le cere ÎNAINTEA Consilierului (tbDeseneazaSemafor le
+   citește din tbStare.sfaturiLista - înainte primea lista turei de dinainte, iar la schimbarea botului pe a botului vechi); desenul sfaturilor din aceeași
+   tură (refolosit = true) ia lista gata făcută, o singură dată - orice alt desen (fișa sosită, direcția, alt bot) le socotește din nou. */
+function tbSfaturiAcum(b,refolosit){
+  var m=tbStare.sfaturiMemo;
+  if(refolosit&&m&&m.proaspat&&m.bot===b.id&&Date.now()-m.la<1500){m.proaspat=false;return m.lista}
   /* v100.267 (auditul 29.10): doar direcția și funding-ul monedei botului de acum (ca renderTabloTrend / tbFundingPt); la schimbarea botului veneau ale celui vechi */
   var d=tbStare.directie&&tbStare.directie.simbol===tbCheieDir(b)?tbStare.directie:null,r4=d&&d.rez?d.rez.filter(function(x){return x.tf==="4H"})[0]:null,e=tbStare.extra&&tbStare.extra.bot===b.id?tbStare.extra:{};
   /* v100.272 (ideile auditului 29.10): ratele PIONEX ale monedei botului (aceleași ca KPI-ul de funding) - sfatul pe ce plătește botul, nu pe Binance */
@@ -7044,25 +7121,50 @@ function renderTabloSfaturi(){
   // v80.1: scenariul, sansele, ritmul, fisa/costuri/zero/setare - revizia 01.10 (I2): din Sfaturi.intrare, ACELEASI ca in colector (o singura voce)
   var lista=Sfaturi.sfaturi(Sfaturi.intrare({bot:b,k4:d&&d.randuri4h,fata4h:r4&&r4.dir?r4.fata.ton:null,dir4h:r4&&r4.dir,funding:e.funding,fundingHist:e.fundingHist,fundingPionex:fpx,
     fisa:tbFisa.botId===b.id?tbFisa.fisa:null,rezumat:d&&d.rez?Directie.rezumat(d.rez,b.directie):null,acum:Date.now()}));
-  tbStare.sfaturiLista=lista;
+  tbStare.sfaturiLista=lista;tbStare.sfaturiMemo={bot:b.id,la:Date.now(),lista:lista,proaspat:true};
+  return lista;
+}
+function renderTabloSfaturi(){
+  var el=$("tbSfaturi");if(!el)return;
+  var b=tbStare.routeOk===false?null:tbStare.bot;
+  if(!b||typeof Sfaturi==="undefined"||typeof Scenariu==="undefined"){el.innerHTML='<p class="tbSub">'+escapeHtml(b?"Aștept botul…":tbTextFaraBot())+'</p>';if(!b)tbRenderTodo();return}   /* v100.306: fără bot și lista „Ce ai de făcut” spune starea (rămânea „Aștept botul…”) */
+  var lista=tbSfaturiAcum(b,true);
   if($("tbSfaturiCard"))$("tbSfaturiCard").hidden=true;   // v100.44 (I-465): sfaturile intra in Consilier (motive sau „Restul”)
   el.innerHTML=lista.map(function(s){return '<div class="tbSfat tbSfat-'+escapeHtml(s.ton)+'"><b>'+escapeHtml(s.titlu)+'</b><p>'+escapeHtml(s.text)+'</p>'+(s.faCe?'<p class="tbFac">👉 <b>Ce aș face eu:</b> '+escapeHtml(s.faCe)+'</p>':'')+(s.sursa?'<p class="tbSub">'+escapeHtml(s.sursa)+'</p>':'')+'</div>'}).join("");
   tbRenderTodo();
 }
 // v86: "Ce ai de facut acum" - sfaturile, avertismentele serverului, alertele colectorului (stranse) si planul
 // lipsa, fiecare o singura data (TabloExtra.ceAiDeFacut, probat in scripts/tablou-v86.mjs)
+/* v100.332 (auditul 12.11, 🔴2): starea planului botului ACUM (TabloExtra.planStare, cu histerezisul pragului de minus ținut de semafor), pentru
+   regulile alertelor din „Ce ai de făcut acum”. Fără plan citit ⇒ null (regulile rămân ca înainte). afaraNestiut: planul are „afară N ore”, prețul e
+   afară din grid, dar colectorul n-a trimis de 20 de minute de când e afară ⇒ regula „afară” nu se poate judeca aici. */
+function tbPlanStareAcum(b){
+  if(!b||tbPlan.botId!==b.id||!tbPlan.plan||!(tbPlan.la>0)||typeof TabloExtra==="undefined")return null;
+  var kv=tbSem.botId===b.id&&tbSem.v?tbSem.v:null,ac=kv&&kv.acum&&kv.acum.la&&Date.now()-kv.acum.la<20*60000?kv.acum:null;
+  var st=TabloExtra.planStare(b,tbPlan.plan,{afaraDe:ac&&ac.afaraOre?Date.now()-ac.afaraOre*3600000:null,minusAtins:tbMinusAtins[b.id]===true},Date.now());
+  var p=botiNr(b.pretCurent),jos=botiNr(b.gridJos),sus=botiNr(b.gridSus);
+  if(st&&!ac&&botiNr(tbPlan.plan.afaraOre)>0&&p!==null&&jos!==null&&sus!==null&&(p<jos||p>sus))st.afaraNestiut=true;
+  return st;
+}
 function tbRenderTodo(){
   var box=$("tbTodoLista");if(!box)return;
   var b=tbStare.routeOk===false?null:tbStare.bot;
   if(!b){box.innerHTML='<p class="tbSub tbTodoGol">'+escapeHtml(tbTextFaraBot())+'</p>';tbStare.todoLista=[];if(typeof tbRenderConteaza==="function")tbRenderConteaza(true);return}
-  var pl=tbPlan.botId===b.id?tbPlan.plan:null,planGol=!(pl&&(pl.plus||pl.minus||pl.afaraOre));
+  /* v100.332 (auditul 12.11, 🟡3): „Nu ai un plan” doar când planul a fost CITIT și e gol - neadus sau cu cererea picată nu e „fără plan” */
+  var stPl=typeof tbPlanCitire==="function"?tbPlanCitire(b):(tbPlan.botId===b.id&&tbPlan.plan&&(tbPlan.plan.plus||tbPlan.plan.minus||tbPlan.plan.afaraOre)?"pus":"gol"),planGol=stPl==="gol";
   var alerte=TabloExtra.alerteleBotului(tbStare.alerteServer,b.id,Date.now());
   var aver=tbStare.avertLista||(Array.isArray(b.avertismente)?b.avertismente:[]);
   var l=TabloExtra.ceAiDeFacut({acum:Date.now(),dateLa:tbStare.botLa||null,sfaturi:tbStare.sfaturiLista||[],avertismente:aver,alerte:alerte,planGol:planGol});
   // v89: consilierul - istoricul tau pe moneda, frica/lacomia crypto, stirile despre moneda
   if(typeof consilierBot==="function"){var cb=consilierBot(b);if(cb.length){l=l.filter(function(x){return x.c!=="v"});cb.forEach(function(x){l.push({c:x.nivel,titlu:x.titlu,text:(x.text?x.text+" ":"")+(x.ceAsFace?"👉 "+x.ceAsFace:""),n:0,stiri:x.stiri,la:tbStare.botLa||null})});var RO={r:0,g:1,n:2,v:3};l.sort(function(a,c){var x=Number(a.la)||null,y=Number(c.la)||null;if(x!==y)return x===null?1:y===null?-1:y-x;return RO[a.c]-RO[c.c]})}}   // v100.40 (audit 30.09): ca in ceAiDeFacut - cele mai NOI sus (cererea lui din 28.09), la aceeasi ora cea mai urgenta
   // v100.110 (I-543): rândurile pe care verdictul / regulile de acum le contrazic se estompează - după CHEIA alertei, nu după titlu
-  var cu=tbStare.consUlt&&tbStare.consUlt.nivel?{nivel:tbStare.consUlt.nivel,eticheta:tbStare.consUlt.eticheta}:null,rg=null;try{rg=typeof Alerte!=="undefined"?Alerte.reguli(b,null):null}catch(e){rg=null}
+  var cu=tbStare.consUlt&&tbStare.consUlt.nivel?{nivel:tbStare.consUlt.nivel,eticheta:tbStare.consUlt.eticheta}:null,rg=null;
+  /* v100.332 (auditul 12.11, 🔴2): regulile de ACUM se cer cu planul botului (tbPlanStareAcum) - altfel alertele critice ale planului („pragul de −15 e
+     atins”, „n-ai stop activ”, ținta, gridul față de plan) nu puteau ieși „ok” și rămâneau roșii 24 h, urcate în „Contează acum”. Una încă adevărată
+     rămâne: regula ei nu iese „ok”. „Afară din grid peste N ore” nu se judecă fără starea proaspătă a colectorului (afaraNestiut). */
+  var plA=null;try{plA=typeof tbPlanStareAcum==="function"?tbPlanStareAcum(b):null}catch(e){plA=null}
+  try{rg=typeof Alerte!=="undefined"?Alerte.reguli(b,plA?{plan:plA}:null):null}catch(e){rg=null}
+  if(rg&&plA&&plA.afaraNestiut&&rg.plan&&rg.plan.nivel==="ok")rg.plan=null;
   l=TabloExtra.marcheazaDepasite(l,{cons:cu,reguli:rg});
   // v100.5 (el: „pune ora la fiecare sfat ca să știu dacă e de actualitate”): alerta = ora ei; restul = ora citirii botului
   tbStare.todoLista=l;if(typeof tbRenderConteaza==="function")tbRenderConteaza(true);   /* v100.313: întâi „CONTEAZĂ ACUM” (alege din lista asta), apoi lista cu „↑ e și sus” pe cele urcate */
@@ -7071,7 +7173,7 @@ function tbRenderTodo(){
   var azi=alerte.filter(function(a){return a.t>0&&Date.now()-a.t<86400000}).length,pune=function(id,t){var e=$(id);if(e&&e.textContent!==t)e.textContent=t};   /* audit 23.10: doar când s-a schimbat */
   pune("tbPlSub-alerte",azi?azi+" în ultimele 24 h":"niciuna în ultimele 24 h");
   pune("tbPlSub-avert",aver.length?aver.length+" de la server":"niciunul");
-  pune("tbPlSub-plan",planGol?"niciun plan încă — scrie-l la rece":"planul e pus · colectorul te anunță");
+  pune("tbPlSub-plan",stPl==="gol"?"niciun plan încă — scrie-l la rece":stPl==="pus"?"planul e pus · colectorul te anunță":stPl==="eroare"?(tbPlan.faraServer?"planul se ține doar pe Radarul de pe server":"planul n-a putut fi citit · reîncerc"):"aduc planul…");
   tbContTot();
 }
 function tbContTot(){if(typeof contTotRender==="function"){contTotRender();if(!contTot.inLucru&&(!t212.cont||!t212.istoric))contTotAsigura()}}
@@ -7382,6 +7484,12 @@ function tbIndSchimbari(b,bd,vaz){try{if(typeof tbVazutAscultator==="function")t
   /* revizia: doar cât vezi Tabloul; intervalele care lipsesc la un desen rămân cum le-ai văzut */
   var o=m[k],acum=IndicatoriBot.amintire(bd);var tot=Object.assign({},o.stocat||{},acum),sv=JSON.stringify(tot);if(o.scris!==sv&&(vaz||tbVazAcum)()){o.scris=sv;o.stocat=tot;try{localStorage.setItem(k,JSON.stringify({r:tot,la:Date.now()}))}catch(e){}}
   return IndicatoriBot.schimbari(o.prev,bd)}catch(e){return null}}
+/* v100.332 (auditul 12.11, 🟡5): lumânările graficului sunt ale intervalului de acum, dar ultima aducere a picat ⇒ de când sunt (null = nimic de spus) */
+function tbGraficVechi(g,cheie){
+  if(!g||!g.eroare||!g.randuri||g.simbol!==cheie||!(g.la>0))return null;
+  var d=new Date(g.la),z=function(n){return String(n).padStart(2,"0")};
+  return "lumânările graficului sunt de la "+z(d.getHours())+":"+z(d.getMinutes())+" - ultima aducere a picat ("+String(g.eroare).slice(0,80)+")";
+}
 async function tbAduGraficul(){
   var b=tbStare.bot;if(!b)return;
   var s=TabloBot.simboluri(b.baza,b.quote,b.simbolPionex).pionex;
@@ -7448,7 +7556,7 @@ function renderTabloTrend(){
         +'<td'+(r.adxVechi?' title="ADX mare cu „lateral”: ține minte o mișcare mai veche"':'')+'>'+(r.adx!=null?Math.round(r.adx):"—")+' · '+(r.rsi!=null?Math.round(r.rsi):"—")+(r.adxVechi?' <span class="tbSub">(mișcare veche)</span>':'')+'</td>'
         +'<td>'+(r.scor?'<span class="'+(r.scor.c==="good"?"good":r.scor.c==="bad"?"bad":"mutedInfo")+'" title="'+escapeHtml(r.scor.titlu||"")+'">'+escapeHtml(r.scor.t)+'</span>':gol(r.scorLipsa||"—"))+'</td>'
         +'<td'+(r.intors&&r.intors.titlu?' title="'+escapeHtml(r.intors.titlu)+'"':'')+'>'+(r.intors?escapeHtml(r.intors.text):gol(r.intorsLipsa||"—"))+'</td>'
-        +'<td>'+(bv!=null?'<span class="'+(bv>0?"good":bv<0?"bad":"")+'">'+(bv>0?"+":"")+tbFormateazaSemn(bv,1).replace(".",",")+'%</span>':gol("—"))+'</td></tr>'}).join("")
+        +'<td>'+(bv!=null?'<span class="'+((String(b.directie||"").toLowerCase()==="short"?-bv:bv)>0?"good":(String(b.directie||"").toLowerCase()==="short"?-bv:bv)<0?"bad":"")+'">'   /* v100.332 (🔵6): verde = bine pentru bot (la short, coborârea) */+(bv>0?"+":"")+tbFormateazaSemn(bv,1).replace(".",",")+'%</span>':gol("—"))+'</td></tr>'}).join("")
     +'</tbody></table></div>';
   if(bo){tbCazuriAdu();bo.textContent=tbCazuri.sem?"Pe boții tăi: "+String(tbCazuri.sem).replace(/^pe boții tăi[,:]?\s*/,""):""}   // I-545, mutat din citire
 }
@@ -7490,11 +7598,13 @@ function tbStopSansa(b){if(!b||typeof CurbaStop==="undefined"||!b.opritorPierder
   var dir=String(b.directie||"").toLowerCase(),gj=botiNr(b.gridJos),gs=botiNr(b.gridSus),parte=dir==="long"&&gj>0&&s.stop<gj?"jos":dir==="short"&&gs>0&&s.stop>gs?"sus":null;
   if(parte&&typeof Probabilitati!=="undefined"){try{var pm=null;(Probabilitati.randuri(rez,t.cal)||[]).forEach(function(r){if(r&&r.cod==="iese-"+parte+"-24"&&isFinite(r.p))pm=r.p});if(pm!==null&&s.p24>pm){s.p24=pm;s.plafon=parte}}catch(e){}}
   /* revizia 🟡4: stopul pus în PROCENTE din investiție (Pionex) - procentul lui și mutarea ca procent, cu grilele de pe drum (TabloExtra.totalCuGridLa) */
+  /* v100.332 (auditul 12.11, 🔴1): propunerea „muți stopul la ~X” verificată - nu la / dincolo de lichidare, cu totalul de acolo și grilele tăiate dacă pică în grid */
+  if(TE&&TE.stopPropus)TE.stopPropus(b,s);
   var rp=botiNr(b.opritorPierdereRaport),inv=botiNr(b.investit);
   if(b.opritorPierdereTip==="raport"&&rp!==null&&inv>0){s.raport=rp;var tm=s.mut20!==null&&TE&&TE.totalCuGridLa?TE.totalCuGridLa(b,s.mut20):null;s.mutRaport=tm!==null&&isFinite(tm)?tm/inv:null}
   return s}
 function tbStopSansaDrum(b){var s=tbStopSansa(b);if(!s)return null;var k=Math.round(s.p24*100);return "24 h: "+(k<1?"< 1%":k>99?"> 99%":"~"+k+"%")}   /* ca graficul (grafic-bot.js cuSanse) */
-function tbConteazaLista(b){if(!b||typeof Conteaza==="undefined")return [];try{return Conteaza.alege({stop:tbStopSansa(b),sfaturi:tbStare.sfaturiLista||[],lista:tbStare.todoLista||[],sanse:tbSansePt(b)||[]})}catch(e){return []}}
+function tbConteazaLista(b){if(!b||typeof Conteaza==="undefined")return [];try{return Conteaza.alege({stop:tbStopSansa(b),sfaturi:tbStare.sfaturiLista||[],lista:tbStare.todoLista||[],sanse:tbSansePt(b)||[],acum:Date.now()})}catch(e){return []}}
 // v100.322 (el, 11.11.2026: „îmbunătățește Contează acum” ⇒ ales: banii în USDT pe rând, butonul potrivit, ce s-a schimbat de la ultima privire,
 // gravitatea și „de când”). Pe o COPIE a rândurilor (Conteaza.alege rămâne neatins): banii la prețul rândului din ACEEAȘI socoteală ca
 // „Dacă prețul ajunge la…” (Scenariu.scenarii), butonul potrivit, semnele. Ce ai văzut ultima oară se ține în browserul tău (ctVazut:<bot>);
@@ -7728,7 +7838,7 @@ function tbRangeFilterRand(b){
   var k=tbRfCheie(b),bare=tbRfStare.cheie===k?tbRfStare.bare:null;if(!bare||bare.length<140)return null;
   if(!tbRfStare.citire||tbRfStare.citireLa!==tbRfStare.la){tbRfStare.citire=RangeFilter.citire(bare);tbRfStare.citireLa=tbRfStare.la}   /* v100.302: citirea ținută minte (1,5 ms la fiecare redesenare) */
   var c=tbRfStare.citire;if(!c||c.eroare)return null;
-  var dir=c.dir===1?"TREND SUS":c.dir===-1?"TREND JOS":"fără direcție",contra=(c.dir===1&&b.directie==="SHORT")||(c.dir===-1&&b.directie==="LONG"),d=c.dovada;
+  var dir=c.dir===1?"TREND SUS":c.dir===-1?"TREND JOS":"fără direcție",dB=String(b.directie||"").toLowerCase(),contra=(c.dir===1&&dB==="short")||(c.dir===-1&&dB==="long"),d=c.dovada;   /* v100.332 (auditul 12.11, 🟡6): direcția vine cu litere mici - „CONTRA botului” nu apărea niciodată */
   var dov=!d.n?"fără cazuri":d.n<RangeFilter.MIN_EP?d.k+" din "+TextRo.cate(d.n,"caz","cazuri")+" (puține cazuri)":Math.round(d.hit)+" din 100 ("+TextRo.cate(d.n,"caz","cazuri")+", "+(d.dovedit?"trece pe o singură monedă, necorectat - pe pagina Range Filter se corectează pentru câte monede vezi":"nedovedit")+")";
   var tx=dir+(c.dir?(c.bareDir>0?" de "+TextRo.cate(c.bareDir,"bară","bare"):" întors pe ultima bară"):"")+" (1h)"+(c.semnal?" · "+c.semnal.fel+(c.semnal.acum===0?" pe ultima bară închisă":" acum "+TextRo.cate(c.semnal.acum,"bară","bare")):"")+(c.regim.cons?" · consolidare":"")+" · DOVADA "+dov+(c.distPct!=null?" · stop (filtru) la "+TextRo.pct(c.distPct*100,1)+(c.costNu?" ⇒ NU TRECE (sub prag "+TextRo.pct(2*c.cost*100,2)+")":""):"")+(c.flipAtr!=null?" · flip la "+TextRo.num(c.flipAtr,1)+" ATR":"")+(contra?" · CONTRA botului (RF nedovedit)":"");   /* v100.301: stopul și costul, ca TRIGGER-ul din Pine; v100.302: flip, „puține cazuri”, CONTRA = info */
   return{ce:"Range Filter",stare:"info",text:tx,actiune:"navTo('rangefilter',true)",linkText:"Range Filter ›"}}
@@ -8419,7 +8529,7 @@ function renderTabloBot(){
     v={nivel:"EROARE",titlu:ex.titlu,ceFac:ex.ceFac,declansator:null};
   }else if(b&&tbStare.stocareStricata){
     v={nivel:"EROARE",titlu:"Stocarea locală nu funcționează",
-      ceFac:"Acest browser blochează localStorage, deci nu pot ține istoricul botului - ritmul și verdictele care depind de el rămân nedovedite pe veci, nu doar 30 de minute.",
+      ceFac:"Nu pot scrie în localStorage (browserul îl blochează sau e plin, și după ce am șters cheile boților dispăruți), deci nu pot ține istoricul botului - ritmul și verdictele care depind de el rămân nedovedite pe veci, nu doar 30 de minute.",
       declansator:null};
   }else{
     v=TabloBot.verdict(m,mod.mod,{faraBot:faraBot});
@@ -8431,6 +8541,8 @@ function renderTabloBot(){
     note.push("Pionex: tickere PERP indisponibile ("+tbStare.probleme.preturi+")");
   if(!eroareActiva&&b&&tbStare.klineStare==="invechit")
     note.push("lumânările sunt învechite - ultima citire a picat");
+  /* v100.332 (auditul 12.11, 🟡5): graficul rămas pe lumânările de dinainte, cu aducerea picată, o spune (înainte nimic) */
+  if(!eroareActiva&&b){var gV=tbGraficVechi(tbStare.grafic,TabloBot.simboluri(b.baza,b.quote,b.simbolPionex).pionex+"|"+tbTf());if(gV)note.push(gV)}
   if($("tbSimbol")){
     if(eroareActiva)$("tbSimbol").textContent="—";
     else if(!b)$("tbSimbol").textContent="fără bot";
@@ -8468,6 +8580,8 @@ function renderTabloBot(){
   }
   // La parola lipsa/gresita omul primeste si drumul, nu doar textul.
   if($("tbSpreSetari"))$("tbSpreSetari").hidden=!(eroareActiva&&eroareDeParola(tbStare.eroare,tbStare.eroareStatus));
+  /* v100.332 (auditul 12.11, 🟡4): sfaturile turei de ACUM, înaintea Consilierului (tbDeseneazaBanii ⇒ tbDeseneazaSemafor le citește) */
+  if(b&&typeof Sfaturi!=="undefined"&&typeof Scenariu!=="undefined"){try{tbSfaturiAcum(b)}catch(e){}}
   tbDeseneazaBanii(b);
   if($("tbPret")){
     if(tbStare.pretSpot==null)$("tbPret").textContent="—";

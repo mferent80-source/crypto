@@ -27,6 +27,9 @@ async function pionexRateGate(weight,fn,env,semnal=null){
   return run
 }
 
+// v100.332 (auditul 12.11, 🟡5): cât se țin lumânările Pionex pe server, în secunde. Înainte 5M și 30M cădeau pe „restul” (300 s), deși 15M se ține
+// 45 s: pe graficul botului (implicit pe 5 min) lumânarea închisă putea lipsi 5 minute. Acum 5M ca 1M / 15M, 30M ca 60M.
+export function ttlLumanari(interval){return interval==="1M"||interval==="5M"||interval==="15M"?45:interval==="30M"||interval==="60M"?90:interval==="4H"?180:300}
 const H={"content-type":"application/json;charset=UTF-8","cache-control":"no-store"};
 const ok=x=>new Response(JSON.stringify(x),{headers:H});
 const softFail=(error,detail,retryAfter=null)=>ok({result:false,error,detail,retryAfter});
@@ -123,7 +126,7 @@ export async function onRequestGet({request,env}){
     // v78: endTime (ms) pentru paginarea in urma a lumanarilor; trimis doar cand e numar pozitiv.
     const etRaw=u.searchParams.get("endTime"),et=Math.floor(Number(etRaw));
     const endQ=etRaw&&Number.isFinite(et)&&et>0?`&endTime=${et}`:"";
-    try{return ok(await pionexCached(`${PIONEX}/api/v1/market/klines?symbol=${encodeURIComponent(ps)}&interval=${encodeURIComponent(interval)}&limit=${limit}${endQ}`,interval==="1M"?45:interval==="15M"?45:interval==="60M"?90:interval==="4H"?180:300,env,opt))}catch(e){return esec("Pionex klines unavailable",e)}
+    try{return ok(await pionexCached(`${PIONEX}/api/v1/market/klines?symbol=${encodeURIComponent(ps)}&interval=${encodeURIComponent(interval)}&limit=${limit}${endQ}`,ttlLumanari(interval),env,opt))}catch(e){return esec("Pionex klines unavailable",e)}
   }
   if(type==="pionex_funding"){
     // v91.9: ratele de funding (ultimele 100, la 4 h la Pionex = ~16 zile) pentru "Mediul botului" din Tablou

@@ -117,7 +117,8 @@ await test("legătura în fișă: blocul stă sub grafic, pe toată lățimea fi
   assert.match(g, /if \(!faraAducere\) t212AduTf\(p\.ticker\);[^\n]*\n\s*try \{ t212IndDeseneaza\(p\.ticker\); \} catch \(e\) \{\}/, "după aducere, înainte de ieșirile graficului");
   const c = fn(T212, "t212IndCalc");
   assert.ok(c.includes("var pe = t212PeTf(tk)") && c.includes("pe[x.tf]") && c.includes('calc(j, "auto")') && c.includes("historicalProbability(j, 4)") && c.includes("j.length >= 60") && c.includes("j.length >= 260"));
-  assert.ok(c.includes("t212SedintaDeschisa(acum)") && c.includes("t212IndInchise(j, x.min, acum, des)") && c.includes('x.tf === "4H"') && c.includes("t212Istoric4h(j, tk)"));
+  // v100.332 (auditul 12.11, Y3 / Y4): ședința se ia pe bursa poziției, iar lumânarea în formare la aducere nu devine „închisă” după ceas
+  assert.ok(c.includes("t212SedintaPt(tk, acum)") && c.includes("t212IndInchise(j, x.min, acum, des, ad[x.tf])") && c.includes('x.tf === "4H"') && c.includes("t212Istoric4h(j, tk)"));
   assert.ok(!/getJSON|fetch\(/.test(c + fn(T212, "t212IndDeseneaza")), "zero cereri");
   // lumânările: aceleași ca graficul fișei - 15M / 60M / 4H aduse pentru fișa deschisă, 1D din barele zilnice (deja închise, bareBursa)
   assert.ok(T212.includes("function t212PeTf(tk) { var c = t212Tf[tk], pe = Object.assign({}, c && c.pe || {}), z = t212ZiRanduri(tk); if (z.length) pe[\"1D\"] = z; return pe; }"));
