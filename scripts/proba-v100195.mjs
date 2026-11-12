@@ -104,15 +104,16 @@ await test("Scorul zilei: cartela spune cinstit când îl poate judeca jurnalul 
 await test("„Piața azi”: cardul Trend 12 luni stă imediat sub „Ce aș cumpăra azi” (în HTML și în ordinea flex), nu mai e în rândul Sectoarelor", () => {
   const idx = citeste("public", "index.html"), css = citeste("public", "app.css");
   /* v100.330 (el, 12.11: „fa tot acum” - golurile): „Ce aș cumpăra azi” stă în .acTine (în HTML după Trend 12 luni); lipiți rămân prin ordine (30/31, pe telefon 15/16) */
-  assert.match(idx, /<div class="acScorBloc" id="acScorT212"><\/div><div class="acBloc acTrendSus" id="acTrendZi"><\/div><div class="acLegatura" id="acLegatura"><\/div>/);
-  assert.match(idx, /<div class="acBloc" id="acIdei"><\/div><div class="acLegatura acCumpar" id="acCumpar"><\/div><\/div>/);
-  assert.match(css, /@media \(max-width:640px\)\{\.pzDemo #acasa #acCumpar\{order:15\}\.pzDemo #acasa>#acTrendZi\{order:16\}\}/);
+  /* v100.331 (golul rămas): „Trend 12 luni” stă în .acTine sub „Ce aș cumpăra azi” - selectorul fără „>” */ 
+  assert.match(idx, /<div class="acScorBloc" id="acScorT212"><\/div><div class="acLegatura" id="acLegatura"><\/div>/);
+  assert.match(idx, /<div class="acBloc" id="acIdei"><\/div><div class="acLegatura acCumpar" id="acCumpar"><\/div><div class="acBloc acTrendSus" id="acTrendZi"><\/div><\/div>/);
+  assert.match(css, /@media \(max-width:640px\)\{\.pzDemo #acasa #acCumpar\{order:15\}\.pzDemo #acasa #acTrendZi\{order:16\}\}/);
   assert.equal((idx.match(/id="acTrendZi"/g) || []).length, 1, "un singur card");
   assert.match(idx, /<div class="acDoua acDouaSug"><div class="acCol"><div class="acBloc acSzBloc" id="acScorZi"><\/div><div class="acBloc" id="acSectoare"><\/div><div class="acBloc" id="acTopSector"><\/div><\/div><div class="acCol"><div class="acBloc acMbBloc" id="acMbSug"><\/div><\/div><\/div>/);
-  assert.match(css, /\.pzDemo #acasa #acCumpar\{order:30\}\.pzDemo #acasa>#acTrendZi\{order:31\}\.pzDemo #acasa>#acLegatura\{order:35\}/);
+  assert.match(css, /\.pzDemo #acasa #acCumpar\{order:30\}\.pzDemo #acasa #acTrendZi\{order:31\}\.pzDemo #acasa>#acLegatura\{order:35\}/);
   assert.match(css, /#dash \.acPereche #acSectoare\{order:5\}#dash \.acPereche #acMbSug\{order:6\}#dash \.acPereche #acTopSector\{order:7\}\}/);
   assert.ok(!/\.acDouaSug #acTrendZi/.test(css));
-  const iNou = css.indexOf("#acasa>#acTrendZi{order:31}"), iPanda = css.lastIndexOf("@media (max-width:640px){.sugPandaTab thead"); assert.ok(iNou > 0 && iPanda > iNou, "pânda rămâne ultima regulă");
+  const iNou = css.indexOf("#acasa #acTrendZi{order:31}"), iPanda = css.lastIndexOf("@media (max-width:640px){.sugPandaTab thead"); assert.ok(iNou > 0 && iPanda > iNou, "pânda rămâne ultima regulă");
 });
 
 await test("versiunile: de la v100.195 în sus peste tot, colectorul de la v101.115, proba în lanțul `test`", () => {   /* v100.196: ≥, nu egal */

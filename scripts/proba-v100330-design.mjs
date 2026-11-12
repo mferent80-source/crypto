@@ -20,17 +20,17 @@ console.log("\nV100.330 · golurile Piața azi: „Ce aș cumpăra azi” lâng�
 const idx = citeste("public", "index.html"), css = citeste("public", "app.css");
 
 await test("1. index.html: „Ce aș cumpăra azi” e a patra cartelă din .acTine (o singură dată în pagină)", () => {
-  assert.match(idx, /<div class="acTine"><div class="acBloc" id="acBoti"><\/div><div class="acBloc" id="acT212"><\/div><div class="acBloc" id="acIdei"><\/div><div class="acLegatura acCumpar" id="acCumpar"><\/div><\/div>/);
+  assert.match(idx, /<div class="acTine"><div class="acBloc" id="acBoti"><\/div><div class="acBloc" id="acT212"><\/div><div class="acBloc" id="acIdei"><\/div><div class="acLegatura acCumpar" id="acCumpar"><\/div><div class="acBloc acTrendSus" id="acTrendZi"><\/div><\/div>/);   /* v100.331: + Trend 12 luni sub ea */
   assert.equal(idx.split('id="acCumpar"').length - 1, 1);
 });
 await test("1. peste 900 px: „Boții tăi” pe două rânduri, „Ce aș cumpăra azi” pe coloanele 2–3 sub cartelele mici; cartelele cât conținutul", () => {
-  assert.match(css, /#dash \.acTine\{display:grid;grid-template-columns:repeat\(3,minmax\(0,1fr\)\);grid-template-rows:auto 1fr;align-items:start;gap:8px\}/);
-  assert.match(css, /#dash \.acTine>#acBoti\{grid-column:1;grid-row:1 \/ span 2\}#dash \.acTine>#acCumpar\{grid-column:2 \/ 4;grid-row:2\}/);
+  assert.match(css, /#dash \.acTine\{display:grid;grid-template-columns:repeat\(3,minmax\(0,1fr\)\);grid-template-rows:auto auto 1fr;align-items:start;gap:8px\}/);   /* v100.331: trei rânduri */
+  assert.match(css, /#dash \.acTine>#acBoti\{grid-column:1;grid-row:1 \/ span 3\}#dash \.acTine>#acCumpar\{grid-column:2 \/ 4;grid-row:2\}#dash \.acTine>#acTrendZi\{grid-column:2 \/ 4;grid-row:3\}/);
 });
 await test("1. sub 900 px: .acTine se desface, ordinea rămâne (cartelele 21, „Ce aș cumpăra azi” 30; ≤ 640 la 15, deasupra grupului)", () => {
   assert.match(css, /@media \(max-width:900px\)\{\.pzDemo #acasa \.acTine\{display:contents\}\.pzDemo #acasa \.acTine>\.acBloc\{order:21\}\}/);
   assert.match(css, /\.pzDemo #acasa #acCumpar\{order:30\}/);
-  assert.match(css, /@media \(max-width:640px\)\{\.pzDemo #acasa #acCumpar\{order:15\}\.pzDemo #acasa>#acTrendZi\{order:16\}\}/);
+  assert.match(css, /@media \(max-width:640px\)\{\.pzDemo #acasa #acCumpar\{order:15\}\.pzDemo #acasa #acTrendZi\{order:16\}\}/);
   assert.doesNotMatch(css, /\.pzDemo #acasa>#acCumpar\{/, "vechiul selector (copil direct) nu mai prinde nimic");
 });
 await test("2. index.html: coloanele bursei - Dobânzi + Regim · Market Breadth SUA | Scorul zilei + Sectoare + Cele mai tari · Sugestii MB", () => {

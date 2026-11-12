@@ -64,7 +64,12 @@ async function acasaPorneste(fortat) {
     await pas("btc4h", async function () { var k = await getJSON("/api/market?type=pionex_klines&symbol=BTC_USDT_PERP&interval=4H&limit=200"); return k && k.data && k.data.klines || null; });
     await pas("btc1d", async function () { var k = await getJSON("/api/market?type=pionex_klines&symbol=BTC_USDT_PERP&interval=1D&limit=200"); return k && k.data && k.data.klines || null; });
     await pas("btc1h", async function () { var k = await getJSON("/api/market?type=pionex_klines&symbol=BTC_USDT_PERP&interval=60M&limit=500"); return k && k.data && k.data.klines || null; });
-    await pas("largime", function () { return typeof refreshMarketBreadthV64 === "function" ? refreshMarketBreadthV64(false, false) : null; });
+    // v100.331 (el, 12.11: „3 … fă tot”): întâi lărgimea colectorului (aceleași formule, o dată la 30 min) - fără cele 32 de cereri la Binance și fără
+    // „Calculez lărgimea…”; dacă lipsește sau are peste 90 de minute, pagina o socotește singură, ca înainte
+    await pas("largime", async function () {
+      try { var r = await getJSON("/api/istoric-bot?action=largimeCrypto"); if (r && r.largime && r.la > 0 && Date.now() - r.la < 90 * 60000) return acLargimeDinServer(r.largime); } catch (e) {}
+      return typeof refreshMarketBreadthV64 === "function" ? refreshMarketBreadthV64(false, false) : null;
+    });
     // mediul botilor pe monede care nu sunt in top 100 (clasamentul nu le are): miscarea din barele de 1 ora
     await pas("regimBoti", async function () {
       var boti = typeof tbStare !== "undefined" && tbStare.boti && tbStare.boti.length ? tbStare.boti : (typeof contTot !== "undefined" ? contTot.boti : null), o = {};
@@ -244,7 +249,30 @@ function acasaCumpar2Parti(d) {
   var et = function (x) { return x && x.eticheta ? " (" + x.eticheta + ")" : ""; };
   return { actiuni: ra ? (ra.length ? ra.slice(0, 3).map(ac).join(", ") : "nimic azi") : null, etA: ra && ra.length ? et(ii.dovadaReveniri) : "",
     monede: rm, short: rs, sg: !!sg, etM: dv.revenire && dv.revenire.piata && dv.revenire.piata.eticheta || "", etS: dv.short && dv.short.piata && dv.short.piata.eticheta || "",
-    urmM: um.revenire && um.revenire.text || "", urmS: um.short && um.short.text || "", nota: nota };
+    // v100.331 (el, 12.11): urmărirea FAȚĂ DE PIAȚĂ, pe zile, când colectorul a făcut-o; altfel cea veche (de la prețul sugestiei) + când vine cea nouă
+    urmM: um.revenireFata ? acFataPiata(um.revenireFata) : um.revenire && um.revenire.text ? um.revenire.text + " · față de piață: vine la tura de dimineață" : "",
+    urmS: um.shortFata ? acFataPiata(um.shortFata, true) :um.short && um.short.text ? um.short.text + " · față de piață: vine la tura de dimineață" : "", nota: nota };
+}
+// v100.331 (revizia Opus 🔴2): lărgimea de la server umple și ce umplea calculul din pagină - pliul „Lărgimea pieței, pe larg” (renderMarketBreadthV64),
+// starea globală (marketBreadthV64State / window.__marketBreadthV64); null din JSON ⇒ NaN, ca pagina să scrie „—”, nu „0%”
+function acLargimeDinServer(x) {
+  var o = Object.assign({}, x);
+  ["score", "participation", "trend", "above20", "above50", "above200", "momentum", "volume", "highLow", "coverage", "altParticipation", "benchmarkReturn"].forEach(function (k) { if (typeof o[k] !== "number" || !isFinite(o[k])) o[k] = NaN; });
+  try { if (typeof marketBreadthV64State !== "undefined") marketBreadthV64State = o; } catch (e) {}
+  if (typeof window !== "undefined") window.__marketBreadthV64 = o;
+  if (typeof renderMarketBreadthV64 === "function") { try { renderMarketBreadthV64(o); } catch (e) {} }
+  return o;
+}
+// v100.331: o listă de monede față de piața din aceleași zile (colectorul: urmarireFixa, orizont 7 zile, pe zile) - fapte, fără verdict
+// (regulile lui de probă: dovezile pe zile, niciun test nou nesimulat); sub 5 zile judecate sau sub 2 ferestre independente spune că e prea devreme
+// revizia Opus (🔵5/6): fără nicio zi judecată spune asta (nu dispare); „mai bine decât piața” pe zilele CU piață (zileCuPiata), la short în direcția lui
+function acFataPiata(u, short) {
+  if (!u) return "";
+  if (!(u.zile > 0) || typeof u.exces !== "number" || !isFinite(u.exces)) return "față de piață: încă nicio zi judecată (7 zile de la sugestie)";
+  if (u.zile < 5 || !(u.ferestre >= 2)) return "față de piață: prea puține zile ca să se vadă ceva (" + u.zile + ")";
+  var zp = u.zileCuPiata > 0 ? u.zileCuPiata : u.zile;
+  var pp = (u.exces < 0 ? "−" : "+") + Math.abs(u.exces * 100).toFixed(1).replace(".", ",") + " pp", peste = Math.round((u.zilePeste || 0) * zp);
+  return "față de piața din aceleași zile: " + pp + " în medie la 7 zile, mai bine decât piața" + (short ? " (pentru un short)" : "") + " în " + peste + " din " + TextRo.cate(zp, "zi", "zile");
 }
 // v100.295 (el, 02.11: „da scoate-le și de pe Acasă”): „Idei de azi” fără rândul acțiunilor pe trend (= ideile T212, scoase de pe Sugestii pe 01.11);
 // rămân monedele liniștite pentru un bot grid. Funcție separată ca să poată fi probată (scripts/proba-v100295.mjs)

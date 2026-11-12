@@ -66,7 +66,7 @@ await test("tabelul „Detaliile indicatorilor” scos într-o funcție (tbIndTa
   assert.ok(poz.includes("Estimare · 4 ore: în 30 de situații asemănătoare din istoricul acțiunii, după 2 ședințe") && poz.includes("Estimare · 1 zi: în 30 de situații asemănătoare din istoricul acțiunii, după 4 ședințe"));
   assert.ok(poz.includes("🔮 Estimare pe 2 ședințe") && !BOT.test(poz), "fișa: fără „botul”");
   const r = fn(APP, "renderTabloIndicatori");
-  assert.match(r, /el\.innerHTML=tbIndTabelHtml\(l,b\.directie\);/, "Tabloul desenează tabelul prin aceeași funcție");
+  assert.match(r, /el\.innerHTML=tbIndTabelHtml\(l,b\.directie\)(?:\+tbListeRadarHtml\(b\))?;/, "Tabloul desenează tabelul prin aceeași funcție");   /* v100.331: + blocul „Listele Radarului” după tabel */
   assert.ok(!r.includes("IndicatoriBot.estimare(") && !r.includes("var cel=l.map"), "fără a doua copie a tabelului în Tablou");
 });
 

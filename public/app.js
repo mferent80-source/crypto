@@ -6460,9 +6460,27 @@ function tbRandUmpleri(b){
 }
 // ===== v80: cinci randuri noi in Tablou (logica pura in lib/tablou-extra.js) =====
 var tbFisa={botId:null,la:0,inLucru:false,fisa:null,eroare:null};
+/* v100.331 (el, 12.11: „2 … fă tot”): fișa monedei se calculează în browser în 16–30 s (lumânări + ~6 luni de bare de 1 h); până atunci verdictul
+   stătea pe „Socotesc”. Fișa (~7,6 KB, fără barele b15 / istoric15) se ține minte pe bot; la deschidere, dacă are cel mult 2 ore (ca ultimul verdict),
+   semaforul, cartela fișei și sfaturile se socotesc imediat pe ea, cu „pe fișa de la HH:MM”, iar fișa nouă se face oricum (veche ⇒ fără pauza de 10 min) */
+function tbFisaTine(t){
+  var m={};try{m=JSON.parse(localStorage.getItem("tbFisaUlt")||"{}")}catch(e){m={}}   /* revizia (🔵8): o cheie stricată se rescrie curat */
+  try{if(!m||typeof m!=="object"||Array.isArray(m))m={};
+    m[t.botId]={la:t.la,fisa:t.fisa,pret:t.pret==null?null:t.pret,amp:t.amp==null?null:t.amp};
+    var o={};Object.keys(m).sort(function(a,c){return (m[c].la||0)-(m[a].la||0)}).slice(0,6).forEach(function(k){o[k]=m[k]});
+    localStorage.setItem("tbFisaUlt",JSON.stringify(o))}catch(e){}
+}
+function tbFisaRestaureaza(b){
+  /* revizia Opus: doar la deschidere / schimbarea botului (🔴1: după o refacere picată pe același bot nu se repune, altfel refacerea pornea la fiecare
+     tic de 8 s) și niciodată cât se calculează o fișă (🟡3: fără două calcule deodată) */
+  if(!b||!b.id||tbFisa.botId===b.id||tbFisa.inLucru)return;
+  try{var m=JSON.parse(localStorage.getItem("tbFisaUlt")||"{}"),x=m&&m[b.id];
+    if(!x||!x.fisa||!(Date.now()-x.la<=2*3600000))return;
+    tbFisa={botId:b.id,la:x.la,inLucru:false,fisa:x.fisa,eroare:null,istoric15:null,b15:null,pret:x.pret,amp:x.amp,veche:true}}catch(e){}
+}
 async function tbAduFisaBot(b){
   if(!b||!b.id||tbFisa.inLucru)return;
-  if(tbFisa.botId===b.id&&Date.now()-tbFisa.la<(tbFisa.eroare?2*60000:10*60000))return;
+  if(tbFisa.botId===b.id&&!tbFisa.veche&&Date.now()-tbFisa.la<(tbFisa.eroare?2*60000:10*60000))return;   /* v100.331: cea ținută minte se reface oricum */
   tbFisa.inLucru=true;
   try{
     var simbol=TabloBot.simboluri(b.baza,b.quote,b.simbolPionex).pionex;
@@ -6475,6 +6493,7 @@ async function tbAduFisaBot(b){
       suma:botiNr(b.investit)||100,fundingZi:d.fundingZi,H:2,dir:null,levier:null,minNotional:info?Number(info.minNotional):null,minSize:info?Number(info.minSizeLimit):null});
     tbFisa={botId:b.id,la:Date.now(),inLucru:false,fisa:f.eroare?null:f,eroare:f.eroare||null,istoric15:d.istoric15||null,   /* v100.274: istoricul de 15 min al fișei, spus în Tablou */
       b15:GridCalcul.bare(d.r15),pret:GridCalcul.pretCurent(d.r15),amp:TabloExtra.miscareZi(GridCalcul.bare(d.r4))};   // v100.16: pentru gridul dupa plan
+    if(tbFisa.fisa)tbFisaTine(tbFisa);   /* v100.331: ținută minte pentru deschiderea următoare */
   }catch(e){tbFisa={botId:b.id,la:Date.now(),inLucru:false,fisa:null,eroare:grTextEroare(e)}}
   if(tbPanouVizibil()&&tbStare.bot&&tbStare.bot.id===b.id){tbDeseneazaExtra(tbStare.bot);tbDeseneazaSemafor(tbStare.bot);if(typeof renderTabloSfaturi==="function")renderTabloSfaturi()}
 }
@@ -6905,7 +6924,7 @@ function tbDeseneazaExtra(b){
   else if(!f){var g0=TabloExtra.geometrieBot(b);el.innerHTML=(g0?linie("Pas net pe grilă (botul)",P(g0.netPct),g0.preaDese?"bad":"",TextRo.cate(g0.grile,"grilă","grile")+" "+g0.mod):"")+'<p class="tbSub">calculez fișa de azi pentru moneda botului…</p>'}
   else{
     var c=TabloExtra.comparaCuFisa(b,f);
-    el.innerHTML='<table class="tbCmp"><thead><tr><th></th><th>botul tău</th><th>fișa de azi</th></tr></thead><tbody>'+c.randuri.map(function(r){return '<tr><th>'+escapeHtml(r.et)+'</th><td>'+escapeHtml(r.bot)+'</td><td>'+escapeHtml(r.et==="Verdictul de azi"?((GR_NIVEL[r.fisa]||[r.fisa])[0]):r.fisa)+'</td></tr>'}).join("")+'</tbody></table>'
+    el.innerHTML=(tbFisa.veche?'<p class="tbSub">pe fișa de la '+new Date(tbFisa.la).toLocaleTimeString("ro-RO",{hour:"2-digit",minute:"2-digit"})+' · o refac acum…</p>':'')+'<table class="tbCmp"><thead><tr><th></th><th>botul tău</th><th>fișa de azi</th></tr></thead><tbody>'+c.randuri.map(function(r){return '<tr><th>'+escapeHtml(r.et)+'</th><td>'+escapeHtml(r.bot)+'</td><td>'+escapeHtml(r.et==="Verdictul de azi"?((GR_NIVEL[r.fisa]||[r.fisa])[0]):r.fisa)+'</td></tr>'}).join("")+'</tbody></table>'
       +(c.semnale.length?'<ul class="tbSemnale">'+c.semnale.map(function(x){return '<li>'+escapeHtml(x)+'</li>'}).join("")+'</ul>':'<p class="tbSub">Setările botului se potrivesc cu fișa de azi.</p>')
       +'<p class="tbSub">Nu schimba botul doar pentru că diferă: fișa e pentru un bot NOU pornit acum. Deschide fereastra Grid pentru toată proba.</p>'
       +(function(){var t=typeof mcsIstoricScurt==="function"&&tbFisa.istoric15?mcsIstoricScurt(tbFisa.istoric15,"fișa e pe atât"):"";return t?'<p class="tbWarn grIstoricScurt">⚠️ '+escapeHtml(t+(tbFisa.istoric15.motiv==="pagina"?" Reîncerc la următoarea reîmprospătare.":""))+'</p>':""})();   /* v100.274: ca fișa Grid */
@@ -6955,7 +6974,7 @@ function tbDeseneazaBanii(b){
     rand("Finanțare",botiBan(b.finantare),"tbSubVal")+
     tbRandUmpleri(b);
   tbAduUmpleri(b);
-  tbDeseneazaExtra(b);tbAduFisaBot(b);tbDeseneazaSaptPlan(b);tbAduSaptamana(b);tbDeseneazaSemafor(b);tbAduSemnale(b);tbDeseneazaPortofoliu();if(typeof gridLaboratorAdu==="function")gridLaboratorAdu();
+  tbFisaRestaureaza(b);tbDeseneazaExtra(b);tbAduFisaBot(b);tbDeseneazaSaptPlan(b);tbAduSaptamana(b);tbDeseneazaSemafor(b);tbAduSemnale(b);tbDeseneazaPortofoliu();if(typeof gridLaboratorAdu==="function")gridLaboratorAdu();
   var lista=Array.isArray(b.avertismente)?b.avertismente:[];
   if(av)av.innerHTML=lista.length?lista.map(function(a){return '<div class="tbAvert">'+escapeHtml(a)+'</div>'}).join(""):'<p class="tbSub">Niciun avertisment de la server.</p>';
   tbStare.avertLista=lista;tbRenderTodo();
@@ -7312,13 +7331,33 @@ function renderTabloIndicatori(){
   var TON={bine:"good",rau:"bad",atentie:"tbWarn",neutru:"mutedInfo"};
   if(mm)mm.innerHTML='<div class="tbMediu"><div class="tbMediuCap">Mediul botului</div>'+med.map(function(m){
       return '<div class="tbMediuR" title="'+escapeHtml(m.titlu)+'"><span>'+escapeHtml(m.eticheta)+'</span><b class="'+(TON[m.ton]||"mutedInfo")+'">'+escapeHtml(m.text)+'</b></div>'}).join("")+'</div>';
-  el.innerHTML=tbIndTabelHtml(l,b.directie);
+  el.innerHTML=tbIndTabelHtml(l,b.directie)+tbListeRadarHtml(b);   /* v100.331: + „Listele Radarului”, indicator separat */
   /* v100.324 (el, 11.11.2026: „detaliile indicatorilor când e închis să arate un grafic sau o bară cu direcția sau scorul” ⇒ I-857..I-861, „fă toate”):
      în rândul închis - banda celor 4 intervale (cu botul / neutri / împotrivă), nota TradingView și „≠”, „era ↔”, rigla scorului cu pragul lui, istoria pe 4 ore */
   var sm=$("tbIndSumar");if(sm){var bd=IndicatoriBot.banda(l,b.directie),tvb=d.tv&&d.tv.n&&typeof TvNote!=="undefined"?IndicatoriBot.tvBanda(d.tv.n,bd,TvNote.clasa):null,sch=tbIndSchimbari(b,bd),b4=bd.filter(function(x){return x.eticheta==="4 ore"})[0],ist=b4&&!b4.lipsa?tbIstoric4hGata(d.simbol):null;
     /* v100.327 (el: „încadrează frumos”): rigla și istoria în două cartele, pe rândul lor sub bandă */
     var gr=IndicatoriBot.riglaHtml(bd,b.directie,escapeHtml)+(ist?IndicatoriBot.sparkHtml(ist,b.directie,escapeHtml):""),hs=IndicatoriBot.bandaHtml(bd,tvb,sch,b.directie,escapeHtml)+(gr?'<span class="ibGrafice">'+gr+'</span>':"");
     if(tbStare.indSumarHtml!==hs){sm.innerHTML=hs;tbStare.indSumarHtml=hs}if(sm.hidden!==!hs)sm.hidden=!hs}
+}
+/* v100.331 (el, 12.11: „la 1 fă și integrează în detaliile indicatorilor ca și indicator separat”): listele de azi (clasamentul colectorului) și
+   urmărirea lor față de piață (sugestiile, fără istoric) - cerute o dată la 10 minute, la desenul indicatorilor; aceleași liste ca pe Piața azi */
+var tbListe={la:0,cl:null,sg:null,inLucru:false};
+function tbListeAsigura(){
+  if(tbListe.inLucru||Date.now()-tbListe.la<10*60000)return;
+  tbListe.inLucru=true;
+  Promise.all([getJSON("/api/istoric-bot?action=clasament").catch(function(){return null}),getJSON("/api/istoric-bot?action=sugestii&scurt=1").catch(function(){return null})])
+    .then(function(r){tbListe.cl=r[0]&&r[0].clasament||null;tbListe.sg=r[1]&&r[1].sugestii||null})
+    .then(function(){tbListe.la=Date.now();tbListe.inLucru=false;if(tbPanouVizibil())renderTabloIndicatori()},function(){tbListe.la=Date.now();tbListe.inLucru=false});
+}
+function tbListeRadarHtml(b){
+  if(!b||typeof IndicatoriBot==="undefined"||!IndicatoriBot.listeRadar)return "";
+  tbListeAsigura();
+  var I=typeof Idei!=="undefined"&&Idei.reveniriBoti?Idei:null,cl=tbListe.cl,sg=tbListe.sg,cap='<div class="tbMediu tbListe"><div class="tbMediuCap">Listele Radarului · față de piață, pe zile</div>';
+  if(!I||!cl)return cap+'<p class="tbSub">'+(tbListe.la>0?"listele de azi nu sunt disponibile aici":"aștept listele de azi…")+'</p></div>';   /* revizia (🔵9) */
+  var mo=function(x){return String(x.moneda||String(x.simbol||"").replace(/_USDT(_PERP)?$/,""))},um=sg&&sg.urmarire||{},dv=sg&&sg.dovada||{},et=function(k){return dv[k]&&dv[k].piata&&dv[k].piata.eticheta||null};
+  var r=IndicatoriBot.listeRadar({moneda:TabloBot.simboluri(b.baza,b.quote,b.simbolPionex).moneda,dirBot:b.directie,rev:I.reveniriBoti(cl,[],5).map(mo),short:I.shortBoti(cl,[],5).map(mo),
+    fata:{revenire:um.revenireFata||null,short:um.shortFata||null},eticheta:{revenire:et("revenire"),short:et("short")}});
+  return cap+r.map(function(m){return '<div class="tbMediuR" title="'+escapeHtml(m.titlu)+'"><span>'+escapeHtml(m.eticheta)+'</span><b class="mutedInfo">'+escapeHtml(m.text)+'</b></div>'}).join("")+'</div>';
 }
 function tbIndSumarGol(){var sm=$("tbIndSumar");if(sm){if(sm.innerHTML)sm.innerHTML="";sm.hidden=true}tbStare.indSumarHtml=""}
 /* v100.324 (I-861, revizia 11.11): istoria scorului pe 4 ore ținută pe monedă și pe ora fiecărei bare (în afara lui tbStare.directie, care se golește la

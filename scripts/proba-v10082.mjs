@@ -119,7 +119,7 @@ await test("(2) Acasă: rândul stă sub cele două verdicte, înaintea legătur
   // v100.330 (el, 12.11: „fa tot acum” - golurile): #acCumpar stă în .acTine (după verdicte în HTML); înaintea legăturii BTC–bursa prin ordinea paginii
   const h = citeste("public", "index.html"), v = h.indexOf('class="acVerdicte"'), c = h.indexOf('<div class="acLegatura acCumpar" id="acCumpar"></div>'), css = citeste("public", "app.css");
   assert.ok(v > 0 && c > v, "locul: " + [v, c].join(","));
-  assert.match(css, /\.pzDemo #acasa>\.acTine\{order:21\}/); assert.match(css, /\.pzDemo #acasa #acCumpar\{order:30\}\.pzDemo #acasa>#acTrendZi\{order:31\}\.pzDemo #acasa>#acLegatura\{order:35\}/);
+  assert.match(css, /\.pzDemo #acasa>\.acTine\{order:21\}/); assert.match(css, /\.pzDemo #acasa #acCumpar\{order:30\}\.pzDemo #acasa #acTrendZi\{order:31\}\.pzDemo #acasa>#acLegatura\{order:35\}/);   /* v100.331 (golul rămas): „Trend 12 luni” stă în .acTine sub „Ce aș cumpăra azi” - selectorul fără „>” */ 
   assert.match(fnDin("acasa-ecran.js", "acasaDeseneaza"), /if \(\$\("acCumpar"\)\) \$\("acCumpar"\)\.innerHTML = acasaCumpar\(d, aziNu\);/);
 });
 await test("(2) butonul deschide pagina și aduce panoul sus (fără animație), SUB bara de sus lipită (pe poză titlul stătea sub ea: 56 px pe calculator, 156 pe telefon)", () => {

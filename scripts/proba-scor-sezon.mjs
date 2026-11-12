@@ -463,8 +463,8 @@ await test("v100.217: versiunea ≥ 217 peste tot, lib-ul în index.html, cardul
   assert.equal(JSON.parse(citeste("BUILD_INFO.json")).version, V); assert.equal(IDX.split(V).length - 1, 4, "de 4 ori în index.html"); assert.ok(!IDX.includes("v100.216"));
   assert.ok(citeste("public", "sw.js").includes('const CACHE="crypto-radar-v100-' + ver + '"')); assert.ok(citeste("functions", "_shared", "versiune.js").includes('VERSIUNE = "' + V + '"'));
   assert.ok(IDX.includes('<script src="/lib/statistica-trade.js"></script><script src="/lib/scor-sezon.js"></script>'), "lib-ul după statistica-trade");
-  // v100.330 (el, 12.11: „fa tot acum” - golurile): „Ce aș cumpăra azi” stă în .acTine (după scor în pagină); după scor vine Trend 12 luni
-  assert.ok(/<\/div><div class="acScorBloc" id="acScor"><\/div>(<div class="acScorBloc" id="acScorT212"><\/div>)?<div class="acBloc acTrendSus" id="acTrendZi">/.test(IDX) && IDX.indexOf('id="acCumpar"') > IDX.indexOf('id="acScor"'), "cardul pe Acasă între verdicte și „ce aș cumpăra”");   // v100.220: + T212
+  // v100.330 (el, 12.11: „fa tot acum” - golurile): „Ce aș cumpăra azi” stă în .acTine (după scor în pagină); v100.331: și Trend 12 luni ⇒ după scor vine legătura
+  assert.ok(/<\/div><div class="acScorBloc" id="acScor"><\/div>(<div class="acScorBloc" id="acScorT212"><\/div>)?<div class="acLegatura" id="acLegatura">/.test(IDX) && IDX.indexOf('id="acCumpar"') > IDX.indexOf('id="acScor"'), "cardul pe Acasă între verdicte și „ce aș cumpăra”");   // v100.220: + T212
   assert.ok(IDX.includes('<div id="jtCrypto"><div id="jtScor"></div><div id="jtStatCrypto"></div>'), "cardul sus în Jurnal");
   assert.ok(P.scripts["test:scorsezon"] && P.scripts.test.includes("npm run test:scorsezon"), "proba în lanț");
   const APP = citeste("public", "app.js"), AC = citeste("public", "lib", "acasa-ecran.js"), CSS = citeste("public", "app.css");

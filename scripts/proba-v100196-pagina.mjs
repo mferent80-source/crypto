@@ -363,7 +363,7 @@ await test("🔵UI7 Nasdaq / US Stocks deschis direct (link) în modul crypto tr
 });
 await test("🟡12 UI (partea de CSS): pe telefon „Ce aș cumpăra azi” urcă deasupra „Ce înseamnă pentru tine”", () => {
   /* v100.330 (el, 12.11: „fa tot acum” - golurile): #acCumpar stă în .acTine (desfăcută sub 900 px) ⇒ selectorul fără „>”; ordinea aceeași */
-  assert.match(CSS, /@media \(max-width:640px\)\{\.pzDemo #acasa #acCumpar\{order:15\}\.pzDemo #acasa>#acTrendZi\{order:16\}\}/);
+  assert.match(CSS, /@media \(max-width:640px\)\{\.pzDemo #acasa #acCumpar\{order:15\}\.pzDemo #acasa #acTrendZi\{order:16\}\}/);   /* v100.331 (golul rămas): „Trend 12 luni” stă în .acTine sub „Ce aș cumpăra azi” - selectorul fără „>” */ 
   assert.match(CSS, /@media \(max-width:900px\)\{\.pzDemo #acasa \.acTine\{display:contents\}/);
 });
 await test("🔵UI1 daltonism: segmentul roșu din barele de pe Piața azi are textură (nu doar culoare); 🔵UI3 textul de 10,5 px urcă la 11,5 px", () => {

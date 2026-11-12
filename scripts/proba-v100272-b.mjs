@@ -152,7 +152,7 @@ await test("3b KPI „Total” la neutru: cifra rămâne, dedesubt scrie „semn
 await test("3c „Banii” din Tablou: rândul „Total” al neutrului poartă nota (ca „Poziția deschisă”)", () => {
   const { els, $ } = pagina(), nimic = () => {};
   const box = { $, tbStare: {}, TabloExtra: TE, GridCalcul: G, TextRo, botiNr, botiBan: (v) => (v == null ? "—" : TextRo.num(v, 1)), botiClasa: () => "", escapeHtml: String, tbRandUmpleri: () => "", tbRenderTodo: nimic };
-  for (const k of ["tbAduUmpleri", "tbDeseneazaExtra", "tbAduFisaBot", "tbDeseneazaSaptPlan", "tbAduSaptamana", "tbDeseneazaSemafor", "tbAduSemnale", "tbDeseneazaPortofoliu"]) box[k] = nimic;
+  for (const k of ["tbAduUmpleri", "tbFisaRestaureaza" /* v100.331 */, "tbDeseneazaExtra", "tbAduFisaBot", "tbDeseneazaSaptPlan", "tbAduSaptamana", "tbDeseneazaSemafor", "tbAduSemnale", "tbDeseneazaPortofoliu"]) box[k] = nimic;
   ruleaza(["tbDeseneazaBanii"], box).tbDeseneazaBanii(NEUTRU);
   const total = els.tbBani.innerHTML.split("tbLinieTotal")[1] || "";
   assert.match(total.slice(0, 200), /semn nesigur la botul neutru/, total.slice(0, 200));

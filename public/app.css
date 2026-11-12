@@ -1798,8 +1798,9 @@ body.peAcasa:not(.acMonedaDeschisa) .toolbar{display:none}
 #dash .acGrupCap{font-size:12.5px;color:var(--muted);margin:6px 2px 0}
 /* v100.330 (auditul de design 12.11 ⇒ el: „fa tot acum”): golul de ~550 px de sub „Acțiunile tale” / „Idei de azi” - „Ce aș cumpăra azi” stă în grilă,
    sub cele două cartele mici, „Boții tăi” pe două rânduri; cartelele cât conținutul (sub 900 px grila se desface, ordinea rămâne) */
-#dash .acTine{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:auto 1fr;align-items:start;gap:8px}
-#dash .acTine>#acBoti{grid-column:1;grid-row:1 / span 2}#dash .acTine>#acCumpar{grid-column:2 / 4;grid-row:2}
+/* v100.331 (golul rămas, ~280 px sub „Ce aș cumpăra azi”): și „Trend 12 luni” în dreapta, sub ea (lipite, ca din v100.195), „Boții tăi” pe trei rânduri */
+#dash .acTine{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:auto auto 1fr;align-items:start;gap:8px}
+#dash .acTine>#acBoti{grid-column:1;grid-row:1 / span 3}#dash .acTine>#acCumpar{grid-column:2 / 4;grid-row:2}#dash .acTine>#acTrendZi{grid-column:2 / 4;grid-row:3}
 #dash .acTine .acBtn{align-self:flex-start;margin-top:auto}
 /* v100.279 (Boții tăi): sub-rândurile, graficul pe 14 zile (bare de cel mult 14 px, colț de 4 px la capăt, linia zero hairline), tabelul zilelor */
 #dash .acLinSub{margin:-2px 0 2px;font-size:12.5px;line-height:1.35}#dash .acZile{display:block;width:100%;height:auto;margin:2px 0 0;overflow:visible}#dash .acZile .zPlus{fill:var(--good)}#dash .acZile .zMinus{fill:var(--bad)}#dash .acZile .zAx{stroke:var(--line);stroke-width:1}#dash .acZile text{fill:var(--muted);font-size:10px}#dash .acZile .zHit{fill:transparent}#dash .acZile .zZi:hover .zBar{opacity:.72}#dash .acZileTab summary{cursor:pointer;color:var(--muted);font-size:12.5px}#dash .acZileTab table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:4px}#dash .acZileTab th{color:var(--muted);font-weight:600;text-align:left}#dash .acZileTab th+th,#dash .acZileTab td+td{text-align:right}#dash .acZileTab td{padding:2px 0;border-top:1px solid var(--line-soft,#1E2A35)}
@@ -2691,7 +2692,7 @@ html.pzDemo body:not(.pzFasiaDeschisa):has(main>#cloud.on,main>#settings.on,main
 .pzDemo #acasa>*{order:900}
 .pzDemo #acasa>.acAntet{order:0}.pzDemo #acasa>.acVerdicte{order:10}
 .pzDemo #acasa>.acGrupCap:has(+.acTine){order:20}.pzDemo #acasa>.acTine{order:21}
-.pzDemo #acasa #acCumpar{order:30}.pzDemo #acasa>#acTrendZi{order:31}.pzDemo #acasa>#acLegatura{order:35}
+.pzDemo #acasa #acCumpar{order:30}.pzDemo #acasa #acTrendZi{order:31}.pzDemo #acasa>#acLegatura{order:35}
 .pzDemo #acasa>.acRandCap:has(+.acPuls #acBtc){order:40}.pzDemo #acasa>.acPuls:has(#acBtc){order:41}
 .pzDemo #acasa>.acRandCap:has(+.acPuls #acNasdaq){order:42}.pzDemo #acasa>.acPuls:has(#acNasdaq){order:43}
 .pzDemo #acasa>.acDoua:has(#acMacro){order:50}.pzDemo #acasa>#acHarta{order:55}.pzDemo #acasa>.acDoua:has(#acMisca){order:60}
@@ -2901,7 +2902,7 @@ html.pzDemo body:not(.pzFasiaDeschisa):has(main>#cloud.on,main>#settings.on,main
 /* v100.196 (auditul UI 🔵4): „Șterge alertele din browser” arată ca o ștergere, nu ca butonul de navigare de lângă */
 #alerts .alSterge{color:var(--bad);border-color:rgba(229,97,90,.45)}
 /* v100.196 (auditul UI 🟡12): pe telefon „Ce aș cumpăra azi” (și Trend 12 luni, lipit de el) urcă deasupra „Ce înseamnă pentru tine” */
-@media (max-width:640px){.pzDemo #acasa #acCumpar{order:15}.pzDemo #acasa>#acTrendZi{order:16}}
+@media (max-width:640px){.pzDemo #acasa #acCumpar{order:15}.pzDemo #acasa #acTrendZi{order:16}}
 /* v100.196 (auditul UI 🔵1, dataviz): verde/roșu ΔE 4,3 la deuteranopie ⇒ segmentul roșu din barele Pieței azi poartă și o textură la 135° */
 .acBar>i[style*="--bad"]{background-image:repeating-linear-gradient(135deg,rgba(0,0,0,.38) 0 2px,transparent 2px 6px)}
 /* v100.197: valoarea contului pe zile (Contul întreg) — o linie subțire în accentul Radarului (validatorul dataviz: PASS pe #141C24), punctul gol = zi parțială,

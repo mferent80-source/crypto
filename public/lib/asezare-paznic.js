@@ -212,6 +212,8 @@
     } else if (!schimbat && (!salvat || salvat.botId !== b.id || salvat.verb !== verb || salvat.tit !== txtTit)) {   // la schimbarea botului se așteaptă o tură: DOM-ul Consilierului poate fi încă al botului vechi
       try { localStorage.setItem(cheie, JSON.stringify({ botId: b.id, verb: verb, ton: tonV, tit: txtTit, fac: txtFac, la: Date.now() })); } catch (e) {}
     }
+    // v100.331: verdictul socotit pe fișa ținută minte (tbFisaRestaureaza) spune de când e fișa, cât se face cea nouă
+    if (typeof tbFisa !== "undefined" && tbFisa.veche && tbFisa.botId === b.id && tbFisa.la > 0) nota += '<p class="pzDin">pe fișa de la ' + new Date(tbFisa.la).toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" }) + ' · o refac acum</p>';
     // O SINGURĂ VOCE: avertismentul „gridul e mai larg…” intră în verdict ca MOTIV, cu textul lui ÎNTREG (și „Ce aș face eu”, neschimbat)
     var motivG = "";
     if (gL && gL.textContent.trim() && !gL.hidden) {

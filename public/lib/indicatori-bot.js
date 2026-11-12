@@ -307,7 +307,34 @@ var IndicatoriBot = (function () {
       '<circle class="ibSpAcum" cx="100%" cy="' + f2(y(u.s)) + '" r="3"></circle>' + cifre + '</svg>' + etP + '</span><span class="ibSpEt"><b>' + ist[0].s + " → " + u.s + '</b>, ' + merge + '</span>' + (legBun ? '<span class="ibSpEt"><i class="ibLbun"></i>' + esc(legBun) + '</span>' : '') + '</span>';
   }
 
-  return { dinPionex: dinPionex, celule: celule, rezumat: rezumat, estimare: estimare, predictie: predictie, mediu: mediu, ORIZONT: ORIZONT, RANDURI: RANDURI,
+  // v100.331 (el, 12.11: „la 1 fă și integrează în detaliile indicatorilor ca și indicator separat”): „Listele Radarului” - e moneda botului azi într-o
+  // listă (pe revenire / pentru short) și cum au ieșit listele FAȚĂ DE PIAȚĂ, pe zile (colectorul: urmarireFixa, 7 zile). Fapte, fără culoare de
+  // avantaj: listele n-au avantaj dovedit (eticheta dovezii stă în titlu). o = { moneda, dirBot, rev: [nume], short: [nume], fata: { revenire, short }, eticheta: { revenire, short } }
+  function listeRadar(o) {
+    o = o || {};
+    var m = String(o.moneda || "").toUpperCase(), d = String(o.dirBot || "").toLowerCase(), rev = (o.rev || []).map(function (x) { return String(x).toUpperCase(); }), sh = (o.short || []).map(function (x) { return String(x).toUpperCase(); });
+    var inR = !!m && rev.indexOf(m) >= 0, inS = !!m && sh.indexOf(m) >= 0;
+    var parte = function (dirLista) { return d === dirLista ? " · de partea botului" : d === "long" || d === "short" ? " · contra botului" : ""; };
+    var azi = !m ? "moneda botului nu se știe" : inR && inS ? m + " e în ambele liste (revenire și short): semnale opuse" : inS ? m + " e în „Monede pentru short”" + parte("short")
+      : inR ? m + " e în „Monede pe revenire”" + parte("long") : m + " nu e azi în listele de revenire sau short";
+    var cate = function (n) { return TextRo.cate(n, "zi", "zile"); };   /* garda v100.75: numărătoarea doar prin TextRo.cate */
+    // revizia Opus (🔵5/6): tura a venit, dar nicio zi judecată ⇒ o spune; „mai bine decât piața” pe zilele cu piață, la short în direcția lui
+    var fata = function (u, short) {
+      if (!u) return "vine la tura de dimineață";
+      if (!(u.zile > 0) || typeof u.exces !== "number" || !isFinite(u.exces)) return "încă nicio zi judecată (7 zile de la sugestie)";
+      if (u.zile < 5 || !(u.ferestre >= 2)) return "prea puține zile ca să se vadă ceva (" + u.zile + ")";
+      var zp = u.zileCuPiata > 0 ? u.zileCuPiata : u.zile;
+      return (u.exces < 0 ? "−" : "+") + Math.abs(u.exces * 100).toFixed(1).replace(".", ",") + " pp față de piață la 7 zile · mai bine decât piața" + (short ? " (pentru un short)" : "") + " în " + Math.round((u.zilePeste || 0) * zp) + " din " + cate(zp);
+    };
+    var F = o.fata || {}, E = o.eticheta || {};
+    var titlu = function (nume, et) { return "Lista „" + nume + "”, urmărită la 7 zile față de mediana pieței din aceleași zile, numărat pe zile (nu pe monede); dovada pe istoric: " + (et || "—") + ". Fapte, nu un avantaj dovedit."; };
+    return [
+      { k: "liste-azi", eticheta: "Azi", text: azi, ton: "neutru", titlu: "Listele Radarului de azi (colectorul, de la 8:00): primele 5 pe revenire și primele 5 pentru short din clasament." },
+      { k: "liste-rev", eticheta: "Revenire", text: fata(F.revenire), ton: "neutru", titlu: titlu("Monede pe revenire", E.revenire) },
+      { k: "liste-short", eticheta: "Short", text: fata(F.short, true), ton: "neutru", titlu: titlu("Monede pentru short", E.short) }];
+  }
+
+  return { dinPionex: dinPionex, celule: celule, rezumat: rezumat, estimare: estimare, predictie: predictie, mediu: mediu, ORIZONT: ORIZONT, RANDURI: RANDURI, listeRadar: listeRadar,
     banda: banda, bandaHtml: bandaHtml, tvBanda: tvBanda, amintire: amintire, schimbari: schimbari, riglaHtml: riglaHtml, istoricScor: istoricScor, sparkHtml: sparkHtml, VORBE_POZITIE: VORBE_POZITIE };
 })();
 if (typeof globalThis !== "undefined") globalThis.IndicatoriBot = IndicatoriBot;

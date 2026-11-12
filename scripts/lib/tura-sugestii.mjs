@@ -34,7 +34,7 @@ export function urmarireFixa(ist, o) {
   const mediiZi = zileL.map((z) => med(z.r)), excesZi = zileL.filter((z) => z.e.length).map((z) => med(z.e));
   // ferestrele de `zile` zile care nu se suprapun: zilele judecate, în ordine; o fereastră nouă începe la cel puțin `zile` zile după precedenta
   let ferestre = 0, ultima = -Infinity; for (const zi of [...peZi.keys()].sort()) { const t = Date.parse(zi + "T06:00:00Z"); if (t - ultima >= zile * ZI) { ferestre++; ultima = t; } }
-  const u = { n: toateR.length, zile: zileL.length, pePlus: toateR.length ? toateR.filter((r) => r > 0).length / toateR.length : null, medie: med(mediiZi), exces: med(excesZi), zilePeste: excesZi.length ? excesZi.filter((e) => e > 0).length / excesZi.length : null, nejudecate, inAsteptare, ferestre };
+  const u = { n: toateR.length, zile: zileL.length, pePlus: toateR.length ? toateR.filter((r) => r > 0).length / toateR.length : null, medie: med(mediiZi), exces: med(excesZi), zilePeste: excesZi.length ? excesZi.filter((e) => e > 0).length / excesZi.length : null, nejudecate, inAsteptare, ferestre, zileCuPiata: excesZi.length };
   const P = (v) => (v == null ? "—" : (v >= 0 ? "+" : "−") + Math.abs(v * 100).toFixed(1).replace(".", ",") + "%"), pp = (v) => (v == null ? "—" : (v >= 0 ? "+" : "−") + Math.abs(v * 100).toFixed(1).replace(".", ",") + " pp");
   const nej = nejudecate ? " · " + nejudecate + " nejudecate (fără bare la intrare sau la orizont)" : "";
   u.text = !u.n ? "Sugestiile se urmăresc de azi, la " + cate(zile, "zi", "zile") + " fiecare, în direcția botului (neutru: ca long): după ~30 de zile cu rezultat se poate spune cu cifre dacă merită" + nej + "."
@@ -58,10 +58,16 @@ export async function turaSugestii(d) {
   const tk = await d.cere("/api/market?type=pionex_tickers&market=PERP");
   for (const x of (tk && tk.data && tk.data.tickers) || []) { const p = Number(x && x.close); if (x && x.symbol && p > 0) preturi[String(x.symbol)] = p; }
   const ist = ((await d.cere("/api/istoric-bot?action=sugestii")) || {}).istoric || [];
+  // revizia Opus (🔵4): barele de 1 h citite o singură dată pentru toate trei urmăririle (fiecare urmarireFixa își ținea cache-ul ei: depozitul citit de 4 ori)
+  const bare1hO = (() => { const m = new Map(); return (s) => { if (!m.has(s)) m.set(s, d.bare1h(s)); return m.get(s); }; })();
   const urm = { revenire: R.urmarire(ist.filter((x) => x && x.lista === "revenire"), preturi, d.acum, { zile: 7, cost: 0.001 }),
     short: R.urmarire(ist.filter((x) => x && x.lista === "short"), preturi, d.acum, { zile: 7, cost: 0.001, short: true }),
     // v100.292: „Pe ce aș porni” la orizont fix, pe zile, față de mediana pieței (pagina Sugestii o arată întreagă, lângă listă)
-    porn: urmarireFixa(ist.filter((x) => x && x.lista === "porn"), { zile: 7, cost: 0.001, bare1h: d.bare1h, toate: d.simboluriDepozit(), acum: d.acum }) };
+    porn: urmarireFixa(ist.filter((x) => x && x.lista === "porn"), { zile: 7, cost: 0.001, bare1h: bare1hO, toate: d.simboluriDepozit(), acum: d.acum }),
+    // v100.331 (el, 12.11: „la 1 fă și integrează în detaliile indicatorilor”): listele de monede FAȚĂ DE PIAȚĂ, la orizont fix, pe zile (ca „porn”) -
+    // „−22,3% de la prețul sugestiei” spunea mai ales încotro a mers piața; asta spune dacă lista ALEGE monede mai bune decât piața din aceleași zile
+    revenireFata: urmarireFixa(ist.filter((x) => x && x.lista === "revenire"), { zile: 7, cost: 0.001, bare1h: bare1hO, toate: d.simboluriDepozit(), acum: d.acum }),
+    shortFata: urmarireFixa(ist.filter((x) => x && x.lista === "short").map((x) => Object.assign({}, x, { dir: "short" })), { zile: 7, cost: 0.001, bare1h: bare1hO, toate: d.simboluriDepozit(), acum: d.acum }) };
   const noi = rev.map((x) => ({ simbol: x.simbol, pret: preturi[x.simbol] || x.pret || null, lista: "revenire" })).concat(sh.map((x) => ({ simbol: x.simbol, pret: preturi[x.simbol] || x.pret || null, lista: "short" })))
     .concat(porn.map((x) => ({ simbol: x.simbol, pret: preturi[x.simbol] || x.pret || null, lista: "porn", dir: x.dir || null }))).filter((x) => x.pret > 0);
   await d.trimite("/api/istoric-bot?action=sugestii", { la: d.acum, zi: d.zi, dovada: { revenire: { piata: piataRev, boti: botiD.revenire }, short: { piata: piataShort, boti: botiD.short } }, urmarire: urm, noi });
