@@ -120,13 +120,16 @@ function acasa() {
   vm.runInContext(["acClasamentSumar", "acSym", "acasaCumpar", "acasaCumpar2Parti"].map((f) => fnDin("acasa-ecran.js", f)).join("\n") + "\n;this.f=acasaCumpar;", ctx);   // v100.295: acasaCumpar2Corp (nechemat) scos
   return ctx;
 }
-await test("(B) I-521 Acasă: „Ce aș cumpăra azi” pe coloane, fiecare cu butonul ei (v100.295: două - boți / acțiuni pe revenire; ideile T212 și monedele pe revenire / short scoase)", () => {
+// v100.330 (el, 12.11: „sugestii de monede la fel cum sunt sugestii de stocks” ⇒ „da”): patru coloane - boți, monedele pe revenire și pentru short (înapoi,
+// cu istoricul; numele duc la fișa monedei), acțiunile pe revenire; ideile T212 rămân scoase
+await test("(B) I-521 Acasă: „Ce aș cumpăra azi” pe coloane (v100.330: patru - boți / monede pe revenire / monede pentru short / acțiuni pe revenire; ideile T212 scoase)", () => {
   const c = acasa(), d = { ...IIB, clasament: CLB, sugestii: null }, h = c.f(d);
-  assert.equal((h.match(/class="acCumparCol"/g) || []).length, 2, h);
+  assert.equal((h.match(/class="acCumparCol"/g) || []).length, 4, h);
   const col = h.split('<div class="acCumparCol">');
   assert.ok(text(col[1]).startsWith("Boți") && col[1].includes("acasaMergiLa('tabloubot','tbIdei')"), text(col[1]));
-  assert.ok(text(col[2]).startsWith("Acțiuni pe revenire") && col[2].includes("<b>LAES</b>") && col[2].includes("(cam la fel)") && col[2].includes("acasaMergiLa('t212','t212Idei','revenire')"), text(col[2]));
-  assert.ok(!h.includes("⚠") && !/>TE<|LNKS|AKE, Q|LIT, Q|Idei de cumpărare/.test(h), "fără listele scoase: " + text(h));
+  assert.ok(text(col[2]).startsWith("Monede pe revenire") && text(col[3]).startsWith("Monede pentru short"), text(h));
+  assert.ok(text(col[4]).startsWith("Acțiuni pe revenire") && col[4].includes("<b>LAES</b>") && col[4].includes("(cam la fel)") && col[4].includes("acasaMergiLa('t212','t212Idei','revenire')"), text(col[4]));
+  assert.ok(!/>TE<|LNKS|Idei de cumpărare/.test(h), "fără ideile T212: " + text(h));
   assert.ok(/#dash \.acCumparCol3\{/.test(citeste("public", "app.css")), "CSS acCumparCol3");
 });
 

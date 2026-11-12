@@ -78,8 +78,9 @@ await test("linia de măsură stă pe cardul crypto și nu intră în verb", () 
   assert.match(ae, /acMasuraLin\(\)/);
   const verb = ae.slice(ae.indexOf("function acFraneaza"), ae.indexOf("function acMasuraLin"));
   assert.doesNotMatch(verb, /masuraFranei|acMasuraLin/);
-  const crypto = ae.slice(ae.indexOf('acasaVerd($("acVremeCrypto")'), ae.indexOf('acasaVerd($("acVremeBursa")'));
-  assert.match(crypto, /acMasuraLin\(\)/);
+  // v100.330 (el: „nu voiam verdicte la fel crypto și nasdaq” ⇒ „Fiecare cu verdictul lui”): linia de măsură stă în banda frânei contului (deasupra
+  // cardurilor), nu pe cardul Crypto; tot o singură dată, tot în afara verbului
+  assert.match(ae, /acFranaContHtml\(acFranaContText\(\), acMasuraLin\(\)\)/);
   assert.match(ae, /action=contZile/);
   assert.match(cont, /Acasa\.unesteZileFrana/);
   assert.doesNotMatch(ae, /<style/);

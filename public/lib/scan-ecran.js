@@ -105,7 +105,10 @@ function scanContext() {
   var vb = acVremeBursa(ad && ad.piata ? ad : d) || { nivel: "fara-date", eticheta: "FĂRĂ DATE", faCe: "" };
   var R = scanRanduri(), cr = R.filter(function (x) { return x.fel === "c"; }), btc = cr.find(function (x) { return x.s === "BTC"; }), f = d.piataCol && d.piataCol.funding;
   var col = function (niv) { return /liniste|larga/.test(niv) ? "good" : /miscare|scade|frica/.test(niv) ? "bad" : "warn"; };
-  el.innerHTML = '<div><span class="scPiata">Crypto · ' + (cr.length ? scCate(cr.length, "monedă", "monede") : "— monede") + ' Pionex</span><span class="scNiv ' + col(v.nivel) + '">' + escapeHtml(v.eticheta) + '</span>'
+  // v100.330 (el: „nu voiam verdicte la fel crypto și nasdaq”): frâna contului o singură dată, pe rândul de sus; fiecare piață își spune fraza ei
+  var fcS = typeof acFranaContText === "function" ? acFranaContText() : "";
+  el.innerHTML = (fcS ? '<div class="scFrana">⛔ <b>Frâna contului azi</b> <span class="scSub">· la ambele piețe</span><span class="scFranaTxt">' + escapeHtml(fcS) + '</span></div>' : '')
+    + '<div><span class="scPiata">Crypto · ' + (cr.length ? scCate(cr.length, "monedă", "monede") : "— monede") + ' Pionex</span><span class="scNiv ' + col(v.nivel) + '">' + escapeHtml(v.eticheta) + '</span>'
     + '<span class="scSub">' + (cl ? cl.evita + ' din ' + (cl.evita + cl.candidati) + ' în mișcare · ' : '') + (btc ? 'BTC ' + scPct(btc.ch7) + ' pe 7 zile' : '') + (f && f.text ? ' · ' + escapeHtml(f.text) : '') + '</span>'
     + (v.faCe ? '<div class="scFac">👉 <b>Ce aș face eu:</b> ' + escapeHtml(v.faCe) + '</div>' : '') + '</div>'
     + '<div><span class="scPiata">Nasdaq 100' + (ndxL ? ' · ' + scCate(ndxL.n, "acțiune", "acțiuni") : '') + '</span><span class="scNiv ' + col(vb.nivel) + '">' + escapeHtml(vb.eticheta) + '</span>'

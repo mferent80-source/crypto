@@ -129,7 +129,7 @@ await test("v80.1 costuri, setare, zero: funding care mananca grilele -> atentie
     geom: { netPct: 0.0022, preaDese: true, grile: 93, mod: "aritmetic" }, bot: { levier: 5, directie: "long" }, fisa: fisaF(), zero: { pretZero: 0.3481, distantaZeroPct: 0.0234, iei: 83.3 } });
   const c = s.find((x) => /[Cc]osturile/.test(x.titlu)); assert.ok(c); assert.equal(c.ton, "atentie");
   const st = s.find((x) => /[Ss]etarea/.test(x.titlu)); assert.ok(st); assert.match(st.text, /0,22%/); assert.match(st.text, /5×/);
-  const z = s.find((x) => /zero/.test(x.titlu)); assert.ok(z); assert.match(z.titlu, /0\.3481/); assert.match(z.text, /83,30 USDT/); /* v100.62: virgula zecimala */
+  const z = s.find((x) => /zero/.test(x.titlu)); assert.ok(z); assert.match(z.titlu, /0\.3481/); assert.match(z.text, /83,3 USDT/); /* v100.62: virgula zecimala; v100.330 (revizia): rezultatul „ai lua” cu o zecimală (regula lui, 03.10) */
 });
 
 await test("lichidare la 5% -> primul sfat e critic; totul in regula -> 'Nimic urgent'", () => {

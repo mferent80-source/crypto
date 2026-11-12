@@ -99,7 +99,9 @@ const STX = () => ({
   sfaturi: [
     { cod: "trend", ton: "info", titlu: "Trendul e lateral, botul e long", text: "4h: …", faCe: "L-aș lăsa să facă perechi." },
     { cod: "margine", ton: "atentie", parte: "jos", titlu: "Marginea de jos (0.3330) e cu 1,1% sub preț", text: "Acolo botul ar avea ~742 STX…", faCe: "N-aș mări levierul și n-aș pune bani în plus în botul ăsta." },
-    { cod: "zero", ton: "info", pctZero: 1.0, titlu: "Botul iese pe zero la 0.3399 (+1,0% de aici)", text: "Închis acum, ai lua 87,13 USDT din 89,18 investiți.", faCe: "Aș pune take-profit-ul botului la 0.3399 ca să ies fără pierdere.", copiaza: [{ ce: "take-profit", pret: "0.3399" }] },
+    // v100.330 (el, 12.11: „Aș pune take-profit-ul … o prostie”): zero-ul urcă în bloc doar ca SFAT DE IEȘIRE (iesire: true = cu motiv, botul de
+    // peste o oră, pierderea ≥ 1%); proba asta păzește ordinea rândurilor, deci zero-ul de aici e cel de ieșire (faptul simplu: proba v100330-sfaturi)
+    { cod: "zero", ton: "info", pctZero: 1.0, iesire: true, titlu: "Botul iese pe zero la 0.3399 (+1,0% de aici)", text: "Închis acum, ai lua 87,13 USDT din 89,18 investiți.", faCe: "Aș pune take-profit-ul botului la 0.3399 ca să ies fără pierdere: trendul e împotriva botului (short, tare).", copiaza: [{ ce: "take-profit", pret: "0.3399" }] },
   ],
   lista: [{ c: "g", titlu: "24 h pe minus (−2,0 USDT)", text: "…" }, { c: "n", titlu: "Nu ai un plan pentru bot", text: "…" }],
   sanse: [{ cod: "iese-jos-24", p: 0.82 }, { cod: "iese-sus-24", p: 0.14 }],
@@ -176,7 +178,7 @@ await test("Conteaza.titluriSus: titlurile urcate (pentru „↑ e și sus” î
 });
 await test("sfaturi.js: sfatul „zero” poartă cifra `pctZero` (pentru cifra mare din bloc), restul neschimbat", () => {
   const s = citeste("public", "lib", "sfaturi.js");
-  assert.match(s, /out\.push\(\{ cod: "zero", ton: "info", pctZero: 100 \* z\.distantaZeroPct, titlu: "Botul iese pe zero la "/);
+  assert.match(s, /out\.push\(\{ cod: "zero", ton: "info", pctZero: 100 \* z\.distantaZeroPct, (?:iesire: iesZ, )?titlu: "Botul iese pe zero la "/);   // v100.330: + `iesire`
 });
 
 // ───────────── 3. server + colector ─────────────

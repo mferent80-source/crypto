@@ -16,6 +16,19 @@ const faraExp=v=>{if(typeof v!=="number"||!Number.isFinite(v))return String(v);c
 // pretul calculat (lichidarea estimata): ~5 cifre semnificative, ca preturile Pionex; peste 1000, 2 zecimale
 const pretScurt=v=>v===null||v===undefined||!Number.isFinite(v)?"—":Math.abs(v)>=1000?v.toFixed(2):faraExp(Number(v.toPrecision(5)));
 
+// v100.330 (auditul 12.11): taxa de intrare (cumpărarea de la pornire, plătită O DATĂ) - aceeași socoteală ca TabloExtra.taxaIntrare
+// (paritatea: scripts/proba-v100330-sfaturi.mjs): investiția × levierul × partea din grid pe care botul o ia la pornire × comisionul taker.
+// Neutrul nu cumpără la pornire (0); fără date - null. Negativă, ca totalFee; cel mult cât comisioanele de până acum.
+const COMISION_TAKER=0.0005;
+export function taxaIntrareServer({x,directie,investit,levier,jos,sus,comisioane}){
+  const dir=String(directie||"").toLowerCase(),inv=nr(investit),lev=nr(levier)||1,j=nr(jos),s=nr(sus),p0=nr(x&&x.initPrice),com=nr(comisioane);
+  if(dir&&dir!=="long"&&dir!=="short")return 0;
+  if(!dir||!(inv>0)||!(j>0)||!(s>j)||!(p0>0))return null;
+  const parte=Math.min(1,Math.max(0,dir==="long"?(s-p0)/(s-j):(p0-j)/(s-j)));
+  const t=-inv*lev*parte*COMISION_TAKER;
+  return com!==null&&com<=0?Math.max(t,com):t;
+}
+
 export function avertismenteBot(o){
   const {x,pret,jos,sus,lich,comisioane,gridProfitBrut,profitNet}=o;
   const avertismente=[];
@@ -31,8 +44,16 @@ export function avertismenteBot(o){
   else if(lich.distantaLichidarePct!==null&&lich.distantaLichidarePct<15)
     avertismente.push(`Lichidarea la ${virgula(lich.distantaLichidarePct.toFixed(1))}% (${pretScurt(lich.pretLichidare)}, partea de ${lich.lichidarePartea}).`);
   // Comisioanele sunt de vina DOAR cand chiar depasesc castigul din grid.
-  if(toate(comisioane,gridProfitBrut)&&comisioane!==0&&Math.abs(comisioane)>gridProfitBrut)
-    avertismente.push(`Comisioanele (${usdt(comisioane)} USDT) depășesc câștigul grilelor (${usdt(gridProfitBrut)} USDT).`);
+  // v100.330 (el, 12.11, HYPE la 14 minute: „Comisioanele (−0,06) depășesc câștigul grilelor (0,0)”): abia după o zi de viață (ca sfatul
+  // „costuri”, TabloExtra.grileVsCosturi) și fără taxa de intrare (o dată, la pornire), spusă alături; fără vârstă / investiție - ca înainte
+  const pornit=nr(o.pornitLa),tanar=pornit>0&&(nr(o.acum)||Date.now())-pornit<86400000;
+  const tx=toate(comisioane)?taxaIntrareServer({x,directie:o.directie,investit:o.investit,levier:o.levier,jos,sus,comisioane}):null;
+  const comG=tx?Math.min(0,comisioane-tx):comisioane;
+  // revizia Opus (🟡2): botul tânăr nu primește nici ramura „botul e pe minus” - cu o grilă umplută era aceeași alarmă, altfel spusă
+  if(tanar){}
+  else if(toate(comisioane,gridProfitBrut)&&comG!==0&&Math.abs(comG)>gridProfitBrut)
+    avertismente.push(tx?`Comisioanele (${usdt(comG)} USDT, fără taxa de intrare de ${usdt(tx)}) depășesc câștigul grilelor (${usdt(gridProfitBrut)} USDT).`
+      :`Comisioanele (${usdt(comisioane)} USDT) depășesc câștigul grilelor (${usdt(gridProfitBrut)} USDT).`);
   else if(profitNet!==null&&profitNet<0&&gridProfitBrut!==null&&gridProfitBrut>0){
     const rest=comisioane!==null?profitNet-gridProfitBrut-comisioane:null;
     // v100.65 (M2 din revizia pachetului 2): cu sume in mii fraza veche trecea de 110 (116 pe BTC) - aceleasi trei cifre, mai scurt

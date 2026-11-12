@@ -40,8 +40,11 @@ const sfat = (b, laTinta) => Sfaturi.sfaturi({ bot: b, scen: null, sanse: {}, re
   .filter((s) => s.cod === "zero")[0];
 
 // ───────────── 1. Sfaturi ─────────────
-await test("Sfaturi: FĂRĂ take-profit, sfatul „zero” rămâne cum era („Aș pune take-profit-ul botului la 0.3022” + copierea)", () => {
-  const s = sfat(BOT({ opritorProfitActiv: false, opritorProfit: null }), null);
+// v100.330 (el, 12.11: „Aș pune take-profit-ul … o prostie”): fără take-profit, „aș pune” + copierea vin doar cu un MOTIV de ieșire (aici trendul tare
+// contra short-ului); STX e pe −4,84 din 72,73 (6,7%), fără `pornitLa` (vârsta necunoscută nu-l oprește)
+await test("Sfaturi: FĂRĂ take-profit, cu motiv de ieșire, sfatul „zero” rămâne („Aș pune take-profit-ul botului la 0.3022” + copierea)", () => {
+  const s = Sfaturi.sfaturi({ bot: BOT({ opritorProfitActiv: false, opritorProfit: null }), scen: null, sanse: {}, rezumat: null, funding: null, fisa: { directie: { dir: "long", tarie: "tare", motive: [] } }, costuri: null, zero: ZERO, laTinta: null, geom: null, ritm: null })
+    .filter((x) => x.cod === "zero")[0];
   assert.ok(s, "sfatul zero lipsește");
   assert.match(s.faCe, /^Aș pune take-profit-ul botului la 0\.3022 ca să ies fără pierdere/);
   assert.deepEqual(J(s.copiaza), [{ ce: "take-profit", pret: "0.3022" }]);

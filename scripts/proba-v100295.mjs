@@ -50,21 +50,24 @@ function acasa() {
 }
 
 // ================================================================ 1. „Ce aș cumpăra azi”
-await test("1. „Ce aș cumpăra azi”: două coloane (Boți, Acțiuni pe revenire), fără ideile T212, fără monedele pe revenire / short și fără nota lor; golurile au stare; „Toate sugestiile” rămâne; CSS pe 2 coloane", () => {
+// v100.330 (el, 12.11: „sugestii de monede la fel cum sunt sugestii de stocks” ⇒ „da”): monedele pe revenire / short înapoi (coloanele 2 și 3, proba
+// v100330-monede); ideile T212 rămân scoase, acțiunile pe revenire și golurile lor - ca la v100.295
+await test("1. „Ce aș cumpăra azi”: patru coloane (Boți, Monede pe revenire, Monede pentru short, Acțiuni pe revenire), fără ideile T212; golurile au stare; „Toate sugestiile” rămâne; CSS pe 2 coloane", () => {
   const c = acasa(), h = c.f({ idei: IDEI, clasament: CL, sugestii: SUG });
   const col = h.split('<div class="acCumparCol">');
-  assert.equal(col.length - 1, 2, "două coloane: " + text(h));
+  assert.equal(col.length - 1, 4, "patru coloane: " + text(h));
   assert.ok(text(col[1]).startsWith("Boți") && col[1].includes("acasaMergiLa('tabloubot','tbIdei')") && /Pe ce aș porni un bot/.test(col[1]) && /HYPE, XMR sau LTC/.test(text(col[1])), text(col[1]));
-  assert.ok(text(col[2]).startsWith("Acțiuni pe revenire") && col[2].includes("<b>CRBP, CWD</b>") && col[2].includes("(cam la fel)") && col[2].includes("acasaMergiLa('t212','t212Idei','revenire')"), text(col[2]));
-  for (const rau of ["ZZT1", "ZZT2", "Idei de cumpărare", "trec de poartă", "monedele", "MREV", "MSHO", "short", "și pe revenire, și la short", "Revenire și short"]) assert.ok(!h.includes(rau), "nu mai apare: " + rau + " · " + text(h));
+  assert.ok(text(col[2]).startsWith("Monede pe revenire") && text(col[3]).startsWith("Monede pentru short"), text(h));
+  assert.ok(text(col[4]).startsWith("Acțiuni pe revenire") && col[4].includes("<b>CRBP, CWD</b>") && col[4].includes("(cam la fel)") && col[4].includes("acasaMergiLa('t212','t212Idei','revenire')"), text(col[4]));
+  for (const rau of ["ZZT1", "ZZT2", "Idei de cumpărare", "trec de poartă", "Revenire și short"]) assert.ok(!h.includes(rau), "nu mai apare: " + rau + " · " + text(h));
   assert.match(h, /💡 <b>Ce aș cumpăra azi<\/b>/); assert.match(h, /navTo\(\\?'sugestii\\?',true\)">💡 Toate sugestiile: boți, acțiuni US și EU<\/button>/);
   const g = c.f({ idei: null, clasament: CL, sugestii: null }), g2 = c.f({ idei: { idei: Object.assign({}, IDEI.idei, { reveniri: [] }) }, clasament: CL, sugestii: null });
-  assert.match(text(g.split('<div class="acCumparCol">')[2]), /aștept lista/, "ideile încă nu s-au încărcat: stare, nu gol");
+  assert.match(text(g.split('<div class="acCumparCol">')[4]), /aștept lista/, "ideile încă nu s-au încărcat: stare, nu gol");
   assert.doesNotMatch(text(g), /8:00/, "cât se încarcă pagina nu spun că tura n-a rulat (poza din 02.11 seara: tura rulase, lista era CRBP, CWD, TE)");
   const g3 = c.f({ idei: { idei: { zi: "2026-11-02", judecate: 203, trecute: 0, actiuni: [] } }, clasament: CL, sugestii: null });
-  assert.match(text(g3.split('<div class="acCumparCol">')[2]), /lista apare la tura de la 8:00/, "ideile de la colectorul vechi, fără câmpul reveniri: când apare");
-  assert.match(text(g2.split('<div class="acCumparCol">')[2]), /nimic azi/, "lista goală: „nimic azi”");
-  assert.deepEqual(JSON.parse(JSON.stringify(c.p({ idei: IDEI, clasament: CL, sugestii: SUG }))), { actiuni: "CRBP, CWD", etA: " (cam la fel)" }, "partea a doua: doar acțiunile pe revenire");
+  assert.match(text(g3.split('<div class="acCumparCol">')[4]), /lista apare la tura de la 8:00/, "ideile de la colectorul vechi, fără câmpul reveniri: când apare");
+  assert.match(text(g2.split('<div class="acCumparCol">')[4]), /nimic azi/, "lista goală: „nimic azi”");
+  const p2 = c.p({ idei: IDEI, clasament: CL, sugestii: SUG }); assert.deepEqual([p2.actiuni, p2.etA], ["CRBP, CWD", " (cam la fel)"], "acțiunile pe revenire ca înainte");
   const css = citeste("public", "app.css");
   assert.match(css, /#dash \.acCumparCol3\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\);gap:8px 18px\}/);
   assert.doesNotMatch(css, /#dash \.acCumparCol3\{display:grid;grid-template-columns:repeat\(3,/);
@@ -89,7 +92,7 @@ await test("3. Tabloul: caseta „Pe ce aș porni un bot acum” fără „Pe re
   assert.match(T, /"💡 Pe ce aș porni un bot acum"\) \+ '<\/h4>/);   /* v100.306 (I-824): titlul se schimbă sub „azi nu” */ assert.match(T, /Fișa îți dă setările și proba pe istoricul monedei\.<\/p>';/, "nota casetei rămâne, fără nimic lipit după ea");
   assert.match(T, /function gridDeschideMonedaDir\(m, dir\)/, "fișa cu direcția rămâne (o folosesc Sugestiile)");
   assert.doesNotMatch(A, /function acasaCumpar2Corp\(/);
-  assert.doesNotMatch(A, /reveniriBoti|shortBoti/, "Piața azi nu mai cheamă listele de monede scoase");
+  /* v100.330 (el, 12.11: „da”): monedele pe revenire / short sunt din nou pe Piața azi (proba v100330-monede); Tabloul rămâne fără ele */
 });
 
 // ================================================================ 4. Discord: rezumatul de dimineață
@@ -117,7 +120,7 @@ await test("5. Neatinse: pagina Trading 212 își păstrează ideile (decizia lu
 // ================================================================ 7. ce a rămas fără rost după scoatere (găsit la reluare, 02.11 seara)
 await test("7. Fără cereri și CSS rămase fără rost: Piața azi și Tabloul nu mai cer /api/istoric-bot?action=sugestii (nimic nu le mai citea); CSS-ul listelor scoase (.tbSugestii, .acCumpar2) scos", () => {
   const A = lib("acasa-ecran.js"), T = lib("t212-ecran.js"), css = citeste("public", "app.css");
-  assert.doesNotMatch(A, /pas\("sugestii"/, "Piața azi nu mai cere sugestiile"); assert.doesNotMatch(A, /sugestiiErr/);
+  /* v100.330 (el, 12.11: „da”): Piața azi cere din nou sugestiile (eticheta + urmărirea monedelor); Tabloul tot nu */ assert.doesNotMatch(A, /sugestiiErr/);
   assert.doesNotMatch(T, /contTot\.sugestii|sugestiiLa|sugestii: null/, "Tabloul nu mai cere sugestiile");
   assert.match(T, /var contTot = \{ boti: null, botiLa: 0, inLucru: false, inchise: null, stiriCrypto: \{\}, clasament: null, clasamentLa: 0, conturi: null, conturiLa: 0, salt: null, saltLa: 0 \};/);
   assert.doesNotMatch(css, /\.tbSugestii|\.acCumpar2/, "CSS-ul listelor scoase");

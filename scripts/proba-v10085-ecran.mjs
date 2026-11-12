@@ -103,8 +103,10 @@ await test("(8) Acasă: coloana „Acțiuni pe revenire” din „Ce aș cumpăr
   assert.ok(text(acasa2({})).includes("Acțiuni pe revenire aștept lista"), text(acasa2({})));   /* încă se încarcă */
   assert.equal(typeof acasa2({ get idei() { throw new Error("x"); }, clasament: CL }), "string", "o eroare în date nu strică cartela");
 });
-await test("(8) v100.295: Piața azi nu mai cere sugestiile (nimic de pe ea nu le mai citește)", () => {
-  assert.doesNotMatch(lib("acasa-ecran.js"), /action=sugestii/);
+// v100.330 (el, 12.11: „sugestii de monede la fel cum sunt sugestii de stocks” ⇒ „da”): monedele pe revenire / short înapoi pe Piața azi,
+// cu eticheta istoricului și urmărirea ⇒ pagina cere din nou sugestiile (proba v100330-monede ține coloanele)
+await test("(8) v100.330: Piața azi cere din nou sugestiile (eticheta istoricului și urmărirea monedelor)", () => {
+  assert.match(lib("acasa-ecran.js"), /pas\("sugestii", function \(\) \{ return getJSON\("\/api\/istoric-bot\?action=sugestii&scurt=1"\); \}\)/);   // revizia Opus: fără istoric
 });
 await test("(9) garda: grupul „sugestii” e STRICT și n-are abateri (toate etichetele, puține, fără istoric, boții, supraviețuitorii, urmărirea)", () => {
   assert.ok(STRICT.has("sugestii"));

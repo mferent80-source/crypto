@@ -81,13 +81,22 @@ await test("o singură voce: acțiunea sfatului „pericol” (lichidarea) e a s
   assert.equal(t.faCe, S.semafor({ bot: CRV(), fisa: f }).componente.find((c) => c.cod === "trend").faCe);
   assert.equal(cod(sfaturi(CRV()), "trend").text, "", "fără motive, textul nu e un „.” singur");
 });
-await test("zero-ul botului: take-profit la persoana I, sub 110 caractere; long pe minus „deasupra prețului”, short „sub preț”", () => {
-  const z = cod(sfaturi(CRV(), { peste: { zero: { pretZero: 0.4012, distantaZeroPct: 0.0399, iei: 46.4 } } }), "zero");
-  assert.equal(z.titlu, "Botul iese pe zero la 0.4012 (+4,0% de aici)");
-  assert.equal(z.text, "Închis acum, ai lua 46,40 USDT din 49,67 investiți.");
-  assert.equal(z.faCe, "Aș pune take-profit-ul botului la 0.4012 ca să ies fără pierdere (nu stop: zero-ul e deasupra prețului).");
-  const s = cod(sfaturi(CRV({ directie: "short" }), { peste: { zero: { pretZero: 0.37, distantaZeroPct: -0.04, iei: 46 } } }), "zero");
-  assert.match(s.faCe, /\(nu stop: zero-ul e sub preț\)\.$/);
+// v100.330 (el, 12.11: „Aș pune take-profit-ul … o prostie”): fără motiv de ieșire zero-ul e doar fapt; cu motiv (trendul tare contra) sfatul
+// spune motivul în locul „(nu stop: …)”, iar textul - câte grile nu mai lucrează dincolo de ținta din grid
+await test("zero-ul botului: fapt fără motiv; cu motiv take-profit la persoana I, sub 110 caractere, cu motivul și grilele tăiate", () => {
+  const Z = { peste: { zero: { pretZero: 0.4012, distantaZeroPct: 0.0399, iei: 46.4 } } };
+  const f = cod(sfaturi(CRV(), Z), "zero");
+  assert.equal(f.titlu, "Botul iese pe zero la 0.4012 (+4,0% de aici)");
+  assert.equal(f.text, "Închis acum, ai lua 46,4 USDT din 49,67 investiți.");   // v100.330 (revizia): rezultatul cu o zecimală
+  assert.ok(!f.faCe, "trendul e cu botul (long, mediu): fără sfat de ieșire");
+  const z = cod(sfaturi(CRV(), Object.assign({ fisa: FISA({ directie: { dir: "short", tarie: "tare", motive: [] } }) }, Z)), "zero");
+  assert.equal(z.faCe, "Aș pune take-profit-ul botului la 0.4012 ca să ies fără pierdere: trendul e împotriva botului (short, tare).");
+  assert.ok(z.faCe.length <= 110, z.faCe.length);
+  // long: peste 0.4012 (până la 0.4331) - (0.4331 − 0.4012) / 0.049 × 6 = 3,9 ⇒ 4 din 6 grile
+  assert.equal(z.text, "Închis acum, ai lua 46,4 USDT din 49,67 investiți. Peste 0.4012 nu mai lucrează 4 din 6 grile.");
+  const s = cod(sfaturi(CRV({ directie: "short" }), { fisa: FISA({ directie: { dir: "long", tarie: "tare", motive: [] } }), peste: { zero: { pretZero: 0.37, distantaZeroPct: -0.04, iei: 46 } } }), "zero");
+  assert.match(s.faCe, /: trendul e împotriva botului \(long, tare\)\.$/);
+  assert.equal(s.text, "Închis acum, ai lua 46,0 USDT din 49,67 investiți.", "0.37 e sub grid: nicio grilă tăiată de spus");
 });
 await test("funding-ul: titlul spune cât și cine plătește, cu virgulă; „până acum” la vedere; sursa Binance separat", () => {
   const p = cod(sfaturi(CRV({ finantare: -0.04 }), { funding: 0.0008 }), "funding"), i = cod(sfaturi(CRV({ finantare: null }), { funding: -0.0002 }), "funding");

@@ -27,8 +27,12 @@ const CL = { la: 5, monede: [{ simbol: "AKE_USDT_PERP", volum: 90, stare: "evita
 
 // ---- (1) Acasă ----
 // v100.295 (el, 02.11: „da scoate-le și de pe Acasă”): monedele pe revenire / short scoase de pe Piața azi ⇒ nota n-are unde apărea
-await test("(1) v100.295: Piața azi fără monedele pe revenire / short ⇒ fără nota „… e și pe revenire, și la short”; acasaCumpar2Corp scos", () => {
-  assert.doesNotMatch(lib("acasa-ecran.js"), /și pe revenire, și la short|function acasaCumpar2Corp\(|reveniriBoti|shortBoti/);
+// v100.330 (el, 12.11: „da”, monedele înapoi): nota se întoarce cu ele, sub coloana „Monede pentru short”; acasaCumpar2Corp rămâne scos
+await test("(1) v100.330: monedele pe revenire / short înapoi pe Piața azi ⇒ nota „… e și pe revenire, și la short: aș sări peste ea” înapoi; acasaCumpar2Corp tot scos", () => {
+  const A = lib("acasa-ecran.js");
+  assert.match(A, / e și pe revenire, și la short: aș sări peste ea/);
+  assert.match(A, /I\.reveniriBoti\(d\.clasament, \[\], 5\)/, "nota se uită la listele de 5, ca pe Tablou odinioară");
+  assert.doesNotMatch(A, /function acasaCumpar2Corp\(/);
 });
 
 // ---- (2) istoricul cu virgulă ----

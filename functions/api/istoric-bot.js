@@ -134,7 +134,7 @@ export async function onRequestGet({request,env}){
   // v100.117 (I-561): carnetul fișei - raportul de noapte al laboratorului (re-joc + ofertele judecate)
   if(action==="carnet"){let r=null;try{r=JSON.parse(await env.ISTORIC.get("carnet")||"null")}catch{r=null}return json({carnet:r})}
   // v100.85 (reveniri + short): istoricul listelor de monede, urmărirea lor și notările (le scrie tura sugestiilor, o dată pe zi)
-  if(action==="sugestii"){let s=null,l=[];try{s=JSON.parse(await env.ISTORIC.get("sugestii")||"null")}catch{s=null}try{l=JSON.parse(await env.ISTORIC.get("sugestii-istoric")||"[]")}catch{l=[]}return json({sugestii:s,istoric:Array.isArray(l)?l:[]})}
+  if(action==="sugestii"){let s=null,l=[];try{s=JSON.parse(await env.ISTORIC.get("sugestii")||"null")}catch{s=null}if(u.searchParams.get("scurt")==="1")return json({sugestii:s});/* v100.330 (revizia Opus): Piața azi cere doar sugestiile, fără istoricul de până la 4.000 de rânduri */try{l=JSON.parse(await env.ISTORIC.get("sugestii-istoric")||"[]")}catch{l=[]}return json({sugestii:s,istoric:Array.isArray(l)?l:[]})}
   if(action==="retea"){let r=null;try{r=JSON.parse(await env.ISTORIC.get("retea")||"null")}catch{r=null}return json({retea:r})}
   if(action==="busolaRetea"){let r=null;try{r=JSON.parse(await env.ISTORIC.get("busolaRetea")||"null")}catch{r=null}return json({busolaRetea:r})}   // v100.95 (ideea 1): bilanțul Busolei despre predicțiile 🧠
   if(action==="arbori"){let r=null;try{r=JSON.parse(await env.ISTORIC.get("arbori")||"null")}catch{r=null}return json({arbori:r})}   // v100.93: arborii (gradient boosting), aceeași formă ca retea

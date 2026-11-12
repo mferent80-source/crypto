@@ -334,7 +334,10 @@ var Alerte = (function () {
       // v100.259 (auditul 23.10): doar la TRAVERSARE - prețul abia a trecut de zero (cel mult 0,5% dincolo); cât stă departe pe plus nu e „a ajuns
       // pe zero” (pleca pe orice long pe plus, la 12 h). În alertă rămâne între −0,3% și +1% (histerezis), apoi iese în tăcere.
       var inA = fost("p-zero") !== "ok", lo0 = inA ? 0.997 : 1, hi0 = inA ? 1.01 : 1.005;
-      var peZero = dirB === "long" ? p >= pz * lo0 && p <= pz * hi0 : p <= pz * (2 - lo0) && p >= pz * (2 - hi0);
+      // v100.330 (el, 12.11: „fa tot acum”; HYPE short: a plecat la 11:13, la 1 h 1 min, cu −0,10 USDT = comisioanele): „a ajuns pe zero” are
+      // sens doar după o pierdere ADEVĂRATĂ - colectorul ține minte (ctx.subZero) că totalul a fost cel puțin 1% din investiție pe minus; odată
+      // pornită, alerta rămâne în banda ei (histerezis) și fără el. Aceeași regulă ca sfatul „zero” din Tablou.
+      var peZero = (inA || ctx.subZero === true) && (dirB === "long" ? p >= pz * lo0 && p <= pz * hi0 : p <= pz * (2 - lo0) && p >= pz * (2 - hi0));
       out["p-zero"] = peZero
         ? { nivel: "atentie", titlu: nume + ": botul a ajuns pe zero (" + pret(pz) + ")",
           mesaj: msg("Prețul e " + pret(p) + ": închis acum, ieși fără pierdere, după comisionul de închidere.", "Aș alege acum: închid botul fără pierdere sau îl las să prindă grilele.") }

@@ -46,7 +46,7 @@ await test("Piața azi: doar netul e mare, propoziția e 28 px, telefonul alege 
   assert.match(ae, /acPiataInit\(\);/);
   assert.match(css, /\.acPiataBtn\{display:none\}/);
   assert.match(css, /@media \(max-width:900px\)\{#dash \.acPiataBtn\{display:inline-flex\}#acasa\.acDoarCrypto #acVremeBursa,#acasa\.acDoarCrypto #acScorT212\{display:none\}#acasa\.acDoarBursa #acVremeCrypto,#acasa\.acDoarBursa #acScor\{display:none\}/);
-  assert.match(css, /@media \(max-width:900px\)\{#dash \.acCol\{display:contents\}#dash \.acDouaMb #acMacro\{order:1\}#dash \.acDouaMb #acScorZi\{order:2\}#dash \.acDouaMb #acMb\{order:3\}#dash \.acDouaMb #acRegim\{order:4\}/);
+  /* v100.330 (el, 12.11: „fa tot acum” - golurile): coloanele bursei echilibrate; pe telefon aceeași ordine (proba v100330-design) */ assert.match(css, /@media \(max-width:900px\)\{#dash \.acCol\{display:contents\}#dash \.acPereche>\.acDoua\{display:contents\}#dash \.acPereche #acMacro\{order:1\}#dash \.acPereche #acScorZi\{order:2\}#dash \.acPereche #acMb\{order:3\}#dash \.acPereche #acRegim\{order:4\}/);
   assert.ok(css.trimEnd().endsWith("#topLive{display:none!important}"));
 });
 

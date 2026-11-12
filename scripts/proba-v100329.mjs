@@ -139,7 +139,9 @@ await test("acVremeCrypto / acVremeBursa: din aceleași date ⇒ același verdic
   const vc = c.acVremeCrypto(c.acasaRef.d), vb = c.acVremeBursa(c.acasaRef.d);
   assert.equal(vc.nivel, "liniste"); assert.equal(vb.nivel, "ingusta");
   const FRANA = "Aș reduce expunerea până sub 4% pe zi: o zi proastă îți ia ~5,7% din cont.";
-  assert.equal(vc.faCe, FRANA); assert.equal(vb.faCe, FRANA); assert.equal(vc.ton, "atentie"); assert.equal(vb.ton, "atentie");
+  // v100.330 (el: „păi nu voiam verdicte la fel crypto și nasdaq” ⇒ „Fiecare cu verdictul lui”): frâna CONTULUI nu mai stă pe carduri - banda ei, o dată
+  assert.notEqual(vc.faCe, FRANA); assert.notEqual(vb.faCe, FRANA); assert.notEqual(vc.faCe, vb.faCe, "fiecare card cu fraza lui");
+  assert.equal(c.acFranaContText(), FRANA, "frâna contului, separat, aceeași pentru Piața azi, Scan și Tablou");
   c.acasaRef.d = dateZi({ contRaport: { cont: { la: Date.now() - 3600000, valoare: { total: 10000 }, risc: { var95: 100 } } } });
   assert.match(c.acVremeCrypto(c.acasaRef.d).faCe, /^Aș porni boți grid doar unde fișa monedei zice PORNEȘTE/, "fără frână: fraza vremii");
 });
@@ -187,16 +189,11 @@ await test("Piața azi, Scan și Tabloul fără bot cheamă funcțiile comune (n
 await test("cardurile simetrice: „ce aș face” pe AMESTECAT galben ca LATERAL / ÎNGUSTĂ; cardul Nasdaq spune când fraza lui e frâna (măsura rămâne la Crypto)", () => {
   const CSS = citeste("public", "app.css");
   assert.match(CSS, /#dash \.acVerd-amestecat \.acFac[^{]*\{color:var\(--warn\)\}/, "AMESTECAT fără culoare (înainte: alb)");
-  const c = ctxEcran();
-  assert.equal(typeof c.acFranaNota, "function", "acFranaNota lipsește");
-  assert.match(c.acFranaNota({ ton: "atentie", faCe: "x" }, { ton: "atentie", faCe: "x" }), /frâna de azi, aceeași ca la Crypto/i);
-  // revizia Opus (🟡1): când Crypto are altă frază (MIȘCARE, pauza, exportul T212 doar la bursă) nota nu zice „aceeași ca la Crypto”
-  const alta = c.acFranaNota({ ton: "atentie", faCe: "x" }, { faCe: "N-aș porni boți grid noi" });
-  assert.match(alta, /frâna de azi/i); assert.doesNotMatch(alta, /aceeași ca la Crypto|cardul Crypto/);
-  assert.equal(c.acFranaNota({ faCe: "x" }, { faCe: "x" }), "", "fără frână: nimic");
-  const des = fn(LIB("acasa-ecran.js"), "acasaDeseneaza"), b = des.slice(des.indexOf('acasaVerd($("acVremeBursa")'));
-  assert.match(b.slice(0, 600), /acFranaNota\(vb, v\)/, "nota pe cardul Nasdaq, comparată cu fraza Crypto");
-  assert.match(des.slice(des.indexOf('acasaVerd($("acVremeCrypto")'), des.indexOf('acasaVerd($("acVremeBursa")')), /acMasuraLin\(\)/, "măsura frânei rămâne pe cardul Crypto (v100.234)");
+  // v100.330 (el: „nu voiam verdicte la fel crypto și nasdaq” ⇒ „Fiecare cu verdictul lui”): nota de pe Nasdaq („fraza de sus e frâna”) nu mai are
+  // rost - frâna contului stă în banda ei, o dată, cu măsura (mutată de pe cardul Crypto); proba v100.330 ține banda
+  const AE = LIB("acasa-ecran.js"), des = fn(AE, "acasaDeseneaza");
+  assert.doesNotMatch(AE, /acFranaNota/);
+  assert.match(des, /acFranaContHtml\(acFranaContText\(\), acMasuraLin\(\)\)/, "măsura frânei în banda frânei");
 });
 
 // ---------------------------------------------------------------- partea B: Piața azi ca Tabloul ----------------------------------------------------------------
@@ -256,7 +253,7 @@ await test("fără goluri: măsura frânei de pe cardul Crypto - fraza de încep
   const vizibil = h.slice(0, h.indexOf("<details"));
   assert.match(vizibil, /^<p class="acMut">Frâna de azi, pusă pe zilele salvate \(23\.10\.2026 – 12\.11\.2026\): în 12 zile din 21 ar fi zis „nu porni”\. Boții pe care i-ar fi oprit: 15\.002,4 pași, rezultat −526,9\. Asta nu arată că frâna face bani\.<\/p>/, "rezultatul și avertismentul la vedere");
   assert.match(h, /<details class="acMasura"><summary>Orele celor 3 zile ›<\/summary><p class="acMut">23\.10\.2026 06:08, 27\.10\.2026 05:16, 28\.10\.2026 05:19<\/p><\/details>/, "doar orele în pliu");
-  c.document.querySelector = (s) => (s === "#acVremeCrypto details.acMasura[open]" ? {} : null);
+  c.document.querySelector = (s) => (s === "#acFranaCont details.acMasura[open]" ? {} : null);   /* v100.330: măsura stă în banda frânei */
   assert.match(c.acMasuraLin(), /<details class="acMasura" open>/, "pliul deschis rămâne deschis la redesen (60 s)");
   c.document.querySelector = () => null;
   c.Acasa.masuraFranei = () => ({ text: "Frâna de azi, pusă pe zilele salvate (21.10.2026): n-ar fi zis „nu porni” în nicio zi.", complete: 1 });

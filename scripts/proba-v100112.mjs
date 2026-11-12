@@ -34,7 +34,9 @@ const T0 = Date.UTC(2026, 9, 6, 6, 0), ORA = 36e5;
 const K4 = (p, amp) => Array.from({ length: 300 }, (_, i) => { const c = p * (1 + amp * Math.sin(i / 5)); return { time: T0 - (300 - i) * 4 * ORA, open: c, high: c * 1.01, low: c * 0.99, close: c }; });
 const NIL = (o) => Object.assign({ id: "2406", baza: "NIL.PERP", directie: "long", levier: 5, investit: 43.87, profitTotal: -1.2, pretCurent: 0.0995, gridJos: 0.09831, gridSus: 0.104,
   distantaLichidarePct: 30, pretLichidare: 0.08, gridProfitBrut: 0.4, pornitLa: T0 - 3 * ORA }, o || {});
-const zeroSfat = () => { const x = SF.intrare({ bot: NIL(), k4: K4(0.0995, 0.03), funding: null, fisa: null, rezumat: null, acum: T0 }); x.zero = { pretZero: 0.1008, distantaZeroPct: 0.013, iei: 42.6 }; return SF.sfaturi(x).find((s) => s.cod === "zero"); };
+// v100.330 (el, 12.11: „Aș pune take-profit-ul … o prostie”): sfatul de ieșire la zero (cu prețul de copiat) vine doar cu un MOTIV - aici trendul tare
+// contra long-ului (NIL e pornit de 3 ore, −1,2 din 43,87 = 2,7%); ce păzește proba rămâne prețul ca CÂMP, dus până la buton
+const zeroSfat = () => { const x = SF.intrare({ bot: NIL(), k4: K4(0.0995, 0.03), funding: null, fisa: { directie: { dir: "short", tarie: "tare", motive: [] } }, rezumat: null, acum: T0 }); x.zero = { pretZero: 0.1008, distantaZeroPct: 0.013, iei: 42.6 }; return SF.sfaturi(x).find((s) => s.cod === "zero"); };
 await test("(551a) sfatul cu take-profit-ul la zero poartă prețul de copiat ca CÂMP (nu scos din text)", () => {
   const z = zeroSfat();
   assert.match(z.faCe, /^Aș pune take-profit-ul botului la 0\.1008 /); assert.deepEqual(z.copiaza, [{ ce: "take-profit", pret: "0.1008" }]);

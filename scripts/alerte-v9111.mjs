@@ -45,11 +45,12 @@ await test("miscarea mare ramane pe regula ei masurata (2x intra, 1,5x iese) - n
 
 // ---------------- (4) pragurile puse de mine pe fiecare bot ----------------
 await test("pragul 'iese pe zero': pretul trece peste 30,15 la un long -> anunta; sub (cu 0,3% marja) tace, nu clipeste", () => {
-  let r = A.evalueaza(BOT({ pretCurent: 30.2 }), { pretZero: 30.15 }, {}, T0);
+  // v100.330 (el, 12.11): alerta „pe zero” pleacă doar după o pierdere de cel puțin 1% (colectorul dă ctx.subZero) - probele de mai jos o dau
+  let r = A.evalueaza(BOT({ pretCurent: 30.2 }), { pretZero: 30.15, subZero: true }, {}, T0);
   const m = mesaj(r, "p-zero"); assert.ok(m); assert.match(m.titlu, /pe zero/); assert.match(m.titlu, /30\.15/); assert.match(m.mesaj, /fără pierdere/);
-  r = A.evalueaza(BOT({ pretCurent: 30.1 }), { pretZero: 30.15 }, r.stare, T0 + 5 * MIN); assert.equal(r.stare["p-zero"].nivel, "atentie", "a iesit din alerta la 0,2% sub");
-  const s = A.evalueaza(BOT({ pretCurent: 30.2 }), { pretZero: 30.15 }, {}, T0).stare;
-  const r3 = A.evalueaza(BOT({ directie: "short", pretCurent: 30.2 }), { pretZero: 30.15 }, {}, T0); assert.ok(!mesaj(r3, "p-zero"), "short peste pragul de zero = pierdere, nu 'pe zero'");
+  r = A.evalueaza(BOT({ pretCurent: 30.1 }), { pretZero: 30.15, subZero: true }, r.stare, T0 + 5 * MIN); assert.equal(r.stare["p-zero"].nivel, "atentie", "a iesit din alerta la 0,2% sub");
+  const s = A.evalueaza(BOT({ pretCurent: 30.2 }), { pretZero: 30.15, subZero: true }, {}, T0).stare;
+  const r3 = A.evalueaza(BOT({ directie: "short", pretCurent: 30.2 }), { pretZero: 30.15, subZero: true }, {}, T0); assert.ok(!mesaj(r3, "p-zero"), "short peste pragul de zero = pierdere, nu 'pe zero'");
   assert.ok(s["p-zero"]);
 });
 await test("pragul 'marginea gridului': la 1% de marginea de jos (inauntru) -> alerta; iese abia peste 1,5%; afara din grid e regula 'grid'", () => {

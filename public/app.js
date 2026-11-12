@@ -3408,17 +3408,21 @@ function apiFetch(url,opt={}){const scrie=!!(opt&&opt.method&&!/^(GET|HEAD)$/i.t
    se pot chema înainte să fi trecut execuția pe aici. */
 var getJsonDrum=null,getJsonProaspat=null,getJsonGen=0,GET_PROASPAT_MS=3000;
 function getJsonGoleste(){getJsonGen=(getJsonGen||0)+1;if(getJsonDrum)getJsonDrum.clear();if(getJsonProaspat)getJsonProaspat.clear()}
+/* v100.330 (auditul 12.11, Piața azi: 179 de cereri / 2,1 MB la deschidere ⇒ el: „fa tot acum”): datele grele care se schimbă rar și veneau de DOUĂ
+   ori în aceeași deschidere (boții închiși 406 kb, istoricul T212 200 kb, clasamentul, știrile) se țin minte 60 s; restul ca înainte, 3 s */
+var GET_LUNG_MS=60000,GET_LUNG_RE=/^\/api\/(?:istoric-bot\?action=(?:botiInchisi|clasament|sugestii)|t212\?action=istoric|stiri\?action=(?:piata|crypto))(?:&|$)/;   /* + sugestiile (o dată pe zi; revizia Opus) */
+function getJsonTtl(k){return GET_LUNG_RE.test(String(k))?GET_LUNG_MS:GET_PROASPAT_MS}
 function getJsonBrut(url){
   getJsonDrum=getJsonDrum||new Map();getJsonProaspat=getJsonProaspat||new Map();
   const k=String(url),p=getJsonProaspat.get(k);
-  if(p&&Date.now()-p.la<GET_PROASPAT_MS)return Promise.resolve(p);
+  if(p&&Date.now()-p.la<getJsonTtl(k))return Promise.resolve(p);   /* v100.330: 60 s pentru datele grele, 3 s restul */
   let d=getJsonDrum.get(k);if(d)return d;
   const gen=getJsonGen||0;
   d=(async()=>{const r=await apiFetch(url,{method:"GET",mode:"cors",cache:"no-store",headers:{"accept":"application/json"}});return {ok:r.ok,status:r.status,raw:await r.text(),la:Date.now()}})();
   getJsonDrum.set(k,d);
   /* revizia: refuzul Pionex vine cu HTTP 200 + result:false - nu se ține minte (ca serverul, v100.173), altfel reîncercarea primea același refuz;
      la fiecare intrare nouă ies cele mai vechi de 3 s, ca plasa să nu crească toată ziua (lumânările de 1 min cer adrese noi la 2 min) */
-  d.then(v=>{if(getJsonDrum.get(k)===d)getJsonDrum.delete(k);if(v.ok&&gen===(getJsonGen||0)&&!/"result"\s*:\s*false/.test(String(v.raw).slice(0,300))){const acum=Date.now();getJsonProaspat.forEach((x,kk)=>{if(acum-x.la>=GET_PROASPAT_MS)getJsonProaspat.delete(kk)});getJsonProaspat.set(k,v)}},()=>{if(getJsonDrum.get(k)===d)getJsonDrum.delete(k)});
+  d.then(v=>{if(getJsonDrum.get(k)===d)getJsonDrum.delete(k);if(v.ok&&gen===(getJsonGen||0)&&!/"result"\s*:\s*false/.test(String(v.raw).slice(0,300))){const acum=Date.now();getJsonProaspat.forEach((x,kk)=>{if(acum-x.la>=getJsonTtl(kk))getJsonProaspat.delete(kk)});getJsonProaspat.set(k,v)}},()=>{if(getJsonDrum.get(k)===d)getJsonDrum.delete(k)});
   return d;
 }
 async function getJSON(url){
@@ -6780,7 +6784,8 @@ function tbPregatire(el){
   var f=tbPreg.fisa,v=typeof acVremeCrypto==="function"&&typeof acasa!=="undefined"&&acasa.d&&acasa.d.clasament?acVremeCrypto(acasa.d):tbPreg.vreme,g=tbPreg.grid,an=typeof acAziNu==="function"?acAziNu():null,nu=!!(an&&an.nu);   /* v100.306 (I-824): regula comună „azi nu” · v100.329: vremea comună, cu frâna de acum */
   if(!f&&!v&&!g)return el.innerHTML=h+'<p class="tbSub">'+(tbPreg.inLucru?"aduc ultimul bot închis, vremea și candidații…":"—")+'</p></div>';
   if(f)h+='<div class="tbPregBloc"><h5>Ultimul bot închis</h5><p class="tbPregTitlu '+(f.nivel==="info"?"good":f.nivel==="critic"?"bad":"tbWarn")+'">'+escapeHtml(f.titlu.replace(/^🔍 /,""))+'</p>'+f.mesaj.split("\n").map(function(t){return '<p class="tbPregRand">'+escapeHtml(t)+'</p>'}).join("")+'</div>';
-  if(v)h+='<div class="tbPregBloc"><h5>Vremea pieței</h5><p class="tbPregTitlu">'+escapeHtml(v.eticheta)+' — '+escapeHtml(v.titlu)+'</p>'+(v.faCe?'<p class="tbFac">👉 <b>Ce aș face eu:</b> '+escapeHtml(v.faCe)+'</p>':'')+'</div>';
+  var fcT=typeof acFranaContText==="function"?acFranaContText():"";   /* v100.330: frâna contului separat de vremea crypto (ca pe Piața azi) */
+  if(v)h+='<div class="tbPregBloc"><h5>Vremea pieței</h5><p class="tbPregTitlu">'+escapeHtml(v.eticheta)+' — '+escapeHtml(v.titlu)+'</p>'+(v.faCe?'<p class="tbFac">👉 <b>Ce aș face eu:</b> '+escapeHtml(v.faCe)+'</p>':'')+(fcT?'<p class="tbWarn">⛔ <b>Frâna contului azi:</b> '+escapeHtml(fcT)+'</p>':'')+'</div>';
   if(g&&g.length)h+='<div class="tbPregBloc"><h5>'+(nu?'Bun pentru grid, din Scan (🟦) · azi nu pornesc':'Pe ce aș porni (🟦 Bun pentru grid, din Scan)')+'</h5>'+(nu?acAziNuHtml(an):'')+g.map(function(q){return '<div class="tbPregMon"><b>'+escapeHtml(q.s)+'</b><span class="tbSub">'+(q.grile?TextRo.cate(q.grile+1,"grilă","grile")+" · pas "+(q.pas*100).toFixed(2).replace(".",",")+"% · ~"+(q.traversari||0).toFixed(1).replace(".",",")+" treceri/zi":"")+' · 7 zile '+(q.ch7>=0?"+":"−")+Math.abs(q.ch7).toFixed(1).replace(".",",")+'%</span><button type="button" class="tbBtnLinie" data-action-click="gridDeschideMoneda(\''+argActiune(q.s)+'\')">Fișa</button></div>'}).join("")
     +'</div>';
   el.innerHTML=h+'</div>';

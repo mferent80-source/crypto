@@ -172,7 +172,7 @@ function normalizeaza(bot,preturi,harta){
   const tipPierdere=x.lossStopType==="profit_ratio"?"raport":x.lossStopType==="price"?"pret":null,tipProfit=x.profitStopType==="profit_ratio"?"raport":x.profitStopType==="price"?"pret":null;
   const opPierdere=tipPierdere==="raport"?pretDinRaport(nr(x.lossStop)):nr(x.lossStop),opProfit=tipProfit==="raport"?pretDinRaport(nr(x.profitStop)):nr(x.profitStop);
   // v100.62: avertismentele intr-o functie pura (functions/_shared/avertismente.js) - le verifica garda textelor
-  const avertismente=avertismenteBot({x,pret,jos,sus,lich,comisioane,gridProfitBrut,profitNet});
+  const avertismente=avertismenteBot({x,pret,jos,sus,lich,comisioane,gridProfitBrut,profitNet,pornitLa:nr(bot.createTime),acum:Date.now(),investit,levier:nr(x.leverage),directie:dir});   // v100.330: vârsta + taxa de intrare
 
   return {
     id:String(bot.strategyId??bot.buOrderId??""),

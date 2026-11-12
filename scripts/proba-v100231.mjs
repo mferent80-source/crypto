@@ -109,7 +109,8 @@ await test("Scan nu mai tipărește planul de dimineață și lei la 1% pe un nu
 await test("gura de pauză e aceeași pe Acasă, Sugestii, Scan și Tablou; ciFac pune abaterea T212 înainte de criză", () => {
   assert.match(ae, /pas\("contRaport"/);
   // v100.329: frâna stă în funcțiile comune ale vremii (aceleași pe Piața azi, în Scan și în Tabloul fără bot), iar pagina le cheamă
-  assert.match(ae, /return acFraneaza\(Acasa\.vreme\(\{ clasament: acClasamentSumar\(d\.clasament\)[^;]*\), "crypto"\);/);
+  assert.match(ae, /return acFraneaza\(Acasa\.vreme\(\{ clasament: acClasamentSumar\(d\.clasament\)[^;]*\), "crypto", AC_FARA_CONT\);/);   // v100.330: pe card fără frâna contului (banda ei)
+  assert.match(ae, /function acFranaContText\(\)[\s\S]{0,600}Acasa\.franaCont\(o\)/, "frâna contului: aceleași date ca acFraneaza, o singură dată");
   assert.match(ae, /return acFraneaza\(Acasa\.vremeBursa\(/);
   assert.match(ae, /faraServer && !cl \? acFaraServerVerd\(d\) : acVremeCrypto\(d\)/); assert.match(ae, /acFaraServerVerd\(d\) : acVremeBursa\(d\)/);
   assert.match(ae, /acFrazaPauza\(pzB\)/); assert.match(ae, /function acAziNuDin\(o\)[\s\S]{0,1500}pauza sezonului/);   /* v100.306 (I-824) */   // v100.295: coloana ideilor T212 scoasă din „Ce aș cumpăra azi”; gura de pauză rămâne pe coloana boților

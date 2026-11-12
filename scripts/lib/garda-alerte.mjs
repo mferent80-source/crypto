@@ -98,7 +98,7 @@ export function situatiiAlerte(pune) {
   al("mediul: BTC contra și funding mare (short)", LIT(), { mediu: med("short", -0.0006, "urca", true) }, null, ["m-btc", "m-funding"]);
   al("mediul: din nou normal", CRV(), { mediu: med("long", 0.0001, "urca", false, 1) }, null, ["m-btc", "m-funding"]);
   // pragurile puse de Radar: pe zero, langa margine; stopul stins
-  al("botul a ajuns pe zero (long)", CRV({ pretCurent: 0.3926, pornitLa: T0 - 3 * ZI }), { pretZero: 0.3925 }, null, ["p-zero"]);
+  al("botul a ajuns pe zero (long)", CRV({ pretCurent: 0.3926, pornitLa: T0 - 3 * ZI }), { pretZero: 0.3925, subZero: true }, null, ["p-zero"]);   // v100.330: după o pierdere de 1%
   al("prețul la 0,4% de marginea de jos", CRV({ pretCurent: 0.3856 }), null, null, ["p-margine"]);
   al("prețul la 0,5% de marginea de sus (short)", LIT({ pretCurent: 5.075 }), null, null, ["p-margine"]);
   al("stopul stins, lichidarea la 8%", CRV({ opritorPierdere: 0.362, opritorPierdereActiv: false, distantaLichidarePct: 8 }), null, null, ["opritor"]);

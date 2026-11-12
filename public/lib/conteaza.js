@@ -61,7 +61,9 @@ var Conteaza = (function () {
         // revizia 11.11: verde doar când ieși pe plus sau practic pe zero (sfatul „bine”); dacă take-profit-ul închide sub zero, rămâne auriu, de urmărit
         var bine = s.ton === "bine";
         pune({ cheie: "zero", ton: bine ? "verde" : "galben", grav: bine ? 6 : 5, nr: "✓", nrSub: "take-profit pus", titlu: s.titlu, sub: String(s.text || ""), faCe: String(s.faCe || "") });
-      } else if (s.cod === "zero") {
+      } else if (s.cod === "zero" && s.iesire) {
+        // v100.330 (el, 12.11: „Aș pune take-profit-ul … o prostie”): zero-ul urcă aici doar ca sfat de ieșire (cu motiv, botul de peste o oră,
+        // pierderea ≥ 1% din bani); simplul fapt „botul iese pe zero la …” rămâne în lista de jos - nu pune bani în joc
         var z = nr(s.pctZero);
         pune({ cheie: "zero", ton: "galben", grav: 5, nr: z === null ? "0" : (z > 0 ? "+" : z < 0 ? "−" : "") + num1(Math.abs(z)), nrSub: "% până la zero",
           titlu: s.titlu, sub: String(s.text || ""), faCe: String(s.faCe || ""), copiaza: s.copiaza });

@@ -45,7 +45,7 @@ await test("simulatorul își spune numele, futures pune interpretarea întâi, 
   assert.ok(html.indexOf("Profilul semnalelor (motorul vechi)", sv) > sv && html.indexOf("Profilul semnalelor (motorul vechi)", sv) < inchide);
   assert.ok(html.indexOf("Alertele din browser (motorul vechi)", sv) < inchide);
   assert.match(html, /<div class="acPereche"><div class="acDoua acDouaMb"><div class="acCol"><div class="acBloc" id="acMacro"><\/div>/);
-  assert.match(html, /<div class="acDoua acDouaSug"><div class="acCol"><div class="acBloc" id="acSectoare"><\/div><div class="acBloc" id="acTopSector"><\/div><\/div><div class="acCol"><div class="acBloc acMbBloc" id="acMbSug"><\/div><\/div><\/div><\/div>/);
+  /* v100.330 (el, 12.11: „fa tot acum” - golurile): coloanele bursei echilibrate; pe telefon aceeași ordine (proba v100330-design) */ assert.match(html, /<div class="acDoua acDouaSug"><div class="acCol"><div class="acBloc acSzBloc" id="acScorZi"><\/div><div class="acBloc" id="acSectoare"><\/div><div class="acBloc" id="acTopSector"><\/div><\/div><div class="acCol"><div class="acBloc acMbBloc" id="acMbSug"><\/div><\/div><\/div><\/div>/);
   assert.match(css, /#dash \.acPereche\{[^}]*grid-template-columns:minmax\(0,1fr\)/);
   assert.match(css, /@media \(min-width:1920px\)\{#dash \.acPereche\{grid-template-columns:minmax\(0,1fr\) minmax\(0,1fr\)\}/);
   assert.match(css, /\.pzDemo #acasa>\.acPereche\{order:50\}/);

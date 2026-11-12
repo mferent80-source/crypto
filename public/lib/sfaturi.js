@@ -30,6 +30,18 @@ var Sfaturi = (function () {
     return Math.round(s.valoare) + "% " + ce + " (" + s.atinse + " din " + s.cazuri + (s.stare === "destule" || s.stare === "dovedit" ? "" : ", puține cazuri") + ")";
   }
 
+  // v100.330: câte grile NU mai lucrează cu un take-profit la x în grid - partea de DINCOLO de el (long: peste x, short: sub x). Aceeași
+  // socoteală ca SemnaleBot.griliMoarte (rândurile Pionex - 1 intervale, aritmetic / geometric), oglindită: acolo e stopul, aici ținta.
+  function griliTaiateTp(b, x) {
+    var d = b && b.brut && b.brut.buOrderData || {}, linii = nr(d.row), N = linii > 1 ? linii - 1 : null, jos = nr(b && b.gridJos), sus = nr(b && b.gridSus), dir = String(b && b.directie || "").toLowerCase();
+    x = nr(x);
+    if (!N || x === null || jos === null || sus === null || !(x > jos && x < sus) || (dir !== "long" && dir !== "short")) return null;
+    var geo = String(d.gridType || "").toLowerCase() === "geometric";
+    var fr = dir === "long" ? (geo ? Math.log(sus / x) / Math.log(sus / jos) : (sus - x) / (sus - jos)) : (geo ? Math.log(x / jos) / Math.log(sus / jos) : (x - jos) / (sus - jos));
+    var k = Math.round(fr * N);
+    return k >= 1 ? k + " din " + cate(N, "grilă", "grile") : null;
+  }
+
   // intrare: { bot, scen (Scenariu.scenarii), sanse: {josZi, josSapt, lichSapt}, rezumat (Directie.rezumat),
   //            directii (rez), funding (rata pe 8h, fractie), fisa (GridProba.fisa pe moneda botului),
   //            costuri (TabloExtra.grileVsCosturi), zero (TabloExtra.dacaInchizi), geom (TabloExtra.geometrieBot),
@@ -152,11 +164,13 @@ var Sfaturi = (function () {
     }
     var L = fisa && fisa.liniste;
     if (L && L.linisteAcum && L.suficient && L.p != null) {
-      var rar = L.p < 0.35;
-      out.push({ cod: "liniste", ton: rar ? "info" : "bine", titlu: "Liniște de " + TextRo.num(L.zileLiniste, 1) + " zile",
+      // v100.330 (auditul 12.11): „tinde să țină” doar de la jumătate în sus - la 40% liniștea a ținut în 4 cazuri din 10, nu „tinde să țină”
+      var rar = L.p < 0.35, tine = L.p >= 0.5;
+      out.push({ cod: "liniste", ton: rar ? "info" : "bine", titlu:   /* revizia Opus (🔵6): tonul vechi - doar fraza se schimbă sub jumătate */ "Liniște de " + TextRo.num(L.zileLiniste, 1) + " zile",
         text: "Pe moneda asta, liniștea care a ajuns aici a mai ținut " + cate(L.H, "zi", "zile") + " în " + Math.round(L.p * 100) + "% din cazuri (" + L.k + " din " + L.n + (L.n < 30 ? ", puține cazuri" : "") + ").",   /* v100.65: pragul scenariului (30) */
         sursa: "Ultimele 30 de zile; interval de încredere " + TextRo.pct(L.ic[0] * 100, 0) + "–" + TextRo.pct(L.ic[1] * 100, 0) + ".",
-        faCe: rar ? "N-aș pune bani în plus; aș încasa ce face și aș închide botul la prima mișcare mare." : "L-aș lăsa să lucreze: liniștea tinde să țină aici." });
+        faCe: rar ? "N-aș pune bani în plus; aș încasa ce face și aș închide botul la prima mișcare mare." : tine ? "L-aș lăsa să lucreze: liniștea tinde să țină aici."
+          : "L-aș lăsa să lucreze, fără bani în plus: liniștea a ținut aici în mai puțin de jumătate din cazuri." });
     }
 
     // C) Schimbare de ritm: grile si tranzactii in 24 h fata de media botului pe zi.
@@ -212,12 +226,25 @@ var Sfaturi = (function () {
         text: (laT !== null ? "Când se atinge, ieși " + (peZero ? "practic pe zero (" + usdt(laT) + ")" : "cu " + usdt(laT) + " în total") + "; închis acum, ai lua " : "Închis acum, ai lua ") + (z.iei != null ? TextRo.num(z.iei, 1) + " USDT" : "—") + (inv ? " din " + TextRo.num(inv, 2) + " investiți" : "") + ".",
         faCe: laT !== null && laT < 0 && !peZero ? "Ieșirea exact fără pierdere e la " + pret(z.pretZero) + "; la take-profit-ul de acum lași " + usdt(-laT).replace(/^\+/, "") + "." : "" });
     } else if (z && z.pretZero != null && z.distantaZeroPct != null && tot !== null && tot < 0) {
-      out.push({ cod: "zero", ton: "info", pctZero: 100 * z.distantaZeroPct, titlu: "Botul iese pe zero la " + pret(z.pretZero) + " (" + proc(100 * z.distantaZeroPct) + " de aici)",
-        text: "Închis acum, ai lua " + (z.iei != null ? TextRo.num(z.iei, 2) + " USDT" : "—") + (inv ? " din " + TextRo.num(inv, 2) + " investiți" : "") + ".",
-        // v100.40 (audit 30.09): pe minus, prețul de zero e DINCOLO de pretul de acum (deasupra la long, dedesubt la short) -> e un
-        // TAKE-PROFIT; un stop pus acolo s-ar executa pe loc (contrar cartelei „Stopul” de pe acelasi ecran)
-        faCe: "Aș pune take-profit-ul botului la " + pret(z.pretZero) + " ca să ies fără pierdere (nu stop: zero-ul e " + (z.distantaZeroPct > 0 ? "deasupra prețului" : "sub preț") + ").",
-        copiaza: [{ ce: "take-profit", pret: pret(z.pretZero) }] });   // v100.112 (I-551): prețul de copiat e câmp, nu se scoate din text
+      // v100.330 (el, 12.11, HYPE short pornit la 10:12, −0,10 = comisioanele: „Aș pune take-profit-ul la 71.2203 … o prostie”): pe ORICE minus
+      // sfatul cerea un take-profit la zero - ÎN grid, deci botul se închidea la prima oscilație, fără câștig (regula lui din 05.10: nimic în mijlocul
+      // gridului). Acum zero-ul e FAPT; „ieși la zero” + butonul vin doar cu un MOTIV de ieșire, de la o oră de viață (boții închiși în prima oră:
+      // −2.065 USDT în 2026, auditul 30.09 - aceeași gardă ca alerta p-zero) și cu pierderea de cel puțin 1% din bani. Setarea (grile dese,
+      // levier) NU e motiv: sfatul ei zice „n-aș închide botul pentru asta” (o singură voce).
+      var acumZ = nr(x.acum) || Date.now(), pornitZ = nr(b.pornitLa), tanarZ = pornitZ > 0 && acumZ - pornitZ < 3600000;
+      var conteazaZ = inv > 0 && -tot >= 0.01 * inv;
+      var motivZ = d && d.dir && d.tarie === "tare" && ((dirBot === "long" && d.dir === "short") || (dirBot === "short" && d.dir === "long")) ? "trendul e împotriva botului (" + d.dir + ", tare)"
+        : fisa && fisa.verdict && fisa.verdict.nivel === "nu" ? "fișa monedei zice NU"
+        : rg && rg.miscare && rg.sens && (dirBot === "long" || dirBot === "short") && !cuB ? "piața e în mișcare mare contra botului"
+        : out.some(function (s) { return s.cod === "pericol" && s.tip === "lich" && (s.ton === "critic" || s.ton === "atentie"); }) ? "lichidarea e aproape"
+        : out.some(function (s) { return s.cod === "pericol" && s.tip === "grid" && (s.ton === "critic" || s.ton === "atentie"); }) ? "prețul a ieșit din grid" : null;
+      var iesZ = !!motivZ && !tanarZ && conteazaZ, taieZ = iesZ ? griliTaiateTp(b, z.pretZero) : null;
+      out.push({ cod: "zero", ton: "info", pctZero: 100 * z.distantaZeroPct, iesire: iesZ, titlu: "Botul iese pe zero la " + pret(z.pretZero) + " (" + proc(100 * z.distantaZeroPct) + " de aici)",
+        text: "Închis acum, ai lua " + (z.iei != null ? TextRo.num(z.iei, 1) + " USDT" : "—") + (inv ? " din " +   /* revizia: rezultatul cu o zecimală (regula lui, 03.10) */TextRo.num(inv, 2) + " investiți" : "") + "."
+          + (taieZ ? " " + (z.distantaZeroPct > 0 ? "Peste " : "Sub ") + pret(z.pretZero) + " nu mai lucrează " + taieZ + "." : ""),
+        // v100.40 (audit 30.09): pe minus, prețul de zero e DINCOLO de prețul de acum (deasupra la long, dedesubt la short) -> e un TAKE-PROFIT
+        faCe: iesZ ? "Aș pune take-profit-ul botului la " + pret(z.pretZero) + " ca să ies fără pierdere: " + motivZ + "." : null,
+        copiaza: iesZ ? [{ ce: "take-profit", pret: pret(z.pretZero) }] : undefined });   // v100.112 (I-551): prețul de copiat e câmp, nu se scoate din text
     }
 
     // 5) Directia fata de bot, spusa ca stare masurata.
@@ -304,7 +331,7 @@ var Sfaturi = (function () {
     var fundingPionex = fp ? { rataZi: nr(fp.rataZi), rata: nr(fp.rata) !== null ? nr(fp.rata) : nr(fp.rate), intervalOre: nr(fp.intervalOre), veche: fp.veche === true } : null;
     return { bot: b, scen: scen, sanse: sanse, rezumat: o.rezumat || null, funding: o.funding, fundingOre: oreFunding(o.fundingHist), fundingPionex: fundingPionex, fata4h: o.fata4h || null, dir4h: o.dir4h, fisa: o.fisa || null,
       costuri: TE ? TE.grileVsCosturi(b, acum) : null, zero: TE ? TE.dacaInchizi(b) : null, geom: TE ? TE.geometrieBot(b) : null, ritm: ritm,
-      laTinta: TE && TE.totalLaTinta ? TE.totalLaTinta(b) : null, tpLive: TE && TE.pretTpLive ? TE.pretTpLive(b) : null };   // v100.322: banii și prețul la take-profit-ul pus (sfatul „zero”)
+      laTinta: TE && TE.totalLaTinta ? TE.totalLaTinta(b) : null, tpLive: TE && TE.pretTpLive ? TE.pretTpLive(b) : null, acum: acum };   // v100.322: banii și prețul la take-profit-ul pus (sfatul „zero”); v100.330: `acum` = vârsta botului pentru sfatul „zero”
   }
   return { sfaturi: sfaturi, intrare: intrare };
 })();

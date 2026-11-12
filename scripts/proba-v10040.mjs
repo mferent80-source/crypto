@@ -254,14 +254,15 @@ await test("🟡 copia KV si pe ALT disc (E:) - arhiva botilor nu mai sta doar p
 
 await test("🟡 sfaturi pe bani: zero-ul pe minus = TAKE-PROFIT (nu stop); lichidarea DEPASITA = IESI; „ai ajuns pe zero” nu in prima ora", () => {
   const SF = new Function("GridCalcul", `${lib("sfaturi.js")}; return Sfaturi;`)(G);
-  assert.match(lib("sfaturi.js"), /Aș pune take-profit-ul botului la " \+ pret\(z\.pretZero\) \+ " ca să ies fără pierdere \(nu stop:/); /* v100.62: la persoana I */
+  /* v100.62: la persoana I. v100.330 (el, 12.11): tot TAKE-PROFIT (și butonul „copiază take-profit”), dar doar cu motivul de ieșire spus, în locul „(nu stop: …)” */
+  assert.match(lib("sfaturi.js"), /Aș pune take-profit-ul botului la " \+ pret\(z\.pretZero\) \+ " ca să ies fără pierdere: " \+ motivZ/);
   assert.doesNotMatch(lib("sfaturi.js"), /take-profit \/ stop la/);
   const SB2 = new Function("GridCalcul", `${lib("semnale-bot.js")}; return SemnaleBot;`)(G);
   const s = SB2.semafor({ bot: { directie: "long", distantaLichidarePct: -20, lichidareDepasita: true }, fisa: { regim: { miscare: false } } });
   assert.equal(s.nivel, "iesi", "lichidarea depasita cu 20%: " + s.nivel + " " + s.motiv);
   const bot = (min) => ({ id: "9", baza: "CRV.PERP", directie: "long", pretCurent: 0.40, pornitLa: Date.now() - min * 60000, gridJos: 0.37, gridSus: 0.42 });
-  assert.equal(AL.reguli(bot(5), { pretZero: 0.399 }, {})["p-zero"], undefined, "la 5 min dupa pornire: nimic");
-  assert.equal(AL.reguli(bot(120), { pretZero: 0.399 }, {})["p-zero"].nivel, "atentie", "dupa o ora: da");
+  assert.equal(AL.reguli(bot(5), { pretZero: 0.399, subZero: true }, {})["p-zero"], undefined, "la 5 min dupa pornire: nimic");
+  assert.equal(AL.reguli(bot(120), { pretZero: 0.399, subZero: true }, {})["p-zero"].nivel, "atentie", "dupa o ora: da");
   void SF;
 });
 

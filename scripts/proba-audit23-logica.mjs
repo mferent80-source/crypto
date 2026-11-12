@@ -81,20 +81,21 @@ await test("(1) „poți urca stopul” (perna de 1,5%) spune grilele tăiate", 
 // ---------- (2) „botul a ajuns pe zero” doar la traversare ----------
 const BOT2 = (p) => ({ id: "Z", baza: "ZZ.PERP", directie: "long", activ: true, investit: 100, levier: 3, pretCurent: p, gridJos: 90, gridSus: 110, pornitLa: Date.now() - 5 * 86400000 });
 await test("(2) long pe plus departe de zero (106 față de zero 99,6) ⇒ nicio alertă „a ajuns pe zero”", () => {
-  const r = A.reguli(BOT2(106), { pretZero: 99.6 }, {});
+  // v100.330 (el, 12.11): alerta „pe zero” pleacă doar după o pierdere de cel puțin 1% (colectorul dă ctx.subZero) - probele de mai jos o dau
+  const r = A.reguli(BOT2(106), { pretZero: 99.6, subZero: true }, {});
   assert.notEqual(r["p-zero"] && r["p-zero"].nivel, "atentie");
 });
 await test("(2) prețul abia a trecut de zero (+0,3%) ⇒ alerta pleacă; în alertă rămâne până la +1%, apoi tace", () => {
-  assert.equal(A.reguli(BOT2(99.9), { pretZero: 99.6 }, {})["p-zero"].nivel, "atentie");
+  assert.equal(A.reguli(BOT2(99.9), { pretZero: 99.6, subZero: true }, {})["p-zero"].nivel, "atentie");
   const fost = { "p-zero": { nivel: "atentie", la: 1 } };
-  assert.equal(A.reguli(BOT2(100.4), { pretZero: 99.6 }, fost)["p-zero"].nivel, "atentie", "în banda de ieșire (sub +1%)");
-  assert.equal(A.reguli(BOT2(101), { pretZero: 99.6 }, fost)["p-zero"].nivel, "ok", "peste +1% iese");
-  assert.equal(A.reguli(BOT2(99.4), { pretZero: 99.6 }, fost)["p-zero"].nivel, "atentie", "histerezisul de jos rămâne (−0,3%)");
+  assert.equal(A.reguli(BOT2(100.4), { pretZero: 99.6, subZero: true }, fost)["p-zero"].nivel, "atentie", "în banda de ieșire (sub +1%)");
+  assert.equal(A.reguli(BOT2(101), { pretZero: 99.6, subZero: true }, fost)["p-zero"].nivel, "ok", "peste +1% iese");
+  assert.equal(A.reguli(BOT2(99.4), { pretZero: 99.6, subZero: true }, fost)["p-zero"].nivel, "atentie", "histerezisul de jos rămâne (−0,3%)");
 });
 await test("(2) short: oglinda (zero 100, prețul 99,8 ⇒ alertă; 97 ⇒ nu)", () => {
   const s = (p) => ({ ...BOT2(p), directie: "short" });
-  assert.equal(A.reguli(s(99.8), { pretZero: 100 }, {})["p-zero"].nivel, "atentie");
-  assert.notEqual(A.reguli(s(97), { pretZero: 100 }, {})["p-zero"].nivel, "atentie");
+  assert.equal(A.reguli(s(99.8), { pretZero: 100, subZero: true }, {})["p-zero"].nivel, "atentie");
+  assert.notEqual(A.reguli(s(97), { pretZero: 100, subZero: true }, {})["p-zero"].nivel, "atentie");
 });
 
 // ---------- (3) stopul în PROCENTE în Monte Carlo: „totalul ≤ r · investiție” pe drum, nu prețul serverului ----------
