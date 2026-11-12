@@ -30,10 +30,34 @@ var Consilier = (function () {
   var FG = { "Extreme Fear": "frică extremă", Fear: "frică", Neutral: "neutru", Greed: "lăcomie", "Extreme Greed": "lăcomie extremă" };
   // v100.259 (auditul 23.10, punctul 11): indicele e valid doar pe 0–100 (ca Macro.scor și Acasa.fgValid) - 150 dintr-un răspuns stricat nu e „lăcomie extremă”
   function fgOk(v) { var x = typeof v === "string" && v.trim() ? Number(v) : v; return typeof x === "number" && isFinite(x) && x >= 0 && x <= 100; }
+  // v100.329 (12.11, el: „verdictele la fel la crypto și la nasdaq” ⇒ trendul „cea a paginii”): fâșia „Piața azi” din Tablou / T212, biletul
+  // și sfatul T212 citesc REGULILE PAGINII - direcția și tonul din verdictul paginii (Acasa.sensBursa / vremeBursa: roșu doar pe BURSA SCADE
+  // sau FRICĂ), VIX-ul cu cuvintele cardului (Macro.vixTreapta), frica / lăcomia pe scara Acasa.fgNume. Fără Acasa / Macro încărcate (probele
+  // vechi, în vm) rămâne calculul de dinainte (AS.stare, VIX 20 / 25, clasa sursei).
+  function fgNumePagina(v) { var AC = typeof Acasa !== "undefined" ? Acasa : globalThis.Acasa; return AC && AC.fgNume ? AC.fgNume(Number(v)) : ""; }
+  function piataPagina(o, q, vix) {
+    var AC = typeof Acasa !== "undefined" ? Acasa : globalThis.Acasa, MC = typeof Macro !== "undefined" ? Macro : globalThis.Macro;
+    if (!AC || !AC.sensBursa || !AC.vremeBursa || !AC.fgNume || !MC || !MC.vixTreapta) return null;
+    var vv = vix ? vix.c : null, parti = [], ton = "fara-date", motiv = null;
+    if (q) {
+      var u = ultima(q), a = q[q.length - 2], ch = a ? u.c / a.c - 1 : null, dir = AC.sensBursa(q), niv = AC.vremeBursa({ qqq: q, vix: vv }).nivel;
+      var tTr = dir === "sus" ? "↑ trend sus" : dir === "jos" ? "↓ trend jos" : dir === "lateral" ? "→ lateral" : "—", cTr = dir === "sus" ? "good" : dir === "jos" ? "bad" : "", tZi = ch !== null ? " · ultima zi " + P(ch, Math.abs(ch) < 0.001 ? 2 : 1) : "";
+      parti.push({ et: "Nasdaq (QQQ)", val: tTr + tZi, cls: cTr, bucati: tZi ? [{ t: tTr, cls: cTr }, { t: tZi, cls: ch >= 0 ? "good" : "bad" }] : null });
+      ton = niv === "scade" || niv === "frica" ? "rau" : niv === "lateral" ? "atentie" : niv === "fara-date" ? "fara-date" : "bine";
+      motiv = niv === "scade" ? "jos" : niv === "frica" ? "panica" : null;
+    }
+    var s = ultima(o.spy), s0 = Array.isArray(o.spy) && o.spy.length > 1 ? o.spy[o.spy.length - 2] : null;
+    if (s && s0) parti.push({ et: "S&P 500", val: "ultima zi " + P(s.c / s0.c - 1, Math.abs(s.c / s0.c - 1) < 0.001 ? 2 : 1), cls: s.c >= s0.c ? "good" : "bad" });
+    if (vv !== null) { var vt = MC.vixTreapta(vv); parti.push({ et: "VIX", val: vv.toFixed(1).replace(".", ",") + " (" + vt.text.split(" (")[0] + ")", cls: vt.scor >= 2 ? "good" : vt.scor >= -1 ? "tbWarn" : "bad" }); }
+    if (o.fg && fgOk(o.fg.valoare)) { var fv = Number(o.fg.valoare); parti.push({ et: "Frica/lăcomia crypto", val: o.fg.valoare + " (" + AC.fgNume(fv) + ")", cls: fv >= 55 ? "tbWarn" : fv <= 45 ? "bad" : "" }); }
+    var text = parti.map(function (x) { return x.et + ": " + x.val; }).join(" · ");
+    return { ton: ton, motiv: motiv, parti: parti, text: text || "fără date despre piață" };
+  }
   function piata(o) {
     o = o || {};
     var q = Array.isArray(o.qqq) && o.qqq.length ? o.qqq : null, parti = [], ton = "fara-date";
     var vix = ultima(o.vix), vv = vix ? vix.c : null;
+    var pg = piataPagina(o, q, vix); if (pg) return pg;
     if (q) {
       var st = AS.stare(q), u = ultima(q), a = q[q.length - 2], ch = a ? u.c / a.c - 1 : null, dir = st.trend.dir;
       // v100.196 (raportul UI, 🟡5): trendul și ziua cu culoarea FIECĂRUIA (bucati) - înainte „↑ trend sus · ultima zi −1,7%” era tot verde; textul rămâne același
@@ -82,7 +106,8 @@ var Consilier = (function () {
     if (pp !== null && pp >= 0 && pp < COST_CONV) out.push({ nivel: "n", sursa: "pozitie", titlu: "Încă nu acoperă comisionul de 0,30%",
       text: "Prețul e la " + P(pp, 2) + " peste intrare, iar schimbul lei↔dolari costă ~0,15% la intrare și ~0,15% la ieșire: ieșind acum, ieși de fapt pe minus.", ceAsFace: null });
     // 5) piata
-    if (ctx.piata && ctx.piata.ton === "rau") out.push({ nivel: "n", sursa: "piata", titlu: "Piața întreagă e în jos", text: ctx.piata.text || "", ceAsFace: "N-aș adăuga nimic azi, pe nicio acțiune." });
+    // v100.329: titlul spune motivul verdictului paginii - trend jos SAU panică (VIX ≥ 30, și cu trend sus nu e „în jos”)
+    if (ctx.piata && ctx.piata.ton === "rau") out.push({ nivel: "n", sursa: "piata", titlu: ctx.piata.motiv === "panica" ? "Bursa e în panică (VIX peste 30)" : "Piața întreagă e în jos", text: ctx.piata.text || "", ceAsFace: "N-aș adăuga nimic azi, pe nicio acțiune." });
     // 6) stirile din ultimele 48 h - aratate, nu interpretate
     var s = stiriRecente(ctx.stiri, acum);
     if (s.length) out.push({ nivel: "n", sursa: "stiri", titlu: cate(s.length, "știre", "știri") + " despre " + p.simbol + " în ultimele 48 h", text: "", ceAsFace: null, stiri: s });
@@ -114,7 +139,8 @@ var Consilier = (function () {
     if (ist.n) out.push({ nivel: ist.total < 0 && ist.n >= 2 ? "g" : "n", sursa: "istoric", titlu: "Pe " + m + ": " + cate(ist.n, "bot", "boți") + ", " + ist.pePlus + " pe plus, total " + usdS(ist.total),
       text: ist.n < 10 ? "(puține cazuri)" : "", ceAsFace: ist.total < 0 && ist.n >= 3 ? "N-aș mări botul: pe " + m + " boții tăi au pierdut de obicei." : null });
     var fg = ctx.fg;
-    if (fg && fgOk(fg.valoare) && (fg.valoare >= 75 || fg.valoare <= 25)) out.push({ nivel: "n", sursa: "piata", titlu: "Frica/lăcomia crypto e la " + fg.valoare + " (" + (FG[fg.clasa] || fg.clasa) + ")",
+    // v100.329 (revizia Opus 🟡2): cuvântul de pe cardul paginii (la 25 sursa zice „Fear”, cardul „frică extremă”), clasa sursei doar fără Acasa
+    if (fg && fgOk(fg.valoare) && (fg.valoare >= 75 || fg.valoare <= 25)) out.push({ nivel: "n", sursa: "piata", titlu: "Frica/lăcomia crypto e la " + fg.valoare + " (" + (fgNumePagina(fg.valoare) || FG[fg.clasa] || fg.clasa) + ")",
       text: "Piața e la o extremă: mișcările mari vin mai des în astfel de zile.", ceAsFace: "N-aș pune bani în plus azi și aș ține stopul pornit." });
     var s = stiriRecente(ctx.stiri, acum);
     if (s.length) out.push({ nivel: "n", sursa: "stiri", titlu: cate(s.length, "știre", "știri") + " despre " + m + " în ultimele 48 h", text: "", ceAsFace: null, stiri: s });

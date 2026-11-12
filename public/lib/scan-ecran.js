@@ -14,6 +14,8 @@ async function scanPorneste(fortat) {
   scanSt.inLucru = true;
   var d = scanSt.d;
   var pas = async function (k, fn) { try { d[k] = await fn(); d[k + "Err"] = null; } catch (e) { d[k + "Err"] = typeof textEroare === "function" ? textEroare(e) : String(e && e.message || e); } scanDeseneaza(); };
+  // v100.329: datele vremii comune (cu frâna, ca Piața azi) vin în paralel și redesenează - nu țin pe loc rândurile scanului (revizia Opus)
+  if (typeof acVremeAsigura === "function") acVremeAsigura().then(function () { scanDeseneaza(); }, function () {});
   try {
     await Promise.all([
       pas("scan", function () { return getJSON("/api/istoric-bot?action=scan"); }),
@@ -93,12 +95,14 @@ function scSortat(l) {
 // ---- contextul, ca pe Home ----
 function scanContext() {
   var d = scanSt.d, el = $("scContext"); if (!el || typeof Acasa === "undefined") return null;
-  var cl = typeof acClasamentSumar === "function" ? acClasamentSumar(d.clasament) : null, p = d.piata || {};
-  var btcC = d.clasament && (d.clasament.monede || []).find(function (x) { return x.simbol === "BTC_USDT_PERP"; });
-  var fgO = p.fg, fgI = Acasa.fg(fgO && fgO.istoric && fgO.istoric.length ? fgO.istoric : fgO ? [fgO.valoare] : []);
-  var v = Acasa.vreme({ clasament: cl, btc: { miscare: !!(btcC && btcC.regim && btcC.regim.miscare) }, fg: fgI.acum });
-  var qqq = p.qqq ? GridCalcul.bareToate(p.qqq) : null, vixB = p.vix ? GridCalcul.bareToate(p.vix) : null, ndxL = d.ndx && Array.isArray(d.ndx.actiuni) ? Acasa.largimeNdx(d.ndx.actiuni) : null;
-  var vb = Acasa.vremeBursa({ qqq: qqq, vix: vixB && vixB.length ? vixB[vixB.length - 1].c : null, ndx: ndxL });
+  // v100.329 (el: verdictele „la fel la crypto și la nasdaq”): vremea și frâna din funcțiile comune ale paginii Piața azi (aceleași date în
+  // acasa.d, același BTC din lumânările de o oră) - înainte Scan le socotea singur, fără frână, cu BTC-ul din clasament. Revizia Opus: și cifrele de
+  // lângă etichetă (câte în mișcare, lățimea Nasdaq) din ACEEAȘI sursă, altfel după un clasament nou „AMESTECAT” stătea lângă „52 din 100”
+  var ad = typeof acasa !== "undefined" && acasa.d && acasa.d.clasament ? acasa.d : d, p = d.piata || {};
+  var cl = acClasamentSumar(ad.clasament);
+  var v = acVremeCrypto(ad) || { nivel: "fara-date", eticheta: "FĂRĂ DATE", faCe: "" };
+  var ndxL = ad.ndx && Array.isArray(ad.ndx.actiuni) ? Acasa.largimeNdx(ad.ndx.actiuni) : null;
+  var vb = acVremeBursa(ad && ad.piata ? ad : d) || { nivel: "fara-date", eticheta: "FĂRĂ DATE", faCe: "" };
   var R = scanRanduri(), cr = R.filter(function (x) { return x.fel === "c"; }), btc = cr.find(function (x) { return x.s === "BTC"; }), f = d.piataCol && d.piataCol.funding;
   var col = function (niv) { return /liniste|larga/.test(niv) ? "good" : /miscare|scade|frica/.test(niv) ? "bad" : "warn"; };
   el.innerHTML = '<div><span class="scPiata">Crypto · ' + (cr.length ? scCate(cr.length, "monedă", "monede") : "— monede") + ' Pionex</span><span class="scNiv ' + col(v.nivel) + '">' + escapeHtml(v.eticheta) + '</span>'

@@ -36,31 +36,31 @@ await test("paleta: fundalul închis devine alb, textul deschis devine cerneală
 });
 // v100.326 (el: „pagina Trading 212 … în aceleași condiții ca și pagina botului”): două rădăcini - comunele sub :is(#tabloubot,#t212), T212 sub #t212
 await test("selectorii: totul intră sub rădăcina Tabloului (și a paginii T212, v100.326); regulile altor pagini și ale rădăcinii se sar", () => {
-  const S = ["dash"], C = ":is(#tabloubot,#t212).tbZi";
+  const S = ["scan"], C = ":is(#tabloubot,#t212,#dash).tbZi";   // v100.329: Piața azi e rădăcină, Scan e pagina străină
   assert.equal(selectorSub(".tbBloc", "#tabloubot.tbZi", S), C + " .tbBloc");
   assert.equal(selectorSub("#tabloubot .gbTip", "#tabloubot.tbZi", S), "#tabloubot.tbZi .gbTip");
   assert.equal(selectorSub(".pzDemo #tabloubot .tbCadru>#tbMcSus", "#tabloubot.tbZi", S), ".pzDemo #tabloubot.tbZi .tbCadru>#tbMcSus");
   assert.equal(selectorSub("html.pzDemo .pzCel", "#tabloubot.tbZi", S), "html.pzDemo " + C + " .pzCel");
-  assert.equal(selectorSub("#dash .acVerd, .x", "#tabloubot.tbZi", S), C + " .x", "selectorul paginii Piața azi cade, vecinul lui rămâne");
+  assert.equal(selectorSub("#scan .scNiv, .x", "#tabloubot.tbZi", S), C + " .x", "selectorul paginii Scan cade, vecinul lui rămâne");
   assert.equal(selectorSub("#t212 .a", "#tabloubot.tbZi", S), "#t212.tbZi .a"); assert.equal(selectorSub(":root", "#tabloubot.tbZi", S), "");
   assert.equal(selectorSub("#tabloubotX .a", "#tabloubot.tbZi", S), C + " #tabloubotX .a", "alt id care doar începe la fel nu e Tabloul");
 });
 await test("generatorul: variabilele rădăcinii, scara de litere pe 5 trepte, @media păstrat, doar declarațiile schimbate", () => {
-  const g = genereaza(":root{--pzF1:#141C24;--x:4px} .a{color:#E6EDF3;margin:0;font-size:11px} @media (max-width:640px){.a{font-size:17px;background:#141C24}} #dash .b{color:#E6EDF3} .c{font-size:13.5px;color:red}", '<section class="panel" id="dash"></section><section class="panel" id="tabloubot"></section>');
+  const g = genereaza(":root{--pzF1:#141C24;--x:4px} .a{color:#E6EDF3;margin:0;font-size:11px} @media (max-width:640px){.a{font-size:17px;background:#141C24}} #scan .b{color:#E6EDF3} .c{font-size:13.5px;color:red}", '<section class="panel" id="scan"></section><section class="panel" id="tabloubot"></section>');
   assert.ok(g.startsWith(INCEPUT) && g.endsWith(SFARSIT));
   // v100.326: rădăcina comună :is(#tabloubot,#t212)
-  assert.ok(g.includes(":is(#tabloubot,#t212).tbZi{--pzF1:#FFFFFF}")); assert.ok(g.includes(":is(#tabloubot,#t212).tbZi .a{color:#0E1A2B}")); assert.ok(g.includes(":is(#tabloubot,#t212) .a{font-size:12px}"));
-  assert.ok(g.includes("@media (max-width:640px){:is(#tabloubot,#t212) .a{font-size:20px}}")); assert.ok(g.includes("@media (max-width:640px){:is(#tabloubot,#t212).tbZi .a{background:#FFFFFF}}"));
-  assert.ok(!g.includes(".b{") && !g.includes(".c{") && !g.includes("margin"), "nimic din pagina Piața azi, nimic neschimbat");
+  assert.ok(g.includes(":is(#tabloubot,#t212,#dash).tbZi{--pzF1:#FFFFFF}")); assert.ok(g.includes(":is(#tabloubot,#t212,#dash).tbZi .a{color:#0E1A2B}")); assert.ok(g.includes(":is(#tabloubot,#t212,#dash) .a{font-size:12px}"));
+  assert.ok(g.includes("@media (max-width:640px){:is(#tabloubot,#t212,#dash) .a{font-size:20px}}")); assert.ok(g.includes("@media (max-width:640px){:is(#tabloubot,#t212,#dash).tbZi .a{background:#FFFFFF}}"));
+  assert.ok(!g.includes(".b{") && !g.includes(".c{") && !g.includes("margin"), "nimic din pagina Scan, nimic neschimbat");
   const o = genereaza(".offlineBanner{background:#E9B949;color:#0E141A} .x{background:#141C24;color:#E6EDF3}", "");
-  assert.ok(o.includes(":is(#tabloubot,#t212).tbZi .offlineBanner{background:#E0A526;color:#0E1A2B}"), "pe fond galben textul rămâne închis: " + o);
-  assert.ok(o.includes(":is(#tabloubot,#t212).tbZi .x{background:#FFFFFF;color:#0E1A2B}"));
+  assert.ok(o.includes(":is(#tabloubot,#t212,#dash).tbZi .offlineBanner{background:#E0A526;color:#0E1A2B}"), "pe fond galben textul rămâne închis: " + o);
+  assert.ok(o.includes(":is(#tabloubot,#t212,#dash).tbZi .x{background:#FFFFFF;color:#0E1A2B}"));
 });
 await test("blocul generat din public/app.css e cel produs acum din restul foii (altfel: node scripts/face-tema-tablou.mjs)", () => {
   assert.equal(CSS.split(INCEPUT).length, 2); assert.equal(CSS.split(SFARSIT).length, 2);
   const NL = CSS.includes("\r\n") ? "\r\n" : "\n";
   assert.equal(blocDin(CSS), genereaza(faraBloc(CSS), HTML).split("\n").join(NL));
-  const bloc = blocDin(CSS); assert.ok(bloc.length > 20000, "blocul are " + bloc.length + " caractere"); assert.ok(!/#(dash|sugestii|comportament)\b/.test(bloc), "în bloc nu intră alte pagini (T212 da, din v100.326)");
+  const bloc = blocDin(CSS); assert.ok(bloc.length > 20000, "blocul are " + bloc.length + " caractere"); assert.ok(!/#(sugestii|comportament|scan)\b/.test(bloc), "în bloc nu intră alte pagini (T212 da, din v100.326; Piața azi da, din v100.329)");
   assert.equal((bloc.match(/{/g) || []).length, (bloc.match(/}/g) || []).length, "acolade pereche");
 });
 await test("stratul scris de mână stă DUPĂ blocul generat și ÎNAINTEA pândei (coada foii rămâne a ei) și ține așezarea: capul paginii, graficul, Monte Carlo o singură dată, telefonul", () => {

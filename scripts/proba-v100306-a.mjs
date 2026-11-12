@@ -36,7 +36,8 @@ const contextul = (extra) => {
   for (const f of ["grid-calcul.js", "obiceiuri.js", "acasa.js"]) vm.runInContext(lib(f), ctx, { filename: f });
   return ctx;
 };
-const ACASA_FN = ["acCate", "acClasamentSumar", "acPauzaSezon", "acFrazaPauza", "acAziNuDin", "acAziNu", "acVremeAziNu", "acAziNuHtml", "acUltimInchisText", "acasaCumpar", "acasaCumpar2Parti", "acIdeiHtml", "acSemn", "acUsd"];
+// v100.329: acVremeAziNu citește BTC-ul cu regula comună acBtcMiscare (aceeași ca vremea paginii, Scan și Tabloul) ⇒ intră în felie
+const ACASA_FN = ["acCate", "acClasamentSumar", "acPauzaSezon", "acFrazaPauza", "acAziNuDin", "acAziNu", "acBtcMiscare", "acVremeAziNu", "acAziNuHtml", "acUltimInchisText", "acasaCumpar", "acasaCumpar2Parti", "acIdeiHtml", "acSemn", "acUsd"];
 const cuAcasa = (extra) => { const ctx = contextul(extra); vm.runInContext(ACASA_FN.map((f) => fnDin("acasa-ecran.js", f)).join("\n"), ctx); Object.assign(ctx, extra || {}); return ctx; };   /* felia lui acCate aduce și `var acasa` */
 const M = (s, stare, o) => Object.assign({ simbol: s + "_USDT_PERP", stare, scor: 1, dir: "long", regim: { miscare: false } }, o || {});
 const CL_LINISTE = { monede: [M("STX", "candidat", { scor: 3 }), M("LIT", "candidat", { scor: 2 }), M("CC", "candidat"), M("BTC", "candidat"), M("ETH", "evita"), M("SOL", "candidat")] };

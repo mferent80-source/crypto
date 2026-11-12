@@ -51,7 +51,8 @@ var Acasa = (function () {
     var lac = fg !== null && fg >= 70 && sens === "urca", fri = fg !== null && fg <= 30 && sens === "coboara", fgR = fg !== null ? Math.round(fg) : null;
     if (lac) sensTxt += " (" + lo + " din " + tot + " de monede)"; else if (fri) sensTxt += " (" + sh + " din " + tot + " de monede)";
     // v100.259 (auditul 23.10): fără „de la care piața a revenit des” - n-am măsurat ce urmează după frica mare; rămâne faptul
-    var fgTxt = fg === null ? "" : fg >= 70 ? ", cu lăcomie mare" : fg <= 30 ? ", cu frică mare" : "";
+    // v100.329: cuvântul de pe cardul „Frică / lăcomie” (fgNume) + cifra; înainte „frică mare” la 28, cardul zicea „frică”. Pragurile 30 / 70 rămân.
+    var fgTxt = fg === null ? "" : fg >= 70 || fg <= 30 ? ", cu " + fgNume(fg) + " (" + fgR + ")" : "";
     var adaos = lac ? ", fără pariuri mari pe urcare (lăcomia e la " + fgR + ")." : fri ? ", fără vânzări în panică (frica e la " + fgR + ")." : null;
     var text = sensTxt + fgTxt + ". " + ev + " din cele " + n + " de monede mari sunt în mișcare, regimul în care gridul iese cel mai rău.";
     var r;
@@ -85,6 +86,9 @@ var Acasa = (function () {
   // v100.259 (auditul 23.10, punctul 11): indicele e pe 0–100 - o valoare în afara scării (150 dintr-un răspuns stricat) nu e „lăcomie extremă”;
   // aceeași regulă ca regimul macro (Macro.scor, v100.255) și Consilierul
   function fgValid(v) { var x = nr(v); return x !== null && x >= 0 && x <= 100 ? x : null; }
+  // v100.329: O SINGURĂ scară de cuvinte pentru frica / lăcomia crypto - cardul paginii, fâșia din Tablou / T212 și textul verdictului
+  // (înainte: cardul ≤ 25 / ≤ 45 / ≥ 55 / ≥ 75, verdictul „frică mare” sub 30, fâșia clasa sursei). Valoare stricată ⇒ "".
+  function fgNume(v) { var x = fgValid(v); return x === null ? "" : x >= 75 ? "lăcomie extremă" : x >= 55 ? "lăcomie" : x <= 25 ? "frică extremă" : x <= 45 ? "frică" : "neutru"; }
   function fg(ist) {
     var r = (Array.isArray(ist) ? ist : []).map(nr).filter(function (v) { return v !== null; }), l = r.filter(function (v) { return fgValid(v) !== null; });
     if (!l.length) return { acum: null, min: null, max: null, text: "" };
@@ -159,12 +163,21 @@ var Acasa = (function () {
       sus: s.filter(function (x) { return x.ch > 0; }).slice(0, 5).map(tag), jos: s.filter(function (x) { return x.ch < 0; }).reverse().slice(0, 5).map(tag),
       mag7: mag, mag7Urca: mu, mag7Text: mag.length ? mu + " din " + mag.length + " mari au urcat" + (mag.filter(function (x) { return x.e50; }).length ? ", " + mag.filter(function (x) { return x.e50; }).length + " peste media de 50" : "") : "" };
   }
+  // v100.329 (12.11, el: verdictele „la fel la crypto și la nasdaq” ⇒ trendul Nasdaq „cea a paginii”): direcția indicelui într-un singur loc -
+  // verdictul paginii, fâșia „Piața azi” din Tablou / T212, biletul și sfatul T212 o citesc de aici (înainte fâșia avea alt scor:
+  // EMA20/50 + pantă + EMA200, care a zis altceva în 18 din 52 de zile). qqq: bare zilnice {c}; sub 200 de zile ⇒ null.
+  function sensBursa(qqq) {
+    var c = (Array.isArray(qqq) ? qqq : []).map(function (x) { return nr(x && x.c); }).filter(function (v) { return v !== null; });
+    if (c.length < 200) return null;
+    var u = c[c.length - 1], e50 = ema(c.slice(-200), 50), e200 = ema(c, 200);
+    return u > e50 && e50 > e200 ? "sus" : u < e50 && e50 < e200 ? "jos" : "lateral";
+  }
   // qqq: bare zilnice {c}; vix: numar; ndx: largimeNdx(...)
   function vremeBursa(o) {
     o = o || {};
     var c = (Array.isArray(o.qqq) ? o.qqq : []).map(function (x) { return nr(x && x.c); }).filter(function (v) { return v !== null; }), vix = nr(o.vix), nd = o.ndx;
     if (c.length < 200) return { nivel: "fara-date", eticheta: "FĂRĂ DATE", titlu: "Bursele n-au venit încă.", text: "", faCe: "" };
-    var u = c[c.length - 1], e50 = ema(c.slice(-200), 50), e200 = ema(c, 200), sens = u > e50 && e50 > e200 ? "sus" : u < e50 && e50 < e200 ? "jos" : "lateral";
+    var sens = sensBursa(o.qqq);   /* v100.329: aceeași funcție ca fâșia; înainte calculul stătea aici, pe loc */
     var cota = nd && nd.n ? nd.e50 / nd.n : null, vx = vix !== null ? "VIX " + vix.toFixed(1).replace(".", ",") : "";
     var partNd = nd && nd.n ? " Doar " + nd.e50 + " din " + cate(nd.n, "acțiune", "acțiuni") + " sunt peste media de 50 de zile." : "";
     if (vix !== null && vix >= 30) return { nivel: "frica", eticheta: "🔴 FRICĂ PE BURSĂ", titlu: "VIX e la " + vix.toFixed(1).replace(".", ",") + ": bursa e în panică.", text: "Peste 30, mișcările sunt mari în ambele sensuri.", faCe: "N-aș cumpăra acum; aș aștepta ca VIX să coboare sub 25." };
@@ -617,6 +630,6 @@ var Acasa = (function () {
     return o;
   }
 
-  return { botiPeMonede: botiPeMonede, botiScurtiLungi: botiScurtiLungi, botiCosturi: botiCosturi, botiPeZile: botiPeZile, PRAG_SCURT_MIN: PRAG_SCURT_MIN, perioadaBoti: perioadaBoti, botiStatistici: botiStatistici, durataScurta: durataScurta, ora9Ro: ora9Ro, clasamentLipsa: clasamentLipsa, textCorelatie: textCorelatie, SECTOR: SECTOR, sectoare: sectoare, ziuaTa: ziuaTa, raportSaptamana: raportSaptamana, socotealaAlerte: socotealaAlerte, miscareTipica: miscareTipica, fundingPiata: fundingPiata, fundingAtentie: fundingAtentie, schimbari: schimbari, vreme: vreme, miscari: miscari, fg: fg, fgValid: fgValid, largime: largime, ro: ro, rezumatActiune: rezumatActiune, largimeNdx: largimeNdx, vremeBursa: vremeBursa, corelatie: corelatie, calendar: calendar, MAG7: MAG7, franaVerb: franaVerb, frazaPauza: frazaPauza, masuraFranei: masuraFranei, unesteZileFrana: unesteZileFrana };
+  return { botiPeMonede: botiPeMonede, botiScurtiLungi: botiScurtiLungi, botiCosturi: botiCosturi, botiPeZile: botiPeZile, PRAG_SCURT_MIN: PRAG_SCURT_MIN, perioadaBoti: perioadaBoti, botiStatistici: botiStatistici, durataScurta: durataScurta, ora9Ro: ora9Ro, clasamentLipsa: clasamentLipsa, textCorelatie: textCorelatie, SECTOR: SECTOR, sectoare: sectoare, ziuaTa: ziuaTa, raportSaptamana: raportSaptamana, socotealaAlerte: socotealaAlerte, miscareTipica: miscareTipica, fundingPiata: fundingPiata, fundingAtentie: fundingAtentie, schimbari: schimbari, vreme: vreme, miscari: miscari, fg: fg, fgValid: fgValid, largime: largime, ro: ro, rezumatActiune: rezumatActiune, largimeNdx: largimeNdx, vremeBursa: vremeBursa, sensBursa: sensBursa, fgNume: fgNume, corelatie: corelatie, calendar: calendar, MAG7: MAG7, franaVerb: franaVerb, frazaPauza: frazaPauza, masuraFranei: masuraFranei, unesteZileFrana: unesteZileFrana };
 })();
 if (typeof globalThis !== "undefined") globalThis.Acasa = Acasa;

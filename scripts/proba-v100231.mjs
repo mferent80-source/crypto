@@ -108,8 +108,10 @@ await test("Scan nu mai tipărește planul de dimineață și lei la 1% pe un nu
 
 await test("gura de pauză e aceeași pe Acasă, Sugestii, Scan și Tablou; ciFac pune abaterea T212 înainte de criză", () => {
   assert.match(ae, /pas\("contRaport"/);
-  assert.match(ae, /else v = acFraneaza\(v, "crypto"\)/);
-  assert.match(ae, /acFraneaza\(Acasa\.vremeBursa/);
+  // v100.329: frâna stă în funcțiile comune ale vremii (aceleași pe Piața azi, în Scan și în Tabloul fără bot), iar pagina le cheamă
+  assert.match(ae, /return acFraneaza\(Acasa\.vreme\(\{ clasament: acClasamentSumar\(d\.clasament\)[^;]*\), "crypto"\);/);
+  assert.match(ae, /return acFraneaza\(Acasa\.vremeBursa\(/);
+  assert.match(ae, /faraServer && !cl \? acFaraServerVerd\(d\) : acVremeCrypto\(d\)/); assert.match(ae, /acFaraServerVerd\(d\) : acVremeBursa\(d\)/);
   assert.match(ae, /acFrazaPauza\(pzB\)/); assert.match(ae, /function acAziNuDin\(o\)[\s\S]{0,1500}pauza sezonului/);   /* v100.306 (I-824) */   // v100.295: coloana ideilor T212 scoasă din „Ce aș cumpăra azi”; gura de pauză rămâne pe coloana boților
   assert.match(citeste("public", "lib", "sugestii-ecran.js"), /acFrazaPauza\(pz\)/); assert.match(citeste("public", "lib", "sugestii-ecran.js"), /acAziNu\(\)/);   /* v100.306 (I-824) */
   assert.match(t212, /acAziNuHtml\(an\)/);   /* v100.306 (I-824): pauza intră în regula comună „azi nu” */

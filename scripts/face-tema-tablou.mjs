@@ -4,7 +4,7 @@
 // Scriptul o CITEȘTE și produce, din ea, un strat nou care stă la coada fișierului, între două marcaje:
 //   - „scara”:   aceleași reguli, doar font-size, strâns pe 5 trepte (12 / 13,5 / 15 / 20 / 30), sub #tabloubot;
 //   - „tema zi”: aceleași reguli, doar declarațiile cu culoare, trecute prin PALETA, sub #tabloubot.tbZi.
-// Regulile altor pagini (#dash, #t212…) se sar. Parserul e pe acolade (comentarii, șiruri, @media / @container imbricate), nu pe regex.
+// Regulile altor pagini se sar (rădăcinile: RADACINI mai jos - Tabloul, T212 din v100.326, Piața azi din v100.329). Parserul e pe acolade (comentarii, șiruri, @media / @container imbricate), nu pe regex.
 //
 //   node scripts/face-tema-tablou.mjs            rescrie blocul din public/app.css
 //   node scripts/face-tema-tablou.mjs --check    iese 1 dacă blocul din fișier nu e cel produs acum
@@ -77,8 +77,13 @@ export function textCitibil(D) {   // D = [{p, v}] deja trecute prin paletă; î
 // ---- selectorul ----
 // v100.326 (el, 11.11.2026: „pagina Trading 212 … în aceleași condiții ca și pagina botului”): două rădăcini. Regulile comune intră sub
 // :is(#tabloubot,#t212) (aceeași putere ca #tabloubot), ale fiecărei pagini sub ea; restul paginilor se sar.
-export const RADACINI = ["tabloubot", "t212"];
+// v100.329 (el, 12.11.2026: „să facem și pagina azi cum am făcut cu restul”): a treia rădăcină, Piața azi (#dash) - aceeași paletă de zi și scară de litere.
+export const RADACINI = ["tabloubot", "t212", "dash"];
 const COMUN = ":is(" + RADACINI.map((r) => "#" + r).join(",") + ")";
+// v100.329: oricâte rădăcini, fără alte selectoare în paranteză; și :where, și cu spații după virgulă (revizia Opus)
+const GRUP_RAD = new RegExp(":(?:is|where)\\(\\s*#(?:" + RADACINI.join("|") + ")(?:\\s*,\\s*#(?:" + RADACINI.join("|") + "))+\\s*\\)", "g");
+// un id dintr-un :not(…) NU e rădăcina („:not(#dash)” devenea „:not(#dash.tbZi)” = sensul întors) - revizia Opus
+function inafaraNot(s, re) { const not = [...s.matchAll(/:not\(([^()]|\([^()]*\))*\)/g)].map((m) => [m.index, m.index + m[0].length]); for (const m of s.matchAll(re)) if (!not.some(([a, b]) => m.index >= a && m.index < b)) return m; return null; }
 function panouriStraine(html) { return [...html.matchAll(/<section[^>]*class="panel[^"]*"[^>]*id="([A-Za-z0-9_-]+)"|<section[^>]*id="([A-Za-z0-9_-]+)"[^>]*class="panel/g)].map((m) => m[1] || m[2]).filter((x) => !RADACINI.includes(x)); }
 export function selectorSub(sel, radacina, straine) {   // radacina: „#tabloubot” (scara) sau „#tabloubot.tbZi” (tema zi) - partea de după id se pune pe orice rădăcină
   const o = [], sufix = radacina.replace(/^#tabloubot/, "");
@@ -86,8 +91,12 @@ export function selectorSub(sel, radacina, straine) {   // radacina: „#tabloub
     if (straine.some((id) => new RegExp("#" + id + "(?![A-Za-z0-9_-])").test(s))) continue;
     if (/^(:root|html|body)\s*$/.test(s) || /^(\*|::?[a-z-]+)$/.test(s)) continue;   // variabilele rădăcinii se dau separat
     if (s.includes(COMUN)) { o.push(s.split(COMUN).join(COMUN + sufix)); continue; }   // revizia: ambele rădăcini deodată, nu doar prima
-    const proprie = RADACINI.find((r) => new RegExp("#" + r + "(?![A-Za-z0-9_-])").test(s));
-    if (proprie) { o.push(s.replace(new RegExp("#" + proprie + "(?![A-Za-z0-9_-])"), "#" + proprie + sufix)); continue; }
+    // v100.329: un :is(...) făcut numai din rădăcini, oricâte (regulile scrise de mână pe două - „:is(#tabloubot,#t212) .x”, v100.326–328) primește
+    // sufixul după paranteză; altfel ar fi căzut la „proprie” și ar fi ieșit „:is(#tabloubot.tbZi,#t212)” = T212 cu culorile de zi și noaptea
+    if (GRUP_RAD.test(s)) { GRUP_RAD.lastIndex = 0; o.push(s.replace(GRUP_RAD, (m) => m + sufix)); continue; }
+    let gasit = null;
+    for (const r of RADACINI) { const m = inafaraNot(s, new RegExp("#" + r + "(?![A-Za-z0-9_-])", "g")); if (m && (!gasit || m.index < gasit.m.index)) gasit = { r, m }; }
+    if (gasit) { const k = gasit.m.index + gasit.m[0].length; o.push(s.slice(0, k) + sufix + s.slice(k)); continue; }
     const rad = COMUN + sufix, m = s.match(/^((?:html|body|:root)[^\s>+~]*|\.pzDemo)(\s+)(.*)$/s);
     o.push(m ? m[1] + " " + rad + " " + m[3] : rad + " " + s);
   }

@@ -325,9 +325,7 @@ function acVremeAziNu() {
   var d = typeof acasa !== "undefined" && acasa.d || {};
   var c = d.clasament || (typeof sugStare !== "undefined" && sugStare.d && sugStare.d.clasament) || (typeof contTot !== "undefined" && contTot.clasament) || null;
   var cl = acClasamentSumar(c); if (!cl) return null;
-  var btcMis = false;
-  if (d.btc1h && typeof GridCalcul !== "undefined") { try { var rg = GridCalcul.regimPeBare(GridCalcul.bare(d.btc1h), 4, 24); btcMis = !!(rg && rg.miscare); } catch (e) { btcMis = false; } }
-  else { var b = (c.monede || []).filter(function (x) { return x && x.simbol === "BTC_USDT_PERP"; })[0]; btcMis = !!(b && b.regim && b.regim.miscare); }
+  var btcMis = acBtcMiscare({ btc1h: d.btc1h, clasament: c });   /* v100.329: aceeași regulă ca vremea paginii (lumânările 1 h, altfel clasamentul) */
   return Acasa.vreme({ clasament: cl, btc: { miscare: btcMis } });
 }
 // regula, din ce are pagina acum: frâna = boții închiși (contTot) + boții activi + pragurile tale (config), ca pe cardul „Boții tăi”
@@ -402,6 +400,60 @@ function acFranaSalveaza() {
     localStorage.setItem("radar-frana-zile-v1", JSON.stringify(lista));
   } catch (e) {}
 }
+// v100.329 (12.11, el: „auditează pagina azi că arată la fel verdictele și la crypto și la nasdaq” ⇒ „Ambele, o versiune”): O SINGURĂ vreme a
+// pieței. Piața azi, Scan și Tabloul fără bot citesc aceleași date (acasa.d, aduse cu adresele paginii), același BTC și aceeași frână.
+// Înainte Scan și Tabloul o socoteau singure, fără frână și cu BTC-ul din clasament (12.11: „Aș porni boți…” lângă frâna paginii).
+var AC_VREME_MS = 10 * 60000;
+var AC_VREME_SURSE = [
+  ["clasament", function () { return getJSON("/api/istoric-bot?action=clasament").then(function (c) { acasa.d.clasamentStare = c && c.stare || null; return c && c.clasament || null; }); }],
+  ["piata", function () { return getJSON("/api/stiri?action=piata"); }],
+  ["ndx", function () { return getJSON("/api/t212?action=ndx"); }],
+  ["btc1h", function () { return getJSON("/api/market?type=pionex_klines&symbol=BTC_USDT_PERP&interval=60M&limit=500").then(function (k) { return k && k.data && k.data.klines || null; }); }],
+  ["contRaport", function () { return getJSON("/api/istoric-bot?action=cont"); }],
+  ["calendar", function () { return getJSON("/api/stiri?action=calendar"); }],
+  ["piataCol", function () { return getJSON("/api/istoric-bot?action=piata"); }]
+];
+// aduce DOAR ce lipsește sau e mai vechi de 10 minute (aceleași chei ca acasaPorneste: d[k], d[k + "La"], d[k + "Err"]); scorul sezonului
+// (pauza din frână) doar când nu e deja pe dispozitiv
+async function acVremeAsigura() {
+  var d = acasa.d = acasa.d || {}, acum = Date.now();
+  var cereri = AC_VREME_SURSE.filter(function (s) { return !(acum - (d[s[0] + "La"] || 0) < AC_VREME_MS); }).map(function (s) {
+    return Promise.resolve().then(s[1]).then(function (v) { d[s[0]] = v; d[s[0] + "Err"] = null; d[s[0] + "La"] = Date.now(); },
+      function (e) { d[s[0] + "Err"] = typeof textEroare === "function" ? textEroare(e) : String(e && e.message || e); });
+  });
+  // revizia Opus: și când jurnalul e adus, dar configurația sezonului nu (deschis pe Tablou după Jurnal) - altfel pauza ieșea cu configurația implicită
+  // (scStare.la.pionex = ora cererii, pusă și când serverul n-are configurație - cfg rămâne null; după cfg s-ar fi reîncărcat la fiecare 5 min)
+  var faraSezon = typeof scTrades === "function" && (!scTrades("pionex") || (typeof scStare !== "undefined" && (!scStare.la || !scStare.la.pionex)));
+  if (typeof scPorneste === "function" && faraSezon) cereri.push(Promise.resolve().then(scPorneste).catch(function () {}));
+  await Promise.all(cereri);
+  return d;
+}
+// BTC „în mișcare”: lumânările de o oră (ca pagina și alerta colectorului), altfel regimul BTC din clasament
+function acBtcMiscare(d) {
+  d = d || {};
+  if (Array.isArray(d.btc1h) && d.btc1h.length && typeof GridCalcul !== "undefined") { try { var rg = GridCalcul.regimPeBare(GridCalcul.bare(d.btc1h), 4, 24); if (rg) return !!rg.miscare; } catch (e) {} }
+  var b = (d.clasament && Array.isArray(d.clasament.monede) ? d.clasament.monede : []).filter(function (x) { return x && x.simbol === "BTC_USDT_PERP"; })[0];
+  return !!(b && b.regim && b.regim.miscare);
+}
+function acVremeCrypto(d) {
+  d = d || {};
+  if (typeof Acasa === "undefined") return null;
+  var fgO = d.piata && d.piata.fg, fgI = Acasa.fg(fgO && fgO.istoric && fgO.istoric.length ? fgO.istoric : fgO ? [fgO.valoare] : []);
+  return acFraneaza(Acasa.vreme({ clasament: acClasamentSumar(d.clasament), btc: { miscare: acBtcMiscare(d) }, fg: fgI.acum, stare: d.clasamentStare }), "crypto");
+}
+function acVremeBursa(d) {
+  d = d || {};
+  if (typeof Acasa === "undefined" || typeof GridCalcul === "undefined") return null;
+  var p = d.piata || {}, qqq = p.qqq ? GridCalcul.bareToate(p.qqq) : null, vixB = p.vix ? GridCalcul.bareToate(p.vix) : null, ndxL = d.ndx && Array.isArray(d.ndx.actiuni) ? Acasa.largimeNdx(d.ndx.actiuni) : null;
+  return acFraneaza(Acasa.vremeBursa({ qqq: qqq, vix: vixB && vixB.length ? vixB[vixB.length - 1].c : null, ndx: ndxL }), "bursa");
+}
+// pe cardul Nasdaq, când fraza lui mare e frâna (ton „atentie” pus de franaVerb): spune asta; măsura frânei rămâne pe cardul Crypto (v100.234)
+// revizia Opus (🟡1): „aceeași ca la Crypto” doar când fraza Crypto chiar e aceeași (Crypto în MIȘCARE, pauza sau exportul T212 - frâna doar la bursă - o fac diferită)
+function acFranaNota(v, vCrypto) {
+  if (!(v && v.ton === "atentie" && v.faCe)) return "";
+  var la = vCrypto && vCrypto.faCe === v.faCe;
+  return '<p class="acMut acFranaNota">' + (la ? "Fraza de sus e frâna de azi, aceeași ca la Crypto; măsura ei stă pe cardul Crypto." : "Fraza de sus e frâna de azi, nu verdictul bursei.") + "</p>";
+}
 function acFraneaza(v, fel) {
   if (!v || typeof Acasa === "undefined" || !Acasa.franaVerb) return v;
   var o = { fel: fel }, rs = acRaportStare(), ev = acEvenimentAzi();
@@ -425,7 +477,16 @@ function acMasuraLin() {
   var m = Acasa.masuraFranei(boti, zile);
   // v100.239: fraza de lipsă rămâne în funcție. Pe card nu ocupă loc până există o zi completă.
   if (!m || !m.text || m.complete === 0 || String(m.text).indexOf("N-am aflat:") === 0) return "";
-  return '<p class="acMut">' + escapeHtml(m.text) + "</p>";
+  // v100.329 (Piața azi ca Tabloul, fără goluri): lista de ore („…, de la: 23.10 06:08, 27.10 05:16, …”, 9 rânduri la 12 zile) întindea cardul Crypto și
+  // lăsa cardul Nasdaq gol pe jumătate ⇒ fraza de început e titlul unui pliu, textul întreg (cu orele) la un clic. Fraza scurtă rămâne cum era.
+  // revizia Opus (🔴1): în pliu intră DOAR lista de ore (decorul); rezultatul boților și „Asta nu arată că frâna face bani” sunt fapte ⇒ la vedere.
+  // Pliul deschis rămâne deschis la redesenul de 60 s (cardul se rescrie întreg).
+  var t = String(m.text), i = t.indexOf(", de la:"), j = i < 0 ? -1 : t.indexOf("(ora României)", i);
+  if (i < 0 || j < 0) return '<p class="acMut">' + escapeHtml(t) + "</p>";
+  var ore = t.slice(i + ", de la:".length, j).trim(), rest = t.slice(j + "(ora României)".length).replace(/^\.\s*/, ""), n = (ore.match(/\d{2}\.\d{2}\.\d{4}/g) || []).length;
+  var deschis = typeof document !== "undefined" && document.querySelector && !!document.querySelector("#acVremeCrypto details.acMasura[open]");
+  return '<p class="acMut">' + escapeHtml(t.slice(0, i) + "." + (rest ? " " + rest : "")) + "</p>"
+    + '<details class="acMasura"' + (deschis ? " open" : "") + "><summary>Orele celor " + acCate(n, "zi", "zile") + " ›</summary><p class=\"acMut\">" + escapeHtml(ore.replace(/[,\s]+$/, "")) + "</p></details>";
 }
 // v100.277 (30.10, el: „boții tăi - față de ieri pare blocat, aș pune mai multe date, statistici”): el pornește ~8 boți pe zi, mulți ținuți
 // minute; cardul arăta doar boții activi (des „Niciun bot pornit acum”). Acum: ultimul închis, ziua de azi și ultimele 7 zile (cu cele 7
@@ -549,19 +610,17 @@ function acasaDeseneaza() {
   if ($("acBursaCand")) $("acBursaCand").textContent = deschis ? "bursa e deschisă · ultimele cifre de azi" : "închiderea de " + (ultZi || "ieri") + " · bursa se redeschide în zilele lucrătoare la " + acOraRedeschidere(acum);   /* v100.272: ora din CalendarBursa */
 
   // 1. doua verdicte alaturate
-  var v = Acasa.vreme({ clasament: cl, btc: { miscare: btcMis }, fg: fgI.acum, stare: d.clasamentStare });
   // v100.199 (15.10, el: „de ce nu citește piața la deschidere” ⇒ „repară”): fără parola aplicației pe dispozitiv, serverul
   // refuză tot (401 AUTH_REQUIRED), iar cardurile scriau „Clasamentul n-a venit încă. Îl face colectorul o dată pe oră” — fals.
   // Acum spun pe față de ce nu se citește piața și unde se pune parola (aceeași regulă ca Tabloul: eroareDeParola).
+  // v100.329: vremea și frâna din funcțiile comune (aceleași în Scan și în Tabloul fără bot)
   var faraParola = acFaraParola(d);
-  if (faraParola) v = AC_FARA_PAROLA;
-  else if (faraServer && !cl) v = acFaraServerVerd(d);
-  else v = acFraneaza(v, "crypto");
+  var v = faraParola ? AC_FARA_PAROLA : faraServer && !cl ? acFaraServerVerd(d) : acVremeCrypto(d);
   acasaVerd($("acVremeCrypto"), "Crypto", v, (faraParola ? AC_BUTON_PAROLA : cl ? acBare(0, [[cl.candidati, "var(--good)", "liniștite"], [cl.evita, "var(--bad)", "în mișcare"]])
     + '<div class="acLeg"><span><b class="good">' + cl.candidati + '</b> liniștite</span><span><b class="bad">' + cl.evita + '</b> în mișcare' + acIeri(sc, "inMiscare", 0, true) + '</span><span class="acMut">top 100 futures</span></div>' : "") + acMasuraLin());
-  var vb = faraParola ? AC_FARA_PAROLA : faraServer && !ndxL && !qqq ? acFaraServerVerd(d) : acFraneaza(Acasa.vremeBursa({ qqq: qqq, vix: vixU, ndx: ndxL }), "bursa");
-  acasaVerd($("acVremeBursa"), "Nasdaq", vb, faraParola ? "" : ndxL ? acBare(0, [[ndxL.e50, "var(--good)", "peste media de 50"], [ndxL.n - ndxL.e50, "var(--bad)", "sub"]])
-    + '<div class="acLeg"><span><b class="good">' + ndxL.e50 + '</b> peste media de 50' + acIeri(sc, "ndxE50") + '</span><span><b class="bad">' + (ndxL.n - ndxL.e50) + '</b> sub</span><span class="acMut">Nasdaq 100</span></div>' : "");
+  var vb = faraParola ? AC_FARA_PAROLA : faraServer && !ndxL && !qqq ? acFaraServerVerd(d) : acVremeBursa(d);
+  acasaVerd($("acVremeBursa"), "Nasdaq", vb, faraParola ? "" : acFranaNota(vb, v) + (ndxL ? acBare(0, [[ndxL.e50, "var(--good)", "peste media de 50"], [ndxL.n - ndxL.e50, "var(--bad)", "sub"]])
+    + '<div class="acLeg"><span><b class="good">' + ndxL.e50 + '</b> peste media de 50' + acIeri(sc, "ndxE50") + '</span><span><b class="bad">' + (ndxL.n - ndxL.e50) + '</b> sub</span><span class="acMut">Nasdaq 100</span></div>' : ""));
   // v100.82 (03.10, ideea 2): „💡 Ce aș cumpăra azi” - primele idei de acțiuni și monedele pentru un bot, cu drumul la cele două panouri
   var aziNu = acAziNu();   /* v100.306 (I-824): o singură regulă pentru „Ce aș cumpăra azi” și „Idei de azi” */
   if ($("acCumpar")) $("acCumpar").innerHTML = acasaCumpar(d, aziNu);
@@ -580,7 +639,7 @@ function acasaDeseneaza() {
     + '<div class="acLin"><span>Dominanța BTC</span><b>' + (isFinite(dom) && dom > 0 ? dom.toFixed(1).replace(".", ",") + "%" : "—") + '</b></div>'
     + '<div class="acLin"><span>ETH</span><b>' + (te ? acNr(te.p) + ' <span class="' + (te.ch >= 0 ? "good" : "bad") + '">' + acPct(te.ch) + '</span>' : "—") + '</b></div>';
   // frica / lacomia crypto
-  var fa = fgI.acum, fcls = fa == null ? "acMut" : fa >= 55 ? "warn" : fa <= 45 ? "bad" : "acMut", fnume = fa == null ? "" : fa >= 75 ? "lăcomie extremă" : fa >= 55 ? "lăcomie" : fa <= 25 ? "frică extremă" : fa <= 45 ? "frică" : "neutru";
+  var fa = fgI.acum, fcls = fa == null ? "acMut" : fa >= 55 ? "warn" : fa <= 45 ? "bad" : "acMut", fnume = fa == null ? "" : Acasa.fgNume(fa);   /* v100.329: aceeași scară ca fâșia și verdictul (până acum scrisă aici) */
   $("acFg").innerHTML = '<div class="acCap"><h4>Frică / lăcomie</h4><span class="acSub">crypto · zilnic</span></div>'
     + acCadran(fa, fa == null ? null : fa / 100, "#E0524A", "#E9B949", "0", "100", "Frică și lăcomie crypto: " + (fa == null ? "fără date" : fa + ", " + fnume))
     + '<div class="acFgv"><b class="' + fcls + '">' + (fa == null ? "—" : fa) + '</b> ' + escapeHtml(fnume) + acIeri(sc, "fg") + '</div>'
@@ -595,7 +654,9 @@ function acasaDeseneaza() {
   // 2b. pulsul Nasdaq: indicele
   var serie = function (l, n) { return (l || []).slice(-(n || 63)).map(function (x) { return x.c; }); };
   var ultim = function (l) { return l && l.length ? l[l.length - 1].c : null; }, ch = function (l, k) { return l && l.length > k ? (l[l.length - 1].c / l[l.length - 1 - k].c - 1) * 100 : null; };
-  var spy = p.spy ? GridCalcul.bareToate(p.spy) : null, dirQ = vb.nivel === "scade" ? '<span class="bad">trend jos</span>' : vb.nivel === "lateral" ? "lateral" : vb.nivel === "fara-date" ? "—" : '<span class="good">trend sus</span>';
+  // revizia Opus (🔴2): direcția din aceeași regulă ca verdictul și fâșia (sensBursa) - înainte, pe FRICĂ (VIX ≥ 30) cădea pe „trend sus”, verde, și cu indicele în jos
+  var spy = p.spy ? GridCalcul.bareToate(p.spy) : null;
+  var sQ = qqq ? Acasa.sensBursa(qqq) : null, dirQ = sQ === "jos" ? '<span class="bad">trend jos</span>' : sQ === "lateral" ? "lateral" : sQ === "sus" ? '<span class="good">trend sus</span>' : "—";
   $("acNasdaq").innerHTML = '<div class="acCap"><h4>Nasdaq 100</h4><span class="acSub">indicele (QQQ)</span></div>'
     + (qqq ? '<div class="acVal">' + acNr(ultim(qqq), 2) + ' <span class="' + ((ch(qqq, 1) || 0) >= 0 ? "good" : "bad") + '" style="font-size:14px">' + acPct(ch(qqq, 1)) + '</span></div>' + acSpark(serie(qqq), "#26A96C")
       + '<div class="acLin"><span>Direcția</span><b>' + dirQ + ' · 3 luni</b></div>'

@@ -6762,10 +6762,12 @@ async function tbPregatireAdu(){
     if(x){var pl=null;try{var p=await getJSON("/api/istoric-bot?action=plan&bot="+encodeURIComponent(x.id));pl=p&&p.plan&&!p.plan.proba?p.plan:null}catch(e){}
       var sim=String(x.baza||"").replace(/\.PERP$/,""),r=sc&&sc.crypto?(sc.crypto.randuri||[]).find(function(q){return q.s===sim}):null;
       tbPreg.fisa=TabloExtra.fisaInchidere(x,{plan:pl,atrPct:r?r.atrPct:null})}
-    try{var cl=await getJSON("/api/istoric-bot?action=clasament"),c=cl&&cl.clasament,btc=c&&(c.monede||[]).find(function(m){return m.simbol==="BTC_USDT_PERP"});
-      if(typeof Acasa!=="undefined"&&typeof acClasamentSumar==="function")tbPreg.vreme=Acasa.vreme({clasament:acClasamentSumar(c),btc:{miscare:!!(btc&&btc.regim&&btc.regim.miscare)},fg:null})}catch(e){}
+    /* v100.329 (el: verdictele „la fel la crypto și la nasdaq”): vremea din funcțiile comune ale paginii Piața azi - aceleași date, același BTC,
+       ACEEAȘI frână (înainte: socotită aici, fără frână și fără frica / lăcomia; 12.11 „Aș porni boți…” lângă frâna paginii) */
     if(sc&&sc.crypto&&typeof Scan!=="undefined"){var g=Scan.RETETE.find(function(q){return q.k==="grid"});
       tbPreg.grid=(sc.crypto.randuri||[]).map(function(q){return Object.assign({fel:"c"},q)}).filter(g.f).sort(function(a,b2){return (b2.gs||0)-(a.gs||0)}).slice(0,3)}
+    /* revizia Opus: vremea după candidații grid (nu-i mai ține pe loc) */
+    try{if(typeof acVremeAsigura==="function"&&typeof acVremeCrypto==="function"){await acVremeAsigura();tbPreg.vreme=acVremeCrypto(acasa.d)}}catch(e){}
     tbPreg.la=Date.now();
   }catch(e){tbPreg.la=Date.now()-4*60000}
   finally{tbPreg.inLucru=false}
@@ -6775,7 +6777,7 @@ function tbPregatire(el){
   if(tbStare.citireGoala){el.innerHTML='<div class="tbPreg"><p class="tbWarn">Citirea a venit goală: țin boții de dinainte.</p></div>';return}
   if(Date.now()-tbPreg.la>=5*60000&&!tbPreg.inLucru)tbPregatireAdu();
   var h='<div class="tbPreg"><div class="tbSemCap"><span class="tbSemNivel">🅿️ FĂRĂ BOT</span><div><b>Niciun bot pornit acum — pregătirea următorului</b><p class="tbSub">ce a fost, cum e piața, pe ce aș porni</p></div></div>';
-  var f=tbPreg.fisa,v=tbPreg.vreme,g=tbPreg.grid,an=typeof acAziNu==="function"?acAziNu():null,nu=!!(an&&an.nu);   /* v100.306 (I-824): regula comună „azi nu” */
+  var f=tbPreg.fisa,v=typeof acVremeCrypto==="function"&&typeof acasa!=="undefined"&&acasa.d&&acasa.d.clasament?acVremeCrypto(acasa.d):tbPreg.vreme,g=tbPreg.grid,an=typeof acAziNu==="function"?acAziNu():null,nu=!!(an&&an.nu);   /* v100.306 (I-824): regula comună „azi nu” · v100.329: vremea comună, cu frâna de acum */
   if(!f&&!v&&!g)return el.innerHTML=h+'<p class="tbSub">'+(tbPreg.inLucru?"aduc ultimul bot închis, vremea și candidații…":"—")+'</p></div>';
   if(f)h+='<div class="tbPregBloc"><h5>Ultimul bot închis</h5><p class="tbPregTitlu '+(f.nivel==="info"?"good":f.nivel==="critic"?"bad":"tbWarn")+'">'+escapeHtml(f.titlu.replace(/^🔍 /,""))+'</p>'+f.mesaj.split("\n").map(function(t){return '<p class="tbPregRand">'+escapeHtml(t)+'</p>'}).join("")+'</div>';
   if(v)h+='<div class="tbPregBloc"><h5>Vremea pieței</h5><p class="tbPregTitlu">'+escapeHtml(v.eticheta)+' — '+escapeHtml(v.titlu)+'</p>'+(v.faCe?'<p class="tbFac">👉 <b>Ce aș face eu:</b> '+escapeHtml(v.faCe)+'</p>':'')+'</div>';
@@ -7919,8 +7921,8 @@ var TB_TEMA_KEY="tbTema";
 function tbTemaZi(){try{return localStorage.getItem(TB_TEMA_KEY)!=="noapte"}catch(e){return true}}
 /* v100.326 (el, 11.11.2026: „pagina Trading 212 … în aceleași condiții ca și pagina botului”): aceeași temă și pe T212 - un singur comutator,
    aceeași alegere ținută minte; butonul e în ambele antete, comutarea redesenează și graficele T212 (fără să ceară date noi) */
-function tbTemaAplica(){var zi=tbTemaZi();["tabloubot","t212"].forEach(function(id){var p=document.getElementById(id);if(p)p.classList.toggle("tbZi",zi)});if(typeof GraficBot!=="undefined"&&GraficBot.tema)GraficBot.tema(zi?"zi":"noapte");["tbTemaBtn","t212TemaBtn"].forEach(function(id){var b=document.getElementById(id);if(b){b.textContent=zi?"Temă închisă":"Temă deschisă";b.setAttribute("aria-pressed",String(!zi));b.title=zi?"Acum: temă deschisă. Apasă pentru cea închisă.":"Acum: temă închisă. Apasă pentru cea deschisă."}});return zi}
-function tbTemaComuta(){try{localStorage.setItem(TB_TEMA_KEY,tbTemaZi()?"noapte":"zi")}catch(e){}tbTemaAplica();try{if(tbPanouVizibil())renderTabloGrafic()}catch(e){}try{if(typeof t212GraficeDeseneaza==="function")t212GraficeDeseneaza(true)}catch(e){}}
+function tbTemaAplica(){var zi=tbTemaZi();["tabloubot","t212","dash"].forEach(function(id){var p=document.getElementById(id);if(p)p.classList.toggle("tbZi",zi)});if(typeof GraficBot!=="undefined"&&GraficBot.tema)GraficBot.tema(zi?"zi":"noapte");["tbTemaBtn","t212TemaBtn","acTemaBtn"].forEach(function(id){var b=document.getElementById(id);if(b){b.textContent=zi?"Temă închisă":"Temă deschisă";b.setAttribute("aria-pressed",String(!zi));b.title=zi?"Acum: temă deschisă. Apasă pentru cea închisă.":"Acum: temă închisă. Apasă pentru cea deschisă."}});return zi}
+function tbTemaComuta(){try{localStorage.setItem(TB_TEMA_KEY,tbTemaZi()?"noapte":"zi")}catch(e){}tbTemaAplica();try{if(tbPanouVizibil())renderTabloGrafic()}catch(e){}try{if(typeof t212GraficeDeseneaza==="function")t212GraficeDeseneaza(true)}catch(e){}try{if(typeof acasaPe==="function"&&acasaPe()&&typeof acasaDeseneaza==="function")acasaDeseneaza()}catch(e){}}   /* v100.329: tema și pe Piața azi (#dash, butonul acTemaBtn) */
 if(typeof window!=="undefined")window.addEventListener("DOMContentLoaded",function(){tbTemaAplica()});
 /* v100.317 (el, 10.11.2026: „păi nu o faci ca în demo?”): RÂNDURILE Tabloului. Secțiunile de sub grafic stau pliate pe o linie - titlul (data-titlu) și un rezumat
    luat din conținutul lor de ACUM (data-rezumat) - și se deschid la clic; ce ai lăsat deschis se ține minte. Nimic nu se mută și nimic nu se șterge: starea e un

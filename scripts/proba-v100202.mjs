@@ -37,7 +37,7 @@ await test("o singură cerere picată sau nimic picat ⇒ nu „fără legătur�
 await test("în desen: verdictul „fără legătură” doar fără cifre pe ecran; „actualizat” = ultima citire bună", () => {
   const f = citeste("public", "lib", "acasa-ecran.js");
   assert.match(f, /d\[k \+ "La"\] = Date\.now\(\);/, "ora citirii bune");
-  assert.match(f, /else if \(faraServer && !cl\) v = acFaraServerVerd\(d\);/);
+  assert.match(f, /var v = faraParola \? AC_FARA_PAROLA : faraServer && !cl \? acFaraServerVerd\(d\) : acVremeCrypto\(d\);/);   // v100.329: aceeași ordine, într-o expresie; vremea din funcția comună
   assert.match(f, /faraServer && !ndxL && !qqq \? acFaraServerVerd\(d\)/);
   assert.match(f, /var faraServer = acFaraServer\(d\), bunLa = d\.clasamentLa \|\| 0;/);
   assert.match(f, /serverul Radarului nu răspunde acum/);   // v100.306: Radarul rulează pe VPS

@@ -42,10 +42,11 @@ await test("cardurile Crypto și Nasdaq: „FĂRĂ PAROLĂ”, ce ai de făcut, 
   assert.match(cx.AC_BUTON_PAROLA, /data-action-click="mergiLaParola\(\)"/);
   assert.match(app, /mergiLaParola\(\)\{/, "mergiLaParola există în app.js");
   const f = citeste("public", "lib", "acasa-ecran.js"), des = f.slice(f.indexOf("function acasaDeseneaza"), f.indexOf("// 2a. pulsul crypto"));
-  assert.match(des, /if \(faraParola\) v = AC_FARA_PAROLA;/);
+  assert.match(des, /var v = faraParola \? AC_FARA_PAROLA : /);   // v100.329: aceeași ordine (parola întâi), într-o expresie; vremea din funcția comună
   assert.match(des, /acasaVerd\(\$\("acVremeCrypto"\), "Crypto", v, \(?faraParola \? AC_BUTON_PAROLA/);   // v100.258: din v100.234 expresia stă în paranteză
   assert.match(des, /var vb = faraParola \? AC_FARA_PAROLA : /);   /* v100.202: după parolă vine „fără legătură”, apoi verdictul obișnuit */
-  assert.match(des, /Acasa\.vremeBursa\(\{ qqq: qqq, vix: vixU, ndx: ndxL \}\)/);
+  assert.match(des, /acFaraServerVerd\(d\) : acVremeBursa\(d\)/);   // v100.329: verdictul Nasdaq din funcția comună (aceeași în Scan)
+  assert.match(f, /Acasa\.vremeBursa\(\{ qqq: qqq, vix: vixB && vixB\.length \? vixB\[vixB\.length - 1\]\.c : null, ndx: ndxL \}\)/);
 });
 
 await test("versiunile: v100.199, proba în lanțul `test`", () => {

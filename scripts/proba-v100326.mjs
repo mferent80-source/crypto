@@ -36,17 +36,17 @@ await test("meniul: „Trading 212” imediat sub „Tabloul botului”, în gru
 
 // ───────────── 2. generatorul cu două rădăcini ─────────────
 await test("generatorul: rădăcinile sunt Tabloul și T212; comunele sub :is(#tabloubot,#t212), ale fiecărei pagini sub ea, celelalte pagini se sar", () => {
-  assert.deepEqual(RADACINI, ["tabloubot", "t212"]);
-  const S = ["dash"];
-  assert.equal(selectorSub(".tbBloc", "#tabloubot.tbZi", S), ":is(#tabloubot,#t212).tbZi .tbBloc");
+  assert.deepEqual(RADACINI, ["tabloubot", "t212", "dash"]);   // v100.329: și Piața azi
+  const S = ["scan"];
+  assert.equal(selectorSub(".tbBloc", "#tabloubot.tbZi", S), ":is(#tabloubot,#t212,#dash).tbZi .tbBloc");
   assert.equal(selectorSub("#tabloubot .gbTip", "#tabloubot.tbZi", S), "#tabloubot.tbZi .gbTip");
   assert.equal(selectorSub("#t212 .t212Pill", "#tabloubot.tbZi", S), "#t212.tbZi .t212Pill");
-  assert.equal(selectorSub("#t212Continut tr.t212Rand", "#tabloubot.tbZi", S), ":is(#tabloubot,#t212).tbZi #t212Continut tr.t212Rand", "#t212Continut nu e rădăcina");
-  assert.equal(selectorSub("html.pzDemo .pzCel", "#tabloubot", S), "html.pzDemo :is(#tabloubot,#t212) .pzCel");
-  assert.equal(selectorSub("#dash .acVerd, .x", "#tabloubot.tbZi", S), ":is(#tabloubot,#t212).tbZi .x");
-  const g = genereaza(":root{--pzF1:#141C24} .a{color:#E6EDF3;font-size:11px} #t212 .b{background:#141C24} #tabloubot .c{color:#E6EDF3} #dash .d{color:#E6EDF3}", '<section class="panel" id="dash"></section><section class="panel" id="tabloubot"></section><section class="panel" id="t212"></section>');
-  assert.ok(g.includes(":is(#tabloubot,#t212).tbZi{--pzF1:#FFFFFF}"));
-  assert.ok(g.includes(":is(#tabloubot,#t212).tbZi .a{color:#0E1A2B}") && g.includes(":is(#tabloubot,#t212) .a{font-size:12px}"));
+  assert.equal(selectorSub("#t212Continut tr.t212Rand", "#tabloubot.tbZi", S), ":is(#tabloubot,#t212,#dash).tbZi #t212Continut tr.t212Rand", "#t212Continut nu e rădăcina");
+  assert.equal(selectorSub("html.pzDemo .pzCel", "#tabloubot", S), "html.pzDemo :is(#tabloubot,#t212,#dash) .pzCel");
+  assert.equal(selectorSub("#scan .scNiv, .x", "#tabloubot.tbZi", S), ":is(#tabloubot,#t212,#dash).tbZi .x");
+  const g = genereaza(":root{--pzF1:#141C24} .a{color:#E6EDF3;font-size:11px} #t212 .b{background:#141C24} #tabloubot .c{color:#E6EDF3} #scan .d{color:#E6EDF3}", '<section class="panel" id="scan"></section><section class="panel" id="tabloubot"></section><section class="panel" id="t212"></section>');
+  assert.ok(g.includes(":is(#tabloubot,#t212,#dash).tbZi{--pzF1:#FFFFFF}"));
+  assert.ok(g.includes(":is(#tabloubot,#t212,#dash).tbZi .a{color:#0E1A2B}") && g.includes(":is(#tabloubot,#t212,#dash) .a{font-size:12px}"));
   assert.ok(g.includes("#t212.tbZi .b{background:#FFFFFF}") && g.includes("#tabloubot.tbZi .c{color:#0E1A2B}"));
   assert.ok(!g.includes(".d{"), "Piața azi rămâne afară");
 });
@@ -54,14 +54,15 @@ await test("stratul din app.css e cel produs acum și cuprinde și pagina T212 (
   const NL = CSS.includes("\r\n") ? "\r\n" : "\n", bloc = blocDin(CSS);
   assert.equal(bloc, genereaza(faraBloc(CSS), HTML).split("\n").join(NL));
   assert.ok(/#t212\.tbZi [^{]*\{/.test(bloc), "regulile paginii T212, pe tema de zi");
-  assert.ok(!/#(dash|sugestii|comportament)\b/.test(bloc));
+  assert.ok(!/#(sugestii|comportament|scan)\b/.test(bloc));   // v100.329: Piața azi (#dash) e acum rădăcină
+  assert.ok(/#dash\.tbZi [^{]*\{/.test(bloc), "regulile paginii Piața azi, pe tema de zi (v100.329)");
 });
 
 // ───────────── 3. un singur comutator ─────────────
 await test("tema: clasa tbZi pe AMBELE pagini, butoanele din amândouă antetele, comutarea redesenează și graficele T212", () => {
   const a = functie(APP, "tbTemaAplica");
-  assert.match(a, /\["tabloubot","t212"\]\.forEach\(function\(id\)\{var p=document\.getElementById\(id\);if\(p\)p\.classList\.toggle\("tbZi",zi\)\}\)/);
-  assert.match(a, /\["tbTemaBtn","t212TemaBtn"\]\.forEach/);
+  assert.match(a, /\["tabloubot","t212","dash"\]\.forEach\(function\(id\)\{var p=document\.getElementById\(id\);if\(p\)p\.classList\.toggle\("tbZi",zi\)\}\)/);
+  assert.match(a, /\["tbTemaBtn","t212TemaBtn","acTemaBtn"\]\.forEach/);
   assert.match(functie(APP, "tbTemaComuta"), /t212GraficeDeseneaza\(true\)/);
   assert.ok(HTML.includes('<button type="button" class="t212BtnLinie" id="t212TemaBtn" aria-pressed="false" data-action-click="tbTemaComuta()">Temă închisă</button><button type="button" class="t212BtnLinie" data-action-click="t212Porneste(true)">Reîncarcă</button>'));
 });
@@ -71,9 +72,9 @@ await test("rama și litera Tabloului și cât e deschisă T212 (meniul, bara de
   const i = CSS.indexOf("/* v100.325 · meniul ca pagina botului"), k = CSS.indexOf("/* v100.325: sfârșitul meniului ca pagina botului */"), B = CSS.slice(i, k);
   assert.ok(i > 0 && k > i);
   assert.doesNotMatch(B, /html:has\(#tabloubot\.on/, "fiecare regulă e pe ambele pagini");
-  assert.ok(B.includes('html:has(:is(#tabloubot,#t212).on) .sideNav,html:has(:is(#tabloubot,#t212).on) .mobileBottom,html:has(:is(#tabloubot,#t212).on) :is(.sideBtn,.mobileNavBtn){font-family:"IBM Plex Sans"'));
-  assert.ok(B.includes("html:has(:is(#tabloubot,#t212).on.tbZi) .sideNav{background:#FFFFFF;"));
-  assert.ok(B.includes("html:has(:is(#tabloubot,#t212).on.tbZi) body{background:#F2F4F7!important}"));
+  assert.ok(B.includes('html:has(:is(#tabloubot,#t212,#dash).on) .sideNav,html:has(:is(#tabloubot,#t212,#dash).on) .mobileBottom,html:has(:is(#tabloubot,#t212,#dash).on) :is(.sideBtn,.mobileNavBtn){font-family:"IBM Plex Sans"'));
+  assert.ok(B.includes("html:has(:is(#tabloubot,#t212,#dash).on.tbZi) .sideNav{background:#FFFFFF;"));
+  assert.ok(B.includes("html:has(:is(#tabloubot,#t212,#dash).on.tbZi) body{background:#F2F4F7!important}"));
   assert.ok(CSS.includes('html.pzDemo #t212{--pzMono:"IBM Plex Sans",system-ui,"Segoe UI",sans-serif;font-family:"IBM Plex Sans",system-ui,"Segoe UI",sans-serif;font-variant-numeric:tabular-nums}'));
   assert.ok(CSS.includes("html.pzDemo #t212 *{font-family:inherit!important}"));
 });

@@ -77,7 +77,7 @@
     // 2. frica / lăcomia: extremele contează contrar (≥ 75 aglomerat −1, ≤ 25 frică extremă +1)
     const fg = semnMacro(m, "frica");
     // v100.196 (🔵4): aceeași cifră intră și în regimul macro (linia Acțiuni), unde lăcomia = poftă de risc (+); aici e citită CONTRAR (aglomerat) - se spune
-    C.push(fg ? { ce: "Frica / lăcomia crypto", val: String(Math.round(fg.v)) + (fg.v >= 75 ? " · lăcomie extremă" : fg.v <= 25 ? " · frică extremă" : fg.v >= 55 ? " · lăcomie moderată" : fg.v <= 45 ? " · frică moderată" : " · neutru"), v: fg.v >= 75 ? -1 : fg.v <= 25 ? 1 : 0, nota: "citită contrar: în regimul macro aceeași lăcomie e poftă de risc" }
+    C.push(fg ? { ce: "Frica / lăcomia crypto", val: String(Math.round(fg.v)) + (fg.v >= 75 ? " · lăcomie extremă" : fg.v <= 25 ? " · frică extremă" : fg.v >= 55 ? " · lăcomie" : fg.v <= 45 ? " · frică" : " · neutru")   /* v100.329: aceleași cuvinte ca pe cardul „Frică / lăcomie” (Acasa.fgNume, aceleași praguri); înainte „… moderată” */, v: fg.v >= 75 ? -1 : fg.v <= 25 ? 1 : 0, nota: "citită contrar: în regimul macro aceeași lăcomie e poftă de risc" }
       : lipsa("Frica / lăcomia crypto", "fără date"));
     // 3. legătura BTC – S&P: doar informativ, spune dacă BTC diversifică sau nu
     const rho = semnMacro(m, "btcSp");

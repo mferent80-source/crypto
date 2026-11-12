@@ -146,7 +146,8 @@ await test("(1) Piața azi: lipsă cu ture picate ⇒ motivul și ora; fără st
   const ok = AC.vreme({ clasament: { evita: 10, candidati: 90, dir: {} }, stare: st });
   assert.notEqual(ok.nivel, "fara-date");
   assert.match(ae, /d\.clasamentStare = c && c\.stare \|\| null; return c && c\.clasament \|\| null;/);
-  assert.match(ae, /Acasa\.vreme\(\{ clasament: cl, btc: \{ miscare: btcMis \}, fg: fgI\.acum, stare: d\.clasamentStare \}\)/);
+  // v100.329: vremea crypto se socotește în funcția comună acVremeCrypto (Piața azi, Scan, Tabloul fără bot) - starea clasamentului ajunge tot în ea
+  assert.match(ae, /Acasa\.vreme\(\{ clasament: acClasamentSumar\(d\.clasament\), btc: \{ miscare: acBtcMiscare\(d\) \}, fg: fgI\.acum, stare: d\.clasamentStare \}\)/);
 });
 
 await test("(2) tura clasamentului: motivul la NEURCAT / neconfirmat, mărimea corpului în jurnal; colectorul urcă starea în ambele ramuri", async () => {
