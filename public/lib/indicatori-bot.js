@@ -343,23 +343,32 @@ var IndicatoriBot = (function () {
     var W = 300, H = 56, MIJ = H / 2, ziOk = function (z) { return z && /^\d{4}-\d{2}-\d{2}$/.test(String(z.zi)) && typeof z.exces === "number" && isFinite(z.exces); };
     var zz = function (u) { return u && Array.isArray(u.peZile) ? u.peZile.filter(ziOk) : []; }, R = zz(fata.revenire), S = zz(fata.short);
     if (!fata.revenire && !fata.short) return '<p class="tbSub lrGol">Pe zile: graficul apare după tura de dimineață a colectorului.</p>';
-    var M = 0.005; R.concat(S).forEach(function (z) { M = Math.max(M, Math.abs(z.exces)); });
+    // v100.334 (pe viu, 13.11): o singură zi de short (29.10, AKE −90% în 7 zile ⇒ +86,3 pp, reală) ținea scara la ±86 pp și cele 59 de zile ieșeau
+    // plate. Scara se ia FĂRĂ valoarea ieșită din rând (cea mai mare > 2,5 × următoarea; cel mult 2 așa): bara ei atinge marginea, cu o ruptură;
+    // cifra adevărată rămâne în hover și se scrie sub grafic. Fără valori ieșite din rând, scara = cea mai mare abatere, ca înainte.
+    var abs = R.concat(S).map(function (z) { return Math.abs(z.exces); }).sort(function (a, b) { return b - a; }), lim = 0;
+    while (lim < 2 && abs.length > lim + 1 && abs[lim] > 2.5 * abs[lim + 1]) lim++;
+    var M = Math.max(0.005, abs.length ? (lim ? abs[lim] * 1.1 : abs[0]) : 0), peste = [];
     var pc = function (v, u) { return typeof v === "number" && isFinite(v) ? (v < 0 ? "−" : "+") + Math.abs(v * 100).toFixed(1).replace(".", ",") + u : "—"; };
     var dd = function (z) { return String(z.zi).slice(8, 10) + "." + String(z.zi).slice(5, 7); };
     var unu = function (nume, l, u) {
       if (!l.length) return '<p class="tbSub lrGol">' + esc(nume) + ": " + (u ? "încă nicio zi judecată (7 zile de la sugestie)" : "vine la tura de dimineață") + "</p>";
       var pas = W / l.length, lat = Math.max(0.6, pas - Math.min(2, pas * 0.25)), bare = "";
       l.forEach(function (z, i) {
-        var h = Math.max(1, Math.abs(z.exces) / M * (MIJ - 2)), y = z.exces >= 0 ? MIJ - h : MIJ, x = i * pas + (pas - lat) / 2, f = function (v) { return String(Math.round(v * 1000) / 1000); };
+        var tai = Math.abs(z.exces) > M, h = Math.max(1, Math.min(1, Math.abs(z.exces) / M) * (MIJ - 2)), y = z.exces >= 0 ? MIJ - h : MIJ;
+        if (tai) peste.push(dd(z) + " (" + nume.toLowerCase() + "): " + pc(z.exces, " pp") + ", peste scară");
+        var x = i * pas + (pas - lat) / 2, f = function (v) { return String(Math.round(v * 1000) / 1000); };
         var tit = dd(z) + ": lista " + pc(z.lista, "%") + " · piața " + pc(z.piata, "%") + " · față de piață " + pc(z.exces, " pp") + (z.n > 0 ? " · " + TextRo.cate(z.n, "monedă", "monede") : "");
-        bare += '<g><rect class="lrHit" x="' + f(i * pas) + '" y="0" width="' + f(pas) + '" height="' + H + '"><title>' + esc(tit) + '</title></rect><rect class="lrBar" x="' + f(x) + '" y="' + f(y) + '" width="' + f(lat) + '" height="' + f(h) + '"></rect></g>';
+        bare += '<g><rect class="lrHit" x="' + f(i * pas) + '" y="0" width="' + f(pas) + '" height="' + H + '"><title>' + esc(tit) + '</title></rect><rect class="lrBar' + (tai ? " lrTaiat" : "") + '" x="' + f(x) + '" y="' + f(y) + '" width="' + f(lat) + '" height="' + f(h) + '"></rect>' +
+          (tai ? '<line class="lrRupt" x1="' + f(x) + '" y1="' + f(z.exces >= 0 ? y + 5 : y + h - 5) + '" x2="' + f(x + lat) + '" y2="' + f(z.exces >= 0 ? y + 5 : y + h - 5) + '" vector-effect="non-scaling-stroke"></line>' : '') + '</g>';
       });
       return '<div class="lrUnu"><div class="lrCap"><span>' + esc(nume) + " · " + TextRo.cate(l.length, "zi", "zile") + '</span><span class="lrSc">±' + esc(pc(M, " pp").slice(1)) + '</span></div>' +
         '<svg class="lrGraf" viewBox="0 0 ' + W + " " + H + '" preserveAspectRatio="none" width="100%" height="' + H + '" role="img" aria-label="' + esc(nume + ": față de piață, pe fiecare zi") + '">' +
         '<line class="lrZero" x1="0" y1="' + MIJ + '" x2="' + W + '" y2="' + MIJ + '" vector-effect="non-scaling-stroke"></line>' + bare + '</svg>' +
         '<div class="lrAx"><span>' + esc(dd(l[0])) + '</span><span>linia = piața</span><span>' + esc(dd(l[l.length - 1])) + "</span></div></div>";
     };
-    return '<div class="lrGrafice">' + unu("Revenire", R, fata.revenire) + unu("Short", S, fata.short) +
+    var gr = unu("Revenire", R, fata.revenire) + unu("Short", S, fata.short);
+    return '<div class="lrGrafice">' + gr + (peste.length ? '<p class="tbSub lrNota">Bara cu ruptură e tăiată la marginea scării: ' + esc(peste.join("; ")) + ".</p>" : "") +
       '<p class="tbSub lrNota">Bara în sus = lista a făcut mai bine decât piața în cele 7 zile de după; în jos = mai rău. Ține mouse-ul pe o zi pentru cifre.</p></div>';
   }
 

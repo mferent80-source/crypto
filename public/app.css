@@ -5091,6 +5091,8 @@ html.pzDemo #dash *{font-family:inherit!important}
 #tabloubot .lrGraf{display:block;width:100%;height:56px;overflow:visible}
 #tabloubot .lrBar{fill:var(--lrBar);pointer-events:none}   /* revizia Opus: bara stă deasupra țintei de hover (.lrHit); fără asta, pe bară nu apăreau cifrele */
 #tabloubot .lrHit{fill:transparent}
+#tabloubot .lrBar.lrTaiat{fill-opacity:.6}   /* v100.334: bara peste scară (tăiată), cu ruptura de mai jos */
+#tabloubot .lrRupt{stroke:var(--pzF1);stroke-width:2;pointer-events:none}
 #tabloubot .lrHit:hover+.lrBar{fill-opacity:.7}
 #tabloubot .lrZero{stroke:var(--pzT2);stroke-width:1;stroke-dasharray:3 3}
 #tabloubot :is(.lrNota,.lrGol){margin:0;font-size:12px}
