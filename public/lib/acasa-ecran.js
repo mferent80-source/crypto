@@ -209,7 +209,15 @@ function acMisList(l) { return l.map(function (x) { return '<div class="acMr"><s
 function acIeri(sc, k, z, invers) {
   var x = sc && sc[k]; if (!x) return "";
   var bine = x.d === 0 ? null : invers ? x.d < 0 : x.d > 0;
-  return ' <span class="acIeri ' + (bine === null ? "acMut" : bine ? "good" : "bad") + '" title="față de ieri: ' + escapeHtml(String(x.de).replace(".", ",")) + '">' + x.sag + (x.d ? " " + Math.abs(x.d).toFixed(z || 0).replace(".", ",") : "") + '</span>';
+  // v100.333 (auditul 12.11, 🔵): poza mai veche de o zi (colectorul a stat) spune de când e - „↑ 3 · din 09.11”, nu „față de ieri”
+  var vechi = sc.zileInUrma > 1 && /^\d{4}-\d{2}-\d{2}$/.test(String(sc.dinZi || "")), cand = vechi ? sc.dinZi.slice(8, 10) + "." + sc.dinZi.slice(5, 7) : "";
+  return ' <span class="acIeri ' + (bine === null ? "acMut" : bine ? "good" : "bad") + '" title="față de ' + (vechi ? cand : "ieri") + ': ' + escapeHtml(String(x.de).replace(".", ",")) + '">' + x.sag + (x.d ? " " + Math.abs(x.d).toFixed(z || 0).replace(".", ",") : "") + (vechi ? " · din " + cand : "") + '</span>';
+}
+// v100.333 (auditul 12.11, 🔵): culoarea graficului mic după direcția seriei (ultima față de prima) - BTC și Nasdaq erau verzi și pe scădere.
+// Culorile sunt cele ale cadranului (#26A96C / #E0524A); fără serie, gri.
+function acSparkCul(l) {
+  var v = (l || []).filter(function (x) { return isFinite(x); });
+  return v.length < 2 ? "#9FB3C4" : v[v.length - 1] >= v[0] ? "#26A96C" : "#E0524A";
 }
 function acZiRo(z) { var d = new Date(z + "T12:00:00Z"); return isFinite(d) ? d.toLocaleDateString("ro-RO", { weekday: "short", day: "numeric", month: "short" }) : z; }
 
@@ -300,7 +308,8 @@ function acLargimeDinServer(x) {
 function acFataPiata(u, short) {
   if (!u) return "";
   if (!(u.zile > 0) || typeof u.exces !== "number" || !isFinite(u.exces)) return "față de piață: încă nicio zi judecată (7 zile de la sugestie)";
-  if (u.zile < 5 || !(u.ferestre >= 2)) return "față de piață: prea puține zile ca să se vadă ceva (" + u.zile + ")";
+  /* v100.333 (auditul 12.11, 🔵): pragul (5 zile judecate, 2 ferestre) e ales, nu măsurat - scris la vedere */
+  if (u.zile < 5 || !(u.ferestre >= 2)) return "față de piață: prea puține zile ca să se vadă ceva (" + u.zile + "; arăt cifrele de la 5 zile judecate, prag ales)";
   var zp = u.zileCuPiata > 0 ? u.zileCuPiata : u.zile;
   var pp = (u.exces < 0 ? "−" : "+") + Math.abs(u.exces * 100).toFixed(1).replace(".", ",") + " pp", peste = Math.round((u.zilePeste || 0) * zp);
   return "față de piața din aceleași zile: " + pp + " în medie la 7 zile, mai bine decât piața" + (short ? " (pentru un short)" : "") + " în " + peste + " din " + TextRo.cate(zp, "zi", "zile");
@@ -627,6 +636,15 @@ function acFranaContText() {
   if (ev && typeof acEvenimentTrecut === "function" && acEvenimentTrecut()) o.evenimentTrecut = true;   /* v100.332 (🟡2): „imediat după”, încă 2 ore */
   return Acasa.franaCont(o);
 }
+// v100.333 (auditul 12.11, 🔵): motivele frânei contului în afară de cel arătat mare (Acasa.franaContMotive), din aceleași date ca acFranaContText
+function acFranaContAlte(fc) {
+  if (typeof Acasa === "undefined" || !Acasa.franaContMotive) return [];
+  var o = {}, rs = acRaportStare(), ev = acEvenimentAzi();
+  if (rs.stare && rs.stare !== "necunoscut") { o.raportStare = rs.stare; if (rs.ore) o.raportOre = rs.ore; if (rs.raport) o.raport = rs.raport; }
+  if (ev !== undefined) o.eveniment = ev;
+  if (ev && typeof acEvenimentTrecut === "function" && acEvenimentTrecut()) o.evenimentTrecut = true;
+  return Acasa.franaContMotive(o).filter(function (x) { return x && x !== fc; });
+}
 // banda: fraza frânei + măsura ei (mutată de pe cardul Crypto); fără frână azi spune asta; fără nimic de spus, goală (ascunsă)
 // revizia Opus (🔵4): „azi nu e trasă” doar când știm - raportul contului a venit și calendarul s-a citit; altfel spune că încă verifică
 function acFranaContStiut() {
@@ -639,7 +657,10 @@ function acFranaContHtml(fc, masura) {
   var stiut = typeof acFranaContStiut === "function" ? acFranaContStiut() : true;
   if (!fc && !masura && stiut) return "";
   var nec = !fc && !stiut && typeof acFranaContNec === "function" ? acFranaContNec() : "";
+  // v100.333 (auditul 12.11, 🔵): și celelalte motive ale zilei (ex.: raportul vechi ȘI CPI-ul de azi), sub fraza mare
+  var alte = fc && typeof acFranaContAlte === "function" ? acFranaContAlte(fc) : [];
   return (fc ? '<div class="acFrCap">⛔ Frâna contului azi <span class="acMut">· la ambele piețe, Crypto și Nasdaq</span></div><div class="acFrTxt">' + escapeHtml(fc) + "</div>"
+    + (alte.length ? '<p class="acMut">Și: ' + escapeHtml(alte.join(" ")) + "</p>" : "")
     : stiut ? '<div class="acFrCap acFrLiber">Frâna contului: azi nu e trasă.</div>'
     : '<div class="acFrCap acFrLiber">Frâna contului: ' + escapeHtml(nec || "încă verific raportul contului și calendarul") + '.</div>') + (masura || "");
 }
@@ -798,7 +819,7 @@ function acasaDeseneaza() {
   var inch = function (rows) { return (rows || []).slice().sort(function (a, b) { return Number(a.time) - Number(b.time); }).map(function (x) { return Number(x.close); }); };
   $("acBtc").innerHTML = '<div class="acCap"><h4>BTC</h4><span class="acSub">„vremea” pieței crypto</span></div>'
     + '<div class="acVal">' + (tb ? acNr(tb.p) : "—") + ' <span class="' + (tb && tb.ch >= 0 ? "good" : "bad") + '" style="font-size:14px">' + (tb ? acPct(tb.ch) : "") + '</span></div>'
-    + acSpark(inch(d.btc4h).slice(-120), "#26A96C")
+    + acSpark(inch(d.btc4h).slice(-120), acSparkCul(inch(d.btc4h).slice(-120)))
     + '<div class="acLin"><span>Direcția</span><b>1 zi ' + (AC_DIR[btc.dir1d] || "—") + ' · 4h ' + (AC_DIR[btc.dir4h] || "—") + '</b></div>'
     + '<div class="acLin"><span>Mișcarea</span><b class="' + (btc.regim ? (btcMis ? "bad" : "good") : "acMut") + '">' + (btc.regim ? (btcMis ? "mișcare" : "liniște") + " · " + (btc.regim.r24h != null ? btc.regim.r24h.toFixed(1).replace(".", ",") + "× pe 24 h" : (btc.regim.r4h || 0).toFixed(1).replace(".", ",") + "× pe 4 h") : "—") + '</b></div>'   /* v100.272 (ideile auditului 29.10): cifra pe 24 h a definiției comune, nu maximul cu 4 h */
     + '<div class="acLin"><span>Dominanța BTC</span><b>' + (isFinite(dom) && dom > 0 ? dom.toFixed(1).replace(".", ",") + "%" : "—") + '</b></div>'
@@ -823,7 +844,7 @@ function acasaDeseneaza() {
   var spy = p.spy ? GridCalcul.bareToate(p.spy) : null;
   var sQ = qqq ? Acasa.sensBursa(qqq) : null, dirQ = sQ === "jos" ? '<span class="bad">trend jos</span>' : sQ === "lateral" ? "lateral" : sQ === "sus" ? '<span class="good">trend sus</span>' : "—";
   $("acNasdaq").innerHTML = '<div class="acCap"><h4>Nasdaq 100</h4><span class="acSub">indicele (QQQ)</span></div>'
-    + (qqq ? '<div class="acVal">' + acNr(ultim(qqq), 2) + ' <span class="' + ((ch(qqq, 1) || 0) >= 0 ? "good" : "bad") + '" style="font-size:14px">' + acPct(ch(qqq, 1)) + '</span></div>' + acSpark(serie(qqq), "#26A96C")
+    + (qqq ? '<div class="acVal">' + acNr(ultim(qqq), 2) + ' <span class="' + ((ch(qqq, 1) || 0) >= 0 ? "good" : "bad") + '" style="font-size:14px">' + acPct(ch(qqq, 1)) + '</span></div>' + acSpark(serie(qqq), acSparkCul(serie(qqq)))
       + '<div class="acLin"><span>Direcția</span><b>' + dirQ + ' · 3 luni</b></div>'
       + '<div class="acLin"><span>S&amp;P 500</span><b>' + (spy ? acNr(ultim(spy), 2) + ' <span class="' + ((ch(spy, 1) || 0) >= 0 ? "good" : "bad") + '">' + acPct(ch(spy, 1)) + '</span>' : "—") + '</b></div>'
       + '<div class="acLin"><span>Ultimele 5 zile</span><b>Nasdaq <span class="' + ((ch(qqq, 5) || 0) >= 0 ? "good" : "bad") + '">' + acPct(ch(qqq, 5), 1) + '</span></b></div>'

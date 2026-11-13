@@ -234,7 +234,8 @@ await test("rama și litera: meniul, bara de sus și fondul ca pe Tablou și câ
 await test("desenele pe tema de zi: acul și capetele cadranelor, liniile mici - culoarea de zi din CSS peste atributele SVG (acul alb #E6EDF3 dispărea pe alb)", () => {
   const CSS = citeste("public", "app.css");
   assert.ok(CSS.includes("#dash.tbZi .acCadran line{stroke:#0E1A2B}") && CSS.includes("#dash.tbZi .acCadran circle{fill:#0E1A2B}") && CSS.includes("#dash.tbZi .acCadran text{fill:#66768B}"));
-  for (const c of ["#26A96C", "#E9B949", "#9FB3C4", "#5B8FC7"]) assert.ok(CSS.includes('#dash.tbZi .acSp polyline[stroke="' + c + '"]'), "linia mică " + c);
+  // v100.333: + #E0524A (graficele mici roșii când seria coboară, acSparkCul) - regexul de mai jos nu prinde culoarea pusă prin funcție
+  for (const c of ["#26A96C", "#E9B949", "#9FB3C4", "#5B8FC7", "#E0524A"]) assert.ok(CSS.includes('#dash.tbZi .acSp polyline[stroke="' + c + '"]'), "linia mică " + c);
   // fiecare culoare scrisă în atribute în acasa-ecran.js are perechea de zi
   const AE = LIB("acasa-ecran.js"), atr = [...new Set([...AE.matchAll(/(?:stroke|fill|stop-color)="(#[0-9A-Fa-f]{6})"/g)].map((m) => m[1]))];
   const lin = [...new Set([...AE.matchAll(/acSpark\([^;]*?"(#[0-9A-Fa-f]{6})"/g)].map((m) => m[1]).concat([...AE.matchAll(/macroRand\("[^"]+", p\.\w+, "(#[0-9A-Fa-f]{6})"/g)].map((m) => m[1])))];

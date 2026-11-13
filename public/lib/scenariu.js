@@ -69,12 +69,18 @@ var Scenariu = (function () {
     return s > 0 ? hi : lo;
   }
 
-  function scenarii(brut, bot, tinte) {
+  // v100.333 (auditul 12.11, 🔵1): pe pagină erau DOUĂ modele pentru „totalul dacă prețul ajunge la X” (acesta și TabloExtra.totalCuGridLa, cu 0,9–3
+  // USDT diferență: comisionul de închidere). totalLa (opțional) = modelul care dă totalul rândului - chematorii (Tabloul, sfaturile) dau
+  // TabloExtra.totalCuGridLa, același cu zero-ul, stopul și Consilierul; poziția și „lichidat” rămân ale scenariului (nivel cu nivel).
+  // Totalul nu coboară sub −investiția (marja izolată). r.totalNiveluri = cifra acestui model, pentru comparație. Fără totalLa: ca înainte.
+  function scenarii(brut, bot, tinte, totalLa) {
     var g = grid(brut, bot);
     if (g.lipsa.length) return { ok: false, motiv: "Nu pot calcula fără " + g.lipsa.join(", ") + "." };
     return { ok: true, grid: g, pretGolire: pretGolire(g),
       randuri: (tinte || []).filter(function (t) { return t && t.pret > 0; }).map(function (t) {
-        var r = la(g, t.pret); r.eticheta = t.eticheta; r.miscare = 100 * (t.pret - g.pret) / g.pret; return r; }) };
+        var r = la(g, t.pret); r.eticheta = t.eticheta; r.miscare = 100 * (t.pret - g.pret) / g.pret;
+        if (typeof totalLa === "function") { var tm = null; try { tm = nr(totalLa(t.pret)); } catch (e) { tm = null; } if (tm !== null) { r.totalNiveluri = r.total; r.total = g.inv > 0 ? Math.max(tm, -g.inv) : tm; } }
+        return r; }) };
   }
 
   function wilson(k, n) {

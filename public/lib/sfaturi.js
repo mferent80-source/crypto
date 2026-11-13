@@ -25,6 +25,7 @@ var Sfaturi = (function () {
   function pret(v) { if (v === null || v === undefined) return "—"; var a = Math.abs(v); return v.toFixed(a >= 100 ? 2 : a >= 0.1 || a === 0 ? 4 : Math.min(12, 3 - Math.floor(Math.log10(a)))); }
   function proc(v, z) { return TextRo.pctSemn(v, z == null ? 1 : z); }
   function mare(s) { s = String(s || ""); return s.charAt(0).toUpperCase() + s.slice(1); }
+  function oraHM(t) { var d = new Date(t), z = function (n) { return (n < 10 ? "0" : "") + n; }; return z(d.getHours()) + ":" + z(d.getMinutes()); }
   function frecventa(s, ce) {
     if (!s || s.valoare === null || s.valoare === undefined) return null;
     return Math.round(s.valoare) + "% " + ce + " (" + s.atinse + " din " + s.cazuri + (s.stare === "destule" || s.stare === "dovedit" ? "" : ", puține cazuri") + ")";
@@ -33,6 +34,8 @@ var Sfaturi = (function () {
   // v100.330: câte grile NU mai lucrează cu un take-profit la x în grid - partea de DINCOLO de el (long: peste x, short: sub x). Aceeași
   // socoteală ca SemnaleBot.griliMoarte (rândurile Pionex - 1 intervale, aritmetic / geometric), oglindită: acolo e stopul, aici ținta.
   function griliTaiateTp(b, x) {
+    // v100.333 (🔵8): o singură socoteală (TabloExtra.grileDincoloK, partea dinspre câștig); copia de mai jos doar fără TabloExtra (probele vechi)
+    if (typeof TabloExtra !== "undefined" && TabloExtra && TabloExtra.grileDincoloK) { var gk = TabloExtra.grileDincoloK(b, nr(x), true); return gk && gk.moarte >= 1 ? gk.txt : null; }
     var d = b && b.brut && b.brut.buOrderData || {}, linii = nr(d.row), N = linii > 1 ? linii - 1 : null, jos = nr(b && b.gridJos), sus = nr(b && b.gridSus), dir = String(b && b.directie || "").toLowerCase();
     x = nr(x);
     if (!N || x === null || jos === null || sus === null || !(x > jos && x < sus) || (dir !== "long" && dir !== "short")) return null;
@@ -234,7 +237,7 @@ var Sfaturi = (function () {
       var acumZ = nr(x.acum) || Date.now(), pornitZ = nr(b.pornitLa), tanarZ = pornitZ > 0 && acumZ - pornitZ < 3600000;
       var conteazaZ = inv > 0 && -tot >= 0.01 * inv;
       var motivZ = d && d.dir && d.tarie === "tare" && ((dirBot === "long" && d.dir === "short") || (dirBot === "short" && d.dir === "long")) ? "trendul e împotriva botului (" + d.dir + ", tare)"
-        : fisa && fisa.verdict && fisa.verdict.nivel === "nu" ? "fișa monedei zice NU"
+        : fisa && fisa.verdict && fisa.verdict.nivel === "nu" ? (nr(x.fisaLa) > 0 ? "fișa monedei de la " + oraHM(nr(x.fisaLa)) + " zice NU" : "fișa monedei zice NU")   /* v100.333 (🔵10): fișa ținută minte își spune ora */
         : rg && rg.miscare && rg.sens && (dirBot === "long" || dirBot === "short") && !cuB ? "piața e în mișcare mare contra botului"
         : out.some(function (s) { return s.cod === "pericol" && s.tip === "lich" && (s.ton === "critic" || s.ton === "atentie"); }) ? "lichidarea e aproape"
         : out.some(function (s) { return s.cod === "pericol" && s.tip === "grid" && (s.ton === "critic" || s.ton === "atentie"); }) ? "prețul a ieșit din grid" : null;
@@ -315,7 +318,8 @@ var Sfaturi = (function () {
     var S = typeof Scenariu !== "undefined" ? Scenariu : null, TE = typeof TabloExtra !== "undefined" ? TabloExtra : null;
     // v100.257: short-ul cere scenariul si frecventa la marginea de SUS. Jos ramane pentru long si directia lipsa.
     // v100.259 (auditul 23.10, punctul 10): neutrul cere frecventa la AMBELE margini
-    var scen = S ? S.scenarii(b.brut || null, b, shortM ? [{ eticheta: "sus", pret: sus }] : [{ eticheta: "jos", pret: jos }]) : null;
+    // v100.333 (🔵1): totalul la margine = același model ca zero-ul, stopul și Consilierul (TabloExtra.totalCuGridLa, cu comisionul de închidere)
+    var scen = S ? S.scenarii(b.brut || null, b, shortM ? [{ eticheta: "sus", pret: sus }] : [{ eticheta: "jos", pret: jos }], TE && TE.totalCuGridLa ? function (x) { return TE.totalCuGridLa(b, x); } : undefined) : null;
     var sanse = {};
     if (S && o.k4 && p !== null && neutruI) {
       if (jos !== null) { sanse.josZi = S.sansaAtingere(o.k4, p, jos, 6); sanse.josSapt = S.sansaAtingere(o.k4, p, jos, 42); }
@@ -331,8 +335,9 @@ var Sfaturi = (function () {
     var fundingPionex = fp ? { rataZi: nr(fp.rataZi), rata: nr(fp.rata) !== null ? nr(fp.rata) : nr(fp.rate), intervalOre: nr(fp.intervalOre), veche: fp.veche === true } : null;
     return { bot: b, scen: scen, sanse: sanse, rezumat: o.rezumat || null, funding: o.funding, fundingOre: oreFunding(o.fundingHist), fundingPionex: fundingPionex, fata4h: o.fata4h || null, dir4h: o.dir4h, fisa: o.fisa || null,
       costuri: TE ? TE.grileVsCosturi(b, acum) : null, zero: TE ? TE.dacaInchizi(b) : null, geom: TE ? TE.geometrieBot(b) : null, ritm: ritm,
+      fisaLa: nr(o.fisaLa) > 0 ? nr(o.fisaLa) : null,   /* v100.333 (🔵10): fișa ținută minte (Tabloul, cât se reface) - ora ei în motiv */
       laTinta: TE && TE.totalLaTinta ? TE.totalLaTinta(b) : null, tpLive: TE && TE.pretTpLive ? TE.pretTpLive(b) : null, acum: acum };   // v100.322: banii și prețul la take-profit-ul pus (sfatul „zero”); v100.330: `acum` = vârsta botului pentru sfatul „zero”
   }
-  return { sfaturi: sfaturi, intrare: intrare };
+  return { sfaturi: sfaturi, intrare: intrare, pret: pret, griliTaiateTp: griliTaiateTp };
 })();
 if (typeof globalThis !== "undefined") globalThis.Sfaturi = Sfaturi;

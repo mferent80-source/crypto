@@ -322,7 +322,7 @@ var IndicatoriBot = (function () {
     var fata = function (u, short) {
       if (!u) return "vine la tura de dimineață";
       if (!(u.zile > 0) || typeof u.exces !== "number" || !isFinite(u.exces)) return "încă nicio zi judecată (7 zile de la sugestie)";
-      if (u.zile < 5 || !(u.ferestre >= 2)) return "prea puține zile ca să se vadă ceva (" + u.zile + ")";
+      if (u.zile < 5 || !(u.ferestre >= 2)) return "prea puține zile ca să se vadă ceva (" + u.zile + "; arăt cifrele de la 5 zile judecate, prag ales)";   /* v100.333: ca pe Piața azi - pragul e ales, nu dovedit */
       var zp = u.zileCuPiata > 0 ? u.zileCuPiata : u.zile;
       return (u.exces < 0 ? "−" : "+") + Math.abs(u.exces * 100).toFixed(1).replace(".", ",") + " pp față de piață la 7 zile · mai bine decât piața" + (short ? " (pentru un short)" : "") + " în " + Math.round((u.zilePeste || 0) * zp) + " din " + cate(zp);
     };
@@ -334,7 +334,36 @@ var IndicatoriBot = (function () {
       { k: "liste-short", eticheta: "Short", text: fata(F.short, true), ton: "neutru", titlu: titlu("Monede pentru short", E.short) }];
   }
 
-  return { dinPionex: dinPionex, celule: celule, rezumat: rezumat, estimare: estimare, predictie: predictie, mediu: mediu, ORIZONT: ORIZONT, RANDURI: RANDURI, listeRadar: listeRadar,
+  // v100.333 (el, 13.11: „în detaliile indicatorilor, în partea dreaptă mai ai spațiu gol, vreau să creezi și să pui acolo un grafic cu asta”):
+  // pe fiecare zi judecată (7 zile după sugestie) câte pp a făcut lista față de mediana pieței din aceleași zile (colectorul: urmarireFixa.peZile).
+  // Două grafice mici (revenire, short), ACEEAȘI scară, linia 0 = piața; o singură culoare (listele n-au avantaj dovedit: fără verde / roșu);
+  // fiecare zi are hover pe toată coloana (data, lista, piața, diferența, câte monede). fata = { revenire: u, short: u }
+  function listeGraficHtml(fata, esc) {
+    fata = fata || {}; esc = esc || function (x) { return String(x); };
+    var W = 300, H = 56, MIJ = H / 2, ziOk = function (z) { return z && /^\d{4}-\d{2}-\d{2}$/.test(String(z.zi)) && typeof z.exces === "number" && isFinite(z.exces); };
+    var zz = function (u) { return u && Array.isArray(u.peZile) ? u.peZile.filter(ziOk) : []; }, R = zz(fata.revenire), S = zz(fata.short);
+    if (!fata.revenire && !fata.short) return '<p class="tbSub lrGol">Pe zile: graficul apare după tura de dimineață a colectorului.</p>';
+    var M = 0.005; R.concat(S).forEach(function (z) { M = Math.max(M, Math.abs(z.exces)); });
+    var pc = function (v, u) { return typeof v === "number" && isFinite(v) ? (v < 0 ? "−" : "+") + Math.abs(v * 100).toFixed(1).replace(".", ",") + u : "—"; };
+    var dd = function (z) { return String(z.zi).slice(8, 10) + "." + String(z.zi).slice(5, 7); };
+    var unu = function (nume, l, u) {
+      if (!l.length) return '<p class="tbSub lrGol">' + esc(nume) + ": " + (u ? "încă nicio zi judecată (7 zile de la sugestie)" : "vine la tura de dimineață") + "</p>";
+      var pas = W / l.length, lat = Math.max(0.6, pas - Math.min(2, pas * 0.25)), bare = "";
+      l.forEach(function (z, i) {
+        var h = Math.max(1, Math.abs(z.exces) / M * (MIJ - 2)), y = z.exces >= 0 ? MIJ - h : MIJ, x = i * pas + (pas - lat) / 2, f = function (v) { return String(Math.round(v * 1000) / 1000); };
+        var tit = dd(z) + ": lista " + pc(z.lista, "%") + " · piața " + pc(z.piata, "%") + " · față de piață " + pc(z.exces, " pp") + (z.n > 0 ? " · " + TextRo.cate(z.n, "monedă", "monede") : "");
+        bare += '<g><rect class="lrHit" x="' + f(i * pas) + '" y="0" width="' + f(pas) + '" height="' + H + '"><title>' + esc(tit) + '</title></rect><rect class="lrBar" x="' + f(x) + '" y="' + f(y) + '" width="' + f(lat) + '" height="' + f(h) + '"></rect></g>';
+      });
+      return '<div class="lrUnu"><div class="lrCap"><span>' + esc(nume) + " · " + TextRo.cate(l.length, "zi", "zile") + '</span><span class="lrSc">±' + esc(pc(M, " pp").slice(1)) + '</span></div>' +
+        '<svg class="lrGraf" viewBox="0 0 ' + W + " " + H + '" preserveAspectRatio="none" width="100%" height="' + H + '" role="img" aria-label="' + esc(nume + ": față de piață, pe fiecare zi") + '">' +
+        '<line class="lrZero" x1="0" y1="' + MIJ + '" x2="' + W + '" y2="' + MIJ + '" vector-effect="non-scaling-stroke"></line>' + bare + '</svg>' +
+        '<div class="lrAx"><span>' + esc(dd(l[0])) + '</span><span>linia = piața</span><span>' + esc(dd(l[l.length - 1])) + "</span></div></div>";
+    };
+    return '<div class="lrGrafice">' + unu("Revenire", R, fata.revenire) + unu("Short", S, fata.short) +
+      '<p class="tbSub lrNota">Bara în sus = lista a făcut mai bine decât piața în cele 7 zile de după; în jos = mai rău. Ține mouse-ul pe o zi pentru cifre.</p></div>';
+  }
+
+  return { dinPionex: dinPionex, celule: celule, rezumat: rezumat, estimare: estimare, predictie: predictie, mediu: mediu, ORIZONT: ORIZONT, RANDURI: RANDURI, listeRadar: listeRadar, listeGraficHtml: listeGraficHtml,
     banda: banda, bandaHtml: bandaHtml, tvBanda: tvBanda, amintire: amintire, schimbari: schimbari, riglaHtml: riglaHtml, istoricScor: istoricScor, sparkHtml: sparkHtml, VORBE_POZITIE: VORBE_POZITIE };
 })();
 if (typeof globalThis !== "undefined") globalThis.IndicatoriBot = IndicatoriBot;

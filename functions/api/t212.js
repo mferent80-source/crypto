@@ -10,7 +10,7 @@
 //   POST ?action=istoric {ordine:[id], umpleri:[...], stare} -> colectorul adauga o pagina (dedup pe id)
 // Verificat pe contul lui (25.09): istoricul vine ca items[{order, fill}], pagini cu nextPagePath.
 import {requireApiAuth,authErrorResponse,sameOrigin} from "../_shared/auth.js";
-import { candidati } from "../_shared/simboluri.js";
+import { candidati, dataRezultate } from "../_shared/simboluri.js";
 import { citesteCorp } from "../_shared/corp-limitat.js";   // v100.272 (ideile auditului 29.10): plafonul corpului ÎNAINTE de citirea întreagă
 import { peCheie } from "../_shared/serializare.js";   // v100.259 (auditul 23.10, punctul 7): citește-modifică-scrie pe rând, pe cheie
 
@@ -110,12 +110,8 @@ async function dupaNume(nume) {
   let j = null; try { j = await r.json(); } catch {}
   return (j && Array.isArray(j.quotes) ? j.quotes : []).filter((q) => q && q.quoteType === "EQUITY" && BURSE_US.includes(q.exchange) && /^[A-Z][A-Z0-9-]{0,9}$/.test(q.symbol || "")).map((q) => q.symbol).slice(0, 3);
 }
-// v87: data rezultatelor trimestriale, de la Nasdaq (fara cheie). Aceeasi regula ca T212.dataRezultate.
-function dataRezultate(j) {
-  const t = j && j.data && j.data.reportText; if (typeof t !== "string") return null;
-  const m = t.match(/(\d{2})\/(\d{2})\/(\d{4})/); if (!m) return null;
-  return { data: m[3] + "-" + m[1] + "-" + m[2], sigur: !/estimated|expected/i.test(t) };
-}
+// v87: data rezultatelor trimestriale, de la Nasdaq (fara cheie). v100.333 (🔵 B8): o singură copie pe server, în _shared/simboluri.js (lângă candidati),
+// iar proba v100.333 o compară cu T212.dataRezultate de pe pagină.
 // v100.110 (bug din revizia v100.108): ziua Twelve Data („2026-10-05”) la ora DESCHIDERII la New York, ca bara zilnică Yahoo - altfel
 // 00:00Z = ziua de dinainte la New York, GridCalcul.bareBursa nu scotea bara de azi în formare, iar arhiva ar fi avut zile dublate la schimbarea sursei
 export function ziTd(d) {

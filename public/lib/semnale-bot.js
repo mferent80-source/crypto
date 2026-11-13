@@ -84,6 +84,8 @@ var SemnaleBot = (function () {
   // short: peste el) - partea de grid care nu mai lucrează niciodată dacă acolo stă stopul (regula lui: stopul nu stă în mijlocul gridului).
   function inGridPret(x, jos, sus) { return x !== null && x !== undefined && jos !== null && sus !== null && x > jos && x < sus; }
   function griliMoarte(b, x) {
+    // v100.333 (🔵8): o singură socoteală pe pagină și în colector (TabloExtra.grileDincoloK); copia de mai jos doar fără TabloExtra (probele vechi)
+    if (typeof TabloExtra !== "undefined" && TabloExtra && TabloExtra.grileDincoloK) return TabloExtra.grileDincoloK(b, nr(x));
     var d = b && b.brut && b.brut.buOrderData || {}, linii = nr(d.row), N = linii > 1 ? linii - 1 : null, jos = nr(b && b.gridJos), sus = nr(b && b.gridSus), dir = String(b && b.directie || "").toLowerCase();
     if (!N || !inGridPret(nr(x), jos, sus) || (dir !== "long" && dir !== "short")) return null;
     var geo = String(d.gridType || "").toLowerCase() === "geometric", lung = dir === "long";
@@ -655,7 +657,7 @@ var SemnaleBot = (function () {
     return { la: prima.t, laIesire: prima.total, acum: t, dif: t - prima.total };
   }
 
-  return { planPeCartela: planPeCartela, distantaLaOra: distantaLaOra, laMargine: laMargine, judecaLaInchidere: judecaLaInchidere, socotealaToti: socotealaToti, tacute: tacute, textIncredere: textIncredere, NUME_SFAT: NUME_SFAT, podeaPeBani: podeaPeBani, sensFata: sensFata, pasiCuBotul: pasiCuBotul, semafor: semafor, mutaGridul: mutaGridul, btcAvertizare: btcAvertizare, aglomerare: aglomerare, iaProfit: iaProfit, noteaza: noteaza, judeca: judeca, socoteala: socoteala,
+  return { griliMoarte: griliMoarte, planPeCartela: planPeCartela, distantaLaOra: distantaLaOra, laMargine: laMargine, judecaLaInchidere: judecaLaInchidere, socotealaToti: socotealaToti, tacute: tacute, textIncredere: textIncredere, NUME_SFAT: NUME_SFAT, podeaPeBani: podeaPeBani, sensFata: sensFata, pasiCuBotul: pasiCuBotul, semafor: semafor, mutaGridul: mutaGridul, btcAvertizare: btcAvertizare, aglomerare: aglomerare, iaProfit: iaProfit, noteaza: noteaza, judeca: judeca, socoteala: socoteala,
     gridMaiDes: gridMaiDes, fisaOpreste: fisaOpreste, textTrend: textTrend, acumConcret: acumConcret, pasBot: pasBot, celelalteMotive: celelalteMotive, pretStopEcran: pretStopEcran, etichetaStopProc: etichetaStopProc };
 })();
 if (typeof globalThis !== "undefined") globalThis.SemnaleBot = SemnaleBot;

@@ -447,9 +447,12 @@ var ActiuniSemnale = (function () {
     var mon = o.moneda === undefined ? "USD" : o.moneda, sg = mon === "USD" ? " $" : mon === "EUR" ? " €" : mon === "GBP" ? " £" : mon === "GBX" ? " p" : mon ? " " + mon : "";
     var bani = function (x) { return x.toFixed(2).replace(".", ",") + sg; };
     if (stop >= intrare) { r.eroare = ale.stop ? "Stopul trebuie să fie sub intrare (doar long)." : "Intrarea ta (" + bani(intrare) + ") e sub stopul calculat (" + bani(stop) + "): scrie-ți și stopul tău."; return r; }
+    // v100.333 (găsit la proba R-b): câștig/risc nu cere contul - se socotește ÎNAINTE de ieșirile fără cont / fără curs / fără „deja”; înainte rămânea
+    // null acolo, iar biletul (t212PlanPoartaHtml: pl.rr.toFixed) arunca ⇒ Poarta nu mai arăta nimic când lipsea cursul
+    if (r.tinta !== null && r.tinta > intrare) r.rr = (r.tinta - intrare) / (intrare - stop);
     // v100.175 (revizia v100.173): fără cont, planul LUI rămâne pe ecran (înainte poarta trecea tăcut la prețurile calculate)
     if (!(o.cont > 0)) { r.eroare = "Contul Trading 212 n-a venit încă: planul e al tău, dar nu pot socoti câte bucăți."; return r; }
-    if (!(o.fx > 0)) { r.eroare = "Lipsește cursul dolar/leu (nici BNR, nici istoricul T212 n-au venit): nu pot socoti câte bucăți."; return r; }
+    if (!(o.fx > 0)) { r.eroare = "Lipsește cursul dolar / moneda contului (BNR sau istoricul T212 n-au venit, ori contul nu e în lei): nu pot socoti câte bucăți."; return r; }
     if (o.deja === null) { r.eroare = "N-aș da o sumă: nu știu cât ai deja în acțiunea asta."; return r; }
     var fx = o.fx;
     r.m = marime({ intrare: intrare, stop: stop, cont: o.cont, fx: fx, riscPct: riscPct / 100, deja: o.deja, liber: o.liber, pretAcum: o.pretAcum });   /* v100.196: plafonul pe total, banii liberi */

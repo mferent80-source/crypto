@@ -212,9 +212,8 @@ var TabloExtra = (function () {
     var lung = dir === "long", mg = lung ? jos : sus, t = totalCuGridLa(b, mg, comision);
     if (t === null) return null;
     var laMargine = -t, stopPlan = laMargine > pm ? pretOpritorPentru(b, -pm, comision) : null, u = bu(b), row = nr(u.row), N = row > 1 ? row - 1 : null;
-    var geo = String(u.gridType || "").toLowerCase() === "geometric", fr = null;
-    if (stopPlan !== null && stopPlan > jos && stopPlan < sus) fr = lung ? (geo ? Math.log(stopPlan / jos) / Math.log(sus / jos) : (stopPlan - jos) / (sus - jos)) : (geo ? Math.log(sus / stopPlan) / Math.log(sus / jos) : (sus - stopPlan) / (sus - jos));
-    return { laMargine: laMargine, procent: inv > 0 ? laMargine / inv : null, parte: lung ? "jos" : "sus", stopPlan: stopPlan, intervale: N, moarte: fr !== null && N ? Math.round(fr * N) : null, plan: pm, preaLarg: laMargine > pm * 1.3 };
+    var gk = stopPlan !== null ? grileDincoloK(b, stopPlan) : null;   // v100.333 (🔵8): aceeași socoteală a grilelor tăiate
+    return { laMargine: laMargine, procent: inv > 0 ? laMargine / inv : null, parte: lung ? "jos" : "sus", stopPlan: stopPlan, intervale: N, moarte: gk ? gk.moarte : null, plan: pm, preaLarg: laMargine > pm * 1.3 };
   }
   function totalLaOpritor(b, comision) {
     if (!b || !b.opritorPierdereActiv) return null;
@@ -242,16 +241,25 @@ var TabloExtra = (function () {
   // să fie arătat. La / dincolo de lichidarea estimată (sau unde modelul zice că marja e deja pierdută) nu se mai propune: acolo stopul nu apucă
   // să lucreze - se ține motivul și prețul lichidării. Altfel i se pun alături totalul de acolo (cu grilele de pe drum) și, dacă pică în grid,
   // câte grile nu mai lucrează dincolo de el (regula lui: niciun stop în mijlocul gridului fără partea care moare). s = CurbaStop.pentruStop(...).
-  function grileDincolo(b, x) {
+  // v100.333 (auditul 12.11, 🔵8): SOCOTEALA grilelor tăiate de un preț x din grid (Pionex numără liniile: intervalele = row − 1), una pentru toată
+  // pagina și colector - Alerte.griliMoarte, SemnaleBot.griliMoarte, Sfaturi.griliTaiateTp și gridVsPlan o cheamă când TabloExtra e încărcat (copiile
+  // lor rămân doar pentru modulele încărcate singure; proba v100.333 ține paritatea). castig = false: partea dinspre pierdere (long: sub x, short:
+  // peste x - un stop acolo); true: partea dinspre câștig (long: peste x, short: sub x - un take-profit acolo). ⇒ { moarte (poate fi 0), intervale, txt } | null
+  function grileDincoloK(b, x, castig) {
     var u = bu(b), row = nr(u.row), N = row > 1 ? row - 1 : null, jos = nr(b && b.gridJos), sus = nr(b && b.gridSus), dir = String(b && b.directie || "").toLowerCase();
     x = nr(x);
     if (!N || x === null || !(jos > 0) || !(sus > jos) || !(x > jos && x < sus) || (dir !== "long" && dir !== "short")) return null;
-    var geo = String(u.gridType || "").toLowerCase() === "geometric";
-    var fr = dir === "long" ? (geo ? Math.log(x / jos) / Math.log(sus / jos) : (x - jos) / (sus - jos)) : (geo ? Math.log(sus / x) / Math.log(sus / jos) : (sus - x) / (sus - jos));
+    var geo = String(u.gridType || "").toLowerCase() === "geometric", josE = (dir === "long") !== !!castig;   // partea tăiată e sub x?
+    var fr = josE ? (geo ? Math.log(x / jos) / Math.log(sus / jos) : (x - jos) / (sus - jos)) : (geo ? Math.log(sus / x) / Math.log(sus / jos) : (sus - x) / (sus - jos));
     var k = Math.round(fr * N);
-    return k >= 1 ? { moarte: k, intervale: N } : null;
+    return { moarte: k, intervale: N, txt: k + " din " + cate(N, "grilă", "grile") };
   }
+  function grileDincolo(b, x) { var g = grileDincoloK(b, x); return g && g.moarte >= 1 ? { moarte: g.moarte, intervale: g.intervale } : null; }
   function stopPropus(b, s) {
+    // v100.333 (auditul 12.11, 🔵11): stopul de acum, atins, păstrează câștigul (totalul la el ≥ 0) ⇒ nu se propune unul mai departe (ar da câștigul
+    // înapoi); rândul spune cât păstrează. Prudent: doar nu se mai împinge, stopul rămâne al lui.
+    var laSt = b && s ? totalLaOpritor(b) : null;
+    if (laSt !== null && laSt >= 0) { s.mut20 = null; s.dMut20 = null; s.mutOprit = "adapost"; s.mutLaStop = laSt; return s; }
     if (!b || !s || nr(s.mut20) === null) return s;
     var x = nr(s.mut20), subPret = !s.sus, inv = nr(b.investit), lq = nr(subPret ? b.lichidareJos : b.lichidareSus);
     if (!(lq > 0)) { var pl = nr(b.pretLichidare), pS = nr(s.pret); lq = pl > 0 && (b.lichidarePartea ? b.lichidarePartea === (subPret ? "jos" : "sus") : pS !== null && (subPret ? pl < pS : pl > pS)) ? pl : null; }
@@ -818,7 +826,7 @@ var TabloExtra = (function () {
     return Object.keys(pe).map(function (k) { var g = pe[k]; g.text = "«" + (NUME_ALERTA[k] || k) + "»: prețul a scăzut în " + g.peMinus + " din " + g.n + " după 24 h" + (g.n < 10 ? " (prea puține)" : ""); return g; }).sort(function (a, b) { return b.n - a.n; });
   }
 
-  return { stopDincoloDeLichidare: stopDincoloDeLichidare, stopPropus: stopPropus, grileDincolo: grileDincolo, dupaAlerta: dupaAlerta, bilantAlerte: bilantAlerte, cifreActiuni: cifreActiuni, textBani: textBani, frecventaAtingere: frecventaAtingere, codTVBot: codTVBot, gridDiferitDeBot: gridDiferitDeBot, alertaRezolvata: alertaRezolvata, alerteleBotului: alerteleBotului, marcheazaDepasite: marcheazaDepasite, ritmRecuperare: ritmRecuperare, comisionDinUmplere: comisionDinUmplere, ceAiDeFacut: ceAiDeFacut, oraSfat: oraSfat, distanteGrid: distanteGrid, geometrieBot: geometrieBot, profitPeGrila: profitPeGrila, fundingBot: fundingBot, fundingPct: fundingPct, notaTotal: notaTotal, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, pretPentruTotal: pretPentruTotal, totalLaPret: totalLaPret, totalCuGridLa: totalCuGridLa, gridVsPlan: gridVsPlan, pragDinPlanuri: pragDinPlanuri, totalLaOpritor: totalLaOpritor, pretOpritorPentru: pretOpritorPentru, pretStopLive: pretStopLive, pretTpLive: pretTpLive, totalLaTinta: totalLaTinta, pretTintaPentru: pretTintaPentru, miscareZi: miscareZi, podeaUrca: podeaUrca, propunePlan: propunePlan, fisaInchidere: fisaInchidere, legaturaJurnal: legaturaJurnal,
+  return { stopDincoloDeLichidare: stopDincoloDeLichidare, stopPropus: stopPropus, grileDincolo: grileDincolo, grileDincoloK: grileDincoloK, dupaAlerta: dupaAlerta, bilantAlerte: bilantAlerte, cifreActiuni: cifreActiuni, textBani: textBani, frecventaAtingere: frecventaAtingere, codTVBot: codTVBot, gridDiferitDeBot: gridDiferitDeBot, alertaRezolvata: alertaRezolvata, alerteleBotului: alerteleBotului, marcheazaDepasite: marcheazaDepasite, ritmRecuperare: ritmRecuperare, comisionDinUmplere: comisionDinUmplere, ceAiDeFacut: ceAiDeFacut, oraSfat: oraSfat, distanteGrid: distanteGrid, geometrieBot: geometrieBot, profitPeGrila: profitPeGrila, fundingBot: fundingBot, fundingPct: fundingPct, notaTotal: notaTotal, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, pretPentruTotal: pretPentruTotal, totalLaPret: totalLaPret, totalCuGridLa: totalCuGridLa, gridVsPlan: gridVsPlan, pragDinPlanuri: pragDinPlanuri, totalLaOpritor: totalLaOpritor, pretOpritorPentru: pretOpritorPentru, pretStopLive: pretStopLive, pretTpLive: pretTpLive, totalLaTinta: totalLaTinta, pretTintaPentru: pretTintaPentru, miscareZi: miscareZi, podeaUrca: podeaUrca, propunePlan: propunePlan, fisaInchidere: fisaInchidere, legaturaJurnal: legaturaJurnal,
     peZile: peZile, marjaNoua: marjaNoua, vsPozitie: vsPozitie, planStare: planStare, evenimente: evenimente };
 })();
 if (typeof globalThis !== "undefined") globalThis.TabloExtra = TabloExtra;

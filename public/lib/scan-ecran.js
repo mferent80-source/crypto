@@ -112,7 +112,8 @@ function scanContext() {
   var fcS = typeof acFranaContText === "function" ? acFranaContText() : "";
   // v100.332 (auditul 12.11, 🟡8): frâna NECUNOSCUTĂ (raportul / calendarul încă pe drum sau căzute, riscul pe o zi lipsă) are rândul ei - înainte lipsea, ca atunci când nu e trasă
   var necS = !fcS && typeof acFranaContStiut === "function" && !acFranaContStiut() ? (typeof acFranaContNec === "function" && acFranaContNec()) || "încă verific raportul contului și calendarul" : "";
-  el.innerHTML = (fcS ? '<div class="scFrana">⛔ <b>Frâna contului azi</b> <span class="scSub">· la ambele piețe</span><span class="scFranaTxt">' + escapeHtml(fcS) + '</span></div>'
+  el.innerHTML = (fcS ? '<div class="scFrana">⛔ <b>Frâna contului azi</b> <span class="scSub">· la ambele piețe</span><span class="scFranaTxt">' + escapeHtml(fcS) + '</span>'
+    + (typeof acFranaContAlte === "function" && acFranaContAlte(fcS).length ? '<span class="scSub">Și: ' + escapeHtml(acFranaContAlte(fcS).join(" ")) + '</span>' : '') + '</div>'   /* v100.333 (🔵): toate motivele, ca banda */
     : necS ? '<div class="scFrana"><b>Frâna contului: ' + escapeHtml(necS) + '.</b></div>' : '')
     + '<div><span class="scPiata">Crypto · ' + (cr.length ? scCate(cr.length, "monedă", "monede") : "— monede") + ' Pionex</span><span class="scNiv ' + col(v.nivel) + '">' + escapeHtml(v.eticheta) + '</span>'
     + '<span class="scSub">' + (cl ? cl.evita + ' din ' + (cl.evita + cl.candidati) + ' în mișcare · ' : '') + (btc ? 'BTC ' + scPct(btc.ch7) + ' pe 7 zile' : '') + (f && f.text ? ' · ' + escapeHtml(f.text) : '') + clLa + '</span>'

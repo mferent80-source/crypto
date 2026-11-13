@@ -35,20 +35,46 @@ export function urmarireFixa(ist, o) {
   // ferestrele de `zile` zile care nu se suprapun: zilele judecate, în ordine; o fereastră nouă începe la cel puțin `zile` zile după precedenta
   let ferestre = 0, ultima = -Infinity; for (const zi of [...peZi.keys()].sort()) { const t = Date.parse(zi + "T06:00:00Z"); if (t - ultima >= zile * ZI) { ferestre++; ultima = t; } }
   const u = { n: toateR.length, zile: zileL.length, pePlus: toateR.length ? toateR.filter((r) => r > 0).length / toateR.length : null, medie: med(mediiZi), exces: med(excesZi), zilePeste: excesZi.length ? excesZi.filter((e) => e > 0).length / excesZi.length : null, nejudecate, inAsteptare, ferestre, zileCuPiata: excesZi.length };
+  // v100.333 (el, 13.11: graficul din „Listele Radarului”): seria PE ZILE - fiecare zi judecată cu lista (după cost, în direcția ei), mediana pieței
+  // din aceleași zile și diferența (pp), aceeași socoteală ca media de mai sus; doar zilele cu piață, ultimele 90 (corpul trimis rămâne mic)
+  const r4 = (v) => Math.round(v * 1e6) / 1e6;
+  u.peZile = [...peZi.entries()].filter(([, z]) => z.e.length).sort((a, b) => (a[0] < b[0] ? -1 : 1)).slice(-90)
+    .map(([zi, z]) => ({ zi, n: z.r.length, lista: r4(med(z.r)), piata: r4(z.piata), exces: r4(med(z.e)) }));
   const P = (v) => (v == null ? "—" : (v >= 0 ? "+" : "−") + Math.abs(v * 100).toFixed(1).replace(".", ",") + "%"), pp = (v) => (v == null ? "—" : (v >= 0 ? "+" : "−") + Math.abs(v * 100).toFixed(1).replace(".", ",") + " pp");
   const nej = nejudecate ? " · " + nejudecate + " nejudecate (fără bare la intrare sau la orizont)" : "";
   u.text = !u.n ? "Sugestiile se urmăresc de azi, la " + cate(zile, "zi", "zile") + " fiecare, în direcția botului (neutru: ca long): după ~30 de zile cu rezultat se poate spune cu cifre dacă merită" + nej + "."
     : "Din " + cate(u.n, "sugestie", "sugestii") + " (" + cate(u.zile, "zi", "zile") + ") la " + cate(zile, "zi", "zile") + ", în direcția botului (neutru: ca long): " + Math.round(u.pePlus * 100) + "% pe plus, " + P(u.medie) + " în medie după cost, " + pp(u.exces) + " față de piața din aceleași zile" + (u.zilePeste != null ? " (peste piață în " + Math.round(u.zilePeste * 100) + "% din zile)" : "") + " · ferestre de " + cate(zile, "zi", "zile") + " care nu se suprapun: " + ferestre + nej + ".";
   return u;
 }
+// v100.333 (el, 13.11: „rezolvă asta”): pe 12 și 13.11 tura a picat („fetch failed”) și ziua s-a pierdut. Acum o tură picată se reia în aceeași
+// zi după REIA_MS; în total cel mult REIA_MAX încercări pe zi (prima + 2 reluări), apoi mâine; reușita închide ziua și șterge reluarea.
+const REIA_MS = 30 * 60000, REIA_MAX = 3;
+const respira = () => new Promise((r) => setImmediate(r));
 export async function turaSugestii(d) {
   if (d.ora < 8 || d.stare.zi === d.zi) return null;
-  d.stare.zi = d.zi; d.scrieStare(d.stare);   // o dată pe zi, chiar dacă pică la mijloc (mâine din nou)
-  const R = d.Reveniri, G = d.G, cache = new Map();
-  const bare4 = (s) => { if (!cache.has(s)) cache.set(s, G.agrega(d.bare1h(s) || [], H4).filter((x) => x && Number.isFinite(x.c))); return cache.get(s); };
+  const rz = d.stare.reia && d.stare.reia.zi === d.zi ? d.stare.reia : null;
+  if (rz && d.acum < rz.la) return null;
+  try {
+    const r = await turaSugestiiPas(d);
+    d.stare.zi = d.zi; delete d.stare.reia; d.scrieStare(d.stare);
+    return r;
+  } catch (e) {
+    const n = (rz ? rz.n : 0) + 1;
+    if (n >= REIA_MAX) { d.stare.zi = d.zi; delete d.stare.reia; } else d.stare.reia = { zi: d.zi, n, la: d.acum + REIA_MS };
+    d.scrieStare(d.stare);
+    throw e;
+  }
+}
+async function turaSugestiiPas(d) {
+  const R = d.Reveniri, G = d.G, cache = new Map(), brute = new Map();
+  // v100.333: barele de 1 h citite O dată (în bucla care respiră), refolosite de cele trei urmăriri - înainte depozitul se citea a doua oară dintr-o bucată
+  const bare1 = (s) => { if (!brute.has(s)) brute.set(s, d.bare1h(s) || []); return brute.get(s); };
+  const bare4 = (s) => { if (!cache.has(s)) cache.set(s, G.agrega(bare1(s), H4).filter((x) => x && Number.isFinite(x.c))); return cache.get(s); };
   // 1) istoricul pieței: punctele de pe fiecare monedă din depozit (fereastra clasamentului: 500 de bare de 4h)
+  // v100.333: bucla respiră după fiecare monedă - dintr-o bucată, citirea + R.puncte țineau colectorul 21–31 s la 8:00 (8,8 s pe 75 de monede pe PC),
+  // iar cererile altor ture (și ale acesteia) cădeau: „aborted due to timeout”, „fetch failed”
   const serii = [];
-  for (const s of d.simboluriDepozit()) { const b = bare4(s); if (b.length < 520) continue; serii.push(R.puncte(b, { r: R.REGULI.moneda, dupaTimp: true, start: 499, G, short: true })); }
+  for (const s of d.simboluriDepozit()) { const b = bare4(s); await respira(); if (b.length < 520) continue; serii.push(R.puncte(b, { r: R.REGULI.moneda, dupaTimp: true, start: 499, G, short: true })); await respira(); }
   const piataRev = R.dovada(serii, "revine", { pauzaZile: 7 }), piataShort = R.dovada(serii, "short", { pauzaZile: 7, short: true });
   // 2) boții lui, după starea monedei la pornire
   const botiD = R.dovadaBoti(await d.boti(), bare4, G);
@@ -59,15 +85,19 @@ export async function turaSugestii(d) {
   for (const x of (tk && tk.data && tk.data.tickers) || []) { const p = Number(x && x.close); if (x && x.symbol && p > 0) preturi[String(x.symbol)] = p; }
   const ist = ((await d.cere("/api/istoric-bot?action=sugestii")) || {}).istoric || [];
   // revizia Opus (🔵4): barele de 1 h citite o singură dată pentru toate trei urmăririle (fiecare urmarireFixa își ținea cache-ul ei: depozitul citit de 4 ori)
-  const bare1hO = (() => { const m = new Map(); return (s) => { if (!m.has(s)) m.set(s, d.bare1h(s)); return m.get(s); }; })();
+  const bare1hO = bare1;
   const urm = { revenire: R.urmarire(ist.filter((x) => x && x.lista === "revenire"), preturi, d.acum, { zile: 7, cost: 0.001 }),
-    short: R.urmarire(ist.filter((x) => x && x.lista === "short"), preturi, d.acum, { zile: 7, cost: 0.001, short: true }),
-    // v100.292: „Pe ce aș porni” la orizont fix, pe zile, față de mediana pieței (pagina Sugestii o arată întreagă, lângă listă)
-    porn: urmarireFixa(ist.filter((x) => x && x.lista === "porn"), { zile: 7, cost: 0.001, bare1h: bare1hO, toate: d.simboluriDepozit(), acum: d.acum }),
-    // v100.331 (el, 12.11: „la 1 fă și integrează în detaliile indicatorilor”): listele de monede FAȚĂ DE PIAȚĂ, la orizont fix, pe zile (ca „porn”) -
-    // „−22,3% de la prețul sugestiei” spunea mai ales încotro a mers piața; asta spune dacă lista ALEGE monede mai bune decât piața din aceleași zile
-    revenireFata: urmarireFixa(ist.filter((x) => x && x.lista === "revenire"), { zile: 7, cost: 0.001, bare1h: bare1hO, toate: d.simboluriDepozit(), acum: d.acum }),
-    shortFata: urmarireFixa(ist.filter((x) => x && x.lista === "short").map((x) => Object.assign({}, x, { dir: "short" })), { zile: 7, cost: 0.001, bare1h: bare1hO, toate: d.simboluriDepozit(), acum: d.acum }) };
+    short: R.urmarire(ist.filter((x) => x && x.lista === "short"), preturi, d.acum, { zile: 7, cost: 0.001, short: true }) };
+  // v100.333: cele trei urmăriri la orizont fix, cu o respirație între ele (pe PC ~0,9 s dintr-o bucată, toate trei)
+  await respira();
+  // v100.292: „Pe ce aș porni” la orizont fix, pe zile, față de mediana pieței (pagina Sugestii o arată întreagă, lângă listă)
+  urm.porn = urmarireFixa(ist.filter((x) => x && x.lista === "porn"), { zile: 7, cost: 0.001, bare1h: bare1hO, toate: d.simboluriDepozit(), acum: d.acum });
+  await respira();
+  // v100.331 (el, 12.11: „la 1 fă și integrează în detaliile indicatorilor”): listele de monede FAȚĂ DE PIAȚĂ, la orizont fix, pe zile (ca „porn”) -
+  // „−22,3% de la prețul sugestiei” spunea mai ales încotro a mers piața; asta spune dacă lista ALEGE monede mai bune decât piața din aceleași zile
+  urm.revenireFata = urmarireFixa(ist.filter((x) => x && x.lista === "revenire"), { zile: 7, cost: 0.001, bare1h: bare1hO, toate: d.simboluriDepozit(), acum: d.acum });
+  await respira();
+  urm.shortFata = urmarireFixa(ist.filter((x) => x && x.lista === "short").map((x) => Object.assign({}, x, { dir: "short" })), { zile: 7, cost: 0.001, bare1h: bare1hO, toate: d.simboluriDepozit(), acum: d.acum });
   const noi = rev.map((x) => ({ simbol: x.simbol, pret: preturi[x.simbol] || x.pret || null, lista: "revenire" })).concat(sh.map((x) => ({ simbol: x.simbol, pret: preturi[x.simbol] || x.pret || null, lista: "short" })))
     .concat(porn.map((x) => ({ simbol: x.simbol, pret: preturi[x.simbol] || x.pret || null, lista: "porn", dir: x.dir || null }))).filter((x) => x.pret > 0);
   await d.trimite("/api/istoric-bot?action=sugestii", { la: d.acum, zi: d.zi, dovada: { revenire: { piata: piataRev, boti: botiD.revenire }, short: { piata: piataShort, boti: botiD.short } }, urmarire: urm, noi });

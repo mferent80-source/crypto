@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ro"><head><link href="/manifest.webmanifest" rel="manifest"/><meta content="#0E141A" name="theme-color"/><meta content="dark" name="color-scheme"/><meta charset="utf-8"/><meta content="v100.332" name="app-version"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
+<html lang="ro"><head><link href="/manifest.webmanifest" rel="manifest"/><meta content="#0E141A" name="theme-color"/><meta content="dark" name="color-scheme"/><meta charset="utf-8"/><meta content="v100.333" name="app-version"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
 <title>Crypto Radar</title>
 <link href="/app.css" rel="stylesheet"/>
 </head><body><div aria-live="polite" class="offlineBanner" hidden="" id="offlineBanner" role="status">OFFLINE · read-only local research mode. Network analysis/scanners are disabled; cached UI, journal and reports remain available.</div>
@@ -75,7 +75,7 @@
 </details>
 </div>
 <div class="sideFooter">
-<div class="label">Build</div><div id="sideVersiune" style="font-size:11px;font-weight:800;margin-top:3px">v100.332 · FĂRĂ DATE NU E „TOTUL BINE”</div>
+<div class="label">Build</div><div id="sideVersiune" style="font-size:11px;font-weight:800;margin-top:3px">v100.333 · LISTELE PE ZILE, ÎN GRAFIC</div>
 <div class="row"><span class="small">Spot source</span><b class="good">DIRECT</b></div>
 <div class="row"><span class="small">Engine</span><b class="good">READY</b></div>
 </div>
@@ -92,7 +92,7 @@
 <div class="logo">◈</div>
 <div><h1>Crypto Radar Pro · Multi-Market</h1><div class="subhead">Crypto + Nasdaq + US stocks · multi-timeframe research</div></div>
 </div>
-<div class="headerMeta"><span class="badge" id="antetVersiune">v100.332 · CRYPTO RADAR · PIONEX + TRADING 212 DOAR CITIRE</span><span class="metaChip">STRICT READ-ONLY · STATIC+RUNTIME</span><span class="metaChip">SPOT DATA · NO ORDER ROUTE</span><span class="metaChip">4 TIMEFRAMES</span></div>
+<div class="headerMeta"><span class="badge" id="antetVersiune">v100.333 · CRYPTO RADAR · PIONEX + TRADING 212 DOAR CITIRE</span><span class="metaChip">STRICT READ-ONLY · STATIC+RUNTIME</span><span class="metaChip">SPOT DATA · NO ORDER ROUTE</span><span class="metaChip">4 TIMEFRAMES</span></div>
 </div>
 <div class="toolbar"><button aria-expanded="false" class="tbarRezumat" data-action-click="tbarComuta()" id="tbarRezumat" title="Alege moneda, intervalul, modul și sursa" type="button">BTC · 4h · Auto · Binance ▾</button>
 <div class="controls">
@@ -375,22 +375,22 @@
 <div class="mini"><span class="label">Trailing</span><b id="trail">—</b></div>
 <div class="mini"><span class="label">Risk</span><b id="risk">—</b></div>
 </div></div></div></div></details><details class="acPl" id="acPl-largime"><summary><b>Lărgimea pieței, pe larg</b><span class="acPlSub" id="acPlSub-largime">—</span></summary><div class="acPlCorp"><div class="grid dashWideGrid"><div class="card full dashBreadth marketBreadthCard">
-<div class="sectionHead"><h3>Market Breadth Pro</h3><div><span class="validationBadge">PARTICIPATION · TREND · VOLUME · MOMENTUM</span> <button class="actionGhost" data-action-click="refreshMarketBreadthV64(true,false)">Refresh</button> <button class="actionGhost" data-action-click="refreshMarketBreadthV64(true,true)">Full universe</button></div></div>
+<div class="sectionHead"><h3>Lărgimea pieței</h3><div><span class="validationBadge">PARTICIPARE · TREND · VOLUM · MOMENTUM</span> <button class="actionGhost" data-action-click="refreshMarketBreadthV64(true,false)">Reîmprospătează</button> <button class="actionGhost" data-action-click="refreshMarketBreadthV64(true,true)">Tot universul</button></div></div>
 <div class="breadthHero">
-  <div><span class="label">Breadth state</span><div class="breadthState neutral" id="breadthState">NOT LOADED</div><div class="small" id="breadthSummary">Run analysis or refresh breadth.</div></div>
-  <div class="breadthScoreWrap"><span class="label">Breadth score</span><b id="breadthScore">—</b><div class="breadthTrack"><i id="breadthBar" style="width:0%"></i></div></div>
+  <div><span class="label">Starea lărgimii</span><div class="breadthState neutral" id="breadthState">NECITITĂ</div><div class="small" id="breadthSummary">Pornește analiza sau reîmprospătează lărgimea.</div></div>
+  <div class="breadthScoreWrap"><span class="label">Scorul lărgimii</span><b id="breadthScore">—</b><div class="breadthTrack"><i id="breadthBar" style="width:0%"></i></div></div>
 </div>
 <div class="breadthGrid">
-  <div class="breadthBox"><span>Advancing participation</span><b id="breadthParticipation">—</b></div>
-  <div class="breadthBox"><span>Above EMA20 / 50 / 200</span><b id="breadthTrend">—</b></div>
-  <div class="breadthBox"><span>Volume breadth</span><b id="breadthVolume">—</b></div>
-  <div class="breadthBox"><span>Momentum · RSI &gt; 50</span><b id="breadthMomentum">—</b></div>
-  <div class="breadthBox"><span>New highs / lows</span><b id="breadthHighLow">—</b></div>
-  <div class="breadthBox"><span>Divergence</span><b id="breadthDivergence">—</b></div>
-  <div class="breadthBox"><span>Universe coverage</span><b id="breadthCoverage">—</b></div>
-  <div class="breadthBox"><span id="breadthAltLabel">Alt / broad participation</span><b id="breadthAltParticipation">—</b></div>
+  <div class="breadthBox"><span>Participare (au urcat)</span><b id="breadthParticipation">—</b></div>
+  <div class="breadthBox"><span>Peste EMA 20 / 50 / 200</span><b id="breadthTrend">—</b></div>
+  <div class="breadthBox"><span>Volumul participă</span><b id="breadthVolume">—</b></div>
+  <div class="breadthBox"><span>Momentum · RSI peste 50</span><b id="breadthMomentum">—</b></div>
+  <div class="breadthBox"><span>Maxime / minime noi</span><b id="breadthHighLow">—</b></div>
+  <div class="breadthBox"><span>Divergență</span><b id="breadthDivergence">—</b></div>
+  <div class="breadthBox"><span>Acoperirea universului</span><b id="breadthCoverage">—</b></div>
+  <div class="breadthBox"><span id="breadthAltLabel">Participarea altcoinilor</span><b id="breadthAltParticipation">—</b></div>
 </div>
-<p class="note" id="breadthNote">Breadth is a confirmation/context layer, not an independent BUY/SELL signal. Fast mode uses a representative basket; Full universe is explicit because it can require materially more provider requests.</p>
+<p class="note" id="breadthNote">Lărgimea confirmă contextul, nu e un semnal de cumpărare / vânzare. Modul rapid folosește un coș reprezentativ; tot universul cere mult mai multe cereri la furnizor.</p>
 </div></div></div></details><details class="acPl" id="acPl-decizii"><summary><b>Deciziile (12 motoare)</b><span class="acPlSub" id="acPlSub-decizii">—</span></summary><div class="acPlCorp"><div class="grid dashWideGrid"><div class="card full dashDecisionOS decisionOsCard">
 <div class="sectionHead"><h3>Decision Intelligence OS Pro</h3><div><span class="validationBadge">12 DECISION ENGINES · CAPITAL PRESERVATION FIRST</span> <button class="actionGhost" data-action-click="refreshV65DecisionOS(true)">Refresh</button> <button class="actionGhost" data-action-click="navTo('decision')">Open Verdict page</button></div></div>
 <div class="decisionOsHero"><div><span class="label">Decision OS state</span><div class="decisionOsState neutral" id="v65DashState">WAIT DATA</div><div class="small" id="v65DashSummary">Run analysis to synthesize all decision instruments.</div></div><div class="decisionOsKpi"><span class="label">Decision quality</span><b id="v65DashScore">—</b></div><div class="decisionOsKpi"><span class="label">Kill switch</span><b id="v65DashKill">—</b></div><div class="decisionOsKpi"><span class="label">Recommended entry</span><b id="v65DashEntry">—</b></div><div class="decisionOsKpi"><span class="label">Position action</span><b id="v65DashExit">—</b></div></div>
@@ -1212,7 +1212,7 @@
 <div class="cacheBox"><span class="label">Scannerul Pionex</span><b id="healthScanner">—</b></div>
 <div class="cacheBox"><span class="label">Reconectări WS</span><b id="healthReconnects">—</b></div>
 <div class="cacheBox"><span class="label">Mod PWA</span><b id="healthPwaMode">—</b></div>
-<div class="cacheBox"><span class="label">Versiunea aplicației</span><b id="healthAppVersion">v100.332</b></div>
+<div class="cacheBox"><span class="label">Versiunea aplicației</span><b id="healthAppVersion">v100.333</b></div>
 <div class="cacheBox"><span class="label">Contractul motorului</span><b>54.1</b></div>
 <div class="cacheBox"><span class="label">Ce s-a verificat</span><b>STATIC+RUNTIME · LIVE UNVERIFIED</b></div>
 <div class="cacheBox"><span class="label">Intel API</span><b id="healthIntel">—</b></div>

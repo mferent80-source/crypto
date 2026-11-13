@@ -157,7 +157,7 @@ await test("7. urmarireFixa (colector): fiecare sugestie judecată la 7 zile FIX
 });
 await test("8. tura trimite notările „porn” ale zilei și urmarire.porn (orizont fix); ruta le primește și le păstrează", () => {
   const T = citeste("scripts", "lib", "tura-sugestii.mjs");
-  assert.match(T, /export function urmarireFixa\(/); assert.match(T, /lista: "porn"/); assert.match(T, /porn: urmarireFixa\(ist\.filter\(\(x\) => x && x\.lista === "porn"\)/);
+  assert.match(T, /export function urmarireFixa\(/); assert.match(T, /lista: "porn"/); assert.match(T, /urm\.porn = urmarireFixa\(ist\.filter\(\(x\) => x && x\.lista === "porn"\)/);   /* v100.333: urmăririle pe rând, cu respirație */
   assert.match(T, /d\.Idei\.ideiBoti\(cl, \[\], 5\)/);
   const R = citeste("functions", "api", "istoric-bot.js");
   assert.match(R, /x&&x\.lista==="porn"\?"porn":/); assert.match(R, /porn:ur\(w\.porn\)/);

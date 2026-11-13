@@ -68,7 +68,9 @@ var Acasa = (function () {
     // v100.329: cuvântul de pe cardul „Frică / lăcomie” (fgNume) + cifra; înainte „frică mare” la 28, cardul zicea „frică”. Pragurile 30 / 70 rămân.
     var fgTxt = fg === null ? "" : fg >= 70 || fg <= 30 ? ", cu " + fgNume(fg) + " (" + fgR + ")" : "";
     var adaos = lac ? ", fără pariuri mari pe urcare (lăcomia e la " + fgR + ")." : fri ? ", fără vânzări în panică (frica e la " + fgR + ")." : null;
-    var text = sensTxt + fgTxt + ". " + ev + " din cele " + n + " de monede mari sunt în mișcare, regimul în care gridul iese cel mai rău.";
+    // v100.333 (auditul 12.11, 🔵): pragurile verdictului (25% „amestecat”, 50% „mișcare”) sunt ALESE, nu măsurate - scris la vedere, nu mutat
+    var text = sensTxt + fgTxt + ". " + ev + " din cele " + n + " de monede mari sunt în mișcare, regimul în care gridul iese cel mai rău."
+      + " Pragurile de 25% („amestecat”) și 50% („mișcare”) sunt alese, nedovedite.";
     var r;
     if (btcMis || cota >= 0.5) r = { nivel: "miscare", eticheta: "🔴 MIȘCARE", titlu: btcMis ? "BTC a intrat în mișcare: toată piața e agitată." : "Jumătate din piață e în mișcare.",
       faCe: lac ? "N-aș porni boți grid noi și n-aș mări pariurile pe urcare (lăcomia e la " + fgR + ")." : fri ? "N-aș porni boți grid noi și n-aș vinde în panică (frica e la " + fgR + ")."
@@ -180,7 +182,27 @@ var Acasa = (function () {
   // v100.329 (12.11, el: verdictele „la fel la crypto și la nasdaq” ⇒ trendul Nasdaq „cea a paginii”): direcția indicelui într-un singur loc -
   // verdictul paginii, fâșia „Piața azi” din Tablou / T212, biletul și sfatul T212 o citesc de aici (înainte fâșia avea alt scor:
   // EMA20/50 + pantă + EMA200, care a zis altceva în 18 din 52 de zile). qqq: bare zilnice {c}; sub 200 de zile ⇒ null.
-  function sensBursa(qqq) {
+  // v100.333 (auditul 12.11, 🟡5; decizia: coordonatorul, 13.11): trendul Nasdaq pe ultima zi ÎNCHISĂ. Yahoo dă și bara zilei de azi cât bursa e
+  // deschisă (se mișcă la fiecare citire); o trecere de câteva minute sub media de 50 muta verdictul (și alerta colectorului) în „LATERAL” și înapoi.
+  // Cu bursa New York deschisă și ultima bară din ziua de azi (ziua New York-ului), bara iese din socoteala trendului; după 16:00 NY e închisă și intră.
+  // Bare fără `t` (probele vechi) rămân toate. acum lipsă = Date.now().
+  function zNY(t) { try { return new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(t)); } catch (e) { return ""; } }
+  function bursaNYDeschisa(acum) {
+    if (typeof CalendarBursa !== "undefined" && CalendarBursa.stare) { try { return !!CalendarBursa.stare(acum, "SPY_US_EQ").deschisa; } catch (e) {} }
+    try {
+      var o = {}; new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(new Date(acum)).forEach(function (x) { o[x.type] = x.value; });
+      var m = Number(o.hour) * 60 + Number(o.minute); return ["Sat", "Sun"].indexOf(o.weekday) < 0 && m >= 570 && m < 960;
+    } catch (e) { return false; }
+  }
+  // { bare: fără bara de azi în formare, azi: bara scoasă (sau null) }
+  function bareInchise(qqq, acum) {
+    var l = Array.isArray(qqq) ? qqq : [], u = l.length ? l[l.length - 1] : null, a = nr(acum) || Date.now();
+    if (acum === false) return { bare: l, azi: null };   /* barele sunt deja tăiate (vremeBursa) */
+    if (!u || nr(u.t) === null || !bursaNYDeschisa(a) || zNY(u.t) !== zNY(a)) return { bare: l, azi: null };
+    return { bare: l.slice(0, -1), azi: u };
+  }
+  function sensBursa(qqq, acum) {
+    qqq = bareInchise(qqq, acum).bare;   /* v100.333 (🟡5) */
     var c = (Array.isArray(qqq) ? qqq : []).map(function (x) { return nr(x && x.c); }).filter(function (v) { return v !== null; });
     if (c.length < 200) return null;
     var u = c[c.length - 1], e50 = ema(c.slice(-200), 50), e200 = ema(c, 200);
@@ -189,9 +211,20 @@ var Acasa = (function () {
   // qqq: bare zilnice {c}; vix: numar; ndx: largimeNdx(...)
   function vremeBursa(o) {
     o = o || {};
+    // v100.333 (🟡5): verdictul pe ziua închisă; mișcarea de azi (bara în formare) rămâne la vedere, în text. VIX-ul rămâne cel de acum (panica e o frână).
+    var bi = bareInchise(o.qqq, o.acum === false ? false : o.acum);
+    if (bi.azi) {
+      var r0 = vremeBursa(Object.assign({}, o, { qqq: bi.bare, acum: false })), ieri = bi.bare.length ? nr(bi.bare[bi.bare.length - 1].c) : null, az = nr(bi.azi.c);
+      if (r0.nivel !== "fara-date" && ieri > 0 && az > 0) {
+        var chA = (az / ieri - 1) * 100;
+        r0.azi = Math.round(chA * 100) / 100;
+        r0.text = (r0.text ? r0.text + " " : "") + "Azi, cu bursa deschisă: QQQ " + (chA < 0 ? "−" : "+") + Math.abs(chA).toFixed(1).replace(".", ",") + "% (trendul e judecat pe ultima închidere).";
+      }
+      return r0;
+    }
     var c = (Array.isArray(o.qqq) ? o.qqq : []).map(function (x) { return nr(x && x.c); }).filter(function (v) { return v !== null; }), vix = nr(o.vix), nd = o.ndx;
     if (c.length < 200) return { nivel: "fara-date", eticheta: "FĂRĂ DATE", titlu: "Bursele n-au venit încă.", text: "", faCe: "" };
-    var sens = sensBursa(o.qqq);   /* v100.329: aceeași funcție ca fâșia; înainte calculul stătea aici, pe loc */
+    var sens = sensBursa(o.qqq, false);   /* v100.329: aceeași funcție ca fâșia; înainte calculul stătea aici, pe loc · v100.333: barele sunt deja cele închise */
     var cota = nd && nd.n ? nd.e50 / nd.n : null, vx = vix !== null ? "VIX " + vix.toFixed(1).replace(".", ",") : "";
     var partNd = nd && nd.n ? " Doar " + nd.e50 + " din " + cate(nd.n, "acțiune", "acțiuni") + " sunt peste media de 50 de zile." : "";
     if (vix !== null && vix >= 30) return { nivel: "frica", eticheta: "🔴 FRICĂ PE BURSĂ", titlu: "VIX e la " + vix.toFixed(1).replace(".", ",") + ": bursa e în panică.", text: "Peste 30, mișcările sunt mari în ambele sensuri.", faCe: "N-aș cumpăra acum; aș aștepta ca VIX să coboare sub 25." };
@@ -299,6 +332,9 @@ var Acasa = (function () {
       if (k === "zi") return; var a = nr(azi[k]), b = nr(ier[k]); if (a === null || b === null) return;
       var d = Math.round((a - b) * 100) / 100; o[k] = { d: d, sag: d > 0 ? "↑" : d < 0 ? "↓" : "=", de: b };
     });
+    // v100.333 (auditul 12.11, 🔵): poza „de ieri” e ultima dinaintea zilei de azi - poate fi de acum câteva zile (colectorul oprit); ziua ei și câte zile au trecut
+    var zi1 = Date.parse(ier.zi + "T12:00:00Z"), zi0 = Date.parse(azi.zi + "T12:00:00Z");
+    o.dinZi = ier.zi; o.zileInUrma = isFinite(zi1) && isFinite(zi0) ? Math.round((zi0 - zi1) / 86400000) : null;
     return o;
   }
 
@@ -538,6 +574,13 @@ var Acasa = (function () {
   // v100.332 (auditul 12.11, 🟡1): raportul proaspăt, dar fără riscul pe o zi (VaR-ul n-a ieșit) sau făcut fără o sursă (`lipsuri`: boții Pionex,
   // pozițiile Trading 212 - citiri picate în tura contului) ⇒ frâna de 4 % nu se poate judeca. franaCont rămâne cum e (Discord neschimbat); pagina
   // întreabă aici și scrie „n-o pot judeca”, nu „azi nu e trasă”. "" = riscul e știut (sau raportul lipsește / e vechi: frâna lui e deja trasă).
+  // v100.333 (auditul 12.11, 🔵): TOATE motivele frânei contului, în ordinea lui franaCont (raportul / riscul întâi, evenimentul după) - banda paginii
+  // le arată pe toate (cu raportul vechi, CPI-ul de azi nu se mai vedea). franaCont (Discord, cardurile) rămâne cu primul.
+  function franaContMotive(o) {
+    o = o || {};
+    var r = franaCont({ raportStare: o.raportStare, raportOre: o.raportOre, raport: o.raport }), e = franaCont({ eveniment: o.eveniment, evenimentTrecut: o.evenimentTrecut });
+    return [r, e].filter(Boolean);
+  }
   function riscNecunoscut(o) {
     o = o || {};
     if (o.raportStare !== "ok") return "";
@@ -701,7 +744,7 @@ var Acasa = (function () {
     return o;
   }
 
-  return { botiPeMonede: botiPeMonede, botiScurtiLungi: botiScurtiLungi, botiCosturi: botiCosturi, botiPeZile: botiPeZile, PRAG_SCURT_MIN: PRAG_SCURT_MIN, perioadaBoti: perioadaBoti, botiStatistici: botiStatistici, durataScurta: durataScurta, ora9Ro: ora9Ro, clasamentLipsa: clasamentLipsa, textCorelatie: textCorelatie, SECTOR: SECTOR, sectoare: sectoare, ziuaTa: ziuaTa, raportSaptamana: raportSaptamana, socotealaAlerte: socotealaAlerte, miscareTipica: miscareTipica, fundingPiata: fundingPiata, fundingAtentie: fundingAtentie, schimbari: schimbari, vreme: vreme, miscari: miscari, fg: fg, fgValid: fgValid, largime: largime, ro: ro, rezumatActiune: rezumatActiune, largimeNdx: largimeNdx, vremeBursa: vremeBursa, sensBursa: sensBursa, fgNume: fgNume, corelatie: corelatie, calendar: calendar, MAG7: MAG7, franaVerb: franaVerb, franaCont: franaCont, frazaPauza: frazaPauza, masuraFranei: masuraFranei, unesteZileFrana: unesteZileFrana,
+  return { bursaNYDeschisa: bursaNYDeschisa, franaContMotive: franaContMotive,bareInchise: bareInchise, botiPeMonede: botiPeMonede, botiScurtiLungi: botiScurtiLungi, botiCosturi: botiCosturi, botiPeZile: botiPeZile, PRAG_SCURT_MIN: PRAG_SCURT_MIN, perioadaBoti: perioadaBoti, botiStatistici: botiStatistici, durataScurta: durataScurta, ora9Ro: ora9Ro, clasamentLipsa: clasamentLipsa, textCorelatie: textCorelatie, SECTOR: SECTOR, sectoare: sectoare, ziuaTa: ziuaTa, raportSaptamana: raportSaptamana, socotealaAlerte: socotealaAlerte, miscareTipica: miscareTipica, fundingPiata: fundingPiata, fundingAtentie: fundingAtentie, schimbari: schimbari, vreme: vreme, miscari: miscari, fg: fg, fgValid: fgValid, largime: largime, ro: ro, rezumatActiune: rezumatActiune, largimeNdx: largimeNdx, vremeBursa: vremeBursa, sensBursa: sensBursa, fgNume: fgNume, corelatie: corelatie, calendar: calendar, MAG7: MAG7, franaVerb: franaVerb, franaCont: franaCont, frazaPauza: frazaPauza, masuraFranei: masuraFranei, unesteZileFrana: unesteZileFrana,
     ndxVechi: ndxVechi, evenimentAzi: evenimentAzi, riscNecunoscut: riscNecunoscut, CLASAMENT_VECHI_MS: CLASAMENT_VECHI_MS, NDX_VECHI_MS: NDX_VECHI_MS };   /* v100.332 (auditul 12.11) */
 })();
 if (typeof globalThis !== "undefined") globalThis.Acasa = Acasa;

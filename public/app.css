@@ -4506,6 +4506,7 @@ body :is(#tabloubot,#t212,#dash).tbZi .dashOperations .decisionTool.bad{outline:
 :is(#tabloubot,#t212,#dash).tbZi .cmdItem[aria-selected="true"]{border-color:#2456E6;background:#F5F7FA}
 :is(#tabloubot,#t212,#dash).tbZi .cmdItem:focus-visible{outline:2px solid #2456E6}
 :is(#tabloubot,#t212,#dash).tbZi .aziNuRand{background:rgba(224,165,38,.08)}
+#tabloubot.tbZi{--lrBar:#2456E6}
 /* ==== v100.316 TEMA TABLOULUI: sfârșit ==== */
 /* Colțurile rămân de cel mult 5 px și ordinea singură pe rând începe cu „.pzDemo #tabloubot .tbCadru>” (regulile temei PAZNIC, proba v100.151). */
 /* v100.316 (el, 10.11.2026: îl deranjează culorile, ordinea, aglomerația, literele ⇒ „Aplică desenul nou în Radar”): DESENUL NOU al Tabloului botului.
@@ -5031,6 +5032,8 @@ html.pzDemo #dash *{font-family:inherit!important}
 #dash.tbZi .acSp polyline[fill="#E9B949"]{fill:#E0A526}
 #dash.tbZi .acSp polyline[stroke="#9FB3C4"]{stroke:#48586E}
 #dash.tbZi .acSp polyline[fill="#9FB3C4"]{fill:#48586E}
+#dash.tbZi .acSp polyline[stroke="#E0524A"]{stroke:#C62828}   /* v100.333: graficele mici roșii când seria coboară (acSparkCul) */
+#dash.tbZi .acSp polyline[fill="#E0524A"]{fill:#C62828}
 #dash.tbZi .acSp polyline[stroke="#5B8FC7"]{stroke:#2456E6}
 #dash.tbZi .acSp polyline[fill="#5B8FC7"]{fill:#2456E6}
 /* anulările pe care stratul de zi le punea la loc (revizia T212 a găsit aceeași boală): „#dash .acFac” are fond albastru, „#dash .acVerd .acFac{background:none}”
@@ -5073,6 +5076,27 @@ html.pzDemo #dash *{font-family:inherit!important}
 .t212Bursa.tbWarn{border-color:var(--warn);color:var(--warn)}
 /* v100.332: ținte de atins pe telefon (măsurat pe live: „Orele celor 12 zile ›” 17 px, „Pune planurile la …” 29 px) ⇒ cel puțin 44 px sub deget */
 @media (pointer:coarse){#dash .acMasura>summary{display:flex;align-items:center;min-height:44px}#t212 #t212PuneToate{min-height:44px}}
+/* v100.333 (el, 13.11: „în detaliile indicatorilor, în partea dreaptă mai ai spațiu gol, vreau să creezi și să pui acolo un grafic cu asta”): „Listele
+   Radarului” pe două coloane - rândurile în stânga, graficul pe zile în dreapta; sub 760 px (sau coloana sub 640 px) unul sub altul. O singură culoare,
+   validată cu dataviz pe ambele fonduri; fără verde / roșu (listele n-au avantaj dovedit). Linia 0 = piața. */
+#tabloubot{--lrBar:#5B8FC7}   /* ziua: blocul generat (face-tema-tablou.mjs) ⇒ #2456E6, validat cu dataviz pe #FFFFFF */
+#tabloubot #tbIndicatori{container-type:inline-size}
+#tabloubot .tbListe{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:16px;align-items:start}
+#tabloubot .tbListe>:is(.tbMediuCap,.tbSub){grid-column:1 / -1}
+#tabloubot .tbListeTxt,#tabloubot .tbListeGr{min-width:0}
+#tabloubot .lrGrafice{display:flex;flex-direction:column;gap:6px}
+#tabloubot .lrUnu{display:flex;flex-direction:column;gap:2px}
+#tabloubot .lrCap,#tabloubot .lrAx{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--pzT2)}
+#tabloubot .lrCap>span:first-child{color:var(--pzT0)}
+#tabloubot .lrGraf{display:block;width:100%;height:56px;overflow:visible}
+#tabloubot .lrBar{fill:var(--lrBar);pointer-events:none}   /* revizia Opus: bara stă deasupra țintei de hover (.lrHit); fără asta, pe bară nu apăreau cifrele */
+#tabloubot .lrHit{fill:transparent}
+#tabloubot .lrHit:hover+.lrBar{fill-opacity:.7}
+#tabloubot .lrZero{stroke:var(--pzT2);stroke-width:1;stroke-dasharray:3 3}
+#tabloubot :is(.lrNota,.lrGol){margin:0;font-size:12px}
+@media (max-width:760px){#tabloubot .tbListe{grid-template-columns:1fr}#tabloubot .tbListeGr{margin-top:8px}}
+@container (max-width:640px){#tabloubot .tbListe{grid-template-columns:1fr}#tabloubot .tbListeGr{margin-top:8px}}
+/* v100.333: sfârșitul graficului „Listele Radarului” */
 @media (max-width:640px){.sugPandaTab thead{display:table-header-group}.sugPandaTab{display:table}.sugPandaTab tbody{display:table-row-group}.sugPandaTab tr{display:table-row}.sugPandaTab td,.sugPandaTab th{display:table-cell}}
 /* v100.224: pe paginile de zi rămân alertele, banda botului și versiunea. Cipurile de cercetare revin la analiza monedei și în laborator. */
 body.peAcasa:not(.acMonedaDeschisa) .topLeft,body.peTablou .topLeft,body.peT212 .topLeft,body.peJurnal .topLeft,body.peGrid .topLeft,body.pePaginaNoua .topLeft,

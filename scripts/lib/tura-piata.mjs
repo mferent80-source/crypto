@@ -39,7 +39,15 @@ async function citire(d, url) {
   try { return { ok: true, v: await d.cere(url) }; }
   catch (e) { if (d.jurnal) d.jurnal("piata frana", e && e.message); return { ok: false }; }
 }
-async function franaAzi(d, acum, evenimente) {
+// v100.333 (revizia Opus v100.332): frâna evenimentului de azi cu ACEEAȘI regulă ca pagina (Acasa.evenimentAzi) - cel care urmează sau, după ce a trecut,
+// încă 2 ore, cu „imediat după”. Înainte colectorul vedea doar evenimentele viitoare: Discord ridica frâna la ora CPI-ului, pagina abia după 2 ore.
+// ca = răspunsul rutei calendarului; căzut (lipsă sau cu `eroare`) ⇒ undefined (necunoscut, ca evenimenteStiute).
+export function evenimentFrana(A, ca, acum) {
+  if (!ca || ca.eroare || !A || !A.evenimentAzi) return undefined;
+  const e = A.evenimentAzi(ca.evenimente, acum);
+  return { eveniment: e ? e.titlu : "", evenimentTrecut: !!(e && e.trecut) };
+}
+async function franaAzi(d, acum, evenimente, ca) {
   const o = {};
   const rap = await citire(d, "/api/istoric-bot?action=cont");
   if (rap.ok) {
@@ -60,7 +68,9 @@ async function franaAzi(d, acum, evenimente) {
       } catch (e) { if (d.jurnal) d.jurnal("piata frana", e && e.message); }
     }
   }
-  if (evenimente !== undefined) {
+  const ef = evenimente !== undefined && ca ? evenimentFrana(d.Acasa, ca, acum) : undefined;   /* v100.333: cu fereastra de 2 ore de după */
+  if (ef) { o.eveniment = ef.eveniment; if (ef.evenimentTrecut) o.evenimentTrecut = true; }
+  else if (evenimente !== undefined) {
     const azi = ceas(acum, "Europe/Bucharest").zi;
     const ev = (evenimente || []).filter((x) => x && x.mare && x.t && ceas(x.t, "Europe/Bucharest").zi === azi)[0];
     o.eveniment = ev ? ev.titlu : "";
@@ -96,9 +106,9 @@ async function vreme(d, st, acum) {
   // minute dă „fara-date” (Alerte.schimbareVreme îl sare: nicio alertă de vreme din date vechi)
   const ndV = !!(nd && A.ndxVechi && A.ndxVechi(nd, acum));
   const ndL = nd && Array.isArray(nd.actiuni) && !ndV ? A.largimeNdx(nd.actiuni) : null;
-  const v0 = A.vreme({ clasament: cl, btc: { miscare: btcInMiscare(reg, clRaw) }, fg, la: clRaw && clRaw.la, acum }), vb0 = A.vremeBursa({ qqq, vix, ndx: ndL, ndxVechi: ndV });
+  const v0 = A.vreme({ clasament: cl, btc: { miscare: btcInMiscare(reg, clRaw) }, fg, la: clRaw && clRaw.la, acum }), vb0 = A.vremeBursa({ qqq, vix, ndx: ndL, ndxVechi: ndV, acum });   /* v100.333 (🟡5): trendul pe ziua închisă, ca pagina */
   const caV = await incearca(d, "calendar vreme", () => d.cere("/api/stiri?action=calendar"));
-  const fr = await franaAzi(d, acum, evenimenteStiute(A, caV, acum));
+  const fr = await franaAzi(d, acum, evenimenteStiute(A, caV, acum), caV);
   const sideF = A.fundingAtentie ? A.fundingAtentie(st.funding) : "";
   if (sideF) fr.fundingAtentie = sideF;
   const v = aplicaFrana(A, v0, "crypto", fr), vb = aplicaFrana(A, vb0, "bursa", fr);
@@ -283,9 +293,9 @@ async function raportSaptamana(d, st, acum) {
   rz.sort((a, b) => (a.data < b.data ? -1 : 1));
   const b1h = await incearca(d, "raport BTC 1h", async () => G.bare((await d.cere("/api/market?type=pionex_klines&symbol=BTC_USDT_PERP&interval=60M&limit=500")).data.klines));
   const regB = b1h && b1h.length ? G.regimPeBare(b1h, 4, 24) : null;
-  const fr = await franaAzi(d, acum, evenimenteStiute(A, ca, acum));   /* v100.332 (🔴1): calendarul cu `eroare` = necunoscut */
+  const fr = await franaAzi(d, acum, evenimenteStiute(A, ca, acum), ca);   /* v100.332 (🔴1): calendarul cu `eroare` = necunoscut */
   const vS = aplicaFrana(A, A.vreme({ clasament: cl, btc: { miscare: regB ? !!regB.miscare : false }, fg: p.fg ? p.fg.valoare : null }), "crypto", fr);
-  const vbS = aplicaFrana(A, A.vremeBursa({ qqq, vix, ndx: A.largimeNdx(l) }), "bursa", fr);
+  const vbS = aplicaFrana(A, A.vremeBursa({ qqq, vix, ndx: A.largimeNdx(l), acum }), "bursa", fr);
   const m = A.raportSaptamana({ btc7: b1d && b1d.length > 7 ? (b1d[b1d.length - 1].c / b1d[b1d.length - 8].c - 1) * 100 : null,
     vreme: vS, qqq5: qqq && qqq.length > 5 ? (qqq[qqq.length - 1].c / qqq[qqq.length - 6].c - 1) * 100 : null, vix,
     vremeBursa: vbS, sus: s5.slice(0, 3), jos: s5.slice(-3).reverse(),

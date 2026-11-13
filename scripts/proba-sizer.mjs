@@ -117,7 +117,7 @@ await test("v100.173 marime fără curs dolar/leu ⇒ null (nu dolari luați dre
 });
 await test("v100.173 planulMeu fără curs ⇒ eroarea spune că lipsește cursul, fără mărime", () => {
   const r = J(AS.planulMeu({ intrare: 100, stop: 92, cont: CONT, calc: CALC }));
-  assert.equal(r.m, null); assert.match(r.eroare, /cursul dolar\/leu/);
+  assert.equal(r.m, null); assert.match(r.eroare, /cursul dolar \/ moneda contului/);   /* v100.333 (revizia Opus 🔵8): mesajul spune și contul care nu e în lei */
 });
 await test("v100.173 t212Fx: cursul BNR de azi întâi (dolari pe leu = 1 / lei pe dolar), umplerile T212 doar ca rezervă", () => {
   const c3 = { console, Date, Math, Object, Array, String, Number, JSON, isFinite, Intl, TextRo: globalThis.TextRo, localStorage: { getItem: () => null, setItem() {} } };

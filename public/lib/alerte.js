@@ -32,6 +32,8 @@ var Alerte = (function () {
   function vg(v, z) { return Math.abs(v).toFixed(z == null ? 1 : z).replace(".", ","); }
   // audit 19.10: câte intervale rămân dincolo de un stop din grid (long: sub el, short: peste el) - partea de grid care nu mai lucrează
   function griliMoarte(b, x) {
+    // v100.333 (🔵8): o singură socoteală pe pagină și în colector (TabloExtra.grileDincoloK); copia de mai jos doar fără TabloExtra (probele vechi)
+    if (typeof TabloExtra !== "undefined" && TabloExtra && TabloExtra.grileDincoloK) return TabloExtra.grileDincoloK(b, nr(x));
     var d = b && b.brut && b.brut.buOrderData || {}, linii = nr(d.row), N = linii > 1 ? linii - 1 : null, jos = nr(b && b.gridJos), sus = nr(b && b.gridSus), dir = String(b && b.directie || "").toLowerCase();
     if (!N || !(x > jos) || !(x < sus) || !(jos > 0) || (dir !== "long" && dir !== "short")) return null;
     var geo = String(d.gridType || "").toLowerCase() === "geometric", fr = dir === "long" ? (geo ? Math.log(x / jos) / Math.log(sus / jos) : (x - jos) / (sus - jos)) : (geo ? Math.log(sus / x) / Math.log(sus / jos) : (sus - x) / (sus - jos));
@@ -574,6 +576,6 @@ var Alerte = (function () {
   }
 
   // v100.86 (§2 „paza boților”): + pret - intervalul botului din mesajul colectorului, cu aceleași zecimale ca alertele
-  return { miscareNeobisnuita: miscareNeobisnuita, schimbareVreme: schimbareVreme, evalueaza: evalueaza, reguli: reguli, grila: grila, podeaUrca: podeaUrca, preturi: preturi, anuntatPreturi: anuntatPreturi, slotRaport: slotRaport, raportBoti: raportBoti, pret: pret };
+  return { miscareNeobisnuita: miscareNeobisnuita, schimbareVreme: schimbareVreme, evalueaza: evalueaza, reguli: reguli, grila: grila, podeaUrca: podeaUrca, preturi: preturi, anuntatPreturi: anuntatPreturi, slotRaport: slotRaport, raportBoti: raportBoti, pret: pret, griliMoarte: griliMoarte };
 })();
 if (typeof globalThis !== "undefined") globalThis.Alerte = Alerte;

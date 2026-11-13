@@ -18,3 +18,11 @@ export function candidati(ticker) {
   if (REDENUMIT[s]) out.unshift(REDENUMIT[s]);
   return out;
 }
+// v87: data rezultatelor trimestriale din raspunsul Nasdaq (api.nasdaq.com/api/analyst/<S>/earnings-date) - aceeasi regula ca T212.dataRezultate
+// v100.333 (auditul 12.11, 🔵 B8): mutata aici din functions/api/t212.js (era a treia copie); pagina si serverul raman doua copii, pazite de
+// scripts/proba-v100333-t212.mjs (aceleasi raspunsuri pe toate simbolurile cunoscute, inclusiv cheile din REDENUMIT)
+export function dataRezultate(j) {
+  const t = j && j.data && j.data.reportText; if (typeof t !== "string") return null;
+  const m = t.match(/(\d{2})\/(\d{2})\/(\d{4})/); if (!m) return null;
+  return { data: m[3] + "-" + m[1] + "-" + m[2], sigur: !/estimated|expected/i.test(t) };
+}

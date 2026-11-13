@@ -366,7 +366,7 @@ await test("🔵 „Dacă prețul ajunge la…”: rândul opritorului ia prețu
 });
 await test("🔵 „Banii botului”: „pe grilă ≈ … USDT” cu virgulă (TextRo.num), ca cifra de sus", () => {
   const f = fnDin(APP, "tbDeseneazaBanii");
-  assert.doesNotMatch(f, /pg\.usdt\.toFixed\(3\)/); assert.match(f, /TextRo\.num\(pg\.usdt,3\)/);
+  assert.doesNotMatch(f, /pg\.usdt\.toFixed\(3\)/); assert.match(f, /tbPeGrilaUsdt\(pg\.usdt\)/);   /* v100.333: o zecimală (două / trei doar sub 0,095 / 0,0095), nu trei mereu */
 });
 
 // ───────────── optimizarea: lumânările de 5 min ale măsurilor ─────────────

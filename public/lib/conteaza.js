@@ -12,12 +12,15 @@ var Conteaza = (function () {
   function TR() { return typeof TextRo !== "undefined" ? TextRo : null; }
   function num1(v) { var T = TR(); return T && T.num ? T.num(v, 1) : (Math.round(v * 10) / 10).toFixed(1).replace(".", ","); }
   // prețul ca în Sfaturi (aceleași zecimale ca restul sfaturilor: 0.3300, 0.004123, 67250.00)
-  function pret(v) { if (v === null || v === undefined) return "—"; var a = Math.abs(v); return v.toFixed(a >= 100 ? 2 : a >= 0.1 || a === 0 ? 4 : Math.min(12, 3 - Math.floor(Math.log10(a)))); }
+  // v100.333 (🔵8): același scris ca sfaturile (Sfaturi.pret, unde e încărcat); copia de mai jos doar pentru modulul încărcat singur
+  function pret(v) { if (typeof Sfaturi !== "undefined" && Sfaturi && Sfaturi.pret) return Sfaturi.pret(v); if (v === null || v === undefined) return "—"; var a = Math.abs(v); return v.toFixed(a >= 100 ? 2 : a >= 0.1 || a === 0 ? 4 : Math.min(12, 3 - Math.floor(Math.log10(a)))); }
   function din100(p) { return String(Math.max(1, Math.min(99, Math.round(p * 100)))); }   // „N din 100”: niciodată 0 sau 100
   function cate(n, u, m) { var T = TR(); return T && T.cate ? T.cate(n, u, m) : n + " " + m; }
   function pct1(f) { return (f < 0 ? "−" : f > 0 ? "+" : "") + num1(Math.abs(f * 100)) + "%"; }
   function cap(t) { t = String(t || ""); return t.charAt(0).toUpperCase() + t.slice(1); }
   function usdt1(v) { var T = TR(); return T && T.usdt ? T.usdt(v, 1) : (v < 0 ? "−" : v > 0 ? "+" : "") + num1(Math.abs(v)) + " USDT"; }
+  // revizia Opus v100.333 (🔵7): sumele mici cu atâtea zecimale câte trebuie (TextRo.zecMici), nu „+0,0 USDT”
+  function usdtMic(v) { var T = TR(); return T && T.usdt && T.zecMici ? T.usdt(v, T.zecMici(v)) : usdt1(v); }
   // v100.332 (auditul 12.11, 🔴2): ora alertei urcate în bloc („05:00”; din altă zi „11.11 23:10”) - un rând din alertă nu mai arată ca socotit acum
   function oraAlerta(la, acum) {
     la = nr(la); if (la === null || !(la > 0)) return "";
@@ -50,6 +53,7 @@ var Conteaza = (function () {
       sub: "e la " + num1(s.d) + " ATR de preț" + (nr(s.p72) !== null ? " · în 3 zile: ~" + din100(s.p72) + " din 100" : "") + " · măsurat pe " + (perechi > 0 ? cate(perechi, "monedă", "monede") : "monedele mari")
         + ", ultimele " + cate(zile, "zi", "zile") + ", jos și sus la un loc (direcția nu se știe)" + (s.plafon ? " · plafonat la șansa marginii de " + (s.plafon === "sus" ? "sus" : "jos") + " (stopul e dincolo de ea)" : ""),
       faCe: mut !== null ? "Hotărăște acum: ori accepți ieșirea la " + iesire + ", ori muți stopul la " + mut + "."
+        : s.mutOprit === "adapost" ? "Hotărăște acum dacă accepți ieșirea la " + iesire + ": stopul păstrează " + (nr(s.mutLaStop) !== null ? usdtMic(s.mutLaStop) : "câștigul") + ", mai departe l-ar da înapoi."   /* v100.333 (🔵11) */
         : oprit ? "Hotărăște acum dacă accepți ieșirea la " + iesire + ": mai departe nu propun, acolo vine întâi lichidarea" + (nr(s.mutLich) !== null ? " (" + pret(s.mutLich) + ")" : "") + "."
         : "Hotărăște acum: ori accepți ieșirea la " + iesire + ", ori pui stopul mult mai departe." };
   }
@@ -122,5 +126,5 @@ var Conteaza = (function () {
 
   function titluriSus(l) { return (Array.isArray(l) ? l : []).filter(function (x) { return x.cheie !== "stop"; }).map(function (x) { return x.titlu; }); }
 
-  return { PRAG: PRAG, alege: alege, html: html, gol: gol, acasa: acasa, titluriSus: titluriSus, pret: pret };
+  return { PRAG: PRAG, alege: alege, html: html, gol: gol, acasa: acasa, titluriSus: titluriSus, pret: pret, usdtMic: usdtMic };
 })();

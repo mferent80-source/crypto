@@ -35,8 +35,8 @@ await test("1a. urmarireFixa pe lista de short: moneda care cade bate piața (se
 });
 await test("1a. tura sugestiilor: revenireFata / shortFata = urmarireFixa (short cu semnul lui), lângă urmărirea veche", () => {
   const S = citeste("scripts", "lib", "tura-sugestii.mjs");
-  assert.match(S, /revenireFata: urmarireFixa\(ist\.filter\(\(x\) => x && x\.lista === "revenire"\), \{ zile: 7, cost: 0\.001, bare1h: bare1hO, toate: d\.simboluriDepozit\(\), acum: d\.acum \}\)/);
-  assert.match(S, /shortFata: urmarireFixa\(ist\.filter\(\(x\) => x && x\.lista === "short"\)\.map\(\(x\) => Object\.assign\(\{\}, x, \{ dir: "short" \}\)\), \{ zile: 7, cost: 0\.001, bare1h: bare1hO, toate: d\.simboluriDepozit\(\), acum: d\.acum \}\)/);
+  assert.match(S, /urm\.revenireFata = urmarireFixa\(ist\.filter\(\(x\) => x && x\.lista === "revenire"\), \{ zile: 7, cost: 0\.001, bare1h: bare1hO, toate: d\.simboluriDepozit\(\), acum: d\.acum \}\)/);
+  assert.match(S, /urm\.shortFata = urmarireFixa\(ist\.filter\(\(x\) => x && x\.lista === "short"\)\.map\(\(x\) => Object\.assign\(\{\}, x, \{ dir: "short" \}\)\), \{ zile: 7, cost: 0\.001, bare1h: bare1hO, toate: d\.simboluriDepozit\(\), acum: d\.acum \}\)/);
 });
 await test("1a. ruta păstrează revenireFata / shortFata (și ferestrele) la salvarea sugestiilor", () => {
   const R = citeste("functions", "api", "istoric-bot.js");
@@ -161,7 +161,8 @@ await test("revizia 🔵5/6: nicio zi judecată încă ⇒ o spune (nu dispare);
 });
 await test("revizia 🔵4: tura sugestiilor citește barele o singură dată pentru toate trei urmăririle", () => {
   const S = citeste("scripts", "lib", "tura-sugestii.mjs");
-  assert.match(S, /const bare1hO = \(\(\) => \{ const m = new Map\(\); return \(s\) => \{ if \(!m\.has\(s\)\) m\.set\(s, d\.bare1h\(s\)\); return m\.get\(s\); \}; \}\)\(\);/);
+  // v100.333: barele de 1 h citite O dată pentru toată tura (și seriile 4h, și cele trei urmăriri): bare1hO = bare1, cu cache-ul `brute`
+  assert.match(S, /const bare1 = \(s\) => \{ if \(!brute\.has\(s\)\) brute\.set\(s, d\.bare1h\(s\) \|\| \[\]\); return brute\.get\(s\); \};/); assert.match(S, /const bare1hO = bare1;/);
   assert.equal((S.match(/bare1h: d\.bare1h,/g) || []).length, 0, "toate trei folosesc bare1hO");
 });
 await test("revizia 🔵9: fără liste (pagina publicată fără KV) spune asta, nu „aștept” la nesfârșit", () => {
