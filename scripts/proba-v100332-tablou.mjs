@@ -326,7 +326,7 @@ await test("🟡7. cheile ținute pe bot ale boților dispăruți se șterg; ale
 
 // ───────────── (c) vocile de sub verdict ─────────────
 await test("(c) vocile: „Monte Carlo” o singură dată - rândul scorului (tbCitMc) nu e o voce", () => {
-  const S = lib("asezare-paznic.js"), i = S.indexOf("  function voci() {"), j = S.indexOf("\n  var ultimBotV", i);
+  const S = lib("asezare-paznic.js"), i = S.indexOf("  function formaVoce("), j = S.indexOf("\n  var ultimBotV", i);   /* v100.336 (I-866): voci() cheamă formaVoce */
   assert.ok(i > 0 && j > i);
   const copil = (t, cls) => ({ textContent: t, className: cls, classList: { contains: (c) => (" " + cls + " ").indexOf(" " + c + " ") >= 0 } });
   const copii = [copil("Lateral, fără trend clar.", "tbCitScurt"), copil("Graficul pe 4h și Monte Carlo spun la fel: cu botul tău (short)", "tbCitVoci info"),

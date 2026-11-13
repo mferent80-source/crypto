@@ -76,7 +76,7 @@ await test("1b. acFataPiata: prea puține zile ⇒ spune asta; fără cifre ⇒ 
 
 // ───────────── 1c. Tabloul: „Listele Radarului” în detaliile indicatorilor ─────────────
 const IB = new Function(lib("indicatori-bot.js") + "; return IndicatoriBot;")();
-const LR = (o) => IB.listeRadar(Object.assign({ moneda: "HYPE", dirBot: "short", rev: ["AKE", "ORDI"], short: ["HYPE", "CC", "KAS"], fata: { revenire: FATA_R, short: FATA_S }, eticheta: { revenire: "n-am aflat", short: "n-am aflat" } }, o));
+const LR = (o) => IB.listeRadar(Object.assign({ moneda: "HYPE", dirBot: "short", rev: ["AKE", "ORDI"], short: ["HYPE", "CC", "KAS"], fata: { revenire: FATA_R, short: FATA_S }, eticheta: { revenire: "n-am aflat", short: "n-am aflat" } }, o)).filter((x) => x.k !== "liste-verdict");   /* v100.336: rândul „Verdict” (primul) are proba lui - proba-v100336-verdict-liste */
 await test("1c. IndicatoriBot.listeRadar: HYPE short e azi în lista de short ⇒ „de partea botului”; rândurile listelor față de piață", () => {
   const r = LR();
   assert.equal(r[0].eticheta, "Azi");

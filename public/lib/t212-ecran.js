@@ -224,6 +224,18 @@ function t212Nume(tk) {
 }
 function t212Stare(t) { var e = $("t212Stare"); if (e) e.textContent = t; }
 
+// v100.336 (I-864): cât a costat așteptarea sub stop, în lei: valoarea de acum a poziției minus cea de la ieșirea de atunci
+// (aceleași bucăți) = valoareLei × (1 − ieșirea / prețul de acum). Fără ieșire sau fără valoare în lei ⇒ null (se spune doar timpul).
+function t212AsteptareLei(p, valLei) {
+  var a = p && p.asteptare; if (!a || !(a.pretIesire > 0) || !(p.pret > 0) || !(valLei > 0)) return null;
+  return valLei * (1 - a.pretIesire / p.pret);
+}
+// suma pe pozițiile care au cifra; nicio cifră ⇒ null (banda nu scrie nimic)
+function t212AsteptareSuma(poz) {
+  var n = 0, s = 0; (poz || []).forEach(function (p) { if (p && typeof p.asteptareLei === "number" && isFinite(p.asteptareLei)) { n++; s += p.asteptareLei; } });
+  return n ? { lei: s, n: n } : null;
+}
+
 // Pozitia, gata de judecat: pretul mediu si pretul de acum sunt in dolari (moneda actiunii)
 function t212Pozitie(x) {
   var tk = x.ticker, b = t212.bare[tk] || [], de = Date.parse(x.initialFillDate || ""), mx = ActiuniSemnale.maxDupaCumparare(b, de, x.currentPrice);   // v100.40
@@ -580,6 +592,8 @@ function t212PregatesteP(x, pond) {
   var n = b.length ? ActiuniSemnale.niveluri(b, p.pret, { pretMediu: p.pretMediu, maxDupaCumparare: p.maxDupaCumparare, minTrail: tp.minTrail, trailProfil: tp.trailProfil, sursaTrail: tp.sursaTrail }) : null;
   p.niv = n && n.nivel === "ok" ? n : null; if (p.niv) t212.niveluri[p.ticker] = p.niv; else if (p.faraDate) delete t212.niveluri[p.ticker];   /* v100.332: „Pune planurile la toate” nu ia un stop socotit pe bare respinse */
   p.nivMotiv = n && n.nivel !== "ok" ? n.motiv : null;
+  // v100.336 (I-864): sub stopul calculat - de câte ședințe și de la ce preț (leii se pun în t212Randeaza, unde se știe valoarea în lei)
+  p.asteptare = null; try { if (p.niv && p.niv.stopAtins && typeof ActiuniSemnale.asteptareSubStop === "function") p.asteptare = ActiuniSemnale.asteptareSubStop(b, p.de, p.niv.trailPct, p.pret); } catch (e) { p.asteptare = null; }
   p.prob = t212ProbPt(p, b, p.niv);   // v100.53
   try { p.revine = t212RevinePt(p, b, p.niv); } catch (e) { p.revine = null; }
   p.cost = t212CostLei(p.ticker, p.qty); p.pctLei = p.cost ? p.ppl / p.cost : null; p.fxPpl = x.fxPpl;
@@ -952,6 +966,8 @@ function t212Render(viu) {   // v100.291: viu = recitirea la 30 s ⇒ doar ce de
   brute.forEach(function (x) { pond[x.ticker] = pond[T212.simbol(x.ticker)]; });
   var poz = brute.map(function (x) { return t212PregatesteP(x, pond); }).sort(function (a, b) { return (T212_ORDINE[a.sem.nivel] - T212_ORDINE[b.sem.nivel]) || (a.ppl - b.ppl); });
   t212.pozPregatite = poz;   // v100.54: butoanele „am făcut / n-am făcut” găsesc poziția
+  poz.forEach(function (p) { p.asteptareLei = t212AsteptareLei(p, vLei[p.ticker]); });   /* v100.336 (I-864) */
+  var astS = t212AsteptareSuma(poz);
   t212TvAdu();   /* v100.320: notele TradingView (cel mult o dată la 5 minute, doar la vedere) */
   // v100.40 (audit 30.09, CRITIC): cate pozitii sunt pe IESI, din DATE (Acasa si banda de cont le citeau din DOM-ul paginii T212 -
   // „nimic roșu” pana deschideai T212). null cat preturile nu sunt aduse pentru toate (semaforul ar fi „fără date”, nu „țin”).
@@ -970,7 +986,7 @@ function t212Render(viu) {   // v100.291: viu = recitirea la 30 s ⇒ doar ce de
   // 1) rezumatul pe un rand
   var cel = function (et, v, cls, sub) { return '<div class="t212Cel"><span class="t212Et">' + escapeHtml(et) + '</span><b class="t212Val ' + (cls || "") + '">' + escapeHtml(v) + '</b><span class="tbSub">' + sub + '</span></div>'; };
   var h = '<div class="t212Kpi">' + cel("Contul", t212Suma(c.total), "", "liber " + escapeHtml(t212Suma(c.free)) + (pf.cash !== null ? " · " + escapeHtml(t212Pct(pf.cash).replace("+", "")) : ""))
-    + cel("Pe pozițiile deschise", t212Lei(c.ppl), t212Cls(c.ppl), t212Cate(poz.length, "poziție", "poziții") + " · " + pe + " pe plus")
+    + cel("Pe pozițiile deschise", t212Lei(c.ppl), t212Cls(c.ppl), t212Cate(poz.length, "poziție", "poziții") + " · " + pe + " pe plus" + (astS ? " · așteptarea sub stop: " + escapeHtml(t212Lei(astS.lei)) + (astS.n > 1 ? " pe " + astS.n : "") : ""))   /* v100.336 (I-864) */
     + (j ? cel("Câștigat real, închise", t212Lei(j.r.total), t212Cls(j.r.total), 'vânzările închise, după comisioanele de conversie (' + escapeHtml(t212Lei(-j.r.comisioane).replace(" lei", "")) + ') · T212 arată <span class="t212Muted">' + escapeHtml(t212Lei(c.result).replace(" lei", "")) + '</span> (fără comisioanele de conversie)' + (t212.dividende && t212.dividende.n ? ' · dividendele, separat: ' + escapeHtml(t212Lei(t212.dividende.total, 1).replace(" lei", "")) : '')
       + (t212.istoric && t212.istoric.stare && t212.istoric.stare.complet === false ? ' · <span class="tbWarn">istoricul încă se coboară: cifra crește până se termină</span>' : ''))   /* v100.40: explicatia spune din ce vine cifra · v100.332 (🔵): ca în Jurnal */
       : cel("Rezultat (după T212)", t212Lei(c.result), t212Cls(c.result), escapeHtml(t212.istoricEroare || "fără comisioanele de conversie; istoricul se strânge acasă")))
@@ -982,7 +998,7 @@ function t212Render(viu) {   // v100.291: viu = recitirea la 30 s ⇒ doar ce de
   var todo = [], fara = poz.filter(function (p) { return p.niv && !t212ArePrag(p.plan); });
   // v100.291: fiecare rând știe poziția lui (tk) sau pozițiile pe care le numește (tks) ⇒ apare și în fișa ei
   poz.filter(function (p) { return p.sem.nivel === "iesi"; }).forEach(function (p) {
-    todo.push({ tk: p.ticker, c: "r", t: p.simbol + (p.niv && p.niv.stopAtins ? " a coborât sub stopul calculat (" + t212PretIn(p.niv.stopPozitie, p.ticker) + ")"   /* v100.332 (🟡 Y4): în moneda poziției */ : ": " + (p.sem.motive[0] || "de ieșit")), s: t212Lei(p.ppl) + (p.pctLei !== null ? " (" + t212Pct(p.pctLei) + ")" : "") + ". " + p.sem.ceAsFace.replace(/^👉 Ce aș face eu: /, ""), b: '<button type="button" class="t212BtnLinie" data-action-click="t212Deschide(\'' + String(p.ticker).replace(/[^A-Za-z0-9._-]/g, "") + '\')">Vezi ' + escapeHtml(p.simbol) + '</button>' });
+    todo.push({ tk: p.ticker, c: "r", t: p.simbol + (p.niv && p.niv.stopAtins ? " a coborât sub stopul calculat (" + t212PretIn(p.niv.stopPozitie, p.ticker) + ")"   /* v100.332 (🟡 Y4): în moneda poziției */ : ": " + (p.sem.motive[0] || "de ieșit")), s: t212Lei(p.ppl) + (p.pctLei !== null ? " (" + t212Pct(p.pctLei) + ")" : "") + ". " + (p.asteptare ? ActiuniSemnale.textAsteptare(p.asteptare, p.asteptareLei) + " " : "") + p.sem.ceAsFace.replace(/^👉 Ce aș face eu: /, ""), b:   /* v100.336 (I-864) */ '<button type="button" class="t212BtnLinie" data-action-click="t212Deschide(\'' + String(p.ticker).replace(/[^A-Za-z0-9._-]/g, "") + '\')">Vezi ' + escapeHtml(p.simbol) + '</button>' });
   });
   // v100.332 (auditul 12.11, 🔴 R1 + 🟡 Y1): poziția pe care semaforul n-o poate judeca se spune pe față, nu tace sub „Nimic urgent”
   poz.filter(function (p) { return p.faraDate; }).forEach(function (p) {

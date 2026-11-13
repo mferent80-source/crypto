@@ -527,6 +527,81 @@ var Acasa = (function () {
     long: "N-aș porni boți noi: longul plătește un funding mult peste obicei.",
     short: "N-aș porni boți noi: shortul plătește un funding mult peste obicei."
   };
+  // ---------- v100.336 (I-862): „De unde știu” - vârsta fiecărei surse a unui verdict, pe un rând, același pe cele trei pagini ----------
+  // Pragurile de vechime, pe sursă, într-un singur loc. Sunt ALESE (la vedere, nu măsurate): peste prag sursa se spune „veche”.
+  // critic = fără ea verdictul nu mai poate invita (franaSurse); zi = date pe ședințe (bare zilnice): se spune ziua, nu ora;
+  // f = substantiv feminin („veche”), pl = plural („n-au venit”, „sunt de la”). Frâna (franaSurse) se aplică verdictelor care INVITĂ (Piața azi, Scan,
+  // Tabloul fără bot); pe Tablou și T212, pionex / t212 doar arată ⚠ - verdictele lor spun ce faci cu ce ai, nu invită (revizia v100.336).
+  var SURSE = {
+    clasament: { et: "clasamentul", prag: CLASAMENT_VECHI_MS, critic: true },
+    btc: { et: "BTC pe oră", prag: 3 * 3600000 },
+    fg: { et: "frica / lăcomia", prag: 30 * 3600000, f: true },
+    calendar: { et: "calendarul", prag: 30 * 3600000 },
+    raport: { et: "raportul contului", prag: 12 * 3600000 },
+    qqq: { et: "QQQ", prag: 100 * 3600000, zi: true, critic: true },
+    vix: { et: "VIX", prag: 100 * 3600000, zi: true, critic: true },
+    ndx: { et: "lățimea Nasdaq 100", prag: NDX_VECHI_MS, f: true, critic: true },
+    pionex: { et: "botul (Pionex)", prag: 15 * 60000, critic: true },
+    fisa: { et: "fișa monedei", prag: 3 * 3600000, f: true },
+    t212: { et: "pozițiile T212", prag: 15 * 60000, critic: true, f: true, pl: true },
+    bare: { et: "prețurile zilnice", prag: 100 * 3600000, zi: true, pl: true },
+    curs: { et: "cursul BNR", prag: 150 * 3600000, zi: "curs" }   /* revizia: după vineri + luni libere (Paște) cursul are ~5 zile */
+  };
+  function ziBuc(t) { try { return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Bucharest", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(t)); } catch (e) { return new Date(t).toISOString().slice(0, 10); } }
+  function varstaSursa(la, acum, zi) {
+    var zA = ziBuc(acum), zL = ziBuc(la), zI = ziBuc(acum - 86400000), dm = zL.slice(8, 10) + "." + zL.slice(5, 7);
+    if (zi === "curs") return zL === zA ? "de azi" : "din " + dm;
+    if (zi) return zL === zA ? "ședința de azi" : "închiderea din " + dm;   /* data, nu „ieri” (lunea, ultima închidere e vineri - regula v100.333) */
+    var d = acum - la; if (d < 60000) return "acum"; if (d < 3600000) return "acum " + Math.floor(d / 60000) + " min";
+    var o = oraScurta(la), hm = o ? o.slice(-5) : "";
+    return (zL === zA ? "azi " : zL === zI ? "ieri " : dm + " ") + hm;
+  }
+  // lista = [{ k, la, eroare, et }] (la = ora la care a fost FĂCUTĂ sursa, când se știe; eroare = cererea a picat). Fără la și fără eroare
+  // sursa n-a fost încă citită ⇒ nu apare. Întoarce { bucati, probleme } - probleme = sursele critice vechi sau lipsă, în cuvinte.
+  function deUndeStiu(lista, acum) {
+    var a = nr(acum) || Date.now(), out = { bucati: [], probleme: [] };
+    (Array.isArray(lista) ? lista : []).forEach(function (x) {
+      var s = x && SURSE[x.k]; if (!s) return;
+      var la = nr(x.la), er = x.eroare ? String(x.eroare) : "";
+      if (!(la > 0) && !er) return;
+      var et = x.et || s.et, b = { k: x.k, et: et, critic: !!s.critic, lipsa: !(la > 0), vechi: false, text: "", cuvVechi: s.f && !s.pl ? "veche" : "vechi" };
+      if (b.lipsa) b.text = s.pl ? "n-au venit" : "n-a venit";
+      else { b.vechi = a - la > s.prag; b.text = varstaSursa(la, a, s.zi); }
+      out.bucati.push(b);
+      if (b.critic && (b.lipsa || b.vechi)) out.probleme.push({ k: x.k, et: et, text: et + " " + (b.lipsa ? b.text : (s.pl ? "sunt" : "e") + " de la " + b.text) });
+    });
+    return out;
+  }
+  // o sursă critică veche / lipsă ⇒ (1) fraza care invita („Aș porni…” / „Aș cumpăra…”) spune ce lipsește; (2) treapta verde coboară la galben
+  // (ca la VIX-ul lipsă, v100.332): „🟡 URCARE LARGĂ · DATE VECHI”. Titlul și textul verdictului rămân la vedere. (I-863: proba-surse-cazute.mjs)
+  var VERDE_LA_GALBEN = { larga: "ingusta", liniste: "amestecat" };
+  function franaSurse(v, r, fel) {
+    if (!v || typeof v !== "object" || !r || !r.probleme || !r.probleme.length) return v;
+    var inv = !!v.faCe && invita(v.faCe, fel), jos = VERDE_LA_GALBEN[v.nivel];
+    if (!inv && !jos) return v;
+    var o = Object.assign({}, v, { surseFrana: true });
+    if (inv) {
+      var pre = (fel === "bursa" ? "N-aș cumpăra" : "N-aș porni boți noi") + " pe verdictul ăsta: ", p = r.probleme.map(function (x) { return x.text; }), f = pre + p.join("; ") + ".";
+      if (f.length > 110) f = pre + p[0] + (p.length > 1 ? " (și încă " + (p.length - 1) + ")" : "") + ".";
+      if (f.length > 110) f = f.slice(0, 109) + "…";
+      o.faCe = f; o.ton = "atentie";
+    }
+    if (jos) {
+      var lipsa = r.probleme.some(function (x) { return /n-au? venit$/.test(x.text); });
+      o.nivel = jos; o.verdeInainte = v.nivel; if (v.nivel === "larga" && !o.latime) o.latime = "larga";
+      o.eticheta = "🟡 " + String(v.eticheta || "").replace(/^[^A-Za-zĂÂÎȘȚăâîșț]+/, "") + (lipsa ? " · SURSE LIPSĂ" : " · DATE VECHI");
+    }
+    return o;
+  }
+  // rândul de sub verdict; E = funcția de scăpare a paginii
+  function surseHtml(r, E) {
+    E = typeof E === "function" ? E : function (x) { return String(x); };
+    if (!r || !r.bucati || !r.bucati.length) return "";
+    return '<p class="dusRand"><span class="dusEt">De unde știu:</span> ' + r.bucati.map(function (b) {
+      var rau = b.lipsa || b.vechi;
+      return '<span class="dusB' + (rau ? " dusVechi" : "") + '">' + (rau ? "⚠ " : "") + E(b.et + " " + b.text + (b.vechi ? " (" + b.cuvVechi + ")" : "")) + '</span>';
+    }).join('<span class="dusSep"> · </span>') + '</p>';
+  }
   function invita(faCe, fel) { return fel === "bursa" ? /^Aș cumpăra/.test(String(faCe || "")) : /^Aș porni/.test(String(faCe || "")); }
   function areAbateriCantitate(o) {
     if (o.exportNePotrivit === true) return true;
@@ -744,7 +819,7 @@ var Acasa = (function () {
     return o;
   }
 
-  return { bursaNYDeschisa: bursaNYDeschisa, franaContMotive: franaContMotive,bareInchise: bareInchise, botiPeMonede: botiPeMonede, botiScurtiLungi: botiScurtiLungi, botiCosturi: botiCosturi, botiPeZile: botiPeZile, PRAG_SCURT_MIN: PRAG_SCURT_MIN, perioadaBoti: perioadaBoti, botiStatistici: botiStatistici, durataScurta: durataScurta, ora9Ro: ora9Ro, clasamentLipsa: clasamentLipsa, textCorelatie: textCorelatie, SECTOR: SECTOR, sectoare: sectoare, ziuaTa: ziuaTa, raportSaptamana: raportSaptamana, socotealaAlerte: socotealaAlerte, miscareTipica: miscareTipica, fundingPiata: fundingPiata, fundingAtentie: fundingAtentie, schimbari: schimbari, vreme: vreme, miscari: miscari, fg: fg, fgValid: fgValid, largime: largime, ro: ro, rezumatActiune: rezumatActiune, largimeNdx: largimeNdx, vremeBursa: vremeBursa, sensBursa: sensBursa, fgNume: fgNume, corelatie: corelatie, calendar: calendar, MAG7: MAG7, franaVerb: franaVerb, franaCont: franaCont, frazaPauza: frazaPauza, masuraFranei: masuraFranei, unesteZileFrana: unesteZileFrana,
+  return { SURSE: SURSE, deUndeStiu: deUndeStiu, franaSurse: franaSurse, surseHtml: surseHtml, bursaNYDeschisa: bursaNYDeschisa, franaContMotive: franaContMotive,bareInchise: bareInchise, botiPeMonede: botiPeMonede, botiScurtiLungi: botiScurtiLungi, botiCosturi: botiCosturi, botiPeZile: botiPeZile, PRAG_SCURT_MIN: PRAG_SCURT_MIN, perioadaBoti: perioadaBoti, botiStatistici: botiStatistici, durataScurta: durataScurta, ora9Ro: ora9Ro, clasamentLipsa: clasamentLipsa, textCorelatie: textCorelatie, SECTOR: SECTOR, sectoare: sectoare, ziuaTa: ziuaTa, raportSaptamana: raportSaptamana, socotealaAlerte: socotealaAlerte, miscareTipica: miscareTipica, fundingPiata: fundingPiata, fundingAtentie: fundingAtentie, schimbari: schimbari, vreme: vreme, miscari: miscari, fg: fg, fgValid: fgValid, largime: largime, ro: ro, rezumatActiune: rezumatActiune, largimeNdx: largimeNdx, vremeBursa: vremeBursa, sensBursa: sensBursa, fgNume: fgNume, corelatie: corelatie, calendar: calendar, MAG7: MAG7, franaVerb: franaVerb, franaCont: franaCont, frazaPauza: frazaPauza, masuraFranei: masuraFranei, unesteZileFrana: unesteZileFrana,
     ndxVechi: ndxVechi, evenimentAzi: evenimentAzi, riscNecunoscut: riscNecunoscut, CLASAMENT_VECHI_MS: CLASAMENT_VECHI_MS, NDX_VECHI_MS: NDX_VECHI_MS };   /* v100.332 (auditul 12.11) */
 })();
 if (typeof globalThis !== "undefined") globalThis.Acasa = Acasa;

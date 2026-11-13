@@ -176,6 +176,47 @@
   }
 
   // ---------- I-590: verdictul sus în Tablou ----------
+  // v100.336 (I-866): forma unei voci din scorul ei DEJA ținut, cu regula deja scrisă a casei (nu un prag nou): Monte Carlo e „măsurată” doar când
+  // nimerește mai des decât „mereu pe plus” (pe zile - cuvintele lui tbMcScorHtml), „prea puține” sub 10 zile, altfel „nedovedită”, cu procentul.
+  // Busola: direcția ei n-a bătut întâmplarea (auditul din 16.10) ⇒ „nedovedită”. Vocile fără scor ținut rămân cum sunt (forma null).
+  // Verdictul Consilierului nu se schimbă; se schimbă doar cât de tare arată vocea. Ipoteză de afișare, nu de semnal.
+  function formaVoce(n, cifre, tx) {
+    if (n === "Busola") return { forma: "nedovedita", pct: null, nota: "direcția Busolei n-a bătut întâmplarea (auditul din 16.10)" };
+    if (n !== "Monte Carlo") return { forma: null, pct: null };
+    var m = /(\d+)\s*[–-]\s*(\d+)/.exec(String(cifre || "")), d = m ? +m[1] : 0, g = m ? +m[2] : 0, t = String(tx || "");
+    if (!(d + g > 0)) return { forma: "fara", pct: null, nota: "scorul Monte Carlo încă nu e citit" };   /* revizia: fără scor nu rămâne bifa colorată */
+    var pct = Math.round(d / (d + g) * 100) + "%";
+    if (/puține zile/.test(t)) return { forma: "putine", pct: pct, nota: "scorul " + d + " – " + g + ": încă puține zile" };
+    if (/mai des decât „mereu pe plus”/.test(t)) return { forma: "masurata", pct: pct, nota: "scorul " + d + " – " + g + ": nimerește mai des decât reperul" };
+    return { forma: "nedovedita", pct: pct, nota: "scorul " + d + " – " + g + " (" + pct + "): încă nu bate reperul „mereu pe plus”" };
+  }
+  // vocea de sub verdict: nedovedită / prea puține ⇒ gri, cu sensul în cuvinte (culoarea nu mai spune „cu botul”); măsurată ⇒ culoarea ei + procentul
+  function vocePzHtml(v) {
+    var SIMB = { da: "✓", nu: "✗", atentie: "!", neutru: "–" }, fo = v.forma || {}, f = fo.forma, tit = ' title="' + esc((v.tit || "") + (fo.nota ? " · " + fo.nota : "")) + '"';
+    if (f === "nedovedita" || f === "putine" || f === "fara") {
+      var sens = v.ton === "da" ? " cu botul" : v.ton === "nu" ? " contra botului" : "";
+      var coada = f === "putine" ? "prea puține zile" : f === "fara" ? "fără scor încă" : fo.pct ? fo.pct + ", nedovedit" : "nedovedită";
+      return '<span class="pzVoce pzVoce-nedov"' + tit + '>○ ' + esc(v.n + sens + " · " + coada) + '</span>';
+    }
+    return '<span class="pzVoce pzVoce-' + v.ton + '"' + tit + '>' + (SIMB[v.ton] || "–") + " " + esc(v.n + (f === "masurata" && fo.pct ? " · " + fo.pct : "")) + '</span>';
+  }
+  // v100.336 (I-862): „De unde știu” sub verdictul Tabloului - ora citirii botului din Pionex, fișa monedei, clasamentul (vremea pieței)
+  function surseTablou() {
+    if (typeof Acasa === "undefined" || !Acasa.deUndeStiu || !Acasa.surseHtml) return "";
+    var s = st() || {}, l = [{ k: "pionex", la: s.botLa || null, eroare: s.routeOk === false ? (s.eroare || "citirea a picat") : "" }];
+    try { if (typeof tbFisa !== "undefined" && tbFisa && tbFisa.la > 0 && (!s.bot || !tbFisa.botId || tbFisa.botId === s.bot.id)) l.push({ k: "fisa", la: tbFisa.la }); } catch (e) {}   /* revizia: doar fișa botului de pe ecran */
+    try { var d = typeof acasa !== "undefined" && acasa && acasa.d; if (d) l.push({ k: "clasament", la: d.clasament && Number(d.clasament.la) > 0 ? Number(d.clasament.la) : null, eroare: d.clasament ? "" : d.clasamentErr || "", et: "clasamentul pieței" }); } catch (e) {}
+    return Acasa.surseHtml(Acasa.deUndeStiu(l, Date.now()), esc);
+  }
+  // T212: pozițiile (ora citirii contului), prețurile zilnice (cea mai veche ultimă ședință dintre poziții), cursul BNR
+  function surseT212() {
+    if (typeof Acasa === "undefined" || !Acasa.deUndeStiu || !Acasa.surseHtml || typeof t212 === "undefined" || !t212) return "";
+    var l = [{ k: "t212", la: Math.max(t212.cititBine || 0, t212.laViu || 0, t212.contLa || 0) || null, eroare: t212.eroare || "" }], ub = null;   /* revizia: recitirea de la 30 s pune cititBine / laViu, nu contLa */
+    try { (t212.pozPregatite || []).forEach(function (p) { var b = t212.bare && t212.bare[p.ticker], u = b && b.length ? b[b.length - 1].t : null; if (u && (ub === null || u < ub)) ub = u; }); } catch (e) {}
+    if (ub) l.push({ k: "bare", la: ub });
+    if (t212.bnr && t212.bnr.zi) l.push({ k: "curs", la: Date.parse(t212.bnr.zi + "T12:00:00Z") });
+    return Acasa.surseHtml(Acasa.deUndeStiu(l, Date.now()), esc);
+  }
   function voci() {
     var V = [];
     document.querySelectorAll("#tbGrafic .gbSem").forEach(function (g) {
@@ -183,13 +224,14 @@
       var ton = /#26A96C/i.test(c) ? "da" : /#E0524A/i.test(c) ? "nu" : /#E9B949/i.test(c) ? "atentie" : "neutru";
       V.push({ n: (t.split(":")[0] || "").trim(), ton: ton, tit: t });
     });
-    var cit = $("tbCitire"); if (cit) [].forEach.call(cit.children, function (x) {
+    var cit = $("tbCitire"), scC = cit && cit.querySelector ? cit.querySelector(".tbCitMc .tbMcScorCifre") : null, scT = cit && cit.querySelector ? cit.querySelector(".tbCitMc .tbMcScorTx") : null;   /* v100.336 (I-866): scorul Monte Carlo */
+    if (cit) [].forEach.call(cit.children, function (x) {
       // v100.332 (12.11, pe pagina vie: „✓ Monte Carlo” și „– Monte Carlo” sub verdict): rândul 🎰 (tbCitMc) începe cu „Scorul Monte Carlo 83 – 79”
       // - e scorul, nu o voce; vocea Monte Carlo e cea din fraza vocilor (cu botul / contra botului)
       if (x.classList && x.classList.contains("tbCitMc")) return;
       var t = (x.textContent || "").trim(), cap = t.slice(0, 40);   // rândul începe cu iconița (🎰/✓) - căutăm în cap, nu cu ^ (revizia, minor)
-      if (/Monte Carlo/.test(cap)) V.push({ n: "Monte Carlo", ton: /contra botului/i.test(t) ? "nu" : /cu botul/i.test(t) ? "da" : "neutru", tit: t.split("\n")[0].slice(0, 200) });
-      else if (/^\W*Busola/.test(cap)) V.push({ n: "Busola", ton: /invers/i.test(t) ? "nu" : /ca botul/i.test(t) ? "da" : "neutru", tit: t.split("\n")[0].slice(0, 200) });
+      if (/Monte Carlo/.test(cap)) V.push({ n: "Monte Carlo", ton: /contra botului/i.test(t) ? "nu" : /cu botul/i.test(t) ? "da" : "neutru", tit: t.split("\n")[0].slice(0, 200), forma: formaVoce("Monte Carlo", scC && scC.textContent, scT && scT.textContent) });
+      else if (/^\W*Busola/.test(cap)) V.push({ n: "Busola", ton: /invers/i.test(t) ? "nu" : /ca botul/i.test(t) ? "da" : "neutru", tit: t.split("\n")[0].slice(0, 200), forma: formaVoce("Busola") });
     });
     return V;
   }
@@ -225,9 +267,9 @@
     }
     var V = voci(), SIM = { da: "✓", nu: "✗", atentie: "!", neutru: "–" };
     var h = '<div class="pzVerbRand"><span class="pzVerb pzVerb-' + tonV + '">' + esc(verb || "—") + '</span>'
-      + '<div class="pzVerbTxt"><b>' + esc(txtTit) + '</b>' + (txtFac ? '<p>' + esc(txtFac) + '</p>' : "") + nota + '<p class="pzDin">din: Consilierul · motivele întregi în cartela lui, mai jos</p></div>'
+      + '<div class="pzVerbTxt"><b>' + esc(txtTit) + '</b>' + (txtFac ? '<p>' + esc(txtFac) + '</p>' : "") + nota + '<p class="pzDin">din: Consilierul · motivele întregi în cartela lui, mai jos</p>' + surseTablou() + '</div>'   /* v100.336 (I-862) */
       + '<b id="pzPret" class="pzPret"></b></div>' + motivG
-      + (V.length ? '<div class="pzVoci">' + V.map(function (v) { return '<span class="pzVoce pzVoce-' + v.ton + '" title="' + esc(v.tit) + '">' + SIM[v.ton] + " " + esc(v.n) + '</span>'; }).join("") + '</div>' : "");
+      + (V.length ? '<div class="pzVoci">' + V.map(vocePzHtml).join("") + '</div>' : "");   /* v100.336 (I-866): vocea își poartă scorul */
     if (!el) { el = document.createElement("section"); el.id = "pzVerdict"; var ref = gL || $("tbKpi"); if (!ref) return; ref.parentNode.insertBefore(el, ref); }
     el.hidden = false; if (el._h !== h) { el.innerHTML = h; el._h = h; pzPretUmple(); }
     if (gL) gL.classList.toggle("pzInVerdict", !!motivG && el.contains(el.querySelector(".pzMotiv")));   // cartela se ascunde DOAR după ce textul ei e în verdict (revizia I5)
@@ -399,7 +441,7 @@
     if (!el) { el = document.createElement("section"); el.id = id; el.className = "pzAntet"; }
     if (el.parentNode !== ref.parentNode || el.nextElementSibling !== ref) ref.parentNode.insertBefore(el, ref);
     var h = '<div class="pzVerbRand"><span class="pzVerb pzVerb-' + (cfg.ton || "mut") + '">' + esc(cfg.verb) + '</span><div class="pzVerbTxt">' + (cfg.titlu ? '<b>' + esc(cfg.titlu) + '</b>' : "")
-      + (cfg.fac ? '<p>' + esc(cfg.fac) + '</p>' : "") + '<p class="pzDin">din: ' + esc(cfg.din || "") + '</p></div></div>'
+      + (cfg.fac ? '<p>' + esc(cfg.fac) + '</p>' : "") + '<p class="pzDin">din: ' + esc(cfg.din || "") + '</p>' + (cfg.surse || "") + '</div></div>'   /* v100.336 (I-862): cfg.surse = rândul „De unde știu” */
       + (cfg.voci && cfg.voci.length ? '<div class="pzVoci">' + cfg.voci.slice(0, 16).map(voceHtml).join("") + '</div>' : "");
     el.hidden = false; if (el._h !== h) { el.innerHTML = h; el._h = h; }
   }
@@ -431,6 +473,7 @@
     if (c) c.fac = primulTodo("#t212TodoBox .t212TodoRand");   /* v100.291: „Ce ai de făcut acum” stă acum jos, în #t212TodoBox */
     // v100.291 (demo aprobat): pastila deschide fișa poziției ei (simbolul ⇒ tickerul, din id-ul rândului)
     if (c && c.voci) c.voci.forEach(function (v) { var r = [].filter.call(document.querySelectorAll("#t212Continut tr.t212Rand"), function (tr) { return tx(".t212Sim b", tr) === v.n; })[0], tk = r && r.id ? r.id.replace(/^t212R-/, "").replace(/[^A-Za-z0-9._-]/g, "") : ""; if (tk) v.act = "t212Deschide('" + tk + "')"; });
+    if (c) c.surse = surseT212();   /* v100.336 (I-862) */
     antet("pzV-t212", $("t212Sus"), c);
   }
   function pagSalt() {
@@ -571,7 +614,7 @@
     if (b) { var t = (des ? "▾ " : "▸ ") + "Prețul monedei alese și filele de analiză" + (des ? " (pliază)" : ""); if (b.textContent !== t) b.textContent = t; b.setAttribute("aria-expanded", des ? "true" : "false"); }
   }
 
-  window.AsezarePaznic = { voceHtml: voceHtml, valJurnal: valJurnal, valBani: valBani,verdictPozitii: verdictPozitii, verdictAlerte: verdictAlerte, nivelPastila: nivelPastila, tonVarsta: tonVarsta, randuriKv: randuriKv, ancora: ancora, GLOSAR: GLOSAR, t212Din: t212Din, colectorDin: colectorDin, colectorSursa: colectorSursa, alerteNrDin: alerteNrDin, lichDin: lichDin, nivele: nivele, drumHtml: drumHtml, latimeDrum: latimeDrum, verdictValid: verdictValid, tonLich: tonLich, pliaza: pliaza };
+  window.AsezarePaznic = { voceHtml: voceHtml, valJurnal: valJurnal, valBani: valBani,verdictPozitii: verdictPozitii, verdictAlerte: verdictAlerte, nivelPastila: nivelPastila, tonVarsta: tonVarsta, randuriKv: randuriKv, ancora: ancora, GLOSAR: GLOSAR, t212Din: t212Din, colectorDin: colectorDin, colectorSursa: colectorSursa, alerteNrDin: alerteNrDin, lichDin: lichDin, nivele: nivele, drumHtml: drumHtml, latimeDrum: latimeDrum, verdictValid: verdictValid, tonLich: tonLich, pliaza: pliaza, formaVoce: formaVoce };
   document.documentElement.classList.add("pzDemo");
   var rz = null; addEventListener("resize", function () { clearTimeout(rz); rz = setTimeout(tura, 200); });   // revizia I10: fără tură la fiecare pixel
   document.addEventListener("click", function (e) { if (e.target && e.target.closest && e.target.closest("#jurnaltrade .jtFiltru")) setTimeout(function () { try { pagJurnal(); } catch (x) {} }, 30); });   /* M1: antetul urmează fila pe loc */

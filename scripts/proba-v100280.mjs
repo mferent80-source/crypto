@@ -90,7 +90,7 @@ await test("(1) Poarta din Grid: câmpul „boți pe zi” și salvarea lui; Aca
   assert.match(app, /<label><span class="tbEt2">boți pe zi<\/span><input id="grFranaBoti" inputmode="numeric" value="'\+fp\.boti\+'"><\/label>/);
   assert.match(app, /rand:Math\.round\(v\("grFranaRand"\)\),boti:Math\.round\(v\("grFranaBoti"\)\)\};/);
   assert.match(app, /if\(!\(p\.zi>0&&p\.sapt>0&&p\.rand>0&&p\.boti>0\)\)/);
-  assert.match(ae, /pas\("franaCfg", async function \(\) \{ var c = await getJSON\("\/api\/istoric-bot\?action=config"\); return c && c\.config && c\.config\.frana \|\| null; \}\)/);
+  assert.match(ae, /pas\("franaCfg", async function \(\) \{ var c = (acDinPachet\(pk, "config"\) \|\| )?await getJSON\("\/api\/istoric-bot\?action=config"\); return c && c\.config && c\.config\.frana \|\| null; \}\)/);   /* v100.336: din pachet, cu cererea ca rezervă */
   assert.match(ae, /hb \+= acFranaZileiHtml\(typeof contTot !== "undefined" && contTot\.inchiseOk \? contTot\.inchise : null, act, d\.franaCfg, Date\.now\(\)\);/);
   assert.ok(ae.indexOf("hb += acFranaZileiHtml(") < ae.indexOf("hb += acBotiStatHtml("), "contorul înaintea blocului „Azi”");
 });

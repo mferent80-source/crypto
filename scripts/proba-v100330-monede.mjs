@@ -79,7 +79,7 @@ await test("goluri cu stare: fără sugestii încă ⇒ „aștept istoricul”;
 });
 // revizia Opus (🔵5): Piața azi cere doar sugestiile (&scurt=1), fără istoricul de până la 4.000 de rânduri pe care nu-l citește; ruta îl lasă afară
 await test("Piața azi cere din nou sugestiile - scurt, fără istoric (eticheta și urmărirea)", () => {
-  assert.match(lib("acasa-ecran.js"), /pas\("sugestii", function \(\) \{ return getJSON\("\/api\/istoric-bot\?action=sugestii&scurt=1"\); \}\)/);
+  assert.match(lib("acasa-ecran.js"), /pas\("sugestii", function \(\) \{ return (acDinPachet\(pk, "sugestii"\) \|\| )?getJSON\("\/api\/istoric-bot\?action=sugestii&scurt=1"\); \}\)/);   /* v100.336: din pachet, rezerva „scurt” */
   assert.match(citeste("functions", "api", "istoric-bot.js"), /if\(action==="sugestii"\)\{let s=null,l=\[\];try\{s=JSON\.parse\(await env\.ISTORIC\.get\("sugestii"\)\|\|"null"\)\}catch\{s=null\}if\(u\.searchParams\.get\("scurt"\)==="1"\)return json\(\{sugestii:s\}\);/);
 });
 // revizia Opus (🔵6): numele monedei din câmpul `moneda` (deja curățat), nu din simbolul tăiat de mână (BTC_USDT ⇒ „BTCUSDT”)

@@ -764,6 +764,36 @@ var ActiuniSemnale = (function () {
     if (pretAcum > 0) mx = mx === null ? pretAcum : Math.max(mx, pretAcum);   // pretul de acum e si el dupa cumparare
     return mx;
   }
+  // ---------------- v100.336 (I-864): de când e depășit stopul care urcă și cât a costat așteptarea ----------------
+  // Pe barele zilnice de DUPĂ ziua cumpărării: stopul unei ședințe = (maximul ședințelor de dinainte, de după cumpărare, sau închiderea ei,
+  // dacă e mai sus) × (1 − trailPct). Maximul NU ia ședința însăși și nici pe cele de după ⇒ fără date din viitor. Se întoarce doar
+  // episodul de ACUM (ședințele de la capăt închise sub stopul lor); fără el ⇒ null (verdictul de azi poate veni doar din prețul viu).
+  // trailPct = coborârea de azi a stopului (−15% sau profilul acțiunii, fixe); ieșirea = deschiderea ședinței de după prima închidere
+  // sub stop (semnalul e pe închidere, ordinul se umple la următorul preț). Conversia e aceeași în ambele variante, deci nu intră.
+  function asteptareSubStop(bare, deLa, trailPct, pretAcum) {
+    var b = Array.isArray(bare) ? bare : [], de = typeof deLa === "number" ? deLa : Date.parse(deLa || "");
+    if (!b.length || !isFinite(de) || !(trailPct > 0) || trailPct >= 100) return null;
+    var z0 = Math.floor(de / ZI), mx = null, start = -1, stopStart = null, stopI;
+    for (var i = 0; i < b.length; i++) {
+      var x = b[i]; if (!x || Math.floor(x.t / ZI) <= z0 || !(x.c > 0)) continue;
+      stopI = mx === null ? null : Math.max(mx, x.c) * (1 - trailPct / 100);
+      if (stopI !== null && x.c <= stopI) { if (start < 0) { start = i; stopStart = stopI; } }
+      else start = -1;
+      if (x.h > 0) mx = mx === null ? x.h : Math.max(mx, x.h);
+    }
+    if (start < 0) return null;
+    var urm = start + 1 < b.length ? b[start + 1] : null, pi = urm && urm.o > 0 ? urm.o : null;
+    return { sedinte: b.length - start, de: b[start].t, stopAtunci: stopStart, pretIesire: pi, difPct: pi && pretAcum > 0 ? pretAcum / pi - 1 : null };
+  }
+  // textul de sub „Ce ai de făcut”: lei = cât a costat (−) sau a adus (+) așteptarea, null când nu se știe în lei
+  function textAsteptare(a, lei) {
+    if (!a || !(a.sedinte > 0)) return "";
+    var zi = new Date(a.de).toLocaleDateString("ro-RO", { day: "2-digit", month: "2-digit", timeZone: "UTC" });
+    if (!(a.pretIesire > 0)) return "A închis sub stopul calculat în ultima ședință (" + zi + ").";
+    var n = a.sedinte, sed = n === 1 ? "o ședință" : cate(n, "ședință", "ședințe");
+    var cost = lei === null || lei === undefined || !isFinite(lei) ? "" : Math.round(lei) < 0 ? " · așteptarea a costat " + L(lei) : Math.round(lei) > 0 ? " · de atunci prețul a revenit: așteptarea a adus " + L(lei) : " · prețul e cam ca atunci";
+    return "Sub stopul calculat de " + sed + " (din " + zi + ")" + cost + ".";
+  }
   // ---------------- v100.71 (revizia pachetului 4, I4): „Ce aș face eu” de pe pagina T212, ca functii pure ----------------
   // (inainte erau scrise in t212-ecran.js, unde nici garda, nici proba nu le vedeau: 3 treceau de 110)
   // poarta de cumparare: nivel = cumpara | nu | asteapta | fara-date
@@ -813,6 +843,6 @@ var ActiuniSemnale = (function () {
   }
   // „Regulile tale”: grupa cea mai scumpa
   function facReguli(grupa) { return "Aș evita deocamdată trade-urile " + grupa + "."; }
-  return { monedaTicker: monedaTicker, pretIn: pretIn, inParalel: inParalel, unitateBare: unitateBare, inchisaInainte: inchisaInainte, zileLipsa: zileLipsa, verificaBare: verificaBare, regimPoarta: regimPoarta, PLAFON: PLAFON, usd: usd,facPoarta: facPoarta, facStop: facStop, sfatStop: sfatStop, facPoartaIstoric: facPoartaIstoric, facReguli: facReguli, notaReguli: notaReguli, stopPoarta: stopPoarta, cheieSituatie: cheieSituatie, situatiiCaAsta: situatiiCaAsta, textSituatie: textSituatie, trailPozitie: trailPozitie, alegeTrail: alegeTrail, maxDupaCumparare: maxDupaCumparare, cuStopUrcator: cuStopUrcator, cumparariInJos: cumparariInJos, alertaFrana: alertaFrana, cuStop: cuStop, rezumatStop: rezumatStop, reguliPersonale: reguliPersonale, atr: atr, niveluri: niveluri, marime: marime, planulMeu: planulMeu, laCumparare: laCumparare, raportSaptamana: raportSaptamana, alertePlan: alertePlan, stare: stare, semafor: semafor, greseli: greseli, rezumatJurnal: rezumatJurnal, poarta: poarta, portofoliu: portofoliu, beta: beta, TEXT: TEXT };
+  return { monedaTicker: monedaTicker, pretIn: pretIn, inParalel: inParalel, unitateBare: unitateBare, inchisaInainte: inchisaInainte, zileLipsa: zileLipsa, verificaBare: verificaBare, regimPoarta: regimPoarta, PLAFON: PLAFON, usd: usd,facPoarta: facPoarta, facStop: facStop, sfatStop: sfatStop, facPoartaIstoric: facPoartaIstoric, facReguli: facReguli, notaReguli: notaReguli, stopPoarta: stopPoarta, cheieSituatie: cheieSituatie, situatiiCaAsta: situatiiCaAsta, textSituatie: textSituatie, trailPozitie: trailPozitie, alegeTrail: alegeTrail, maxDupaCumparare: maxDupaCumparare, asteptareSubStop: asteptareSubStop, textAsteptare: textAsteptare, cuStopUrcator: cuStopUrcator, cumparariInJos: cumparariInJos, alertaFrana: alertaFrana, cuStop: cuStop, rezumatStop: rezumatStop, reguliPersonale: reguliPersonale, atr: atr, niveluri: niveluri, marime: marime, planulMeu: planulMeu, laCumparare: laCumparare, raportSaptamana: raportSaptamana, alertePlan: alertePlan, stare: stare, semafor: semafor, greseli: greseli, rezumatJurnal: rezumatJurnal, poarta: poarta, portofoliu: portofoliu, beta: beta, TEXT: TEXT };
 })();
 if (typeof globalThis !== "undefined") globalThis.ActiuniSemnale = ActiuniSemnale;

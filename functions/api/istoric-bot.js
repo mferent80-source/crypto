@@ -65,7 +65,15 @@ const faraKv=()=>json({error:"ISTORIC_DOAR_ACASA",detail:"Istoricul de pe server
 export async function onRequestGet({request,env}){
   const auth=await requireApiAuth(request,env,"istoric-read",300,1200);if(!auth.ok)return authErrorResponse(auth,H);
   if(!env.ISTORIC?.get)return faraKv();
+  return istoricGet(request,env)}
+// v100.336 (revizia): citirile, după autentificare - pachetul le cheamă de aici, fără să treacă de 11 ori prin parolă și prin limitarea cererilor (KV neatomic)
+async function istoricGet(request,env){
   const u=new URL(request.url),action=u.searchParams.get("action")||"citeste";
+  // v100.336 (I-867): pachetul paginii Piața azi - o singură cerere cu ce ține serverul de la colector. Fiecare parte = răspunsul EXACT al cererii ei
+  // (aceeași funcție, chemată aici, după o singură autentificare). O parte care pică își spune eroarea, celelalte rămân; pagina cade pe cererea ei doar pentru ea.
+  if(action==="pachet"){const PARTI=["clasament","piata","cont","contZile","config","sugestii","verdicteCalibrare","trend12","sectoareTop","latime","largimeCrypto"],parti={};
+    await Promise.all(PARTI.map(async a=>{try{const q=new URL(u.toString());q.search="";q.searchParams.set("action",a);if(a==="sugestii")q.searchParams.set("scurt","1");const r=await istoricGet(new Request(q.toString(),{headers:request.headers}),env);parti[a]=r.ok?await r.json():{eroare:"HTTP "+r.status}}catch(e){parti[a]={eroare:String(e&&e.message||e).slice(0,160)}}}));
+    return json({la:Date.now(),parti})}
   if(action==="config")return json({config:await citesteConfig(env)});
   // v100.25: arhiva botilor inchisi (toata istoria Pionex), stransa de colector; ?la=<ultima vazuta> -> fara lista daca nu s-a schimbat
   if(action==="botiInchisi"){let a=null;try{a=JSON.parse(await env.ISTORIC.get("botiInchisi")||"null")}catch{a=null}

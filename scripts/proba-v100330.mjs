@@ -34,7 +34,9 @@ const RAP = (var95) => ({ cont: { la: Date.now() - 3600000, valoare: { total: 10
 const VAR57 = "Aș reduce expunerea până sub 4% pe zi: o zi proastă îți ia ~5,7% din cont.";
 const monede = (ev) => Array.from({ length: 100 }, (_, i) => ({ simbol: i === 0 ? "BTC_USDT_PERP" : "M" + i + "_USDT_PERP", stare: i > 0 && i <= ev ? "evita" : "candidat", dir: i < 64 ? "short" : "neutru", regim: { miscare: false } }));
 const k1h = (n) => Array.from({ length: n }, (_, i) => ({ time: T0 + i * 3600000, open: 100 + Math.sin(i / 7), high: 100.1 + Math.sin(i / 7), low: 99.9 + Math.sin(i / 7), close: 100 + Math.sin(i / 7) }));
-const dateZi = (var95) => ({ clasament: { monede: monede(12) }, piata: { qqq: serie(260, (i) => 100 * Math.pow(1.002, i)), vix: [{ time: T0, open: 17, high: 17, low: 17, close: 17 }], fg: { valoare: 28, clasa: "Fear", istoric: [40, 35, 28] } },
+/* v100.336: bursa se termină IERI (altfel „De unde știu” o vede, pe drept, veche și verdictul nu mai invită) */
+const T0B = Date.now() - 260 * ZI, serieB = (n, f) => serie(n, f).map((x) => Object.assign({}, x, { time: x.time - T0 + T0B }));
+const dateZi = (var95) => ({ clasament: { monede: monede(12) }, piata: { qqq: serieB(260, (i) => 100 * Math.pow(1.002, i)), vix: [{ time: Date.now() - ZI, open: 17, high: 17, low: 17, close: 17 }], fg: { valoare: 28, clasa: "Fear", istoric: [40, 35, 28] } },
   ndx: { actiuni: Array.from({ length: 98 }, (_, i) => ({ s: "A" + i, ch: 1, e50: i < 54, e200: true, rsi: 55 })) }, btc1h: k1h(500), contRaport: RAP(var95), calendar: { evenimente: [] }, piataCol: { funding: null } });
 
 await test("Acasa.franaCont: frâna CONTULUI într-un singur loc - raportul lipsă / vechi / VaR peste 4 % / evenimentul mare; altfel nimic", () => {

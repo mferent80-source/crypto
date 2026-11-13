@@ -310,6 +310,26 @@ var IndicatoriBot = (function () {
   // v100.331 (el, 12.11: „la 1 fă și integrează în detaliile indicatorilor ca și indicator separat”): „Listele Radarului” - e moneda botului azi într-o
   // listă (pe revenire / pentru short) și cum au ieșit listele FAȚĂ DE PIAȚĂ, pe zile (colectorul: urmarireFixa, 7 zile). Fapte, fără culoare de
   // avantaj: listele n-au avantaj dovedit (eticheta dovezii stă în titlu). o = { moneda, dirBot, rev: [nume], short: [nume], fata: { revenire, short }, eticheta: { revenire, short } }
+  // v100.336 (13.11, el: „vreau să modifici și verdictul din ultimul grafic, să-l faci mai explicit”): verdictul fiecărei liste în cuvinte, din cifrele
+  // DEJA arătate. Direcția = semnul medianei zilelor ȘI în câte zile lista a bătut piața (peste / sub jumătate); dacă nu se potrivesc ⇒ „cam cât piața”.
+  // Mereu „nedovedit”, cu ferestrele de 7 zile care nu se suprapun (zilele vecine împart aceleași prețuri). Sub 5 zile judecate sau 2 ferestre ⇒
+  // „prea devreme” (pragul ales al rândurilor, v100.333). Nu e un test statistic și nu se dă drept unul.
+  function listeVerdict(u, short) {
+    var nume = short ? "short" : "de revenire", dir = short ? "short" : "long", zi = function (n) { return TextRo.cate(n, "zi", "zile"); };
+    if (!u || !(u.zile >= 5) || !(u.ferestre >= 2) || typeof u.exces !== "number" || !isFinite(u.exces))
+      return { cod: "devreme", cuvant: "Prea devreme pentru un verdict", fraza: "Lista " + nume + " are " + (u && u.zile > 0 ? zi(u.zile) + " judecate" : "încă nicio zi judecată") + "; verdictul vine de la 5 zile.", fac: "Aștept cel puțin 5 zile judecate.", nota: "" };
+    var zp = u.zileCuPiata > 0 ? u.zileCuPiata : u.zile, bune = Math.round((u.zilePeste || 0) * zp), pp = (u.exces < 0 ? "−" : "+") + Math.abs(u.exces * 100).toFixed(1).replace(".", ",") + " pp";
+    var cod = u.exces < 0 && bune * 2 < zp ? "slab" : u.exces > 0 && bune * 2 > zp ? "bine" : "lafel", sh = short ? " (pentru un short)" : "";
+    var fraza = "Lista " + nume + (cod === "slab" ? " a făcut mai rău decât piața: mediana " + pp + " la 7 zile, mai bine decât piața" + sh + " doar în "
+      : cod === "bine" ? " a făcut mai bine decât piața: mediana " + pp + " la 7 zile, mai bine decât piața" + sh + " în "
+      : " a făcut cam cât piața: mediana " + pp + " la 7 zile, dar mai bine decât piața" + sh + " în ") + bune + " din " + zi(zp) + ".";
+    return { cod: cod, fraza: fraza,
+      cuvant: cod === "slab" ? "Mai slabă decât piața, până acum" : cod === "bine" ? "Mai bună decât piața, până acum" : "Cam cât piața, până acum",
+      fac: cod === "slab" ? "N-aș porni și n-aș ține un bot " + dir + " doar pentru că moneda e pe lista " + nume + "."
+        : cod === "bine" ? "Lista a ajutat până acum, dar pe atât de puține ferestre n-aș mări un bot doar pe ea."
+        : "Lista n-a adus nimic peste piață: o iau ca informație, nu ca motiv să pornesc sau să măresc un bot " + dir + ".",
+      nota: "nedovedit: doar " + TextRo.cate(u.ferestre, "fereastră", "ferestre") + " de 7 zile care nu se suprapun" };
+  }
   function listeRadar(o) {
     o = o || {};
     var m = String(o.moneda || "").toUpperCase(), d = String(o.dirBot || "").toLowerCase(), rev = (o.rev || []).map(function (x) { return String(x).toUpperCase(); }), sh = (o.short || []).map(function (x) { return String(x).toUpperCase(); });
@@ -327,8 +347,22 @@ var IndicatoriBot = (function () {
       return (u.exces < 0 ? "−" : "+") + Math.abs(u.exces * 100).toFixed(1).replace(".", ",") + " pp față de piață la 7 zile · mai bine decât piața" + (short ? " (pentru un short)" : "") + " în " + Math.round((u.zilePeste || 0) * zp) + " din " + cate(zp);
     };
     var F = o.fata || {}, E = o.eticheta || {};
+    // v100.336: verdictul pentru botul TĂU, primul rând - lista pe care e moneda, de partea sau contra botului, și cât cântărește ea
+    var vR = listeVerdict(F.revenire, false), vS = listeVerdict(F.short, true);
+    var verdictBot = function () {
+      if (!m) return "moneda botului nu se știe: listele nu se pot lega de bot.";
+      if (inR && inS) return m + " e în ambele liste, cu semnale opuse: listele nu spun nimic limpede despre botul tău.";
+      if (!inR && !inS) return m + " nu e azi pe liste: listele nu spun nimic despre botul tău.";
+      var v = inS ? vS : vR, lista = inS ? "lista short" : "lista de revenire", dl = inS ? "short" : "long", fara = d !== "long" && d !== "short", cu = d === dl;
+      var cap = m + " e pe " + lista + (fara ? "" : cu ? ", de partea botului tău" : ", contra botului tău " + d);
+      if (v.cod === "devreme") return cap + "; lista e prea nouă ca să cântărească ceva.";
+      if (fara) return cap + "; " + v.cuvant.toLowerCase() + ".";
+      if (cu) return cap + (v.cod === "slab" ? ", dar " + lista + " a făcut mai rău decât piața: nu e un motiv să ții botul." : v.cod === "lafel" ? ", dar " + lista + " a fost cam cât piața: nu e un motiv în plus să ții sau să mărești botul." : ", iar " + lista + " a făcut mai bine decât piața, nedovedit: un sprijin mic, nu un motiv să mărești botul.");
+      return cap + ", iar " + lista + (v.cod === "slab" ? " a făcut mai rău decât piața: semnalul contra cântărește puțin." : v.cod === "lafel" ? " a fost cam cât piața: semnalul contra cântărește puțin." : " a făcut mai bine decât piața, nedovedit: un semn de atenție pentru botul tău.");
+    };
     var titlu = function (nume, et) { return "Lista „" + nume + "”, urmărită la 7 zile față de mediana pieței din aceleași zile, numărat pe zile (nu pe monede); dovada pe istoric: " + (et || "—") + ". Fapte, nu un avantaj dovedit."; };
     return [
+      { k: "liste-verdict", eticheta: "Verdict", text: verdictBot(), ton: "neutru", titlu: "Verdictul listelor pentru botul tău, din urmărirea la 7 zile față de piață. " + [vR.nota, vS.nota].filter(Boolean)[0] + " (zilele vecine împart aceleași prețuri, deci nu sunt dovezi separate). Fapte de până acum, nu un avantaj dovedit." },
       { k: "liste-azi", eticheta: "Azi", text: azi, ton: "neutru", titlu: "Listele Radarului de azi (colectorul, de la 8:00): primele 5 pe revenire și primele 5 pentru short din clasament." },
       { k: "liste-rev", eticheta: "Revenire", text: fata(F.revenire), ton: "neutru", titlu: titlu("Monede pe revenire", E.revenire) },
       { k: "liste-short", eticheta: "Short", text: fata(F.short, true), ton: "neutru", titlu: titlu("Monede pentru short", E.short) }];
@@ -371,7 +405,9 @@ var IndicatoriBot = (function () {
       var e = l.map(function (z) { return z.exces; }), mediana = u && u.zile === l.length && typeof u.exces === "number" && isFinite(u.exces) ? u.exces : med(e);
       var bune = e.filter(function (v) { return v > 0; }).length, z = l[l.length - 1];
       var scara = '<svg class="lrScara" width="52" height="' + H + '" aria-hidden="true"><text class="ibSpEtP" x="0" y="9">+' + esc(sc) + '</text><text class="ibSpEtP" x="0" y="' + (MIJ + 4) + '">piața</text><text class="ibSpEtP" x="0" y="' + H + '">−' + esc(sc) + '</text></svg>';
+      var vd = listeVerdict(u, short);   /* v100.336: verdictul în cuvinte, deasupra cifrelor */
       return '<div class="lrUnu"><div class="lrCap"><span>' + esc(nume) + " · față de piață, " + TextRo.cate(l.length, "zi", "zile") + '</span></div>' +
+        '<p class="lrVerdict"><b>' + esc(vd.cuvant) + '</b>' + (vd.nota ? '<span> · ' + esc(vd.nota) + '</span>' : '') + '</p><p class="lrFac">👉 ' + esc(vd.fac) + '</p>' +
         '<div class="lrDes"><svg class="lrGraf" viewBox="0 0 ' + W + " " + H + '" preserveAspectRatio="none" width="100%" height="' + H + '" role="img" aria-label="' + esc(nume + ": față de piață, pe fiecare zi") + '">' +
         '<line class="lrZero" x1="0" y1="' + MIJ + '" x2="' + W + '" y2="' + MIJ + '" vector-effect="non-scaling-stroke"></line>' + bare + ult + '</svg>' + scara + '</div>' +
         '<div class="lrAx"><span>' + esc(dd(l[0])) + '</span><span>' + esc(dd(z)) + '</span></div>' +
@@ -383,7 +419,7 @@ var IndicatoriBot = (function () {
       '<p class="tbSub lrNota">Bara în sus = lista a făcut mai bine decât piața în cele 7 zile de după; în jos = mai rău. Rama = ultima zi. Ține mouse-ul pe o zi pentru cifre.</p></div>';
   }
 
-  return { dinPionex: dinPionex, celule: celule, rezumat: rezumat, estimare: estimare, predictie: predictie, mediu: mediu, ORIZONT: ORIZONT, RANDURI: RANDURI, listeRadar: listeRadar, listeGraficHtml: listeGraficHtml,
+  return { dinPionex: dinPionex, celule: celule, rezumat: rezumat, estimare: estimare, predictie: predictie, mediu: mediu, ORIZONT: ORIZONT, RANDURI: RANDURI, listeRadar: listeRadar, listeVerdict: listeVerdict, listeGraficHtml: listeGraficHtml,
     banda: banda, bandaHtml: bandaHtml, tvBanda: tvBanda, amintire: amintire, schimbari: schimbari, riglaHtml: riglaHtml, istoricScor: istoricScor, sparkHtml: sparkHtml, VORBE_POZITIE: VORBE_POZITIE };
 })();
 if (typeof globalThis !== "undefined") globalThis.IndicatoriBot = IndicatoriBot;

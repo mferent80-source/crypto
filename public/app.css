@@ -2536,6 +2536,19 @@ body:before{background-image:none!important}
 .pzVoci{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid var(--pzLi)}
 .pzVoce{font-family:var(--pzMono);font-size:11.5px;padding:3px 8px;border:1px solid var(--pzLi2);border-radius:3px;color:var(--pzT1)}
 .pzVoce-da{border-color:rgba(38,169,108,.55);color:var(--pzSus)}.pzVoce-nu{border-color:rgba(224,82,74,.6);color:var(--pzJos)}.pzVoce-atentie{border-color:rgba(233,185,73,.6);color:var(--pzAur)}
+/* v100.336 (I-862): „De unde știu” - vârsta surselor sub verdict (Piața azi, Tablou, T212); ⚠ pe sursa veche sau lipsă, culoarea de atenție */
+.dusRand{margin:6px 0 0;font-size:11.5px;line-height:1.55;color:var(--pzT2,#8B98A5)}
+.dusEt{font-weight:600;color:var(--pzT1,#C9D4DE)}
+.dusVechi{color:var(--pzAur,#E9B949);font-weight:600}
+.dusSep{opacity:.6}
+/* v100.336 (I-866): vocea fără avantaj măsurat - gri, linie întreruptă, sensul în cuvinte (nu bifă colorată) */
+.pzVoce-nedov{border-style:dashed;border-color:var(--pzLi2);color:var(--pzT2,#8B98A5)}
+/* v100.336 (el: „verdictul din ultimul grafic mai explicit”): verdictul listelor în cuvinte - cerneala textului, fără verde / roșu (listele n-au avantaj dovedit) */
+.lrVerdict{margin:0;font-size:13px;line-height:1.4;color:var(--pzT0,#E6EDF3)}
+.lrVerdict b{font-weight:600}
+.lrVerdict span{font-size:11.5px;font-weight:400;color:var(--pzT2,#8B98A5)}
+.lrFac{margin:0 0 2px;font-size:12px;line-height:1.4;color:var(--pzT1,#C9D4DE)}
+.tbListeVerdict b{color:var(--pzT0,#E6EDF3);font-weight:600}
 @media (max-width:550px){.pzVerbRand{flex-direction:column;gap:6px}.pzVerb{font-size:24px}#pzVerdict .pzVerbRand{display:flex;flex-direction:row;flex-wrap:wrap;column-gap:12px;row-gap:6px;align-items:center}#pzVerdict .pzVerb{order:1;white-space:nowrap;flex:0 0 auto}#pzVerdict .pzPret{order:2;margin-left:auto}#pzVerdict .pzVerbTxt{order:3;flex:1 0 100%}}
 
 /* I-591: drumul botului */
@@ -3869,6 +3882,9 @@ button.pzVoce{width:auto;min-height:0;margin:0;background:transparent;font-weigh
 :is(#tabloubot,#t212,#dash) .pzVerbTxt b{font-size:13.5px}
 :is(#tabloubot,#t212,#dash) .pzVerbTxt p{font-size:13.5px}
 :is(#tabloubot,#t212,#dash) .pzVoce{font-size:12px}
+:is(#tabloubot,#t212,#dash) .dusRand{font-size:12px}
+:is(#tabloubot,#t212,#dash) .lrVerdict{font-size:13.5px}
+:is(#tabloubot,#t212,#dash) .lrVerdict span{font-size:12px}
 @media (max-width:550px){:is(#tabloubot,#t212,#dash) .pzVerb{font-size:30px}}
 :is(#tabloubot,#t212,#dash) .pzDrumEt{font-size:12px}
 :is(#tabloubot,#t212,#dash) .pzDrumAcumEt{font-size:12px}
@@ -4443,6 +4459,9 @@ body :is(#tabloubot,#t212,#dash).tbZi .dashOperations .decisionTool.bad{outline:
 :is(#tabloubot,#t212,#dash).tbZi .pzVoce-da{border-color:rgba(11,138,95,.55)}
 :is(#tabloubot,#t212,#dash).tbZi .pzVoce-nu{border-color:rgba(204,58,50,.6)}
 :is(#tabloubot,#t212,#dash).tbZi .pzVoce-atentie{border-color:rgba(224,165,38,.6)}
+:is(#tabloubot,#t212,#dash).tbZi .dusVechi{color:var(--pzAur,#8A5A00)}
+:is(#tabloubot,#t212,#dash).tbZi .lrVerdict{color:var(--pzT0,#0E1A2B)}
+:is(#tabloubot,#t212,#dash).tbZi .tbListeVerdict b{color:var(--pzT0,#0E1A2B)}
 :is(#tabloubot,#t212,#dash).tbZi .pzDrumGrid{background:rgba(36,86,230,.28)}
 :is(#tabloubot,#t212,#dash).tbZi .pzRangeBanda{background:rgba(14,26,43,.35)}
 :is(#tabloubot,#t212,#dash).tbZi .pzKv{border-bottom:1px dotted rgba(195,204,216,.6)}

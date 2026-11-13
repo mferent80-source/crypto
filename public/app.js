@@ -7495,7 +7495,7 @@ function tbListeRadarHtml(b){
     fata:{revenire:um.revenireFata||null,short:um.shortFata||null},eticheta:{revenire:et("revenire"),short:et("short")}});
   /* v100.333 (el, 13.11: „în partea dreaptă mai ai spațiu gol, vreau să creezi și să pui acolo un grafic cu asta”): rândurile în stânga, graficul pe zile în dreapta */
   var gr=IndicatoriBot.listeGraficHtml?IndicatoriBot.listeGraficHtml({revenire:um.revenireFata||null,short:um.shortFata||null},escapeHtml):"";
-  return cap+'<div class="tbListeTxt">'+r.map(function(m){return '<div class="tbMediuR" title="'+escapeHtml(m.titlu)+'"><span>'+escapeHtml(m.eticheta)+'</span><b class="mutedInfo">'+escapeHtml(m.text)+'</b></div>'}).join("")+'</div><div class="tbListeGr">'+gr+'</div></div>';
+  return cap+'<div class="tbListeTxt">'+r.map(function(m){return '<div class="tbMediuR'+(m.k==="liste-verdict"?" tbListeVerdict":"")+'" title="'+escapeHtml(m.titlu)+'"><span>'+escapeHtml(m.eticheta)+'</span><b class="mutedInfo">'+escapeHtml(m.text)+'</b></div>'}).join("")+'</div><div class="tbListeGr">'+gr+'</div></div>';
 }
 function tbIndSumarGol(){var sm=$("tbIndSumar");if(sm){if(sm.innerHTML)sm.innerHTML="";sm.hidden=true}tbStare.indSumarHtml=""}
 /* v100.324 (I-861, revizia 11.11): istoria scorului pe 4 ore ținută pe monedă și pe ora fiecărei bare (în afara lui tbStare.directie, care se golește la
