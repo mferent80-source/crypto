@@ -8,7 +8,8 @@ $node = (Get-Command node).Source
 $act = New-ScheduledTaskAction -Execute $node -Argument ('"' + (Join-Path $rad 'scripts\vps\paza-pagini.mjs') + '" --motiv=dimineata') -WorkingDirectory $rad
 $cand = New-ScheduledTaskTrigger -Daily -At '07:50'
 $set = New-ScheduledTaskSettingsSet -ExecutionTimeLimit (New-TimeSpan -Minutes 30) -MultipleInstances IgnoreNew -Priority 7 -StartWhenAvailable:$false -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
-$cine = New-ScheduledTaskPrincipal -UserId ($env:USERDOMAIN + '\' + $env:USERNAME) -LogonType S4U -RunLevel Limited
+# contul din COMPUTERNAME: pe ssh, USERDOMAIN e „WORKGROUP” ⇒ 0x80070534 (livrarea v100.336, 13.11)
+$cine = New-ScheduledTaskPrincipal -UserId ($env:COMPUTERNAME + '\' + $env:USERNAME) -LogonType S4U -RunLevel Limited
 Register-ScheduledTask -TaskName 'Crypto Radar paza pagini' -Action $act -Trigger $cand -Settings $set -Principal $cine -Description 'I-865: Piața azi, Tabloul, T212 la 1920 și 412 px; abaterile repetate pleacă pe Discord. Jurnal: data\paza-pagini.log' -Force | Out-Null
 $t = Get-ScheduledTask -TaskName 'Crypto Radar paza pagini'
 'sarcina: ' + $t.TaskName + ' | ' + $t.State + ' | ' + ($t.Triggers | ForEach-Object { $_.StartBoundary }) + ' | ' + $t.Actions.Execute + ' ' + $t.Actions.Arguments
