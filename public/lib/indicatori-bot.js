@@ -351,25 +351,36 @@ var IndicatoriBot = (function () {
     var M = Math.max(0.005, abs.length ? (lim ? abs[lim] * 1.1 : abs[0]) : 0), peste = [];
     var pc = function (v, u) { return typeof v === "number" && isFinite(v) ? (v < 0 ? "−" : "+") + Math.abs(v * 100).toFixed(1).replace(".", ",") + u : "—"; };
     var dd = function (z) { return String(z.zi).slice(8, 10) + "." + String(z.zi).slice(5, 7); };
-    var unu = function (nume, l, u) {
+    var med = function (v) { var s = v.slice().sort(function (a, b) { return a - b; }), k = s.length; return k ? (k % 2 ? s[(k - 1) / 2] : (s[k / 2 - 1] + s[k / 2]) / 2) : null; };
+    var sc = pc(M, " pp").slice(1);
+    // v100.335 (el, 13.11: „fă ultimul grafic mai explicit în stilul nostru”): ca „Scorul pe 4h” - fiecare listă în cartela ei (ramă, titlu mic),
+    // scara scrisă pe axă în dreapta (+X pp / piața / −X pp), sub desen în cuvinte mediana zilelor și în câte zile lista a fost mai bună decât
+    // piața, ultima zi marcată (rama barei) și scrisă cu cifrele ei. Aceeași culoare, fără verde / roșu; textele în cerneala textului.
+    var unu = function (nume, l, u, short) {
       if (!l.length) return '<p class="tbSub lrGol">' + esc(nume) + ": " + (u ? "încă nicio zi judecată (7 zile de la sugestie)" : "vine la tura de dimineață") + "</p>";
-      var pas = W / l.length, lat = Math.max(0.6, pas - Math.min(2, pas * 0.25)), bare = "";
+      var pas = W / l.length, lat = Math.max(0.6, pas - Math.min(2, pas * 0.25)), bare = "", ult = "", f = function (v) { return String(Math.round(v * 1000) / 1000); };
       l.forEach(function (z, i) {
         var tai = Math.abs(z.exces) > M, h = Math.max(1, Math.min(1, Math.abs(z.exces) / M) * (MIJ - 2)), y = z.exces >= 0 ? MIJ - h : MIJ;
         if (tai) peste.push(dd(z) + " (" + nume.toLowerCase() + "): " + pc(z.exces, " pp") + ", peste scară");
-        var x = i * pas + (pas - lat) / 2, f = function (v) { return String(Math.round(v * 1000) / 1000); };
+        var x = i * pas + (pas - lat) / 2;
         var tit = dd(z) + ": lista " + pc(z.lista, "%") + " · piața " + pc(z.piata, "%") + " · față de piață " + pc(z.exces, " pp") + (z.n > 0 ? " · " + TextRo.cate(z.n, "monedă", "monede") : "");
         bare += '<g><rect class="lrHit" x="' + f(i * pas) + '" y="0" width="' + f(pas) + '" height="' + H + '"><title>' + esc(tit) + '</title></rect><rect class="lrBar' + (tai ? " lrTaiat" : "") + '" x="' + f(x) + '" y="' + f(y) + '" width="' + f(lat) + '" height="' + f(h) + '"></rect>' +
           (tai ? '<line class="lrRupt" x1="' + f(x) + '" y1="' + f(z.exces >= 0 ? y + 5 : y + h - 5) + '" x2="' + f(x + lat) + '" y2="' + f(z.exces >= 0 ? y + 5 : y + h - 5) + '" vector-effect="non-scaling-stroke"></line>' : '') + '</g>';
+        if (i === l.length - 1) ult = '<rect class="lrUlt" x="' + f(x - 0.5) + '" y="' + f(y - 1) + '" width="' + f(lat + 1) + '" height="' + f(h + 2) + '" vector-effect="non-scaling-stroke"></rect>';
       });
-      return '<div class="lrUnu"><div class="lrCap"><span>' + esc(nume) + " · " + TextRo.cate(l.length, "zi", "zile") + '</span><span class="lrSc">±' + esc(pc(M, " pp").slice(1)) + '</span></div>' +
-        '<svg class="lrGraf" viewBox="0 0 ' + W + " " + H + '" preserveAspectRatio="none" width="100%" height="' + H + '" role="img" aria-label="' + esc(nume + ": față de piață, pe fiecare zi") + '">' +
-        '<line class="lrZero" x1="0" y1="' + MIJ + '" x2="' + W + '" y2="' + MIJ + '" vector-effect="non-scaling-stroke"></line>' + bare + '</svg>' +
-        '<div class="lrAx"><span>' + esc(dd(l[0])) + '</span><span>linia = piața</span><span>' + esc(dd(l[l.length - 1])) + "</span></div></div>";
+      var e = l.map(function (z) { return z.exces; }), mediana = u && u.zile === l.length && typeof u.exces === "number" && isFinite(u.exces) ? u.exces : med(e);
+      var bune = e.filter(function (v) { return v > 0; }).length, z = l[l.length - 1];
+      var scara = '<svg class="lrScara" width="52" height="' + H + '" aria-hidden="true"><text class="ibSpEtP" x="0" y="9">+' + esc(sc) + '</text><text class="ibSpEtP" x="0" y="' + (MIJ + 4) + '">piața</text><text class="ibSpEtP" x="0" y="' + H + '">−' + esc(sc) + '</text></svg>';
+      return '<div class="lrUnu"><div class="lrCap"><span>' + esc(nume) + " · față de piață, " + TextRo.cate(l.length, "zi", "zile") + '</span></div>' +
+        '<div class="lrDes"><svg class="lrGraf" viewBox="0 0 ' + W + " " + H + '" preserveAspectRatio="none" width="100%" height="' + H + '" role="img" aria-label="' + esc(nume + ": față de piață, pe fiecare zi") + '">' +
+        '<line class="lrZero" x1="0" y1="' + MIJ + '" x2="' + W + '" y2="' + MIJ + '" vector-effect="non-scaling-stroke"></line>' + bare + ult + '</svg>' + scara + '</div>' +
+        '<div class="lrAx"><span>' + esc(dd(l[0])) + '</span><span>' + esc(dd(z)) + '</span></div>' +
+        '<p class="lrSum"><b>mediana zilelor: ' + esc(pc(mediana, " pp")) + '</b> față de piață · mai bine decât piața' + (short ? " (pentru un short)" : "") + " în " + bune + " din " + esc(TextRo.cate(l.length, "zi", "zile")) + '</p>' +
+        '<p class="lrSum">ultima zi, ' + esc(dd(z)) + ': <b>' + esc(pc(z.exces, " pp")) + '</b> (lista ' + esc(pc(z.lista, "%")) + " · piața " + esc(pc(z.piata, "%")) + ')</p></div>';
     };
-    var gr = unu("Revenire", R, fata.revenire) + unu("Short", S, fata.short);
+    var gr = unu("Revenire", R, fata.revenire, false) + unu("Short", S, fata.short, true);
     return '<div class="lrGrafice">' + gr + (peste.length ? '<p class="tbSub lrNota">Bara cu ruptură e tăiată la marginea scării: ' + esc(peste.join("; ")) + ".</p>" : "") +
-      '<p class="tbSub lrNota">Bara în sus = lista a făcut mai bine decât piața în cele 7 zile de după; în jos = mai rău. Ține mouse-ul pe o zi pentru cifre.</p></div>';
+      '<p class="tbSub lrNota">Bara în sus = lista a făcut mai bine decât piața în cele 7 zile de după; în jos = mai rău. Rama = ultima zi. Ține mouse-ul pe o zi pentru cifre.</p></div>';
   }
 
   return { dinPionex: dinPionex, celule: celule, rezumat: rezumat, estimare: estimare, predictie: predictie, mediu: mediu, ORIZONT: ORIZONT, RANDURI: RANDURI, listeRadar: listeRadar, listeGraficHtml: listeGraficHtml,

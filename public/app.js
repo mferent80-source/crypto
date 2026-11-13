@@ -6615,9 +6615,9 @@ function grProbDeseneaza(f){
   var zar=Probabilitati.randuri(rez,grProb.cal,{titluCursa:grTitluCursa(rez)}),rt=null,rtA=null;try{rt=reteaM.m&&grProb.bare?Retea.pentruBot(reteaM.m,grProb.bare,grProb.o,grRetea.btc):null}catch(e){rt=null}
   try{rtA=reteaM.a&&grProb.bare?Arbori.pentruBot(reteaM.a,grProb.bare,grProb.o,grRetea.btc):null}catch(e){rtA=null}   /* v100.93: 🌳 pe aceleași bare și niveluri */
   var rz=$("grRezumat");if(rz){var tz=null;try{tz=Retea.rezumat(reteaM.m,rt,zar,{acum:Date.now(),dir:dir},rtA&&reteaM.a?{modele:reteaM.a,rt:rtA}:null)}catch(e){tz=null}rz.hidden=!tz;rz.textContent=tz||""}   /* v100.96: rândul modelelor sub verdict */
-  el.innerHTML='<div class="tbBloc grProbBloc"><h4>🎲 Ce s-a întâmplat în trecut, cu gridul propus</h4><p class="tbSub">acum: '+escapeHtml(Probabilitati.ETICHETE[rez.stare]||rez.stare)+' · '+Math.round(rez.bare/24)+' de zile de bare de 1 h</p>'
+  var ht='<div class="tbBloc grProbBloc"><h4>🎲 Ce s-a întâmplat în trecut, cu gridul propus</h4><p class="tbSub">acum: '+escapeHtml(Probabilitati.ETICHETE[rez.stare]||rez.stare)+' · '+Math.round(rez.bare/24)+' de zile de bare de 1 h</p>'
     +zar.map(tbProbRandHtml).join("")
-    +'<p class="tbSub tbProbNota">Frecvențe din trecutul monedei, în situații ca acum — nu predicții; „puține cazuri independente” înseamnă prea puține date: un semn, nu o regulă. Banda: zona e intervalul de încredere, semnul e cifra.</p>'+reteaHtml(rt,zar,{acum:Date.now()},rtA)+'</div>';   /* v100.71 (I2); v100.80: 🧠 sub nota lui 🎲 */
+    +'<p class="tbSub tbProbNota">Frecvențe din trecutul monedei, în situații ca acum — nu predicții; „puține cazuri independente” înseamnă prea puține date: un semn, nu o regulă. Banda: zona e intervalul de încredere, semnul e cifra.</p>'+reteaHtml(rt,zar,{acum:Date.now()},rtA)+'</div>';(typeof puneCuPliuri==="function"?puneCuPliuri(el,ht):(el.innerHTML=ht));   /* v100.71 (I2); v100.80: 🧠 sub nota lui 🎲 */
 }
 // v100.80 (rețeaua neuronală): BTC pentru trăsăturile 🧠 ale fișei (ultimele 500 de ore din Pionex), o dată la 30 de minute
 var grRetea={btc:null,la:0,inLucru:false};
@@ -6636,6 +6636,11 @@ function grReteaPoartaHtml(f,p){var m=reteaM.m,st=grProbSetare(f);if(typeof Rete
 // v100.96 (el: „nu le văd pe toate, scoate-le în evidență”): rândul-rezumat al modelelor sub semafor (Retea.rezumat), ținut în tbProb.rezumat
 // de tbDeseneazaProb; cartela 🎲 e deschisă implicit (index.html). Fără cifre rândul stă ascuns
 function tbRezumatHtml(t){return '<p id="tbRezumatModele" class="tbRezumat"'+(t?'':' hidden')+'>'+escapeHtml(t||"")+'</p>'}
+/* v100.335 (inventarul „nimic pierdut”, 13.11): cartela 🎲 își rescrie tot conținutul la fiecare desen, iar pliurile deschise („Cum s-a verificat”,
+   „Fără semn · N”) se închideau singure după câteva secunde (la 412 px, măsurat; era și în v100.332). Acum: ține minte pliurile deschise după titlul
+   lor (cifrele scoase), rescrie, le redeschide. Proba: scripts/proba-v100335-pliuri.mjs */
+function pliuCheie(s){return String(s&&s.textContent||"").replace(/[0-9]+([.,][0-9]+)*/g,"#").replace(/[ \n\t]+/g," ").trim()}
+function puneCuPliuri(el,html){if(!el)return;var des={};try{Array.prototype.forEach.call(el.querySelectorAll("details[open]>summary"),function(s){des[pliuCheie(s)]=1})}catch(_){}el.innerHTML=html;try{Array.prototype.forEach.call(el.querySelectorAll("details>summary"),function(s){if(des[pliuCheie(s)]&&s.parentNode)s.parentNode.open=true})}catch(_){}}
 function tbDeseneazaProb(b){
   var card=$("tbPl-prob"),el=$("tbProb"),sub=$("tbProbSub");if(!card||!el||!b)return;
   tbProb.rezumat=null;var rz1=$("tbRezumatModele"),rzVine=tbProb.botId===b.id&&tbProb.rez&&!tbProb.rez.gol;if(rz1&&!rzVine){rz1.hidden=true;rz1.textContent=""}   /* audit 23.10: se golește doar când urmează o ieșire timpurie (altfel ascuns-arătat la fiecare desen, 28 de mutații / 20 s); rândul îl pune mai jos, doar dacă s-a schimbat. revizia 🟡1: la schimbarea botului sau fără cifre, rândul de sub verdict nu rămâne cu cifrele altui bot */
@@ -6649,8 +6654,8 @@ function tbDeseneazaProb(b){
   tbProb.rezumat=null;try{tbProb.rezumat=typeof Retea!=="undefined"&&!vh?Retea.rezumat(reteaM.m,rez.retea||null,l,{acum:Date.now(),dir:b.directie},rez.arbori&&reteaM.a?{modele:reteaM.a,rt:rez.arbori}:null):null}catch(e){tbProb.rezumat=null}   /* v100.96: rezumatul de sub semafor */
   var rz0=$("tbRezumatModele");if(rz0){if(rz0.hidden!==!tbProb.rezumat)rz0.hidden=!tbProb.rezumat;if(rz0.textContent!==(tbProb.rezumat||""))rz0.textContent=tbProb.rezumat||""}   /* audit 23.10: doar când s-a schimbat */
   if(sub)sub.textContent=(vh?"⚠ cifre de acum "+vh+" h (colectorul nu le-a mai reînnoit) · stare: ":"acum: ")+(Probabilitati.ETICHETE[rez.stare]||rez.stare)+" · "+Math.round(rez.bare/24)+" de zile de bare de 1 h";
-  el.innerHTML=(l.length?l.map(tbProbRandHtml).join(""):'<p class="tbSub">Nicio cifră de arătat: botul n-are margini sau plan pe care să le socotesc.</p>')
-    +tbIndicatoriHtml(rez)+tbAsemanatoareHtml(b,rez)+'<p class="tbSub tbProbNota">Frecvențe din trecutul monedei (6 luni de bare de 1 h — nu neapărat un ciclu întreg de piață), nu predicții; „puține cazuri independente” înseamnă prea puține date: un semn, nu o regulă. Banda: zona e intervalul de încredere, semnul e cifra. „Independente” = ferestre care nu se suprapun; intervalul e socotit pe ele. Fiecare cifră se verifică după ce-i trece orizontul; de la 20 de verificări pe treaptă se arată cifra corectată (pragurile 20 și 15 puncte sunt ipoteze de urmărit).</p>'+reteaHtml(rez.retea,l,{acum:Date.now(),pornire:rez.retea&&rez.retea.pornire},rez.arbori);   /* v100.80: 🧠 sub nota lui 🎲 */
+  var ht=(l.length?l.map(tbProbRandHtml).join(""):'<p class="tbSub">Nicio cifră de arătat: botul n-are margini sau plan pe care să le socotesc.</p>')
+    +tbIndicatoriHtml(rez)+tbAsemanatoareHtml(b,rez)+'<p class="tbSub tbProbNota">Frecvențe din trecutul monedei (6 luni de bare de 1 h — nu neapărat un ciclu întreg de piață), nu predicții; „puține cazuri independente” înseamnă prea puține date: un semn, nu o regulă. Banda: zona e intervalul de încredere, semnul e cifra. „Independente” = ferestre care nu se suprapun; intervalul e socotit pe ele. Fiecare cifră se verifică după ce-i trece orizontul; de la 20 de verificări pe treaptă se arată cifra corectată (pragurile 20 și 15 puncte sunt ipoteze de urmărit).</p>'+reteaHtml(rez.retea,l,{acum:Date.now(),pornire:rez.retea&&rez.retea.pornire},rez.arbori);(typeof puneCuPliuri==="function"?puneCuPliuri(el,ht):(el.innerHTML=ht));   /* v100.80: 🧠 sub nota lui 🎲; v100.335: pliurile deschise rămân */
 }
 // v100.45 (pachetul 1): profilul monedei (colectorul il face noaptea din 6 luni de bare de 1 h) - pragurile sfaturilor pe moneda.
 // Pe pagina publicata (fara KV) ruta da 503 -> null -> pragurile fixe de azi, spuse ca atare.
@@ -7484,7 +7489,7 @@ function tbListeRadarHtml(b){
   if(!b||typeof IndicatoriBot==="undefined"||!IndicatoriBot.listeRadar)return "";
   tbListeAsigura();
   var I=typeof Idei!=="undefined"&&Idei.reveniriBoti?Idei:null,cl=tbListe.cl,sg=tbListe.sg,cap='<div class="tbMediu tbListe"><div class="tbMediuCap">Listele Radarului · față de piață, pe zile</div>';
-  if(!I||!cl)return cap+'<p class="tbSub">'+(tbListe.la>0?"listele de azi nu sunt disponibile aici":"aștept listele de azi…")+'</p></div>';   /* revizia (🔵9) */
+  if(!I||!cl){var gz=sg&&sg.urmarire&&IndicatoriBot.listeGraficHtml?IndicatoriBot.listeGraficHtml({revenire:sg.urmarire.revenireFata||null,short:sg.urmarire.shortFata||null},escapeHtml):"";return cap+'<p class="tbSub">'+(tbListe.la>0?"listele de azi nu sunt disponibile aici":"aștept listele de azi…")+'</p>'+(gz?'<div class="tbListeGr">'+gz+'</div>':'')+'</div>'}   /* revizia (🔵9); v100.335: graficul pe zile vine din sugestii, nu din listele de azi - se vede și fără ele */
   var mo=function(x){return String(x.moneda||String(x.simbol||"").replace(/_USDT(_PERP)?$/,""))},um=sg&&sg.urmarire||{},dv=sg&&sg.dovada||{},et=function(k){return dv[k]&&dv[k].piata&&dv[k].piata.eticheta||null};
   var r=IndicatoriBot.listeRadar({moneda:TabloBot.simboluri(b.baza,b.quote,b.simbolPionex).moneda,dirBot:b.directie,rev:I.reveniriBoti(cl,[],5).map(mo),short:I.shortBoti(cl,[],5).map(mo),
     fata:{revenire:um.revenireFata||null,short:um.shortFata||null},eticheta:{revenire:et("revenire"),short:et("short")}});

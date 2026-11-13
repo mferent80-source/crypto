@@ -5081,12 +5081,21 @@ html.pzDemo #dash *{font-family:inherit!important}
    validată cu dataviz pe ambele fonduri; fără verde / roșu (listele n-au avantaj dovedit). Linia 0 = piața. */
 #tabloubot{--lrBar:#5B8FC7}   /* ziua: blocul generat (face-tema-tablou.mjs) ⇒ #2456E6, validat cu dataviz pe #FFFFFF */
 #tabloubot #tbIndicatori{container-type:inline-size}
-#tabloubot .tbListe{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:16px;align-items:start}
+#tabloubot .tbListe{display:grid;grid-template-columns:minmax(0,1fr);row-gap:8px;align-items:start}   /* v100.335: rândurile sus, cartelele graficului dedesubt */
 #tabloubot .tbListe>:is(.tbMediuCap,.tbSub){grid-column:1 / -1}
 #tabloubot .tbListeTxt,#tabloubot .tbListeGr{min-width:0}
-#tabloubot .lrGrafice{display:flex;flex-direction:column;gap:6px}
-#tabloubot .lrUnu{display:flex;flex-direction:column;gap:2px}
+#tabloubot .tbListeGr{container-type:inline-size}
+#tabloubot .lrGrafice{display:flex;flex-direction:column;gap:8px}
+@container (min-width:560px){#tabloubot .lrGrafice{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-items:stretch}#tabloubot .lrGrafice>:not(.lrUnu){grid-column:1 / -1}}
+#tabloubot .lrUnu{display:flex;flex-direction:column;gap:4px;min-width:0;padding:8px 10px;border:1px solid var(--pzLi);border-radius:4px}   /* v100.335: cartela, ca „Scorul pe 4h” */
+#tabloubot .lrDes{display:flex;gap:6px;align-items:flex-start;min-width:0}
+#tabloubot .lrDes>.lrGraf{flex:1 1 0;min-width:120px}
+#tabloubot .lrScara{flex:0 0 52px;height:56px;overflow:visible}
+#tabloubot .lrUlt{fill:none;stroke:var(--pzT2);stroke-width:1;pointer-events:none}
+#tabloubot .lrSum{margin:0;font-size:12px;color:var(--pzT2)}
+#tabloubot .lrSum b{color:var(--pzT0);font-weight:600}
 #tabloubot .lrCap,#tabloubot .lrAx{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--pzT2)}
+#tabloubot .lrAx{padding-right:58px}   /* datele sub bare, nu sub coloana scării */
 #tabloubot .lrCap>span:first-child{color:var(--pzT0)}
 #tabloubot .lrGraf{display:block;width:100%;height:56px;overflow:visible}
 #tabloubot .lrBar{fill:var(--lrBar);pointer-events:none}   /* revizia Opus: bara stă deasupra țintei de hover (.lrHit); fără asta, pe bară nu apăreau cifrele */
@@ -5096,9 +5105,21 @@ html.pzDemo #dash *{font-family:inherit!important}
 #tabloubot .lrHit:hover+.lrBar{fill-opacity:.7}
 #tabloubot .lrZero{stroke:var(--pzT2);stroke-width:1;stroke-dasharray:3 3}
 #tabloubot :is(.lrNota,.lrGol){margin:0;font-size:12px}
-@media (max-width:760px){#tabloubot .tbListe{grid-template-columns:1fr}#tabloubot .tbListeGr{margin-top:8px}}
-@container (max-width:640px){#tabloubot .tbListe{grid-template-columns:1fr}#tabloubot .tbListeGr{margin-top:8px}}
 /* v100.333: sfârșitul graficului „Listele Radarului” */
+/* v100.335 (el, 13.11: „ia skill-ul de design, așază indicatorul mai bine că rămâne un mare gol” ⇒ demo ⇒ „perfect”): ≥ 1181 px, pliul „Detaliile
+   indicatorilor” DESCHIS creștea doar în coloana dreaptă și sub TradingView rămânea un gol de ~900 px. Deschis, ia acum toată lățimea cardului, pe
+   rândul lui; înăuntru: tabelul + predicția + nota în stânga, „Listele Radarului” în dreapta; cartelele 15m…1z 2×2 lângă riglă și scorul pe 4h.
+   Pliul închis (rândul 7, coloana 2) și telefonul rămân ca înainte. Proba: scripts/proba-v100335-asezare.mjs */
+@media (min-width:1181px){
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbTrendCard>#tbTrendDet[open]{grid-column:1 / -1;grid-row:8;border-top:1px solid var(--pzLi);padding-top:12px;margin-top:6px}
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbTrendCard>#tbTrendDet[open] #tbIndicatori{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);grid-template-rows:auto auto auto 1fr;column-gap:32px;align-items:start}
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbTrendCard>#tbTrendDet[open] #tbIndicatori>*{grid-column:1;min-width:0}
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbTrendCard>#tbTrendDet[open] #tbIndicatori>.tbListe{grid-column:2;grid-row:1 / span 4;margin-top:0}   /* rândul 4 (1fr) ia tot ce e în plus: rândurile din stânga rămân cât textul lor */
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbTrendCard>#tbTrendDet[open] .tbIndSumar:not([hidden]){display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);column-gap:32px;align-items:start}
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbTrendCard>#tbTrendDet[open] .tbIndSumar .ibBanda{grid-template-columns:repeat(2,minmax(0,1fr));max-width:none;align-self:stretch}
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbTrendCard>#tbTrendDet[open] .tbIndSumar .ibGrafice{max-width:none}
+}
+/* v100.335: sfârșitul așezării detaliilor */
 @media (max-width:640px){.sugPandaTab thead{display:table-header-group}.sugPandaTab{display:table}.sugPandaTab tbody{display:table-row-group}.sugPandaTab tr{display:table-row}.sugPandaTab td,.sugPandaTab th{display:table-cell}}
 /* v100.224: pe paginile de zi rămân alertele, banda botului și versiunea. Cipurile de cercetare revin la analiza monedei și în laborator. */
 body.peAcasa:not(.acMonedaDeschisa) .topLeft,body.peTablou .topLeft,body.peT212 .topLeft,body.peJurnal .topLeft,body.peGrid .topLeft,body.pePaginaNoua .topLeft,

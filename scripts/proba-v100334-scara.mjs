@@ -25,7 +25,7 @@ const bare = (h) => [...h.matchAll(/<rect class="lrBar( lrTaiat)?" x="([\d.]+)" 
 
 await test("1 · scara nu urmează ziua ieșită din rând: ±28,7 pp (26,1 × 1,1), nu ±86,3 pp", () => {
   const h = IB.listeGraficHtml({ revenire: REV, short: SH }, esc), t = text(h);
-  assert.match(t, /±28,7 pp/); assert.doesNotMatch(t, /±86,3 pp/);
+  assert.match(t, /\+28,7 pp piața −28,7 pp/); assert.doesNotMatch(t, /\+86,3 pp piața/);   /* v100.335: scara scrisă pe axă */
 });
 await test("2 · bara tăiată: atinge marginea, are clasa lrTaiat și o ruptură; celelalte nu", () => {
   const h = IB.listeGraficHtml({ revenire: REV, short: SH }, esc), b = bare(h);
@@ -42,7 +42,7 @@ await test("3 · cifra adevărată rămâne: în hover (+86,3 pp) și scrisă su
 });
 await test("4 · fără valoare ieșită din rând, scara rămâne cea mai mare abatere (ca în v100.333)", () => {
   const h = IB.listeGraficHtml({ revenire: REV, short: { zile: 2, peZile: [z("2026-10-12", -0.12), z("2026-10-23", 0.05)] } }, esc);
-  assert.match(text(h), /±15,6 pp/); assert.doesNotMatch(h, /lrTaiat/); assert.doesNotMatch(text(h), /peste scară/);
+  assert.match(text(h), /\+15,6 pp piața −15,6 pp/); assert.doesNotMatch(h, /lrTaiat/); assert.doesNotMatch(text(h), /peste scară/);
 });
 await test("5 · CSS: bara tăiată mai ștearsă, ruptura în culoarea fondului", () => {
   const C = fs.readFileSync(path.join(RAD, "public", "app.css"), "utf8");

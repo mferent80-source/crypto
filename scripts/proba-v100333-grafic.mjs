@@ -49,7 +49,7 @@ await test("2 · hover pe fiecare zi: data, lista, piața, diferența, câte mon
 });
 await test("3 · etichetele: numele listei, prima și ultima zi, scara (±X pp), „piața” la linia 0; fără culoare de câștig / pierdere", () => {
   const h = IB.listeGraficHtml({ revenire: REV, short: SH }, esc), t = text(h);
-  assert.match(t, /Revenire/); assert.match(t, /Short/); assert.match(t, /03\.10/); assert.match(t, /06\.10/); assert.match(t, /±5,0 pp/); assert.match(t, /piața/);
+  assert.match(t, /Revenire/); assert.match(t, /Short/); assert.match(t, /03\.10/); assert.match(t, /06\.10/); assert.match(t, /\+5,0 pp piața −5,0 pp/); assert.match(t, /piața/);
   assert.doesNotMatch(h, /class="[^"]*\b(good|bad|tbWarn)\b/, "verde / roșu pe o listă fără avantaj dovedit");
 });
 await test("4 · fără zile judecate / fără tură: un rând care spune de ce, nu un grafic gol", () => {
@@ -59,13 +59,14 @@ await test("4 · fără zile judecate / fără tură: un rând care spune de ce,
   assert.match(t2, /Revenire: încă nicio zi judecată/); assert.equal((IB.listeGraficHtml({ revenire: { zile: 0, peZile: [] }, short: SH }, esc).match(/<svg class="lrGraf"/g) || []).length, 1);
   assert.equal(IB.listeGraficHtml({ revenire: { peZile: [{ zi: "<x>", exces: 0.1 }] } }, esc).includes("<x>"), false, "data nevalidă intră în pagină");
 });
-await test("5 · Tabloul: „Listele Radarului” pe două coloane - rândurile în stânga, graficul în dreapta (pe telefon dedesubt)", () => {
+/* v100.335 (el, 13.11: „fă ultimul grafic mai explicit în stilul nostru”): blocul stă acum în coloana dreaptă a detaliilor deschise pe toată lățimea -
+   rândurile sus, cartelele graficului dedesubt (una lângă alta când au loc); proba acestei așezări: proba-v100335-grafic.mjs (testul 6). */
+await test("5 · Tabloul: „Listele Radarului” - rândurile sus, graficul dedesubt (v100.335; înainte: două coloane)", () => {
   const A = citeste("public", "app.js"), src = fnDin(A, "tbListeRadarHtml");
   assert.match(src, /IndicatoriBot\.listeGraficHtml\(\{revenire:um\.revenireFata\|\|null,short:um\.shortFata\|\|null\},escapeHtml\)/);
   assert.match(src, /<div class="tbListeTxt">/); assert.match(src, /<div class="tbListeGr">/);
   const C = citeste("public", "app.css");
-  assert.match(C, /#tabloubot \.tbListe\{display:grid;grid-template-columns:minmax\(0,1fr\) minmax\(0,1fr\)/);
-  assert.match(C, /@container[^{]*\(max-width:\s*640px\)\{[^}]*#tabloubot \.tbListe\{grid-template-columns:1fr\}|@media \(max-width:\s*760px\)\{#tabloubot \.tbListe\{grid-template-columns:1fr\}/);
+  assert.match(C, /#tabloubot \.tbListe\{display:grid;grid-template-columns:minmax\(0,1fr\);/);
   assert.match(C, /#tabloubot \.lrBar\{fill:var\(--lrBar\);pointer-events:none\}/);   /* revizia Opus: bara nu fură hover-ul țintei de sub ea */ assert.match(C, /--lrBar:#5B8FC7/); assert.match(C, /#tabloubot\.tbZi\{--lrBar:#2456E6\}/, "ziua din blocul generat (face-tema-tablou)");
   assert.doesNotMatch(C, /--lrBar:#3F72AF/, "două reguli de zi");
 });
