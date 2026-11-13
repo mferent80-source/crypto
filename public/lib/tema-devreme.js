@@ -4,6 +4,6 @@
 (function () {
   try {
     var zi = localStorage.getItem("tbTema") !== "noapte";
-    ["tabloubot", "t212", "dash"].forEach(function (id) { var p = document.getElementById(id); if (p) p.classList.toggle("tbZi", zi); });
+    ["tabloubot", "t212", "dash", "rangefilter"].forEach(function (id) { var p = document.getElementById(id); if (p) p.classList.toggle("tbZi", zi); });
   } catch (e) {}
 })();

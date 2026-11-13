@@ -143,24 +143,24 @@ await test("revizia: niciun rând de sus liber pe toată lățimea când lipsesc
 const blocMeniu = () => { const i = CSS.indexOf("/* v100.325 · meniul ca pagina botului"), k = CSS.indexOf("/* v100.325: sfârșitul meniului ca pagina botului */"); assert.ok(i > 0 && k > i, "blocul meniului lipsește"); return CSS.slice(i, k); };
 await test("meniul: cât ești pe Tablou ia litera Tabloului (IBM Plex Sans), iar pe tema de zi a Tabloului exact culorile paginii (alb, cerneala, albastrul de accent)", () => {
   const B = blocMeniu();
-  assert.ok(B.includes('html:has(:is(#tabloubot,#t212,#dash).on) .sideNav,html:has(:is(#tabloubot,#t212,#dash).on) .mobileBottom,html:has(:is(#tabloubot,#t212,#dash).on) :is(.sideBtn,.mobileNavBtn){font-family:"IBM Plex Sans",system-ui,"Segoe UI",sans-serif}'), "revizia: butoanele nu moștenesc litera");
+  assert.ok(B.includes('html:has(:is(#tabloubot,#t212,#dash,#rangefilter).on) .sideNav,html:has(:is(#tabloubot,#t212,#dash,#rangefilter).on) .mobileBottom,html:has(:is(#tabloubot,#t212,#dash,#rangefilter).on) :is(.sideBtn,.mobileNavBtn){font-family:"IBM Plex Sans",system-ui,"Segoe UI",sans-serif}'), "revizia: butoanele nu moștenesc litera");
   assert.doesNotMatch(B, /font-weight/, "revizia: butonul paginii deschise rămâne la grosimea celorlalte (750)");
   assert.doesNotMatch(B, /sideFooter/, "revizia: subsolul e mutat în „Starea aplicației” ⇒ regula nu prindea");
-  for (const r of ["html:has(:is(#tabloubot,#t212,#dash).on.tbZi) .sideNav{background:#FFFFFF;border-right:1px solid #E0E5EC;color:#0E1A2B}",
-    "html:has(:is(#tabloubot,#t212,#dash).on.tbZi) .sideBtn{color:#48586E}", "html:has(:is(#tabloubot,#t212,#dash).on.tbZi) .sideBtn:hover{background:#F5F7FA;border-color:transparent;color:#0E1A2B}",
-    "html:has(:is(#tabloubot,#t212,#dash).on.tbZi) .sideBtn.active{background:rgba(36,86,230,.10);border-color:#E0E5EC;color:#0E1A2B}",
-    "html:has(:is(#tabloubot,#t212,#dash).on.tbZi) .sideLogo{background:#2456E6;border-color:#C3CCD8;color:#FFFFFF}"])
+  for (const r of ["html:has(:is(#tabloubot,#t212,#dash,#rangefilter).on.tbZi) .sideNav{background:#FFFFFF;border-right:1px solid #E0E5EC;color:#0E1A2B}",
+    "html:has(:is(#tabloubot,#t212,#dash,#rangefilter).on.tbZi) .sideBtn{color:#48586E}", "html:has(:is(#tabloubot,#t212,#dash,#rangefilter).on.tbZi) .sideBtn:hover{background:#F5F7FA;border-color:transparent;color:#0E1A2B}",
+    "html:has(:is(#tabloubot,#t212,#dash,#rangefilter).on.tbZi) .sideBtn.active{background:rgba(36,86,230,.10);border-color:#E0E5EC;color:#0E1A2B}",
+    "html:has(:is(#tabloubot,#t212,#dash,#rangefilter).on.tbZi) .sideLogo{background:#2456E6;border-color:#C3CCD8;color:#FFFFFF}"])
     assert.ok(B.includes(r), "lipsește: " + r);
   // culorile sunt chiar ale temei de zi a Tabloului (#tabloubot.tbZi), nu altele
-  const zi = /:is\(#tabloubot,#t212,#dash\)\.tbZi\{([^}]*)\}/.exec(CSS)[1];   // v100.326: rădăcina comună
+  const zi = /:is\(#tabloubot,#t212,#dash,#rangefilter\)\.tbZi\{([^}]*)\}/.exec(CSS)[1];   // v100.326: rădăcina comună
   for (const [v, c] of [["--panel", "#FFFFFF"], ["--line", "#E0E5EC"], ["--text", "#0E1A2B"], ["--muted", "#48586E"], ["--accent", "#2456E6"], ["--pzT2", "#66768B"], ["--pzLi2", "#C3CCD8"]])
     assert.ok(zi.includes(v + ":" + c), v + " ≠ " + c);
 });
 await test("meniul pe telefon (bara de jos) la fel, iar pe celelalte pagini nimic nu se schimbă; nimic ascuns, niciun buton scos", () => {
   const B = blocMeniu();
-  assert.match(B, /@media \(max-width:980px\)\{\nhtml:has\(:is\(#tabloubot,#t212,#dash\)\.on\.tbZi\) \.mobileBottom\{background:#FFFFFF;border:1px solid #E0E5EC\}/);
+  assert.match(B, /@media \(max-width:980px\)\{\nhtml:has\(:is\(#tabloubot,#t212,#dash,#rangefilter\)\.on\.tbZi\) \.mobileBottom\{background:#FFFFFF;border:1px solid #E0E5EC\}/);
   // fiecare regulă e legată de Tabloul deschis
-  for (const r of B.split("\n").filter((l) => /\{[^}]*\}/.test(l) && !l.startsWith("@media"))) assert.match(r, /^html:has\(:is\(#tabloubot,#t212,#dash\)\.on/, "regulă fără legătură cu Tabloul: " + r.slice(0, 80));
+  for (const r of B.split("\n").filter((l) => /\{[^}]*\}/.test(l) && !l.startsWith("@media"))) assert.match(r, /^html:has\(:is\(#tabloubot,#t212,#dash,#rangefilter\)\.on/, "regulă fără legătură cu Tabloul: " + r.slice(0, 80));
   assert.doesNotMatch(B, /display:none|visibility:hidden/);
   const HTML = citeste("public", "index.html"), a = HTML.slice(HTML.indexOf('<aside class="sideNav">'), HTML.indexOf("</aside>", HTML.indexOf('<aside class="sideNav">')));
   assert.equal((a.match(/class="sideBtn[" ]/g) || []).length, 59, "cele 59 de butoane ale meniului (și cele din „Laborator vechi”)");
@@ -169,16 +169,16 @@ await test("meniul pe telefon (bara de jos) la fel, iar pe celelalte pagini nimi
 });
 
 await test("rama din jurul Tabloului (poza ecranului întreg: meniul alb, dar bara de sus, fâșia cu cifre și fondul rămâneau închise): pe tema de zi a Tabloului ia aceleași culori", () => {
-  const B = blocMeniu(), zi = /:is\(#tabloubot,#t212,#dash\)\.tbZi\{([^}]*)\}/.exec(CSS)[1];
+  const B = blocMeniu(), zi = /:is\(#tabloubot,#t212,#dash,#rangefilter\)\.tbZi\{([^}]*)\}/.exec(CSS)[1];
   const pz = zi.split(";").filter((d) => d.startsWith("--pz")).join(";");
   assert.ok(pz.length > 100);
-  assert.ok(B.includes("html:has(:is(#tabloubot,#t212,#dash).on.tbZi){" + pz + "}"), "variabilele --pz* ale fâșiei = exact cele ale Tabloului de zi");
-  assert.ok(B.includes("html:has(:is(#tabloubot,#t212,#dash).on.tbZi) body{background:#F2F4F7!important}"), "fondul paginii (body are !important închis)");
-  assert.ok(B.includes("html:has(:is(#tabloubot,#t212,#dash).on.tbZi) .topStatus{--text:#0E1A2B;--muted:#48586E;--good:#0B8A5F;--bad:#CC3A32;--warn:#8A5A00;background:#FFFFFF!important;border-bottom:1px solid #E0E5EC;color:#0E1A2B}"), "bara de sus: culorile de stare doar în ea");
+  assert.ok(B.includes("html:has(:is(#tabloubot,#t212,#dash,#rangefilter).on.tbZi){" + pz + "}"), "variabilele --pz* ale fâșiei = exact cele ale Tabloului de zi");
+  assert.ok(B.includes("html:has(:is(#tabloubot,#t212,#dash,#rangefilter).on.tbZi) body{background:#F2F4F7!important}"), "fondul paginii (body are !important închis)");
+  assert.ok(B.includes("html:has(:is(#tabloubot,#t212,#dash,#rangefilter).on.tbZi) .topStatus{--text:#0E1A2B;--muted:#48586E;--good:#0B8A5F;--bad:#CC3A32;--warn:#8A5A00;background:#FFFFFF!important;border-bottom:1px solid #E0E5EC;color:#0E1A2B}"), "bara de sus: culorile de stare doar în ea");
   for (const [v, c] of [["--text", "#0E1A2B"], ["--muted", "#48586E"], ["--good", "#0B8A5F"], ["--bad", "#CC3A32"], ["--warn", "#8A5A00"]]) assert.ok(zi.includes(v + ":" + c), v);
-  assert.ok(B.includes("html:has(:is(#tabloubot,#t212,#dash).on.tbZi) .statusChip{border:1px solid #E0E5EC;background:#F5F7FA;color:#48586E}"));
-  assert.ok(B.includes("html:has(:is(#tabloubot,#t212,#dash).on.tbZi) .topStatus button:hover{background:#E9EDF3;border-color:#C3CCD8}"), "„button:hover” închis ar ascunde textul");
-  assert.match(B, /html:has\(:is\(#tabloubot,#t212,#dash\)\.on\.tbZi\) \.botStrip::after\{background:linear-gradient\(#F5F7FA,#F5F7FA\)\}/);
+  assert.ok(B.includes("html:has(:is(#tabloubot,#t212,#dash,#rangefilter).on.tbZi) .statusChip{border:1px solid #E0E5EC;background:#F5F7FA;color:#48586E}"));
+  assert.ok(B.includes("html:has(:is(#tabloubot,#t212,#dash,#rangefilter).on.tbZi) .topStatus button:hover{background:#E9EDF3;border-color:#C3CCD8}"), "„button:hover” închis ar ascunde textul");
+  assert.match(B, /html:has\(:is\(#tabloubot,#t212,#dash,#rangefilter\)\.on\.tbZi\) \.botStrip::after\{background:linear-gradient\(#F5F7FA,#F5F7FA\)\}/);
 });
 
 console.log(`\n${teste - picate}/${teste} trec`);

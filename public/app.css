@@ -3214,6 +3214,37 @@ input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px soli
 #rangefilter .rfGrilaCautata{grid-template-columns:repeat(auto-fill,minmax(320px,1fr))}
 #rangefilter .acBtn:disabled{opacity:.55;cursor:default}
 @media (max-width:640px){#rangefilter .rfCautaIn{flex:1 1 10em}#rangefilter .rfGrila{grid-template-columns:minmax(0,1fr)}#rangefilter .rfRand{grid-template-columns:76px 56px minmax(0,1fr)}}
+/* v100.338 · Range Filter ca Tabloul (el, 13.11.2026): verdictul paginii sus, monedele ca LISTĂ (un rând pe monedă), cartela întreagă ca FIȘĂ la un clic.
+   Culorile din paleta Tabloului (stratul generat le dă varianta de zi). Coloanele: pe lat un tabel; sub 900 px perechi etichetă–valoare. */
+#rangefilter .rfVerdict{background:var(--rf-fond);border:1px solid var(--rf-linie);border-radius:5px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+#rangefilter .rfVerdictCap{display:flex;gap:6px 12px;align-items:baseline;flex-wrap:wrap}
+#rangefilter .rfVerdictCap .rfColorant{display:inline-block;padding:1px 8px;border:1px solid var(--rf-linie);border-radius:4px;font-weight:700}
+#rangefilter .rfVerdictFraza{font-size:20px;font-weight:700;line-height:1.35;color:#E6EDF3;max-width:120ch;text-wrap:pretty}
+#rangefilter .rfVerdict .dusRand{margin:0}
+#rangefilter .rfLista{background:var(--rf-fond);border:1px solid var(--rf-linie);border-radius:5px;display:flex;flex-direction:column;min-width:0;container:rfl / inline-size}
+#rangefilter .rfLinie,#rangefilter .rfListaCap{display:grid;grid-template-columns:minmax(0,1fr) 140px;gap:0 14px;align-items:start;padding:0 16px}
+#rangefilter .rfLinie{border-top:1px solid var(--rf-linie)}
+#rangefilter .rfListaCap{padding-top:8px;padding-bottom:8px;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#7E92A6}
+#rangefilter .rfRandCap,#rangefilter .rfRandMoneda{display:grid;grid-template-columns:minmax(150px,1.3fr) minmax(180px,1.7fr) minmax(120px,1fr) minmax(130px,1.1fr) minmax(84px,.8fr) minmax(84px,.8fr);gap:4px 14px;align-items:baseline}
+#rangefilter .rfRandMoneda{padding:11px 0;cursor:pointer;list-style:none}
+#rangefilter .rfRandMoneda::-webkit-details-marker{display:none}
+#rangefilter .rfRandMoneda:focus-visible{outline:2px solid #5B8FC7;outline-offset:2px}
+#rangefilter .rfColMoneda{display:flex;gap:4px 8px;align-items:baseline;flex-wrap:wrap;min-width:0}
+#rangefilter .rfColMoneda::before{content:"▸";color:#7E92A6;font-size:11px;width:10px}
+#rangefilter .rfFisa[open] .rfColMoneda::before{content:"▾"}
+#rangefilter .rfRandMoneda:hover .rfSimbol{text-decoration:underline}
+#rangefilter .rfColDir{font-weight:700;color:#E6EDF3;min-width:0}
+#rangefilter .rfColLung{grid-column:2/-1;font-weight:400;color:#9FB3C4}
+#rangefilter .rfColLoc,#rangefilter .rfColSemnal,#rangefilter .rfColDovada,#rangefilter .rfColCost{min-width:0;font-variant-numeric:tabular-nums}
+#rangefilter .rfLinieBot{background:rgba(91,143,199,.07)}
+#rangefilter .rfLinieProaspat .rfColSemnal{font-weight:700;color:#E6EDF3}
+#rangefilter .rfLinie>.rfGridBtn{margin-top:7px;width:140px;justify-content:center;text-align:center}
+#rangefilter .rfFisaCorp{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,440px),1fr));gap:6px 28px;padding:2px 0 14px 18px}
+#rangefilter .rfFisaCorp>.rfHero,#rangefilter .rfFisaCorp>p{grid-column:1/-1}
+/* sub 1.000 px de listă (1024 cu meniul, tableta, telefonul): perechi etichetă–valoare; butonul Grid mic, pe rândul monedei */
+@container rfl (max-width:999px){#rangefilter .rfListaCap{display:none}#rangefilter .rfLinie{grid-template-columns:minmax(0,1fr) auto;padding:0 12px}#rangefilter .rfRandMoneda{grid-template-columns:repeat(4,minmax(0,1fr));gap:5px 12px}#rangefilter .rfColMoneda,#rangefilter .rfColDir{grid-column:1/-1}#rangefilter [data-et]::before{content:attr(data-et) " ";font-size:11px;font-weight:700;letter-spacing:.04em;color:#7E92A6}#rangefilter .rfLinie>.rfGridBtn{width:auto;margin-top:8px;padding:4px 8px;font-size:12px}#rangefilter .rfFisaCorp{padding-left:0}}
+@container rfl (max-width:799px){#rangefilter .rfRandMoneda{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:640px){#rangefilter .rfVerdictFraza{font-size:17px}}
 /* v100.258: pânda (v100.150) stă după orice regulă de tabel, chiar înaintea blocului v100.224 (#topLive), care rămâne ultimul - scripts/lib/panda-ultima.mjs */
 /* v100.261 (27.10.2026, el: „linia vreau să cumpăr întinde f mult pagina în jos lăsând un mare gol”): raportul Porții (13 blocuri, ~3000 px
    la 310 px) stătea în coloana îngustă din dreapta și întindea grila Trading 212; sub „Pozițiile” (~560 px) rămânea golul. Cu raport pe ecran
@@ -3556,164 +3587,164 @@ button.pzVoce{width:auto;min-height:0;margin:0;background:transparent;font-weigh
 @media (max-width:600px){.ctRand{grid-template-columns:70px minmax(0,1fr)}.ctNr{font-size:24px}.ctTxt>b{font-size:15.5px}.ctFac{font-size:13.5px}}
 /* ==== v100.316 TEMA TABLOULUI: GENERAT de scripts/face-tema-tablou.mjs - nu se scrie de mână ==== */
 /* scara de litere: 12 / 13,5 / 15 / 20 / 30 */
-:is(#tabloubot,#t212,#dash) .logo{font-size:20px}
-:is(#tabloubot,#t212,#dash) h1{font-size:20px}
-:is(#tabloubot,#t212,#dash) .badge{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .metaChip{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .pill{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .status{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .tab{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .hero .value{font-size:30px}
-:is(#tabloubot,#t212,#dash) .label{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .value{font-size:20px}
-:is(#tabloubot,#t212,#dash) .muted{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .legend{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .mini b{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .note{font-size:13.5px}
-@media(max-width:760px){:is(#tabloubot,#t212,#dash) h1{font-size:15px}:is(#tabloubot,#t212,#dash) .tab{font-size:13.5px}:is(#tabloubot,#t212,#dash) .hero .value{font-size:20px}:is(#tabloubot,#t212,#dash) .value{font-size:15px}}
-:is(#tabloubot,#t212,#dash) .metricBox .n{font-size:15px}
-:is(#tabloubot,#t212,#dash) .gaugeInner b{font-size:30px}
-:is(#tabloubot,#t212,#dash) .gaugeInner span{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .hmHead,:is(#tabloubot,#t212,#dash) .hmLabel{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .chartToolbar button{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .small{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .signalCard .big{font-size:20px}
-:is(#tabloubot,#t212,#dash) .journalRow{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .perfBox strong{font-size:15px}
-:is(#tabloubot,#t212,#dash) .sideLogo{font-size:15px}
-:is(#tabloubot,#t212,#dash) .topCoin{font-size:15px}
-:is(#tabloubot,#t212,#dash) .statusChip{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .heroCoin{font-size:20px}
-:is(#tabloubot,#t212,#dash) .heroPrice{font-size:20px}
-:is(#tabloubot,#t212,#dash) .heroSignal{font-size:20px}
-:is(#tabloubot,#t212,#dash) .quickCard .qv{font-size:15px}
-:is(#tabloubot,#t212,#dash) .toast{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .sectionHead h3{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .kpi .delta{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .actionGhost{font-size:13.5px}
-@media(max-width:980px){:is(#tabloubot,#t212,#dash) .mobileNavBtn b{font-size:15px}}
-@media(max-width:520px){:is(#tabloubot,#t212,#dash) .heroCoin{font-size:20px}:is(#tabloubot,#t212,#dash) .heroSignal{font-size:20px}:is(#tabloubot,#t212,#dash) .heroPrice{font-size:15px}}
-:is(#tabloubot,#t212,#dash) .levelBox b{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .levelBox span{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .flowBox strong{font-size:15px}
-:is(#tabloubot,#t212,#dash) .srHeat .hc{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .flowSide .flowBig{font-size:20px}
-:is(#tabloubot,#t212,#dash) .marketTile .coinName{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .marketTile .marketPrice{font-size:15px}
-:is(#tabloubot,#t212,#dash) .alertItem strong{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .alertItem p{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .presetBtn{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .calBox b{font-size:15px}
-:is(#tabloubot,#t212,#dash) .ctxBox b{font-size:15px}
-:is(#tabloubot,#t212,#dash) .depthRow{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .healthBox b{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .decisionBig{font-size:30px}
-:is(#tabloubot,#t212,#dash) .corrCell{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .volBox b{font-size:15px}
-:is(#tabloubot,#t212,#dash) .proxyLvl{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .paperBox b{font-size:15px}
-:is(#tabloubot,#t212,#dash) .paperRow{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .analyticsBox b{font-size:15px}
-:is(#tabloubot,#t212,#dash) .mxCell{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .mcBox b{font-size:15px}
-:is(#tabloubot,#t212,#dash) .scenarioBox{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .freshBox b{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .edgeState{font-size:20px}
-:is(#tabloubot,#t212,#dash) .validBox b{font-size:15px}
-:is(#tabloubot,#t212,#dash) .oosBox b{font-size:15px}
-:is(#tabloubot,#t212,#dash) .execHint{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .forwardState{font-size:20px}
-:is(#tabloubot,#t212,#dash) .guardBox b{font-size:15px}
-:is(#tabloubot,#t212,#dash) .segmentBox b{font-size:15px}
-:is(#tabloubot,#t212,#dash) .foldCell{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .qualityBox b{font-size:15px}
-:is(#tabloubot,#t212,#dash) .scanStat span{font-size:12px}
-:is(#tabloubot,#t212,#dash) .moreBtn{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .moreBtn b{font-size:15px}
-:is(#tabloubot,#t212,#dash) .flowBox b,:is(#tabloubot,#t212,#dash) .bandBox b,:is(#tabloubot,#t212,#dash) .oiBox b,:is(#tabloubot,#t212,#dash) .liqBox b{font-size:15px}
-:is(#tabloubot,#t212,#dash) .proxyNotice{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .microBias{font-size:20px}
-:is(#tabloubot,#t212,#dash) .microBox b{font-size:15px}
-:is(#tabloubot,#t212,#dash) .tapeRow{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .sourceBox b{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .providerNote{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .pwaInstall{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .deskBox b,:is(#tabloubot,#t212,#dash) .oppBox b,:is(#tabloubot,#t212,#dash) .calBox2 b,:is(#tabloubot,#t212,#dash) .acctBox b{font-size:15px}
-:is(#tabloubot,#t212,#dash) .oppCell{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .calCell2{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .accountCell{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .stockMetric b{font-size:15px}
-:is(#tabloubot,#t212,#dash) .stockScannerNote{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .robustBox b,:is(#tabloubot,#t212,#dash) .portBox b,:is(#tabloubot,#t212,#dash) .lifeBox b{font-size:15px}
-:is(#tabloubot,#t212,#dash) .robustCell{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .lifeState{font-size:20px}
-:is(#tabloubot,#t212,#dash) .riskMult{font-size:20px}
-:is(#tabloubot,#t212,#dash) .cloudCell,:is(#tabloubot,#t212,#dash) .profileCell,:is(#tabloubot,#t212,#dash) .footCell{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .cloudState{font-size:15px}
-:is(#tabloubot,#t212,#dash) .structureCell{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .ladderCell{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .newsItem b{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .liqCell,:is(#tabloubot,#t212,#dash) .mlCell{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .contextScore{font-size:20px!important}
-:is(#tabloubot,#t212,#dash) .govCell,:is(#tabloubot,#t212,#dash) .driftCell,:is(#tabloubot,#t212,#dash) .waterCell{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .piCell,:is(#tabloubot,#t212,#dash) .clusterCell,:is(#tabloubot,#t212,#dash) .familyCell{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .scanRecovery{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .rgCell,:is(#tabloubot,#t212,#dash) .coefCell,:is(#tabloubot,#t212,#dash) .leakCell,:is(#tabloubot,#t212,#dash) .expCell{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .masterHero .big{font-size:30px}
-:is(#tabloubot,#t212,#dash) .diCell{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .heatCell{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .cmdBox input{font-size:15px}
-:is(#tabloubot,#t212,#dash) .ldCell{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .reportHero .big{font-size:20px}
-:is(#tabloubot,#t212,#dash) .pv3Cell,:is(#tabloubot,#t212,#dash) .stressCell{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .ensCell{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .extCell{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .vcKpi b{font-size:15px}
-:is(#tabloubot,#t212,#dash) .vcKpi .label{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .vcGroup .vcChip{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .vcCell{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .volStateBig{font-size:20px}
-:is(#tabloubot,#t212,#dash) .volCell{font-size:13.5px}
-@media(min-width:981px){:is(#tabloubot,#t212,#dash) .sideTitle{font-size:13.5px}:is(#tabloubot,#t212,#dash) .sideSub{font-size:12px}:is(#tabloubot,#t212,#dash) .sideBtn{font-size:13.5px}:is(#tabloubot,#t212,#dash) .topCoin{font-size:15px}:is(#tabloubot,#t212,#dash) .heroCoin{font-size:20px}:is(#tabloubot,#t212,#dash) .heroSignal{font-size:20px}:is(#tabloubot,#t212,#dash) .heroPrice{font-size:15px}:is(#tabloubot,#t212,#dash) .masterHero .big{font-size:20px}:is(#tabloubot,#t212,#dash) .vcKpi b{font-size:13.5px}}
-:is(#tabloubot,#t212,#dash) .decisionCall{font-size:30px}
-:is(#tabloubot,#t212,#dash) .decisionKpi b{font-size:15px}
-:is(#tabloubot,#t212,#dash) .decisionExplain>b{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .decisionListItem{font-size:13.5px}
-@media(max-width:700px){:is(#tabloubot,#t212,#dash) .decisionCall{font-size:30px}}
-:is(#tabloubot,#t212,#dash) .prState{font-size:20px}
-:is(#tabloubot,#t212,#dash) .prHeadline{font-size:15px}
-:is(#tabloubot,#t212,#dash) .prVerify{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .prCriterion{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .prCriterion .prIcon{font-size:15px}
-:is(#tabloubot,#t212,#dash) .prCriterion b{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .prMarketCard>b{font-size:20px}
-@media(max-width:980px){:is(#tabloubot,#t212,#dash) .prState{font-size:20px}}
-:is(#tabloubot,#t212,#dash) .replayKpi span{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .replayComp span{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .replayLogRow{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .histScanCell{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .paperRowV3{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .paperRowV3 small{font-size:12px}
-:is(#tabloubot,#t212,#dash) .edgeProKpis span,:is(#tabloubot,#t212,#dash) .edgeProMetric span{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .edgeProRow.head .edgeProCell{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .breadthState{font-size:20px}
-:is(#tabloubot,#t212,#dash) .breadthScoreWrap b{font-size:20px}
-:is(#tabloubot,#t212,#dash) .breadthBox span{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .scanBreadthStrip>span:first-child{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .decisionOsKpi b{font-size:15px}
-:is(#tabloubot,#t212,#dash) .decisionOsState{font-size:20px}
-:is(#tabloubot,#t212,#dash) .decisionToolNum{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .decisionToolState{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .decisionToolScore{font-size:20px}
-:is(#tabloubot,#t212,#dash) .decisionToolDetail{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .decisionToolAction{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .decisionOsFooter{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .edgeCalKpi b{font-size:15px}
-:is(#tabloubot,#t212,#dash) .edgeCalState{font-size:20px}
-:is(#tabloubot,#t212,#dash) .edgeCalTables>.label,:is(#tabloubot,#t212,#dash) .edgeCalTables .label{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .edgeCalRow>span,:is(#tabloubot,#t212,#dash) .edgeCalRow>b{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .noticeBad{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .tbRezumat{font-size:15px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .logo{font-size:20px}
+:is(#tabloubot,#t212,#dash,#rangefilter) h1{font-size:20px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .badge{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .metaChip{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .pill{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .status{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .tab{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .hero .value{font-size:30px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .label{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .value{font-size:20px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .muted{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .legend{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .mini b{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .note{font-size:13.5px}
+@media(max-width:760px){:is(#tabloubot,#t212,#dash,#rangefilter) h1{font-size:15px}:is(#tabloubot,#t212,#dash,#rangefilter) .tab{font-size:13.5px}:is(#tabloubot,#t212,#dash,#rangefilter) .hero .value{font-size:20px}:is(#tabloubot,#t212,#dash,#rangefilter) .value{font-size:15px}}
+:is(#tabloubot,#t212,#dash,#rangefilter) .metricBox .n{font-size:15px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .gaugeInner b{font-size:30px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .gaugeInner span{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .hmHead,:is(#tabloubot,#t212,#dash,#rangefilter) .hmLabel{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .chartToolbar button{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .small{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .signalCard .big{font-size:20px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .journalRow{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .perfBox strong{font-size:15px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .sideLogo{font-size:15px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .topCoin{font-size:15px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .statusChip{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .heroCoin{font-size:20px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .heroPrice{font-size:20px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .heroSignal{font-size:20px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .quickCard .qv{font-size:15px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .toast{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .sectionHead h3{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .kpi .delta{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .actionGhost{font-size:13.5px}
+@media(max-width:980px){:is(#tabloubot,#t212,#dash,#rangefilter) .mobileNavBtn b{font-size:15px}}
+@media(max-width:520px){:is(#tabloubot,#t212,#dash,#rangefilter) .heroCoin{font-size:20px}:is(#tabloubot,#t212,#dash,#rangefilter) .heroSignal{font-size:20px}:is(#tabloubot,#t212,#dash,#rangefilter) .heroPrice{font-size:15px}}
+:is(#tabloubot,#t212,#dash,#rangefilter) .levelBox b{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .levelBox span{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .flowBox strong{font-size:15px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .srHeat .hc{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .flowSide .flowBig{font-size:20px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .marketTile .coinName{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .marketTile .marketPrice{font-size:15px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .alertItem strong{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .alertItem p{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .presetBtn{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .calBox b{font-size:15px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .ctxBox b{font-size:15px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .depthRow{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .healthBox b{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .decisionBig{font-size:30px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .corrCell{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .volBox b{font-size:15px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .proxyLvl{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .paperBox b{font-size:15px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .paperRow{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .analyticsBox b{font-size:15px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .mxCell{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .mcBox b{font-size:15px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .scenarioBox{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .freshBox b{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .edgeState{font-size:20px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .validBox b{font-size:15px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .oosBox b{font-size:15px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .execHint{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .forwardState{font-size:20px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .guardBox b{font-size:15px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .segmentBox b{font-size:15px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .foldCell{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .qualityBox b{font-size:15px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .scanStat span{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .moreBtn{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .moreBtn b{font-size:15px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .flowBox b,:is(#tabloubot,#t212,#dash,#rangefilter) .bandBox b,:is(#tabloubot,#t212,#dash,#rangefilter) .oiBox b,:is(#tabloubot,#t212,#dash,#rangefilter) .liqBox b{font-size:15px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .proxyNotice{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .microBias{font-size:20px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .microBox b{font-size:15px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .tapeRow{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .sourceBox b{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .providerNote{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .pwaInstall{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .deskBox b,:is(#tabloubot,#t212,#dash,#rangefilter) .oppBox b,:is(#tabloubot,#t212,#dash,#rangefilter) .calBox2 b,:is(#tabloubot,#t212,#dash,#rangefilter) .acctBox b{font-size:15px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .oppCell{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .calCell2{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .accountCell{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .stockMetric b{font-size:15px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .stockScannerNote{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .robustBox b,:is(#tabloubot,#t212,#dash,#rangefilter) .portBox b,:is(#tabloubot,#t212,#dash,#rangefilter) .lifeBox b{font-size:15px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .robustCell{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .lifeState{font-size:20px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .riskMult{font-size:20px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .cloudCell,:is(#tabloubot,#t212,#dash,#rangefilter) .profileCell,:is(#tabloubot,#t212,#dash,#rangefilter) .footCell{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .cloudState{font-size:15px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .structureCell{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .ladderCell{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .newsItem b{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .liqCell,:is(#tabloubot,#t212,#dash,#rangefilter) .mlCell{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .contextScore{font-size:20px!important}
+:is(#tabloubot,#t212,#dash,#rangefilter) .govCell,:is(#tabloubot,#t212,#dash,#rangefilter) .driftCell,:is(#tabloubot,#t212,#dash,#rangefilter) .waterCell{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .piCell,:is(#tabloubot,#t212,#dash,#rangefilter) .clusterCell,:is(#tabloubot,#t212,#dash,#rangefilter) .familyCell{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .scanRecovery{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .rgCell,:is(#tabloubot,#t212,#dash,#rangefilter) .coefCell,:is(#tabloubot,#t212,#dash,#rangefilter) .leakCell,:is(#tabloubot,#t212,#dash,#rangefilter) .expCell{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .masterHero .big{font-size:30px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .diCell{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .heatCell{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .cmdBox input{font-size:15px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .ldCell{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .reportHero .big{font-size:20px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .pv3Cell,:is(#tabloubot,#t212,#dash,#rangefilter) .stressCell{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .ensCell{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .extCell{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .vcKpi b{font-size:15px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .vcKpi .label{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .vcGroup .vcChip{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .vcCell{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .volStateBig{font-size:20px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .volCell{font-size:13.5px}
+@media(min-width:981px){:is(#tabloubot,#t212,#dash,#rangefilter) .sideTitle{font-size:13.5px}:is(#tabloubot,#t212,#dash,#rangefilter) .sideSub{font-size:12px}:is(#tabloubot,#t212,#dash,#rangefilter) .sideBtn{font-size:13.5px}:is(#tabloubot,#t212,#dash,#rangefilter) .topCoin{font-size:15px}:is(#tabloubot,#t212,#dash,#rangefilter) .heroCoin{font-size:20px}:is(#tabloubot,#t212,#dash,#rangefilter) .heroSignal{font-size:20px}:is(#tabloubot,#t212,#dash,#rangefilter) .heroPrice{font-size:15px}:is(#tabloubot,#t212,#dash,#rangefilter) .masterHero .big{font-size:20px}:is(#tabloubot,#t212,#dash,#rangefilter) .vcKpi b{font-size:13.5px}}
+:is(#tabloubot,#t212,#dash,#rangefilter) .decisionCall{font-size:30px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .decisionKpi b{font-size:15px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .decisionExplain>b{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .decisionListItem{font-size:13.5px}
+@media(max-width:700px){:is(#tabloubot,#t212,#dash,#rangefilter) .decisionCall{font-size:30px}}
+:is(#tabloubot,#t212,#dash,#rangefilter) .prState{font-size:20px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .prHeadline{font-size:15px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .prVerify{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .prCriterion{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .prCriterion .prIcon{font-size:15px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .prCriterion b{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .prMarketCard>b{font-size:20px}
+@media(max-width:980px){:is(#tabloubot,#t212,#dash,#rangefilter) .prState{font-size:20px}}
+:is(#tabloubot,#t212,#dash,#rangefilter) .replayKpi span{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .replayComp span{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .replayLogRow{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .histScanCell{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .paperRowV3{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .paperRowV3 small{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .edgeProKpis span,:is(#tabloubot,#t212,#dash,#rangefilter) .edgeProMetric span{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .edgeProRow.head .edgeProCell{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .breadthState{font-size:20px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .breadthScoreWrap b{font-size:20px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .breadthBox span{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .scanBreadthStrip>span:first-child{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .decisionOsKpi b{font-size:15px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .decisionOsState{font-size:20px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .decisionToolNum{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .decisionToolState{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .decisionToolScore{font-size:20px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .decisionToolDetail{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .decisionToolAction{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .decisionOsFooter{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .edgeCalKpi b{font-size:15px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .edgeCalState{font-size:20px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .edgeCalTables>.label,:is(#tabloubot,#t212,#dash,#rangefilter) .edgeCalTables .label{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .edgeCalRow>span,:is(#tabloubot,#t212,#dash,#rangefilter) .edgeCalRow>b{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .noticeBad{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .tbRezumat{font-size:15px}
 #tabloubot .tbTvBtn{font-size:13.5px}
 #tabloubot .tbPretViu b{font-size:15px}
 #tabloubot .tbIdent h3{font-size:20px}
@@ -3721,10 +3752,10 @@ button.pzVoce{width:auto;min-height:0;margin:0;background:transparent;font-weigh
 #tabloubot #tbTitlu{font-size:20px}
 #tabloubot .tbKpiVal{font-size:30px}
 #tabloubot .tbKpiCel:first-child .tbKpiVal{font-size:30px}
-:is(#tabloubot,#t212,#dash) .grPlanCap{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .grPlanBani{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .grPlanProba{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .grPlanPornire{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .grPlanCap{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .grPlanBani{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .grPlanProba{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .grPlanPornire{font-size:13.5px}
 #tabloubot .tbLinie{font-size:13.5px}
 #tabloubot .tbLinieTotal{font-size:15px}
 #tabloubot .tbAvert{font-size:13.5px}
@@ -3739,39 +3770,39 @@ button.pzVoce{width:auto;min-height:0;margin:0;background:transparent;font-weigh
 #tabloubot .tbPodeaBani{font-size:13.5px}
 #tabloubot .grTabel{font-size:13.5px}
 #tabloubot .tbPill{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .t212Val{font-size:20px}
-:is(#tabloubot,#t212,#dash) .t212Cal{font-size:12px}
-:is(#tabloubot,#t212,#dash) .t212Rest>summary{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .t212Sim{font-size:15px}
-:is(#tabloubot,#t212,#dash) .t212Rez{font-size:15px}
-:is(#tabloubot,#t212,#dash) .t212Plan label{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .t212PretGrid b{font-size:15px}
-:is(#tabloubot,#t212,#dash) .t212Verdict b{font-size:15px}
-:is(#tabloubot,#t212,#dash) .t212CapCard h3{font-size:20px}
-:is(#tabloubot,#t212,#dash) .t212Et{font-size:12px}
-:is(#tabloubot,#t212,#dash) .t212Val{font-size:20px}
-:is(#tabloubot,#t212,#dash) .t212TodoCap h4{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .t212TodoRand p{font-size:12px}
-:is(#tabloubot,#t212,#dash) .t212PanouCap h4{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .t212Tab th{font-size:12px}
-:is(#tabloubot,#t212,#dash) .t212Sim b{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .t212Tab .t212Pill{font-size:12px}
-:is(#tabloubot,#t212,#dash) .t212Mic{font-size:12px}
-:is(#tabloubot,#t212,#dash) .t212StopulMeu summary{font-size:12px}
-@media (max-width:640px){:is(#tabloubot,#t212,#dash) .t212Tab tr.t212Rand td.c-stop,:is(#tabloubot,#t212,#dash) .t212Tab tr.t212Rand td.c-tinta{font-size:12px}}
-:is(#tabloubot,#t212,#dash) .t212CapCard h3{font-size:15px}
-:is(#tabloubot,#t212,#dash) .t212Val{font-size:15px}
-:is(#tabloubot,#t212,#dash) .t212Et{font-size:12px}
-:is(#tabloubot,#t212,#dash) .t212Tab .t212Pill{font-size:12px}
-:is(#tabloubot,#t212,#dash) .t212Card h3{font-size:15px}
-:is(#tabloubot,#t212,#dash) .t212Tab .t212Mic{font-size:12px}
-@media (max-width:640px){:is(#tabloubot,#t212,#dash) .t212Kpi .tbSub{font-size:12px}}
+:is(#tabloubot,#t212,#dash,#rangefilter) .t212Val{font-size:20px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .t212Cal{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .t212Rest>summary{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .t212Sim{font-size:15px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .t212Rez{font-size:15px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .t212Plan label{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .t212PretGrid b{font-size:15px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .t212Verdict b{font-size:15px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .t212CapCard h3{font-size:20px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .t212Et{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .t212Val{font-size:20px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .t212TodoCap h4{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .t212TodoRand p{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .t212PanouCap h4{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .t212Tab th{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .t212Sim b{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .t212Tab .t212Pill{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .t212Mic{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .t212StopulMeu summary{font-size:12px}
+@media (max-width:640px){:is(#tabloubot,#t212,#dash,#rangefilter) .t212Tab tr.t212Rand td.c-stop,:is(#tabloubot,#t212,#dash,#rangefilter) .t212Tab tr.t212Rand td.c-tinta{font-size:12px}}
+:is(#tabloubot,#t212,#dash,#rangefilter) .t212CapCard h3{font-size:15px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .t212Val{font-size:15px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .t212Et{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .t212Tab .t212Pill{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .t212Card h3{font-size:15px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .t212Tab .t212Mic{font-size:12px}
+@media (max-width:640px){:is(#tabloubot,#t212,#dash,#rangefilter) .t212Kpi .tbSub{font-size:12px}}
 #tabloubot .tbKpiVal,#tabloubot .tbKpiCel:first-child .tbKpiVal{font-size:15px}
 #tabloubot .tbTodoCap h4{font-size:13.5px}
 #tabloubot .tbOra{font-size:12px}
 #tabloubot .tbNr{font-size:12px}
 @media (max-width:640px){#tabloubot .tbKpiVal,#tabloubot .tbKpiCel:first-child .tbKpiVal{font-size:15px}}
-:is(#tabloubot,#t212,#dash) .contTot{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .contTot{font-size:13.5px}
 #tabloubot .tbConsEt{font-size:13.5px}
 #tabloubot .tbConsSt h3{font-size:15px}
 #tabloubot .tbConsExplica{font-size:13.5px}
@@ -3781,10 +3812,10 @@ button.pzVoce{width:auto;min-height:0;margin:0;background:transparent;font-weigh
 #tabloubot .tbConsCip{font-size:12px}
 #tabloubot .tbConsRest>summary{font-size:13.5px}
 @media (max-width:760px){#tabloubot .tbConsSt h3{font-size:15px}}
-:is(#tabloubot,#t212,#dash) .tbCcBani{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .tbCcBani{font-size:12px}
 #tabloubot .tbCcDeCe,#tabloubot .tbCcSursa{font-size:12px}
-:is(#tabloubot,#t212,#dash) .piataAzi{font-size:12px}
-:is(#tabloubot,#t212,#dash) .t212Sursa{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .piataAzi{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .t212Sursa{font-size:12px}
 :is(#tabloubot,#t212) .tbIndTab{font-size:12px}
 :is(#tabloubot,#t212) .tbIndTab th{font-size:12px}
 #tabloubot .tbMediuCap{font-size:12px}
@@ -3832,535 +3863,545 @@ button.pzVoce{width:auto;min-height:0;margin:0;background:transparent;font-weigh
 #tabloubot .tbCcMare small{font-size:13.5px}
 #tabloubot .tbCcDet{font-size:12px}
 #tabloubot .tbCitScurt{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .grPlanAleg{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .grPlanAleg{font-size:13.5px}
 #tabloubot .gbBilant{font-size:12px}
 #tabloubot .gbUlt{font-size:12px}
 #tabloubot .gbValGrid{font-size:12px}
 #tabloubot .tbGrup{font-size:13.5px}
 #tabloubot .tbKpiGrid{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .stStat .stCap h3{font-size:20px}
-:is(#tabloubot,#t212,#dash) .stStat .stSub{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .stStat .stEt{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .stStat .stVal{font-size:20px}
-:is(#tabloubot,#t212,#dash) .stStat .stAx{font-size:12px}
-:is(#tabloubot,#t212,#dash) .stStat .stTabel{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .stStat .stBtn{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .tbProbH{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .tbDecBtn{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .t212Graf .tbIntBtn{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .stStat .stCap h3{font-size:20px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .stStat .stSub{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .stStat .stEt{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .stStat .stVal{font-size:20px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .stStat .stAx{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .stStat .stTabel{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .stStat .stBtn{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .tbProbH{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .tbDecBtn{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .t212Graf .tbIntBtn{font-size:13.5px}
 #dash .acCumparCol .acCumparEt{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .t212File .tbIntBtn{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .t212File .tbIntBtn{font-size:13.5px}
 #tabloubot .tbTrendTab{font-size:13.5px}
 :is(#tabloubot,#t212) .tbTrendDet>summary{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .grPlanSariTx{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .sugDir{font-size:12px}
-:is(#tabloubot,#t212,#dash) #sugPagina .rlSec>h3{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .saltCampuri label,:is(#tabloubot,#t212,#dash) .saltCautaEt{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) #mcsPagina .mcsCap h4{font-size:15px}
-:is(#tabloubot,#t212,#dash) #mcsPagina .mcsCif span{font-size:12px}
-:is(#tabloubot,#t212,#dash) #mcsPagina .mcsCif b{font-size:15px}
-:is(#tabloubot,#t212,#dash) #mcsPagina .mcsRand{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) #mcsPagina .mcsHist text,:is(#tabloubot,#t212,#dash) #gsPagina .mcsHist text{font-size:12px}
-:is(#tabloubot,#t212,#dash) #mcsPagina .mcsAvert{font-size:13.5px}
-@media (max-width:760px){:is(#tabloubot,#t212,#dash) #mcsPagina .mcsCif b{font-size:13.5px}}
-:is(#tabloubot,#t212,#dash) #mcsPagina .mcsForm button small{font-size:12px}
-:is(#tabloubot,#t212,#dash) .mcsRevBtn{font-size:12px}
-:is(#tabloubot,#t212,#dash) #gsPagina .gsCodOut code{font-size:12px}
-:is(#tabloubot,#t212,#dash) #gsPagina .gsVerdict b{font-size:20px}
-:is(#tabloubot,#t212,#dash) #gsPagina .gsSub{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) #gsPagina .mcsRand{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) #gsPagina .mcsAvert{font-size:13.5px}
-@media (max-width:760px){:is(#tabloubot,#t212,#dash) #gsPagina .gsVerdict b{font-size:20px}}
+:is(#tabloubot,#t212,#dash,#rangefilter) .grPlanSariTx{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .sugDir{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) #sugPagina .rlSec>h3{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .saltCampuri label,:is(#tabloubot,#t212,#dash,#rangefilter) .saltCautaEt{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) #mcsPagina .mcsCap h4{font-size:15px}
+:is(#tabloubot,#t212,#dash,#rangefilter) #mcsPagina .mcsCif span{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) #mcsPagina .mcsCif b{font-size:15px}
+:is(#tabloubot,#t212,#dash,#rangefilter) #mcsPagina .mcsRand{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) #mcsPagina .mcsHist text,:is(#tabloubot,#t212,#dash,#rangefilter) #gsPagina .mcsHist text{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) #mcsPagina .mcsAvert{font-size:13.5px}
+@media (max-width:760px){:is(#tabloubot,#t212,#dash,#rangefilter) #mcsPagina .mcsCif b{font-size:13.5px}}
+:is(#tabloubot,#t212,#dash,#rangefilter) #mcsPagina .mcsForm button small{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .mcsRevBtn{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) #gsPagina .gsCodOut code{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) #gsPagina .gsVerdict b{font-size:20px}
+:is(#tabloubot,#t212,#dash,#rangefilter) #gsPagina .gsSub{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) #gsPagina .mcsRand{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) #gsPagina .mcsAvert{font-size:13.5px}
+@media (max-width:760px){:is(#tabloubot,#t212,#dash,#rangefilter) #gsPagina .gsVerdict b{font-size:20px}}
 #tabloubot .tbMcNota{font-size:12px}
-:is(#tabloubot,#t212,#dash) .pzCap b{font-size:12px}
-:is(#tabloubot,#t212,#dash) .pzCap span{font-size:12px}
-:is(#tabloubot,#t212,#dash) .pzDin{font-size:12px}
-:is(#tabloubot,#t212,#dash) .pzCel>span{font-size:12px}
-:is(#tabloubot,#t212,#dash) .pzCel>b{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .pzCel>b small{font-size:12px}
-@media (max-width:550px){:is(#tabloubot,#t212,#dash) #pzKpi .pzCel>span{font-size:12px}:is(#tabloubot,#t212,#dash) #pzKpi .pzCel>b{font-size:12px}}
-:is(#tabloubot,#t212,#dash) .pzVerbTxt b{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .pzVerbTxt p{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .pzVoce{font-size:12px}
-:is(#tabloubot,#t212,#dash) .dusRand{font-size:12px}
-:is(#tabloubot,#t212,#dash) .lrVerdict{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .lrVerdict span{font-size:12px}
-@media (max-width:550px){:is(#tabloubot,#t212,#dash) .pzVerb{font-size:30px}}
-:is(#tabloubot,#t212,#dash) .pzDrumEt{font-size:12px}
-:is(#tabloubot,#t212,#dash) .pzDrumAcumEt{font-size:12px}
-:is(#tabloubot,#t212,#dash) .pzAcumGrila .pzCel>b{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .pzRandBot>b{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) #tbCitire>.pzFoldOk::after{font-size:12px}
-:is(#tabloubot,#t212,#dash) .pzRangeAx{font-size:12px}
-:is(#tabloubot,#t212,#dash) .pzChip{font-size:12px}
-:is(#tabloubot,#t212,#dash) .pzColRand{font-size:12px}
-:is(#tabloubot,#t212,#dash) .pzMotiv b{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .pzMotiv p{font-size:12px}
-:is(#tabloubot,#t212,#dash) .gbValori{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .luScor{font-size:20px}
-:is(#tabloubot,#t212,#dash) .rzEt{font-size:12px}
-@media (max-width:640px){:is(#tabloubot,#t212,#dash) .rzIstTab td:nth-child(3)::before{font-size:12px}:is(#tabloubot,#t212,#dash) .rzIstTab td:nth-child(4)::before{font-size:12px}:is(#tabloubot,#t212,#dash) .rzIstTab td:nth-child(5)::before{font-size:12px}}
-:is(#tabloubot,#t212,#dash) .jtRaportPiata h5{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .srQt{font-size:12px}
-:is(#tabloubot,#t212,#dash) .srEt{font-size:12px}
-@media (max-width:640px){:is(#tabloubot,#t212,#dash) .srTab td:nth-child(2)::before{font-size:12px}:is(#tabloubot,#t212,#dash) .srTab td:nth-child(3)::before{font-size:12px}:is(#tabloubot,#t212,#dash) .srTab td:nth-child(4)::before{font-size:12px}:is(#tabloubot,#t212,#dash) .srTab td:nth-child(5)::before{font-size:12px}:is(#tabloubot,#t212,#dash) .srTab td:nth-child(7)::before{font-size:12px}}
-:is(#tabloubot,#t212,#dash) .mcVerdict b{font-size:30px}
-:is(#tabloubot,#t212,#dash) .mcAx{font-size:12px}
-:is(#tabloubot,#t212,#dash) .mcTxt{font-size:12px}
-:is(#tabloubot,#t212,#dash) .mbH{font-size:12px}
-:is(#tabloubot,#t212,#dash) .mbSursa{font-size:12px}
-:is(#tabloubot,#t212,#dash) .mbMic{font-size:12px}
-:is(#tabloubot,#t212,#dash) .mbZona{font-size:12px}
-:is(#tabloubot,#t212,#dash) .mbSc{font-size:12px}
-:is(#tabloubot,#t212,#dash) .mbRand{font-size:12px}
-:is(#tabloubot,#t212,#dash) .acLink{font-size:12px}
-:is(#tabloubot,#t212,#dash) .szVal{font-size:20px}
-:is(#tabloubot,#t212,#dash) .szPiesa{font-size:12px}
-:is(#tabloubot,#t212,#dash) .szChip{font-size:12px}
-:is(#tabloubot,#t212,#dash) .scCap .acSub{font-size:12px}
-:is(#tabloubot,#t212,#dash) .scCap .actionGhost{font-size:12px}
-:is(#tabloubot,#t212,#dash) .scEt{font-size:12px}
-:is(#tabloubot,#t212,#dash) .scVal{font-size:30px}
-:is(#tabloubot,#t212,#dash) #acasa .scVal.scMare{font-size:20px}
-:is(#tabloubot,#t212,#dash) .scObiectiv{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .scInainte{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .scForm input{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .scIst h4{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .scIstTab{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .scIstTab th{font-size:12px}
-:is(#tabloubot,#t212,#dash) .scOprit{font-size:13.5px}
-@media (max-width:640px){:is(#tabloubot,#t212,#dash) .scVal{font-size:20px}}
+:is(#tabloubot,#t212,#dash,#rangefilter) .pzCap b{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .pzCap span{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .pzDin{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .pzCel>span{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .pzCel>b{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .pzCel>b small{font-size:12px}
+@media (max-width:550px){:is(#tabloubot,#t212,#dash,#rangefilter) #pzKpi .pzCel>span{font-size:12px}:is(#tabloubot,#t212,#dash,#rangefilter) #pzKpi .pzCel>b{font-size:12px}}
+:is(#tabloubot,#t212,#dash,#rangefilter) .pzVerbTxt b{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .pzVerbTxt p{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .pzVoce{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .dusRand{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .lrVerdict{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .lrVerdict span{font-size:12px}
+@media (max-width:550px){:is(#tabloubot,#t212,#dash,#rangefilter) .pzVerb{font-size:30px}}
+:is(#tabloubot,#t212,#dash,#rangefilter) .pzDrumEt{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .pzDrumAcumEt{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .pzAcumGrila .pzCel>b{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .pzRandBot>b{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) #tbCitire>.pzFoldOk::after{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .pzRangeAx{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .pzChip{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .pzColRand{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .pzMotiv b{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .pzMotiv p{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .gbValori{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .luScor{font-size:20px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .rzEt{font-size:12px}
+@media (max-width:640px){:is(#tabloubot,#t212,#dash,#rangefilter) .rzIstTab td:nth-child(3)::before{font-size:12px}:is(#tabloubot,#t212,#dash,#rangefilter) .rzIstTab td:nth-child(4)::before{font-size:12px}:is(#tabloubot,#t212,#dash,#rangefilter) .rzIstTab td:nth-child(5)::before{font-size:12px}}
+:is(#tabloubot,#t212,#dash,#rangefilter) .jtRaportPiata h5{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .srQt{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .srEt{font-size:12px}
+@media (max-width:640px){:is(#tabloubot,#t212,#dash,#rangefilter) .srTab td:nth-child(2)::before{font-size:12px}:is(#tabloubot,#t212,#dash,#rangefilter) .srTab td:nth-child(3)::before{font-size:12px}:is(#tabloubot,#t212,#dash,#rangefilter) .srTab td:nth-child(4)::before{font-size:12px}:is(#tabloubot,#t212,#dash,#rangefilter) .srTab td:nth-child(5)::before{font-size:12px}:is(#tabloubot,#t212,#dash,#rangefilter) .srTab td:nth-child(7)::before{font-size:12px}}
+:is(#tabloubot,#t212,#dash,#rangefilter) .mcVerdict b{font-size:30px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .mcAx{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .mcTxt{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .mbH{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .mbSursa{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .mbMic{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .mbZona{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .mbSc{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .mbRand{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .acLink{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .szVal{font-size:20px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .szPiesa{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .szChip{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .scCap .acSub{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .scCap .actionGhost{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .scEt{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .scVal{font-size:30px}
+:is(#tabloubot,#t212,#dash,#rangefilter) #acasa .scVal.scMare{font-size:20px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .scObiectiv{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .scInainte{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .scForm input{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .scIst h4{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .scIstTab{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .scIstTab th{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .scOprit{font-size:13.5px}
+@media (max-width:640px){:is(#tabloubot,#t212,#dash,#rangefilter) .scVal{font-size:20px}}
 #dash .acVerd:has(.acFac) .acNiv{font-size:12px}
 #dash .acVerd .acFac{font-size:30px}
-@media (max-width:640px){#dash .acVerd .acFac{font-size:30px}:is(#tabloubot,#t212,#dash) #acasa .scVal{font-size:13.5px}:is(#tabloubot,#t212,#dash) #acasa .scVal.scMare{font-size:20px}:is(#tabloubot,#t212,#dash) .mcVerdict b{font-size:30px}}
+@media (max-width:640px){#dash .acVerd .acFac{font-size:30px}:is(#tabloubot,#t212,#dash,#rangefilter) #acasa .scVal{font-size:13.5px}:is(#tabloubot,#t212,#dash,#rangefilter) #acasa .scVal.scMare{font-size:20px}:is(#tabloubot,#t212,#dash,#rangefilter) .mcVerdict b{font-size:30px}}
 #dash .acFranaNota{font-size:12px}
 #dash .acMasura{font-size:12px}
-:is(#tabloubot,#t212,#dash) .pzPret{font-size:20px}
-@media (max-width:550px){:is(#tabloubot,#t212,#dash) .pzPret{font-size:20px}}
+:is(#tabloubot,#t212,#dash,#rangefilter) .pzPret{font-size:20px}
+@media (max-width:550px){:is(#tabloubot,#t212,#dash,#rangefilter) .pzPret{font-size:20px}}
 #tabloubot .gbValCap{font-size:13.5px}
+#rangefilter .rfAntet h3{font-size:20px}
+#rangefilter .rfSimbol{font-size:15px}
+#rangefilter .rfEticheta{font-size:12px}
+#rangefilter .rfColorant{font-size:12px}
+#rangefilter .rfEt{font-size:12px}
+#rangefilter .rfBara{font-size:12px}
+#rangefilter .rfListaCap{font-size:12px}
+#rangefilter .rfColMoneda::before{font-size:12px}
+@container rfl (max-width:999px){#rangefilter [data-et]::before{font-size:12px}}
+@media (max-width:640px){#rangefilter .rfVerdictFraza{font-size:20px}}
 #tabloubot .tbMcScorCifre{font-size:20px}
-:is(#tabloubot,#t212,#dash) #t212Continut tr.t212Rand td.c-rez b{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) #t212Continut tr.t212Rand .t212Modele{font-size:12px}
-:is(#tabloubot,#t212,#dash) .t212FisaSim b{font-size:20px}
-:is(#tabloubot,#t212,#dash) .sugVerdict{font-size:12px}
-:is(#tabloubot,#t212,#dash) .sugRandSim b{font-size:15px}
-:is(#tabloubot,#t212,#dash) .sugFisaSim{font-size:20px}
-:is(#tabloubot,#t212,#dash) .sugFisaPret b{font-size:30px}
-:is(#tabloubot,#t212,#dash) .sugBloc h5,:is(#tabloubot,#t212,#dash) .sugBlocA h5{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .prNume b{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .prFapte dt{font-size:12px}
-:is(#tabloubot,#t212,#dash) .prFapte dd{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .prCamp input,:is(#tabloubot,#t212,#dash) .prCamp select{font-size:13.5px}
-:is(#tabloubot,#t212,#dash) .prParCap b{font-size:15px}
-:is(#tabloubot,#t212,#dash) .ctNr small{font-size:12px}
-:is(#tabloubot,#t212,#dash) .ctTxt>b{font-size:20px}
-:is(#tabloubot,#t212,#dash) .ctTxt>span{font-size:12px}
-:is(#tabloubot,#t212,#dash) .ctFac{font-size:15px}
-:is(#tabloubot,#t212,#dash) .ctSus{font-size:12px}
-@media (max-width:600px){:is(#tabloubot,#t212,#dash) .ctNr{font-size:30px}:is(#tabloubot,#t212,#dash) .ctTxt>b{font-size:15px}}
+:is(#tabloubot,#t212,#dash,#rangefilter) #t212Continut tr.t212Rand td.c-rez b{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) #t212Continut tr.t212Rand .t212Modele{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .t212FisaSim b{font-size:20px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .sugVerdict{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .sugRandSim b{font-size:15px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .sugFisaSim{font-size:20px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .sugFisaPret b{font-size:30px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .sugBloc h5,:is(#tabloubot,#t212,#dash,#rangefilter) .sugBlocA h5{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .prNume b{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .prFapte dt{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .prFapte dd{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .prCamp input,:is(#tabloubot,#t212,#dash,#rangefilter) .prCamp select{font-size:13.5px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .prParCap b{font-size:15px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .ctNr small{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .ctTxt>b{font-size:20px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .ctTxt>span{font-size:12px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .ctFac{font-size:15px}
+:is(#tabloubot,#t212,#dash,#rangefilter) .ctSus{font-size:12px}
+@media (max-width:600px){:is(#tabloubot,#t212,#dash,#rangefilter) .ctNr{font-size:30px}:is(#tabloubot,#t212,#dash,#rangefilter) .ctTxt>b{font-size:15px}}
 @media (max-width:640px){html.pzDemo #tabloubot #pzVerdict .pzPret{font-size:30px}}
 /* tema zi: variabilele rădăcinii, apoi regulile cu culoare */
-:is(#tabloubot,#t212,#dash).tbZi{--bg:#F2F4F7;--panel:#FFFFFF;--panel-2:#F5F7FA;--panel-3:#E9EDF3;--line:#E0E5EC;--line-soft:#F5F7FA;--text:#0E1A2B;--muted:#48586E;--accent:#2456E6;--accent-2:#2456E6;--good:#0B8A5F;--bad:#CC3A32;--warn:#8A5A00;--pzF0:#F2F4F7;--pzF1:#FFFFFF;--pzF2:#F5F7FA;--pzF3:#E9EDF3;--pzLi:#E0E5EC;--pzLi2:#C3CCD8;--pzT0:#0E1A2B;--pzT1:#48586E;--pzT2:#66768B;--pzSus:#0B8A5F;--pzJos:#CC3A32;--pzAur:#8A5A00;--pzInfo:#2456E6}
-:is(#tabloubot,#t212,#dash).tbZi body:before{background-image:linear-gradient(rgba(14,26,43,.015) 1px,transparent 1px),linear-gradient(90deg,rgba(14,26,43,.015) 1px,transparent 1px)}
-:is(#tabloubot,#t212,#dash).tbZi .logo{background:linear-gradient(135deg,rgba(36,86,230,.2),rgba(36,86,230,.18));border:1px solid rgba(36,86,230,.28)}
-:is(#tabloubot,#t212,#dash).tbZi .badge{border:1px solid rgba(36,86,230,.28);background:rgba(36,86,230,.08);color:#0E1A2B}
-:is(#tabloubot,#t212,#dash).tbZi .metaChip{background:rgba(245,247,250,.75)}
-:is(#tabloubot,#t212,#dash).tbZi .toolbar{background:linear-gradient(rgba(245,247,250,.92),rgba(245,247,250,.92))}
-:is(#tabloubot,#t212,#dash).tbZi input,:is(#tabloubot,#t212,#dash).tbZi select,:is(#tabloubot,#t212,#dash).tbZi button{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi input:focus,:is(#tabloubot,#t212,#dash).tbZi select:focus{border-color:#2456E6;box-shadow:0 0 0 3px rgba(36,86,230,.12)}
-:is(#tabloubot,#t212,#dash).tbZi button:hover{border-color:#C3CCD8;background:#F5F7FA}
-:is(#tabloubot,#t212,#dash).tbZi #analyzeBtn{background:linear-gradient(135deg,#2456E6,#2456E6)}
-:is(#tabloubot,#t212,#dash).tbZi .pill{background:#F5F7FA;border-color:#E0E5EC;color:#0E1A2B}
-:is(#tabloubot,#t212,#dash).tbZi .status:before{background:#66768B;box-shadow:0 0 0 3px rgba(102,118,139,.10)}
-:is(#tabloubot,#t212,#dash).tbZi .tabs{border:1px solid rgba(224,229,236,.9);background:rgba(255,255,255,.82)}
-:is(#tabloubot,#t212,#dash).tbZi .tab{color:#48586E}
-:is(#tabloubot,#t212,#dash).tbZi .tab:hover{background:#F5F7FA}
-:is(#tabloubot,#t212,#dash).tbZi .tab.active{background:linear-gradient(135deg,rgba(36,86,230,.14),rgba(36,86,230,.14));border-color:#C3CCD8}
-:is(#tabloubot,#t212,#dash).tbZi .card{background:linear-gradient(rgba(245,247,250,.93),rgba(245,247,250,.93))}
-:is(#tabloubot,#t212,#dash).tbZi .card:after{background:linear-gradient(135deg,rgba(14,26,43,.022),transparent 38%)}
-:is(#tabloubot,#t212,#dash).tbZi .bar{background:#E9EDF3;border:1px solid rgba(14,26,43,.025)}
-:is(#tabloubot,#t212,#dash).tbZi .fill{background:linear-gradient(90deg,#2456E6,#2456E6)}
-:is(#tabloubot,#t212,#dash).tbZi .kpi:before{background:radial-gradient(circle,rgba(36,86,230,.10),transparent 70%)}
-:is(#tabloubot,#t212,#dash).tbZi .row span:first-child{color:#48586E}
-:is(#tabloubot,#t212,#dash).tbZi canvas{background:linear-gradient(#FFFFFF,#FFFFFF);border:1px solid #E9EDF3}
-:is(#tabloubot,#t212,#dash).tbZi .coin:hover{background:#F5F7FA}
-:is(#tabloubot,#t212,#dash).tbZi .mini{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .note{color:#66768B}
-:is(#tabloubot,#t212,#dash).tbZi .sectionTitle{color:#0E1A2B}
-:is(#tabloubot,#t212,#dash).tbZi .metricBox{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .gauge{--gc:#8A5A00;background:conic-gradient(var(--gc) calc(var(--p)*1%),#E9EDF3 0)}
-:is(#tabloubot,#t212,#dash).tbZi .gauge:before{background:#F5F7FA;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .hmCell{border:1px solid #E0E5EC;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .hmBull{background:rgba(11,138,95,.10);border-color:rgba(11,138,95,.22)}
-:is(#tabloubot,#t212,#dash).tbZi .hmBear{background:rgba(204,58,50,.10);border-color:rgba(204,58,50,.22)}
-:is(#tabloubot,#t212,#dash).tbZi .hmNeu{background:rgba(224,165,38,.08);border-color:rgba(224,165,38,.18)}
-:is(#tabloubot,#t212,#dash).tbZi .sentimentBand{background:linear-gradient(90deg,#CC3A32,#E0A526,#0B8A5F)}
-:is(#tabloubot,#t212,#dash).tbZi .signalCard{background:linear-gradient(#F5F7FA,#F5F7FA);border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .levelBox{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .tag{border:1px solid #C3CCD8}
-:is(#tabloubot,#t212,#dash).tbZi .tagLong{background:rgba(11,138,95,.08);border-color:rgba(11,138,95,.25)}
-:is(#tabloubot,#t212,#dash).tbZi .tagShort{background:rgba(204,58,50,.08);border-color:rgba(204,58,50,.25)}
-:is(#tabloubot,#t212,#dash).tbZi .scoreBar{background:#E9EDF3}
-:is(#tabloubot,#t212,#dash).tbZi .longFill{background:linear-gradient(90deg,#0B8A5F,#0B8A5F)}
-:is(#tabloubot,#t212,#dash).tbZi .shortFill{background:linear-gradient(90deg,#CC3A32,#CC3A32)}
-:is(#tabloubot,#t212,#dash).tbZi .perfBox{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .sideNav{background:linear-gradient(#FFFFFF,#FFFFFF);border-right:1px solid #E9EDF3}
-:is(#tabloubot,#t212,#dash).tbZi .sideLogo{background:linear-gradient(135deg,#2456E6,#2456E6);border:1px solid #C3CCD8}
-:is(#tabloubot,#t212,#dash).tbZi .sideBtn{color:#48586E}
-:is(#tabloubot,#t212,#dash).tbZi .sideBtn:hover{background:#F5F7FA}
-:is(#tabloubot,#t212,#dash).tbZi .sideBtn.active{background:linear-gradient(135deg,rgba(36,86,230,.11),rgba(36,86,230,.11));border-color:#E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .sideFooter{border:1px solid #2456E6;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .topStatus{background:rgba(255,255,255,.86);border-bottom:1px solid rgba(224,229,236,.85)}
-:is(#tabloubot,#t212,#dash).tbZi .statusChip{border:1px solid #E0E5EC;background:#F5F7FA;color:#48586E}
-:is(#tabloubot,#t212,#dash).tbZi .heroSummary{background:linear-gradient(135deg,rgba(36,86,230,.10),rgba(36,86,230,.08));border:1px solid #C3CCD8}
-:is(#tabloubot,#t212,#dash).tbZi .quickCard{background:#F5F7FA;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .toast{background:#F5F7FA;border:1px solid #E0E5EC;color:#0E1A2B}
-:is(#tabloubot,#t212,#dash).tbZi .toast.good{border-color:rgba(11,138,95,.34)}
-:is(#tabloubot,#t212,#dash).tbZi .toast.bad{border-color:rgba(204,58,50,.34)}
-:is(#tabloubot,#t212,#dash).tbZi .toast.warn{border-color:rgba(224,165,38,.34)}
-@media(max-width:980px){:is(#tabloubot,#t212,#dash).tbZi .mobileBottom{background:#FFFFFF;border:1px solid #E0E5EC}:is(#tabloubot,#t212,#dash).tbZi .mobileNavBtn{color:#48586E}:is(#tabloubot,#t212,#dash).tbZi .mobileNavBtn.active{background:#E9EDF3}}
-:is(#tabloubot,#t212,#dash).tbZi .levelBox{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .flowBox{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .zoneChip{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .srHeat .hc{border:1px solid #E0E5EC;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .srHeat .sup{background:rgba(11,138,95,.09);color:#0B8A5F;border-color:rgba(11,138,95,.22)}
-:is(#tabloubot,#t212,#dash).tbZi .srHeat .res{background:rgba(204,58,50,.09);color:#CC3A32;border-color:rgba(204,58,50,.22)}
-:is(#tabloubot,#t212,#dash).tbZi .srHeat .pivot{background:rgba(36,86,230,.09);color:#2456E6;border-color:rgba(36,86,230,.24)}
-:is(#tabloubot,#t212,#dash).tbZi .srHeat .near{box-shadow:0 0 0 2px rgba(224,165,38,.45) inset;color:#8A5A00}
-:is(#tabloubot,#t212,#dash).tbZi .flowSide{border:1px solid #E0E5EC;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .flowMeter{background:#E9EDF3}
-:is(#tabloubot,#t212,#dash).tbZi .flowMeter .buy{background:linear-gradient(90deg,#0B8A5F,#0B8A5F)}
-:is(#tabloubot,#t212,#dash).tbZi .flowMeter .sell{background:linear-gradient(90deg,#CC3A32,#CC3A32)}
-:is(#tabloubot,#t212,#dash).tbZi .ofRow{border-bottom:1px solid #E9EDF3}
-:is(#tabloubot,#t212,#dash).tbZi .marketTile{background:linear-gradient(#F5F7FA,#F5F7FA);border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .marketTile:hover{border-color:#C3CCD8}
-:is(#tabloubot,#t212,#dash).tbZi .alertItem{border:1px solid #E0E5EC;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .alertIcon{background:#E9EDF3}
-:is(#tabloubot,#t212,#dash).tbZi .settingsCard{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .settingRow{border-bottom:1px solid #E9EDF3}
-:is(#tabloubot,#t212,#dash).tbZi .toggle{background:#E0E5EC;border:1px solid #C3CCD8}
-:is(#tabloubot,#t212,#dash).tbZi .toggle:after{background:#48586E}
-:is(#tabloubot,#t212,#dash).tbZi .toggle.on{background:rgba(11,138,95,.16);border-color:rgba(11,138,95,.35)}
-:is(#tabloubot,#t212,#dash).tbZi .toggle.on:after{background:#0B8A5F}
-:is(#tabloubot,#t212,#dash).tbZi .calBox{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .chartZoneLegend .lz:before{background:rgba(11,138,95,.35)}
-:is(#tabloubot,#t212,#dash).tbZi .chartZoneLegend .rz:before{background:rgba(204,58,50,.35)}
-:is(#tabloubot,#t212,#dash).tbZi .chartZoneLegend .pz:before{background:rgba(36,86,230,.35)}
-:is(#tabloubot,#t212,#dash).tbZi .vpTrack{background:#E9EDF3}
-:is(#tabloubot,#t212,#dash).tbZi .vpFill{background:linear-gradient(90deg,#2456E6,#2456E6)}
-:is(#tabloubot,#t212,#dash).tbZi .ctxBox{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .explainRow{border-bottom:1px solid #E9EDF3}
-:is(#tabloubot,#t212,#dash).tbZi .lifeStep{background:#FFFFFF;border:1px solid #E0E5EC;color:#66768B}
-:is(#tabloubot,#t212,#dash).tbZi .lifeStep.on{border-color:#66768B;background:#E9EDF3}
-:is(#tabloubot,#t212,#dash).tbZi .depthSide{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .depthBid{background:linear-gradient(90deg,#0B8A5F,#0B8A5F)}
-:is(#tabloubot,#t212,#dash).tbZi .depthAsk{background:linear-gradient(90deg,#CC3A32,#CC3A32)}
-:is(#tabloubot,#t212,#dash).tbZi .wsDot{background:#66768B}
-:is(#tabloubot,#t212,#dash).tbZi .healthBox{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .fullscreenChart{background:#FFFFFF!important}
-:is(#tabloubot,#t212,#dash).tbZi .decisionHero{background:linear-gradient(135deg,rgba(36,86,230,.12),rgba(36,86,230,.08));border:1px solid #C3CCD8}
-:is(#tabloubot,#t212,#dash).tbZi .reason{border:1px solid #E0E5EC;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .corrCell{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .corrPos{background:rgba(11,138,95,.07)}
-:is(#tabloubot,#t212,#dash).tbZi .corrNeg{background:rgba(204,58,50,.07)}
-:is(#tabloubot,#t212,#dash).tbZi .proxyLvl{border:1px solid #E0E5EC;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .proxyLvl.hot{background:rgba(204,58,50,.11);border-color:rgba(204,58,50,.28);color:#CC3A32}
-:is(#tabloubot,#t212,#dash).tbZi .proxyLvl.mid{background:rgba(224,165,38,.08);border-color:rgba(224,165,38,.22);color:#8A5A00}
-:is(#tabloubot,#t212,#dash).tbZi .proxyLvl.cool{background:rgba(11,138,95,.07);border-color:rgba(11,138,95,.2);color:#0B8A5F}
-:is(#tabloubot,#t212,#dash).tbZi .paperBox{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .paperRow{border-top:1px solid #E9EDF3}
-:is(#tabloubot,#t212,#dash).tbZi .analyticsBox{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .mxCell{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .mxGood{background:rgba(11,138,95,.07)}
-:is(#tabloubot,#t212,#dash).tbZi .mxBad{background:rgba(204,58,50,.07)}
-:is(#tabloubot,#t212,#dash).tbZi .mcBox{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .scenarioBox{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .freshBox{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .calibrationLine{border-bottom:1px solid #E9EDF3}
-:is(#tabloubot,#t212,#dash).tbZi .calibrationTrack{background:#E9EDF3}
-:is(#tabloubot,#t212,#dash).tbZi .calibrationFill{background:linear-gradient(90deg,#2456E6,#2456E6)}
-:is(#tabloubot,#t212,#dash).tbZi .edgeCard{background:linear-gradient(135deg,rgba(36,86,230,.10),rgba(36,86,230,.07));border:1px solid #C3CCD8}
-:is(#tabloubot,#t212,#dash).tbZi .validBox{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .curveWrap{border:1px solid #E0E5EC;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .oosBox{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .execHint{border:1px solid #E0E5EC;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .validationBadge{border:1px solid #C3CCD8;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .forwardCard{background:linear-gradient(135deg,rgba(36,86,230,.11),rgba(36,86,230,.08));border:1px solid #C3CCD8}
-:is(#tabloubot,#t212,#dash).tbZi .guardBox{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .segmentBox{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .foldCell{border:1px solid #E0E5EC;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .qualityBox{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .guardCaution{color:#8A5A00}
-:is(#tabloubot,#t212,#dash).tbZi .pionexBadge{border:1px solid rgba(36,86,230,.28);background:rgba(36,86,230,.08);color:#2456E6}
-:is(#tabloubot,#t212,#dash).tbZi .pionexBadge:before{background:#2456E6}
-:is(#tabloubot,#t212,#dash).tbZi .scanMeta span{border:1px solid #E0E5EC;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .scanProgress{background:#E9EDF3}
-:is(#tabloubot,#t212,#dash).tbZi .scanProgress>div{background:linear-gradient(90deg,#2456E6,#2456E6)}
-:is(#tabloubot,#t212,#dash).tbZi .scanStat{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .moreDrawer{background:rgba(242,244,247,.74)}
-:is(#tabloubot,#t212,#dash).tbZi .moreSheet{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .moreBtn{background:#F5F7FA;border:1px solid #E0E5EC;color:#48586E}
-:is(#tabloubot,#t212,#dash).tbZi .cacheBox{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .wsStale{color:#8A5A00!important;border-color:rgba(224,165,38,.3)!important}
-:is(#tabloubot,#t212,#dash).tbZi .flowBox,:is(#tabloubot,#t212,#dash).tbZi .bandBox,:is(#tabloubot,#t212,#dash).tbZi .oiBox,:is(#tabloubot,#t212,#dash).tbZi .liqBox{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .regimeHero{border:1px solid #C3CCD8;background:linear-gradient(135deg,rgba(36,86,230,.10),rgba(36,86,230,.07))}
-:is(#tabloubot,#t212,#dash).tbZi .proxyNotice{border:1px solid rgba(224,165,38,.25);background:rgba(224,165,38,.06);color:#8A5A00}
-:is(#tabloubot,#t212,#dash).tbZi .microBiasCard{border:1px solid #C3CCD8;background:linear-gradient(135deg,rgba(36,86,230,.10),rgba(36,86,230,.07))}
-:is(#tabloubot,#t212,#dash).tbZi .microBox{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .tapeWrap{border:1px solid #E0E5EC;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .tapeRow{border-bottom:1px solid #E9EDF3}
-:is(#tabloubot,#t212,#dash).tbZi .tapeHead{background:#F5F7FA}
-:is(#tabloubot,#t212,#dash).tbZi .microChart{border:1px solid #E0E5EC;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .depthMeter{background:#E9EDF3}
-:is(#tabloubot,#t212,#dash).tbZi .depthMeter .bid{background:#0B8A5F}
-:is(#tabloubot,#t212,#dash).tbZi .depthMeter .ask{background:#CC3A32}
-:is(#tabloubot,#t212,#dash).tbZi .slipBox{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .sourcePill{border:1px solid rgba(36,86,230,.28);background:rgba(36,86,230,.08);color:#2456E6}
-:is(#tabloubot,#t212,#dash).tbZi .sourceBox{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .sourceExternal{color:#8A5A00}
-:is(#tabloubot,#t212,#dash).tbZi .sourceLock{border:1px solid rgba(36,86,230,.28);background:rgba(36,86,230,.08);color:#2456E6}
-:is(#tabloubot,#t212,#dash).tbZi .providerNote{border:1px solid #E0E5EC;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .pwaInstall{border:1px solid rgba(36,86,230,.34);background:#F5F7FA}
-:is(#tabloubot,#t212,#dash).tbZi .pwaBanner{border:1px solid #C3CCD8;background:#F5F7FA}
-:is(#tabloubot,#t212,#dash).tbZi .deskBox,:is(#tabloubot,#t212,#dash).tbZi .oppBox,:is(#tabloubot,#t212,#dash).tbZi .calBox2,:is(#tabloubot,#t212,#dash).tbZi .acctBox{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .oppCell{border:1px solid #E0E5EC;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .gradeA{color:#0B8A5F}
-:is(#tabloubot,#t212,#dash).tbZi .gradeB{color:#2456E6}
-:is(#tabloubot,#t212,#dash).tbZi .gradeC{color:#8A5A00}
-:is(#tabloubot,#t212,#dash).tbZi .gradeD{color:#CC3A32}
-:is(#tabloubot,#t212,#dash).tbZi .qualityMeter{background:#E9EDF3}
-:is(#tabloubot,#t212,#dash).tbZi .qualityMeter>div{background:linear-gradient(90deg,#2456E6,#2456E6)}
-:is(#tabloubot,#t212,#dash).tbZi .calCell2{border:1px solid #E0E5EC;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .accountCell{border:1px solid #E0E5EC;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .readOnlyBadge{border:1px solid rgba(36,86,230,.28);background:rgba(36,86,230,.08);color:#2456E6}
-:is(#tabloubot,#t212,#dash).tbZi .stockBadge{border:1px solid rgba(36,86,230,.34);background:rgba(36,86,230,.08);color:#2456E6}
-:is(#tabloubot,#t212,#dash).tbZi .stockMetric{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .stockProviderBox{border:1px solid #C3CCD8;background:linear-gradient(135deg,rgba(36,86,230,.08),rgba(36,86,230,.04))}
-:is(#tabloubot,#t212,#dash).tbZi .stockScannerNote{border:1px solid #E0E5EC;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .stockUniverseBox{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .sessionOpen{color:#0B8A5F}
-:is(#tabloubot,#t212,#dash).tbZi .sessionPre,:is(#tabloubot,#t212,#dash).tbZi .sessionAfter{color:#8A5A00}
-:is(#tabloubot,#t212,#dash).tbZi .sessionClosed{color:#48586E}
-:is(#tabloubot,#t212,#dash).tbZi .robustBox,:is(#tabloubot,#t212,#dash).tbZi .portBox,:is(#tabloubot,#t212,#dash).tbZi .lifeBox{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .robustCell{border:1px solid #E0E5EC;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .corrTable td,:is(#tabloubot,#t212,#dash).tbZi .corrTable th{border:1px solid #E0E5EC;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .lifePromoted{color:#0B8A5F}
-:is(#tabloubot,#t212,#dash).tbZi .lifeWatch{color:#8A5A00}
-:is(#tabloubot,#t212,#dash).tbZi .lifeRetired{color:#CC3A32}
-:is(#tabloubot,#t212,#dash).tbZi .lifeLearning{color:#2456E6}
-:is(#tabloubot,#t212,#dash).tbZi .cloudBox,:is(#tabloubot,#t212,#dash).tbZi .profileBox,:is(#tabloubot,#t212,#dash).tbZi .liqMapBox{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .cloudCell,:is(#tabloubot,#t212,#dash).tbZi .profileCell,:is(#tabloubot,#t212,#dash).tbZi .footCell{border:1px solid #E0E5EC;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .profileBarTrack{background:#E9EDF3}
-:is(#tabloubot,#t212,#dash).tbZi .profileBarFill{background:linear-gradient(90deg,#2456E6,#2456E6)}
-:is(#tabloubot,#t212,#dash).tbZi .liqChip{border:1px solid #C3CCD8;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .liqChip.buy{color:#0B8A5F}
-:is(#tabloubot,#t212,#dash).tbZi .liqChip.sell{color:#CC3A32}
-:is(#tabloubot,#t212,#dash).tbZi .cloudOk{color:#0B8A5F}
-:is(#tabloubot,#t212,#dash).tbZi .cloudWarn{color:#8A5A00}
-:is(#tabloubot,#t212,#dash).tbZi .sessionBox,:is(#tabloubot,#t212,#dash).tbZi .structureBox,:is(#tabloubot,#t212,#dash).tbZi .costBox{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .structureCell{border:1px solid #E0E5EC;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .zoneBull{color:#0B8A5F}
-:is(#tabloubot,#t212,#dash).tbZi .zoneBear{color:#CC3A32}
-:is(#tabloubot,#t212,#dash).tbZi .sessionActive{color:#0B8A5F}
-:is(#tabloubot,#t212,#dash).tbZi .sessionInactive{color:#48586E}
-:is(#tabloubot,#t212,#dash).tbZi .ladderCell{border:1px solid #E0E5EC;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .intelBox,:is(#tabloubot,#t212,#dash).tbZi .mlBox,:is(#tabloubot,#t212,#dash).tbZi .liqBox{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .newsItem{border:1px solid #E0E5EC;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .riskHigh{color:#CC3A32}
-:is(#tabloubot,#t212,#dash).tbZi .riskMed{color:#8A5A00}
-:is(#tabloubot,#t212,#dash).tbZi .riskLow{color:#0B8A5F}
-:is(#tabloubot,#t212,#dash).tbZi .liqCell,:is(#tabloubot,#t212,#dash).tbZi .mlCell{border:1px solid #E0E5EC;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .contribPos{color:#0B8A5F}
-:is(#tabloubot,#t212,#dash).tbZi .contribNeg{color:#CC3A32}
-:is(#tabloubot,#t212,#dash).tbZi .govBox,:is(#tabloubot,#t212,#dash).tbZi .driftBox,:is(#tabloubot,#t212,#dash).tbZi .ensBox{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .govCell,:is(#tabloubot,#t212,#dash).tbZi .driftCell,:is(#tabloubot,#t212,#dash).tbZi .waterCell{border:1px solid #E0E5EC;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .stateStable{color:#0B8A5F}
-:is(#tabloubot,#t212,#dash).tbZi .stateWatch{color:#8A5A00}
-:is(#tabloubot,#t212,#dash).tbZi .stateDrift{color:#CC3A32}
-:is(#tabloubot,#t212,#dash).tbZi .barTiny{background:#E9EDF3}
-:is(#tabloubot,#t212,#dash).tbZi .barTiny>i{background:linear-gradient(90deg,#2456E6,#2456E6)}
-:is(#tabloubot,#t212,#dash).tbZi .execBox{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .execPending{color:#8A5A00}
-:is(#tabloubot,#t212,#dash).tbZi .execPartial{color:#2456E6}
-:is(#tabloubot,#t212,#dash).tbZi .execLive{color:#0B8A5F}
-:is(#tabloubot,#t212,#dash).tbZi .execClosed{color:#48586E}
-:is(#tabloubot,#t212,#dash).tbZi .execBad{color:#CC3A32}
-:is(#tabloubot,#t212,#dash).tbZi .execCell{border:1px solid #E0E5EC;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .piBox,:is(#tabloubot,#t212,#dash).tbZi .budgetBox,:is(#tabloubot,#t212,#dash).tbZi .familyBox{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .piCell,:is(#tabloubot,#t212,#dash).tbZi .clusterCell,:is(#tabloubot,#t212,#dash).tbZi .familyCell{border:1px solid #E0E5EC;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .budgetTrack{background:#E9EDF3}
-:is(#tabloubot,#t212,#dash).tbZi .budgetFill{background:linear-gradient(90deg,#2456E6,#2456E6)}
-:is(#tabloubot,#t212,#dash).tbZi .budgetWarn{background:linear-gradient(90deg,#E0A526,#E0A526)}
-:is(#tabloubot,#t212,#dash).tbZi .budgetBad{background:linear-gradient(90deg,#CC3A32,#CC3A32)}
-:is(#tabloubot,#t212,#dash).tbZi .riskPass{color:#0B8A5F}
-:is(#tabloubot,#t212,#dash).tbZi .riskWatch{color:#8A5A00}
-:is(#tabloubot,#t212,#dash).tbZi .riskBlock{color:#CC3A32}
-:is(#tabloubot,#t212,#dash).tbZi .familyChip{border:1px solid #C3CCD8;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .scanRecovery{border:1px solid #C3CCD8;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .scanLive{color:#0B8A5F}
-:is(#tabloubot,#t212,#dash).tbZi .scanSaved{color:#2456E6}
-:is(#tabloubot,#t212,#dash).tbZi .scanSnapshot{color:#8A5A00}
-:is(#tabloubot,#t212,#dash).tbZi .rgBox,:is(#tabloubot,#t212,#dash).tbZi .auditBox,:is(#tabloubot,#t212,#dash).tbZi .expBox{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .rgCell,:is(#tabloubot,#t212,#dash).tbZi .coefCell,:is(#tabloubot,#t212,#dash).tbZi .leakCell,:is(#tabloubot,#t212,#dash).tbZi .expCell{border:1px solid #E0E5EC;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .auditPass{color:#0B8A5F}
-:is(#tabloubot,#t212,#dash).tbZi .auditWarn{color:#8A5A00}
-:is(#tabloubot,#t212,#dash).tbZi .auditFail{color:#CC3A32}
-:is(#tabloubot,#t212,#dash).tbZi .expPromoted{color:#0B8A5F}
-:is(#tabloubot,#t212,#dash).tbZi .expCandidate{color:#2456E6}
-:is(#tabloubot,#t212,#dash).tbZi .expRejected{color:#CC3A32}
-:is(#tabloubot,#t212,#dash).tbZi .expResearch{color:#8A5A00}
-:is(#tabloubot,#t212,#dash).tbZi .masterVerdict{border:1px solid #C3CCD8;background:linear-gradient(#FFFFFF,#FFFFFF)}
-:is(#tabloubot,#t212,#dash).tbZi .masterHero{border:1px solid #C3CCD8;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .masterMetric{border:1px solid #E0E5EC;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .masterReasonBox{border:1px solid #E0E5EC;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .reasonChip{border:1px solid #C3CCD8}
-:is(#tabloubot,#t212,#dash).tbZi .reasonGood{color:#0B8A5F}
-:is(#tabloubot,#t212,#dash).tbZi .reasonBad{color:#CC3A32}
-:is(#tabloubot,#t212,#dash).tbZi .reasonWarn{color:#8A5A00}
-:is(#tabloubot,#t212,#dash).tbZi .diBox{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .diCell{border:1px solid #E0E5EC;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .heatCell{border:1px solid #E0E5EC;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .heatBar{background:#E9EDF3}
-:is(#tabloubot,#t212,#dash).tbZi .cmdBox{background:#FFFFFF;border:1px solid #C3CCD8}
-:is(#tabloubot,#t212,#dash).tbZi .cmdItem{border:1px solid #E0E5EC;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .ldBox{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .ldCell{border:1px solid #E0E5EC;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .reportHero{border:1px solid #C3CCD8;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .reportSection{border:1px solid #E0E5EC;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .syncReady{color:#0B8A5F}
-:is(#tabloubot,#t212,#dash).tbZi .syncWarn{color:#8A5A00}
-:is(#tabloubot,#t212,#dash).tbZi .syncBad{color:#CC3A32}
-:is(#tabloubot,#t212,#dash).tbZi .pv3Box,:is(#tabloubot,#t212,#dash).tbZi .stressBox{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .pv3Cell,:is(#tabloubot,#t212,#dash).tbZi .stressCell{border:1px solid #E0E5EC;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .stressLoss{color:#CC3A32}
-:is(#tabloubot,#t212,#dash).tbZi .stressGood{color:#0B8A5F}
-:is(#tabloubot,#t212,#dash).tbZi .ensBox{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .ensCell{border:1px solid #E0E5EC;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .ensUsable{color:#0B8A5F}
-:is(#tabloubot,#t212,#dash).tbZi .ensWeak{color:#8A5A00}
-:is(#tabloubot,#t212,#dash).tbZi .ensSkip{color:#CC3A32}
-:is(#tabloubot,#t212,#dash).tbZi .disagreeTrack{background:#E9EDF3}
-:is(#tabloubot,#t212,#dash).tbZi .disagreeTrack i{background:#2456E6}
-:is(#tabloubot,#t212,#dash).tbZi .extBox{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .extCell{border:1px solid #E0E5EC;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .extGood{color:#0B8A5F}
-:is(#tabloubot,#t212,#dash).tbZi .extWarn{color:#8A5A00}
-:is(#tabloubot,#t212,#dash).tbZi .extBad{color:#CC3A32}
-:is(#tabloubot,#t212,#dash).tbZi .heatTrack{background:#E9EDF3}
-:is(#tabloubot,#t212,#dash).tbZi .heatTrack i{background:#2456E6}
-:is(#tabloubot,#t212,#dash).tbZi .vcKpi{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .vcAgreementTrack{background:#E9EDF3}
-:is(#tabloubot,#t212,#dash).tbZi .vcAgreementTrack i{background:#2456E6}
-:is(#tabloubot,#t212,#dash).tbZi .vcGroup{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .vcGroup .vcChip{border:1px solid #C3CCD8}
-:is(#tabloubot,#t212,#dash).tbZi .vcBull .vcChip{border-color:#0B8A5F;color:#0B8A5F}
-:is(#tabloubot,#t212,#dash).tbZi .vcBear .vcChip{border-color:#CC3A32;color:#CC3A32}
-:is(#tabloubot,#t212,#dash).tbZi .vcNeutral .vcChip{border-color:#66768B;color:#48586E}
-:is(#tabloubot,#t212,#dash).tbZi .vcBlock .vcChip{border-color:#E0A526;color:#8A5A00}
-:is(#tabloubot,#t212,#dash).tbZi .vcFamily{border:1px solid #E0E5EC;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .vcCell{border:1px solid #E0E5EC;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .vcBiasBull{color:#0B8A5F}
-:is(#tabloubot,#t212,#dash).tbZi .vcBiasBear{color:#CC3A32}
-:is(#tabloubot,#t212,#dash).tbZi .vcBiasNeutral{color:#48586E}
-:is(#tabloubot,#t212,#dash).tbZi .vcBiasBlock{color:#8A5A00}
-:is(#tabloubot,#t212,#dash).tbZi .vcSummary{border:1px solid #C3CCD8;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .volHeroBox{background:linear-gradient(135deg,rgba(36,86,230,.11),rgba(36,86,230,.07));border:1px solid #C3CCD8}
-:is(#tabloubot,#t212,#dash).tbZi .volBox{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .volCell{border:1px solid #E0E5EC;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .volGauge{background:#E9EDF3}
-:is(#tabloubot,#t212,#dash).tbZi .volGauge i{background:#2456E6}
-:is(#tabloubot,#t212,#dash).tbZi .volTf{background:#FFFFFF;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .volGood{color:#0B8A5F}
-:is(#tabloubot,#t212,#dash).tbZi .volWarn{color:#8A5A00}
-:is(#tabloubot,#t212,#dash).tbZi .volBad{color:#CC3A32}
-:is(#tabloubot,#t212,#dash).tbZi .volNeutral{color:#48586E}
-:is(#tabloubot,#t212,#dash).tbZi td,:is(#tabloubot,#t212,#dash).tbZi th{border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .offlineBanner{background:#E0A526;color:#0E1A2B;border-bottom:1px solid #E0A526}
-:is(#tabloubot,#t212,#dash).tbZi .vcDetails{border:1px solid #E0E5EC;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .vcDetails>summary{color:#0E1A2B}
-:is(#tabloubot,#t212,#dash).tbZi .vcDetails>summary:focus-visible{box-shadow:0 0 0 2px #2456E6}
-:is(#tabloubot,#t212,#dash).tbZi .refStale{color:#CC3A32}
-:is(#tabloubot,#t212,#dash).tbZi .refAging{color:#8A5A00}
-:is(#tabloubot,#t212,#dash).tbZi .refFresh{color:#0B8A5F}
-@media(min-width:981px){:is(#tabloubot,#t212,#dash).tbZi .sideMenu{scrollbar-color:#C3CCD8 transparent}}
-:is(#tabloubot,#t212,#dash).tbZi .decisionPrimary{border:1px solid #C3CCD8;background:linear-gradient(#FFFFFF,#FFFFFF)}
-:is(#tabloubot,#t212,#dash).tbZi .decisionHeadline{color:#0E1A2B}
-:is(#tabloubot,#t212,#dash).tbZi .decisionActionLine{background:#E9EDF3;border:1px solid #C3CCD8}
-:is(#tabloubot,#t212,#dash).tbZi .decisionRisk{border:1px solid #C3CCD8}
-:is(#tabloubot,#t212,#dash).tbZi .decisionRisk.good{color:#0B8A5F;border-color:#0B8A5F;background:rgba(11,138,95,.12)}
-:is(#tabloubot,#t212,#dash).tbZi .decisionRisk.bad{color:#CC3A32;border-color:#66768B;background:rgba(102,118,139,.12)}
-:is(#tabloubot,#t212,#dash).tbZi .decisionRisk.warn{color:#8A5A00;border-color:#E0A526;background:rgba(224,165,38,.12)}
-:is(#tabloubot,#t212,#dash).tbZi .decisionRisk.neutral{color:#0E1A2B}
-:is(#tabloubot,#t212,#dash).tbZi .decisionKpi{border:1px solid #E0E5EC;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .decisionExplain{border:1px solid #E0E5EC;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .decisionExplain.support>b{color:#0B8A5F}
-:is(#tabloubot,#t212,#dash).tbZi .decisionExplain.oppose>b{color:#CC3A32}
-:is(#tabloubot,#t212,#dash).tbZi .decisionExplain.unlock>b{color:#8A5A00}
-:is(#tabloubot,#t212,#dash).tbZi .decisionListItem{background:#F5F7FA;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .decisionListItem.support i{color:#0B8A5F}
-:is(#tabloubot,#t212,#dash).tbZi .decisionListItem.oppose i{color:#CC3A32}
-:is(#tabloubot,#t212,#dash).tbZi .decisionListItem.unlock i{color:#8A5A00}
-:is(#tabloubot,#t212,#dash).tbZi .decisionListItem.neutral i{color:#48586E}
-:is(#tabloubot,#t212,#dash).tbZi .decisionTrade{border:1px solid #C3CCD8;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .prGateDash,:is(#tabloubot,#t212,#dash).tbZi .prPrimary,:is(#tabloubot,#t212,#dash).tbZi .prCurrent,:is(#tabloubot,#t212,#dash).tbZi .prBox,:is(#tabloubot,#t212,#dash).tbZi .prMarketCard{border:1px solid #C3CCD8;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .prDashHero>div{border:1px solid #E0E5EC;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .prNotReady{color:#CC3A32}
-:is(#tabloubot,#t212,#dash).tbZi .prPaperReady{color:#8A5A00}
-:is(#tabloubot,#t212,#dash).tbZi .prLiveReady{color:#0B8A5F}
-:is(#tabloubot,#t212,#dash).tbZi .prTrack{background:#E9EDF3}
-:is(#tabloubot,#t212,#dash).tbZi .prTrack i{background:linear-gradient(90deg,#66768B,#2456E6)}
-:is(#tabloubot,#t212,#dash).tbZi .prMini{border:1px solid #E0E5EC;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .prCriterion{border:1px solid #E0E5EC;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .prCriterion.pass .prIcon{color:#0B8A5F}
-:is(#tabloubot,#t212,#dash).tbZi .prCriterion.fail .prIcon{color:#CC3A32}
-:is(#tabloubot,#t212,#dash).tbZi .prCriterion.warn .prIcon{color:#8A5A00}
-:is(#tabloubot,#t212,#dash).tbZi .replayStepper input[type=range]{accent-color:#0B8A5F}
-:is(#tabloubot,#t212,#dash).tbZi .replayKpi{border:1px solid #2456E6;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .replayKpi span{color:#66768B}
-:is(#tabloubot,#t212,#dash).tbZi .replayComp{border:1px solid #2456E6;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .replayComp span{color:#66768B}
-:is(#tabloubot,#t212,#dash).tbZi .replayLog{border:1px solid #2456E6}
-:is(#tabloubot,#t212,#dash).tbZi .replayLogRow{border-bottom:1px solid #E9EDF3}
-:is(#tabloubot,#t212,#dash).tbZi #replayChart{background:#FFFFFF;border:1px solid #2456E6}
-:is(#tabloubot,#t212,#dash).tbZi .histProgress>div{background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .histProgress i{background:linear-gradient(90deg,#2456E6,#0B8A5F)}
-:is(#tabloubot,#t212,#dash).tbZi .histScanTable{border:1px solid #2456E6}
-:is(#tabloubot,#t212,#dash).tbZi .histScanRow{border-bottom:1px solid #E9EDF3}
-:is(#tabloubot,#t212,#dash).tbZi .histScanHead{background:#F5F7FA;color:#0E1A2B}
-:is(#tabloubot,#t212,#dash).tbZi .histRank{color:#0B8A5F}
-:is(#tabloubot,#t212,#dash).tbZi .paperBlotterWrap{border:1px solid #E9EDF3;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .paperRowV3{border-top:1px solid #E9EDF3}
-:is(#tabloubot,#t212,#dash).tbZi .paperRowV3Head{background:#FFFFFF;color:#48586E}
-:is(#tabloubot,#t212,#dash).tbZi .edgeProKpis>div,:is(#tabloubot,#t212,#dash).tbZi .edgeProMetric{background:rgba(14,26,43,.018)}
-:is(#tabloubot,#t212,#dash).tbZi .edgeProRow.head .edgeProCell{background:rgba(14,26,43,.025)}
-:is(#tabloubot,#t212,#dash).tbZi .providerHealthPanel{border-top:1px solid var(--border,#E0E5EC)}
-:is(#tabloubot,#t212,#dash).tbZi .providerHealthRow{background:rgba(14,26,43,.025)}
-:is(#tabloubot,#t212,#dash).tbZi .providerHealthHead{color:var(--muted,#48586E);background:rgba(14,26,43,.05)}
-:is(#tabloubot,#t212,#dash).tbZi .marketBreadthCard{border-color:#C3CCD8;background:linear-gradient(rgba(245,247,250,.98),rgba(245,247,250,.98))}
-:is(#tabloubot,#t212,#dash).tbZi .breadthHero>div{background:rgba(14,26,43,.018)}
-:is(#tabloubot,#t212,#dash).tbZi .breadthState.neutral{color:#8A5A00}
-:is(#tabloubot,#t212,#dash).tbZi .breadthTrack{background:#E9EDF3}
-:is(#tabloubot,#t212,#dash).tbZi .breadthTrack i{background:linear-gradient(90deg,#CC3A32,#E0A526 50%,#0B8A5F)}
-:is(#tabloubot,#t212,#dash).tbZi .breadthBox{background:rgba(14,26,43,.018)}
-:is(#tabloubot,#t212,#dash).tbZi .scanBreadthStrip{border:1px solid #C3CCD8;background:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .decisionOsCard,:is(#tabloubot,#t212,#dash).tbZi .decisionOsVerdictCard{border:1px solid rgba(11,138,95,.18);background:linear-gradient(rgba(245,247,250,.98),rgba(245,247,250,.98))}
-:is(#tabloubot,#t212,#dash).tbZi .decisionOsKpi,:is(#tabloubot,#t212,#dash).tbZi .decisionTool{border:1px solid rgba(102,118,139,.15);background:rgba(14,26,43,.025)}
-:is(#tabloubot,#t212,#dash).tbZi .decisionOsState.good,:is(#tabloubot,#t212,#dash).tbZi .decisionTool.good .decisionToolState{color:#0B8A5F}
-:is(#tabloubot,#t212,#dash).tbZi .decisionOsState.bad,:is(#tabloubot,#t212,#dash).tbZi .decisionTool.bad .decisionToolState{color:#CC3A32}
-:is(#tabloubot,#t212,#dash).tbZi .decisionOsState.neutral,:is(#tabloubot,#t212,#dash).tbZi .decisionTool.warn .decisionToolState{color:#8A5A00}
-:is(#tabloubot,#t212,#dash).tbZi .decisionToolDetail{color:var(--muted,#48586E)}
-:is(#tabloubot,#t212,#dash).tbZi .decisionOsFooter{background:rgba(14,26,43,.025);color:var(--muted,#48586E)}
-:is(#tabloubot,#t212,#dash).tbZi .edgeCalCard,:is(#tabloubot,#t212,#dash).tbZi .edgeCalVerdictCard{border:1px solid rgba(36,86,230,.22);background:linear-gradient(rgba(245,247,250,.98),rgba(245,247,250,.98))}
-:is(#tabloubot,#t212,#dash).tbZi .edgeCalKpi{border:1px solid rgba(102,118,139,.15);background:rgba(14,26,43,.025)}
-:is(#tabloubot,#t212,#dash).tbZi .edgeCalState.good{color:#0B8A5F}
-:is(#tabloubot,#t212,#dash).tbZi .edgeCalState.bad{color:#CC3A32}
-:is(#tabloubot,#t212,#dash).tbZi .edgeCalState.neutral{color:#8A5A00}
-:is(#tabloubot,#t212,#dash).tbZi .edgeCalRow.head{background:rgba(14,26,43,.035)}
-:is(#tabloubot,#t212,#dash).tbZi .edgeCalRow.warn b{color:#8A5A00}
-body :is(#tabloubot,#t212,#dash).tbZi .dashOperations .decisionTool.bad{outline:1px solid rgba(204,58,50,.28)}
-:is(#tabloubot,#t212,#dash).tbZi .noticeBad{border:1px solid rgba(204,58,50,.34);background:rgba(204,58,50,.07)}
-:is(#tabloubot,#t212,#dash).tbZi #tbNivel.tbOprit{color:#2456E6}
-:is(#tabloubot,#t212,#dash).tbZi .lipsa,:is(#tabloubot,#t212,#dash).tbZi b.lipsa,:is(#tabloubot,#t212,#dash).tbZi .n.lipsa{color:#66768B!important}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi{--bg:#F2F4F7;--panel:#FFFFFF;--panel-2:#F5F7FA;--panel-3:#E9EDF3;--line:#E0E5EC;--line-soft:#F5F7FA;--text:#0E1A2B;--muted:#48586E;--accent:#2456E6;--accent-2:#2456E6;--good:#0B8A5F;--bad:#CC3A32;--warn:#8A5A00;--pzF0:#F2F4F7;--pzF1:#FFFFFF;--pzF2:#F5F7FA;--pzF3:#E9EDF3;--pzLi:#E0E5EC;--pzLi2:#C3CCD8;--pzT0:#0E1A2B;--pzT1:#48586E;--pzT2:#66768B;--pzSus:#0B8A5F;--pzJos:#CC3A32;--pzAur:#8A5A00;--pzInfo:#2456E6}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi body:before{background-image:linear-gradient(rgba(14,26,43,.015) 1px,transparent 1px),linear-gradient(90deg,rgba(14,26,43,.015) 1px,transparent 1px)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .logo{background:linear-gradient(135deg,rgba(36,86,230,.2),rgba(36,86,230,.18));border:1px solid rgba(36,86,230,.28)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .badge{border:1px solid rgba(36,86,230,.28);background:rgba(36,86,230,.08);color:#0E1A2B}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .metaChip{background:rgba(245,247,250,.75)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .toolbar{background:linear-gradient(rgba(245,247,250,.92),rgba(245,247,250,.92))}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi input,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi select,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi button{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi input:focus,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi select:focus{border-color:#2456E6;box-shadow:0 0 0 3px rgba(36,86,230,.12)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi button:hover{border-color:#C3CCD8;background:#F5F7FA}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi #analyzeBtn{background:linear-gradient(135deg,#2456E6,#2456E6)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .pill{background:#F5F7FA;border-color:#E0E5EC;color:#0E1A2B}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .status:before{background:#66768B;box-shadow:0 0 0 3px rgba(102,118,139,.10)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .tabs{border:1px solid rgba(224,229,236,.9);background:rgba(255,255,255,.82)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .tab{color:#48586E}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .tab:hover{background:#F5F7FA}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .tab.active{background:linear-gradient(135deg,rgba(36,86,230,.14),rgba(36,86,230,.14));border-color:#C3CCD8}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .card{background:linear-gradient(rgba(245,247,250,.93),rgba(245,247,250,.93))}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .card:after{background:linear-gradient(135deg,rgba(14,26,43,.022),transparent 38%)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .bar{background:#E9EDF3;border:1px solid rgba(14,26,43,.025)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .fill{background:linear-gradient(90deg,#2456E6,#2456E6)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .kpi:before{background:radial-gradient(circle,rgba(36,86,230,.10),transparent 70%)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .row span:first-child{color:#48586E}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi canvas{background:linear-gradient(#FFFFFF,#FFFFFF);border:1px solid #E9EDF3}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .coin:hover{background:#F5F7FA}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .mini{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .note{color:#66768B}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .sectionTitle{color:#0E1A2B}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .metricBox{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .gauge{--gc:#8A5A00;background:conic-gradient(var(--gc) calc(var(--p)*1%),#E9EDF3 0)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .gauge:before{background:#F5F7FA;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .hmCell{border:1px solid #E0E5EC;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .hmBull{background:rgba(11,138,95,.10);border-color:rgba(11,138,95,.22)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .hmBear{background:rgba(204,58,50,.10);border-color:rgba(204,58,50,.22)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .hmNeu{background:rgba(224,165,38,.08);border-color:rgba(224,165,38,.18)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .sentimentBand{background:linear-gradient(90deg,#CC3A32,#E0A526,#0B8A5F)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .signalCard{background:linear-gradient(#F5F7FA,#F5F7FA);border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .levelBox{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .tag{border:1px solid #C3CCD8}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .tagLong{background:rgba(11,138,95,.08);border-color:rgba(11,138,95,.25)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .tagShort{background:rgba(204,58,50,.08);border-color:rgba(204,58,50,.25)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .scoreBar{background:#E9EDF3}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .longFill{background:linear-gradient(90deg,#0B8A5F,#0B8A5F)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .shortFill{background:linear-gradient(90deg,#CC3A32,#CC3A32)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .perfBox{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .sideNav{background:linear-gradient(#FFFFFF,#FFFFFF);border-right:1px solid #E9EDF3}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .sideLogo{background:linear-gradient(135deg,#2456E6,#2456E6);border:1px solid #C3CCD8}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .sideBtn{color:#48586E}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .sideBtn:hover{background:#F5F7FA}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .sideBtn.active{background:linear-gradient(135deg,rgba(36,86,230,.11),rgba(36,86,230,.11));border-color:#E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .sideFooter{border:1px solid #2456E6;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .topStatus{background:rgba(255,255,255,.86);border-bottom:1px solid rgba(224,229,236,.85)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .statusChip{border:1px solid #E0E5EC;background:#F5F7FA;color:#48586E}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .heroSummary{background:linear-gradient(135deg,rgba(36,86,230,.10),rgba(36,86,230,.08));border:1px solid #C3CCD8}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .quickCard{background:#F5F7FA;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .toast{background:#F5F7FA;border:1px solid #E0E5EC;color:#0E1A2B}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .toast.good{border-color:rgba(11,138,95,.34)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .toast.bad{border-color:rgba(204,58,50,.34)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .toast.warn{border-color:rgba(224,165,38,.34)}
+@media(max-width:980px){:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .mobileBottom{background:#FFFFFF;border:1px solid #E0E5EC}:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .mobileNavBtn{color:#48586E}:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .mobileNavBtn.active{background:#E9EDF3}}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .levelBox{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .flowBox{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .zoneChip{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .srHeat .hc{border:1px solid #E0E5EC;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .srHeat .sup{background:rgba(11,138,95,.09);color:#0B8A5F;border-color:rgba(11,138,95,.22)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .srHeat .res{background:rgba(204,58,50,.09);color:#CC3A32;border-color:rgba(204,58,50,.22)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .srHeat .pivot{background:rgba(36,86,230,.09);color:#2456E6;border-color:rgba(36,86,230,.24)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .srHeat .near{box-shadow:0 0 0 2px rgba(224,165,38,.45) inset;color:#8A5A00}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .flowSide{border:1px solid #E0E5EC;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .flowMeter{background:#E9EDF3}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .flowMeter .buy{background:linear-gradient(90deg,#0B8A5F,#0B8A5F)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .flowMeter .sell{background:linear-gradient(90deg,#CC3A32,#CC3A32)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .ofRow{border-bottom:1px solid #E9EDF3}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .marketTile{background:linear-gradient(#F5F7FA,#F5F7FA);border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .marketTile:hover{border-color:#C3CCD8}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .alertItem{border:1px solid #E0E5EC;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .alertIcon{background:#E9EDF3}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .settingsCard{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .settingRow{border-bottom:1px solid #E9EDF3}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .toggle{background:#E0E5EC;border:1px solid #C3CCD8}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .toggle:after{background:#48586E}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .toggle.on{background:rgba(11,138,95,.16);border-color:rgba(11,138,95,.35)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .toggle.on:after{background:#0B8A5F}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .calBox{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .chartZoneLegend .lz:before{background:rgba(11,138,95,.35)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .chartZoneLegend .rz:before{background:rgba(204,58,50,.35)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .chartZoneLegend .pz:before{background:rgba(36,86,230,.35)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .vpTrack{background:#E9EDF3}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .vpFill{background:linear-gradient(90deg,#2456E6,#2456E6)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .ctxBox{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .explainRow{border-bottom:1px solid #E9EDF3}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .lifeStep{background:#FFFFFF;border:1px solid #E0E5EC;color:#66768B}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .lifeStep.on{border-color:#66768B;background:#E9EDF3}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .depthSide{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .depthBid{background:linear-gradient(90deg,#0B8A5F,#0B8A5F)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .depthAsk{background:linear-gradient(90deg,#CC3A32,#CC3A32)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .wsDot{background:#66768B}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .healthBox{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .fullscreenChart{background:#FFFFFF!important}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .decisionHero{background:linear-gradient(135deg,rgba(36,86,230,.12),rgba(36,86,230,.08));border:1px solid #C3CCD8}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .reason{border:1px solid #E0E5EC;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .corrCell{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .corrPos{background:rgba(11,138,95,.07)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .corrNeg{background:rgba(204,58,50,.07)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .proxyLvl{border:1px solid #E0E5EC;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .proxyLvl.hot{background:rgba(204,58,50,.11);border-color:rgba(204,58,50,.28);color:#CC3A32}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .proxyLvl.mid{background:rgba(224,165,38,.08);border-color:rgba(224,165,38,.22);color:#8A5A00}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .proxyLvl.cool{background:rgba(11,138,95,.07);border-color:rgba(11,138,95,.2);color:#0B8A5F}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .paperBox{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .paperRow{border-top:1px solid #E9EDF3}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .analyticsBox{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .mxCell{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .mxGood{background:rgba(11,138,95,.07)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .mxBad{background:rgba(204,58,50,.07)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .mcBox{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .scenarioBox{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .freshBox{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .calibrationLine{border-bottom:1px solid #E9EDF3}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .calibrationTrack{background:#E9EDF3}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .calibrationFill{background:linear-gradient(90deg,#2456E6,#2456E6)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .edgeCard{background:linear-gradient(135deg,rgba(36,86,230,.10),rgba(36,86,230,.07));border:1px solid #C3CCD8}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .validBox{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .curveWrap{border:1px solid #E0E5EC;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .oosBox{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .execHint{border:1px solid #E0E5EC;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .validationBadge{border:1px solid #C3CCD8;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .forwardCard{background:linear-gradient(135deg,rgba(36,86,230,.11),rgba(36,86,230,.08));border:1px solid #C3CCD8}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .guardBox{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .segmentBox{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .foldCell{border:1px solid #E0E5EC;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .qualityBox{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .guardCaution{color:#8A5A00}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .pionexBadge{border:1px solid rgba(36,86,230,.28);background:rgba(36,86,230,.08);color:#2456E6}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .pionexBadge:before{background:#2456E6}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .scanMeta span{border:1px solid #E0E5EC;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .scanProgress{background:#E9EDF3}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .scanProgress>div{background:linear-gradient(90deg,#2456E6,#2456E6)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .scanStat{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .moreDrawer{background:rgba(242,244,247,.74)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .moreSheet{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .moreBtn{background:#F5F7FA;border:1px solid #E0E5EC;color:#48586E}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .cacheBox{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .wsStale{color:#8A5A00!important;border-color:rgba(224,165,38,.3)!important}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .flowBox,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .bandBox,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .oiBox,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .liqBox{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .regimeHero{border:1px solid #C3CCD8;background:linear-gradient(135deg,rgba(36,86,230,.10),rgba(36,86,230,.07))}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .proxyNotice{border:1px solid rgba(224,165,38,.25);background:rgba(224,165,38,.06);color:#8A5A00}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .microBiasCard{border:1px solid #C3CCD8;background:linear-gradient(135deg,rgba(36,86,230,.10),rgba(36,86,230,.07))}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .microBox{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .tapeWrap{border:1px solid #E0E5EC;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .tapeRow{border-bottom:1px solid #E9EDF3}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .tapeHead{background:#F5F7FA}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .microChart{border:1px solid #E0E5EC;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .depthMeter{background:#E9EDF3}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .depthMeter .bid{background:#0B8A5F}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .depthMeter .ask{background:#CC3A32}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .slipBox{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .sourcePill{border:1px solid rgba(36,86,230,.28);background:rgba(36,86,230,.08);color:#2456E6}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .sourceBox{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .sourceExternal{color:#8A5A00}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .sourceLock{border:1px solid rgba(36,86,230,.28);background:rgba(36,86,230,.08);color:#2456E6}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .providerNote{border:1px solid #E0E5EC;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .pwaInstall{border:1px solid rgba(36,86,230,.34);background:#F5F7FA}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .pwaBanner{border:1px solid #C3CCD8;background:#F5F7FA}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .deskBox,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .oppBox,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .calBox2,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .acctBox{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .oppCell{border:1px solid #E0E5EC;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .gradeA{color:#0B8A5F}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .gradeB{color:#2456E6}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .gradeC{color:#8A5A00}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .gradeD{color:#CC3A32}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .qualityMeter{background:#E9EDF3}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .qualityMeter>div{background:linear-gradient(90deg,#2456E6,#2456E6)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .calCell2{border:1px solid #E0E5EC;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .accountCell{border:1px solid #E0E5EC;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .readOnlyBadge{border:1px solid rgba(36,86,230,.28);background:rgba(36,86,230,.08);color:#2456E6}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .stockBadge{border:1px solid rgba(36,86,230,.34);background:rgba(36,86,230,.08);color:#2456E6}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .stockMetric{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .stockProviderBox{border:1px solid #C3CCD8;background:linear-gradient(135deg,rgba(36,86,230,.08),rgba(36,86,230,.04))}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .stockScannerNote{border:1px solid #E0E5EC;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .stockUniverseBox{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .sessionOpen{color:#0B8A5F}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .sessionPre,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .sessionAfter{color:#8A5A00}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .sessionClosed{color:#48586E}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .robustBox,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .portBox,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .lifeBox{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .robustCell{border:1px solid #E0E5EC;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .corrTable td,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .corrTable th{border:1px solid #E0E5EC;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .lifePromoted{color:#0B8A5F}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .lifeWatch{color:#8A5A00}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .lifeRetired{color:#CC3A32}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .lifeLearning{color:#2456E6}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .cloudBox,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .profileBox,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .liqMapBox{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .cloudCell,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .profileCell,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .footCell{border:1px solid #E0E5EC;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .profileBarTrack{background:#E9EDF3}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .profileBarFill{background:linear-gradient(90deg,#2456E6,#2456E6)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .liqChip{border:1px solid #C3CCD8;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .liqChip.buy{color:#0B8A5F}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .liqChip.sell{color:#CC3A32}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .cloudOk{color:#0B8A5F}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .cloudWarn{color:#8A5A00}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .sessionBox,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .structureBox,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .costBox{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .structureCell{border:1px solid #E0E5EC;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .zoneBull{color:#0B8A5F}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .zoneBear{color:#CC3A32}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .sessionActive{color:#0B8A5F}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .sessionInactive{color:#48586E}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .ladderCell{border:1px solid #E0E5EC;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .intelBox,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .mlBox,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .liqBox{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .newsItem{border:1px solid #E0E5EC;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .riskHigh{color:#CC3A32}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .riskMed{color:#8A5A00}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .riskLow{color:#0B8A5F}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .liqCell,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .mlCell{border:1px solid #E0E5EC;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .contribPos{color:#0B8A5F}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .contribNeg{color:#CC3A32}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .govBox,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .driftBox,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .ensBox{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .govCell,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .driftCell,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .waterCell{border:1px solid #E0E5EC;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .stateStable{color:#0B8A5F}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .stateWatch{color:#8A5A00}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .stateDrift{color:#CC3A32}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .barTiny{background:#E9EDF3}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .barTiny>i{background:linear-gradient(90deg,#2456E6,#2456E6)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .execBox{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .execPending{color:#8A5A00}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .execPartial{color:#2456E6}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .execLive{color:#0B8A5F}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .execClosed{color:#48586E}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .execBad{color:#CC3A32}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .execCell{border:1px solid #E0E5EC;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .piBox,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .budgetBox,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .familyBox{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .piCell,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .clusterCell,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .familyCell{border:1px solid #E0E5EC;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .budgetTrack{background:#E9EDF3}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .budgetFill{background:linear-gradient(90deg,#2456E6,#2456E6)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .budgetWarn{background:linear-gradient(90deg,#E0A526,#E0A526)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .budgetBad{background:linear-gradient(90deg,#CC3A32,#CC3A32)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .riskPass{color:#0B8A5F}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .riskWatch{color:#8A5A00}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .riskBlock{color:#CC3A32}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .familyChip{border:1px solid #C3CCD8;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .scanRecovery{border:1px solid #C3CCD8;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .scanLive{color:#0B8A5F}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .scanSaved{color:#2456E6}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .scanSnapshot{color:#8A5A00}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .rgBox,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .auditBox,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .expBox{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .rgCell,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .coefCell,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .leakCell,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .expCell{border:1px solid #E0E5EC;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .auditPass{color:#0B8A5F}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .auditWarn{color:#8A5A00}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .auditFail{color:#CC3A32}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .expPromoted{color:#0B8A5F}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .expCandidate{color:#2456E6}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .expRejected{color:#CC3A32}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .expResearch{color:#8A5A00}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .masterVerdict{border:1px solid #C3CCD8;background:linear-gradient(#FFFFFF,#FFFFFF)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .masterHero{border:1px solid #C3CCD8;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .masterMetric{border:1px solid #E0E5EC;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .masterReasonBox{border:1px solid #E0E5EC;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .reasonChip{border:1px solid #C3CCD8}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .reasonGood{color:#0B8A5F}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .reasonBad{color:#CC3A32}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .reasonWarn{color:#8A5A00}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .diBox{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .diCell{border:1px solid #E0E5EC;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .heatCell{border:1px solid #E0E5EC;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .heatBar{background:#E9EDF3}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .cmdBox{background:#FFFFFF;border:1px solid #C3CCD8}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .cmdItem{border:1px solid #E0E5EC;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .ldBox{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .ldCell{border:1px solid #E0E5EC;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .reportHero{border:1px solid #C3CCD8;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .reportSection{border:1px solid #E0E5EC;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .syncReady{color:#0B8A5F}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .syncWarn{color:#8A5A00}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .syncBad{color:#CC3A32}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .pv3Box,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .stressBox{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .pv3Cell,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .stressCell{border:1px solid #E0E5EC;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .stressLoss{color:#CC3A32}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .stressGood{color:#0B8A5F}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .ensBox{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .ensCell{border:1px solid #E0E5EC;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .ensUsable{color:#0B8A5F}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .ensWeak{color:#8A5A00}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .ensSkip{color:#CC3A32}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .disagreeTrack{background:#E9EDF3}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .disagreeTrack i{background:#2456E6}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .extBox{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .extCell{border:1px solid #E0E5EC;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .extGood{color:#0B8A5F}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .extWarn{color:#8A5A00}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .extBad{color:#CC3A32}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .heatTrack{background:#E9EDF3}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .heatTrack i{background:#2456E6}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .vcKpi{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .vcAgreementTrack{background:#E9EDF3}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .vcAgreementTrack i{background:#2456E6}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .vcGroup{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .vcGroup .vcChip{border:1px solid #C3CCD8}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .vcBull .vcChip{border-color:#0B8A5F;color:#0B8A5F}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .vcBear .vcChip{border-color:#CC3A32;color:#CC3A32}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .vcNeutral .vcChip{border-color:#66768B;color:#48586E}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .vcBlock .vcChip{border-color:#E0A526;color:#8A5A00}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .vcFamily{border:1px solid #E0E5EC;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .vcCell{border:1px solid #E0E5EC;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .vcBiasBull{color:#0B8A5F}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .vcBiasBear{color:#CC3A32}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .vcBiasNeutral{color:#48586E}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .vcBiasBlock{color:#8A5A00}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .vcSummary{border:1px solid #C3CCD8;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .volHeroBox{background:linear-gradient(135deg,rgba(36,86,230,.11),rgba(36,86,230,.07));border:1px solid #C3CCD8}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .volBox{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .volCell{border:1px solid #E0E5EC;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .volGauge{background:#E9EDF3}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .volGauge i{background:#2456E6}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .volTf{background:#FFFFFF;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .volGood{color:#0B8A5F}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .volWarn{color:#8A5A00}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .volBad{color:#CC3A32}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .volNeutral{color:#48586E}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi td,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi th{border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .offlineBanner{background:#E0A526;color:#0E1A2B;border-bottom:1px solid #E0A526}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .vcDetails{border:1px solid #E0E5EC;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .vcDetails>summary{color:#0E1A2B}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .vcDetails>summary:focus-visible{box-shadow:0 0 0 2px #2456E6}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .refStale{color:#CC3A32}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .refAging{color:#8A5A00}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .refFresh{color:#0B8A5F}
+@media(min-width:981px){:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .sideMenu{scrollbar-color:#C3CCD8 transparent}}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .decisionPrimary{border:1px solid #C3CCD8;background:linear-gradient(#FFFFFF,#FFFFFF)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .decisionHeadline{color:#0E1A2B}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .decisionActionLine{background:#E9EDF3;border:1px solid #C3CCD8}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .decisionRisk{border:1px solid #C3CCD8}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .decisionRisk.good{color:#0B8A5F;border-color:#0B8A5F;background:rgba(11,138,95,.12)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .decisionRisk.bad{color:#CC3A32;border-color:#66768B;background:rgba(102,118,139,.12)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .decisionRisk.warn{color:#8A5A00;border-color:#E0A526;background:rgba(224,165,38,.12)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .decisionRisk.neutral{color:#0E1A2B}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .decisionKpi{border:1px solid #E0E5EC;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .decisionExplain{border:1px solid #E0E5EC;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .decisionExplain.support>b{color:#0B8A5F}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .decisionExplain.oppose>b{color:#CC3A32}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .decisionExplain.unlock>b{color:#8A5A00}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .decisionListItem{background:#F5F7FA;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .decisionListItem.support i{color:#0B8A5F}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .decisionListItem.oppose i{color:#CC3A32}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .decisionListItem.unlock i{color:#8A5A00}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .decisionListItem.neutral i{color:#48586E}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .decisionTrade{border:1px solid #C3CCD8;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .prGateDash,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .prPrimary,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .prCurrent,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .prBox,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .prMarketCard{border:1px solid #C3CCD8;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .prDashHero>div{border:1px solid #E0E5EC;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .prNotReady{color:#CC3A32}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .prPaperReady{color:#8A5A00}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .prLiveReady{color:#0B8A5F}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .prTrack{background:#E9EDF3}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .prTrack i{background:linear-gradient(90deg,#66768B,#2456E6)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .prMini{border:1px solid #E0E5EC;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .prCriterion{border:1px solid #E0E5EC;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .prCriterion.pass .prIcon{color:#0B8A5F}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .prCriterion.fail .prIcon{color:#CC3A32}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .prCriterion.warn .prIcon{color:#8A5A00}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .replayStepper input[type=range]{accent-color:#0B8A5F}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .replayKpi{border:1px solid #2456E6;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .replayKpi span{color:#66768B}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .replayComp{border:1px solid #2456E6;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .replayComp span{color:#66768B}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .replayLog{border:1px solid #2456E6}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .replayLogRow{border-bottom:1px solid #E9EDF3}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi #replayChart{background:#FFFFFF;border:1px solid #2456E6}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .histProgress>div{background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .histProgress i{background:linear-gradient(90deg,#2456E6,#0B8A5F)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .histScanTable{border:1px solid #2456E6}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .histScanRow{border-bottom:1px solid #E9EDF3}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .histScanHead{background:#F5F7FA;color:#0E1A2B}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .histRank{color:#0B8A5F}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .paperBlotterWrap{border:1px solid #E9EDF3;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .paperRowV3{border-top:1px solid #E9EDF3}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .paperRowV3Head{background:#FFFFFF;color:#48586E}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .edgeProKpis>div,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .edgeProMetric{background:rgba(14,26,43,.018)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .edgeProRow.head .edgeProCell{background:rgba(14,26,43,.025)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .providerHealthPanel{border-top:1px solid var(--border,#E0E5EC)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .providerHealthRow{background:rgba(14,26,43,.025)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .providerHealthHead{color:var(--muted,#48586E);background:rgba(14,26,43,.05)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .marketBreadthCard{border-color:#C3CCD8;background:linear-gradient(rgba(245,247,250,.98),rgba(245,247,250,.98))}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .breadthHero>div{background:rgba(14,26,43,.018)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .breadthState.neutral{color:#8A5A00}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .breadthTrack{background:#E9EDF3}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .breadthTrack i{background:linear-gradient(90deg,#CC3A32,#E0A526 50%,#0B8A5F)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .breadthBox{background:rgba(14,26,43,.018)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .scanBreadthStrip{border:1px solid #C3CCD8;background:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .decisionOsCard,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .decisionOsVerdictCard{border:1px solid rgba(11,138,95,.18);background:linear-gradient(rgba(245,247,250,.98),rgba(245,247,250,.98))}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .decisionOsKpi,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .decisionTool{border:1px solid rgba(102,118,139,.15);background:rgba(14,26,43,.025)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .decisionOsState.good,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .decisionTool.good .decisionToolState{color:#0B8A5F}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .decisionOsState.bad,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .decisionTool.bad .decisionToolState{color:#CC3A32}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .decisionOsState.neutral,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .decisionTool.warn .decisionToolState{color:#8A5A00}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .decisionToolDetail{color:var(--muted,#48586E)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .decisionOsFooter{background:rgba(14,26,43,.025);color:var(--muted,#48586E)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .edgeCalCard,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .edgeCalVerdictCard{border:1px solid rgba(36,86,230,.22);background:linear-gradient(rgba(245,247,250,.98),rgba(245,247,250,.98))}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .edgeCalKpi{border:1px solid rgba(102,118,139,.15);background:rgba(14,26,43,.025)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .edgeCalState.good{color:#0B8A5F}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .edgeCalState.bad{color:#CC3A32}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .edgeCalState.neutral{color:#8A5A00}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .edgeCalRow.head{background:rgba(14,26,43,.035)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .edgeCalRow.warn b{color:#8A5A00}
+body :is(#tabloubot,#t212,#dash,#rangefilter).tbZi .dashOperations .decisionTool.bad{outline:1px solid rgba(204,58,50,.28)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .noticeBad{border:1px solid rgba(204,58,50,.34);background:rgba(204,58,50,.07)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi #tbNivel.tbOprit{color:#2456E6}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .lipsa,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi b.lipsa,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .n.lipsa{color:#66768B!important}
 #tabloubot.tbZi,#dash.tbZi{--tb-linie:rgba(14,26,43,.16);--tb-fond:#FFFFFF;--tb-fond2:#F5F7FA}
 #tabloubot.tbZi .tbGauge{background:rgba(14,26,43,.14)}
 #tabloubot.tbZi .tbGaugeGrid{background:linear-gradient(90deg,rgba(36,86,230,.18),rgba(36,86,230,.18))}
@@ -4375,22 +4416,22 @@ body :is(#tabloubot,#t212,#dash).tbZi .dashOperations .decisionTool.bad{outline:
 #tabloubot.tbZi .tbPill-bine{background:#0B8A5F}
 #tabloubot.tbZi .tbPill-atentie{background:#E0A526}
 #tabloubot.tbZi .tbPill-rau{background:#CC3A32}
-:is(#tabloubot,#t212,#dash).tbZi .t212Card{--tb-linie:rgba(14,26,43,.16);--tb-fond:#FFFFFF;--tb-fond2:#F5F7FA;border:1px solid rgba(36,86,230,.35);background:linear-gradient(135deg,rgba(36,86,230,.07),rgba(255,255,255,.6))}
-:is(#tabloubot,#t212,#dash).tbZi .t212BtnPlin{color:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .t212Fac{background:rgba(36,86,230,.08)}
-:is(#tabloubot,#t212,#dash).tbZi .t212Pill-tine{background:#0B8A5F}
-:is(#tabloubot,#t212,#dash).tbZi .t212Pill-atentie{background:#E0A526}
-:is(#tabloubot,#t212,#dash).tbZi .t212Pill-iesi{background:#CC3A32}
-:is(#tabloubot,#t212,#dash).tbZi .t212Pill-fara{background:#66768B}
-:is(#tabloubot,#t212,#dash).tbZi .t212Preturi{border:1px solid rgba(36,86,230,.28);background:rgba(36,86,230,.05)}
-:is(#tabloubot,#t212,#dash).tbZi .t212Dunga.n{background:#66768B}
-:is(#tabloubot,#t212,#dash).tbZi .t212PlanChip.ok{border-color:rgba(11,138,95,.45)}
-:is(#tabloubot,#t212,#dash).tbZi .t212Plan input.calc{border-color:rgba(36,86,230,.5)}
-:is(#tabloubot,#t212,#dash).tbZi .t212Side .t212Preturi{border:1px solid rgba(36,86,230,.28);background:rgba(36,86,230,.05)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .t212Card{--tb-linie:rgba(14,26,43,.16);--tb-fond:#FFFFFF;--tb-fond2:#F5F7FA;border:1px solid rgba(36,86,230,.35);background:linear-gradient(135deg,rgba(36,86,230,.07),rgba(255,255,255,.6))}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .t212BtnPlin{color:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .t212Fac{background:rgba(36,86,230,.08)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .t212Pill-tine{background:#0B8A5F}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .t212Pill-atentie{background:#E0A526}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .t212Pill-iesi{background:#CC3A32}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .t212Pill-fara{background:#66768B}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .t212Preturi{border:1px solid rgba(36,86,230,.28);background:rgba(36,86,230,.05)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .t212Dunga.n{background:#66768B}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .t212PlanChip.ok{border-color:rgba(11,138,95,.45)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .t212Plan input.calc{border-color:rgba(36,86,230,.5)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .t212Side .t212Preturi{border:1px solid rgba(36,86,230,.28);background:rgba(36,86,230,.05)}
 #tabloubot.tbZi .tbSus>#tbSemaforCard{background:linear-gradient(135deg,rgba(11,138,95,.12),transparent)}
 #tabloubot.tbZi .tbDunga.n{background:#66768B}
-:is(#tabloubot,#t212,#dash).tbZi .t212Link{border:1px solid rgba(36,86,230,.35);background:rgba(36,86,230,.06)}
-:is(#tabloubot,#t212,#dash).tbZi .t212Sfat{border-left:3px solid #66768B;background:rgba(14,26,43,.06)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .t212Link{border:1px solid rgba(36,86,230,.35);background:rgba(36,86,230,.06)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .t212Sfat{border-left:3px solid #66768B;background:rgba(14,26,43,.06)}
 :is(#tabloubot,#t212).tbZi .tbIndTab th{color:var(--muted,#48586E)}
 :is(#tabloubot,#t212).tbZi .tbIndTab td{border-top:1px solid var(--tb-linie,#E0E5EC)}
 :is(#tabloubot,#t212).tbZi .tbIndTab td:first-child{color:var(--muted,#48586E)}
@@ -4432,99 +4473,129 @@ body :is(#tabloubot,#t212,#dash).tbZi .dashOperations .decisionTool.bad{outline:
 #tabloubot.tbZi .tbCitR.atentie .tbCitIc{background:rgba(224,165,38,.15)}
 #tabloubot.tbZi .tbCitR.rau .tbCitIc{background:rgba(204,58,50,.16)}
 #tabloubot.tbZi .tbCitR.info .tbCitIc{background:rgba(14,26,43,.14)}
-:is(#tabloubot,#t212,#dash).tbZi .grPlanDe ul{color:#0E1A2B}
-:is(#tabloubot,#t212,#dash).tbZi .tbGridLarg{background:rgba(204,58,50,.08)}
-:is(#tabloubot,#t212,#dash).tbZi .stStat .stCurba{stroke:#2456E6}
-:is(#tabloubot,#t212,#dash).tbZi .stStat .stPunct{fill:#2456E6}
-:is(#tabloubot,#t212,#dash).tbZi .stStat .stPlus{fill:#0B8A5F}
-:is(#tabloubot,#t212,#dash).tbZi .stStat .stMinus{fill:#CC3A32}
-:is(#tabloubot,#t212,#dash).tbZi .tbRetea{border-top:1px dashed rgba(14,26,43,.35)}
-:is(#tabloubot,#t212,#dash).tbZi .tbRezumat{background:rgba(14,26,43,.05);border:1px solid rgba(14,26,43,.08);color:var(--text,#0E1A2B)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .grPlanDe ul{color:#0E1A2B}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .tbGridLarg{background:rgba(204,58,50,.08)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .stStat .stCurba{stroke:#2456E6}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .stStat .stPunct{fill:#2456E6}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .stStat .stPlus{fill:#0B8A5F}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .stStat .stMinus{fill:#CC3A32}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .tbRetea{border-top:1px dashed rgba(14,26,43,.35)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .tbRezumat{background:rgba(14,26,43,.05);border:1px solid rgba(14,26,43,.08);color:var(--text,#0E1A2B)}
 #tabloubot.tbZi .tbTrendTab th{color:var(--muted,#48586E)}
 #tabloubot.tbZi .tbTrendTab td{border-top:1px solid var(--tb-linie,#E0E5EC)}
 #tabloubot.tbZi .tbTrendBec{color:#FFFFFF;background:var(--muted,#48586E)}
-:is(#tabloubot,#t212,#dash).tbZi .grPlanSariTx{background:rgba(204,58,50,.08)}
-:is(#tabloubot,#t212,#dash).tbZi .bsTot{background:#F5F7FA}
-@media (max-width:760px){:is(#tabloubot,#t212,#dash).tbZi .botStrip::after{background:linear-gradient(#F5F7FA,#F5F7FA)}}
-:is(#tabloubot,#t212,#dash).tbZi #mcsPagina .mcsBaraSt .n{background:#66768B}
-:is(#tabloubot,#t212,#dash).tbZi #mcsPagina .mcsAvert{background:rgba(224,165,38,.08)}
-:is(#tabloubot,#t212,#dash).tbZi .mcsRevBtn:hover,:is(#tabloubot,#t212,#dash).tbZi .mcsRevBtn:focus-visible{color:var(--text,#0E1A2B)}
-:is(#tabloubot,#t212,#dash).tbZi #gsPagina .gsVerdict.good b{color:var(--good,#0B8A5F)}
-:is(#tabloubot,#t212,#dash).tbZi #gsPagina .gsVerdict.bad b{color:var(--bad,#CC3A32)}
-:is(#tabloubot,#t212,#dash).tbZi #gsPagina .gsVerdict.mijl b{color:var(--warn,#8A5A00)}
-:is(#tabloubot,#t212,#dash).tbZi #gsPagina .mcsAvert{background:rgba(224,165,38,.08)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .grPlanSariTx{background:rgba(204,58,50,.08)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .bsTot{background:#F5F7FA}
+@media (max-width:760px){:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .botStrip::after{background:linear-gradient(#F5F7FA,#F5F7FA)}}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi #mcsPagina .mcsBaraSt .n{background:#66768B}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi #mcsPagina .mcsAvert{background:rgba(224,165,38,.08)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .mcsRevBtn:hover,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .mcsRevBtn:focus-visible{color:var(--text,#0E1A2B)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi #gsPagina .gsVerdict.good b{color:var(--good,#0B8A5F)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi #gsPagina .gsVerdict.bad b{color:var(--bad,#CC3A32)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi #gsPagina .gsVerdict.mijl b{color:var(--warn,#8A5A00)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi #gsPagina .mcsAvert{background:rgba(224,165,38,.08)}
 #tabloubot.tbZi .tbCitVoci{background:rgba(14,26,43,.08)}
 #tabloubot.tbZi .tbCitVoci.atentie{background:rgba(224,165,38,.08)}
-:is(#tabloubot,#t212,#dash).tbZi .topStatus{background:#FFFFFF!important;border-bottom:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .pzVoce-da{border-color:rgba(11,138,95,.55)}
-:is(#tabloubot,#t212,#dash).tbZi .pzVoce-nu{border-color:rgba(204,58,50,.6)}
-:is(#tabloubot,#t212,#dash).tbZi .pzVoce-atentie{border-color:rgba(224,165,38,.6)}
-:is(#tabloubot,#t212,#dash).tbZi .dusVechi{color:var(--pzAur,#8A5A00)}
-:is(#tabloubot,#t212,#dash).tbZi .lrVerdict{color:var(--pzT0,#0E1A2B)}
-:is(#tabloubot,#t212,#dash).tbZi .tbListeVerdict b{color:var(--pzT0,#0E1A2B)}
-:is(#tabloubot,#t212,#dash).tbZi .pzDrumGrid{background:rgba(36,86,230,.28)}
-:is(#tabloubot,#t212,#dash).tbZi .pzRangeBanda{background:rgba(14,26,43,.35)}
-:is(#tabloubot,#t212,#dash).tbZi .pzKv{border-bottom:1px dotted rgba(195,204,216,.6)}
-:is(#tabloubot,#t212,#dash).tbZi .pzK{text-decoration:underline dotted rgba(14,26,43,.6)}
-#tabloubot.tbZi .tbPill,:is(#tabloubot,#t212,#dash).tbZi .t212Pill{color:#F2F4F7}
-:is(#tabloubot,#t212,#dash).tbZi .pzFasiaBtn{background:var(--f1,#FFFFFF);color:#48586E;border:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .pzFasiaBtn:hover{color:#0E1A2B;border-color:#C3CCD8}
-:is(#tabloubot,#t212,#dash).tbZi .pzFasiaBtn:focus-visible{outline:2px solid #2456E6}
-:is(#tabloubot,#t212,#dash).tbZi .gbValori{border-top:1px solid #E0E5EC}
-:is(#tabloubot,#t212,#dash).tbZi .gbValori .gbVN{color:#48586E}
-:is(#tabloubot,#t212,#dash).tbZi .gbValori .gbVP{color:#0E1A2B}
-:is(#tabloubot,#t212,#dash).tbZi .gbValori .gbVD,:is(#tabloubot,#t212,#dash).tbZi .gbValori .gbVS{color:#66768B}
-:is(#tabloubot,#t212,#dash).tbZi .luGrafic .luUp{stroke:#2456E6}
-:is(#tabloubot,#t212,#dash).tbZi .luGrafic .luSp{stroke:#E0A526}
-:is(#tabloubot,#t212,#dash).tbZi .luLegUp{color:#2456E6}
-:is(#tabloubot,#t212,#dash).tbZi .luLegSp{color:#8A5A00}
-:is(#tabloubot,#t212,#dash).tbZi .rzTab tr.rzRand[data-action-click]:hover td{background:var(--panel-3,rgba(14,26,43,.03))}
-:is(#tabloubot,#t212,#dash).tbZi .srQL{fill:#0B8A5F}
-:is(#tabloubot,#t212,#dash).tbZi .srQI{fill:#2456E6}
-:is(#tabloubot,#t212,#dash).tbZi .srQG{fill:#CC3A32}
-:is(#tabloubot,#t212,#dash).tbZi .srQW{fill:#E0A526}
-:is(#tabloubot,#t212,#dash).tbZi .srCad.cdL{color:#0B8A5F}
-:is(#tabloubot,#t212,#dash).tbZi .srCad.cdW{color:#8A5A00}
-:is(#tabloubot,#t212,#dash).tbZi .srCad.cdG{color:#CC3A32}
-:is(#tabloubot,#t212,#dash).tbZi .srCad.cdI{color:#2456E6}
-:is(#tabloubot,#t212,#dash).tbZi .mcBara{background:linear-gradient(90deg,#CC3A32,#E0A526 45%,#66768B 58%,#0B8A5F)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .topStatus{background:#FFFFFF!important;border-bottom:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .pzVoce-da{border-color:rgba(11,138,95,.55)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .pzVoce-nu{border-color:rgba(204,58,50,.6)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .pzVoce-atentie{border-color:rgba(224,165,38,.6)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .dusVechi{color:var(--pzAur,#8A5A00)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .lrVerdict{color:var(--pzT0,#0E1A2B)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .tbListeVerdict b{color:var(--pzT0,#0E1A2B)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .pzDrumGrid{background:rgba(36,86,230,.28)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .pzRangeBanda{background:rgba(14,26,43,.35)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .pzKv{border-bottom:1px dotted rgba(195,204,216,.6)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .pzK{text-decoration:underline dotted rgba(14,26,43,.6)}
+#tabloubot.tbZi .tbPill,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .t212Pill{color:#F2F4F7}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .pzFasiaBtn{background:var(--f1,#FFFFFF);color:#48586E;border:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .pzFasiaBtn:hover{color:#0E1A2B;border-color:#C3CCD8}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .pzFasiaBtn:focus-visible{outline:2px solid #2456E6}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .gbValori{border-top:1px solid #E0E5EC}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .gbValori .gbVN{color:#48586E}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .gbValori .gbVP{color:#0E1A2B}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .gbValori .gbVD,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .gbValori .gbVS{color:#66768B}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .luGrafic .luUp{stroke:#2456E6}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .luGrafic .luSp{stroke:#E0A526}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .luLegUp{color:#2456E6}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .luLegSp{color:#8A5A00}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .rzTab tr.rzRand[data-action-click]:hover td{background:var(--panel-3,rgba(14,26,43,.03))}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .srQL{fill:#0B8A5F}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .srQI{fill:#2456E6}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .srQG{fill:#CC3A32}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .srQW{fill:#E0A526}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .srCad.cdL{color:#0B8A5F}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .srCad.cdW{color:#8A5A00}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .srCad.cdG{color:#CC3A32}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .srCad.cdI{color:#2456E6}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .mcBara{background:linear-gradient(90deg,#CC3A32,#E0A526 45%,#66768B 58%,#0B8A5F)}
 #dash.tbZi .acMbBloc,#dash.tbZi .acSzBloc{border-color:rgba(36,86,230,.45)}
-:is(#tabloubot,#t212,#dash).tbZi .mbCitat{color:#2B3A4B}
-:is(#tabloubot,#t212,#dash).tbZi .mbSursa{border-top:1px solid rgba(14,26,43,.08)}
-:is(#tabloubot,#t212,#dash).tbZi .mbZona{background:rgba(14,26,43,.14);color:#2B3A4B}
-:is(#tabloubot,#t212,#dash).tbZi .mbZHealthy,:is(#tabloubot,#t212,#dash).tbZi .mbZStrong{background:rgba(11,138,95,.18);color:#0B8A5F}
-:is(#tabloubot,#t212,#dash).tbZi .mbZWeakening{background:rgba(224,165,38,.18)}
-:is(#tabloubot,#t212,#dash).tbZi .mbZCritical{background:rgba(204,58,50,.18);color:#CC3A32}
-:is(#tabloubot,#t212,#dash).tbZi .mbSc{border-top:1px solid rgba(14,26,43,.08)}
-:is(#tabloubot,#t212,#dash).tbZi .szBara{background:rgba(14,26,43,.14)}
-:is(#tabloubot,#t212,#dash).tbZi .szBara i{background:rgba(14,26,43,.5)}
-:is(#tabloubot,#t212,#dash).tbZi .szPiesa{border-top:1px solid rgba(14,26,43,.08)}
-:is(#tabloubot,#t212,#dash).tbZi .szP{background:rgba(11,138,95,.18);color:#0B8A5F}
-:is(#tabloubot,#t212,#dash).tbZi .szN{background:rgba(204,58,50,.18);color:#CC3A32}
-:is(#tabloubot,#t212,#dash).tbZi .sz0{background:rgba(14,26,43,.14);color:#2B3A4B}
-:is(#tabloubot,#t212,#dash).tbZi .szW{background:rgba(224,165,38,.18)}
-:is(#tabloubot,#t212,#dash).tbZi .scIstTab tr.scIstAcum td{background:rgba(36,86,230,.07)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .mbCitat{color:#2B3A4B}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .mbSursa{border-top:1px solid rgba(14,26,43,.08)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .mbZona{background:rgba(14,26,43,.14);color:#2B3A4B}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .mbZHealthy,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .mbZStrong{background:rgba(11,138,95,.18);color:#0B8A5F}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .mbZWeakening{background:rgba(224,165,38,.18)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .mbZCritical{background:rgba(204,58,50,.18);color:#CC3A32}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .mbSc{border-top:1px solid rgba(14,26,43,.08)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .szBara{background:rgba(14,26,43,.14)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .szBara i{background:rgba(14,26,43,.5)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .szPiesa{border-top:1px solid rgba(14,26,43,.08)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .szP{background:rgba(11,138,95,.18);color:#0B8A5F}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .szN{background:rgba(204,58,50,.18);color:#CC3A32}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .sz0{background:rgba(14,26,43,.14);color:#2B3A4B}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .szW{background:rgba(224,165,38,.18)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .scIstTab tr.scIstAcum td{background:rgba(36,86,230,.07)}
 #tabloubot.tbZi .gbValori li.gbAproape .gbVN{color:#8A5A00}
 #tabloubot.tbZi .gbValCap{color:#0E1A2B}
-:is(#tabloubot,#t212,#dash).tbZi input:focus-visible,:is(#tabloubot,#t212,#dash).tbZi select:focus-visible,:is(#tabloubot,#t212,#dash).tbZi textarea:focus-visible{outline:2px solid #2456E6}
-:is(#tabloubot,#t212,#dash).tbZi .vcDetails>summary:focus-visible{outline:2px solid #2456E6}
-:is(#tabloubot,#t212,#dash).tbZi #t212Continut tr.t212Rand[aria-expanded="true"]{background:rgba(36,86,230,.12)}
-:is(#tabloubot,#t212,#dash).tbZi .t212Bursa.deschisa{border-color:rgba(11,138,95,.45)}
-:is(#tabloubot,#t212,#dash).tbZi button.pzVoce:hover{background:rgba(14,26,43,.05)}
-:is(#tabloubot,#t212,#dash).tbZi .sugVerdict-v{background:rgba(224,165,38,.14);border-color:rgba(224,165,38,.55)}
-:is(#tabloubot,#t212,#dash).tbZi .sugVerdict-p{background:rgba(36,86,230,.16);border-color:rgba(36,86,230,.55)}
-:is(#tabloubot,#t212,#dash).tbZi .sugVerdict-n{background:rgba(14,26,43,.12);border-color:rgba(14,26,43,.4)}
-:is(#tabloubot,#t212,#dash).tbZi .sugRand.ales{background:rgba(36,86,230,.12)}
-:is(#tabloubot,#t212,#dash).tbZi .sugBlocA{border-color:rgba(224,165,38,.4)}
-:is(#tabloubot,#t212,#dash).tbZi .sugActiuni .sugBtnPlin{color:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .sugLista2 .sugMaiMult:hover{background:rgba(36,86,230,.08)}
-:is(#tabloubot,#t212,#dash).tbZi .prDrumFond{fill:rgba(14,26,43,.2)}
-:is(#tabloubot,#t212,#dash).tbZi #prNoteaza{color:#FFFFFF}
-:is(#tabloubot,#t212,#dash).tbZi .prMesaj{background:rgba(36,86,230,.08)}
-:is(#tabloubot,#t212,#dash).tbZi .prMesaj.prMesajRau{background:rgba(224,165,38,.08)}
-:is(#tabloubot,#t212,#dash).tbZi .cmdItem[aria-selected="true"]{border-color:#2456E6;background:#F5F7FA}
-:is(#tabloubot,#t212,#dash).tbZi .cmdItem:focus-visible{outline:2px solid #2456E6}
-:is(#tabloubot,#t212,#dash).tbZi .aziNuRand{background:rgba(224,165,38,.08)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi input:focus-visible,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi select:focus-visible,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi textarea:focus-visible{outline:2px solid #2456E6}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .vcDetails>summary:focus-visible{outline:2px solid #2456E6}
+#rangefilter.tbZi{--rf-fond:#FFFFFF;--rf-linie:rgba(14,26,43,.16)}
+#rangefilter.tbZi .rfTfOn{border-color:var(--accent,#E0A526);color:var(--accent,#8A5A00)}
+#rangefilter.tbZi .rfIntro{color:var(--t2,#48586E)}
+#rangefilter.tbZi .acBtn{background:var(--panel-2,#F5F7FA);border:1px solid var(--line,#E0E5EC)}
+#rangefilter.tbZi .rfContra{border-color:var(--pzAur,#E0A526);color:var(--pzAur,#8A5A00)}
+#rangefilter.tbZi .rfProaspatEt{border-color:var(--pzSus,#0B8A5F);color:var(--pzSus,#0B8A5F)}
+#rangefilter.tbZi .rfCardProaspat{border-color:rgba(11,138,95,.45)}
+#rangefilter.tbZi .rfEticheta{color:var(--t2,#48586E)}
+#rangefilter.tbZi .rfHero{background:#C3CCD8}
+#rangefilter.tbZi .rfColorant{color:#2B3A4B}
+#rangefilter.tbZi .rfEt{color:var(--t2,#48586E)}
+#rangefilter.tbZi .rfBara{color:var(--t3,#66768B)}
+#rangefilter.tbZi .rfTon-sus{color:var(--pzSus,#0B8A5F)}
+#rangefilter.tbZi .rfTon-jos{color:var(--pzJos,#CC3A32)}
+#rangefilter.tbZi .rfTon-atentie{color:var(--pzAur,#8A5A00)}
+#rangefilter.tbZi .rfTon-fara{color:var(--t2,#48586E)}
+#rangefilter.tbZi .rfMut{color:var(--t3,#66768B)}
+#rangefilter.tbZi .rfRau{color:#CC3A32}
+#rangefilter.tbZi .rfCautaIn{background:var(--panel-2,#F5F7FA);border:1px solid var(--line,#E0E5EC)}
+#rangefilter.tbZi .rfCautaIn::placeholder{color:var(--t3,#66768B)}
+#rangefilter.tbZi .rfCautataEt{border-color:var(--pzInfo,#2456E6);color:var(--pzInfo,#2456E6)}
+#rangefilter.tbZi .rfVerdictFraza{color:#0E1A2B}
+#rangefilter.tbZi .rfListaCap{color:#66768B}
+#rangefilter.tbZi .rfRandMoneda:focus-visible{outline:2px solid #2456E6}
+#rangefilter.tbZi .rfColMoneda::before{color:#66768B}
+#rangefilter.tbZi .rfColDir{color:#0E1A2B}
+#rangefilter.tbZi .rfColLung{color:#48586E}
+#rangefilter.tbZi .rfLinieBot{background:rgba(36,86,230,.07)}
+#rangefilter.tbZi .rfLinieProaspat .rfColSemnal{color:#0E1A2B}
+@container rfl (max-width:999px){#rangefilter.tbZi [data-et]::before{color:#66768B}}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi #t212Continut tr.t212Rand[aria-expanded="true"]{background:rgba(36,86,230,.12)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .t212Bursa.deschisa{border-color:rgba(11,138,95,.45)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi button.pzVoce:hover{background:rgba(14,26,43,.05)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .sugVerdict-v{background:rgba(224,165,38,.14);border-color:rgba(224,165,38,.55)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .sugVerdict-p{background:rgba(36,86,230,.16);border-color:rgba(36,86,230,.55)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .sugVerdict-n{background:rgba(14,26,43,.12);border-color:rgba(14,26,43,.4)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .sugRand.ales{background:rgba(36,86,230,.12)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .sugBlocA{border-color:rgba(224,165,38,.4)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .sugActiuni .sugBtnPlin{color:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .sugLista2 .sugMaiMult:hover{background:rgba(36,86,230,.08)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .prDrumFond{fill:rgba(14,26,43,.2)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi #prNoteaza{color:#FFFFFF}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .prMesaj{background:rgba(36,86,230,.08)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .prMesaj.prMesajRau{background:rgba(224,165,38,.08)}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .cmdItem[aria-selected="true"]{border-color:#2456E6;background:#F5F7FA}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .cmdItem:focus-visible{outline:2px solid #2456E6}
+:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .aziNuRand{background:rgba(224,165,38,.08)}
 #tabloubot.tbZi{--lrBar:#2456E6}
 /* ==== v100.316 TEMA TABLOULUI: sfârșit ==== */
 /* Colțurile rămân de cel mult 5 px și ordinea singură pe rând începe cu „.pzDemo #tabloubot .tbCadru>” (regulile temei PAZNIC, proba v100.151). */
@@ -4906,33 +4977,33 @@ html.pzDemo #tabloubot #ctAcum .ctGol{margin:6px 0 2px;color:var(--pzT2)}
 /* v100.325 · meniul ca pagina botului (el, 11.11.2026: „fă și meniul la fel ca pagina botului”). Cât ești pe Tablou, meniul din stânga (și bara de jos
    pe telefon) ia litera Tabloului și, pe tema lui de zi, exact culorile paginii (alb, cerneala #0E1A2B, albastrul #2456E6); pe tema de noapte rămâne
    închis, ca pagina. Pe celelalte pagini nimic nu se schimbă. Regulile „#tabloubot.tbZi .sideNav…” din stratul generat nu prindeau niciodată:
-   meniul nu stă în #tabloubot - de aici html:has(:is(#tabloubot,#t212,#dash).on.tbZi). Doar culori și literă: niciun buton scos, nimic ascuns. v100.326: la fel cât e deschisă pagina Trading 212 (:is(#tabloubot,#t212)). Revizia: butoanele nu
+   meniul nu stă în #tabloubot - de aici html:has(:is(#tabloubot,#t212,#dash,#rangefilter).on.tbZi). Doar culori și literă: niciun buton scos, nimic ascuns. v100.326: la fel cât e deschisă pagina Trading 212 (:is(#tabloubot,#t212)). Revizia: butoanele nu
    moștenesc litera (de aici :is(.sideBtn,.mobileNavBtn)); grosimea rămâne a tuturor butoanelor (750); chenarul închis de la trecere („button:hover”) stins. */
-html:has(:is(#tabloubot,#t212,#dash).on) .sideNav,html:has(:is(#tabloubot,#t212,#dash).on) .mobileBottom,html:has(:is(#tabloubot,#t212,#dash).on) :is(.sideBtn,.mobileNavBtn){font-family:"IBM Plex Sans",system-ui,"Segoe UI",sans-serif}
-html:has(:is(#tabloubot,#t212,#dash).on.tbZi) .sideNav{background:#FFFFFF;border-right:1px solid #E0E5EC;color:#0E1A2B}
-html:has(:is(#tabloubot,#t212,#dash).on.tbZi) .sideTitle{color:#0E1A2B}
-html:has(:is(#tabloubot,#t212,#dash).on.tbZi) .sideSub,html:has(:is(#tabloubot,#t212,#dash).on.tbZi) .sideGrupCap{color:#66768B}
-html:has(:is(#tabloubot,#t212,#dash).on.tbZi) .sideLogo{background:#2456E6;border-color:#C3CCD8;color:#FFFFFF}
-html:has(:is(#tabloubot,#t212,#dash).on.tbZi) .sideBtn{color:#48586E}
-html:has(:is(#tabloubot,#t212,#dash).on.tbZi) .sideBtn:hover{background:#F5F7FA;border-color:transparent;color:#0E1A2B}
-html:has(:is(#tabloubot,#t212,#dash).on.tbZi) .sideBtn.active{background:rgba(36,86,230,.10);border-color:#E0E5EC;color:#0E1A2B}
-html:has(:is(#tabloubot,#t212,#dash).on.tbZi) .sideBtn:focus-visible{outline:2px solid #2456E6;outline-offset:1px}
-html:has(:is(#tabloubot,#t212,#dash).on.tbZi) .sideMenu{scrollbar-color:#C3CCD8 transparent}
+html:has(:is(#tabloubot,#t212,#dash,#rangefilter).on) .sideNav,html:has(:is(#tabloubot,#t212,#dash,#rangefilter).on) .mobileBottom,html:has(:is(#tabloubot,#t212,#dash,#rangefilter).on) :is(.sideBtn,.mobileNavBtn){font-family:"IBM Plex Sans",system-ui,"Segoe UI",sans-serif}
+html:has(:is(#tabloubot,#t212,#dash,#rangefilter).on.tbZi) .sideNav{background:#FFFFFF;border-right:1px solid #E0E5EC;color:#0E1A2B}
+html:has(:is(#tabloubot,#t212,#dash,#rangefilter).on.tbZi) .sideTitle{color:#0E1A2B}
+html:has(:is(#tabloubot,#t212,#dash,#rangefilter).on.tbZi) .sideSub,html:has(:is(#tabloubot,#t212,#dash,#rangefilter).on.tbZi) .sideGrupCap{color:#66768B}
+html:has(:is(#tabloubot,#t212,#dash,#rangefilter).on.tbZi) .sideLogo{background:#2456E6;border-color:#C3CCD8;color:#FFFFFF}
+html:has(:is(#tabloubot,#t212,#dash,#rangefilter).on.tbZi) .sideBtn{color:#48586E}
+html:has(:is(#tabloubot,#t212,#dash,#rangefilter).on.tbZi) .sideBtn:hover{background:#F5F7FA;border-color:transparent;color:#0E1A2B}
+html:has(:is(#tabloubot,#t212,#dash,#rangefilter).on.tbZi) .sideBtn.active{background:rgba(36,86,230,.10);border-color:#E0E5EC;color:#0E1A2B}
+html:has(:is(#tabloubot,#t212,#dash,#rangefilter).on.tbZi) .sideBtn:focus-visible{outline:2px solid #2456E6;outline-offset:1px}
+html:has(:is(#tabloubot,#t212,#dash,#rangefilter).on.tbZi) .sideMenu{scrollbar-color:#C3CCD8 transparent}
 /* rama (poza ecranului întreg, 1440: meniul alb, dar bara de sus, fâșia cu cifrele contului și fondul rămâneau închise; regulile lor de zi din stratul
    generat - „#tabloubot.tbZi .topStatus…” - nu prindeau nici ele): aceleași culori ca Tabloul de zi. Culorile de stare (--good / --bad / --warn) doar în bara
    de sus, nu pe toată pagina - altfel un text pe un fond închis scris fix ar ieși închis pe închis */
-html:has(:is(#tabloubot,#t212,#dash).on.tbZi){--pzF0:#F2F4F7;--pzF1:#FFFFFF;--pzF2:#F5F7FA;--pzF3:#E9EDF3;--pzLi:#E0E5EC;--pzLi2:#C3CCD8;--pzT0:#0E1A2B;--pzT1:#48586E;--pzT2:#66768B;--pzSus:#0B8A5F;--pzJos:#CC3A32;--pzAur:#8A5A00;--pzInfo:#2456E6}
-html:has(:is(#tabloubot,#t212,#dash).on.tbZi) body{background:#F2F4F7!important}
-html:has(:is(#tabloubot,#t212,#dash).on.tbZi) .topStatus{--text:#0E1A2B;--muted:#48586E;--good:#0B8A5F;--bad:#CC3A32;--warn:#8A5A00;background:#FFFFFF!important;border-bottom:1px solid #E0E5EC;color:#0E1A2B}
-html:has(:is(#tabloubot,#t212,#dash).on.tbZi) .statusChip{border:1px solid #E0E5EC;background:#F5F7FA;color:#48586E}
-html:has(:is(#tabloubot,#t212,#dash).on.tbZi) .topStatus button:hover{background:#E9EDF3;border-color:#C3CCD8}
+html:has(:is(#tabloubot,#t212,#dash,#rangefilter).on.tbZi){--pzF0:#F2F4F7;--pzF1:#FFFFFF;--pzF2:#F5F7FA;--pzF3:#E9EDF3;--pzLi:#E0E5EC;--pzLi2:#C3CCD8;--pzT0:#0E1A2B;--pzT1:#48586E;--pzT2:#66768B;--pzSus:#0B8A5F;--pzJos:#CC3A32;--pzAur:#8A5A00;--pzInfo:#2456E6}
+html:has(:is(#tabloubot,#t212,#dash,#rangefilter).on.tbZi) body{background:#F2F4F7!important}
+html:has(:is(#tabloubot,#t212,#dash,#rangefilter).on.tbZi) .topStatus{--text:#0E1A2B;--muted:#48586E;--good:#0B8A5F;--bad:#CC3A32;--warn:#8A5A00;background:#FFFFFF!important;border-bottom:1px solid #E0E5EC;color:#0E1A2B}
+html:has(:is(#tabloubot,#t212,#dash,#rangefilter).on.tbZi) .statusChip{border:1px solid #E0E5EC;background:#F5F7FA;color:#48586E}
+html:has(:is(#tabloubot,#t212,#dash,#rangefilter).on.tbZi) .topStatus button:hover{background:#E9EDF3;border-color:#C3CCD8}
 @media (max-width:760px){
-html:has(:is(#tabloubot,#t212,#dash).on.tbZi) .botStrip::after{background:linear-gradient(#F5F7FA,#F5F7FA)}
+html:has(:is(#tabloubot,#t212,#dash,#rangefilter).on.tbZi) .botStrip::after{background:linear-gradient(#F5F7FA,#F5F7FA)}
 }
 @media (max-width:980px){
-html:has(:is(#tabloubot,#t212,#dash).on.tbZi) .mobileBottom{background:#FFFFFF;border:1px solid #E0E5EC}
-html:has(:is(#tabloubot,#t212,#dash).on.tbZi) .mobileNavBtn{color:#48586E}
-html:has(:is(#tabloubot,#t212,#dash).on.tbZi) .mobileNavBtn.active{background:#E9EDF3;color:#0E1A2B}
+html:has(:is(#tabloubot,#t212,#dash,#rangefilter).on.tbZi) .mobileBottom{background:#FFFFFF;border:1px solid #E0E5EC}
+html:has(:is(#tabloubot,#t212,#dash,#rangefilter).on.tbZi) .mobileNavBtn{color:#48586E}
+html:has(:is(#tabloubot,#t212,#dash,#rangefilter).on.tbZi) .mobileNavBtn.active{background:#E9EDF3;color:#0E1A2B}
 }
 /* v100.325: sfârșitul meniului ca pagina botului */
 /* v100.326 · Trading 212 în aceleași condiții ca Tabloul (el, 11.11.2026: „pagina Trading 212 … în aceleași condiții ca și pagina botului”): litera
@@ -5036,10 +5107,17 @@ html.pzDemo #t212 .t212Plan input.calc{border-color:var(--pzInfo)}
 #t212 .t212IndDet>:is(.tbIndWrap,.tbIndPred,.tbIndNota){max-width:760px}
 /* v100.328: sfârșitul detaliilor indicatorilor în T212 */
 /* v100.329 · Piața azi în aceleași condiții ca Tabloul (el, 12.11.2026: „hai să facem și pagina azi cum am făcut cu restul”): litera Tabloului
-   (IBM Plex Sans, cifrele pe coloane); culorile de zi și scara de litere din stratul generat (face-tema-tablou.mjs, rădăcina :is(#tabloubot,#t212,#dash));
+   (IBM Plex Sans, cifrele pe coloane); culorile de zi și scara de litere din stratul generat (face-tema-tablou.mjs, rădăcina :is(#tabloubot,#t212,#dash,#rangefilter));
    un singur comutator de temă (tbTemaAplica; butonul acTemaBtn în antet); rama de mai sus (meniul, bara de sus, fondul) și pe Piața azi. */
 html.pzDemo #dash{--pzMono:"IBM Plex Sans",system-ui,"Segoe UI",sans-serif;font-family:"IBM Plex Sans",system-ui,"Segoe UI",sans-serif;font-variant-numeric:tabular-nums;color:var(--pzT0)}
 html.pzDemo #dash *{font-family:inherit!important}
+/* v100.338 · Range Filter ca Tabloul (el, 13.11.2026: „și pagina Range Filter la fel ca ultimele pagini”): aceeași literă, culorile de zi și scara din
+   stratul generat (rădăcina #rangefilter), același comutator (butonul rfTemaBtn în antetul paginii), rama de mai sus și aici. */
+html.pzDemo #rangefilter{--pzMono:"IBM Plex Sans",system-ui,"Segoe UI",sans-serif;font-family:"IBM Plex Sans",system-ui,"Segoe UI",sans-serif;font-variant-numeric:tabular-nums;color:var(--pzT0)}
+html.pzDemo #rangefilter *{font-family:inherit!important}
+/* banda din capul cartelei / fișei: pe zi fondul devine gri deschis (stratul), textul rămânea alb ⇒ cerneala paginii */
+#rangefilter.tbZi .rfHero{color:#0E1A2B}
+#rangefilter.tbZi .rfHero .rfColorant{color:#2B3A4B}
 /* desenele au culorile scrise în atribute (acul și capetele cadranelor, liniile mici): pe zi CSS-ul le bate - atributul are cea mai mică putere */
 #dash.tbZi .acCadran line{stroke:#0E1A2B}
 #dash.tbZi .acCadran circle{fill:#0E1A2B}

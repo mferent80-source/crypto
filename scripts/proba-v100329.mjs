@@ -199,13 +199,13 @@ await test("cardurile simetrice: „ce aș face” pe AMESTECAT galben ca LATERA
 // ---------------------------------------------------------------- partea B: Piața azi ca Tabloul ----------------------------------------------------------------
 await test("tema Tabloului și pe Piața azi: rădăcina #dash în generator, stratul la zi, comutatorul pune tbZi pe #dash, butonul „Temă închisă” în antetul paginii", async () => {
   const GEN = citeste("scripts", "face-tema-tablou.mjs"), CSS = citeste("public", "app.css"), APP = citeste("public", "app.js"), HTML = citeste("public", "index.html");
-  assert.match(GEN, /export const RADACINI = \["tabloubot", "t212", "dash"\];/);
-  assert.ok(CSS.includes(":is(#tabloubot,#t212,#dash).tbZi{"), "variabilele de zi pe toate trei rădăcinile");
+  assert.match(GEN, /export const RADACINI = \["tabloubot", "t212", "dash", "rangefilter"\];/);
+  assert.ok(CSS.includes(":is(#tabloubot,#t212,#dash,#rangefilter).tbZi{"), "variabilele de zi pe toate trei rădăcinile");
   const { spawnSync } = await import("node:child_process");
   const r = spawnSync(process.execPath, [path.join(RAD, "scripts", "face-tema-tablou.mjs"), "--check"], { encoding: "utf8" });
   assert.equal(r.status, 0, "stratul generat e la zi: " + (r.stdout || r.stderr));
   const ap = APP.slice(APP.indexOf("function tbTemaAplica("), APP.indexOf("function tbTemaComuta("));
-  assert.match(ap, /\["tabloubot","t212","dash"\]/); assert.match(ap, /"acTemaBtn"/);
+  assert.match(ap, /\["tabloubot","t212","dash","rangefilter"\]/); assert.match(ap, /"acTemaBtn"/);
   assert.match(APP.slice(APP.indexOf("function tbTemaComuta("), APP.indexOf("function tbTemaComuta(") + 600), /acasaDeseneaza\(\)/, "comutarea redesenează Piața azi");
   const antet = HTML.slice(HTML.indexOf('<div class="acAntet">'), HTML.indexOf('<div class="acVerdicte">'));
   assert.match(antet, /<button class="acBtn" type="button" id="acTemaBtn" aria-pressed="false" data-action-click="tbTemaComuta\(\)">Temă închisă<\/button>/);
@@ -214,8 +214,8 @@ await test("tema Tabloului și pe Piața azi: rădăcina #dash în generator, st
 await test("generatorul cu trei rădăcini: regulile scrise pe DOUĂ (:is(#tabloubot,#t212) .x, v100.326–328) primesc tema după paranteză, nu pe Tablou singur (altfel T212 lua culorile de zi și noaptea)", async () => {
   const { selectorSub } = await import("file:///" + path.join(RAD, "scripts", "face-tema-tablou.mjs").replace(/\\/g, "/"));
   assert.equal(selectorSub(":is(#tabloubot,#t212) .tbIndTab th", "#tabloubot.tbZi", ["scan"]), ":is(#tabloubot,#t212).tbZi .tbIndTab th");
-  assert.equal(selectorSub(":is(#tabloubot,#t212,#dash) .x", "#tabloubot.tbZi", ["scan"]), ":is(#tabloubot,#t212,#dash).tbZi .x");
-  assert.equal(selectorSub("html:has(:is(#tabloubot,#t212,#dash).on) .x", "#tabloubot.tbZi", ["scan"]), "html:has(:is(#tabloubot,#t212,#dash).tbZi.on) .x");
+  assert.equal(selectorSub(":is(#tabloubot,#t212,#dash,#rangefilter) .x", "#tabloubot.tbZi", ["scan"]), ":is(#tabloubot,#t212,#dash,#rangefilter).tbZi .x");
+  assert.equal(selectorSub("html:has(:is(#tabloubot,#t212,#dash,#rangefilter).on) .x", "#tabloubot.tbZi", ["scan"]), "html:has(:is(#tabloubot,#t212,#dash,#rangefilter).tbZi.on) .x");
   assert.equal(selectorSub(":is(#tabloubot,#t212) .ibTf", "#tabloubot", ["scan"]), ":is(#tabloubot,#t212) .ibTf", "scara (fără sufix) neschimbată");
   const CSS = citeste("public", "app.css");
   assert.ok(!CSS.includes(":is(#tabloubot.tbZi,"), "nicio regulă de zi doar pe Tablou într-un :is cu T212");
@@ -225,8 +225,8 @@ await test("generatorul cu trei rădăcini: regulile scrise pe DOUĂ (:is(#tablo
 await test("rama și litera: meniul, bara de sus și fondul ca pe Tablou și cât e deschisă Piața azi; IBM Plex cu culoarea pe rădăcină; nicio regulă a ramei rămasă doar pe Tablou / T212", () => {
   const CSS = citeste("public", "app.css"), coada = CSS.slice(CSS.indexOf("/* ==== v100.316 TEMA TABLOULUI: sfârșit ==== */"));
   assert.equal(coada.split("html:has(:is(#tabloubot,#t212).on").length - 1, 0, "regulile ramei fără #dash");
-  assert.ok(coada.split("html:has(:is(#tabloubot,#t212,#dash).on").length - 1 >= 20, "rama pe toate trei");
-  assert.ok(coada.includes("html:has(:is(#tabloubot,#t212,#dash).on.tbZi) .sideNav{background:#FFFFFF"));
+  assert.ok(coada.split("html:has(:is(#tabloubot,#t212,#dash,#rangefilter).on").length - 1 >= 20, "rama pe toate trei");
+  assert.ok(coada.includes("html:has(:is(#tabloubot,#t212,#dash,#rangefilter).on.tbZi) .sideNav{background:#FFFFFF"));
   assert.match(coada, /html\.pzDemo #dash\{[^}]*font-family:"IBM Plex Sans"[^}]*color:var\(--pzT0\)\}/);
   assert.ok(coada.includes("html.pzDemo #dash *{font-family:inherit!important}"));
 });
@@ -303,14 +303,14 @@ await test("revizia: tema pusă devreme (fără clipire închis → alb la porni
   const HTML = citeste("public", "index.html"), SW = citeste("public", "sw.js"), TD = LIB("tema-devreme.js");
   assert.ok(HTML.indexOf('<script src="/lib/tema-devreme.js"></script>') >= 0 && HTML.indexOf('<script src="/lib/tema-devreme.js"></script>') < HTML.indexOf('<script src="/lib/text-ro.js"></script>'), "primul script din pagină");
   assert.ok(SW.includes('"/lib/tema-devreme.js"'), "și în cache-ul offline");
-  assert.match(TD, /localStorage\.getItem\("tbTema"\) !== "noapte"/); assert.match(TD, /\["tabloubot", "t212", "dash"\]/);
+  assert.match(TD, /localStorage\.getItem\("tbTema"\) !== "noapte"/); assert.match(TD, /\["tabloubot", "t212", "dash", "rangefilter"\]/);
   const CSS = citeste("public", "app.css"), dupa = CSS.slice(CSS.indexOf("/* ==== v100.316 TEMA TABLOULUI: sfârșit ==== */"));
   assert.ok(dupa.includes("#dash.tbZi .acLink{background:none;border:0}") && dupa.includes("#dash.tbZi .acSym{background:transparent}"));
   assert.ok(dupa.includes('#dash .acPiataBtn[aria-pressed="true"]{border-color:var(--accent);color:var(--text)}'), "starea apăsată bate #dash .acBtn");
   const { selectorSub } = await import("file:///" + path.join(RAD, "scripts", "face-tema-tablou.mjs").replace(/\\/g, "/"));
   assert.equal(selectorSub(":is(#tabloubot, #t212) .x", "#tabloubot.tbZi", ["scan"]), ":is(#tabloubot, #t212).tbZi .x");
   assert.equal(selectorSub(":where(#tabloubot,#t212) .x", "#tabloubot.tbZi", ["scan"]), ":where(#tabloubot,#t212).tbZi .x");
-  assert.equal(selectorSub(".acBtn:not(#dash .z)", "#tabloubot.tbZi", ["scan"]), ":is(#tabloubot,#t212,#dash).tbZi .acBtn:not(#dash .z)", ":not(#dash) nu e rădăcina");
+  assert.equal(selectorSub(".acBtn:not(#dash .z)", "#tabloubot.tbZi", ["scan"]), ":is(#tabloubot,#t212,#dash,#rangefilter).tbZi .acBtn:not(#dash .z)", ":not(#dash) nu e rădăcina");
 });
 
 console.log(`\n${teste - picate}/${teste} trec${picate ? " · " + picate + " PICĂ" : ""}\n`);

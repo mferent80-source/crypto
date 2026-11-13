@@ -4,7 +4,7 @@
 // Scriptul o CITEȘTE și produce, din ea, un strat nou care stă la coada fișierului, între două marcaje:
 //   - „scara”:   aceleași reguli, doar font-size, strâns pe 5 trepte (12 / 13,5 / 15 / 20 / 30), sub #tabloubot;
 //   - „tema zi”: aceleași reguli, doar declarațiile cu culoare, trecute prin PALETA, sub #tabloubot.tbZi.
-// Regulile altor pagini se sar (rădăcinile: RADACINI mai jos - Tabloul, T212 din v100.326, Piața azi din v100.329). Parserul e pe acolade (comentarii, șiruri, @media / @container imbricate), nu pe regex.
+// Regulile altor pagini se sar (rădăcinile: RADACINI mai jos - Tabloul, T212 din v100.326, Piața azi din v100.329, Range Filter din v100.338). Parserul e pe acolade (comentarii, șiruri, @media / @container imbricate), nu pe regex.
 //
 //   node scripts/face-tema-tablou.mjs            rescrie blocul din public/app.css
 //   node scripts/face-tema-tablou.mjs --check    iese 1 dacă blocul din fișier nu e cel produs acum
@@ -78,7 +78,7 @@ export function textCitibil(D) {   // D = [{p, v}] deja trecute prin paletă; î
 // v100.326 (el, 11.11.2026: „pagina Trading 212 … în aceleași condiții ca și pagina botului”): două rădăcini. Regulile comune intră sub
 // :is(#tabloubot,#t212) (aceeași putere ca #tabloubot), ale fiecărei pagini sub ea; restul paginilor se sar.
 // v100.329 (el, 12.11.2026: „să facem și pagina azi cum am făcut cu restul”): a treia rădăcină, Piața azi (#dash) - aceeași paletă de zi și scară de litere.
-export const RADACINI = ["tabloubot", "t212", "dash"];
+export const RADACINI = ["tabloubot", "t212", "dash", "rangefilter"];
 const COMUN = ":is(" + RADACINI.map((r) => "#" + r).join(",") + ")";
 // v100.329: oricâte rădăcini, fără alte selectoare în paranteză; și :where, și cu spații după virgulă (revizia Opus)
 const GRUP_RAD = new RegExp(":(?:is|where)\\(\\s*#(?:" + RADACINI.join("|") + ")(?:\\s*,\\s*#(?:" + RADACINI.join("|") + "))+\\s*\\)", "g");

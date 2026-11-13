@@ -36,7 +36,7 @@ await test("paleta: fundalul închis devine alb, textul deschis devine cerneală
 });
 // v100.326 (el: „pagina Trading 212 … în aceleași condiții ca și pagina botului”): două rădăcini - comunele sub :is(#tabloubot,#t212), T212 sub #t212
 await test("selectorii: totul intră sub rădăcina Tabloului (și a paginii T212, v100.326); regulile altor pagini și ale rădăcinii se sar", () => {
-  const S = ["scan"], C = ":is(#tabloubot,#t212,#dash).tbZi";   // v100.329: Piața azi e rădăcină, Scan e pagina străină
+  const S = ["scan"], C = ":is(#tabloubot,#t212,#dash,#rangefilter).tbZi";   // v100.329: Piața azi e rădăcină, Scan e pagina străină
   assert.equal(selectorSub(".tbBloc", "#tabloubot.tbZi", S), C + " .tbBloc");
   assert.equal(selectorSub("#tabloubot .gbTip", "#tabloubot.tbZi", S), "#tabloubot.tbZi .gbTip");
   assert.equal(selectorSub(".pzDemo #tabloubot .tbCadru>#tbMcSus", "#tabloubot.tbZi", S), ".pzDemo #tabloubot.tbZi .tbCadru>#tbMcSus");
@@ -49,12 +49,12 @@ await test("generatorul: variabilele rădăcinii, scara de litere pe 5 trepte, @
   const g = genereaza(":root{--pzF1:#141C24;--x:4px} .a{color:#E6EDF3;margin:0;font-size:11px} @media (max-width:640px){.a{font-size:17px;background:#141C24}} #scan .b{color:#E6EDF3} .c{font-size:13.5px;color:red}", '<section class="panel" id="scan"></section><section class="panel" id="tabloubot"></section>');
   assert.ok(g.startsWith(INCEPUT) && g.endsWith(SFARSIT));
   // v100.326: rădăcina comună :is(#tabloubot,#t212)
-  assert.ok(g.includes(":is(#tabloubot,#t212,#dash).tbZi{--pzF1:#FFFFFF}")); assert.ok(g.includes(":is(#tabloubot,#t212,#dash).tbZi .a{color:#0E1A2B}")); assert.ok(g.includes(":is(#tabloubot,#t212,#dash) .a{font-size:12px}"));
-  assert.ok(g.includes("@media (max-width:640px){:is(#tabloubot,#t212,#dash) .a{font-size:20px}}")); assert.ok(g.includes("@media (max-width:640px){:is(#tabloubot,#t212,#dash).tbZi .a{background:#FFFFFF}}"));
+  assert.ok(g.includes(":is(#tabloubot,#t212,#dash,#rangefilter).tbZi{--pzF1:#FFFFFF}")); assert.ok(g.includes(":is(#tabloubot,#t212,#dash,#rangefilter).tbZi .a{color:#0E1A2B}")); assert.ok(g.includes(":is(#tabloubot,#t212,#dash,#rangefilter) .a{font-size:12px}"));
+  assert.ok(g.includes("@media (max-width:640px){:is(#tabloubot,#t212,#dash,#rangefilter) .a{font-size:20px}}")); assert.ok(g.includes("@media (max-width:640px){:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .a{background:#FFFFFF}}"));
   assert.ok(!g.includes(".b{") && !g.includes(".c{") && !g.includes("margin"), "nimic din pagina Scan, nimic neschimbat");
   const o = genereaza(".offlineBanner{background:#E9B949;color:#0E141A} .x{background:#141C24;color:#E6EDF3}", "");
-  assert.ok(o.includes(":is(#tabloubot,#t212,#dash).tbZi .offlineBanner{background:#E0A526;color:#0E1A2B}"), "pe fond galben textul rămâne închis: " + o);
-  assert.ok(o.includes(":is(#tabloubot,#t212,#dash).tbZi .x{background:#FFFFFF;color:#0E1A2B}"));
+  assert.ok(o.includes(":is(#tabloubot,#t212,#dash,#rangefilter).tbZi .offlineBanner{background:#E0A526;color:#0E1A2B}"), "pe fond galben textul rămâne închis: " + o);
+  assert.ok(o.includes(":is(#tabloubot,#t212,#dash,#rangefilter).tbZi .x{background:#FFFFFF;color:#0E1A2B}"));
 });
 await test("blocul generat din public/app.css e cel produs acum din restul foii (altfel: node scripts/face-tema-tablou.mjs)", () => {
   assert.equal(CSS.split(INCEPUT).length, 2); assert.equal(CSS.split(SFARSIT).length, 2);

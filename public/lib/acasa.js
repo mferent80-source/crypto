@@ -545,7 +545,11 @@ var Acasa = (function () {
     fisa: { et: "fișa monedei", prag: 3 * 3600000, f: true },
     t212: { et: "pozițiile T212", prag: 15 * 60000, critic: true, f: true, pl: true },
     bare: { et: "prețurile zilnice", prag: 100 * 3600000, zi: true, pl: true },
-    curs: { et: "cursul BNR", prag: 150 * 3600000, zi: "curs" }   /* revizia: după vineri + luni libere (Paște) cursul are ~5 zile */
+    curs: { et: "cursul BNR", prag: 150 * 3600000, zi: "curs" },   /* revizia: după vineri + luni libere (Paște) cursul are ~5 zile */
+    /* v100.338: pagina Range Filter - ora la care s-a ÎNCHIS ultima lumânare citită (vechi după 3 / 10 ore: o bară sărită + marja), boții citiți */
+    lum60M: { et: "lumânările de 1h", prag: 3 * 3600000, pl: true },
+    lum4H: { et: "lumânările de 4h", prag: 10 * 3600000, pl: true },
+    boti: { et: "boții (Pionex)", prag: 15 * 60000, pl: true }
   };
   function ziBuc(t) { try { return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Bucharest", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(t)); } catch (e) { return new Date(t).toISOString().slice(0, 10); } }
   function varstaSursa(la, acum, zi) {

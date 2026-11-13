@@ -71,14 +71,14 @@ await test("2. cache pe interval: 1h → 4h → 1h nu reface cererile pe 1h (sub
 
 await test("3. ordinea cartelelor + filtrele: boții primii, apoi semnalele noi (cele mai noi primele), apoi restul; „Semnale noi” / „Boții tăi”", () => {
   const c = context(async () => ({}), {});
-  const cit = c.RangeFilter.citire(D.bare), vechi = Object.assign({}, cit, { semnal: { fel: "SELL", acum: 40, pret: 1 } }), nou = Object.assign({}, cit, { semnal: { fel: "BUY", acum: 1, pret: 1 } }), nou3 = Object.assign({}, cit, { semnal: { fel: "SELL", acum: 3, pret: 1 } });
+  const cit = c.RangeFilter.citire(D.bare), vechi = Object.assign({}, cit, { semnal: { fel: "SELL", acum: 40, pret: 1 } }), nou = Object.assign({}, cit, { semnal: { fel: "BUY", acum: 1, pret: 1 } }), nou3 = Object.assign({}, cit, { semnal: { fel: "SELL", acum: 2, pret: 1 } });
   const monede = [{ simbol: "AAA", fel: "top", c: vechi }, { simbol: "BBB", fel: "top", c: nou3 }, { simbol: "CCC", fel: "top", c: nou }, { simbol: "DOGE", fel: "bot", c: vechi, directie: "LONG" }];
   const ord = c.rfOrdoneaza(monede).map((m) => m.simbol);
   assert.deepEqual(ord, ["DOGE", "CCC", "BBB", "AAA"]);
   assert.deepEqual(c.rfFiltreaza(monede, "semnale").map((m) => m.simbol), ["BBB", "CCC"]);
   assert.deepEqual(c.rfFiltreaza(monede, "boti").map((m) => m.simbol), ["DOGE"]);
   const h = c.rfHtml({ monede, la: Date.now(), inLucru: false, eroare: null, simboluri: monede, tf: "60M", filtru: "semnale", adanc: false, perTf: {} });
-  assert.ok(h.indexOf('aria-label="CCC"') < h.indexOf('aria-label="BBB"') && h.indexOf('aria-label="AAA"') < 0 && h.indexOf('aria-label="DOGE"') < 0, "filtrul Semnale noi arată doar BBB și CCC, în ordinea noutății");
+  /* v100.338: monedele ca listă - rândul poartă data-simbol */ assert.ok(h.indexOf('data-simbol="CCC"') >= 0 && h.indexOf('data-simbol="CCC"') < h.indexOf('data-simbol="BBB"') && h.indexOf('data-simbol="AAA"') < 0 && h.indexOf('data-simbol="DOGE"') < 0, "filtrul Semnale noi arată doar BBB și CCC, în ordinea noutății");
   assert.match(h, /semnal nou/); assert.match(h, /rfFiltru\('boti'\)/); assert.match(h, /rfAdanc\(\)/);
   const h2 = c.rfHtml({ monede: [monede[0]], la: Date.now(), inLucru: false, eroare: null, simboluri: [1], tf: "60M", filtru: "boti", adanc: false, perTf: {} });
   assert.match(h2, /Niciun bot activ/);

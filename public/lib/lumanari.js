@@ -15,7 +15,9 @@ var Lumanari = (function () {
   function ia(pionex, tf) { var e = cache[pionex + "|" + tf]; return e && Date.now() < e.urm ? e : null; }
   function pune(pionex, tf, r1, r2) {
     var u = urm(r1, tf);
-    if (u > 0) cache[pionex + "|" + tf] = { r1: r1, r2: r2 || null, urm: u };
+    // v100.338 (auditul): Tabloul pune doar prima pagină ⇒ pagina a doua a Range Filter (aceeași bară) nu se mai șterge
+    var v = cache[pionex + "|" + tf];
+    if (u > 0) cache[pionex + "|" + tf] = { r1: r1, r2: r2 || (v && v.urm === u ? v.r2 : null), urm: u };
     return u > 0;
   }
   // prima pagină: din cache sau de la Pionex; refuzul vine 200 {result:false, retryAfter} ⇒ { refuz: true }
