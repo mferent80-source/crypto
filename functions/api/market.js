@@ -29,6 +29,41 @@ async function pionexRateGate(weight,fn,env,semnal=null){
 
 // v100.332 (auditul 12.11, 🟡5): cât se țin lumânările Pionex pe server, în secunde. Înainte 5M și 30M cădeau pe „restul” (300 s), deși 15M se ține
 // 45 s: pe graficul botului (implicit pe 5 min) lumânarea închisă putea lipsi 5 minute. Acum 5M ca 1M / 15M, 30M ca 60M.
+// v100.337 (el, 13.11: „fa idei” - măsurat pe viu: Tabloul = 26 de cereri la Pionex, cifrele la 15 s, ultima la 35 s; poarta de mai sus le trece
+// una câte una, ≥ 1,1 s, împărțită cu colectorul). Aceleași lumânări veneau cu alt „limit” (5M: 100 / 288 / 500; 60M: 168 / 500; 1D: 2 / 200 / 400),
+// iar cache-ul le ținea separat. Acum, fără endTime, Pionex e întrebat o singură dată pe monedă + interval, la 500 (aceeași greutate), iar
+// fiecare primește ultimele N; cu endTime (paginarea în urmă) - neschimbat. Probat în scripts/proba-v100337-idei.mjs.
+const KL_INTERVALE=new Set(["1M","5M","15M","30M","60M","4H","8H","12H","1D"]);
+export function klineCerere(u){
+  const ps=(u.searchParams.get("symbol")||"BTC_USDT").toUpperCase().replace(/[^A-Z0-9_]/g,"");
+  const pi=(u.searchParams.get("interval")||"4H").toUpperCase(),interval=KL_INTERVALE.has(pi)?pi:"4H",limit=limita(u,300,1,500);
+  // v78: endTime (ms) pentru paginarea in urma a lumanarilor; trimis doar cand e numar pozitiv.
+  const etRaw=u.searchParams.get("endTime"),et=Math.floor(Number(etRaw)),endQ=etRaw&&Number.isFinite(et)&&et>0?`&endTime=${et}`:"";
+  return {interval,limit,url:`${PIONEX}/api/v1/market/klines?symbol=${encodeURIComponent(ps)}&interval=${encodeURIComponent(interval)}&limit=${endQ?limit:500}${endQ}`};
+}
+// ultimele N lumânări (după „time”), în ordinea în care le-a dat Pionex; obiectul din cache rămâne neatins; refuzul trece neschimbat
+export function taieLumanari(data,limit){
+  const k=data&&data.data&&Array.isArray(data.data.klines)?data.data.klines:null;if(!k||!(limit>0)||k.length<=limit)return data;
+  const desc=k.length>1&&Number(k[0]&&k[0].time)>Number(k[k.length-1]&&k[k.length-1].time);
+  return {...data,data:{...data.data,klines:desc?k.slice(0,limit):k.slice(k.length-limit)}};
+}
+// cererile identice venite deodată așteaptă aceeași cerere; cea abandonată (pagina închisă) sau refuzată de proba de ecran nu le trage după ea.
+// Revizia (🔴): Cloudflare poate lăsa o cerere abandonată fără răspuns pentru totdeauna (poarta.js, 26.09) ⇒ cine așteaptă are termen (20 s, peste
+// cele 12 ale porții); la depășire intrarea iese din hartă și cererea pleacă singură. După un abandon, cele care așteptau se uită iar în hartă:
+// prima reia, celelalte o așteaptă pe ea (nu câte una fiecare).
+const inZbor=new Map(),ZBOR_MAX_MS=20000;
+export async function impartit(cheie,fn,maxMs=ZBOR_MAX_MS){
+  for(let i=0;i<4;i++){
+    const z=inZbor.get(cheie);if(!z)break;
+    const ramas=maxMs-(Date.now()-z.la);if(ramas<=0){if(inZbor.get(cheie)===z)inZbor.delete(cheie);break}
+    let t;const r=await Promise.race([z.p.then((v)=>({v}),(e)=>({e})),new Promise((ok)=>{t=setTimeout(()=>ok(null),ramas)})]).finally(()=>clearTimeout(t));
+    if(!r){if(inZbor.get(cheie)===z)inZbor.delete(cheie);break}
+    if("v" in r)return r.v;
+    if(!(r.e&&(r.e.abandonata||r.e.proba)))throw r.e;
+  }
+  const z={la:Date.now(),p:Promise.resolve().then(fn)};inZbor.set(cheie,z);
+  try{return await z.p}finally{if(inZbor.get(cheie)===z)inZbor.delete(cheie)}
+}
 export function ttlLumanari(interval){return interval==="1M"||interval==="5M"||interval==="15M"?45:interval==="30M"||interval==="60M"?90:interval==="4H"?180:300}
 const H={"content-type":"application/json;charset=UTF-8","cache-control":"no-store"};
 const ok=x=>new Response(JSON.stringify(x),{headers:H});
@@ -119,14 +154,8 @@ export async function onRequestGet({request,env}){
     try{return ok(await pionexCached(`${PIONEX}/api/v1/market/tickers?type=${mk}`,30,env,opt))}catch(e){return esec("Pionex tickers unavailable",e)}
   }
   if(type==="pionex_klines"){
-    const ps=(u.searchParams.get("symbol")||"BTC_USDT").toUpperCase().replace(/[^A-Z0-9_]/g,"");
-    const pi=(u.searchParams.get("interval")||"4H").toUpperCase();
-    const allowed=new Set(["1M","5M","15M","30M","60M","4H","8H","12H","1D"]);
-    const interval=allowed.has(pi)?pi:"4H",limit=limita(u,300,1,500);
-    // v78: endTime (ms) pentru paginarea in urma a lumanarilor; trimis doar cand e numar pozitiv.
-    const etRaw=u.searchParams.get("endTime"),et=Math.floor(Number(etRaw));
-    const endQ=etRaw&&Number.isFinite(et)&&et>0?`&endTime=${et}`:"";
-    try{return ok(await pionexCached(`${PIONEX}/api/v1/market/klines?symbol=${encodeURIComponent(ps)}&interval=${encodeURIComponent(interval)}&limit=${limit}${endQ}`,ttlLumanari(interval),env,opt))}catch(e){return esec("Pionex klines unavailable",e)}
+    const kc=klineCerere(u);   // v100.337: o cerere pe monedă + interval, tăiată la cât cere pagina
+    try{return ok(taieLumanari(await impartit(kc.url,()=>pionexCached(kc.url,ttlLumanari(kc.interval),env,opt)),kc.limit))}catch(e){return esec("Pionex klines unavailable",e)}
   }
   if(type==="pionex_funding"){
     // v91.9: ratele de funding (ultimele 100, la 4 h la Pionex = ~16 zile) pentru "Mediul botului" din Tablou

@@ -4,6 +4,12 @@
 // Abaterile: pagina nu s-a deschis, excepții, derulare laterală, text stricat („undefined”, „NaN”, „[object Object]”), o stare de așteptare rămasă
 // (rândul ÎNCEPE cu „Aștept / Socotesc / Se aduc / Se încarcă / Calculez / Citesc”). Pe Discord pleacă doar ce se repetă la a doua deschidere.
 export const PAGINI = { dash: "Piața azi", tabloubot: "Tabloul botului", t212: "Trading 212" };
+// v100.337 (el, 13.11: „fa idei”): la toate lățimile lui - telefonul (412), tableta (768), monitorul (1920) și cel mare (2560); 12 deschideri
+// de ~55 s. Revizia: TERMEN_MIN = după el nu mai începe nicio pagină nouă; REDESCHIDE_MIN = după el nicio redeschidere (abaterea rămâne
+// „neconfirmată”, doar în jurnal). Cel mai rău caz: pagină la 20 min + 2 + 1 + 2 = 25, sub limita sarcinii (30) - altfel sarcina oprea
+// procesul și se pierdeau TOATE abaterile rondului (pleacă pe Discord doar la final).
+export const LATIMI_IMPLICIT = [412, 768, 1920, 2560];
+export const TERMEN_MIN = 20, REDESCHIDE_MIN = 23;
 const STRICAT = /(^|[^A-Za-z])(undefined|NaN|\[object Object\])([^A-Za-z]|$)/;
 const ASTEPT = /^(⏳\s*)?(aștept|socotesc|se aduc|se încarcă|calculez|citesc)(?![a-zăâîșț])/i;
 // așteptări firești la o oră anume (înainte de tura de la 8:00 a listelor) - nu sunt abateri

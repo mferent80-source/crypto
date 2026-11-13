@@ -1,23 +1,23 @@
-// I-865 (v100.336): paza paginilor Radarului pe VPS - Piața azi, Tabloul botului, Trading 212, la 1920 și 412 px, una câte una.
+// I-865 (v100.336): paza paginilor Radarului pe VPS - Piața azi, Tabloul botului, Trading 212, la 412, 768, 1920 și 2560 px (v100.337), una câte una.
 // Rulează din sarcina programată „Crypto Radar paza pagini” (dimineața la 07:50 și la cerere după fiecare livrare: schtasks /Run).
 // Deschide pagina în Chrome fără fereastră (prioritate joasă: pe același VPS e gestiunea), așteaptă să se liniștească, judecă (scripts/lib/paza-pagini.mjs).
 // O pagină cu abateri se redeschide după un minut; pe Discord pleacă doar ce s-a găsit de ambele dăți. Jurnalul: data/paza-pagini.log.
 // Parola aplicației (APP_API_TOKEN) se citește din .dev.vars și merge doar la serverul local (127.0.0.1 / localhost). Nu scrie date în Radar.
 // Revizia v100.336: fiecare cerere către browser are limită (15 s); aplicația care nu pornește se spune pe loc (fără cele 45 s de liniștire); browserul se
-// oprește cu tot arborele lui (taskkill /T); portul de depanare îl alege Chrome (fără ciocniri); tot rondul are un termen (15 min) - la depășire, mesajul pleacă.
-//   node scripts/vps/paza-pagini.mjs [--url=http://127.0.0.1:8788/] [--latimi=1920,412] [--pagini=dash,tabloubot,t212] [--motiv=dimineata] [--fara-discord]
+// oprește cu tot arborele lui (taskkill /T); portul de depanare îl alege Chrome (fără ciocniri); tot rondul are un termen (pagină nouă până la 20 min, redeschidere până la 23) - la depășire, mesajul pleacă.
+//   node scripts/vps/paza-pagini.mjs [--url=http://127.0.0.1:8788/] [--latimi=412,768,1920,2560] [--pagini=dash,tabloubot,t212] [--motiv=dimineata] [--fara-discord]
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync, readFileSync, appendFileSync, mkdirSync, rmSync, mkdtempSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { judeca, repetate, mesaj, CITIRE } from "../lib/paza-pagini.mjs";
+import { judeca, repetate, mesaj, CITIRE, LATIMI_IMPLICIT, TERMEN_MIN, REDESCHIDE_MIN } from "../lib/paza-pagini.mjs";
 import { mesajDiscord, esteWebhookDiscord } from "../lib/canal-discord.mjs";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const arg = (n, d) => { const a = process.argv.find((x) => x.startsWith("--" + n + "=")); return a ? a.slice(n.length + 3) : d; };
-const URL_R = arg("url", "http://127.0.0.1:8788/"), LATIMI = arg("latimi", "1920,412").split(",").map(Number), PAGINI = arg("pagini", "dash,tabloubot,t212").split(",");
-const MOTIV = arg("motiv", "verificare"), FARA_DISCORD = process.argv.includes("--fara-discord"), LINISTE_S = Number(arg("liniste", 45)), TERMEN_MS = Number(arg("termen", 15)) * 60000;
+const URL_R = arg("url", "http://127.0.0.1:8788/"), LATIMI = arg("latimi", LATIMI_IMPLICIT.join(",")).split(",").map(Number), PAGINI = arg("pagini", "dash,tabloubot,t212").split(",");
+const MOTIV = arg("motiv", "verificare"), FARA_DISCORD = process.argv.includes("--fara-discord"), LINISTE_S = Number(arg("liniste", 45)), TERMEN_MS = Number(arg("termen", TERMEN_MIN)) * 60000, REDESCHIDE_MS = TERMEN_MS + (REDESCHIDE_MIN - TERMEN_MIN) * 60000;   // v100.337: 4 lățimi; pagină nouă până la 20 min, redeschidere până la 23
 const VARS = {}; try { for (const l of readFileSync(path.join(RAD, ".dev.vars"), "utf8").split(/\r?\n/)) { const m = /^([A-Z0-9_]+)\s*=\s*"?([^"]*)"?\s*$/.exec(l); if (m) VARS[m[1]] = m[2]; } } catch {}
 const TOKEN = VARS.APP_API_TOKEN || "", WEBHOOK = process.env.DISCORD_WEBHOOK || VARS.DISCORD_WEBHOOK || "";
 const BROWSER = ["C:/Program Files/Google/Chrome/Application/chrome.exe", "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe", "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe", "C:/Program Files/Microsoft/Edge/Application/msedge.exe"].find((c) => existsSync(c));
@@ -66,6 +66,7 @@ for (const pagina of PAGINI) for (const latime of LATIMI) {
   if (Date.now() - T0 > TERMEN_MS) { peste = true; break; }
   const a = judeca(await deschide(pagina, latime));
   if (!a.length) { scrie(`ok ${pagina} ${latime}`); continue; }
+  if (Date.now() - T0 > REDESCHIDE_MS) { scrie(`neconfirmată (fără timp de redeschidere) ${pagina} ${latime}: ${a.map((x) => x.text).join(" | ")}`); continue; }
   await asteapta(60000);
   const b = judeca(await deschide(pagina, latime)), r = repetate(a, b);
   scrie(`${r.length ? "ABATERE" : "trecătoare"} ${pagina} ${latime}: ${(r.length ? r : a).map((x) => x.text).join(" | ")}`);

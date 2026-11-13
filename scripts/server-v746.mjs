@@ -264,7 +264,8 @@ await test("10 · balances fara data.balances lista -> 502; cu lista -> 200", as
 
 // ---- (11) limit nenumeric -> implicit, nu NaN ----
 await test("11 · limit=abc pe klines/trades/depth -> valoarea implicita", async () => {
-  const astept = { pionex_klines: "limit=300", pionex_trades: "limit=500", pionex_depth: "limit=100" };
+  // v100.337: la lumânări fără endTime spre Pionex pleacă mereu 500 (o cerere pe monedă + interval); pagina primește implicitul 300 tăiat
+  const astept = { pionex_klines: "limit=500", pionex_trades: "limit=500", pionex_depth: "limit=100" };
   for (const [tip, lim] of Object.entries(astept)) {
     fetchStub(() => ({ corp: { result: true, data: {} } }));
     await cheama("market", `type=${tip}&symbol=BTC_USDT&limit=abc`, { APP_API_TOKEN: TOKEN });

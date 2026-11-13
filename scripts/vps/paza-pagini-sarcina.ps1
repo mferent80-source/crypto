@@ -1,6 +1,6 @@
 # I-865 (v100.336): sarcina programată „Crypto Radar paza pagini” pe VPS - dimineața la 07:50 (înainte de deschiderea magazinelor, gestiunea e
 # pe același VPS) și la cerere după fiecare livrare (schtasks /Run /TN "Crypto Radar paza pagini"). Rulează scripts\vps\paza-pagini.mjs cu
-# prioritate joasă, cel mult 30 de minute (rondul are termenul lui de 15), o singură instanță. Idempotent: o rulare nouă înlocuiește sarcina cu aceleași setări.
+# prioritate joasă, cel mult 30 de minute (rondul: pagină nouă până la 20 min, redeschidere până la 23 - v100.337), o singură instanță. Idempotent: o rulare nouă înlocuiește sarcina cu aceleași setări.
 #   powershell -NoProfile -ExecutionPolicy Bypass -File C:\Users\Cimin\crypto\scripts\vps\paza-pagini-sarcina.ps1
 $ErrorActionPreference = 'Stop'
 $rad = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)

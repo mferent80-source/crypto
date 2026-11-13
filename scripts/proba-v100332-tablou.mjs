@@ -289,7 +289,8 @@ await test("🟡5. serverul ține lumânările de 5 min cât pe cele de 15 min (
   const M = await import(pathToFileURL(path.join(RAD, "functions", "api", "market.js")).href);
   assert.equal(typeof M.ttlLumanari, "function", "market.js nu exportă ttlLumanari");
   assert.deepEqual(["1M", "5M", "15M", "30M", "60M", "4H", "8H", "12H", "1D"].map(M.ttlLumanari), [45, 45, 45, 90, 90, 180, 300, 300, 300]);
-  assert.match(citeste("functions", "api", "market.js"), /\$\{limit\}\$\{endQ\}`,ttlLumanari\(interval\),env,opt\)/, "ruta folosește funcția");
+  // v100.337: ruta cere lumânările prin klineCerere (o cerere pe monedă + interval); TTL-ul tot după interval
+  assert.match(citeste("functions", "api", "market.js"), /pionexCached\(kc\.url,ttlLumanari\(kc\.interval\),env,opt\)/, "ruta folosește funcția");
 });
 await test("🟡5. lumânări vechi cu aducerea picată ⇒ nota „lumânările graficului sunt de la HH:MM”; proaspete sau ale altui interval ⇒ nimic", () => {
   const { ctx, pune } = pagina(ACUM); pune("tbGraficVechi");
