@@ -140,7 +140,7 @@ var GridSim = (function () {
   }
   function mediana(v) { if (!v.length) return null; var s = v.slice().sort(function (a, b) { return a - b; }); return pc(s, 0.5); }
   // o = { zile (14), orizonturi ([1,3,7,14]), n (500), seed (12), plan: { minus, plus } | null, pornitLa: ms | null }
-  function simuleaza(b15, st, o) {
+  function simuleazaIntreg(b15, st, o) {
     o = o || {}; var zile = o.zile > 0 ? o.zile : 14, oriz = Array.isArray(o.orizonturi) && o.orizonturi.length ? o.orizonturi : [1, 3, 7, 14], n = o.n > 0 ? o.n : 500, seed = o.seed || 12;
     var plan = o.plan && (nr(o.plan.minus) > 0 || nr(o.plan.plus) > 0) ? { minus: Math.abs(nr(o.plan.minus) || 0), plus: nr(o.plan.plus) || 0 } : null;
     if (!Array.isArray(b15) || b15.length < 7 * BZ) return { eroare: "Prea puțin istoric ca să simulez: " + cate(Math.floor((b15 ? b15.length : 0) / BZ), "zi", "zile") + " pe 15 minute; îmi trebuie cel puțin 7." };
@@ -184,13 +184,14 @@ var GridSim = (function () {
     { var rnd0 = M.generator(seed), v0 = []; for (var q = 0; q < n; q++) { var d0 = DRUM(b15, H, BZ, P0, rnd0, mu); v0.push(Math.log(d0[d0.length - 1].c / P0)); } v0.sort(function (a, c) { return a - c; }); m = mu + pc(v0, 0.5) / H; }
     var rnd = M.generator(seed), bareO = oriz.map(function (z) { return pre + Math.round(z * BZ); });   /* v100.269: orizonturile de 1 h / 4 h pe bare întregi */
     var col = oriz.map(function () { return { net: [], deAici: [], R: [], plan: 0, planRau: 0, planZile: [], lich: 0, stop: 0, tp: 0, ies: 0, per: 0, maxJos: [], funding: 0 }; });
-    var acum = null, dejaAtins = null;
+    var acum = null, dejaAtins = null, imediat = 0;   /* v100.339 (revizia): drumurile oprite pe prag chiar la prima bară simulată */
     // v100.269 (ideile auditului 29.10): zilele distincte din care se trag drumurile (pe regim, doar zilele lui) - marja pe zile le cere; măștile
     // grupelor (jackknife-ul de până acum) nu mai trebuie, drumurile rămân exact aceleași (aceleași trageri din rnd)
     var D = ST ? Math.max(1, Math.round(ST.length / BZ)) : zileIst;
     for (var sIdx = 0; sIdx < n; sIdx++) {
       var d = DRUM(b15, H, BZ, P0, rnd, m), drumT = pre ? prefix.concat(d) : d;
       var r = GP.simuleaza(drumT, 0, drumT.length, stS, optGP), tr = r.traseu, L = tr.net.length;
+      if (pre && r.oprit && !r.lichidat && r.bare > pre && r.bare <= pre + 1) imediat++;
       // „până acum” = traseul la ultima bară reală (identic pe toate drumurile); t = închiderea ei; oprit și când stopul cade chiar pe ea (revizia)
       if (pre && !acum) { var ia = Math.min(pre, L) - 1; acum = { net: tr.net[ia], usdt: tr.net[ia] * suma, bare: pre, t: prefix[prefix.length - 1].t + 9e5, perechi: tr.perechi[ia], oprit: (r.lichidat || r.oprit) && r.bare <= pre ? (r.lichidat ? "lichidat" : "oprit") : null }; }
       var iPlus = null, iMinus = null;
@@ -224,7 +225,23 @@ var GridSim = (function () {
       if (acum) { var da = c.deAici.map(function (x) { return x * suma; }).sort(function (a, b) { return a - b; }), dc = 0, dp = 0; c.deAici.forEach(function (x) { if (x > 0) dc++; else if (x < 0) dp++; }); var mDa = marja(dc / n, n), mZa = marjaZile(c.deAici, c.R, D); out.deAici = { p5: pc(da, 0.05), p50: pc(da, 0.5), p95: pc(da, 0.95), pCastig: dc / n, pPierde: dp / n, pZero: (n - dc - dp) / n, marja: mZa !== null ? Math.max(mZa, mDa) : mDa, marjaDrumuri: mDa, marjaZile: mZa, hist: M.histograma(da, 24) }; if (o.peDrum) out.drumuriDeAici = c.deAici.map(function (x) { return x * suma; }); }   // v100.136: și de aici încolo, pe drumuri
       return out;
     });
-    return { regim: ST ? { starturi: ST.length } : null, n: n, zile: zile, zileIstoric: zileIst, tendintaPeZi: Math.exp(mu * BZ) - 1, suma: suma, tpIgnorat: v.ignorat, tpIgnoratPrefix: tpIgnoratPrefix, acum: acum, orizonturi: orizonturi };
+    return { regim: ST ? { starturi: ST.length } : null, n: n, zile: zile, zileIstoric: zileIst, tendintaPeZi: Math.exp(mu * BZ) - 1, suma: suma, tpIgnorat: v.ignorat, tpIgnoratPrefix: tpIgnoratPrefix, acum: acum, opritImediat: pre ? imediat / n : 0, orizonturi: orizonturi };
+  }
+  // v100.339 (I-868, auditul din 13.11): o.botRuleaza = botul e pornit la Pionex ACUM. Dacă reluarea îl oprește pe stop / țintă pe drumul real
+  // (prag pus după pornire sau neatins la Pionex), reluarea contrazice realitatea și toate drumurile stau pe loc („0% / 0% / pe zero 100%”).
+  // Atunci pe drumul real rămâne doar gridul, iar stopul și ținta se aplică de la prima bară simulată (rez.praguriDeAici). Lichidarea pe
+  // drumul real nu se ocolește: starea reluată nu mai seamănă cu botul, deci rămâne „Reluarea arată…”.
+  function simuleaza(b15, st, o) {
+    var rez = simuleazaIntreg(b15, st, o);
+    if (!rez || rez.eroare || !o || !o.botRuleaza || !(o.pornitLa > 0) || !rez.acum || rez.acum.oprit !== "oprit") return rez;
+    var fara = {}, o2 = {}, k; for (k in st) fara[k] = st[k]; fara.stop = null; fara.tp = null; fara.stopRaport = null;
+    for (k in o) o2[k] = o[k]; o2.stPrefix = fara;
+    var r2 = simuleazaIntreg(b15, st, o2);
+    // revizia independentă (14.11): pragul e depășit și la prețul de ACUM (stop 1,06 cu prețul la 1,07, stop în procente deja trecut) ⇒ toate
+    // drumurile s-ar opri la prima bară simulată („CÂȘTIGĂ în 100% · stopul atins 100%” sau „PIERDE în 100%”, adică iar „contra botului”).
+    // Botul rulează la Pionex cu pragul trecut: setările citite nu sunt ale lui ⇒ rămâne „Reluarea arată…”.
+    if (!r2 || r2.eroare || (r2.acum && r2.acum.oprit) || r2.opritImediat >= 0.9) return rez;
+    r2.praguriDeAici = true; return r2;
   }
 
   // revizia (R3): alte setări pe ACELEAȘI drumuri, cu ACELAȘI motor ca verdictul (14 zile, sămânța 12, fără prefix = bot pornit acum) ⇒ rândul
@@ -293,6 +310,7 @@ var GridSim = (function () {
     // v100.140 (ideea 4): rotunjite separat, 96,5% / 3,5% dădeau „97% · 4%” = 101 - PIERDE ia restul până la 100 (cu „pe zero” doar de la 0,5%)
     var P = Math.round(pC * 100), Z = pZ >= 0.005 ? Math.min(Math.round(pZ * 100), 100 - P) : 0, Q = Math.max(0, 100 - P - Z), p50 = d ? d.p50 : o.p50, p5 = d ? d.p5 : o.p5, p95 = d ? d.p95 : o.p95, mj = d && d.marja != null ? d.marja : o.marja;
     var rand = (meu ? "de aici încolo: " : "") + "CÂȘTIGĂ în " + P + "% din drumuri · PIERDE în " + Q + "%" + (Z > 0 ? " · pe zero " + Z + "%" : "");
+    if (meu && rez.acum.oprit) rand = "de aici încolo: fără procente - drumurile simulate stau pe loc";   /* v100.339 (revizia): nu „0% · 0% · pe zero 100%” */
     var sub = "de obicei " + bani1(p50) + " · cele mai proaste 5%: " + bani1(p5) + " · cele mai bune 5%: " + bani1(p95) + (meu ? " · cu tot cu ce a făcut până acum: de obicei " + bani1(o.p50) : "");
     var zi = cate(o.zile, "zi", "zile"), faCe, planTxt = pl && o.plan && pl.plus > 0 && pl.minus > 0 ? "; planul +" + nrRo(pl.plus, 1) + " vine înainte de −" + nrRo(pl.minus, 1) + " în " + pr(o.plan.p) : "";
     // v100.196 (auditul 14.10, B1): „Aș porni / Aș ține” cere și ca marginea de jos a incertitudinii reale (pe zile) să rămână peste 50%, iar la botul
@@ -409,15 +427,17 @@ var GridSim = (function () {
     var opritMeu = !!(meu && rez.acum.oprit);
     if (o7.pStop >= 0.005 && !opritMeu) parti.push("stopul atins " + pr(o7.pStop)); if (o7.pLich >= 0.005 && !opritMeu) parti.push("lichidare " + pr(o7.pLich)); if (o7.pTp >= 0.005 && !opritMeu) parti.push("TP atins " + pr(o7.pTp));
     var faCe = String(v.faCe || "").split(/[.:]/)[0].trim(); if (faCe) parti.push("«" + faCe + "»");
-    if (o7 && o7.funding != null && o7.funding !== "" && isFinite(Number(o7.funding))) {
+    if (!opritMeu && o7 && o7.funding != null && o7.funding !== "" && isFinite(Number(o7.funding))) {
       var fv = Number(o7.funding), fa = Math.abs(fv), fban = fa < 0.05 ? "sub 0,1 USDT" : "≈ " + nrRo(fa, 1) + " USDT";
       parti.push("din care funding " + (fv < 0 ? "încasat " : "plătit ") + fban + (st && st.fundingCost ? ", presupus" : ""));
     }
-    if (v1) parti.push("pe o zi: " + fara(v1.rand).replace(/ din drumuri/, ""));
+    if (v1 && !opritMeu) parti.push("pe o zi: " + fara(v1.rand).replace(/ din drumuri/, ""));
     // revizia (3): culoarea urmează TEXTUL - „oprește / nu porni / nu se potrivește / oprit pe drumul real” e rău oricare ar fi procentul;
     // planul atins pe plus e bine (încasează), pe minus e rău (ieși)
-    var rau = /^(L-aș opri|N-aș porni|Aș opri|Nu se potrivește|Reluarea arată)/.test(faCe);
-    var stare = atins === "minus" ? "rau" : atins === "plus" ? "bine" : rau ? "rau" : v.culoare === "good" ? "bine" : v.culoare === "bad" ? "rau" : "atentie";
+    // v100.339 (auditul din 13.11): „Reluarea arată botul OPRIT / LICHIDAT” nu e o părere despre bot, e „setările de aici nu se potrivesc” ⇒
+    // informație, nu „rău” (din „rău” vocile de sub verdict făceau „Monte Carlo contra botului”)
+    var rau = /^(L-aș opri|N-aș porni|Aș opri|Nu se potrivește)/.test(faCe), reluare = /^Reluarea arată/.test(faCe);
+    var stare = reluare ? "info" : atins === "minus" ? "rau" : atins === "plus" ? "bine" : rau ? "rau" : v.culoare === "good" ? "bine" : v.culoare === "bad" ? "rau" : "atentie";
     return { stare: stare, text: parti.join(" · "), culoare: v.culoare, faCe: v.faCe, rand: v.rand, atins: atins };
   }
   return { riscSaptamana: riscSaptamana, textSaptamana: textSaptamana, riscScurt: riscScurt, ORIZ_SCURT: ORIZ_SCURT, LICHIDARI_ACCEPTATE: LICHIDARI_ACCEPTATE, lichidareAcceptata: lichidareAcceptata, starturiRegim: starturiRegim, dinCod: dinCod, inCod: inCod, setariDinBot: setariDinBot, tpValid: tpValid, simuleaza: simuleaza, compara: compara, comparaLa: comparaLa, verdict: verdict, verdictScurt: verdictScurt, rataFunding: rataFunding, marja: marja, bani1: bani1, pr: pr, NUME: NUME, textCalibrareMc: textCalibrareMc };

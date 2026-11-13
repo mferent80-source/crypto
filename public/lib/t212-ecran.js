@@ -880,7 +880,7 @@ function t212Istoric4hGata(tk) {
 // blocul întreg; tot ce desenează vine prin parametri (proba îl rulează fără pagină). Ca la bot: închis - banda, rigla, istoria; deschis - tabelul.
 function t212IndHtml(tk, l, ist, tvN, sch, deschis) {
   var V = IndicatoriBot.VORBE_POZITIE, sum = "", corp;
-  var MASURAT = "Nedovedit: măsurată, metoda asta a nimerit direcția în 48,8% din cazuri — cât dat cu banul.", MASURAT_ACT = "Nedovedit: pe acțiuni n-a fost măsurată; pe crypto a nimerit direcția în 48,8% din cazuri — cât dat cu banul.";
+  var MASURAT = "Nedovedit: măsurată pe piață (13.11.2026, 21 de monede), metoda asta a nimerit direcția în 50 din 100 de cazuri — cât dat cu banul.", MASURAT_ACT = "Nedovedit: pe acțiuni n-a fost măsurată; pe crypto (13.11.2026, 21 de monede) a nimerit direcția în 50 din 100 de cazuri — cât dat cu banul.";   /* v100.339: cifra măsurată pe piață (era 48,8%, pe mers aleator) */
   var cap = "Detaliile indicatorilor · ca „Analizează piața”, pe bare închise (medii, Supertrend, MACD, Stochastic, Bollinger, MFI, estimarea și predicția)";
   if (!l) corp = '<p class="tbSub">Aștept lumânările: 15 min, 1 oră și 4 ore vin pentru fișa deschisă, ziua din prețurile zilnice…</p>';
   else {
@@ -903,7 +903,7 @@ function t212IndDeseneaza(tk) {
   var el = $("t212Ind-" + tk); if (!el || !t212.deschis[tk]) return;
   var l = t212IndCalc(tk, Date.now()), bd = l ? IndicatoriBot.banda(l, "long") : null;
   var sch = bd && typeof tbIndSchimbari === "function" ? tbIndSchimbari({ id: "t212:" + tk }, bd, t212VazAcum) : null;
-  var h = t212IndHtml(tk, l, t212Istoric4hGata(tk), t212.tv && t212.tv.note ? t212.tv.note[tk] : null, sch, !!t212.indDeschis[tk]);
+  var h = t212IndHtml(tk, l, t212Istoric4hGata(tk), t212.tv && t212.tv.note && !t212TvNesigur(tk) ? t212.tv.note[tk] : null, sch, !!t212.indDeschis[tk]);   /* revizia (14.11): banda ține aceeași gardă ca rândul și fișa */
   t212IndUlt[tk] = h;
   if (el._h !== h) { el.innerHTML = h; el._h = h; }
 }
@@ -930,6 +930,19 @@ function t212TfCitHtml(sem) {
    poziție (coloana Trend) și toate intervalele în fișă. O cerere pentru toate pozițiile (serverul ⇒ scannerul TradingView, nu Trading 212),
    doar cu pagina la vedere, cel mult o dată la 5 minute (sau când apar simboluri noi); simbolul de bursă e cel cu care au venit prețurile
    zilnice (t212.simbolPret). INFORMAȚIE: semaforul și consilierul nu o folosesc. */
+/* v100.339 (auditul din 13.11): pe simbol NESIGUR (prețurile găsite după numele firmei, sau barele respinse ca ale altui simbol) nota
+   TradingView ar putea fi a altei firme ⇒ nu se arată; rândul și fișa spun „simbol nesigur”. Cerută și nesosită ⇒ „n-a fost cerut încă”. */
+function t212TvNesigur(tk) {
+  if (t212.dupaNume && t212.dupaNume[tk]) return true;
+  var x = (t212.poz || []).filter(function (p) { return p && p.ticker === tk; })[0], b = (t212.bare && t212.bare[tk]) || [];
+  if (!x || !b.length || typeof ActiuniSemnale === "undefined" || typeof ActiuniSemnale.verificaBare !== "function") return false;
+  var vb = ActiuniSemnale.verificaBare(b, t212Pozitie(x).pret, tk, Date.now()); return !!(vb && vb.cod === "nepotrivit");
+}
+function t212NotaTv(p) {
+  if (!t212.tv || !p) return null;
+  if (t212TvNesigur(p.ticker) || p.bareCod === "nepotrivit") return { lipsa: "nesigur" };
+  return t212.tv.note[p.ticker] || (t212.tv.laNote ? { lipsa: "necerut" } : null);
+}
 function t212TvAdu(forta) {
   if (!t212LaVedere()) return;
   var tv = t212.tv || (t212.tv = { note: {}, la: 0, laNote: 0, cheie: "", inLucru: false });
@@ -938,13 +951,14 @@ function t212TvAdu(forta) {
   if (!lista.length || tv.inLucru || (!forta && cheie === tv.cheie && Date.now() - tv.la < 5 * 60000)) return;
   tv.inLucru = true; tv.la = Date.now(); tv.cheie = cheie;
   (async function () {
-    var note = {};
+    var note = {}, laS = 0;
     try {
       var r = await getJSON("/api/market?type=tv_rating&piata=actiuni&simboluri=" + encodeURIComponent(lista.join(",")));
-      Object.keys(sim).forEach(function (tk) { note[tk] = r && r.result !== false ? (r.note && r.note[sim[tk]]) || {} : { eroare: "TradingView nu răspunde" + (r && r.detail ? " (" + r.detail + ")" : "") }; });
+      laS = r && r.result !== false && Number(r.la) > 0 ? Number(r.la) : 0;   /* v100.339: vârsta notei e a serverului (ține minte 2 minute) */
+      Object.keys(sim).forEach(function (tk) { note[tk] = r && r.result !== false ? (r.note && r.note[sim[tk]]) || { lipsa: "necerut" } : { eroare: "TradingView nu răspunde" + (r && r.detail ? " (" + r.detail + ")" : "") }; });
     } catch (e) { Object.keys(sim).forEach(function (tk) { note[tk] = { eroare: "TradingView nu răspunde" }; }); }
     finally { tv.inLucru = false; }
-    tv.note = note; tv.laNote = Date.now();
+    tv.note = note; tv.laNote = laS || Date.now();
     if (t212LaVedere()) t212Render(true);
   })();
 }
@@ -1317,14 +1331,14 @@ function t212RandPozitie(p) {
   var planTxt = p.plan ? [pl.trailPct ? "−" + String(pl.trailPct).replace(".", ",") + "% de la max" : "", pl.stop ? "stop " + Pr(pl.stop) : "", pl.tinta ? "țintă " + Pr(pl.tinta) : ""].filter(Boolean).join(" · ") : "";
   var w = p.pond > 0.2 ? " rau" : p.pond > 0.15 ? " atentie" : "", rv = t212RevineHtml(p);
   // v100.291: bucățile rândului, folosite și de capul fișei (aceleași cifre, același scris)
-  var iSim = '<span class="t212Pill ' + niv[1] + '">' + niv[0] + '</span><div><b>' + escapeHtml(p.simbol) + '</b><span class="t212Mic">' + t212Bucati(p.qty, p.pret > 0 ? p.pret : p.pretMediu) + ' · mediu ' + Pr(p.pretMediu) + (rz && rz.data ? ' · rezultate ' + t212ZiScurta(rz.data) : rz && /_US_EQ$/.test(p.ticker) ? ' · rezultate: dată necunoscută' : '') + '</span>' + t212ModeleRand(p) + (typeof TvNote !== "undefined" && t212.tv ? TvNote.mic(t212.tv.note[p.ticker], "1D", "tvMicTel") : '') + '</div>';   /* v100.320: pe telefon coloana Trend e ascunsă ⇒ „TV 1D” și sub nume */
+  var iSim = '<span class="t212Pill ' + niv[1] + '">' + niv[0] + '</span><div><b>' + escapeHtml(p.simbol) + '</b><span class="t212Mic">' + t212Bucati(p.qty, p.pret > 0 ? p.pret : p.pretMediu) + ' · mediu ' + Pr(p.pretMediu) + (rz && rz.data ? ' · rezultate ' + t212ZiScurta(rz.data) : rz && /_US_EQ$/.test(p.ticker) ? ' · rezultate: dată necunoscută' : '') + '</span>' + t212ModeleRand(p) + (typeof TvNote !== "undefined" && t212.tv ? TvNote.mic(t212NotaTv(p), "1D", "tvMicTel") : '') + '</div>';   /* v100.320: pe telefon coloana Trend e ascunsă ⇒ „TV 1D” și sub nume */
   var iRez = '<b class="' + t212Cls(p.ppl) + '">' + t212Lei(p.ppl) + '</b><span class="t212Mic">' + (p.pctLei !== null ? t212Pct(p.pctLei) + ' · preț ' + t212Pct(pctPret) : 'preț ' + t212Pct(pctPret)) + '</span>';
   var iStop = n ? '<span class="' + (n.stopAtins ? "bad" : "") + '">' + Pr(n.stopPozitie) + '</span><span class="t212Mic">' + (n.stopAtins ? "DEPĂȘIT" : Math.abs(n.stopPozitie / p.pret - 1) < 0.0005 ? "la stop" : t212Pct(n.stopPozitie / p.pret - 1) + " de acum") + '</span>' + rv.mic : '—';   /* v100.196 (UI 🔵5): nu „−0,0%” */
   // v100.332 (el, poza APLD: rândul arăta ținta calculată azi, $34,65, iar planul și graficul $34,44): cu ținta scrisă în plan, rândul arată ȚINTA DIN PLAN
   // (pe ea sună colectorul și ea e pe grafic) și spune „din plan”; fără plan, cea calculată, spusă „calculată”. Cea calculată rămâne în fișă, la „Planul tău”.
   var tPl = pl.tinta > 0 ? Number(pl.tinta) : null, tV = tPl || (n ? n.tintaPozitie : null);
   var iTinta = tV > 0 ? '<span class="good">' + Pr(tV) + '</span><span class="t212Mic">' + t212Pct(tV / p.pret - 1) + (tPl ? " · din plan" : " · calculată") + '</span>' : '—';
-  var iTrend = '<b class="' + (tr === "sus" ? "good" : tr === "jos" ? "bad" : "t212Estompat") + '">' + (tr === "sus" ? "↑ sus" : tr === "jos" ? "↓ jos" : tr === "lateral" ? "→ lateral" : "—") + '</b>' + (dif ? '<span class="t212Mic">1z: ' + NZ[sz.dir] + '</span>' : '') + (typeof TvNote !== "undefined" && t212.tv ? TvNote.mic(t212.tv.note[p.ticker]) : '');   /* v100.320: nota TradingView pe 1D */
+  var iTrend = '<b class="' + (tr === "sus" ? "good" : tr === "jos" ? "bad" : "t212Estompat") + '">' + (tr === "sus" ? "↑ sus" : tr === "jos" ? "↓ jos" : tr === "lateral" ? "→ lateral" : "—") + '</b>' + (dif ? '<span class="t212Mic">1z: ' + NZ[sz.dir] + '</span>' : '') + (typeof TvNote !== "undefined" && t212.tv ? TvNote.mic(t212NotaTv(p)) : '');   /* v100.320: nota TradingView pe 1D */
   var iPond = p.pond !== null ? Math.round(p.pond * 100) + '%<span class="t212MiniBara"><i class="' + w + '" style="width:' + Math.min(100, p.pond / 0.3 * 100).toFixed(0) + '%"></i></span>' : '—';
   var iPlan = t212ArePrag(p.plan) ? '<span class="t212PlanChip ok">✓ ' + escapeHtml(planTxt) + '</span>' : p.plan ? '<span class="t212PlanChip">teză, fără prag</span>' : '<span class="t212PlanChip">fără plan</span>';   /* v100.333 (🔵 B9) */
   var rand = '<tr class="t212Rand" id="t212R-' + tk + '" tabindex="0" aria-expanded="' + des + '" data-action-click="t212Comuta(\'' + tk + '\')">'
@@ -1348,7 +1362,7 @@ function t212RandPozitie(p) {
     + (!p.cons && n && n.stopAtins ? '<p class="t212Fac">👉 <b>Ce aș face eu:</b> Aș ieși (măcar jumătate), fără să aștept să „își revină”: ' + escapeHtml(p.simbol) + ' e deja sub stopul calculat.</p>' : '')
     + '<p class="tbSub">' + escapeHtml(T212_TREND_CARE) + '</p>'   /* v100.333 (auditul 12.11, 🔵 B12): pe fișă stau cinci trenduri; se spune care face verdictul */
     + '<p class="tbSub">' + escapeHtml(info || (t212.inLucru ? "aduc prețurile zilnice…" : t212BareLipsa(p.ticker) ? t212BareMotiv(p.ticker) : "fără prețuri zilnice pentru " + p.simbol)) + '</p>'
-    + (typeof TvNote !== "undefined" ? '<div class="tvNote">' + TvNote.tabel(t212.tv && t212.tv.note[p.ticker] || (t212.tv && t212.tv.laNote ? {} : null), { directie: "long", cu: "poziția", la: t212.tv && t212.tv.laNote }) + '</div>' : '')   /* v100.320: toate intervalele TradingView */
+    + (typeof TvNote !== "undefined" ? '<div class="tvNote">' + TvNote.tabel(t212NotaTv(p), { directie: "long", cu: "poziția", actiuni: true, la: t212.tv && t212.tv.laNote }) + '</div>' : '')   /* v100.320: toate intervalele TradingView */
     + (n ? '<p class="tbSub"><b>Adaug doar la:</b> ' + (n.intrare && p.pret >= p.pretMediu ? Pr(n.intrare.pret) + " — " + escapeHtml(n.intrare.motiv) : escapeHtml(p.pret < p.pretMediu ? "— ești pe minus: nu adaug (așa a crescut NPA la 33.000 de lei)" : "— " + n.intrareMotiv)) + '</p>' : '')
     + rv.det
     + (typeof mcsPozButon === "function" ? '<p class="tbSub">' + mcsPozButon(t212.simbolPret[p.ticker] || p.simbol, p.pret, p.pretMediu, n ? n.stopPozitie : null) + '</p>' : '') + '</div>';

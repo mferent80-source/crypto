@@ -22,12 +22,14 @@ console.log("Proba v100.320 - TradingView Technicals / Technical Ratings în Tab
 
 const TV = await import("../functions/_shared/tv-note.js");
 // un rând de scanner: name, exchange, apoi All/MA/Other pe 5, 15, 60, 240, 1D, 1W
-const rand = (s, nume, bursa, baza) => ({ s, d: [nume, bursa, ...Array.from({ length: 18 }, (_, i) => baza + i / 100)] });
+const rand = (s, nume, bursa, baza) => ({ s, d: [nume, bursa, 1, ...Array.from({ length: 18 }, (_, i) => baza + i / 100)] });   // v100.339: a treia coloană e prețul („close”)
 
 await test("simbolul botului: Pionex ⇒ Binance (perp ⇒ .P, spot fără); altceva ⇒ nimic", () => {
   assert.equal(TV.tvDinPionex("STX_USDT_PERP"), "BINANCE:STXUSDT.P");
   assert.equal(TV.tvDinPionex("stx_usdt"), "BINANCE:STXUSDT");
   assert.equal(TV.tvDinPionex("1000PEPE_USDT_PERP"), "BINANCE:1000PEPEUSDT.P");
+  // v100.339 (auditul din 13.11): simbolul pe care Pionex îl ARE e PEPE_USDT_PERP - la Binance contractul e „în mii”
+  assert.equal(TV.tvDinPionex("PEPE_USDT_PERP"), "BINANCE:1000PEPEUSDT.P"); assert.equal(TV.tvDinPionex("SHIB_USDT_PERP"), "BINANCE:1000SHIBUSDT.P"); assert.equal(TV.tvDinPionex("PEPE_USDT"), "BINANCE:PEPEUSDT");
   for (const x of ["", "STX", "STX-USDT", "STX_EUR_PERP", null, "A".repeat(30) + "_USDT"]) assert.equal(TV.tvDinPionex(x), null, String(x));
 });
 
@@ -44,7 +46,7 @@ await test("cererile către scanner: cel mult două (global cu tickere, america 
   assert.equal(c[0].piata, "global"); assert.deepEqual(c[0].corp.symbols.tickers, ["LSE:VUSA", "BINANCE:STXUSDT.P"]);
   assert.equal(c[1].piata, "america"); assert.deepEqual(c[1].corp.filter[0], { left: "name", operation: "in_range", right: ["AAPL"] });
   assert.deepEqual(c[1].corp.filter[1].right, ["NASDAQ", "NYSE", "AMEX"]);
-  assert.equal(c[0].corp.columns.length, 2 + 18); assert.ok(c[0].corp.columns.includes("Recommend.Other|240") && c[0].corp.columns.includes("Recommend.All") && c[0].corp.columns.includes("Recommend.MA|1W"));
+  assert.equal(c[0].corp.columns.length, 3 + 18); assert.equal(c[0].corp.columns[2], "close"); assert.ok(c[0].corp.columns.includes("Recommend.Other|240") && c[0].corp.columns.includes("Recommend.All") && c[0].corp.columns.includes("Recommend.MA|1W"));
   assert.deepEqual(TV.tvCereri([]), []);
 });
 
@@ -52,15 +54,15 @@ await test("citirea: nota pe interval (All / medii / oscilatoare), lipsa rămân
   const r = TV.tvRand(rand("BINANCE:STXUSDT.P", "STXUSDT.P", "BINANCE", -0.3));
   assert.equal(r.tv, "BINANCE:STXUSDT.P"); assert.deepEqual(Object.keys(r.iv), ["5m", "15m", "1h", "4h", "1D", "1W"]);
   assert.ok(Math.abs(r.iv["5m"].all + 0.3) < 1e-9 && Math.abs(r.iv["1W"].osc - (-0.3 + 0.17)) < 1e-9);
-  const g = rand("X:Y", "Y", "X", 0); g.d[2] = null; g.d[3] = "abc"; g.d[19] = 7; const q = TV.tvRand(g);
+  const g = rand("X:Y", "Y", "X", 0); g.d[3] = null; g.d[4] = "abc"; g.d[20] = 7; const q = TV.tvRand(g);
   assert.equal(q.iv["5m"].all, null); assert.equal(q.iv["5m"].ma, null); assert.equal(q.iv["1W"].osc, 1);
-  const gol = { s: "X:Y", d: ["Y", "X", ...Array(18).fill(null)] }; assert.equal(TV.tvRand(gol), null, "fără nicio notă ⇒ nimic");
+  const gol = { s: "X:Y", d: ["Y", "X", 1, ...Array(18).fill(null)] }; assert.equal(TV.tvRand(gol), null, "fără nicio notă ⇒ nimic");
 });
 
 await test("potrivirea: cheia cerută primește rândul ei; la US, NASDAQ / NYSE înaintea AMEX; negăsit ⇒ null", () => {
   const tinte = [{ cheie: "AAPL", us: "AAPL" }, { cheie: "VUSA.L", ticker: "LSE:VUSA" }, { cheie: "LIPSA.L", ticker: "LSE:LIPSA" }, { cheie: "X", us: "X" }];
   const o = TV.tvPotriveste(tinte, [{ data: [rand("LSE:VUSA", "VUSA", "LSE", 0.2)] }, { data: [rand("AMEX:AAPL", "AAPL", "AMEX", -0.9), rand("NASDAQ:AAPL", "AAPL", "NASDAQ", 0.4)] }]);
-  assert.equal(o.AAPL.tv, "NASDAQ:AAPL"); assert.equal(o["VUSA.L"].tv, "LSE:VUSA"); assert.equal(o["LIPSA.L"], null); assert.equal(o.X, null);
+  assert.equal(o.AAPL.tv, "NASDAQ:AAPL"); assert.equal(o["VUSA.L"].tv, "LSE:VUSA"); assert.equal(o["LIPSA.L"].lipsa, "negasit"); assert.deepEqual(o["LIPSA.L"].cautat, ["LSE:LIPSA"]); assert.equal(o.X.lipsa, "negasit");   // v100.339: lipsa își spune motivul
 });
 
 // ---- ruta: /api/market?type=tv_rating
@@ -81,8 +83,8 @@ await test("ruta, botul: STX_USDT_PERP ⇒ o cerere POST la scanner (global, BIN
   const { onRequestGet } = await marketNou(); const c = lume((u, corp) => J({ data: corp.symbols.tickers.map((t) => rand(t, t.split(":")[1], "BINANCE", -0.2)) }));
   try {
     const j = await (await onRequestGet({ request: cerere("/api/market?type=tv_rating&piata=crypto&simboluri=STX_USDT_PERP"), env: ENV })).json();
-    assert.equal(c.length, 1); assert.equal(c[0].u, "https://scanner.tradingview.com/global/scan"); assert.equal(c[0].metoda, "POST"); assert.deepEqual(c[0].corp.symbols.tickers, ["BINANCE:STXUSDT.P"]);
-    assert.equal(j.result, true); assert.equal(j.note.STX_USDT_PERP.tv, "BINANCE:STXUSDT.P"); assert.ok(Math.abs(j.note.STX_USDT_PERP.iv["4h"].all + 0.11) < 1e-9); assert.ok(j.la > 0);
+    assert.equal(c.length, 1); assert.equal(c[0].u, "https://scanner.tradingview.com/global/scan"); assert.equal(c[0].metoda, "POST"); assert.deepEqual(c[0].corp.symbols.tickers, ["PIONEX:STXUSDT.P", "BINANCE:STXUSDT.P"]);   // v100.339 (I-869): întâi instrumentul botului
+    assert.equal(j.result, true); assert.equal(j.note.STX_USDT_PERP.tv, "PIONEX:STXUSDT.P"); assert.equal(j.note.STX_USDT_PERP.scara, 1); assert.equal(j.note.STX_USDT_PERP.close, 1); assert.ok(Math.abs(j.note.STX_USDT_PERP.iv["4h"].all + 0.11) < 1e-9); assert.ok(j.la > 0);
     await onRequestGet({ request: cerere("/api/market?type=tv_rating&piata=crypto&simboluri=STX_USDT_PERP"), env: ENV }); assert.equal(c.length, 1, "a doua oară din memorie");
   } finally { globalThis.fetch = fetchReal; }
 });
@@ -91,7 +93,7 @@ await test("ruta, T212: AAPL + VUSA.L + un sufix necunoscut ⇒ două cereri (gl
   const { onRequestGet } = await marketNou(); const c = lume((u, corp) => J({ data: u.includes("/global/") ? corp.symbols.tickers.map((t) => rand(t, t.split(":")[1], t.split(":")[0], 0.3)) : [rand("NASDAQ:AAPL", "AAPL", "NASDAQ", 0.6)] }));
   try {
     const j = await (await onRequestGet({ request: cerere("/api/market?type=tv_rating&piata=actiuni&simboluri=" + encodeURIComponent("AAPL,VUSA.L,7203.T,<b>")), env: ENV })).json();
-    assert.equal(c.length, 2); assert.equal(j.note.AAPL.tv, "NASDAQ:AAPL"); assert.equal(j.note["VUSA.L"].tv, "LSE:VUSA"); assert.equal(j.note["7203.T"], null);
+    assert.equal(c.length, 2); assert.equal(j.note.AAPL.tv, "NASDAQ:AAPL"); assert.equal(j.note["VUSA.L"].tv, "LSE:VUSA"); assert.equal(j.note["7203.T"].lipsa, "nemapat");
     assert.ok(!Object.keys(j.note).some((k) => /[<>]/.test(k)), "simbolurile se curăță");
     const multe = Array.from({ length: 45 }, (_, i) => "S" + i).join(",");
     const j2 = await (await onRequestGet({ request: cerere("/api/market?type=tv_rating&piata=actiuni&simboluri=" + multe), env: ENV })).json();
@@ -118,7 +120,8 @@ await test("biblioteca: clasele după pragurile TradingView (< −0,5 · [−0,5
   assert.equal(c(-0.51), "vinde-tare"); assert.equal(c(-0.5), "vinde"); assert.equal(c(-0.11), "vinde"); assert.equal(c(-0.1), "neutru"); assert.equal(c(0), "neutru"); assert.equal(c(0.1), "neutru");
   assert.equal(c(0.11), "cumpara"); assert.equal(c(0.5), "cumpara"); assert.equal(c(0.51), "cumpara-tare"); assert.equal(c(null), "lipsa"); assert.equal(c(NaN), "lipsa");
   assert.equal(T.clasa(-0.3).text, "vinde"); assert.equal(T.clasa(0.7).text, "cumpără tare"); assert.equal(T.clasa(-0.3).ton, "bad"); assert.equal(T.clasa(0.3).ton, "good"); assert.equal(T.clasa(0).ton, "mutedInfo");
-  assert.equal(T.valoare(-0.333), "−0,3"); assert.equal(T.valoare(0.45), "+0,5"); assert.equal(T.valoare(0.04), "0,0"); assert.equal(T.valoare(null), "—");
+  assert.equal(T.valoare(-0.333), "−0,3"); assert.equal(T.valoare(0.45), "+0,45"); assert.equal(T.valoare(0.7), "+0,7");   /* v100.339: lângă pragul 0,5 două zecimale (0,45 e „cumpără”, 0,54 „cumpără tare”: nu amândouă „+0,5”) */
+  assert.equal(T.valoare(0.04), "0,0"); assert.equal(T.valoare(null), "—");
 });
 await test("biblioteca: tabelul (6 intervale × rezumat / medii / oscilatoare), tickerul scăpat, lipsa ⇒ „—”; fără note ⇒ mesajul de așteptare; linia mică pe 1D", () => {
   const T = ctxLib(); const n = { tv: "BINANCE:STX<i>", iv: { "5m": { all: -0.33, ma: -0.67, osc: 0 }, "15m": { all: null, ma: null, osc: null }, "1h": { all: 0.6, ma: 0.8, osc: 0.4 }, "4h": { all: -0.45, ma: -0.8, osc: -0.09 }, "1D": { all: -0.13, ma: -0.27, osc: 0 }, "1W": { all: 0.11, ma: 0.31, osc: -0.09 } } };
@@ -140,8 +143,11 @@ await test("biblioteca: tabelul (6 intervale × rezumat / medii / oscilatoare), 
 const APP = citeste("public", "app.js"), HTML = citeste("public", "index.html"), SW = citeste("public", "sw.js"), T212 = citeste("public", "lib", "t212-ecran.js"), CSS = citeste("public", "app.css");
 await test("Tabloul: cererea vine cu lumânările direcției (același ritm, simbolul Pionex al botului), nota se ține pe moneda botului și se desenează în cardul „Trendul pe TF-uri”", () => {
   const f = APP.slice(APP.indexOf("async function tbAduDirectie(){"), APP.indexOf("function tbCalculeazaIndicatorii(d){"));
-  assert.ok(f.includes('getJSON("/api/market?type=tv_rating&piata=crypto&simboluri="+encodeURIComponent(s))'), "cererea în tbAduDirectie");
-  assert.ok(/d\.tv=/.test(f), "ținută pe d (moneda botului)");
+  // v100.339 (auditul din 13.11): cererea pleacă din tbAduDirectie FĂRĂ await, prin tbAduTv (nu ține în loc direcția), iar nota poartă cheia monedei ei
+  assert.ok(f.includes("tbAduTv(d,s,cheie);") && !/await getJSON\("\/api\/market\?type=tv_rating/.test(f), "cererea pornită din tbAduDirectie, fără await");
+  const fTv = APP.slice(APP.indexOf("function tbAduTv(d,s,cheie){"), APP.indexOf("function renderTabloTv(){"));
+  assert.ok(fTv.includes('getJSON("/api/market?type=tv_rating&piata=crypto&simboluri="+encodeURIComponent(s))'), "cererea în tbAduTv");
+  assert.ok(/d\.tv=\{n:n,la:la,simbol:cheie\}/.test(fTv), "ținută pe d, cu moneda ei");
   assert.ok(/function renderTabloTv\(\)\{/.test(APP)); const r = APP.slice(APP.indexOf("function renderTabloTv(){"), APP.indexOf("function renderTabloTv(){") + 900);
   assert.ok(r.includes('$("tbTvNote")') && r.includes("TvNote.tabel(") && r.includes("tbCheieDir(b)"), "desenul, cu garda pe moneda de acum");
   assert.ok(APP.slice(APP.indexOf("function renderTabloDirectia(){"), APP.indexOf("function renderTabloDirectia(){") + 400).includes("renderTabloTv()"), "chemat din renderTabloDirectia");
@@ -154,7 +160,7 @@ await test("pagina și cache-ul aplicației încarcă biblioteca; nota NU intră
   // care aduce sau desenează (tbAduDirectie, renderTabloTv, renderTabloIndicatori) - niciuna în verdict / semafor / sfaturi
   const unde = []; for (const m of APP.matchAll(/\.tv\b(?!_)/g)) { const inainte = APP.slice(0, m.index), k = inainte.lastIndexOf("function "); unde.push(/^function (?:\s*)([\w$]+)/.exec(APP.slice(k))?.[1] || "?"); }
   assert.ok(unde.length >= 3, "citirile notei: " + unde.join(", "));
-  for (const f of unde) assert.ok(["tbAduDirectie", "renderTabloTv", "renderTabloIndicatori"].includes(f), "nota TradingView citită în " + f + " (doar adus / desen)");
+  for (const f of unde) assert.ok(["tbAduDirectie", "tbAduTv", "tbTvDe", "renderTabloTv", "renderTabloIndicatori"].includes(f), "nota TradingView citită în " + f + " (doar adus / desen)");
   assert.ok(!/TvNote/.test(APP.slice(APP.indexOf("function tbVerdict"), APP.indexOf("function tbVerdict") + 4000)), "verdictul nu vede nota");
 });
 
@@ -169,7 +175,7 @@ await test("T212: o cerere pentru toate pozițiile, doar cu pagina la vedere, ce
 await test("T212: în coloana Trend apare „TV 1D: …”, în fișă tabelul întreg; semaforul / consilierul nu folosesc nota", () => {
   const r = T212.slice(T212.indexOf("function t212RandPozitie(p) {"), T212.indexOf("function t212RandPozitie(p) {") + 12000);
   assert.ok(/var iTrend = [^\n]*TvNote\.mic\(/.test(r), "linia mică în Trend");
-  assert.ok(/var iSim = [^\n]*TvNote\.mic\(t212\.tv\.note\[p\.ticker\], "1D", "tvMicTel"\)/.test(r), "pe telefon coloana Trend e ascunsă: linia stă și sub nume");
+  assert.ok(/var iSim = [^\n]*TvNote\.mic\(t212NotaTv\(p\), "1D", "tvMicTel"\)/.test(r), "pe telefon coloana Trend e ascunsă: linia stă și sub nume");
   assert.ok(/TvNote\.tabel\(/.test(r), "tabelul în fișă");
   assert.ok(!/t212\.tv\b/.test(T212.slice(T212.indexOf("function t212Semafor"), T212.indexOf("function t212Semafor") + 3000)), "semaforul nu vede nota");
 });

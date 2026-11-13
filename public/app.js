@@ -3854,6 +3854,9 @@ function DMI(h,l,c,n=14){
 }
 function stochRSI(r,n=14){let o=Array(r.length).fill(50);for(let i=n-1;i<r.length;i++){let w=r.slice(i-n+1,i+1),mn=Math.min(...w),mx=Math.max(...w);o[i]=mx===mn?50:100*(r[i]-mn)/(mx-mn)}return o}
 function rollingVWAP(h,l,c,v,n=50){let o=Array(c.length).fill(NaN);for(let i=0;i<c.length;i++){let a=Math.max(0,i-n+1),pv=0,vs=0;for(let z=a;z<=i;z++){let tp=(h[z]+l[z]+c[z])/3;pv+=tp*v[z];vs+=v[z]}o[i]=vs?pv/vs:c[i]}return o}
+/* v100.339 (I-870, auditul din 13.11): Stochasticul PREȚULUI, %K(n, k) ca în TradingView - unde e închiderea în intervalul maxim–minim al
+   ultimelor n bare, netezit pe k bare. Interval zero (preț pe loc) ⇒ null. Rândul „Stochastic” îl arată pe el; scorul rămâne pe Stoch RSI brut. */
+function stochPret(h,l,c,n=14,k=3){const brut=Array(c.length).fill(null);for(let i=n-1;i<c.length;i++){let hh=-Infinity,ll=Infinity;for(let z=i-n+1;z<=i;z++){if(h[z]>hh)hh=h[z];if(l[z]<ll)ll=l[z]}brut[i]=hh>ll?(c[i]-ll)/(hh-ll)*100:null}return brut.map((x,i)=>{if(i<n+k-2)return null;let s=0;for(let z=i-k+1;z<=i;z++){if(brut[z]===null)return null;s+=brut[z]}return s/k})}
 function superTrend(h,l,c,atr,n=14,mult=2.8){
  let len=c.length,up=Array(len).fill(0),dn=Array(len).fill(0),trend=Array(len).fill(1),line=Array(len).fill(0);
  for(let i=0;i<len;i++){let mid=(h[i]+l[i])/2,bu=mid+mult*atr[i],bd=mid-mult*atr[i];if(i===0){up[i]=bu;dn[i]=bd;line[i]=bd;continue}up[i]=(bu<up[i-1]||c[i-1]>up[i-1])?bu:up[i-1];dn[i]=(bd>dn[i-1]||c[i-1]<dn[i-1])?bd:dn[i-1];if(c[i]>up[i-1])trend[i]=1;else if(c[i]<dn[i-1])trend[i]=-1;else trend[i]=trend[i-1];line[i]=trend[i]===1?dn[i]:up[i]}
@@ -3873,6 +3876,16 @@ function smcState(h,l,c,v,volOk=true){
 // bare (aceeași fereastră ca rollingRvPercentile, același pctRank), mare = peste percentila 80. Pragul fix ATR% ≥ 3 era atins în 90% din
 // bare pe 1d și niciodată pe 15m/1h. Sub 60 de bare cu ATR: istoric scurt - nu se spune „mare” (regimul rămâne RANGE, profilul obișnuit).
 function atrPctMare(atr,c,i,look=160){const a=[];for(let k=Math.max(0,i-look+1);k<=i;k++){const v=atr[k]/c[k]*100;if(Number.isFinite(v)&&v>0)a.push(v)}const cur=atr[i]/c[i]*100;if(a.length<60||!Number.isFinite(cur)||!(cur>0))return {percentila:null,mare:false,istoricScurt:true,n:a.length};const p=pctRank(a,cur);return {percentila:p,mare:p>=80,istoricScurt:false,n:a.length}}
+/* v100.339 (I-873, auditul din 13.11): regimul profilului cu HISTEREZIS. Fără memorie, pragul verdictului (64 / 66 / 67) și multiplicatorul
+   Supertrend (2,4 / 2,8 / 3,0) săreau de la o bară la alta când ADX-ul oscila în jurul lui 27 sau ATR-ul în jurul percentilei 80, iar verdictul
+   se schimba fără ca prețul să fi făcut ceva nou. Aici regimul se hotărăște bară cu bară pe ultimele 60 de bare: „trend” intră la ADX ≥ 27 și
+   iese sub 24; „agitat” intră la percentila ATR% ≥ 80 și iese sub 70; „trend” are întâietate. Pragurile vin din mecanism (regulile scrise înainte
+   de cifre în docs/cercetare/2026-11-13-tablou-acuratete.md, M2), nu din reglaj.
+   CÂT AJUTĂ, măsurat (M2 + revizia independentă din 14.11): aproape deloc - săriturile „doar din parametri” erau ~1% din schimbările de verdict
+   (18 → 12 și 24 → 12 din ~2.350, în zgomot). Ține parametrii pe loc și nu strică; verdictul îl liniștește confirmarea pe două bare
+   (tbVerdictConfirmat), nu histerezisul. */
+function regimProfil(atr,c,adx,i){let st=null;for(let k=Math.max(0,i-59);k<=i;k++){const a=adx[k],pr=atrPctMare(atr,c,k).percentila;const trend=st==="trend"?a>=24:a>=27,agitat=pr!==null&&(st==="agitat"?pr>=70:pr>=80);st=trend?"trend":agitat?"agitat":"calm"}return st}
+function profilDinRegim(r){return r==="trend"?{st:2.8,breakout:22,signal:64}:r==="agitat"?{st:3.0,breakout:18,signal:67}:{st:2.4,breakout:18,signal:66}}
 function profileParams(mode,atrMare,adx){
  if(mode==="scalp")return {st:2.0,breakout:12,signal:66};
  if(mode==="swing")return {st:3.2,breakout:30,signal:64};
@@ -3974,19 +3987,22 @@ function fvgLifecycle(j,look=80){
 }
 function liquidityMap(j,atrNow){const h=j.map(x=>+x[2]),l=j.map(x=>+x[3]),c=+j[j.length-1][4],pd=previousPeriodHL(j,"day"),pw=previousPeriodHL(j,"week"),eq=equalLiquidity(h,l,atrNow),hi=Math.max(...h.slice(-50)),lo=Math.min(...l.slice(-50)),mid=(hi+lo)/2;return {prevDay:pd,prevWeek:pw,equalHigh:eq.equalHigh,equalLow:eq.equalLow,premium:c>=mid?"PREMIUM":"DISCOUNT",mid,fvg:fvgLifecycle(j)}}
 function regimeFusion(q){let trend=0,range=0,reasons=[];if(q.chop<38){trend+=2;reasons.push("low CHOP")}else if(q.chop>61){range+=2;reasons.push("high CHOP")}if(q.efficiency>=.45){trend+=2;reasons.push("efficient move")}else if(q.efficiency<.25){range+=1;reasons.push("low efficiency")}if(q.hurst>=.55){trend+=1;reasons.push("persistent Hurst")}else if(q.hurst<=.45){range+=1;reasons.push("mean-reverting Hurst")}if(q.adx>=25)trend+=1;else range+=1;let state=trend>=4?"TRENDING":range>=4?(q.hurst<=.45?"MEAN-REVERTING":"CHOPPY"):"TRANSITION",quality=Math.max(0,Math.min(100,50+(trend-range)*10));return {state,quality,reason:reasons.join(" · ")||"mixed regime evidence"}}
-function calc(j,mode="auto"){
+function calc(j,mode="auto",opt=null){
  let c=j.map(x=>+x[4]),lo=j.map(x=>+x[3]),hi=j.map(x=>+x[2]),v=j.map(x=>volBara(x)??0),i=c.length-1;
  // ferestrele exacte ale indicatorilor de volum (vezi rollingVWAP/MFI/CMF/OBV/vr mai jos)
  const lipsaVwap=volLipsaIn(j,i-49,i),lipsaMfi=volLipsaIn(j,i-13,i),lipsaCmf=volLipsaIn(j,i-19,i),lipsaVr=volLipsaIn(j,i-19,i),lipsaObv=volLipsaIn(j,i-19,i),lipsaSmc=volLipsaIn(j,i-20,i);
  let e20=ema(c,20),e50=ema(c,50),e200=ema(c,200),rr=RSI(c),m12=ema(c,12),m26=ema(c,26),m=m12.map((x,z)=>x-m26[z]),sig=ema(m,9),hist=m.map((x,z)=>x-sig[z]);
  let atr=ATR(hi,lo,c,14),dm=DMI(hi,lo,c,14),stoch=stochRSI(rr,14),ma20=sma(c,20),sd20=stddev(c,20),vwap=rollingVWAP(hi,lo,c,v,50),mfiArr=MFI(hi,lo,c,v,14),cmfArr=CMF(hi,lo,c,v,20),obvArr=OBV(c,v),ichi=ichimoku(hi,lo,c),divergence=rsiDivergence(c,rr),levels=levelLadder(hi,lo,c,50);
- let atrPct=atr[i]/c[i]*100,atrRang=atrPctMare(atr,c,i),p=profileParams(mode,atrRang.mare,dm.adx[i]),st=superTrend(hi,lo,c,atr,14,p.st),smc=smcState(hi,lo,c,v,!lipsaSmc),structure2=swingStructure(hi,lo,c,3);
+ /* v100.339 (auditul din 13.11): Stochasticul prețului și Stoch RSI netezit pentru tabel (scorul rămâne pe `stoch` brut); sub 200 de bare
+    EMA 200 pleacă de la prima închidere și nu înseamnă nimic ⇒ e200Valid; preț pe loc pe ultimele 14 bare ⇒ plat (RSI 100 / MFI 100 mint) */
+ const stK=stochPret(hi,lo,c,14,3),stRsiK=sma(stoch,3),e200Valid=c.length>=200,plat=c.length>=14&&Math.max(...hi.slice(-14))===Math.min(...lo.slice(-14));
+ let atrPct=atr[i]/c[i]*100,atrRang=atrPctMare(atr,c,i),regimP=mode==="auto"&&!(opt&&opt.faraHisterezis)?regimProfil(atr,c,dm.adx,i):null,p=opt&&opt.profil?opt.profil:regimP?profilDinRegim(regimP):profileParams(mode,atrRang.mare,dm.adx[i]),   /* opt.profil: doar pentru măsurătoare (verdictul barei cu profilul altei bare) */st=superTrend(hi,lo,c,atr,14,p.st),smc=smcState(hi,lo,c,v,!lipsaSmc),structure2=swingStructure(hi,lo,c,3);
  let deltaFlow=candleDeltaProxy(j),ttm=ttmSqueeze(hi,lo,c,20),chop=choppinessIndex(hi,lo,c,14),efficiency=efficiencyRatio(c,20),hurst=hurstExponent(c,80),rv=rollingRvPercentile(c,20,160),parkVol=parkinsonVol(hi,lo,20),gkVol=garmanKlassVol(j,20),vwapBands=weightedVwapBand(j,50),calendarVwaps={day:calendarVwap(j,"day"),week:calendarVwap(j,"week"),month:calendarVwap(j,"month")};
  let vm=v.slice(-20).reduce((a,b)=>a+b,0)/Math.min(20,v.length),vr=v[i]/(vm||1),roc10=(c[i]/c[Math.max(0,i-10)]-1)*100;
  let upper=ma20[i]+2*sd20[i],lower=ma20[i]-2*sd20[i],bbpos=(c[i]-lower)/Math.max(upper-lower,1e-12)*100;
  let dstart=Math.max(1,i-p.breakout),prevHi=Math.max(...hi.slice(dstart,i)),prevLo=Math.min(...lo.slice(dstart,i)),bo=c[i]>prevHi?"UP":c[i]<prevLo?"DOWN":"NONE";
  let trendScore=50;
- trendScore+=c[i]>e20[i]?9:-9;trendScore+=e20[i]>e50[i]?11:-11;trendScore+=e50[i]>e200[i]?13:-13;trendScore+=st.trend[i]>0?12:-12;trendScore+=dm.pdi[i]>dm.mdi[i]?5:-5;
+ trendScore+=c[i]>e20[i]?9:-9;trendScore+=e20[i]>e50[i]?11:-11;trendScore+=e200Valid?(e50[i]>e200[i]?13:-13):0;   /* v100.339: fără EMA 200 adevărată, cele 13 puncte ale ei nu se dau */trendScore+=st.trend[i]>0?12:-12;trendScore+=dm.pdi[i]>dm.mdi[i]?5:-5;
  trendScore=Math.max(0,Math.min(100,trendScore));
  let momScore=50;momScore+=rr[i]>=55?10:rr[i]<=45?-10:0;momScore+=hist[i]>0?13:-13;momScore+=roc10>0?10:-10;momScore+=stoch[i]>55?7:stoch[i]<45?-7:0;momScore=Math.max(0,Math.min(100,momScore));
  let volScore=null;if(!lipsaVr&&!lipsaVwap){volScore=50;if(vr>=1.5)volScore+=c[i]>=c[i-1]?24:-24;else if(vr>=1.1)volScore+=c[i]>=c[i-1]?12:-12;if(c[i]>vwap[i])volScore+=8;else volScore-=8;volScore=Math.max(0,Math.min(100,volScore))}
@@ -4001,9 +4017,9 @@ function calc(j,mode="auto"){
  let confluence=Math.min(100,Math.abs(score-50)*2),quality=confluence>=78?"A":confluence>=62?"B":confluence>=46?"C":"D";
  return{
   price:c[i],score,signal,quality,confluence,regime,trendScore,momScore,volScore,structureScore,structure2,
-  rsi:rr[i],stoch:stoch[i],mfi:lipsaMfi?null:mfiArr[i],cmf:lipsaCmf?null:cmfArr[i],obvSlope:lipsaObv?null:obvArr[i]-obvArr[Math.max(0,i-20)],ichimoku:ichi.state,divergence,vr:lipsaVr?null:vr,volumLipsa:areVolLipsa(j),ema:e20[i]>e50[i]&&e50[i]>e200[i],emaDir:e20[i]>e50[i]?"UP":"DOWN",macd:hist[i]>0,
+  rsi:rr[i],stoch:stoch[i],stochK:stK[i],stochRsiK:stRsiK[i],bare:c.length,e200Valid,plat,mfi:lipsaMfi?null:mfiArr[i],cmf:lipsaCmf?null:cmfArr[i],obvSlope:lipsaObv?null:obvArr[i]-obvArr[Math.max(0,i-20)],ichimoku:ichi.state,divergence,vr:lipsaVr?null:vr,volumLipsa:areVolLipsa(j),ema:e20[i]>e50[i]&&e50[i]>e200[i],emaDir:e20[i]>e50[i]?"UP":"DOWN",macd:hist[i]>0,
   adx:dm.adx[i],pdi:dm.pdi[i],mdi:dm.mdi[i],supertrend:st.trend[i]>0?"BULL":"BEAR",bbpos,vwapAbove:lipsaVwap?null:c[i]>=vwap[i],levels,
-  atr:atr[i],atrPct,atrPctPercentila:atrRang.percentila,atrIstoricScurt:atrRang.istoricScurt,e20Now:e20[i],e50Now:e50[i],e200Now:e200[i],sup:Math.min(...lo.slice(-50)),res:Math.max(...hi.slice(-50)),ver,prag:threshold,breakout:bo,prevHi,prevLo,smc,
+  atr:atr[i],atrPct,atrPctPercentila:atrRang.percentila,atrIstoricScurt:atrRang.istoricScurt,e20Now:e20[i],e50Now:e50[i],e200Now:e200[i],sup:Math.min(...lo.slice(-50)),res:Math.max(...hi.slice(-50)),ver,prag:threshold,regimProfil:regimP,breakout:bo,prevHi,prevLo,smc,
   deltaFlow,ttm,chop,efficiency,hurst,rv20:rv.value,rvPercentile:rv.percentile,parkVol,gkVol,vwapBands,calendarVwaps,liquidity,
   candles:j.slice(-160),closes:c.slice(-160),e20:e20.slice(-160),e50:e50.slice(-160)
  }
@@ -4038,7 +4054,7 @@ function draw(q){
  line(e50,"#7f8da3",1);line(e20,"#5B8FC7",1.35);
  ctx.setLineDash([4,4]);ctx.strokeStyle="#385067";ctx.beginPath();ctx.moveTo(padL,y(q.sup));ctx.lineTo(w-padR,y(q.sup));ctx.stroke();ctx.beginPath();ctx.moveTo(padL,y(q.res));ctx.lineTo(w-padR,y(q.res));ctx.stroke();ctx.setLineDash([]);
 }
-function historicalProbability(j,horizon=4){
+function historicalProbability(j,horizon=4,opt=null){
   const c=j.map(x=>+x[4]), v=j.map(x=>+x[5]), n=c.length;
   if(n<260)return null;
   const e20=ema(c,20), e50=ema(c,50), e200=ema(c,200), rr=RSI(c);
@@ -4050,24 +4066,44 @@ function historicalProbability(j,horizon=4){
   };
   const cur=feat(n-1); if(!cur)return null;
   if(areVolLipsa(j)){cur[5]=0;const f0=feat;feat=(i)=>{const f=f0(i);if(f)f[5]=0;return f}}
-  let samples=[], scales=[1.2,1,1,1,1,.8];
-  for(let i=205;i<n-horizon-2;i+=2){
-    let f=feat(i), d=0;
-    for(let k=0;k<f.length;k++)d+=Math.pow((f[k]-cur[k])/scales[k],2);
-    samples.push({dist:Math.sqrt(d),ret:(c[i+horizon]/c[i]-1)*100});
+  let samples=[], scales=[1.2,1,1,1,1,.8], k, near, ws=0, upw=0, av=0;
+  if(opt&&opt.vechi){   /* regula de până la v100.338 (K1), păstrată doar pentru măsurătoare (docs/cercetare/2026-11-13-tablou-acuratete.md, M3) */
+    for(let i=205;i<n-horizon-2;i+=2){
+      let f=feat(i), d=0;
+      for(let q=0;q<f.length;q++)d+=Math.pow((f[q]-cur[q])/scales[q],2);
+      samples.push({dist:Math.sqrt(d),ret:(c[i+horizon]/c[i]-1)*100});
+    }
+    if(!samples.length)return null;
+    samples.sort((a,b)=>a.dist-b.dist);
+    k=Math.min(60,Math.max(20,Math.floor(samples.length*.12)));near=samples.slice(0,k);
+  }else{
+    /* v100.339 (auditul din 13.11, K2): în K1 histograma MACD era înmulțită cu 10.000 lângă trăsături în procente ⇒ distanța era aproape numai
+       MACD („situații asemănătoare” = „aceeași histogramă”), iar vecinii luați din două în două bare aveau rezultate suprapuse (20 de
+       „situații” = ~10 episoade, banda prea îngustă). Acum fiecare trăsătură se împarte la abaterea ei standard pe eșantioane (cântăresc
+       la fel, înaintea ponderilor), iar vecinii se aleg cu cel puțin un orizont între oricare doi; k = 20. */
+    for(let i=205;i<n-horizon-2;i++){const f=feat(i);if(f)samples.push({i,f,ret:(c[i+horizon]/c[i]-1)*100})}
+    if(!samples.length)return null;
+    const sd=cur.map((_,q)=>{let s=0,s2=0;for(const x of samples){s+=x.f[q];s2+=x.f[q]*x.f[q]}const m=s/samples.length,vr=s2/samples.length-m*m;return vr>1e-12?Math.sqrt(vr):1});
+    for(const x of samples){let d=0;for(let q=0;q<cur.length;q++)d+=Math.pow((x.f[q]-cur[q])/sd[q]/scales[q],2);x.dist=Math.sqrt(d)}
+    samples.sort((a,b)=>a.dist-b.dist);
+    near=[];for(const x of samples){if(near.length>=20)break;if(near.every(y=>Math.abs(y.i-x.i)>=horizon))near.push(x)}
+    k=near.length;
   }
-  if(!samples.length)return null;
-  samples.sort((a,b)=>a.dist-b.dist);
-  let k=Math.min(60,Math.max(20,Math.floor(samples.length*.12))), near=samples.slice(0,k), ws=0, upw=0, av=0;
-  near.forEach(x=>{let w=1/(.25+x.dist);ws+=w;if(x.ret>0)upw+=w;av+=x.ret*w});
+  /* revizia (14.11): randamentul exact zero nu e „coborâre” - se împarte pe jumătate (pe bare identice ieșea „↓100%”); regula veche (K1) rămâne cum era */
+  near.forEach(x=>{let w=1/(.25+x.dist);ws+=w;if(x.ret>0)upw+=w;else if(x.ret===0&&!(opt&&opt.vechi))upw+=w/2;av+=x.ret*w});
   let up=upw/ws*100, down=100-up, avg=av/ws, strength=Math.abs(up-50)*2;
   // v74.6: banda de zgomot. Masurat: pe mers ALEATOR kNN-ul ghiceste directia
   // in 48,8% din cazuri - deci procentul, singur, nu dovedeste nimic. Banda e
   // intervalul binomial 95% in jurul lui 50%, pe numarul EFECTIV de analogi
   // (ponderile inegale il micsoreaza). Cat e in banda: NEUTRAL, fara culoare.
   let w2=0;near.forEach(x=>{let w=1/(.25+x.dist);w2+=w*w});
-  const nEff=w2?ws*ws/w2:k,banda=1.96*Math.sqrt(.25/Math.max(1,nEff))*100,inBanda=Math.abs(up-50)<=banda;
-  return {up,down,avg,k,strength,banda,nEff,inBanda,nedovedit:true,ver:inBanda?"NEUTRAL":up>=58?"BULLISH":up<=42?"BEARISH":"NEUTRAL"};
+  /* v100.339 (K3, docs/cercetare/2026-11-13-tablou-acuratete.md, M3b): banda pe cuantila Student t(0,975; nEff − 1), nu pe 1,96 - cu ~17 vecini
+     efectivi aproximarea normală e prea îngustă (pe mers aleator celula ieșea „în afara benzii” în 7,5–8,3% din serii, nu 5%). opt.vechi (K1)
+     și opt.bandaNormala (K2) păstrează 1,96, doar pentru măsurătoare. */
+  const nEff=w2?ws*ws/w2:k,gl=Math.max(1,nEff-1),zT=opt&&(opt.vechi||opt.bandaNormala)?1.96:1.96+(1.96*1.96*1.96+1.96)/(4*gl)+(5*Math.pow(1.96,5)+16*1.96*1.96*1.96+3*1.96)/(96*gl*gl),banda=zT*Math.sqrt(.25/Math.max(1,nEff))*100,inBanda=Math.abs(up-50)<=banda;
+  const rezE={up,down,avg,k,strength,banda,nEff,inBanda,nedovedit:true,ver:inBanda?"NEUTRAL":up>=58?"BULLISH":up<=42?"BEARISH":"NEUTRAL"};
+  if(opt&&opt.detalii&&!opt.vechi)rezE.vecini=near.map(x=>x.i);   /* doar pentru probă: barele vecinilor (cel puțin un orizont între oricare doi) */
+  return rezE;
 }
 // Eticheta afisata pentru kNN: procentul, banda si "nedovedit" - niciodata singur.
 function knnEticheta(hp){
@@ -4879,7 +4915,10 @@ function v71RenderJournal(){const symbol=v71CurrentSymbol(),j=v71StoredJournal(s
 function botiNr(v){if(v==null||v===""||typeof v==="boolean")return null;const n=+v;return Number.isFinite(n)?n:null}
 function botiBan(v,zecimale=1,cuSemn=true){   /* v100.196: rezultatele cu O zecimală și virgula (era 4 zecimale cu punct) */
   const n=botiNr(v);if(n===null)return '—';
-  const s=Math.abs(n).toFixed(zecimale);return `${n<0&&+s!==0?'−':cuSemn&&n>0&&+s!==0?'+':''}${s.replace('.',',')} USDT`
+  /* v100.339 (auditul din 13.11): sub 0,1 se scriu zecimalele mărunte (−0,0377 apărea „0,0” cu roșu: cifra zicea zero, culoarea minus) - regula
+     TextRo.zecMici; zecimalele cerute anume (altele decât una) rămân */
+  const z=zecimale===1&&typeof TextRo!=="undefined"&&TextRo.zecMici?TextRo.zecMici(n):zecimale;
+  const s=Math.abs(n).toFixed(z);return `${n<0&&+s!==0?'−':cuSemn&&n>0&&+s!==0?'+':''}${s.replace('.',',')} USDT`
 }
 function botiClasa(v){const n=botiNr(v);return n===null?'lipsa':n>0?'good':n<0?'bad':'neutral'}
 // Suma pe boti a unui camp: daca un singur bot n-are cifra, totalul e
@@ -7023,9 +7062,10 @@ function tbDeseneazaExtra(b){
   h+='<div class="tbGrupCard">'+tbGrup("Azi");
   h+=linie("Grile, ultimele 24 h",z.grile24h==null?"—":botiBan(z.grile24h),botiClasa(z.grile24h),z.umpleri24h!=null?TextRo.cate(z.umpleri24h,"tranzacție","tranzacții"):"");
   /* v100.272 (ideile auditului 29.10): taxa de intrare (o dată, la pornire) separat de comisionul pe zi - înainte era împărțită pe zile în el */
-  h+=linie("Comisioane pe zi",z.comisionZi==null?"—":botiBan(z.comisionZi),"tbSubVal",z.taxaIntrare?"medie de la pornire, fără taxa de intrare":"medie de la pornire");
+  var cz=tbCosturiZi(z,b);   /* v100.339 (auditul din 13.11): sub o zi nimic „pe zi”; comisionul pe fereastra grilelor */
+  h+=linie("Comisioane pe zi",cz.comision.val,"tbSubVal",cz.comision.nota);
   if(z.taxaIntrare)h+=linie("Taxa de intrare (o dată)","≈ "+botiBan(z.taxaIntrare,TextRo.zecMici(z.taxaIntrare)),"tbSubVal","estimată: poziția cumpărată la pornire × comisionul la piață");
-  h+=linie("Funding pe zi",z.fundingZi==null?"—":botiBan(z.fundingZi),z.fundingMananca?"bad":"tbSubVal",z.fundingMananca?"mănâncă tot câștigul din grile":"medie de la pornire");
+  h+=linie("Funding pe zi",cz.funding.val,z.fundingMananca&&!cz.tanar?"bad":"tbSubVal",cz.funding.nota);
   h+=linie("Grile − costuri, pe zi",z.netZi==null?"—":botiBan(z.netZi),botiClasa(z.netZi));
   h+='</div><div class="tbGrupCard">'+tbGrup("Dacă închizi acum");
   h+='<div class="tbLinie tbLinieTotal"><span>Dacă îl închizi acum, iei</span><b class="'+botiClasa(q.iei!=null&&botiNr(b.investit)!=null?q.iei-botiNr(b.investit):null)+'">'+escapeHtml(q.iei==null?"—":TextRo.num(q.iei,1)+" USDT")/* audit 19.10: o zecimală, virgula */+'</b></div>';
@@ -7046,6 +7086,18 @@ function tbDeseneazaExtra(b){
 /* v100.333 (revizia Opus a v100.332): cât aduce o grilă, în USDT - rezultat ⇒ O zecimală (regula lui); o sumă mică (sub 0,095) cu două, sub 0,0095 cu trei,
    ca să nu iasă „0,0” (TextRo.zecMici, ca sfaturile) */
 function tbPeGrilaUsdt(v){return TextRo.num(v,TextRo.zecMici(v))}
+/* v100.339 (I-874, auditul din 13.11): vârsta botului nu apărea nicăieri pe pagină (multe sfaturi depind de ea), iar poziția era rotunjită la
+   întreg. Două rânduri în capul cartelei „Banii”: de când rulează (cu perechile și ritmul lor) și poziția de acum (cu unitate, valoare și
+   levierul efectiv = valoarea poziției / banii puși). Fără date nu inventează nimic. */
+function tbIdentitateBot(b,acum){
+  var out=[],p=botiNr(b&&b.pornitLa),per=botiNr(b&&b.ordinePerechi),poz=botiNr(b&&b.pozitie),pr=botiNr(b&&b.pretCurent),inv=botiNr(b&&b.investit),lev=botiNr(b&&b.levier);
+  if(p>0&&acum>p){var min=Math.floor((acum-p)/60000),ore=min/60,d=Math.floor(min/1440),h=Math.floor((min%1440)/60),mm=min%60;
+    var cat=d>=1?TextRo.cate(d,"zi","zile")+(h?" "+h+" h":""):h>=1?h+" h"+(mm?" "+mm+" min":""):mm+" min";
+    var dt=new Date(p),z=function(n){return (n<10?"0":"")+n};
+    out.push({eticheta:"Rulează de",valoare:cat,nota:(per!==null?TextRo.cate(per,"pereche","perechi")+(ore>=1&&per>0?" · ≈ "+TextRo.num(per/ore,1)+" pe oră":"")+" · ":"")+"pornit "+z(dt.getDate())+"."+z(dt.getMonth()+1)+", "+z(dt.getHours())+":"+z(dt.getMinutes())})}
+  if(poz!==null){var moneda=String(b.baza||"").replace(/\.PERP$/,""),a=Math.abs(poz),val=pr>0?a*pr:null;
+    out.push({eticheta:"Poziția acum",valoare:a<1e-9?"fără poziție":TextRo.cant(a)+(moneda?" "+moneda:""),nota:a<1e-9?"":(poz<0?"short":"long")+(val!==null?" · ≈ "+TextRo.usdt(val,1).replace(/^\+/,""):"")+(val!==null&&inv>0?" · levier efectiv "+TextRo.num(val/inv,1)+"×"+(lev>0?" (setat "+TextRo.num(lev,0)+"×)":""):"")})}
+  return out}
 // Banii botului pe Tablou, dupa contractul rutei. Lipsa = "—", niciodata 0.
 function tbDeseneazaBanii(b){
   var el=$("tbBani"),av=$("tbAvertismente");if(!el)return;
@@ -7053,7 +7105,7 @@ function tbDeseneazaBanii(b){
   // Lista, nu cutii: eticheta la stanga, cifra la dreapta, aliniata pe coloana.
   var pg=typeof TabloExtra!=="undefined"?TabloExtra.profitPeGrila(b):null,per=botiNr(b.ordinePerechi);
   var rand=function(eticheta,valoare,cls,nota){return '<div class="tbLinie"><span>'+escapeHtml(eticheta)+(nota?' <span class="tbSub">'+escapeHtml(nota)+'</span>':'')+'</span><b class="'+(cls||"")+'">'+escapeHtml(valoare)+'</b></div>'};
-  el.innerHTML=rand("Investit",botiBan(b.investit,2,false))+
+  el.innerHTML=tbIdentitateBot(b,Date.now()).map(function(x){return rand(x.eticheta,x.valoare,"tbSubVal",x.nota)}).join("")+rand("Investit",botiBan(b.investit,2,false))+
     rand("Realizat, după comisioane",botiBan(b.profitNet),botiClasa(b.profitNet))+
     rand("Poziția deschisă",botiBan(b.pnlNerealizat)+(b.pnlNerealizatSigur===false?" (semn nesigur)":""),botiClasa(b.pnlNerealizat),"nerealizat")+
     '<div class="tbLinie tbLinieTotal"><span>Total'+(typeof TabloExtra!=="undefined"&&TabloExtra.notaTotal&&TabloExtra.notaTotal(b)?' <span class="tbSub">'+escapeHtml(TabloExtra.notaTotal(b))+'</span>':'')+'</span><b class="'+botiClasa(b.profitTotal)+'">'+escapeHtml(botiBan(b.profitTotal))+'</b></div>'+   /* v100.272: nota neutrului lângă total */
@@ -7099,7 +7151,8 @@ async function tbAduExtra(){
 function tbTinteScenariu(b){
   /* v100.332 (🔵2): stopul în procente = prețul viu (pretStopLive), ca take-profit-ul de mai jos; cel pe preț rămâne prețul lui */
   var t=[],p=botiNr(b.pretCurent),jos=botiNr(b.gridJos),sus=botiNr(b.gridSus),opr=!b.opritorPierdereActiv?botiNr(b.opritorPierdere):typeof TabloExtra!=="undefined"&&TabloExtra.pretStopLive?TabloExtra.pretStopLive(b):botiNr(b.opritorPierdere);
-  if(p!==null){t.push({eticheta:"+5%",pret:p*1.05});t.push({eticheta:"−5%",pret:p*0.95});t.push({eticheta:"−10%",pret:p*0.9})}
+  /* v100.339 (auditul din 13.11): țintele erau gândite pentru long (+5%, −5%, −10%); la short partea pierderii e SUS ⇒ −5%, +5%, +10% */
+  if(p!==null){if(String(b.directie||"").toLowerCase()==="short"){t.push({eticheta:"−5%",pret:p*0.95});t.push({eticheta:"+5%",pret:p*1.05});t.push({eticheta:"+10%",pret:p*1.1})}else{t.push({eticheta:"+5%",pret:p*1.05});t.push({eticheta:"−5%",pret:p*0.95});t.push({eticheta:"−10%",pret:p*0.9})}}
   if(sus!==null)t.push({eticheta:"marginea de sus",pret:sus});
   if(jos!==null)t.push({eticheta:"jos",pret:jos});
   if(opr!==null&&opr!==jos)t.push({eticheta:"opritorul",pret:opr});
@@ -7107,6 +7160,17 @@ function tbTinteScenariu(b){
   var propriu=tbStare.scenariuPropriu;if(propriu>0)t.push({eticheta:"prețul tău",pret:propriu});
   return t;
 }
+/* v100.339 (auditul din 13.11): „pe zi” doar de la o zi de viață - o plată de +0,03 la 5 ore apărea „+0,1 pe zi”; sub o zi se arată suma de la
+   pornire. De la o zi, comisionul e pe perechile ultimelor 24 h (aceeași fereastră ca grilele) când se poate, altfel media, spusă ca medie. */
+function tbOraCitirii(){var t=tbStare&&Number(tbStare.botLa);if(!(t>0))return "";var d=new Date(t),z=function(n){return (n<10?"0":"")+n};return " · citit "+z(d.getHours())+":"+z(d.getMinutes())+":"+z(d.getSeconds())}
+function tbCosturiZi(z,b){
+  var tanar=z&&z.zile!=null&&z.zile<1,com=botiNr(b&&b.comisioane),fin=botiNr(b&&b.finantare),tx=z&&z.taxaIntrare?z.taxaIntrare:0;
+  var faraTx=z&&z.taxaIntrare?", fără taxa de intrare":"";
+  return {tanar:tanar,
+    comision:tanar?{val:"—",nota:"sub o zi: de la pornire "+(com===null?"—":botiBan(com-tx))+faraTx}:{val:!z||z.comisionZi==null?"—":botiBan(z.comisionZi),nota:(z&&z.fereastra==="24h"?"pe perechile ultimelor 24 h":"medie de la pornire")+faraTx},
+    funding:tanar?{val:"—",nota:"sub o zi: de la pornire "+(fin===null?"—":botiBan(fin))}:{val:!z||z.fundingZi==null?"—":botiBan(z.fundingZi),nota:z&&z.fundingMananca?"mănâncă tot câștigul din grile":"medie de la pornire"}}}
+/* v100.339: rândul din „Dacă prețul ajunge la…” e „lichidat” și când prețul lui trece de lichidarea estimată de Pionex (modelul golea contul mai departe) */
+function tbScenLichidat(x,b){var lq=botiNr(b&&b.pretLichidare),d=String(b&&b.directie||"").toLowerCase();return !!(x&&(x.gol||(lq>0&&(d==="short"?x.pret>=lq:d==="long"?x.pret<=lq:false))))}
 function tbScenariuPropriu(v){var x=Number(String(v||"").replace(",","."));tbStare.scenariuPropriu=x>0&&isFinite(x)?x:null;renderTabloScenarii()}
 function renderTabloScenarii(){
   var el=$("tbScenarii");if(!el)return;
@@ -7117,8 +7181,8 @@ function renderTabloScenarii(){
   var nume={jos:"marginea de jos"};
   var randuri=r.randuri.slice().sort(function(a,c){return c.pret-a.pret});
   el.innerHTML='<div class="tbScenCap"><span>Dacă prețul ajunge la</span><span>Poziția</span><span>Totalul ar fi</span></div>'+
-    randuri.map(function(x){return '<div class="tbScenRand'+(x.gol?' tbScenGol':'')+'"><span><b>'+escapeHtml(tbPretScurt(x.pret))+'</b> <span class="tbSub">'+escapeHtml(/^[+−]/.test(x.eticheta)?x.eticheta:(nume[x.eticheta]||x.eticheta)+' · '+tbFormateazaSemn(x.miscare,1)+'%')+'</span></span>'+
-      '<span>'+Math.round(x.pozitie)+'</span>'+(x.gol?'<b class="bad">lichidat, ≈ −'+escapeHtml(TextRo.num(r.grid.inv,1))+' USDT</b>':'<b class="'+(x.total>0?"good":x.total<0?"bad":"")+'">'+escapeHtml(botiBan(x.total,1))+'</b>')+'</div>'}).join("")+
+    randuri.map(function(x){return '<div class="tbScenRand'+(tbScenLichidat(x,b)?' tbScenGol':'')+'"><span><b>'+escapeHtml(tbPretScurt(x.pret))+'</b> <span class="tbSub">'+escapeHtml(/^[+−]/.test(x.eticheta)?x.eticheta:(nume[x.eticheta]||x.eticheta)+' · '+tbFormateazaSemn(x.miscare,1)+'%')+'</span></span>'+
+      '<span>'+escapeHtml(TextRo.cant(x.pozitie))+'</span>'+(tbScenLichidat(x,b)?'<b class="bad">lichidat, ≈ −'+escapeHtml(TextRo.num(r.grid.inv,1))+' USDT</b>':'<b class="'+(x.total>0?"good":x.total<0?"bad":"")+'">'+escapeHtml(botiBan(x.total,1))+'</b>')+'</div>'}).join("")+
     '<p class="tbSub tbScenNota">Aproximare pe gridul tău ('+TextRo.cate(r.grid.randuri,"nivel","niveluri")+', câte '+r.grid.q+' pe nivel). După model, contul botului s-ar goli pe la <b>'+escapeHtml(tbPretScurt(r.pretGolire))+'</b>; Pionex estimează lichidarea la '+escapeHtml(tbPretScurt(botiNr(b.pretLichidare)))+'.</p>';
 }
 // v100.306: cardul unic al Tabloului fără bot (ultimul închis din acasa-ecran.js) și drumul spre Grid
@@ -7268,7 +7332,7 @@ function tbDeseneazaKpi(){if(typeof tbKpiAsezare==="function")tbKpiAsezare();
   var gvc=typeof TabloExtra!=="undefined"?TabloExtra.grileVsCosturi(b,Date.now()):null,rr=gvc?TabloExtra.ritmRecuperare(tot,gvc.netZi):null;
   // v100.40: sub o zi de viata ritmul nu se socoteste (taxa de pornire nu e un cost zilnic) - se spune, nu dispare fara explicatie
   var nN=typeof TabloExtra!=="undefined"&&TabloExtra.notaTotal?TabloExtra.notaTotal(b):null;   /* v100.272 (ideile auditului 29.10): la neutru semnul poziției din total e nesigur - spus lângă cifră */
-  pune("tbKpiTotalSub",(tot!==null&&inv!==null&&inv>0?TextRo.pctSemn(100*tot/inv,1)+" din "+TextRo.num(inv,1)+" investiți":"cu tot cu poziția deschisă")+(nN?" · "+nN:"")+(rr&&rr.zile!==0?" · "+rr.text.replace(/, dacă prețul stă pe loc$/," (preț pe loc)"):tot!==null&&tot<0&&gvc&&gvc.preaTanar?" · ritmul de recuperare se socotește după o zi de viață":""),"");
+  pune("tbKpiTotalSub",(tot!==null&&inv!==null&&inv>0?TextRo.pctSemn(100*tot/inv,1)+" din "+TextRo.num(inv,1)+" investiți":"cu tot cu poziția deschisă")+(nN?" · "+nN:"")+(rr&&rr.zile!==0?" · "+rr.text.replace(/, dacă prețul stă pe loc$/," (preț pe loc)"):tot!==null&&tot<0&&gvc&&gvc.preaTanar?" · ritmul de recuperare se socotește după o zi de viață":"")+(typeof tbOraCitirii==="function"?tbOraCitirii():""),"");   /* v100.339: ora citirii botului (prețul de alături e viu, totalul e al citirii) */
   // v100.4 (el, 28.09: „lipsește profit per grilă, adică doar din grid”): ce a adus DOAR gridul (Pionex „Grid profit”) + cat aduce o grila
   var gp=botiNr(b.gridProfitBrut),pg=typeof TabloExtra!=="undefined"?TabloExtra.profitPeGrila(b):null;
   var fb=typeof TabloExtra!=="undefined"&&tbStare.funding&&tbStare.funding.info&&tbStare.funding.sim===TabloBot.simboluri(b.baza,b.quote,b.simbolPionex).pionex?TabloExtra.fundingBot(b,tbStare.funding.info):null;   /* v100.136: funding-ul monedei, langa grid; revizia (I3): doar al monedei botului de acum */
@@ -7388,8 +7452,9 @@ async function tbAduDirectie(){
     try{var kb=await getJSON("/api/market?type=pionex_klines&symbol=BTC_USDT_PERP&interval=4H&limit=200");d.btc4h=kb&&kb.data&&Array.isArray(kb.data.klines)?kb.data.klines:null}catch(e){d.btc4h=null}
     // v100.320 (el, 11.11.2026): notele TradingView (Technicals / Technical Ratings) pe moneda botului - o cerere la server (scannerul TradingView,
     // nu Pionex), în același ritm cu lumânările direcției; desenate de renderTabloTv în cardul „Trendul pe TF-uri”. Nu intră în verdict.
-    var tvN;try{var tvR=await getJSON("/api/market?type=tv_rating&piata=crypto&simboluri="+encodeURIComponent(s));tvN=tvR&&tvR.result!==false?(tvR.note&&tvR.note[s])||{}:{eroare:"TradingView nu răspunde"+(tvR&&tvR.detail?" ("+tvR.detail+")":"")}}catch(e){tvN={eroare:"TradingView nu răspunde ("+textEroare(e)+")"}}
-    d.tv={n:tvN,la:Date.now()};
+    /* v100.339 (auditul din 13.11): cererea pleacă FĂRĂ await - cu TradingView lent (2 cereri × 8 s) direcția și indicatorii întârziau până la
+       16 s la fiecare tură; nota se desenează când sosește (tbAduTv), cu ora serverului și cheia monedei ei (nu apare sub altă monedă) */
+    tbAduTv(d,s,cheie);
     d.rez=t.rez;d.randuriPe=t.pe;d.simbol=cheie;d.la=Date.now();d.eroare=t.eroare;
     // revizia v100.110 (R2): reluarea se programează abia acum (după d.randuriPe), și doar dacă n-au căzut toate (atunci se reia toată tura la 30 s)
     d.lipsa=t.lipsa;d.reiaProgramat=t.reiaProgramat;d.aDouaOara=false;if(d.reiaProgramat)setTimeout(tbReiaLipsa,30000);
@@ -7401,6 +7466,35 @@ async function tbAduDirectie(){
 // v91.8: "Ce spun indicatorii" langa grafic - aceleasi calcule ca "Analizeaza piata" (calc), pe barele INCHISE
 // ale celor 4 intervale pe care Tabloul le aduce deja pentru directie (zero cereri in plus catre Pionex).
 var TB_TF_CALC={"15M":"15m","60M":"1h","4H":"4h","1D":"1d"};
+/* v100.339 (I-873; măsurat în docs/cercetare/2026-11-13-tablou-acuratete.md, M2): verdictul ARĂTAT se schimbă abia când două bare închise la
+   rând zic la fel (episoadele de cel mult două bare: de la ~49% la ~20%). Verdictele celor două bare dinainte se socotesc o singură dată pe bară
+   închisă și pe interval, după desen (2 × ~18 ms), apoi cartela se redesenează; până atunci se arată verdictul barei. q.ver devine cel confirmat,
+   q.verBrut al barei, q.neconfirmat ce așteaptă a doua bară, q.miscatDe componenta care a mișcat scorul, q.tineDe (doar pe 4 ore, din istoria scorului). */
+/* „ține de N bare” (I-873): pe 4 ore, câte bare închise la rând au același verdict ca ultima - din istoria scorului (tbIstoric4h), unde fiecare
+   bară își ține verdictul de atunci. Se pune doar când istoria e gata și ultima ei bară zice ce zice bara de acum. */
+function tbTineDe(d){var l=d&&Array.isArray(d.indicatori)?d.indicatori:null,x=l?l.filter(function(y){return y.tf==="4H"&&y.q})[0]:null,ist=x&&typeof tbIstoric4hGata==="function"?tbIstoric4hGata(d.simbol):null;if(!x||!ist||!ist.length)return;var u=ist[ist.length-1].ver,n=0;for(var i=ist.length-1;i>=0&&ist[i].ver===u;i--)n++;if(u===(x.q.verBrut||x.q.ver))x.q.tineDe=n}
+/* v100.339 (nimic pierdut): rândul „drumul prețului, în trepte” a luat locul „amplitudinii vs treaptă”; cifra amplitudinii (ATR față de
+   treaptă) și percentila ei rămân pe același rând, ca fapt - fără starea ei „rău”, care se aprindea cât botul lucra. */
+function tbRandTrepte(m){var t=m?m.trepte:undefined,a=m?m.amplitudine:null;if(!t||!a||a.valoare==null||!isFinite(+a.valoare))return t;
+  var ea="amplitudinea (ATR) "+TextRo.num(+a.valoare,Math.abs(+a.valoare)>=1?1:2)+"× treapta"+(typeof a.eticheta==="string"&&a.eticheta?" · "+a.eticheta:""),o={},k;
+  for(k in t)o[k]=t[k];o.eticheta=(typeof t.eticheta==="string"&&t.eticheta?t.eticheta+" · ":"")+ea;return o}
+var tbVerAnt={simbol:null,pe:{}};
+function tbVerdictConfirmat(tf,j,q,simbol){
+  if(tbVerAnt.simbol!==simbol)tbVerAnt={simbol:simbol,pe:{}};
+  var t=j.length?+j[j.length-1][0]:0,e=tbVerAnt.pe[tf];
+  var aplica=function(qq,x){if(qq.verBrut!==undefined)return;var c=IndicatoriBot.confirma(qq.ver,x.v1,x.v2);qq.verBrut=qq.ver;qq.ver=c.ver;qq.neconfirmat=c.neconfirmat;
+    if(x.comp&&qq.verBrut!==x.v1){var N={trendScore:"trendul",momScore:"impulsul",volScore:"volumul",structureScore:"structura"},cel=null;Object.keys(N).forEach(function(k){var a=Number(qq[k]),b=Number(x.comp[k]);if(isFinite(a)&&isFinite(b)&&(!cel||Math.abs(a-b)>Math.abs(cel.d)))cel={nume:N[k],d:a-b}});if(cel&&cel.d)qq.miscatDe=cel}};
+  if(e&&e.t===t&&e.v1){aplica(q,e);return}
+  if(e&&e.t===t&&e.inLucru)return;
+  if(j.length<62)return;
+  tbVerAnt.pe[tf]={t:t,inLucru:true};
+  setTimeout(function(){
+    if(tbVerAnt.simbol!==simbol)return;
+    try{var q1=calc(j.slice(0,-1),"auto"),q2=calc(j.slice(0,-2),"auto");tbVerAnt.pe[tf]={t:t,v1:q1.ver,v2:q2.ver,comp:{trendScore:q1.trendScore,momScore:q1.momScore,volScore:q1.volScore,structureScore:q1.structureScore}}}catch(er){tbVerAnt.pe[tf]=null;return}
+    var d=tbStare.directie,l=d&&d.simbol===simbol&&Array.isArray(d.indicatori)?d.indicatori:null,x=l?l.filter(function(y){return y.tf===tf&&y.q})[0]:null;
+    if(x){aplica(x.q,tbVerAnt.pe[tf]);if(typeof renderTabloDirectia==="function")renderTabloDirectia();if(typeof renderTabloIndicatori==="function")renderTabloIndicatori()}
+  },0);
+}
 function tbCalculeazaIndicatorii(d){
   if(typeof IndicatoriBot==="undefined"||!d)return;
   // v91.9: Mediul botului - miscarea monedei (1h: 4h si 24h fata de obisnuit), funding-ul, BTC pe 4h
@@ -7418,7 +7512,8 @@ function tbCalculeazaIndicatorii(d){
     try{var j=bareInchise(IndicatoriBot.dinPionex(rows),TB_TF_CALC[x.tf],Date.now());if(j.length>=60)q=calc(j,"auto");else eroare="doar "+TextRo.cate(j.length,"bară închisă","bare închise");
       hp=j.length>=260?historicalProbability(j,4):null;
       /* v100.324 (I-861; revizia: nu pe loc - 24 × ~16 ms blocau pagina la fiecare încărcare): istoria scorului pe 4 ore, doar barele noi, după desen */
-      if(x.tf==="4H"&&q){try{tbIstoric4h(j,d.simbol)}catch(e2){}}}catch(e){q=null;eroare=String(e&&e.message||e)}
+      if(x.tf==="4H"&&q){try{tbIstoric4h(j,d.simbol)}catch(e2){}}
+      if(q){try{tbVerdictConfirmat(x.tf,j,q,d.simbol)}catch(e3){}}}catch(e){q=null;eroare=String(e&&e.message||e)}   /* v100.339 (I-873): verdictul confirmat pe două bare închise */
     return {tf:x.tf,eticheta:x.eticheta,q:q,hp:hp,eroare:eroare};
   });
 }
@@ -7427,16 +7522,25 @@ function tbCalculeazaIndicatorii(d){
    fișa cu opt.vorbe (IndicatoriBot.VORBE_POZITIE: „poziția”, istoricul acțiunii) și opt.orizont (4 bare de 4 ore la bursă = 2 ședințe) */
 function tbIndTabelHtml(l,dir,opt){
   opt=opt||{};var cel=l.map(function(x){return IndicatoriBot.celule(x.q)}),OR=opt.orizont||IndicatoriBot.ORIZONT;
+  /* v100.339 (auditul din 13.11): O convenție pe cartelă - culoarea e FAȚĂ DE BOT (ca banda, rigla și becul): la un short „↓” e verde. Săgeata
+     rămâne a pieței. Fără direcție (neutru / fără bot): verde = sus, ca înainte. */
+  var dirB=String(dir||"").toLowerCase(),tonF=function(c){return c==="lipsa"||c==="neutral"?"mutedInfo":dirB==="short"&&c==="good"?"bad":dirB==="short"&&c==="bad"?"good":c};
+  var cuCe=opt.vorbe&&opt.vorbe.cu?opt.vorbe.cu:"cu botul";
   return '<div class="tbIndWrap"><table class="tbIndTab"><thead><tr><th></th>'+l.map(function(x){return '<th>'+escapeHtml(x.eticheta.replace(" min","m").replace(" oră","h").replace(" ore","h").replace(" zi","z"))+'</th>'}).join("")+'</tr></thead><tbody>'+
     IndicatoriBot.RANDURI.map(function(r){
       return '<tr><td title="'+escapeHtml(r.titlu)+'">'+escapeHtml(r.eticheta)+'</td>'+cel.map(function(c,i){
         var v=c&&c[r.k];if(!v)return '<td class="mutedInfo" title="prea puține bare închise">—</td>';
-        return '<td class="'+(v.c==="lipsa"||v.c==="neutral"?"mutedInfo":v.c)+'" title="'+escapeHtml(r.eticheta+" · "+l[i].eticheta+": "+(v.titlu||v.t))+'">'+escapeHtml(v.t)+'</td>'}).join("")+'</tr>'}).join("")+
+        return '<td class="'+tonF(v.c)+'" title="'+escapeHtml(r.eticheta+" · "+l[i].eticheta+": "+(v.titlu||v.t))+'">'+escapeHtml(v.t)+'</td>'}).join("")+'</tr>'}).join("")+
     '<tr class="tbIndEst"><td title="Estimarea din istoric: situații asemănătoare cu acum și ce a făcut prețul după 4 bare. Nedovedită.">Estimare</td>'+l.map(function(x){
       var e=IndicatoriBot.estimare(x.hp,OR[x.eticheta]||"4 bare",opt.vorbe);
-      return '<td class="'+(e.c==="lipsa"||e.c==="neutral"?"mutedInfo":e.c)+'" title="'+escapeHtml("Estimare · "+x.eticheta+": "+e.titlu)+'">'+escapeHtml(e.t)+'</td>'}).join("")+'</tr>'+
-    '</tbody></table></div><p class="tbIndPred">🔮 '+escapeHtml(IndicatoriBot.predictie(l,dir,opt.vorbe).text)+'</p><p class="tbSub tbIndNota">Indicatorii arată ce e acum pe grafic; doar rândul „Estimare” privește înainte. Ține mouse-ul pe o celulă ca să vezi ce înseamnă.</p>';
+      return '<td class="'+tonF(e.c)+'" title="'+escapeHtml("Estimare · "+x.eticheta+": "+e.titlu)+'">'+escapeHtml(e.t)+'</td>'}).join("")+'</tr>'+
+    '</tbody></table></div><p class="tbIndPred">🔮 '+escapeHtml(IndicatoriBot.predictie(l,dir,opt.vorbe).text)+'</p><p class="tbSub tbIndNota">Indicatorii arată ce e acum pe grafic; doar rândul „Estimare” privește înainte. '+escapeHtml((opt.vorbe?IndicatoriBot.MASURAT_DIRECTIE_ACT:IndicatoriBot.MASURAT_DIRECTIE)||"")+' '+(dirB==="short"||dirB==="long"?'Culoarea: verde = '+escapeHtml(cuCe)+' ('+dirB+'), roșu = împotrivă; săgeata arată piața. ':'')+'Atinge o celulă (sau ține mouse-ul pe ea) ca să vezi ce înseamnă.</p><p class="tbSub tbIndExplic" hidden></p>';
 }
+/* v100.339 (auditul din 13.11): pe telefon explicațiile din `title` nu se pot citi ⇒ atingerea unei celule o scrie sub tabel */
+if(typeof document!=="undefined"&&document.addEventListener)document.addEventListener("click",function(ev){
+  var td=ev.target&&ev.target.closest?ev.target.closest(".tbIndTab td[title],.tbIndTab th[title]"):null;if(!td)return;
+  var w=td.closest(".tbIndWrap"),ex=w&&w.parentElement?w.parentElement.querySelector(".tbIndExplic"):null;if(!ex)return;
+  ex.textContent=td.getAttribute("title");ex.hidden=false});
 /* v100.333 (auditul 12.11, 🔵5): rândul „Funding” din „Mediul botului” judecă după ULTIMA rată, KPI-ul de sus și sfatul după media pe 7 zile - cu semne
    diferite stăteau „tu încasezi” și „plătești” pe același ecran. Rândul spune acum „ultima rată”, iar când media zice altceva o adaugă; dacă media
    zice că plătești, rândul e de atenție (avertizează, nu schimbă verdictul). info = TabloExtra/GridSim.rataFunding ({rataZi}), dir = long / short */
@@ -7457,6 +7561,7 @@ function renderTabloIndicatori(){
   var el=$("tbIndicatori"),rz=$("tbIndicatoriRezumat"),mm=$("tbTrendMediu");if(!el||!rz||typeof IndicatoriBot==="undefined")return;
   renderTabloTrend();   // v100.111 (I-542): tabelul unic folosește aceleași calcule
   var b=tbStare.routeOk===false?null:tbStare.bot,d=tbStare.directie,l=d&&d.simbol&&b&&d.simbol.indexOf(TabloBot.simboluri(b.baza,b.quote,b.simbolPionex).pionex+"|")===0?d.indicatori:null;
+  tbTineDe(d);   /* v100.339 (I-873): „ține de N bare” pe 4 ore, când istoria scorului e gata */
   if(!b){rz.className="tbRezumat mutedInfo";rz.textContent="Fără bot, n-am pe ce monedă să citesc indicatorii.";el.innerHTML="";if(mm)mm.innerHTML="";tbIndSumarGol();return}
   if(!l){rz.className="tbRezumat mutedInfo";rz.textContent="Aștept lumânările…";el.innerHTML="";if(mm)mm.innerHTML="";tbIndSumarGol();return}
   var z=IndicatoriBot.rezumat(l,b.directie);
@@ -7470,7 +7575,7 @@ function renderTabloIndicatori(){
   el.innerHTML=tbIndTabelHtml(l,b.directie)+tbListeRadarHtml(b);   /* v100.331: + „Listele Radarului”, indicator separat */
   /* v100.324 (el, 11.11.2026: „detaliile indicatorilor când e închis să arate un grafic sau o bară cu direcția sau scorul” ⇒ I-857..I-861, „fă toate”):
      în rândul închis - banda celor 4 intervale (cu botul / neutri / împotrivă), nota TradingView și „≠”, „era ↔”, rigla scorului cu pragul lui, istoria pe 4 ore */
-  var sm=$("tbIndSumar");if(sm){var bd=IndicatoriBot.banda(l,b.directie),tvb=d.tv&&d.tv.n&&typeof TvNote!=="undefined"?IndicatoriBot.tvBanda(d.tv.n,bd,TvNote.clasa):null,sch=tbIndSchimbari(b,bd),b4=bd.filter(function(x){return x.eticheta==="4 ore"})[0],ist=b4&&!b4.lipsa?tbIstoric4hGata(d.simbol):null;
+  var sm=$("tbIndSumar");if(sm){var bd=IndicatoriBot.banda(l,b.directie),tvb=tbTvDe(d)&&d.tv.n&&typeof TvNote!=="undefined"?IndicatoriBot.tvBanda(d.tv.n,bd,TvNote.clasa):null,sch=tbIndSchimbari(b,bd),b4=bd.filter(function(x){return x.eticheta==="4 ore"})[0],ist=b4&&!b4.lipsa?tbIstoric4hGata(d.simbol):null;
     /* v100.327 (el: „încadrează frumos”): rigla și istoria în două cartele, pe rândul lor sub bandă */
     var gr=IndicatoriBot.riglaHtml(bd,b.directie,escapeHtml)+(ist?IndicatoriBot.sparkHtml(ist,b.directie,escapeHtml):""),hs=IndicatoriBot.bandaHtml(bd,tvb,sch,b.directie,escapeHtml)+(gr?'<span class="ibGrafice">'+gr+'</span>':"");
     if(tbStare.indSumarHtml!==hs){sm.innerHTML=hs;tbStare.indSumarHtml=hs}if(sm.hidden!==!hs)sm.hidden=!hs}
@@ -7565,11 +7670,20 @@ function renderTabloDirectia(){
 }
 // v100.320 (el, 11.11.2026: „Technicals și Technical Ratings din TradingView în pagina botului”): nota TradingView pe 5m…1W (rezumat, medii,
 // oscilatoare) în cardul „Trendul pe TF-uri”, doar pentru moneda botului de acum (aceeași gardă ca rezumatul direcției). Informație, nu verdict.
+function tbAduTv(d,s,cheie){
+  var pune=function(n,la){if(tbStare.directie!==d||d.simbol!==cheie)return;   /* revizia (14.11): răspunsul întârziat al monedei de dinainte nu mai suprascrie nota celei de acum */
+    d.tv={n:n,la:la,simbol:cheie};renderTabloTv();if(typeof renderTabloIndicatori==="function")try{renderTabloIndicatori()}catch(e){}};
+  getJSON("/api/market?type=tv_rating&piata=crypto&simboluri="+encodeURIComponent(s)).then(function(tvR){
+    if(tvR&&tvR.result!==false)pune((tvR.note&&tvR.note[s])||{lipsa:"necerut"},Number(tvR.la)>0?Number(tvR.la):Date.now());
+    else pune({eroare:"TradingView nu răspunde"+(tvR&&tvR.detail?" ("+tvR.detail+")":"")},Date.now())
+  },function(e){pune({eroare:"TradingView nu răspunde ("+textEroare(e)+")"},Date.now())})}
+/* nota TradingView a monedei de ACUM (v100.339): cea rămasă de la altă monedă nu se arată */
+function tbTvDe(d){return d&&d.tv&&d.tv.simbol===d.simbol?d.tv:null}
 function renderTabloTv(){
   var el=$("tbTvNote");if(!el||typeof TvNote==="undefined")return;
-  var b=tbStare.routeOk===false?null:tbStare.bot,d=b&&tbStare.directie&&tbStare.directie.simbol===tbCheieDir(b)?tbStare.directie:null,t=d&&d.tv;
+  var b=tbStare.routeOk===false?null:tbStare.bot,d=b&&tbStare.directie&&tbStare.directie.simbol===tbCheieDir(b)?tbStare.directie:null,t=tbTvDe(d);
   if(!b){el.innerHTML='<p class="tbSub">Fără bot, n-am pe ce monedă să citesc notele TradingView.</p>';return}
-  el.innerHTML=TvNote.tabel(t?t.n:null,{directie:b.directie,la:t?t.la:null});
+  el.innerHTML=TvNote.tabel(t?t.n:null,{directie:String(b.directie||"").toLowerCase(),la:t?t.la:null,pret:Number(b.pretCurent)>0?Number(b.pretCurent):null,radar:"Pionex"});   /* v100.339 (I-869): prețul botului la verificarea instrumentului, ora serverului, bazele la vedere */
 }
 // v100.111 (I-542, demo aprobat 06.10, el: „ok”): UN tabel „Trendul pe TF-uri” în locul a trei liste (rândurile din „Ce spune graficul acum”,
 // „Ce spun indicatorii”, „Direcția pieței”) - becul e regula; scorul, cât de des s-a întors și bara de acum sunt dovezi lângă el
@@ -7584,7 +7698,7 @@ function renderTabloTrend(){
   var ind=l?l.map(function(x){var v=null;try{v=x.q?IndicatoriBot.celule(x.q).verdict:null}catch(e){v=null}return {tf:x.tf,verdict:v||null,eroare:x.eroare||null}}):null;
   var t=GraficBot.trendTabel(sem,fin?d.rez:null,ind,TB_DIR_TF.map(function(x){return x.tf})),s=GraficBot.trendSumar(sem),CL={bine:"good",rau:"bad",atentie:"tbWarn",info:"mutedInfo"};
   var gol=function(x){return '<span class="mutedInfo">'+escapeHtml(x)+'</span>'};
-  el.innerHTML='<p class="tbTrendSum '+(CL[s.stare]||"mutedInfo")+'">'+escapeHtml(s.text.replace(/ — tabelul de sub grafic$/,""))+'</p><div class="tbIndWrap"><table class="tbTrendTab"><thead><tr><th>TF</th><th>Becul (față de botul tău)</th><th>ADX · RSI</th><th>Scorul indicatorilor</th><th>Cât de des s-a întors în trecut</th><th>Bara de acum</th></tr></thead><tbody>'
+  el.innerHTML='<p class="tbTrendSum '+(CL[s.stare]||"mutedInfo")+'">'+escapeHtml(s.text.replace(/ — tabelul de sub grafic$/,""))+'</p><div class="tbIndWrap"><table class="tbTrendTab"><thead><tr><th>TF</th><th>Becul (față de botul tău)</th><th>ADX · RSI <small>(cu bara de acum)</small></th><th>Scorul indicatorilor</th><th>Cât de des s-a întors în trecut</th><th>Bara de acum</th></tr></thead><tbody>'
     +t.map(function(r){
       var bv=r.bara!=null?Math.round(r.bara*10)/10:null;
       return '<tr><td class="tbTrendTf"><span class="tbTrendBec '+escapeHtml(r.ton)+'" aria-hidden="true">'+escapeHtml(r.sageata)+'</span>'+escapeHtml(r.et)+'</td>'
@@ -7612,7 +7726,7 @@ function tbAlegeMod(m){if(m!=="simplu"&&m!=="complet")return;try{localStorage.se
 // Pionex; Binance doar când Pionex n-a dat ratele, cu sursa spusă - pe același ecran nu mai stau două rate de semne diferite
 function tbFundingPt(){var e=tbStare.extra||{},b=tbStare.bot;if(!b)return null;
   var fu=tbStare.funding,inf=fu&&fu.info&&fu.sim===TabloBot.simboluri(b.baza,b.quote,b.simbolPionex).pionex?fu.info:null;
-  if(inf&&inf.rata!=null&&isFinite(inf.rata)){var pas=(Number(inf.intervalOre)>0?Number(inf.intervalOre):8)*3600000,up=Number(inf.ultimaLa)>0?Number(inf.ultimaLa)+pas:null;if(up!==null)while(up<=Date.now())up+=pas;return {rata:Number(inf.rata),urmatoarea:up,acum:Date.now(),sursa:"Pionex"}}
+  if(inf&&inf.rata!=null&&isFinite(inf.rata)){var pas=(Number(inf.intervalOre)>0?Number(inf.intervalOre):8)*3600000,up=Number(inf.ultimaLa)>0?Number(inf.ultimaLa)+pas:null;if(up!==null)while(up<=Date.now())up+=pas;return {rata:Number(inf.rata),urmatoarea:up,acum:Date.now(),sursa:"Pionex",medieZi:inf.rataZi!=null&&isFinite(inf.rataZi)?Number(inf.rataZi):null}}   /* v100.339: + media pe 7 zile, după care se colorează rândul */
   if(e.bot!==b.id||e.funding==null||!isFinite(e.funding))return null;var h=Array.isArray(e.fundingHist)?e.fundingHist:[],u=null;
   if(h.length>1){var ult=Number(h[h.length-1].fundingTime),pas=ult-Number(h[h.length-2].fundingTime);if(ult>0&&pas>0){u=ult+pas;while(u<=Date.now())u+=pas}}
   return {rata:e.funding,urmatoarea:u,acum:Date.now(),sursa:"după Binance, ca reper: n-am aici ratele Pionex"}}
@@ -7854,6 +7968,9 @@ function macroAduce(dupa){
     .then(function(){macroStare.la=Date.now();macroStare.inLucru=null;if(typeof dupa==="function")dupa()});
   return macroStare.inLucru}
 function macroCitire(){var p=macroStare.p;return p?Macro.textCitire(Macro.scor({vix:p.vix,tnx:p.tnx,dxy:p.dxy,spy:p.spy,btc:macroStare.btc,fg:p.fg},Date.now()),macroStare.tinut):Macro.textCitire(null)}
+/* v100.339 (auditul din 13.11): regimul macro e măsurat pe S&P (pagina Trading 212), nu pe moneda botului ⇒ în citirea botului e informație,
+   fără verde / galben (risk-on apărea ✓ verde și la un bot short) */
+function tbMacroRand(){var m=macroCitire();return m?Object.assign({},m,{stare:"info",text:m.text+" · nemăsurat pe crypto: informație, nu semn pentru bot",actiune:"navTo('dash',true)",linkText:"Dashboard ›"}):null}
 function latimeUsDeschide(){if(typeof setAssetClass==="function")setAssetClass("STOCKS");navTo("stocks",true)}
 // revizia (1): fără lumânări (alt bot / interval) citirea se golește, nu rămâne pe moneda veche
 function tbCitireGol(text){var cl=document.querySelectorAll("[data-cit-live]");for(var i=0;i<cl.length;i++){cl[i].textContent="—";cl[i].className="tbSub tbCitLive"}/* v100.196: fără date nu scrie „live” */tbStare.citireO=null;tbStare.citireCheie=null;tbStare.citireH=null;[$("tbCitire"),$("tbCitireMobil")].forEach(function(el){if(el)el.innerHTML='<p class="tbSub">'+escapeHtml(text||"Aștept prețurile…")+'</p>'});var sus=$("tbMcSus");if(sus){sus.innerHTML="";sus.hidden=true}}
@@ -7877,9 +7994,10 @@ function tbRangeFilterRand(b){
   var k=tbRfCheie(b),bare=tbRfStare.cheie===k?tbRfStare.bare:null;if(!bare||bare.length<140)return null;
   if(!tbRfStare.citire||tbRfStare.citireLa!==tbRfStare.la){tbRfStare.citire=RangeFilter.citire(bare);tbRfStare.citireLa=tbRfStare.la}   /* v100.302: citirea ținută minte (1,5 ms la fiecare redesenare) */
   var c=tbRfStare.citire;if(!c||c.eroare)return null;
+  var ub=bare[bare.length-1];
   var dir=c.dir===1?"TREND SUS":c.dir===-1?"TREND JOS":"fără direcție",dB=String(b.directie||"").toLowerCase(),contra=(c.dir===1&&dB==="short")||(c.dir===-1&&dB==="long"),d=c.dovada;   /* v100.332 (auditul 12.11, 🟡6): direcția vine cu litere mici - „CONTRA botului” nu apărea niciodată */
   var dov=!d.n?"fără cazuri":d.n<RangeFilter.MIN_EP?d.k+" din "+TextRo.cate(d.n,"caz","cazuri")+" (puține cazuri)":Math.round(d.hit)+" din 100 ("+TextRo.cate(d.n,"caz","cazuri")+", "+(d.dovedit?"trece pe o singură monedă, necorectat - pe pagina Range Filter se corectează pentru câte monede vezi":"nedovedit")+")";
-  var tx=dir+(c.dir?(c.bareDir>0?" de "+TextRo.cate(c.bareDir,"bară","bare"):" întors pe ultima bară"):"")+" (1h)"+(c.semnal?" · "+c.semnal.fel+(c.semnal.acum===0?" pe ultima bară închisă":" acum "+TextRo.cate(c.semnal.acum,"bară","bare")):"")+(c.regim.cons?" · consolidare":"")+" · DOVADA "+dov+(c.distPct!=null?" · stop (filtru) la "+TextRo.pct(c.distPct*100,1)+(c.costNu?" ⇒ NU TRECE (sub prag "+TextRo.pct(2*c.cost*100,2)+")":""):"")+(c.flipAtr!=null?" · flip la "+TextRo.num(c.flipAtr,1)+" ATR":"")+(contra?" · CONTRA botului (RF nedovedit)":"");   /* v100.301: stopul și costul, ca TRIGGER-ul din Pine; v100.302: flip, „puține cazuri”, CONTRA = info */
+  var tx=dir+(c.dir?(c.bareDir>0?" de "+TextRo.cate(c.bareDir,"bară","bare"):" întors pe ultima bară"):"")+" (1h)"+(c.semnal?" · "+c.semnal.fel+(c.semnal.acum===0?" pe ultima bară închisă":" acum "+TextRo.cate(c.semnal.acum,"bară","bare")):"")+(c.regim.cons?" · consolidare":"")+" · DOVADA "+dov+(c.distPct!=null?" · filtrul e la "+TextRo.pct(c.distPct*100,1)+" de preț"+(c.costNu?(c.semnalAcum?" ⇒ NU TRECE (sub prag "+TextRo.pct(2*c.cost*100,2)+")":" (sub pragul de 2× cost, "+TextRo.pct(2*c.cost*100,2)+")"):""):"")+(c.flipAtr!=null?" · flip la "+TextRo.num(c.flipAtr,1)+" ATR":"")+(contra?" · CONTRA botului":"")+" · direcția filtrului: nedovedită"+(ub&&ub.t>0?" · bara de la "+new Date(ub.t).toTimeString().slice(0,5):"");   /* v100.339 (auditul din 13.11): ca pagina Range Filter din v100.338 - „NU TRECE” doar cu semnal pe bara închisă; „filtrul e la X” (nu „stop”, care se citea ca stopul botului); „nedovedit” mereu, nu doar la CONTRA; ora barei */   /* v100.301: stopul și costul, ca TRIGGER-ul din Pine; v100.302: flip, „puține cazuri”, CONTRA = info */
   return{ce:"Range Filter",stare:"info",text:tx,actiune:"navTo('rangefilter',true)",linkText:"Range Filter ›"}}
 function tbCitireExtra(b,o){
   var out={indicatori:null,estimare:null,busola:null,busolaDirectie:null,busolaVerdict:null,busolaGrid:null,busolaInterval:null,busolaBtc:null,latime:null,latimeMoneda:null,bilant:null,latimeUs:null,sectoare:null,macro:null,rangeFilter:null},d=tbStare.directie;
@@ -7895,7 +8013,7 @@ function tbCitireExtra(b,o){
   /* lățimea pieței US (11.10.2026): rândul apare după prima citire a lui latest.json; sosirea redesenează citirea o dată */
   if(typeof latimeUsAduce==="function"&&typeof LatimeUS!=="undefined"){latimeUsAduce(function(){if(tbPanouVizibil()&&tbStare.bot&&tbStare.citireO)tbDeseneazaCitire(tbStare.citireO,tbStare.bot)});out.latimeUs=latimeUsStare.la?LatimeUS.textCitire(LatimeUS.normalizeaza(latimeUsStare.j,Date.now()),Date.now()):null}
   if(typeof sectoareAduce==="function"&&typeof Sectoare!=="undefined"){sectoareAduce(function(){if(tbPanouVizibil()&&tbStare.bot&&tbStare.citireO)tbDeseneazaCitire(tbStare.citireO,tbStare.bot)});out.sectoare=sectoareStare.la?Object.assign(Sectoare.textCitire(sectoareDate()),{actiune:"latimeUsDeschide()",linkText:"sectoarele ›"}):null}   /* v100.167 */
-  if(typeof macroAduce==="function"&&typeof Macro!=="undefined"){macroAduce(function(){if(tbPanouVizibil()&&tbStare.bot&&tbStare.citireO)tbDeseneazaCitire(tbStare.citireO,tbStare.bot)});out.macro=macroStare.la?Object.assign(macroCitire(),{actiune:"navTo('dash',true)",linkText:"Dashboard ›"}):null}   /* v100.168 */   /* revizia (4): deschide Sugestii cu încărcare și blocul desfăcut */
+  if(typeof macroAduce==="function"&&typeof Macro!=="undefined"){macroAduce(function(){if(tbPanouVizibil()&&tbStare.bot&&tbStare.citireO)tbDeseneazaCitire(tbStare.citireO,tbStare.bot)});out.macro=macroStare.la?tbMacroRand():null}   /* v100.168 */   /* revizia (4): deschide Sugestii cu încărcare și blocul desfăcut */
   var l=d&&d.indicatori&&b&&d.simbol===tbCheieDir(b)?d.indicatori:null;
   if(l&&typeof IndicatoriBot!=="undefined"){
     var tf=tbTf(),r=l.filter(function(x){return x.tf===tf&&x.q})[0]||l.filter(function(x){return x.tf==="15M"&&x.q})[0];
@@ -7903,12 +8021,12 @@ function tbCitireExtra(b,o){
     if(r){var ce=IndicatoriBot.celule(r.q);if(ce)out.indicatori={ce:"Indicatorii",stare:"info",text:"pe "+r.eticheta+": "+ce.verdict.t+" · Supertrend "+ce.supertrend.t+" · MACD "+ce.macd.t+" · Stochastic "+cu(ce.stoch)+" · MFI "+cu(ce.mfi)+" · pe bare închise"}}
     var p=IndicatoriBot.predictie(l,String(b.directie||"").toLowerCase());
     // revizia: o singură propoziție (prima), fără „Nedovedit… nu o promisiune” repetat la fiecare tic; pe ce bare judecă
-    if(p&&p.text)out.estimare={ce:"Estimare pe 16 ore",stare:p.ton==="bine"||p.ton==="rau"||p.ton==="atentie"?p.ton:"info",text:String(p.text).replace(/^Estimare pe 16 ore: /,"").split(/\. (?=[A-ZĂÂÎȘȚ])/)[0].replace(/\.$/,"")+" · pe bare închise de 4 ore"}
+    if(p&&p.text)out.estimare={ce:"Estimare pe 16 ore",stare:p.ton==="bine"||p.ton==="rau"||p.ton==="atentie"?p.ton:"info",text:String(p.text).replace(/^Estimare pe 16 ore: /,"").split(/\. (?=[A-ZĂÂÎȘȚ])/)[0].replace(/\.$/,"")+(/în \d+% din/.test(p.text)?" · nedovedit":"")+" · pe bare închise de 4 ore"}   /* v100.339: procentul își păstrează „nedovedit” (era tăiat odată cu fraza a doua) */
   }
   if(typeof Busola!=="undefined"){
     // revizia: aceeași cheie și același kv ca în cartela Busolei din Tablou („de N h”); Busola căzută ⇒ spus, nu „aștept” la nesfârșit
     var rez=Busola.rezumat(),e=rez?Busola.eticheta(rez,tbCheieBusola(b),Date.now(),tbPazaKv.boti[b.id]||null):null;
-    out.busola=e?{ce:"Busola, pe 4h",stare:e.nivel==="atentie"?"atentie":e.nivel==="info"?"bine":"info",text:e.text+(e.nota?" · "+e.nota:"")}
+    out.busola=e?{ce:"Busola, pe 4h",stare:e.nivel==="atentie"?"atentie":"info",   /* v100.339: „mai calmă” nu e bifă verde (nedovedit) */text:e.text+(e.nota?" · "+e.nota:"")}
       :{ce:"Busola, pe 4h",stare:"info",text:rez?"Busola n-a măsurat încă moneda asta":Busola.nuRaspunde()?"Busola nu răspunde acum":"aștept rezumatul Busolei (vine o dată la 30 de minute)"}
     /* v100.148 (I-576): și 1h / 1z, unde Busola le are (cele 30 de monede ale ei; pe futures doar 4h) */
     var ai=rez&&e?Busola.alteIntervale(rez,tbCheieBusola(b)):null;if(ai){out.busola.ce="Busola";out.busola.text+=" · "+ai}   /* revizia: eticheta spune „Busola” când nu e doar 4h */
@@ -8014,7 +8132,8 @@ async function tbMcPorneste(b,k){
     if(!(b.brut&&b.brut.buOrderData&&Number(b.brut.buOrderData.row)>1))note.push("număr de grile necunoscut, am pus 20");   /* revizia (10) */
     await new Promise(function(r){setTimeout(r,30)});   /* „socotesc…” apare înainte de calcul */
     /* v100.271 (ideile auditului 29.10): drumuri de 7 zile = cel mai lung orizont citit (era 14): aceleași cifre în limita tragerii, ~40% mai repede */
-    var rez=await tbMcSimuleaza(tbMc.b15,st,{plan:plan,pornitLa:pornitLa,stPrefix:pornitLa?st:null,n:500,seed:12,orizonturi:[1/24,4/24,1,7],zile:7});
+    var rez=await tbMcSimuleaza(tbMc.b15,st,{plan:plan,pornitLa:pornitLa,stPrefix:pornitLa?st:null,botRuleaza:!!pornitLa,n:500,seed:12,orizonturi:[1/24,4/24,1,7],zile:7});
+    if(rez.praguriDeAici)note.push("stopul și ținta socotite de aici încolo (pe drumul real prețul le-a atins, dar botul rulează)");   /* v100.339 (I-868) */
     if(rez.eroare&&pornitLa){var motiv=String(rez.eroare).split(/[.:]/)[0];rez=await tbMcSimuleaza(tbMc.b15,st,{plan:plan,pornitLa:null,n:500,seed:12,orizonturi:[1/24,4/24,1,7],zile:7});if(!rez.eroare)note.push("ca bot pornit acum ("+motiv+")")}   /* revizia (6): motivul adevărat */
     tbMc.rez=rez;tbMc.st=st;tbMc.plan=plan;tbMc.rand=GridSim.verdictScurt(rez,st,plan,b);tbMc.rand.scurt=GridSim.riscScurt?GridSim.riscScurt(rez):null;   /* v100.312 (I-842): ce poate face piața botului în 7 zile - gridul față de mișcarea obișnuită, ieșirea din grid, pierderea la stop */tbMc.rand.sapt=typeof tbMcSapt==="function"?tbMcSapt(rez,tbMc.b15,b):null;   /* v100.269 (auditul MC): riscul pe 1 h / 4 h / o zi */if(note.length)tbMc.rand.text=note.join(" · ")+": "+tbMc.rand.text;tbMc.randLa=Date.now();tbMc.randSursa="pagina";ok=true;
   }catch(e){tbMc.eroare=textEroare(e)}   /* revizia (9): verdictul vechi rămâne pe ecran, cu ora lui */
@@ -8646,7 +8765,7 @@ function renderTabloBot(){
     }
   }
   var randuri=[["poziția în interval",m.pozitieInterval],["ritmul perechilor",m.ritmPerechi],
-    ["oscilație sau trend",m.eficienta],["amplitudine vs treaptă",m.amplitudine],
+    ["oscilație sau trend",m.eficienta],["drumul prețului, în trepte",tbRandTrepte(m)],   /* v100.339 (I-872): în locul „amplitudinii vs treaptă” (roșie ~1 oră din 4 cât botul lucra) */
     ["până la lichidare",m.lichidare],["basis perp Pionex vs spot Binance",m.basis],["comision vs grid",m.comision]];   /* v100.272 (ideile auditului 29.10): perp-ul e al botului (Pionex), spotul vine de la Binance - diferența cuprinde și cea dintre burse, se spune */
   if($("tbMasuri"))$("tbMasuri").innerHTML=randuri.map(function(r){
     var val=r[1]&&r[1].valoare!=null?(r[1]===m.lichidare?tbLichidareScurt(r[1]):tbCuUnitate(tbFormateazaSemn(+r[1].valoare,Math.abs(+r[1].valoare)>=1?1:2),r[1].unitate)):"—";

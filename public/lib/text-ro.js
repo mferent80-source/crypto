@@ -26,6 +26,8 @@ var TextRo = (function () {
   // audit 19.10: zecimalele unei sume care poate fi mică (costul pe zi, funding-ul plătit): 1 de la 0,1 în sus, 2 sub 0,1, 3 sub 0,01,
   // ca „0,04 USDT” să nu iasă „0,0 USDT”. Se cere explicit: TextRo.usdt(x, TextRo.zecMici(x)).
   // v100.314 (08.11): pragul pe cifra ROTUNJITĂ - 0,0999 iese „0,1” (o zecimală), nu „0,10”
+  // v100.339 (auditul din 13.11): o cantitate de monede cu cifre semnificative („2,24 monede”, „0,0021 BTC”), nu rotunjită la întreg („~3” / „~0”)
+  function cant(x) { x = nr(x); if (x === null) return "—"; var a = Math.abs(x), z = a >= 100 || a === 0 ? 0 : a >= 10 ? 1 : a >= 1 ? 2 : Math.min(8, 1 - Math.floor(Math.log10(a))); var s = num(x, z); return /,/.test(s) ? s.replace(/0+$/, "").replace(/,$/, "") : s; }
   function zecMici(x) { x = nr(x); if (x === null || x === 0) return 1; var a = Math.abs(x); return a >= 0.095 ? 1 : a >= 0.0095 ? 2 : 3; }
   // „1.234 lei” (rotunjit la leu, mii cu punct); cuSemn -> „+1.234 lei”
   function lei(x, cuSemn) {
@@ -92,6 +94,6 @@ var TextRo = (function () {
     if (v >= 100) return v.toFixed(2); if (v >= 1 || v <= 0) return v.toFixed(4);
     return v.toFixed(Math.min(10, Math.max(4, 3 - Math.floor(Math.log10(v)))));
   }
-  return { num: num, pct: pct, pctSemn: pctSemn, ori: ori, usdt: usdt, zecMici: zecMici, lei: lei, ore: ore, cate: cate, oreN: oreN, cifreNoi: cifreNoi, rupe: rupe, volum: volum, pret: pret };
+  return { num: num, pct: pct, pctSemn: pctSemn, ori: ori, usdt: usdt, zecMici: zecMici, cant: cant, lei: lei, ore: ore, cate: cate, oreN: oreN, cifreNoi: cifreNoi, rupe: rupe, volum: volum, pret: pret };
 })();
 if (typeof globalThis !== "undefined") globalThis.TextRo = TextRo;

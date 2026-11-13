@@ -105,16 +105,18 @@ function cutieCitire() {   // tbDeseneazaCitire + tbCitireLive adevărate, cu DO
 await test("(d) tbCitireExtra (funcția adevărată, cu stub-uri): indicatorii pe intervalul graficului (sau pe 15 min când graficul e pe 5m), estimarea pe 16 ore, Busola pe 4h cu nota", () => {
   const ctx = { console, Date, Math, Object, Array, String, Number, JSON, isFinite, IndicatoriBot: IB, TextRo: globalThis.TextRo };
   ctx.tbStare = { bot: { baza: "MET.PERP", quote: "USDT", directie: "LONG" }, graficInterval: "5M", directie: { simbol: "MET_USDT_PERP|LONG", indicatori: [
-    { tf: "15M", eticheta: "15 min", q: { ver: "BULLISH", score: 62, supertrend: "BULL", macd: false, stoch: 72, mfi: 55, rsi: 52, bbpos: 50, adx: 13, ema: true }, hp: null },
-    { tf: "4H", eticheta: "4 ore", q: { ver: "BEARISH", score: 38, supertrend: "BEAR", macd: true, stoch: 30, mfi: 40, rsi: 45, bbpos: 40, adx: 28, pdi: 10, mdi: 20 }, hp: { up: 61, avg: 0.012, inBanda: false } }] } };
+    { tf: "15M", eticheta: "15 min", q: { ver: "BULLISH", score: 62, supertrend: "BULL", macd: false, stoch: 72, stochK: 72, mfi: 55, rsi: 52, bbpos: 50, adx: 13, ema: true }, hp: null },
+    { tf: "4H", eticheta: "4 ore", q: { ver: "BEARISH", score: 38, supertrend: "BEAR", macd: true, stoch: 30, stochK: 30, mfi: 40, rsi: 45, bbpos: 40, adx: 28, pdi: 10, mdi: 20 }, hp: { up: 61, avg: 0.012, inBanda: false } }] } };
   ctx.TabloBot = { simboluri: () => ({ pionex: "MET_USDT_PERP" }) }; ctx.tbCheieDir = (b) => "MET_USDT_PERP|" + b.directie; ctx.tbCheieBusola = () => "MET_USDT_PERP"; ctx.tbPretScurt = String; ctx.tbPazaKv = { boti: {} };
   ctx.Busola = { randGrid: () => null, randFisa: () => null, randDirectie: () => null, randVerdict: () => null, randBtc: () => null, alteIntervale: () => null, concluzie: () => null, liniaBtc: () => null, simbolBusola: (s) => String(s).replace(/_USDT_PERP$/, ""), pazaStare: () => null, linkBusola: () => null, bilantVoci: () => null, rezumat: () => ({ la: Date.now() - 3600000 }), nuRaspunde: () => false, eticheta: (rez, s, acum) => ({ stare: "miscare", nivel: "atentie", text: "mai agitată ca de obicei", nota: "măsurat acum 1 h" }) };
   const src = "var TB_PERIOADE=" + APP.match(/var TB_PERIOADE=(\{[^\n]*\});/)[1] + ";\n" + functie(APP, "tbTf") + "\n" + functie(APP, "tbCitireExtra");
   vm.createContext(ctx); vm.runInContext(src, ctx);
   const x = ctx.tbCitireExtra(ctx.tbStare.bot, {});
   assert.equal(x.indicatori.ce, "Indicatorii"); assert.equal(x.indicatori.text, "pe 15 min: ↑ 62 · Supertrend ↑ · MACD ↓ · Stochastic 72: în partea de sus a intervalului · MFI 55: intră bani · pe bare închise");
-  assert.equal(x.estimare.ce, "Estimare pe 16 ore"); assert.match(x.estimare.text, /^urcare în 61%/, "fără eticheta repetată");
+  assert.equal(x.estimare.ce, "Estimare pe 16 ore"); assert.match(x.estimare.text, /^urcare în 61%/, "fără eticheta repetată"); assert.match(x.estimare.text, / · nedovedit · pe bare închise de 4 ore$/, "v100.339: procentul își păstrează „nedovedit”");
   assert.equal(x.busola.ce, "Busola, pe 4h"); assert.equal(x.busola.text, "mai agitată ca de obicei · măsurat acum 1 h"); assert.equal(x.busola.stare, "atentie");
+  // v100.339 (auditul din 13.11): „mai calmă” e informație, nu bifă verde (direcția Busolei e nedovedită)
+  { const et0 = ctx.Busola.eticheta; ctx.Busola.eticheta = () => ({ stare: "liniste", nivel: "info", text: "mai calmă ca de obicei", nota: "măsurat acum 1 h" }); assert.equal(ctx.tbCitireExtra(ctx.tbStare.bot, {}).busola.stare, "info"); ctx.Busola.eticheta = et0; }
   ctx.tbStare.graficInterval = "4H"; assert.match(ctx.tbCitireExtra(ctx.tbStare.bot, {}).indicatori.text, /^pe 4 ore: ↓ 38 · Supertrend ↓ · MACD ↑/);
   ctx.Busola = { randGrid: () => null, randFisa: () => null, randDirectie: () => null, randVerdict: () => null, randBtc: () => null, alteIntervale: () => null, concluzie: () => null, liniaBtc: () => null, simbolBusola: (s) => String(s).replace(/_USDT_PERP$/, ""), pazaStare: () => null, linkBusola: () => null, bilantVoci: () => null, rezumat: () => null, nuRaspunde: () => false, eticheta: () => null }; assert.match(ctx.tbCitireExtra(ctx.tbStare.bot, {}).busola.text, /Busola n-a măsurat încă|aștept rezumatul/);
   ctx.tbStare.directie = null; const g = ctx.tbCitireExtra(ctx.tbStare.bot, {}); assert.equal(g.indicatori, null); assert.equal(g.estimare, null);

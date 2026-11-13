@@ -81,7 +81,7 @@ await test("🔵1a. Scenariu.scenarii(…, totalLa): totalul rândului e cel al 
 await test("🔵1b. pagina: „Dacă prețul ajunge la…” și banii din „Contează acum” (tbCtBani) dau totalul lui TabloExtra.totalCuGridLa", () => {
   const { ctx, pune } = pagina(ACUM), d = dom(), b = bot(LONG5());
   Object.assign(ctx, { $: d.$, tbStare: { bot: b, botBrut: b.brut, routeOk: true, scenariuPropriu: null } });
-  pune("botiNr", "botiBan", "tbPretScurt", "tbFormateazaSemn", "tbTinteScenariu", "renderTabloScenarii", "tbCtBani"); try { pune("tbTotalLa"); } catch (e) { /* v100.332 nu o are */ }
+  pune("botiNr", "botiBan", "tbPretScurt", "tbFormateazaSemn", "tbTinteScenariu", "tbScenLichidat", "renderTabloScenarii", "tbCtBani");   /* v100.339: + tbScenLichidat */ try { pune("tbTotalLa"); } catch (e) { /* v100.332 nu o are */ }
   const t = ctx.TabloExtra.totalCuGridLa(b, 90);
   assert.ok(Math.abs(ctx.tbCtBani(b, 90) - t) < 1e-9, "tbCtBani " + ctx.tbCtBani(b, 90) + " ≠ " + t);
   ctx.renderTabloScenarii();

@@ -209,7 +209,7 @@ var GraficBot = (function () {
     var A = adx(raw, 14), a = A.adx[N - 1], z = zonaAdx(a), pdi = A.pdi[N - 1], mdi = A.mdi[N - 1];
     if (a !== null) {
       var spre = pdi > mdi ? "sus" : "jos", contraA = z === "trend" && ((dir === "long" && spre === "jos") || (dir === "short" && spre === "sus"));
-      rows.push({ ce: "ADX 14", peBoti: o.adxPeBoti || null, stare: z === "loc" ? "bine" : z === "nehotărât" ? "info" : contraA ? "rau" : "atentie", text: Math.round(a) + " · " + (z === "loc" ? "piața stă pe loc (vremea gridului)" : z === "nehotărât" ? "nehotărât, între loc și trend" : "trend " + (spre === "sus" ? "în sus" : "în jos") + (contraA ? ", împotriva botului " + dir : "")) + (o.adxPeBoti && !o.doarPiata ? " · " + o.adxPeBoti : "") + peTf });   /* v100.138: doarPiata fără statistica boților */
+      rows.push({ ce: "ADX 14", peBoti: o.adxPeBoti || null, stare: z === "loc" ? "info" :   /* v100.339 (auditul din 13.11): „vremea gridului” e nedovedită (pe boții lui: „nu s-a dovedit că ajută”) ⇒ informație, nu bifă verde */ z === "nehotărât" ? "info" : contraA ? "rau" : "atentie", text: Math.round(a) + " · " + (z === "loc" ? "piața stă pe loc (vremea gridului)" : z === "nehotărât" ? "nehotărât, între loc și trend" : "trend " + (spre === "sus" ? "în sus" : "în jos") + (contraA ? ", împotriva botului " + dir : "")) + (o.adxPeBoti && !o.doarPiata ? " · " + o.adxPeBoti : "") + peTf });   /* v100.138: doarPiata fără statistica boților */
     }
     if (N >= 48) {
       var sume = []; for (var i = 12; i <= N; i++) { var sv = 0; for (var j = i - 12; j < i; j++) sv += raw[j].v; sume.push(sv); }
@@ -218,9 +218,14 @@ var GraficBot = (function () {
     }
     var fu = o.funding, ra = fu ? nr(fu.rata) : null;   // v100.137 (revizia): fără funding ⇒ null, nu undefined (undefined !== null intra pe ramura de jos)
     if (ra !== null) {
-      var platesti = (dir === "long" && ra > 0) || (dir === "short" && ra < 0), val = poz !== null && !o.doarPiata ? Math.abs(poz) * p * Math.abs(ra) : null, un = nr(fu.urmatoarea), acumT = nr(fu.acum) || Date.now();   /* v100.138: doarPiata ⇒ fără banii botului */
+      // revizia independentă (14.11): la botul neutru funding-ul îl plătește partea pe care e poziția de ACUM (înainte ieșea mereu „bine · încasează”)
+      var dirF = dir === "long" || dir === "short" ? dir : poz !== null && poz > 0 ? "long" : poz !== null && poz < 0 ? "short" : null, neutruF = dirF !== null && dirF !== dir;
+      var platesti = (dirF === "long" && ra > 0) || (dirF === "short" && ra < 0), val = poz !== null && !o.doarPiata ? Math.abs(poz) * p * Math.abs(ra) : null, un = nr(fu.urmatoarea), acumT = nr(fu.acum) || Date.now();   /* v100.138: doarPiata ⇒ fără banii botului */
       var min = un !== null ? Math.max(0, Math.round((un - acumT) / 60000)) : null;
-      rows.push({ ce: "Funding", stare: platesti ? "atentie" : "bine", text: (ra >= 0 ? "+" : "−") + Math.abs(ra * 100).toFixed(4).replace(".", ",") + "%" + (un !== null ? " · următoarea plată la " + ora(un) + " (în " + (min >= 60 ? Math.floor(min / 60) + " h " + (min % 60) + " min" : min + " min") + ")" : "") + (val !== null ? " · botul " + (platesti ? "plătește" : "încasează") + " ~" + val.toFixed(3).replace(".", ",") + " USDT" : "") + (fu.sursa ? " (" + fu.sursa + ")" : "") });
+      // v100.339 (auditul din 13.11): culoarea după MEDIA pe 7 zile când o avem (cifra de sus și sfatul judecă după ea - „ultima rată” singură
+      // arăta ✓ verde lângă „plătești ≈ 0,7 USDT pe săptămână”); când media și ultima rată se contrazic, rândul o spune
+      var medF = nr(fu.medieZi), platMed = medF === null ? null : (dir === "long" && medF > 0) || (dir === "short" && medF < 0), contraF = platMed !== null && platMed !== platesti && (dir === "long" || dir === "short");
+      rows.push({ ce: "Funding", stare: dirF === null ? "info" : (platMed !== null && (dir === "long" || dir === "short") ? platMed : platesti) ? "atentie" : "bine", text: (contraF ? "ultima rată " : "") + (ra >= 0 ? "+" : "−") + Math.abs(ra * 100).toFixed(4).replace(".", ",") + "%" + (un !== null ? " · următoarea plată la " + ora(un) + " (în " + (min >= 60 ? Math.floor(min / 60) + " h " + (min % 60) + " min" : min + " min") + ")" : "") + (val !== null && dirF !== null ? " · botul " + (neutruF ? "(acum pe " + dirF + ") " : "") + (platesti ? "plătește" : "încasează") + " ~" + val.toFixed(3).replace(".", ",") + " USDT" : "") + (fu.sursa ? " (" + fu.sursa + ")" : "") + (contraF ? " · pe 7 zile, în medie, botul " + (platMed ? "plătește" : "încasează") : "") });
     }
     var scurt = [];
     // v100.138 (el, 08.10): o.doarPiata ⇒ doar piața - direcția, trendul (rândurile tf), unde e prețul, ADX, volumul, funding-ul; fără banii

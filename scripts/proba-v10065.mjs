@@ -70,8 +70,10 @@ const cuBotul = (bot, zero) => cod(sfaturi(bot, { fisa: FISA({ dir: bot.directie
   peste: { zero } }), "miscare-cu");
 // revizia Opus a 2b (4): o singura voce cu semaforul (SemnaleBot.pasiCuBotul) - textele de mai jos sunt ale lui
 await test("(b) long pe plus (zero-ul sub preț), fără stop: stopul la zero", () => {
-  const s = cuBotul(CRV({ profitTotal: 2.1 }), { pretZero: 0.38, distantaZeroPct: -0.015 });
-  assert.equal(s && s.faCe, "Aș muta stopul la zero-ul botului (0.38), fără bani în plus.");
+  // v100.339 (auditul din 13.11): stopul la zero se propune doar cu zero-ul la cel puțin o grilă de preț (aici grila e ~2,1%) ⇒ zero-ul la −2,5%
+  const s = cuBotul(CRV({ profitTotal: 2.1 }), { pretZero: 0.376, distantaZeroPct: -0.0254 });
+  assert.equal(s && s.faCe, "Aș muta stopul la zero-ul botului (0.376), fără bani în plus.");
+  assert.match(cuBotul(CRV({ profitTotal: 2.1 }), { pretZero: 0.38, distantaZeroPct: -0.015 }).faCe, /^L-aș lăsa: zero-ul e la sub o grilă de preț; un stop la zero \(0\.38\) l-ar închide la prima oscilație\.$/);
 });
 await test("(b) long pe minus (zero-ul peste preț): fără stop la zero (s-ar executa pe loc)", () => {
   const s = cuBotul(CRV(), { pretZero: 0.3925, distantaZeroPct: 0.0174 });
@@ -80,7 +82,9 @@ await test("(b) long pe minus (zero-ul peste preț): fără stop la zero (s-ar e
 await test("(b) short pe minus (zero-ul sub preț): fără stop; short pe plus: stopul la zero; fără zero: fără stop", () => {
   const sh = CRV({ directie: "short" });
   assert.equal(cuBotul(sh, { pretZero: 0.38, distantaZeroPct: -0.015 }).faCe, "L-aș lăsa să lucreze, fără bani în plus.");
-  assert.equal(cuBotul(sh, { pretZero: 0.3925, distantaZeroPct: 0.0174 }).faCe, "Aș muta stopul la zero-ul botului (0.3925), știind că taie 5 din 6 grile.");   // v100.259 (auditul 23.10): zero-ul cade în grid ⇒ se spun grilele tăiate
+  // v100.339: „pe plus” cu plus adevărat (≥ 1% din bani) și zero-ul la peste o grilă de preț
+  assert.match(cuBotul(CRV({ directie: "short", profitTotal: 2.1 }), { pretZero: 0.395, distantaZeroPct: 0.0238 }).faCe, /^Aș muta stopul la zero-ul botului \(0\.395\), știind că taie \d din 6 grile\.$/);
+  assert.equal(cuBotul(sh, { pretZero: 0.395, distantaZeroPct: 0.0238 }).faCe, "L-aș lăsa: plusul e sub 1% din bani; un stop la zero (0.395) l-ar închide la prima oscilație.");   // v100.259 (auditul 23.10): zero-ul cade în grid ⇒ se spun grilele tăiate
   assert.equal(cuBotul(CRV(), null).faCe, "L-aș lăsa să lucreze, fără bani în plus.");
 });
 

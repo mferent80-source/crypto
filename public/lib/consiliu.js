@@ -110,7 +110,7 @@ var Consiliu = (function () {
     if (cs && cs.tag && cs.tag.c === "bad" && !cand.some(function (m) { return m.cod === "plan"; })) {
       // v100.61: titlul cu cifra (cat costa stopul atins), textul = de ce (cartela il da in deCe; o fixtura veche - actiunea ei)
       var pp = cs.tag.t === "peste plan", cost = nr(cs.atins) !== null ? nr(cs.atins) : cs.cifre ? nr(cs.cifre.laOpritor) : null;
-      cand.push({ cod: "stop", nivel: "atentie", c: "r", titlu: pp ? "Stopul e peste plan" + (cost !== null ? ": atins, ≈ −" + Math.round(Math.abs(cost)) + " USDT" : "") : "Botul n-are stop activ în Pionex", text: cs.deCe || cs.act || "", faCe: cs.act || "",
+      cand.push({ cod: "stop", nivel: "atentie", c: "r", titlu: pp ? "Stopul e peste plan" + (cost !== null ? ": atins, ≈ −" + TextRo.num(Math.abs(cost), 1) + " USDT" : "") : "Botul n-are stop activ în Pionex", text: cs.deCe || cs.act || "", faCe: cs.act || "",
         scurt: pp ? "stopul costă peste plan" : "botul n-are stop", cifre: cs.cifre || null, bani: cs.bani || null });
     }
     // revizia Opus a 2b (2): trendul pe medii (sfatul „trend”), cand nu e un avertisment, se spune LANGA directia pietei, ca „structura pe
@@ -198,7 +198,7 @@ var Consiliu = (function () {
 
     // banii: pierderea maxima (cartela Stopul) + totalul la marginea de jos
     var bani = [];
-    if (cf && nr(cf.laPropus) !== null) bani.push("pierderea maximă: " + (nr(cf.laOpritor) !== null ? U(nr(cf.laOpritor)) + " cu stopul de acum" : "fără margine (n-ai stop)") + " · " + U(nr(cf.laPropus)).replace(" USDT", "") + " cu stopul planului");
+    if (cf && nr(cf.laPropus) !== null) bani.push("pierderea maximă: " + (nr(cf.laOpritor) !== null ? U(nr(cf.laOpritor)) + " cu stopul de acum" : (nr(cf.laLichidare) !== null ? U(nr(cf.laLichidare)) + " fără stop (toată marja)" : "fără margine (n-ai stop)")) + " · " + U(nr(cf.laPropus)).replace(" USDT", "") + " cu stopul propus");   /* v100.339 (auditul din 13.11): maximul pe marjă izolată; „propus”, nu „al planului” (poate să nu existe plan) */
     // v100.106 (el: „exprimarea e ambiguă”): ce prag, ce sumă, ce unitate - „dacă atinge doar marginea de jos: −6,3” nu spunea nimic din ele
     // v100.257: la short, banii sunt la marginea de sus. Fără laSus nu se tipărește totalul de jos ca și cum ar fi pericolul.
     var mgA = avert.filter(function (m) { return m.cod === "margine"; })[0];

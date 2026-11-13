@@ -34,6 +34,7 @@ function lume(o = {}) {
   return ctx;
 }
 const A = lume().Acasa, ACUM = Date.now();
+const AZI_MAI_TARZIU = (() => { const d = new Date(ACUM); return Math.min(ACUM + 3600000, new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 30).getTime()); })();
 const RAPORT = (o = {}) => ({ cont: Object.assign({ la: ACUM - ORA, valoare: { total: 50000 }, risc: { var95: 1000 } }, o) });
 const EV = (t, titlu = "CPI m/m", impact = "High") => ({ date: new Date(t).toISOString(), title: titlu, impact, country: "USD" });
 
@@ -63,8 +64,10 @@ await test("🟡5 colectorul (Discord) judecă la fel: vremeBursa primește ora 
 const TP = await import(pathToFileURL(path.join(RAD, "scripts", "lib", "tura-piata.mjs")).href);
 await test("frâna evenimentului în colector: încă 2 ore după ora lui (ca pagina), cu „imediat după”; calendarul căzut rămâne necunoscut", () => {
   assert.equal(typeof TP.evenimentFrana, "function", "tura-piata.mjs: lipsește evenimentFrana");
-  assert.deepEqual(TP.evenimentFrana(A, { evenimente: [EV(ACUM - 30 * MIN)] }, ACUM), { eveniment: "CPI m/m", evenimentTrecut: true });
-  assert.deepEqual(TP.evenimentFrana(A, { evenimente: [EV(ACUM + 30 * MIN)] }, ACUM), { eveniment: "CPI m/m", evenimentTrecut: false });
+  /* v100.339: evenimentele rămân AZI la orice oră (înainte: +30 min cădea mâine după 23:30, −30 min ieri înainte de 00:30 ⇒ testul pica noaptea) */
+  const ZI0 = (() => { const d = new Date(ACUM); return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(); })(), PUTIN_INAINTE = Math.max(ACUM - 30 * MIN, ZI0 + 1000), PUTIN_DUPA = Math.min(ACUM + 30 * MIN, ZI0 + 24 * ORA - 30000);
+  assert.deepEqual(TP.evenimentFrana(A, { evenimente: [EV(PUTIN_INAINTE)] }, ACUM), { eveniment: "CPI m/m", evenimentTrecut: true });
+  assert.deepEqual(TP.evenimentFrana(A, { evenimente: [EV(PUTIN_DUPA)] }, ACUM), { eveniment: "CPI m/m", evenimentTrecut: false });
   assert.deepEqual(TP.evenimentFrana(A, { evenimente: [EV(ACUM - 3 * ORA)] }, ACUM), { eveniment: "", evenimentTrecut: false });
   assert.equal(TP.evenimentFrana(A, { evenimente: [], eroare: "x" }, ACUM), undefined);
   const S = citeste("scripts", "lib", "tura-piata.mjs");
@@ -94,7 +97,7 @@ await test("🔵 banda frânei arată TOATE motivele (riscul pe o zi ȘI evenime
   assert.equal(m.length, 2); assert.match(m[0], /reduce expunerea/); assert.match(m[1], /CPI m\/m/);
   assert.equal(A.franaCont(o), m[0]);
   const c = lume();
-  c.acasa.d = { contRaport: RAPORT({ risc: { var95: 2500 } }), calendar: { evenimente: [EV(ACUM + ORA)] } };
+  c.acasa.d = { contRaport: RAPORT({ risc: { var95: 2500 } }), calendar: { evenimente: [EV(AZI_MAI_TARZIU)] } };   /* v100.339: evenimentul rămâne AZI și la 23:30 (înainte: peste o oră ⇒ mâine ⇒ testul pica seara târziu) */
   const h = text(c.acFranaContHtml(c.acFranaContText(), ""));
   assert.match(h, /reduce expunerea/); assert.match(h, /Și: N-aș porni boți noi și n-aș cumpăra chiar înainte de CPI m\/m/);
 });

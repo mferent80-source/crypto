@@ -53,6 +53,8 @@ var Sfaturi = (function () {
     var out = [], b = x.bot || {};
     // v100.259 (auditul 23.10, punctul 16): un singur filtru de regim - cât fișa zice NU sau piața e în mișcare, niciun sfat nu cere un grid nou acum
     var opreste = !!(x.fisa && ((x.fisa.verdict && x.fisa.verdict.nivel === "nu") || (x.fisa.regim && x.fisa.regim.miscare)));
+    // v100.339 (auditul din 13.11): prețul dincolo de grid ⇒ botul nu lucrează; niciun sfat nu mai zice „L-aș lăsa să lucreze”
+    var pS = nr(b.pretCurent), jS = nr(b.gridJos), sS = nr(b.gridSus), afaraS = pS !== null && jS !== null && sS !== null && (pS < jS || pS > sS);
     var nume = String(b.baza || "botul").replace(/\.PERP$/, "");
     var dist = nr(b.distantaLichidarePct), tot = nr(b.profitTotal), inv = nr(b.investit);
     var jos = nr(b.gridJos), p = nr(b.pretCurent), pl = nr(b.pretLichidare);
@@ -67,11 +69,12 @@ var Sfaturi = (function () {
         // v100.62: aceleasi actiuni ca semaforul (o singura voce); titlul si textul vin din regulile alertelor (pachetul 3)
         // v100.70 (revizia pachetului 3, I1): lichidarea depasita = actiunea semaforului (marja nu mai ajuta), nu „aș adăuga marjă”
         var fc = k === "lich" ? (b.lichidareDepasita === true ? "Aș închide ce a rămas, după ce verific botul în Pionex." : a.nivel === "critic" ? "Aș adăuga marjă sau aș închide botul acum." : "N-aș mări poziția; dacă scade sub 8%, aș adăuga marjă.")
-          : k === "grid" ? (opreste ? "Aș aștepta o zi; dacă nu revine, aș închide botul, iar unul nou din fișă abia după liniște." : "Aș aștepta o zi; dacă nu revine în interval, aș închide botul și aș porni din fișă unul la prețul de acum.") : null;
+          : k === "grid" ? (a.peCastig ? (opreste ? "Aș încasa; unul nou din fișă abia după liniște." : "Aș încasa sau aș porni din fișă unul nou, la prețul de acum.")   /* v100.339: pe partea câștigului botul a încasat și stă */
+            : opreste ? "Aș aștepta o zi; dacă nu revine, aș închide botul, iar unul nou din fișă abia după liniște." : "Aș aștepta o zi; dacă nu revine în interval, aș închide botul și aș porni din fișă unul la prețul de acum.") : null;
         // v100.67 (pachetul 3): mesajul alertei e pe 2 randuri (faptul + „👉 ” actiunea) - sfatul ia faptul; actiunea ramane a semaforului,
         // iar unde semaforul n-are una (starea Pionex, botul oprit) vine din alerta
         var l12 = String(a.mesaj || "").split("\n"), actA = l12[1] ? l12[1].replace(/^👉\s*/, "") : null;
-        out.push({ cod: "pericol", tip: k, ton: a.nivel, titlu: a.titlu.replace(nume + ": ", ""), text: l12[0], faCe: fc || actA });
+        out.push({ cod: "pericol", tip: k, ton: k === "grid" && a.peCastig ? "info" : a.nivel,   /* v100.339: ieșirea pe câștig e informație (nu urcă în „Contează acum”) */ titlu: a.titlu.replace(nume + ": ", ""), text: l12[0], faCe: fc || actA });
       });
     }
 
@@ -101,7 +104,7 @@ var Sfaturi = (function () {
         var dzS = x.sanse && x.sanse.susZi && x.sanse.susZi.valoare, tonS = dzS === null || dzS === undefined ? "info" : dzS >= 20 ? "atentie" : "info";
         var pjS = Math.abs(100 * (sus - p) / p);
         out.push({ cod: "margine", ton: tonS, parte: "sus", pctJos: pjS, zile: dzS === null || dzS === undefined ? null : dzS, titlu: "Marginea de sus (" + pret(sus) + ") e cu " + TextRo.pct(pjS) + " peste preț",
-          text: "Acolo botul ar avea ~" + Math.round(laSus.pozitie) + " " + nume + " (acum " + Math.round(scen.grid.poz) + "), total ~" + usdt(laSus.total) + "; " +
+          text: "Acolo botul ar avea ~" + TextRo.cant(laSus.pozitie) + " " + nume + " (acum " + TextRo.cant(scen.grid.poz) + "), total ~" + usdt(laSus.total) + "; " +
             (fzS || fsS ? "moneda urcă cu atât în " + [fzS, fsS].filter(Boolean).join(" și ") + "." : "n-am destul istoric pentru cât de des urcă moneda atât."),
           sursa: "Frecvență pe lumânările de 4 ore ale monedei, ferestre fără suprapunere.",
           faCe: tonS === "atentie" ? "N-aș mări levierul și n-aș pune bani în plus în botul ăsta." : null });
@@ -114,7 +117,7 @@ var Sfaturi = (function () {
       // textul = ce ar avea botul acolo și cât de des scade moneda atât; pctJos / zile le folosește Consilierul ca să spună cifra, nu „lângă”
       var pj = Math.abs(100 * (jos - p) / p);
       out.push({ cod: "margine", ton: ton, pctJos: pj, zile: dz === null || dz === undefined ? null : dz, titlu: "Marginea de jos (" + pret(jos) + ") e cu " + TextRo.pct(pj) + " sub preț",
-        text: "Acolo botul ar avea ~" + Math.round(laJos.pozitie) + " " + nume + " (acum " + Math.round(scen.grid.poz) + "), total ~" + usdt(laJos.total) + "; " +
+        text: "Acolo botul ar avea ~" + TextRo.cant(laJos.pozitie) + " " + nume + " (acum " + TextRo.cant(scen.grid.poz) + "), total ~" + usdt(laJos.total) + "; " +
           (fz || fs ? "moneda scade cu atât în " + [fz, fs].filter(Boolean).join(" și ") + "." : "n-am destul istoric pentru cât de des scade moneda atât."),
         sursa: "Frecvență pe lumânările de 4 ore ale monedei, ferestre fără suprapunere.",
         faCe: ton === "atentie" ? "N-aș mări levierul și n-aș pune bani în plus în botul ăsta." : null });
@@ -137,7 +140,7 @@ var Sfaturi = (function () {
         // nu exista „tare pe 1 zi”); aceeasi in semafor (o singura voce)
         faCe: contra ? (typeof SemnaleBot !== "undefined" && SemnaleBot.textTrend ? SemnaleBot.textTrend(d.tarie, opreste) : d.tarie === "tare" ? (opreste ? "N-aș adăuga bani; aș închide botul lângă zero, iar unul pe trend din fișă abia după liniște." : "N-aș adăuga bani; trendul e „tare”, deci aș închide botul lângă zero și aș porni din fișă unul pe trend.")
             : opreste ? "N-aș adăuga bani; dacă trece pe „tare”, aș închide botul lângă zero, iar unul nou abia după liniște." : "N-aș adăuga bani; dacă trece pe „tare”, aș închide botul lângă zero și aș porni din fișă unul pe trend.")
-          : cu ? "L-aș lăsa să lucreze." : "L-aș lăsa să facă perechi: lateral e bine pentru un grid." });
+          : afaraS ? "Aș hotărî după „prețul a ieșit din grid”: botul nu lucrează acum." : cu ? "L-aș lăsa să lucreze." : "L-aș lăsa să facă perechi: lateral e bine pentru un grid." });
     }
 
     // B) Regimul acum: miscare mare vs liniste (cu frecventa "cat mai tine").
@@ -148,12 +151,12 @@ var Sfaturi = (function () {
     var rata = rg && rg.mare && rg.mare.rata ? rg.mare.rata : "~1 zi din 10";
     if (cuB && rg.r4h != null && rg.r24h != null) {
       out.push({ cod: "miscare-cu", ton: "bine", titlu: "Mișcare cu botul: " + X(rg.r24h) + " obișnuitul pe 24 h",
-        text: "Pe 4 h e " + X(rg.r4h) + " obișnuitul, în direcția botului: grilele " + (dirBot === "long" ? "de sus" : "de jos") + " încasează pe drum și poziția scade.",
+        text: "Pe 4 h e " + X(rg.r4h) + " obișnuitul, în direcția botului: " + (nr(b.pozitie) !== null && Math.abs(nr(b.pozitie)) < 1e-9 ? "grilele au încasat tot, botul nu mai are poziție." : "grilele " + (dirBot === "long" ? "de sus" : "de jos") + " încasează pe drum și poziția scade."),   /* v100.339: fără poziție nu mai „scade” nimic */
         // v100.259 (auditul 23.10, punctul 7): 40 de monede în ACEEAȘI perioadă nu sunt 40 de dovezi și n-a fost niciun test ⇒ observație, nu cifră-dovadă
         sursa: "Observație nedovedită (27.09, 40 de monede în aceleași zile, fără test): după mișcarea cu botul gridul n-a ieșit mai rău decât în liniște.",
         // v100.65 (problema b) + revizia Opus a 2b (4): O SINGURA VOCE cu semaforul (SemnaleBot.pasiCuBotul) - stopul la zero doar pe plus
         // si doar daca stopul de acum nu e deja dincolo de zero (altfel l-ar fi slabit); pe minus fara stop (take-profit-ul il spune sfatul „zero”)
-        faCe: typeof SemnaleBot !== "undefined" && SemnaleBot.pasiCuBotul ? SemnaleBot.pasiCuBotul(b, dirBot, x.zero).faCe
+        faCe: typeof SemnaleBot !== "undefined" && SemnaleBot.pasiCuBotul ? SemnaleBot.pasiCuBotul(b, dirBot, x.zero, fisa, x.acum).faCe   /* v100.339: fișa (filtrul „unul nou abia după liniște”) și vârsta botului */
           : "L-aș lăsa să lucreze, fără bani în plus, și aș urmări marginea " + (dirBot === "long" ? "de sus" : "de jos") + "." });
     } else if (rg && rg.r4h != null && rg.r24h != null && rg.miscare) {
       // revizia Opus (I1, 02.10): „Mișcare mare …” ca alerta colectorului („mișcare mare împotriva botului”) - in „Ce ai de făcut acum”
@@ -183,7 +186,7 @@ var Sfaturi = (function () {
       if (raport <= 0.5 || raport >= 2) {
         var sc = raport <= 0.5;
         out.push({ cod: "ritm", ton: sc ? "atentie" : "info",
-          titlu: "Ritmul a " + (sc ? "scăzut" : "crescut") + ": grilele " + TextRo.num(rt.grile24h, 2) + " USDT în 24 h, media " + TextRo.num(rt.medieZi, 2) + "/zi",
+          titlu: "Ritmul a " + (sc ? "scăzut" : "crescut") + ": grilele " + TextRo.num(rt.grile24h, TextRo.zecMici(rt.grile24h)) + " USDT în 24 h, media " + TextRo.num(rt.medieZi, TextRo.zecMici(rt.medieZi)) + "/zi",   /* v100.339: o zecimală (sub 0,1 cele mărunte) */
           text: mare((rt.tranz24h != null && rt.tranzMedieZi > 0 ? cate(rt.tranz24h, "tranzacție", "tranzacții") + " în 24 h față de " + Math.round(rt.tranzMedieZi) + " pe zi: " : "") +
             (sc ? "de obicei prețul a ieșit din zona perechilor sau piața a înghețat." : "piața se mișcă mai mult, bine pentru grile cât prețul stă în interval.")),
           faCe: sc ? (opreste ? "Aș închide botul dacă ritmul rămâne jos încă o zi; unul nou din fișă abia după liniște." : "Aș închide botul și aș porni din fișă unul la prețul de acum, dacă ritmul rămâne jos încă o zi.") : "Aș verifica lichidarea: ritmul mare vine des cu mișcare mare." });
@@ -287,7 +290,7 @@ var Sfaturi = (function () {
     }
 
     // 7) Cand nu e nimic de facut, se spune si asta.
-    if (!out.some(function (s) { return s.ton === "critic" || s.ton === "atentie"; })) {
+    if (!afaraS && !out.some(function (s) { return s.ton === "critic" || s.ton === "atentie"; })) {   /* v100.339: nu și cu prețul dincolo de grid (botul nu lucrează) */
       out.push({ cod: "nimic", ton: "bine", titlu: "Nimic urgent", text: tot !== null ? "Totalul botului e " + usdt(tot) + "." : "", faCe: "L-aș lăsa să lucreze și m-aș uita din nou diseară." });
     }
     out.sort(function (a, c) { return RANG[a.ton] - RANG[c.ton]; });
@@ -329,7 +332,7 @@ var Sfaturi = (function () {
       : { josZi: S.sansaAtingere(o.k4, p, jos, 6), josSapt: S.sansaAtingere(o.k4, p, jos, 42) };
     var bu = b.brut && b.brut.buOrderData || {}, zile = nr(b.pornitLa) ? (acum - nr(b.pornitLa)) / 86400000 : null;
     var ritm = { grile24h: nr(bu.gridProfit24h), medieZi: zile && nr(b.gridProfitBrut) != null ? nr(b.gridProfitBrut) / zile : null, tranz24h: nr(bu.trx24h),
-      tranzMedieZi: zile && nr(bu.closedExchangeOrderCount) != null ? nr(bu.closedExchangeOrderCount) / zile : null, zile: zile };
+      tranzMedieZi: zile && nr(b.ordinePerechi) != null ? nr(b.ordinePerechi) / zile : null, zile: zile };   /* revizia (14.11): trx24h numără PERECHI (botul viu: trx24h ÷ perechile socotite din grile = 0,99) ⇒ media tot pe perechi, nu pe ordinele închise (de două ori mai multe) */
     // v100.272 (ideile auditului 29.10): ratele Pionex ale monedei (Tablou: GridSim.rataFunding; colector: { rate, rataZi, intervalOre }) - sursa sfatului
     var fp = o.fundingPionex && nr(o.fundingPionex.rataZi) !== null ? o.fundingPionex : null;
     var fundingPionex = fp ? { rataZi: nr(fp.rataZi), rata: nr(fp.rata) !== null ? nr(fp.rata) : nr(fp.rate), intervalOre: nr(fp.intervalOre), veche: fp.veche === true } : null;

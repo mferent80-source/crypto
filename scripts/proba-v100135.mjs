@@ -38,7 +38,7 @@ await test("(4b) GridSim: pierderea maximă pe drum din minimul în bară (≤ c
   assert.ok(o.maxJos.p50 <= o.p50); assert.ok(o.maxJos.p5 <= o.maxJos.p50);
   const p = GS.simuleaza(B, ST, Object.assign({}, O, { plan: { minus: 0.000001, plus: 0.000001 }, orizonturi: [7] })).orizonturi[0].plan;
   assert.equal(p.pRau, 1); assert.equal(p.p, 0, "amândouă pe prima bară ⇒ minusul câștigă");
-  assert.match(functie(citeste("public", "lib", "grid-sim.js"), "simuleaza"), /tr\.min\[/); assert.match(functie(citeste("public", "lib", "grid-sim.js"), "simuleaza"), /tr\.max\[/);
+  assert.match(functie(citeste("public", "lib", "grid-sim.js"), "simuleazaIntreg"), /tr\.min\[/); assert.match(functie(citeste("public", "lib", "grid-sim.js"), "simuleazaIntreg"), /tr\.max\[/);   // v100.339: corpul e în simuleazaIntreg (simuleaza = învelișul cu botRuleaza)
 });
 
 // ---------------- (3) funding-ul real ----------------

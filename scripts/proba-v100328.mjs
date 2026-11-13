@@ -36,7 +36,7 @@ await test("vorbele poziției (VORBE_POZITIE): banda, rigla, istoria, predicția
   assert.deepEqual(JSON.parse(JSON.stringify(V.orizont)), { "15 min": "1 oră", "1 oră": "4 ore de bursă", "4 ore": "2 ședințe", "1 zi": "4 ședințe" });
   const b = IB.banda(L(), "long");
   const bh = IB.bandaHtml(b, null, null, "long", esc, V);
-  assert.match(bh, /aria-label="Indicatorii pe 4 intervale, față de poziția ta \(long\)"/); assert.ok(!BOT.test(bh), "banda fără „botul”");
+  assert.match(bh, /aria-label="Indicatorii pe 4 intervale, pe trei familii \(trend, impuls, poziție\), față de poziția ta \(long\)"/); assert.ok(!BOT.test(bh), "banda fără „botul”");
   assert.match(IB.bandaHtml(b, null, null, "long", esc), /față de botul tău \(long\)/, "botul: neschimbat");
   const rg = IB.riglaHtml(b, "long", esc, V);
   assert.ok(rg.includes("verde = cu poziția ta (long: câștigă când urcă)") && !BOT.test(rg), "rigla");
@@ -60,7 +60,8 @@ await test("tabelul „Detaliile indicatorilor” scos într-o funcție (tbIndTa
   for (const h of [bot, poz]) {
     assert.ok(h.startsWith('<div class="tbIndWrap"><table class="tbIndTab"><thead><tr><th></th><th>15m</th><th>1h</th><th>4h</th><th>1z</th></tr></thead><tbody>'));
     assert.ok(h.includes('<tr class="tbIndEst"><td title="Estimarea din istoric: situații asemănătoare cu acum și ce a făcut prețul după 4 bare. Nedovedită.">Estimare</td>'));
-    assert.ok(h.includes('<p class="tbSub tbIndNota">Indicatorii arată ce e acum pe grafic; doar rândul „Estimare” privește înainte. Ține mouse-ul pe o celulă ca să vezi ce înseamnă.</p>'));
+    // v100.339 (auditul din 13.11): culoarea e față de bot / poziție (cu legendă), iar explicația unei celule se poate atinge (telefon)
+    assert.ok(h.includes('<p class="tbSub tbIndNota">Indicatorii arată ce e acum pe grafic; doar rândul „Estimare” privește înainte. ' + (h === bot ? IB.MASURAT_DIRECTIE : IB.MASURAT_DIRECTIE_ACT) + ' Culoarea: verde = ' + (h === bot ? "cu botul (short)" : "cu poziția (long)") + ', roșu = împotrivă; săgeata arată piața. Atinge o celulă (sau ține mouse-ul pe ea) ca să vezi ce înseamnă.</p><p class="tbSub tbIndExplic" hidden></p>'), h.slice(-420));
   }
   assert.ok(bot.includes("Estimare · 4 ore: în 30 de situații asemănătoare din istoricul monedei, după 16 ore") && bot.includes("🔮 Estimare pe 16 ore") && bot.includes("împotriva botului"), "Tabloul: ca înainte");
   assert.ok(poz.includes("Estimare · 4 ore: în 30 de situații asemănătoare din istoricul acțiunii, după 2 ședințe") && poz.includes("Estimare · 1 zi: în 30 de situații asemănătoare din istoricul acțiunii, după 4 ședințe"));

@@ -994,7 +994,7 @@ async function main() {
 
     /* ═══ v74.6 · C8: kNN "Hist ↑ X%" e NEDOVEDIT (48,8% directie pe mers aleator) ═══ */
     // serie de mers aleator, cu samanta fixa (proba e determinista)
-    const MERS_ALEATOR = `(() => { let s = 12345, p = 100; const r = () => (s = (s * 1103515245 + 12345) % 2147483648) / 2147483648;
+    const MERS_ALEATOR = `(() => { let s = 12345, p = 100; const r = () => { s |= 0; s = (s + 0x6D2B79F5) | 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };   /* v100.339: mulberry32 (regula casei), nu LCG */
       const t0 = Date.now() - 750 * 3600000, j = [];
       for (let i = 0; i < 750; i++) { const o = p; p = p * (1 + (r() - 0.5) * 0.02); j.push([t0 + i * 3600000, String(o), String(Math.max(o, p) * 1.001), String(Math.min(o, p) * 0.999), String(p), String(100 + r() * 50)]); }
       return j; })()`;

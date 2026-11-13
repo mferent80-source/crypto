@@ -107,7 +107,7 @@ await test("funding-ul: titlul spune cât și cine plătește, cu virgulă; „p
 });
 await test("ritmul, costurile, setarea, mișcarea: cifrele cu virgulă; titlul ≤ 60 chiar la 10× obișnuitul", () => {
   const r = cod(sfaturi(CRV(), { peste: { ritm: { grile24h: 0.1, medieZi: 1.2, tranz24h: 2, tranzMedieZi: 14, zile: 4 } } }), "ritm");
-  assert.equal(r.titlu, "Ritmul a scăzut: grilele 0,10 USDT în 24 h, media 1,20/zi");
+  assert.equal(r.titlu, "Ritmul a scăzut: grilele 0,1 USDT în 24 h, media 1,2/zi");   // v100.339: o zecimală
   assert.equal(r.text, "2 tranzacții în 24 h față de 14 pe zi: de obicei prețul a ieșit din zona perechilor sau piața a înghețat.");
   const c = cod(sfaturi(CRV(), { peste: { costuri: { netZi: -0.004, grile24h: 0.01, comisionZi: 0.004, fundingZi: 0.01, fundingMananca: false } } }), "costuri");
   assert.equal(c.titlu, "Costurile mănâncă grilele: −0,004 USDT pe zi, net");

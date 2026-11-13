@@ -31,7 +31,7 @@ var TabloBot = (function () {
   // Audit 24.09: fiecare masura poarta unitatea, iar valoarea e DEJA in ea
   // (comisionul in procente, nu fractie). Ecranul doar o lipeste langa cifra.
   // eficienta e un indice 0-1 si starile de cont/bot sunt text: unitate "".
-  var UNITATI = { pozitieInterval: "%", ritmPerechi: "perechi/oră", eficienta: "",
+  var UNITATI = { trepte: "trepte/oră", pozitieInterval: "%", ritmPerechi: "perechi/oră", eficienta: "",
     amplitudine: "×", lichidare: "%", comision: "%", basis: "%",
     marginStatus: "", riskStatus: "", stareBot: "",
     varstaBot: "min", lumanari: "lumânări", istoric: "min" };
@@ -217,7 +217,7 @@ var TabloBot = (function () {
       pretPerp: pretPerp,
       pretSpot: pretSpot,
       eficienta: judecaEficienta(ef, inchideri),   // v100.269: față de istoricul monedei (percentilele 20 / 80), nu 0,30 / 0,60 fixe
-      pozitieInterval: NECUNOSCUT, ritmPerechi: NECUNOSCUT, amplitudine: NECUNOSCUT,
+      pozitieInterval: NECUNOSCUT, ritmPerechi: NECUNOSCUT, amplitudine: NECUNOSCUT, trepte: NECUNOSCUT,
       lichidare: NECUNOSCUT, comision: NECUNOSCUT,
       basis: NECUNOSCUT, directieBot: 0,
       marginStatus: NECUNOSCUT, riskStatus: NECUNOSCUT,
@@ -262,6 +262,13 @@ var TabloBot = (function () {
         // v100.38: row = linii Pionex -> linii − 1 intervale
         var treapta = (sus - jos) / (linii - 1), amp = atr(lumanari, 14);
         if (amp !== null) m.amplitudine = judecaAmplitudine(lumanari, amp, treapta);   // v100.269: sub o treaptă ȘI sub percentila 20 a ATR-ului ei
+        // v100.339 (I-872, auditul din 13.11): „amplitudine vs treaptă” ieșea „rău” cam o oră din patru cât botul făcea 2 perechi pe oră (ATR-ul
+        // pe 70 de minute sub o treaptă nu înseamnă că gridul nu lucrează). Pagina arată în locul ei FAPTUL de care depinde un grid: cât a mers
+        // prețul, în trepte, pe lumânările avute (100 × 5 min ≈ 8 h). Nu se judecă: nu e măsurat ce prag „e rău”.
+        var drumT = 0, nT = 0, tPrim = null, tUlt = null;
+        for (var li = 1; li < lumanari.length; li++) { var cA = nr(lumanari[li - 1].close), cB = nr(lumanari[li].close); if (cA !== null && cB !== null && cA > 0 && cB > 0) { drumT += Math.abs(cB - cA); nT++; if (tPrim === null) tPrim = nr(lumanari[li - 1].time); tUlt = nr(lumanari[li].time); } }
+        var oreT = tPrim !== null && tUlt !== null && tUlt > tPrim ? (tUlt - tPrim) / 3600000 : nT * 5 / 60;
+        if (nT >= 12 && treapta > 0 && oreT > 0) m.trepte = { valoare: drumT / treapta / oreT, prag: null, stare: "info", eticheta: cate(Math.round(drumT / treapta), "treaptă", "trepte") + " în ultimele " + String(Math.round(oreT * 10) / 10).replace(".", ",") + " h" };
       }
     }
 
@@ -286,16 +293,23 @@ var TabloBot = (function () {
     }
 
     var brut = nr(x.gridProfit), taxe = nr(x.totalFee);
+    // v100.339 (auditul din 13.11): taxa de INTRARE (plătită o dată, la pornire) nu e „comision care mănâncă gridul” - un bot de 20 de minute
+    // ieșea „88% rău”, din care taxa de intrare era aproape tot. Se scade estimarea ei (banii × levierul × partea de grid pe care se deschide
+    // poziția × 0,05%); ce rămâne e comisionul grilelor, judecat ca înainte. Fără datele ei (bot fără bani / levier / preț de pornire) nu se scade nimic.
+    var invC = nr(x.usdtInvestment), levC = nr(x.leverage), initC = nr(x.initPrice), txIn = 0;
+    if (invC > 0 && levC > 0 && initC > 0 && grid.bun) { var parteC = tr === "short" ? (initC - jos) / (sus - jos) : tr === "long" ? (sus - initC) / (sus - jos) : 0;   /* revizia (14.11): neutrul nu deschide poziție la pornire (ca TabloExtra.taxaIntrare) - înainte 0,5 îi scădea o taxă neplătită */ txIn = invC * levC * Math.max(0, Math.min(1, parteC)) * 0.0005; }
+    var etC = txIn > 0 ? "fără taxa de intrare (≈ " + (txIn >= 0.095 ? (Math.round(txIn * 10) / 10).toFixed(1) : (Math.round(txIn * 100) / 100).toFixed(2)).replace(".", ",") + " USDT)" : null;   /* o zecimală de la 0,1 în sus */
     if (brut !== null && taxe !== null) {
+      var taxeG = Math.max(0, Math.abs(taxe) - txIn);
       if (brut > 0) {
-        var r = 100 * Math.abs(taxe) / brut;
-        m.comision = { valoare: r, prag: 50, stare: r > 50 ? "rau" : "bine" };
-      } else if (Math.abs(taxe) > 0) {
+        var r = 100 * taxeG / brut;
+        m.comision = { valoare: r, prag: 50, stare: r > 50 ? "rau" : "bine", eticheta: etC };
+      } else if (taxeG > 0) {
         // Taxe care curg fara profit brut (zero sau negativ) e cazul cel mai
         // rau, nu unul nemasurabil - la un ban profit ratul striga, la zero
         // tacea. Nu exista un raport sanatos de aratat (impartire la zero sau
         // negativ), dar starea nu are voie sa taca pe "nu-se-poate".
-        m.comision = { valoare: null, prag: 50, stare: "rau" };
+        m.comision = { valoare: null, prag: 50, stare: "rau", eticheta: etC };
       }
       // brut <= 0 si taxe === 0: ramane NECUNOSCUT - n-a curs nimic inca.
     }
@@ -332,9 +346,13 @@ var TabloBot = (function () {
         // Contor resetat (bot inchis si redeschis): o diferenta negativa nu e
         // ritm. Fara baza de comparatie nu raportam "rau" - ramane NECUNOSCUT.
         if (!(ultima < 0 || baza < 0)) {
+          // v100.339 (auditul din 13.11): o oră cu puține perechi e „rău” doar dacă e sub ZGOMOTUL ritmului de dinainte - la ~2 perechi pe oră,
+          // o oră fără niciuna vine din întâmplare cam o dată la 7 (Poisson); pragul: sub 5% șansă. Rândul spune și ce compară.
+          var kUlt = Math.round(p0 - p1), lam = baza * ((t0 - t1) / ORA), pCel = 0, termen = Math.exp(-lam);
+          for (var ki = 0; ki <= kUlt && ki < 400; ki++) { pCel += termen; termen *= lam / (ki + 1); }
           m.ritmPerechi = { valoare: ultima, baza: baza, prag: 0.40,
-            stare: baza > 0 && ultima / baza < 0.40 ? "rau" : "bine",
-            sursa: "istoric", eticheta: null };
+            stare: baza > 0 && ultima / baza < 0.40 && pCel < 0.05 ? "rau" : "bine",
+            sursa: "istoric", eticheta: "ultima oră: " + cate(kUlt, "pereche", "perechi") + " · înainte ~" + (Math.round(baza * 10) / 10).toFixed(1).replace(".", ",") + " pe oră" };
           ritmDinIstoric = true;
         }
       }

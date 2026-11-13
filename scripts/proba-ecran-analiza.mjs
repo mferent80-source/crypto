@@ -173,7 +173,7 @@ try {
         pred:(document.querySelector("#tbIndicatori .tbIndPred")||{}).textContent||"", rez:document.getElementById("tbIndicatoriRezumat").textContent, gunoi:/NaN|undefined|null/.test(document.getElementById("tbTrendCard").textContent)}})()`);
     assert.ok(r.langa, "tabelul nu sta sub grafic, pe toata latimea (la 1440 px)"); assert.equal(r.becuri, 6);
     assert.equal(r.coloane, 5); assert.ok(r.v.some((t) => /[↑↓↔] \d+/.test(t)), `niciun verdict calculat: ${r.v}`);
-    assert.match(r.pred, /48,8%/); assert.match(r.rez, /Cu botul|Urcă pe/); assert.equal(r.gunoi, false);
+    assert.match(r.pred, /50 din 100 de cazuri/);   /* v100.339: cifra măsurată pe piață */ assert.match(r.rez, /Cu botul|Urcă pe/); assert.equal(r.gunoi, false);
   });
   // v91.9: "fa toate 3 si lasa tabelul cum e" - Mediul botului cu date REALE (nu "n-am ..."), tabelul neatins
   await test("Tabloul: 'Mediul botului' are cele 3 randuri cu date reale (miscarea, funding-ul, BTC) si tabelul a ramas cu 10 randuri", async () => {

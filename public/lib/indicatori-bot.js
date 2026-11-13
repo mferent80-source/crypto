@@ -14,18 +14,24 @@ var IndicatoriBot = (function () {
     return (Array.isArray(rows) ? rows : []).map(function (x) {
       var ts = Number(x && x.time), o = Number(x && x.open), h = Number(x && x.high), l = Number(x && x.low), c = Number(x && x.close), v = Number(x && x.volume);
       return [ts, String(o), String(h), String(l), String(c), String(v), ts + 1, String(v * c)];
-    }).filter(function (r) { return isFinite(r[0]) && isFinite(+r[4]) && +r[4] > 0; }).sort(function (a, b) { return a[0] - b[0]; });
+    // v100.339 (auditul din 13.11): și maximul / minimul trebuie să existe - o bară fără ele făcea ATR-ul NaN până la capăt (Supertrend înghețat, ADX ≈ 0)
+    }).filter(function (r) { return isFinite(r[0]) && isFinite(+r[4]) && +r[4] > 0 && isFinite(+r[2]) && +r[2] > 0 && isFinite(+r[3]) && +r[3] > 0; }).sort(function (a, b) { return a[0] - b[0]; });
   }
 
   // randurile ferestrei, in ordinea in care se citesc; titlul = ce inseamna indicatorul, in cuvinte
   var RANDURI = [
-    { k: "verdict", eticheta: "Verdict", titlu: "Scorul Radarului din toți indicatorii (0-100): peste ~60 urcă, sub ~40 coboară." },
+    // v100.339 (auditul din 13.11): titlul spunea „din toți indicatorii … peste ~60 / sub ~40” - pragurile reale sunt 64–67 / 33–36, iar scorul nu
+    // e făcut din rândurile tabelului (Bollinger și MFI au pondere 0; jumătate din el vine din ce n-are rând aici)
+    { k: "verdict", eticheta: "Verdict", titlu: "Scorul Radarului (0–100) din trend, impuls, volum și structură. Urcă de la pragul intervalului în sus și coboară de la oglinda lui în jos (pragul, 64–67, e scris în explicația fiecărei celule); între ele e neutru. Bollinger și MFI nu intră în scor; intră în schimb prețul față de EMA 20, ritmul pe 10 bare, volumul și spargerile, care n-au rând aici." },
     { k: "ema", eticheta: "Medii EMA", titlu: "Mediile de 20, 50 și 200 de bare: 20 peste 50 peste 200 = urcare așezată; 20 sub 50 sub 200 = coborâre așezată; altfel neutru." },
-    { k: "supertrend", eticheta: "Supertrend", titlu: "Urmăritorul de trend: ↑ cât prețul stă peste linia lui, ↓ sub ea." },
+    { k: "supertrend", eticheta: "Supertrend", titlu: "Urmăritorul de trend: ↑ cât prețul stă peste linia lui, ↓ sub ea. Aici linia e la ATR 14 × 2,4–3,0 (după cât de agitată e moneda); în TradingView, implicit, ATR 10 × 3 - poate arăta altfel pe aceeași bară." },
     { k: "macd", eticheta: "MACD", titlu: "Impulsul: histograma peste 0 = împinge în sus, sub 0 = în jos." },
     { k: "adx", eticheta: "ADX", titlu: "Tăria trendului: sub 20 = fără trend (bun pentru grid), peste 25 = trend. Culoarea = cine trage (+DI / −DI)." },
     { k: "rsi", eticheta: "RSI", titlu: "Forța: peste 50 cumpărătorii, sub 50 vânzătorii; peste 70 încins, sub 30 epuizat." },
-    { k: "stoch", eticheta: "Stochastic", titlu: "Unde e prețul în intervalul recent: peste 80 sus (încins), sub 20 jos (epuizat)." },
+    // v100.339 (I-870): rândul afișa Stoch RSI brut sub numele „Stochastic” („85 încins” cu prețul la mijlocul intervalului) - acum e
+    // Stochasticul prețului, ca în TradingView; Stoch RSI are rândul lui
+    { k: "stoch", eticheta: "Stochastic", titlu: "Stochasticul prețului, %K(14, 3), ca în TradingView: unde e prețul în intervalul ultimelor 14 bare - peste 80 sus (încins), sub 20 jos (epuizat)." },
+    { k: "stochRsi", eticheta: "Stoch RSI", titlu: "Unde e RSI-ul în intervalul lui din ultimele 14 bare (netezit pe 3): peste 80 / sub 20 = RSI-ul e la extrema lui. Nu spune unde e prețul. Varianta lui brută intră în scor." },
     { k: "bb", eticheta: "Bollinger", titlu: "Unde e prețul în banda de volatilitate: 0% jos, 100% sus." },
     { k: "mfi", eticheta: "MFI (bani)", titlu: "RSI cu volum: intră bani (peste 50) sau ies (sub 50); peste 80 / sub 20 = extrem." }
   ];
@@ -37,29 +43,38 @@ var IndicatoriBot = (function () {
   function celule(q) {
     if (!q) return null;
     var o = {};
-    var sc = nr(q.score), scTxt = sc !== null ? " " + Math.round(sc) : "";
+    var sc = nr(q.score), pg = nr(q.prag), scTxt = sc !== null ? " " + scorText(sc, pg) : "", astept = q.neconfirmat && q.neconfirmat !== q.ver;
+    if (astept) scTxt += "⏳";   // v100.339 (I-873): direcția barei de acum așteaptă a doua bară închisă   // v100.339: lângă prag o zecimală (65,6 cu pragul 66 nu e „↔ 66”)
+    var PLAT = { t: "—", c: "lipsa", titlu: "preț pe loc pe ultimele 14 bare: nu se poate judeca" };   // v100.339: pe bare identice RSI / MFI ieșeau 100 „încins”
     o.verdict = q.ver === "BULLISH" ? { t: "↑" + scTxt, c: "good", titlu: "urcă" } : q.ver === "BEARISH" ? { t: "↓" + scTxt, c: "bad", titlu: "coboară" } : { t: "↔" + scTxt, c: "neutral", titlu: "neutru" };
-    if (sc !== null) o.verdict.titlu += ", scor " + Math.round(sc) + " din 100";
+    if (astept) o.verdict.titlu += " (confirmat); pe ultima bară scorul zice „" + eTitlu(q.neconfirmat) + "”: aștept a doua bară închisă" + (q.miscatDe && q.miscatDe.nume ? " · l-a mișcat " + q.miscatDe.nume + " (" + (q.miscatDe.d >= 0 ? "+" : "−") + Math.abs(Math.round(q.miscatDe.d)) + ")" : "");
+    else if (nr(q.tineDe) > 1) o.verdict.titlu += ", ține de " + cate(q.tineDe, "bară", "bare");
+    if (sc !== null) o.verdict.titlu += ", scor " + scorText(sc, pg) + " din 100" + (pg !== null ? " (urcă de la " + pg + " în sus, coboară de la " + (100 - pg) + " în jos)" : "");
     // v100.325 (el, 11.11.2026: „aplică regula simetrică și în tabel”): urcarea și coborârea „așezate” cer toate trei mediile în ordine, în oglindă;
     // înainte „20 sub 50” era ↓ și când 50 > 200, iar oglinda lui doar ↗ neutru (un short câștiga un „jos” pe care un long nu-l primea)
     var e20 = nr(q.e20Now), e50 = nr(q.e50Now), e200 = nr(q.e200Now);
-    if (e20 !== null && e50 !== null && e200 !== null) o.ema = e20 > e50 && e50 > e200 ? { t: "↑", c: "good", titlu: "așezat pe urcare: 20 > 50 > 200" } : e20 < e50 && e50 < e200 ? { t: "↓", c: "bad", titlu: "așezat pe coborâre: 20 < 50 < 200" }
+    // v100.339 (auditul din 13.11): sub 200 de bare închise „EMA 200” pleacă de la prima închidere - nu se judecă „așezat”
+    if (q.e200Valid === false && e20 !== null && e50 !== null) o.ema = { t: e20 > e50 ? "↗" : e20 < e50 ? "↘" : "↔", c: "neutral", titlu: (e20 > e50 ? "20 peste 50" : e20 < e50 ? "20 sub 50" : "20 și 50 egale") + "; sub 200 de bare închise EMA 200 nu se poate socoti încă" };
+    else if (e20 !== null && e50 !== null && e200 !== null) o.ema = e20 > e50 && e50 > e200 ? { t: "↑", c: "good", titlu: "așezat pe urcare: 20 > 50 > 200" } : e20 < e50 && e50 < e200 ? { t: "↓", c: "bad", titlu: "așezat pe coborâre: 20 < 50 < 200" }
       : e20 > e50 ? { t: "↗", c: "neutral", titlu: "20 peste 50, dar 50 nu e peste 200" } : e20 < e50 ? { t: "↘", c: "neutral", titlu: "20 sub 50, dar 50 nu e sub 200" } : { t: "↔", c: "neutral", titlu: "20 și 50 egale" };
     // fără cifre (calc vechi): tot în oglindă - fără 200 nu știm „coborâre așezată” ⇒ „20 sub 50” e neutru, ca „20 peste 50”
     else o.ema = q.ema ? { t: "↑", c: "good", titlu: "așezat pe urcare: 20 > 50 > 200" } : q.emaDir === "UP" ? { t: "↗", c: "neutral", titlu: "20 peste 50, dar nu peste 200" } : q.emaDir === "DOWN" ? { t: "↘", c: "neutral", titlu: "20 sub 50" } : LIPSA;
     o.supertrend = q.supertrend === "BULL" ? { t: "↑", c: "good", titlu: "prețul peste linie" } : q.supertrend === "BEAR" ? { t: "↓", c: "bad", titlu: "prețul sub linie" } : LIPSA;
-    o.macd = q.macd === true ? { t: "↑", c: "good", titlu: "histograma peste 0: împinge în sus" } : q.macd === false ? { t: "↓", c: "bad", titlu: "histograma sub 0: împinge în jos" } : LIPSA;
+    o.macd = q.plat ? PLAT : q.macd === true ? { t: "↑", c: "good", titlu: "histograma peste 0: împinge în sus" } : q.macd === false ? { t: "↓", c: "bad", titlu: "histograma sub 0: împinge în jos" } : LIPSA;
     var a = nr(q.adx), pd = nr(q.pdi), md = nr(q.mdi);
-    o.adx = a === null ? LIPSA : { t: String(Math.round(a)), c: a < 20 || pd === null || md === null ? "neutral" : pd > md ? "good" : "bad",
+    o.adx = a === null ? LIPSA : { t: String(Math.round(a)), c: a < 20 || pd === null || md === null || Math.abs(pd - md) < 1 ? "neutral" : pd > md ? "good" : "bad",   // v100.339: +DI și −DI la sub un punct = nimeni nu trage
       titlu: (a >= 25 ? "trend" : a < 20 ? "liniște, fără trend" : "trend slab") + (pd !== null && md !== null ? (pd > md ? "; trag cumpărătorii" : "; trag vânzătorii") : "") };
     var r = nr(q.rsi);
-    o.rsi = r === null ? LIPSA : { t: String(Math.round(r)), c: r >= 70 || r <= 30 ? "tbWarn" : r > 50 ? "good" : r < 50 ? "bad" : "neutral", titlu: forta(r, 70, 30, ["cumpărătorii conduc", "vânzătorii conduc"]) };
-    var s = nr(q.stoch);
-    o.stoch = s === null ? LIPSA : { t: String(Math.round(s)), c: s >= 80 || s <= 20 ? "tbWarn" : s > 50 ? "good" : s < 50 ? "bad" : "neutral", titlu: forta(s, 80, 20, ["în partea de sus a intervalului", "în partea de jos a intervalului"]) };
+    // v100.339 (auditul din 13.11): zona neutră 45–55, ca în scor (RSI 50,4 era verde, „cumpărătorii conduc”)
+    o.rsi = q.plat ? PLAT : r === null ? LIPSA : { t: String(Math.round(r)), c: r >= 70 || r <= 30 ? "tbWarn" : r >= 55 ? "good" : r <= 45 ? "bad" : "neutral", titlu: r > 45 && r < 55 ? "la mijloc (între 45 și 55): nimeni nu conduce limpede" : forta(r, 70, 30, ["cumpărătorii conduc", "vânzătorii conduc"]) };
+    var s = nr(q.stochK), sr = nr(q.stochRsiK);   // v100.339 (I-870): Stochasticul prețului; Stoch RSI (netezit) pe rândul lui
+    o.stochRsi = q.plat ? PLAT : sr === null ? LIPSA : { t: String(Math.round(sr)), c: sr >= 80 || sr <= 20 ? "tbWarn" : sr > 55 ? "good" : sr < 45 ? "bad" : "neutral", titlu: forta(sr, 80, 20, ["RSI-ul e în partea de sus a intervalului lui", "RSI-ul e în partea de jos a intervalului lui"]) };
+    o.stoch = q.plat ? PLAT : s === null ? LIPSA : { t: String(Math.round(s)), c: s >= 80 || s <= 20 ? "tbWarn" : s > 50 ? "good" : s < 50 ? "bad" : "neutral", titlu: forta(s, 80, 20, ["în partea de sus a intervalului", "în partea de jos a intervalului"]) };
     var b = nr(q.bbpos);
-    o.bb = b === null ? LIPSA : { t: Math.round(b) + "%", c: b >= 80 || b <= 20 ? "tbWarn" : b > 55 ? "good" : b < 45 ? "bad" : "neutral", titlu: b >= 80 ? "lipit de banda de sus" : b <= 20 ? "lipit de banda de jos" : "în interiorul benzii" };
+    // v100.339 (auditul din 13.11): „lipit” de la 95% / 5% (de la 80% = 1,2σ era auriu în ~4 bare din 10)
+    o.bb = q.plat ? PLAT : b === null ? LIPSA : { t: Math.round(b) + "%", c: b >= 95 || b <= 5 ? "tbWarn" : b > 55 ? "good" : b < 45 ? "bad" : "neutral", titlu: b >= 95 ? "lipit de banda de sus" : b <= 5 ? "lipit de banda de jos" : b > 55 ? "în partea de sus a benzii" : b < 45 ? "în partea de jos a benzii" : "la mijlocul benzii" };
     var m = nr(q.mfi);
-    o.mfi = m === null ? { t: "—", c: "lipsa", titlu: "fără volum pe fereastra lui" } : { t: String(Math.round(m)), c: m >= 80 || m <= 20 ? "tbWarn" : m > 50 ? "good" : m < 50 ? "bad" : "neutral", titlu: forta(m, 80, 20, ["intră bani", "ies bani"]) };
+    o.mfi = q.plat ? PLAT : m === null ? { t: "—", c: "lipsa", titlu: "fără volum pe fereastra lui" } : { t: String(Math.round(m)), c: m >= 80 || m <= 20 ? "tbWarn" : m > 50 ? "good" : m < 50 ? "bad" : "neutral", titlu: forta(m, 80, 20, ["intră bani", "ies bani"]) };
     return o;
   }
 
@@ -81,16 +96,30 @@ var IndicatoriBot = (function () {
     var dirTxt = botDir === "long" ? "urcare" : "coborâre";
     var neutre = valide.filter(function (x) { return x.q.ver !== vrea && x.q.ver !== opus; });
     var baza = "Cu botul (" + botDir + "): " + cu.length + " din " + valide.length + (cu.length ? " (" + nume(cu) + ")" : "") + (contra.length ? " · împotrivă: " + nume(contra) : "") + (neutre.length ? " · neutru: " + nume(neutre) : "") + ".";
-    if (lungi.length && lungiContra === lungi.length) return { ton: "rau", text: baza + " Și 4 ore, și 1 zi arată " + (botDir === "long" ? "coborâre" : "urcare") + ": indicatorii nu mai susțin botul." };
-    if (lungiContra) return { ton: "atentie", text: baza + " Unul din intervalele lungi (4 ore / 1 zi) e împotrivă — de urmărit." };
-    if (contra.length) return { ton: "atentie", text: baza + " Împotrivă doar pe termen scurt; botul ține zile, contează 4 ore și 1 zi" + (lungiCu ? ", care arată " + dirTxt + "." : ".") };
-    return { ton: cu.length ? "bine" : "neutru", text: baza + (cu.length ? "" : " Niciun interval nu arată clar o direcție.") };
+    // v100.339 (auditul din 13.11): „Și 4 ore, și 1 zi” doar cu AMBELE citite (cu 1 zi fără date, fraza apărea din 4 ore singur); intervalul
+    // împotrivă e numit, iar cel fără date e spus; „care arată” doar când ambele intervale lungi arată direcția botului
+    var opusTxt = botDir === "long" ? "coborâre" : "urcare", LUNGI = ["4 ore", "1 zi"];
+    var lipsaL = LUNGI.filter(function (e) { return !lungi.some(function (x) { return x.eticheta.indexOf(e) >= 0; }); });
+    var lungiC = lungi.filter(function (x) { return opus && x.q.ver === opus; }), lungiV = lungi.filter(function (x) { return vrea && x.q.ver === vrea; });
+    // v100.339 (I-871): direcția arătată de indicatori e nedovedită (47–50 din 100 la 4 bare) ⇒ rezumatul nu mai dă roșu / verde, doar „de urmărit”
+    if (lungi.length >= 2 && lungiContra === lungi.length) return { ton: "atentie", text: baza + " Și 4 ore, și 1 zi arată " + opusTxt + ": indicatorii nu mai susțin botul." };
+    if (lungiContra && lipsaL.length) return { ton: "atentie", text: baza + " " + nume(lungiC) + " arată " + opusTxt + "; " + lipsaL.join(" și ") + " n-are încă date, deci nu pot spune că ambele intervale lungi sunt împotrivă." };
+    if (lungiContra) return { ton: "atentie", text: baza + " Dintre intervalele lungi, " + nume(lungiC) + " e împotrivă — de urmărit." };
+    // revizia independentă (14.11): fără 4 ore și fără 1 zi nu se spune „contează 4 ore și 1 zi” ca și cum ar fi fost citite
+    if (lipsaL.length === LUNGI.length) return { ton: contra.length ? "atentie" : "neutru", text: baza + " 4 ore și 1 zi n-au încă date: din intervalele scurte nu trag nicio concluzie pentru un bot care ține zile." };
+    if (contra.length) return { ton: "atentie", text: baza + " Împotrivă doar pe termen scurt; botul ține zile, contează 4 ore și 1 zi" + (lungiCu >= 2 ? ", care arată " + dirTxt + "." : lungiCu ? "; " + nume(lungiV) + " arată " + dirTxt + "." : ".") + (lipsaL.length ? " " + lipsaL.join(" și ") + " n-are încă date." : "") };
+    return { ton: "neutru", text: baza + (cu.length ? "" : " Niciun interval nu arată clar o direcție.") };
   }
 
   // ---- v91.8: estimarea din istoric (kNN-ul lui "Analizeaza piata": historicalProbability(j, 4) = 4 bare inainte) ----
-  // MASURAT in v74.6: nimereste directia in 48,8% din cazuri (cat dat cu banul) - de aceea eticheta merge MEREU cu ea.
+  // MASURAT: in v74.6, pe mers aleator, 48,8%; in v100.339, PE PIATA (21 de monede, 1h si 4h, ~13.000 de judecati pe interval, dovada pe zile):
+  // 50,1% si 50,0% - cat dat cu banul (docs/cercetare/2026-11-13-tablou-acuratete.md, M3). De aceea eticheta merge MEREU cu ea.
+  // v100.339 (I-871): cât de des a fost nimerită direcția arătată pe cartelă (docs/cercetare/2026-11-13-tablou-acuratete.md) - la vedere, sub tabel
+  var MASURAT_DIRECTIE = "Direcția arătată de verdict, bec și nota TradingView (formula ei, refăcută pe bare închise) a fost nimerită după 4 bare în 47–50 din 100 de cazuri (măsurat 13.11.2026, 21 de monede): nedovedit. Culorile spun ce e acum pe grafic, nu ce urmează.",
+    /* fișa unei acțiuni (revizia, 14.11): cifra e a crypto-ului - pe acțiuni n-a fost măsurată */
+    MASURAT_DIRECTIE_ACT = "Direcția arătată de verdict, bec și nota TradingView: pe acțiuni n-a fost măsurată; pe crypto a fost nimerită după 4 bare în 47–50 din 100 de cazuri (măsurat 13.11.2026, 21 de monede): nedovedit. Culorile spun ce e acum pe grafic, nu ce urmează.";
   var ORIZONT = { "15 min": "1 oră", "1 oră": "4 ore", "4 ore": "16 ore", "1 zi": "4 zile" };
-  var CINSTIT = "Nedovedit: măsurată, metoda asta a nimerit direcția în 48,8% din cazuri — cât dat cu banul. O frecvență din trecut, nu o promisiune.";
+  var CINSTIT = "Nedovedit: măsurată pe piață (13.11.2026, 21 de monede), metoda asta a nimerit direcția în 50 din 100 de cazuri — cât dat cu banul. O frecvență din trecut, nu o promisiune.";
   // v100.328 (el, 11.11.2026: „nu poți pune detaliile indicatorilor și în Trading 212 la fel ca la bot?” ⇒ „da, fă așa”): vorbele textelor - ale botului
   // (implicite, neschimbate) sau ale unei poziții în acțiuni (long; la bursă o zi are 2 bare de 4 ore ⇒ orizonturile și istoria în ședințe, nu în ore / zile)
   var VORBE_BOT = { tau: "botul tău", cu: "cu botul", gen: "botului", ajuta: "botul", lui: "lui", istoric: "monedei", orizont: ORIZONT, pred: "16 ore", sedinte: false,
@@ -170,7 +199,11 @@ var IndicatoriBot = (function () {
   // „fă toate”): ce se vede în rândul ÎNCHIS al lui „Detaliile indicatorilor”, din ce e deja calculat (zero cereri noi) ----
   var SCURT = { "15 min": "15m", "1 oră": "1h", "4 ore": "4h", "1 zi": "1z" };
   var TV_TF = { "15 min": "15m", "1 oră": "1h", "4 ore": "4h", "1 zi": "1D" };
-  var IND8 = RANDURI.filter(function (r) { return r.k !== "verdict"; });   // cei 8 indicatori (verdictul e rezultatul lor, nu încă unul)
+  var IND8 = RANDURI.filter(function (r) { return r.k !== "verdict"; });   // indicatorii din tabel (verdictul e rezultatul lor, nu încă unul)
+  // v100.339 (auditul din 13.11): indicatorii din tabel nu sunt tot atâtea voci (RSI și Bollinger arată la fel în ~9 cazuri din 10; cei 8 ≈ 4,7
+  // independenți) ⇒ banda numără TREI familii, fiecare o dată
+  var ETICHETA = {}; RANDURI.forEach(function (r) { ETICHETA[r.k] = r.eticheta; });
+  var FAMILII = [{ k: "trend", nume: "trend", membri: ["ema", "supertrend", "adx"] }, { k: "impuls", nume: "impuls", membri: ["macd", "rsi", "mfi", "stochRsi"] }, { k: "pozitie", nume: "poziție", membri: ["stoch", "bb"] }];
   function directional(botDir) { return botDir === "long" || botDir === "short"; }
   // revizia 11.11: fără esc dat, textul tot se escapează (ca în tv-note.js)
   function escImplicit(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
@@ -184,22 +217,32 @@ var IndicatoriBot = (function () {
       var et = x && x.eticheta || "", o = { eticheta: et, scurt: SCURT[et] || et, lung: /4 ore|1 zi/.test(et) };
       if (!x || !x.q) { o.lipsa = true; if (x && x.eroare) o.eroare = String(x.eroare); return o; }
       var q = x.q, sc = nr(q.score), cel = celule(q) || {};
-      o.ver = q.ver || "NEUTRAL"; o.sageata = q.ver === "BULLISH" ? "↑" : q.ver === "BEARISH" ? "↓" : "↔";
+      o.ver = q.ver || "NEUTRAL"; o.sageata = q.ver === "BULLISH" ? "↑" : q.ver === "BEARISH" ? "↓" : "↔"; o.neconfirmat = q.neconfirmat && q.neconfirmat !== q.ver ? q.neconfirmat : null;
       o.scor = sc === null ? null : Math.round(sc); o.prag = nr(q.prag); o.scorBrut = sc; o.scorTxt = scorText(sc, o.prag);
       o.faraDirectie = !dir; o.fata = !dir ? null : o.ver === vrea ? "cu" : o.ver === opus ? "contra" : "neutru";
       o.cu = 0; o.contra = 0; o.neutru = 0; o.incinsi = 0; o.numeCu = []; o.numeContra = []; o.numeNeutru = []; o.numeIncinsi = [];
-      IND8.forEach(function (r) {
-        var v = cel[r.k], c = v && v.c; if (!c || c === "lipsa") return;   // mediile: simetric chiar în celule (v100.325)
-        if (c === "tbWarn") { o.neutru++; o.incinsi++; o.numeIncinsi.push(r.eticheta); return; }
-        if (c === "neutral") { o.neutru++; o.numeNeutru.push(r.eticheta); return; }
-        var sus = c === "good", cu = !dir || botDir === "long" ? sus : !sus;
-        if (cu) { o.cu++; o.numeCu.push(r.eticheta); } else { o.contra++; o.numeContra.push(r.eticheta); }
+      // familia merge încotro merge majoritatea membrilor ei; cu toți membrii la extreme e „la extreme”; la egalitate, neutră; lipsa nu se numără
+      o.familii = FAMILII.map(function (f) {
+        var s = 0, n = 0, ext = 0, m = [];
+        f.membri.forEach(function (k) { var v = cel[k], c = v && v.c; if (!c || c === "lipsa") return; n++; if (c === "tbWarn") ext++; else if (c === "good") s++; else if (c === "bad") s--; m.push(ETICHETA[k] + " " + (c === "good" ? "↑" : c === "bad" ? "↓" : c === "tbWarn" ? "la extrem" : "↔")); });
+        return { k: f.k, nume: f.nume, dir: !n ? null : ext === n ? "extrem" : s > 0 ? "sus" : s < 0 ? "jos" : "neutru", membri: m };
+      });
+      o.familii.forEach(function (f) {
+        if (f.dir === null) return; var et = f.nume + " (" + f.membri.join(", ") + ")";
+        if (f.dir === "extrem") { o.neutru++; o.incinsi++; o.numeIncinsi.push(et); return; }
+        if (f.dir === "neutru") { o.neutru++; o.numeNeutru.push(et); return; }
+        var sus = f.dir === "sus", cu = !dir || botDir === "long" ? sus : !sus;
+        if (cu) { o.cu++; o.numeCu.push(et); } else { o.contra++; o.numeContra.push(et); }
       });
       o.total = o.cu + o.neutru + o.contra;
       return o;
     });
   }
   function eTitlu(v) { return v === "BULLISH" ? "urcă" : v === "BEARISH" ? "coboară" : "neutru"; }
+  // v100.339 (I-873, măsurat în M2): verdictul se schimbă abia când DOUĂ bare închise la rând zic la fel - episoadele de cel mult două bare
+  // scad de la ~49% la ~20%. vn = verdictul barei de acum, v1 / v2 = al celor două dinainte. Întoarce verdictul de arătat și, când diferă,
+  // ce zice bara de acum (neconfirmat). Fără barele dinainte: verdictul barei.
+  function confirma(vn, v1, v2) { if (!v1) return { ver: vn, neconfirmat: null }; if (vn === v1) return { ver: vn, neconfirmat: null }; return { ver: v1 === v2 ? v1 : "NEUTRAL", neconfirmat: vn }; }
   function fmt1(x) { var r = Math.round(x * 10) / 10; return r === 0 ? "0,0" : (r > 0 ? "+" : "−") + Math.abs(r).toFixed(1).replace(".", ","); }
   // I-859: nota TradingView (Technical Ratings, n.iv[tf].all) pe același interval; „diferit” = direcții opuse cu Radarul. clasa = TvNote.clasa (aceleași praguri).
   function tvBanda(n, b, clasa) {
@@ -207,7 +250,7 @@ var IndicatoriBot = (function () {
     return (Array.isArray(b) ? b : []).map(function (x) {
       var k = TV_TF[x.eticheta], v = k && n.iv[k] ? nr(n.iv[k].all) : null; if (v === null) return null;
       var c = clasa(v), dirTv = c.ton === "good" ? "sus" : c.ton === "bad" ? "jos" : "neutru";
-      return { cod: c.cod, text: c.text, v: v, dir: dirTv, diferit: !x.lipsa && ((x.ver === "BULLISH" && dirTv === "jos") || (x.ver === "BEARISH" && dirTv === "sus")) };
+      return { cod: c.cod, text: c.text, v: v, dir: dirTv, diferit: !x.lipsa && Math.abs(v) >= 0.3 && ((x.ver === "BULLISH" && dirTv === "jos") || (x.ver === "BEARISH" && dirTv === "sus")) };   /* v100.339 (auditul din 13.11): „≠” doar la o notă limpede - zona neutră a TradingView e doar ±0,1, a Radarului ~33–67 */
     });
   }
   // I-860: ce a văzut ultima oară (săgeata pe interval) și ce s-a schimbat de atunci
@@ -218,13 +261,13 @@ var IndicatoriBot = (function () {
   function bandaHtml(b, tv, sch, botDir, esc, v) {
     esc = esc || escImplicit;
     var dir = directional(botDir), V = vorbe(v);
-    var pe = "Indicatorii pe " + cate(b.length, "interval", "intervale"), lab = dir ? pe + ", față de " + V.tau + " (" + botDir + ")" : pe + " (botul n-are direcție: sus / jos)";
+    var pe = "Indicatorii pe " + cate(b.length, "interval", "intervale") + ", pe trei familii (trend, impuls, poziție)", lab = dir ? pe + ", față de " + V.tau + " (" + botDir + ")" : pe + " (botul n-are direcție: sus / jos)";
     var nCu = dir ? V.cu : "sus", nContra = dir ? "împotrivă" : "jos";
     return '<span class="ibBanda" role="group" aria-label="' + esc(lab) + '">' + b.map(function (x, i) {
       if (x.lipsa) return '<span class="ibCel ibLipsa" title="' + esc(x.eticheta + ": " + (x.eroare || "prea puține bare închise")) + '"><span class="ibTf">' + esc(x.scurt) + '</span><span class="ibVer">—</span></span>';
       var s = sch && sch[i], t = tv && tv[i];
       var cls = "ibCel" + (x.lung ? " ibLung" : "") + (x.fata === "cu" ? " ibCu" : x.fata === "contra" ? " ibContra" : x.faraDirectie ? (x.ver === "BULLISH" ? " ibSus" : x.ver === "BEARISH" ? " ibJos" : " ibNeutru") : " ibNeutru") + (s ? " ibSchimbat" : "");
-      var tit = x.eticheta + ": " + eTitlu(x.ver) + (x.scorTxt !== null ? ", scor " + x.scorTxt : "") + (s ? " · s-a schimbat de la ultima ta privire (era " + s.era + ")" : "") +
+      var tit = x.eticheta + ": " + eTitlu(x.ver) + (x.neconfirmat ? " (bara de acum zice „" + eTitlu(x.neconfirmat) + "”, aștept a doua)" : "") + (x.scorTxt !== null ? ", scor " + x.scorTxt : "") + (s ? " · s-a schimbat de la ultima ta privire (era " + s.era + ")" : "") +
         (x.numeCu.length ? " · " + nCu + ": " + x.numeCu.join(", ") : "") + (x.numeContra.length ? " · " + nContra + ": " + x.numeContra.join(", ") : "") +
         (x.numeNeutru.length ? " · neutri: " + x.numeNeutru.join(", ") : "") + (x.numeIncinsi.length ? " · la extreme: " + x.numeIncinsi.join(", ") : "");
       var seg = function (k, n) { return n > 0 ? '<i class="ibB ' + k + '" style="flex-grow:' + n + '"></i>' : ""; };
@@ -234,7 +277,7 @@ var IndicatoriBot = (function () {
         tvH = '<span class="ibTv ' + tcls + '" title="' + esc("TradingView " + x.eticheta + ": " + t.text + " (" + fmt1(t.v) + ")") + '">TV ' + esc(t.text) + '</span>' +
           (t.diferit ? '<em class="ibDif" title="' + esc(V.surse + " arată direcții opuse pe " + x.eticheta) + '">≠</em>' : "");
       }
-      return '<span class="' + cls + '" title="' + esc(tit) + '"><span class="ibTf">' + esc(x.scurt) + '</span><span class="ibVer">' + esc(x.sageata + (x.scorTxt !== null ? " " + x.scorTxt : "")) + '</span>' +
+      return '<span class="' + cls + '" title="' + esc(tit) + '"><span class="ibTf">' + esc(x.scurt) + '</span><span class="ibVer">' + esc(x.sageata + (x.scorTxt !== null ? " " + x.scorTxt : "") + (x.neconfirmat ? "⏳" : "")) + '</span>' +
         '<span class="ibBara" aria-hidden="true">' + seg("ibBCu", x.cu) + seg("ibBNeutru", x.neutru - x.incinsi) + seg("ibBIncins", x.incinsi) + seg("ibBContra", x.contra) + '</span>' +
         '<span class="ibNr">' + esc(dir ? x.cu + " cu · " + x.neutru + " · " + x.contra + " împ." : x.cu + " sus · " + x.neutru + " · " + x.contra + " jos") + '</span>' + tvH +
         (s ? '<span class="ibEra">era ' + esc(s.era) + '</span>' : "") + '</span>';
@@ -270,7 +313,7 @@ var IndicatoriBot = (function () {
     for (var k = n - 1; k >= 0; k--) {
       var len = j.length - k; if (len < 60) continue;
       var q = null; try { q = calcFn(j.slice(0, len)); } catch (e) { q = null; }
-      if (q && nr(q.score) !== null) out.push({ s: Math.round(q.score), prag: nr(q.prag) });
+      if (q && nr(q.score) !== null) out.push({ s: Math.round(q.score), prag: nr(q.prag), ver: q.ver || "NEUTRAL" });   // v100.339: verdictul de ATUNCI (cu pragul de atunci)
     }
     return out;
   }
@@ -294,6 +337,9 @@ var IndicatoriBot = (function () {
       else if (botDir === "long") { bun = '<rect class="ibSpBun" x="0" y="0" width="100%" height="' + f2(y(p)) + '"></rect>'; legBun = "verde = cu " + V.tau + " (long: ≥ " + p + ")"; }
     }
     var pts = ist.map(function (o, i) { return f2(x(i)) + "," + f2(y(o.s)); }).join(" "), u = ist[n - 1];
+    // v100.339 (auditul din 13.11): liniile de prag sunt ale ULTIMEI bare; barele vechi au fost judecate cu pragul lor ⇒ fiecare bară cu direcție e punctată
+    var areDir = botDir === "long" || botDir === "short";
+    var pct = ist.map(function (o, i) { if (o.ver !== "BULLISH" && o.ver !== "BEARISH") return ""; var sus = o.ver === "BULLISH"; return '<circle class="ibSpPct ' + (areDir ? (sus === (botDir === "long") ? "ibSpPctCu" : "ibSpPctContra") : sus ? "ibSpPctSus" : "ibSpPctJos") + '" cx="' + f2(x(i)) + '%" cy="' + f2(y(o.s)) + '" r="2"></circle>'; }).join("");
     var cifre = '<text class="ibSpVal" x="0" y="' + f2(yEt(ist[0].s)) + '">' + ist[0].s + '</text><text class="ibSpVal" x="100%" y="' + f2(yEt(u.s)) + '" text-anchor="end">' + u.s + '</text>';
     var tit = "Scorul pe 4 ore, ultimele " + cate(n, "bară închisă", "bare închise") + ": de la " + ist[0].s + " la " + u.s + (p !== null ? " · liniile = pragurile (" + (100 - p) + " / " + p + ")" : "");
     // v100.327: sub desen, în cuvinte - ce e, câte bare (≈ zile; 6 bare de 4 h = o zi), de unde până unde și încotro; ce sunt liniile punctate și zona verde
@@ -303,8 +349,8 @@ var IndicatoriBot = (function () {
     // încadrare: titlul sus, ca la riglă; sub desen „de unde → unde, încotro” și legenda zonei
     var titlu = "Scorul pe 4h, ultimele " + cate(n, "bară", "bare") + " (" + cat + ")";
     return '<span class="ibSpark" title="' + esc(tit) + '"><span class="ibRcap">' + esc(titlu) + '</span><span class="ibSpDes"><svg class="ibSpG" width="100%" height="' + H + '" aria-hidden="true">' + bun + linii +
-      '<svg viewBox="0 0 100 ' + H + '" preserveAspectRatio="none" width="100%" height="' + H + '" overflow="visible"><polyline class="ibSpLinie" points="' + pts + '" vector-effect="non-scaling-stroke"></polyline></svg>' +
-      '<circle class="ibSpAcum" cx="100%" cy="' + f2(y(u.s)) + '" r="3"></circle>' + cifre + '</svg>' + etP + '</span><span class="ibSpEt"><b>' + ist[0].s + " → " + u.s + '</b>, ' + merge + '</span>' + (legBun ? '<span class="ibSpEt"><i class="ibLbun"></i>' + esc(legBun) + '</span>' : '') + '</span>';
+      '<svg viewBox="0 0 100 ' + H + '" preserveAspectRatio="none" width="100%" height="' + H + '" overflow="visible"><polyline class="ibSpLinie" points="' + pts + '" vector-effect="non-scaling-stroke"></polyline></svg>' + pct +
+      '<circle class="ibSpAcum" cx="100%" cy="' + f2(y(u.s)) + '" r="3"></circle>' + cifre + '</svg>' + etP + '</span><span class="ibSpEt"><b>' + ist[0].s + " → " + u.s + '</b>, ' + merge + '</span>' + (legBun ? '<span class="ibSpEt"><i class="ibLbun"></i>' + esc(legBun) + '</span>' : '') + (pct ? '<span class="ibSpEt">punctele = barele cu direcție, judecate cu pragul de atunci</span>' : '') + '</span>';
   }
 
   // v100.331 (el, 12.11: „la 1 fă și integrează în detaliile indicatorilor ca și indicator separat”): „Listele Radarului” - e moneda botului azi într-o
@@ -419,7 +465,7 @@ var IndicatoriBot = (function () {
       '<p class="tbSub lrNota">Bara în sus = lista a făcut mai bine decât piața în cele 7 zile de după; în jos = mai rău. Rama = ultima zi. Ține mouse-ul pe o zi pentru cifre.</p></div>';
   }
 
-  return { dinPionex: dinPionex, celule: celule, rezumat: rezumat, estimare: estimare, predictie: predictie, mediu: mediu, ORIZONT: ORIZONT, RANDURI: RANDURI, listeRadar: listeRadar, listeVerdict: listeVerdict, listeGraficHtml: listeGraficHtml,
+  return { dinPionex: dinPionex, celule: celule, rezumat: rezumat, estimare: estimare, predictie: predictie, mediu: mediu, ORIZONT: ORIZONT, MASURAT_DIRECTIE: MASURAT_DIRECTIE, MASURAT_DIRECTIE_ACT: MASURAT_DIRECTIE_ACT, confirma: confirma, RANDURI: RANDURI, listeRadar: listeRadar, listeVerdict: listeVerdict, listeGraficHtml: listeGraficHtml,
     banda: banda, bandaHtml: bandaHtml, tvBanda: tvBanda, amintire: amintire, schimbari: schimbari, riglaHtml: riglaHtml, istoricScor: istoricScor, sparkHtml: sparkHtml, VORBE_POZITIE: VORBE_POZITIE };
 })();
 if (typeof globalThis !== "undefined") globalThis.IndicatoriBot = IndicatoriBot;

@@ -154,10 +154,10 @@ await test("3c „Banii” din Tablou: rândul „Total” al neutrului poartă 
   const { els, $ } = pagina(), nimic = () => {};
   const box = { $, tbStare: {}, TabloExtra: TE, GridCalcul: G, TextRo, botiNr, botiBan: (v) => (v == null ? "—" : TextRo.num(v, 1)), botiClasa: () => "", escapeHtml: String, tbRandUmpleri: () => "", tbRenderTodo: nimic };
   for (const k of ["tbAduUmpleri", "tbFisaRestaureaza" /* v100.331 */, "tbDeseneazaExtra", "tbAduFisaBot", "tbDeseneazaSaptPlan", "tbAduSaptamana", "tbDeseneazaSemafor", "tbAduSemnale", "tbDeseneazaPortofoliu"]) box[k] = nimic;
-  ruleaza(["tbDeseneazaBanii"], box).tbDeseneazaBanii(NEUTRU);
+  ruleaza(["tbIdentitateBot" /* v100.339: rândurile de identitate din capul „Banilor” */, "tbDeseneazaBanii"], box).tbDeseneazaBanii(NEUTRU);
   const total = els.tbBani.innerHTML.split("tbLinieTotal")[1] || "";
   assert.match(total.slice(0, 200), /semn nesigur la botul neutru/, total.slice(0, 200));
-  const p2 = pagina(); ruleaza(["tbDeseneazaBanii"], Object.assign({}, box, { $: p2.$ })).tbDeseneazaBanii(LONG);
+  const p2 = pagina(); ruleaza(["tbIdentitateBot", "tbDeseneazaBanii"], Object.assign({}, box, { $: p2.$ })).tbDeseneazaBanii(LONG);
   assert.doesNotMatch((p2.els.tbBani.innerHTML.split("tbLinieTotal")[1] || "").slice(0, 200), /nesigur/, "la long nu");
 });
 await test("3d banda de sus: totalul neutrului spune „semn nesigur” lângă cifră (și în titlu)", () => {
@@ -306,7 +306,7 @@ await test("6c eticheta: sfatul „Costurile” și rândul din Tablou spun că 
   const s = SF.sfaturi({ bot: BOT_C, costuri: co }).find((x) => x.cod === "costuri");
   assert.ok(s, "lipsește sfatul de costuri"); assert.match(s.text, /comisioanele iau 0,2 pe zi \(fără taxa de intrare, ≈ 0,1 o dată\)/, s.text);
   const ex = fnApp("tbDeseneazaExtra");
-  assert.match(ex, /linie\("Taxa de intrare \(o dată\)"/); assert.match(ex, /"medie de la pornire, fără taxa de intrare"/);
+  assert.match(ex, /linie\("Taxa de intrare \(o dată\)"/); assert.match(ex, /tbCosturiZi\(z,b\)/); assert.match(fnApp("tbCosturiZi"), /", fără taxa de intrare"/); assert.match(fnApp("tbCosturiZi"), /"medie de la pornire"/);   /* v100.339: nota comisionului pe zi e în tbCosturiZi */
 });
 
 console.log(picate ? `\n${picate} PICA din ${teste}\n` : `\ntoate ${teste} ok\n`);

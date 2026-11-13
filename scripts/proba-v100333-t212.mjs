@@ -116,9 +116,10 @@ await test("B10. „Detaliile indicatorilor” din fișa T212: măsurătoarea de
   const Q = (score, ver) => ({ ver, score, prag: 64, ema: false, emaDir: "UP", e20Now: 3, e50Now: 2, e200Now: 1 }), HP = (up) => ({ up, k: 30, banda: 5, inBanda: false, avg: 1.2 });
   L.ctx.__l = [{ tf: "15M", eticheta: "15 min", q: Q(70, "BULLISH"), hp: HP(55) }, { tf: "60M", eticheta: "1 oră", q: Q(50, "NEUTRAL"), hp: HP(48) }, { tf: "4H", eticheta: "4 ore", q: Q(68, "BULLISH"), hp: HP(62) }, { tf: "1D", eticheta: "1 zi", q: Q(30, "BEARISH"), hp: HP(41) }];
   const h = L.run('t212IndHtml("ABCD_US_EQ", __l, null, null, null, true)');
-  assert.ok(!/metoda asta a nimerit direcția în 48,8%/.test(h), "nu mai pretinde că e măsurat aici");
-  assert.match(h, /pe acțiuni n-a fost măsurată/); assert.match(h, /pe crypto a nimerit direcția în 48,8%/);
-  assert.match(L.run('tbIndTabelHtml(__l, "long")'), /metoda asta a nimerit direcția în 48,8%/, "Tabloul botului (crypto): neschimbat");
+  // v100.339: cifra e cea măsurată pe piață în 13.11 (50 din 100), nu „48,8%” (pe mers aleator)
+  assert.ok(!/metoda asta a nimerit direcția în 50 din 100/.test(h), "nu mai pretinde că e măsurat aici");
+  assert.match(h, /pe acțiuni n-a fost măsurată/); assert.match(h, /pe crypto \(13\.11\.2026, 21 de monede\) a nimerit direcția în 50 din 100 de cazuri/);
+  assert.match(L.run('tbIndTabelHtml(__l, "long")'), /metoda asta a nimerit direcția în 50 din 100 de cazuri/, "Tabloul botului (crypto): neschimbat");
 });
 
 // ───────────── B12. care trend ─────────────

@@ -113,7 +113,7 @@ async function tvNoteDinMemorie(piata,tinte){
   }
   const v={result:true,note:TV.tvPotriveste(tinte,raspunsuri),la:Date.now()};
   if(tvMemorie.size>=100)tvMemorie.delete(tvMemorie.keys().next().value);
-  tvMemorie.set(cheie,{la:Date.now(),v});
+  if(Object.values(v.note).some(x=>x&&x.iv))tvMemorie.set(cheie,{la:Date.now(),v});   /* v100.339: răspunsul fără nicio notă nu se ține minte (2 minute de „n-are simbolul” după un scanner gol) */
   return v;
 }
 async function pionexCached(url,ttl=30,env=null,opt={}){
@@ -178,7 +178,7 @@ export async function onRequestGet({request,env}){
     const piata=u.searchParams.get("piata");
     if(piata!=="crypto"&&piata!=="actiuni")return new Response(JSON.stringify({result:false,error:"piață necunoscută (crypto | actiuni)"}),{status:400,headers:H});
     const simb=[...new Set(String(u.searchParams.get("simboluri")||"").split(",").map(x=>x.trim().replace(/[^A-Za-z0-9._-]/g,"").slice(0,24)).filter(Boolean))].slice(0,30);
-    const tinte=simb.map(s=>{const t=piata==="crypto"?(TV.tvDinPionex(s)?{ticker:TV.tvDinPionex(s)}:null):TV.tvDinYahoo(s);return Object.assign({cheie:s},t||{})});
+    const tinte=simb.map(s=>piata==="crypto"?{cheie:s,tickere:TV.tvLantPionex(s)}:Object.assign({cheie:s},TV.tvDinYahoo(s)||{}));   /* v100.339 (I-869): la crypto, lanțul PIONEX → Binance */
     try{return ok(await tvNoteDinMemorie(piata,tinte))}catch(e){return softFail("TradingView nu răspunde",String(e&&e.message||e))}
   }
   if(type!=="futures")return new Response(JSON.stringify({error:"Spot data is fetched directly by the browser"}),{status:400,headers:H});
@@ -203,7 +203,7 @@ export async function onRequestGet({request,env}){
 }
 // v100.264 (29.10): pe Binance unele monede stau în mii (1000PEPEUSDT) sau în milioane (1000000MOGUSDT, 1MBABYDOGEUSDT).
 // Harta fixă acoperă ce era listat pe 29.10; o listare nouă se găsește din /fapi/v1/ticker/price (ținută minte 6 h).
-const IN_MII={PEPE:"1000PEPE",SHIB:"1000SHIB",BONK:"1000BONK",FLOKI:"1000FLOKI",LUNC:"1000LUNC",XEC:"1000XEC",SATS:"1000SATS",RATS:"1000RATS",CAT:"1000CAT",CHEEMS:"1000CHEEMS",WHY:"1000WHY",MOG:"1000000MOG",BABYDOGE:"1MBABYDOGE"};
+const IN_MII=TV.IN_MII;   /* v100.339: o singură hartă a contractelor „în mii”, în _shared/tv-note.js (o folosește și nota TradingView) */
 const faraContractPana=new Map();let listaFut=null,listaFutLa=0;
 // v100.265 (F2): lista oficială a intervalelor de funding (simbol → ore), cerută o dată la 6 h; un refuz nu e o problemă a datelor
 let infoFut=null,infoFutLa=0;

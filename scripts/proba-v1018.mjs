@@ -188,7 +188,7 @@ await test("2 · LIGHTER: eticheta nu mai e verde „pus” — „peste plan”
   const s = cartela(LIGHTER());
   assert.equal(s.tag.t, "peste plan");
   assert.equal(s.tag.c, "bad");
-  assert.match(s.mic, /atins ≈ −6\d USDT/);
+  assert.match(s.mic, /atins ≈ −6\d,\d USDT/);   // v100.339: o zecimală
   // audit 19.10: prețul planului (4,2601) stă în grid ⇒ „unde să-l muți” = sub grid (4,0387), planul și costul rămân în „de ce”
   assert.match(s.deCe, /te costă ≈ 63,5 USDT, nu 15,7; planul cade în grid \(4\.2601\)/);
   assert.match(s.act, /sub grid, la 4\.0387/);
@@ -198,7 +198,7 @@ await test("2 · stop pe masura planului -> ramane „pus”, cu costul la veder
   const b = LIGHTER({ opritorPierdere: 4.05 }), t = Math.ceil(-TabloExtra.totalLaOpritor(b));
   const s = cartela(b, TabloExtra.planStare(b, { minus: t }, {}, T0));
   assert.equal(s.tag.t, "pus");
-  assert.match(s.mic, /atins ≈ −\d+ USDT/);
+  assert.match(s.mic, /atins ≈ −\d+,\d USDT/);   // v100.339: o zecimală
   const f = cartela(LIGHTER(), null);
   assert.equal(f.tag.t, "pus");
   assert.doesNotMatch(f.mic, /atins/);

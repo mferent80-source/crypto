@@ -206,7 +206,7 @@ await test("🟡2/3 rezultatele din Tablou: o zecimală și virgula (KPI total, 
   assert.ok(!/Math\.abs\(dist\)\.toFixed\(1\)\+"%"/.test(kl), "lichidarea KPI cu punct");
   assert.match(k, /var s1=function\(v\)\{var x=TextRo\.num\(v,1\);return v>0&&x!=="0,0"\?"\+"\+x:x\}/); assert.match(k, /pune\("tbKpiTotal",tot===null\?"—":s1\(tot\)/);
   const c = ctx({}); vm.runInContext(citeste("public", "lib", "text-ro.js") + "\n" + fnSursa(APP, "botiBan").replace(/^/, "function botiNr(v){const n=Number(v);return v==null||v===''||!isFinite(n)?null:n}\n"), c);
-  assert.equal(vm.runInContext("botiBan(12.345)", c), "+12,3 USDT"); assert.equal(vm.runInContext("botiBan(-0.04)", c), "0,0 USDT"); assert.equal(vm.runInContext("botiBan(-21.31)", c), "−21,3 USDT");
+  assert.equal(vm.runInContext("botiBan(12.345)", c), "+12,3 USDT"); assert.equal(vm.runInContext("botiBan(-0.04)", c), "−0,04 USDT");   /* v100.339 (auditul din 13.11): sub 0,1 zecimalele mărunte (TextRo.zecMici) - „0,0” cu roșu zicea zero și minus deodată */ assert.equal(vm.runInContext("botiBan(-21.31)", c), "−21,3 USDT");
   assert.equal(vm.runInContext("botiBan(100,2,false)", c), "100,00 USDT", "suma investită (o valoare, nu un rezultat) rămâne la ban");
   assert.match(kl, /TextRo\.pct\(Math\.abs\(dist\),1\)/);
   assert.ok(!/Math\.abs\(x\.grile\)\.toFixed\(2\)/.test(APP), "săptămâna (grilele pe zi) cu 2 zecimale");

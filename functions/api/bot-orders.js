@@ -130,13 +130,16 @@ function lichidare(pret,lichJos,lichSus,directie){
   return {pretLichidare:p.pret,lichidarePartea:p.partea,distantaLichidarePct:Math.round(p.dist*100)/100,lichidareDepasita:p.dist<0};
 }
 
-function normalizeaza(bot,preturi,harta){
+/* v100.339: exportată ca probele să treacă botul de probă prin normalizarea adevărată (scripts/lib/bot-de-proba.mjs) */
+export function normalizeaza(bot,preturi,harta){
   const x=bot.buOrderData||{};
   const jos=nr(x.bottom),sus=nr(x.top);
   const simbolPionex=simbolTicker(bot.base,bot.quote,harta);
   const pret=preturi[simbolPionex]??null;
   const lichJos=nr(x.estimateLiquidationPriceDown),lichSus=nr(x.estimateLiquidationPriceUp);
-  const directie=x.trend||x.gridType||null,dir=String(directie||"").toLowerCase();
+  /* v100.339 (auditul din 13.11): fără „trend”, direcția NU e tipul gridului („arithmetic” ajungea direcție și pagina trata botul ca neutru).
+     Un grid SPOT cumpără jos și vinde sus: e long, fără levier; altceva fără trend rămâne fără direcție. */
+  const directie=x.trend||(/spot/i.test(String(bot.buOrderType||""))?"long":null),dir=String(directie||"").toLowerCase();
 
   // BANI (contractul): profitRealizatBrut e fara comisioane/finantare; profitNet e
   // cel realizat NET. Identitatea dovedita pe contul real:

@@ -4796,6 +4796,11 @@ html.pzDemo #tabloubot.on :is(p,li,.tbCitTx,.tbMcScurt,.tbMcNota,.tbMcScorTx){ma
 .tvNoteTab td b{font-weight:600}
 .tvNoteVal{display:block;font-size:12px;color:var(--pzT2,inherit)}
 .tvNoteNota{margin:0}
+.tvNoteTab tr.tvVechi td,.tvNoteTab tr.tvVechi th{opacity:.5}
+.tvNoteBaze{opacity:.85}
+.ibSpPct{stroke:none}.ibSpPctCu,.ibSpPctSus{fill:var(--good)}.ibSpPctContra,.ibSpPctJos{fill:var(--bad)}
+.tbIndExplic{margin:4px 0 0;padding:6px 8px;border-left:2px solid var(--pzLi,rgba(127,127,127,.4))}
+.tbTrendTab th small{font-weight:400;opacity:.8}
 .tvMic{display:block}
 /* în fișa T212 tabelul stă ÎN tabelul pozițiilor: regulile acestuia (capul ascuns, celulele la dreapta pe 13,5 px, pe telefon corpul pe bloc) nu-l mai ating */
 #t212Continut .tvNoteTab thead{display:table-header-group}

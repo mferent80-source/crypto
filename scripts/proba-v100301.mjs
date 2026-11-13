@@ -108,9 +108,9 @@ await test("5. rândul din Tablou: stopul (filtru) la X % și NU TRECE sub 2× c
   vm.runInContext(A.slice(i0, i1), c2);
   c2.tbRfStare.cheie = "BTC_USDT_PERP"; c2.tbRfStare.bare = c2.GridCalcul.bare(randuri(D.bare)); c2.tbRfStare.la = Date.now();
   const r = c2.tbRangeFilterRand({ baza: "BTC", quote: "USDT", directie: "LONG" });
-  assert.match(r.text, /stop \(filtru\) la \d+,\d%/, r.text);
+  assert.match(r.text, /filtrul e la \d+,\d% de preț/, r.text);   // v100.339 (auditul din 13.11): „filtrul e la X”, nu „stop (filtru)” (se citea ca stopul botului)
   const cit = c2.RangeFilter.citire(c2.tbRfStare.bare);
-  if (cit.costNu) assert.match(r.text, /NU TRECE/); else assert.doesNotMatch(r.text, /NU TRECE/);
+  if (cit.costNu && cit.semnalAcum) assert.match(r.text, /NU TRECE/); else assert.doesNotMatch(r.text, /NU TRECE/);   // v100.339: „NU TRECE” doar cu semnal pe bara închisă
   const T = citeste("public", "lib", "trade-zilei-ecran.js");
   assert.match(T, /if \(k && k\.result === false && k\.retryAfter != null\) \{[^\n]*tzStare\.eroare = "Pionex a refuzat/, "tz: refuzul citit din răspuns");
   // în vm: refuz la prima monedă ⇒ o singură cerere de lumânări, mesajul la vedere

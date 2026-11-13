@@ -111,7 +111,7 @@ await test("LIGHTER: Consilierul - titlul scurt, o singura actiune, „de ce” 
   const c = C.alcatuieste({ sm: S.semafor({ bot: LIGHTER(), fisa: { regim: { r4h: 0.5, r24h: 0.5, miscare: false } }, plan: PLAN_L() }), concret: conL(), sfaturi: [], opritor: 3.787 });
   assert.equal(c.titlu, "Stopul costă peste plan"); assert.equal(c.faCe, "Aș lăsa stopul la 3.787 și aș trece planul la −64 USDT.");
   assert.equal(c.explica, "Stopul planului (4.2601) e prea aproape: o zi obișnuită a monedei ajunge acolo în 71% din zile.");
-  assert.match(c.motive[0].titlu, /^Stopul e peste plan: atins, ≈ −6\d USDT$/); assert.equal(c.motive[0].text, "Atins acum, stopul te costă ≈ 63,5 USDT, nu 15,7; planul cade în grid (4.2601), unde ar tăia 4 din 15 grile.");   // audit 19.10: motivul spune și că planul cade în grid
+  assert.match(c.motive[0].titlu, /^Stopul e peste plan: atins, ≈ −6\d,\d USDT$/); assert.equal(c.motive[0].text, "Atins acum, stopul te costă ≈ 63,5 USDT, nu 15,7; planul cade în grid (4.2601), unde ar tăia 4 din 15 grile.");   // audit 19.10: motivul spune și că planul cade în grid
 });
 await test("RF2: titlul Consilierului din doua motive lungi nu trece de 60 - ramane primul (al doilea e chiar dedesubt)", () => {
   const sm = { nivel: "atentie", cod: "lichidare", motiv: "lichidarea la 12,4% · se apropie (13,6% acum 1 h)", faCe: "N-aș mări poziția.", componente: [
@@ -178,7 +178,7 @@ await test("R4 (Opus I4): valorile planului cu virgula (−7,5 / +5,5) in motive
   assert.equal(pd.cod, "podea"); assert.match(pd.motiv, /\+5,5 USDT/); assert.ok(!/5\.5/.test(pd.motiv + pd.faCe + pd.deCe), pd.motiv + " | " + pd.faCe);
   const c = S.acumConcret({ bot: { ...LIGHTER(), opritorPierdere: 4.4, opritorPierdereActiv: true }, fisa: null, zero: T.dacaInchizi(LIGHTER()), costuri: null, acum: T0,
     plan: { atins: [], minus: { prag: 0.3, laOpritor: -0.3, opritorPlan: 4.39 } } }).find((x) => x.cod === "stop");
-  assert.ok(!/−0 USDT/.test(c.mic + " " + c.act), c.mic + " | " + c.act); assert.match(c.mic, /atins ≈ 0 USDT/);
+  assert.ok(!/−0 USDT/.test(c.mic + " " + c.act), c.mic + " | " + c.act); assert.match(c.mic, /atins ≈ (0,0|−0,[1-9]) USDT/);   // v100.339: o zecimală; tot fără „−0,0”
 });
 await test("R6 (Opus M1): randurile noi de pe ecran castiga in fata lui #tabloubot .tbSub (14px) - „de ce” mai mic decat actiunea, legenda la 12px si departe de chenar", () => {
   const css = fs.readFileSync(path.join(RAD, "public", "app.css"), "utf8");

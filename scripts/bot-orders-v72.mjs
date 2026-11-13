@@ -472,7 +472,9 @@ await test("nicio ruta care SCRIE nu s-a strecurat", async () => {
   // audit 19.10: + preturiPerp / hartaSimboluri (GET pe datele publice de piata, exportate ca proba sa vada ca respecta lacatul Pionex comun);
   // regula ramane: niciun handler care scrie (tiparele interzise de mai sus se verifica tot)
   // v100.259 (auditul 23.10, punctul 8): + reseteazaCacheBotOrders (golește cache-ul de 20 s al tickerelor PERP, doar pentru probe; nu scrie nimic)
-  assert.deepEqual(exporturi, ["reseteazaCacheBotOrders", "preturiPerp", "hartaSimboluri", "onRequestGet"], `exporturi neasteptate: ${exporturi.join(", ")}`);
+  // v100.339 (auditul din 13.11): + normalizeaza (funcție pură: botul brut ⇒ forma paginii; exportată ca probele să treacă botul de probă prin
+  // normalizarea adevărată, nu printr-o copie a formulelor ei); nu citește și nu scrie nimic
+  assert.deepEqual(exporturi, ["reseteazaCacheBotOrders", "preturiPerp", "hartaSimboluri", "normalizeaza", "onRequestGet"], `exporturi neasteptate: ${exporturi.join(", ")}`);
 });
 
 await test("indemnul de a bifa 'Bot reading' apare DOAR cand lipseste dreptul", async () => {

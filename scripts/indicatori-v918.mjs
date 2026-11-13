@@ -33,9 +33,9 @@ await test("celulele: scurte (cel mult 6 semne), verdict cu scor, culori pe dire
   assert.equal(c.supertrend.c, "bad"); assert.equal(c.macd.t, "↓"); assert.equal(c.rsi.t, "39"); assert.equal(c.rsi.c, "bad"); assert.match(c.rsi.titlu, /vânzătorii/);
   assert.equal(c.adx.t, "28"); assert.equal(c.adx.c, "bad"); assert.match(c.adx.titlu, /trend/);
   const z = I.celule(VVV[3].q); assert.equal(z.verdict.c, "good"); assert.equal(z.ema.t, "↑"); assert.match(z.ema.titlu, /așezat/);
-  const e = I.celule(Q({ rsi: 74, stoch: 92, bbpos: 12, adx: 14 }));
+  const e = I.celule(Q({ rsi: 74, stoch: 92, stochK: 92, stochRsiK: 90, bbpos: 3, adx: 14 })   /* v100.339: Stochasticul prețului (stochK); Bollinger „lipit” de la 95% / 5% */);
   assert.equal(e.rsi.c, "tbWarn"); assert.match(e.rsi.titlu, /încins/); assert.equal(e.stoch.c, "tbWarn"); assert.equal(e.bb.c, "tbWarn"); assert.equal(e.adx.c, "neutral"); assert.match(e.adx.titlu, /liniște/);
-  for (const q of [VVV[0].q, VVV[3].q, Q({ rsi: 74, stoch: 92, bbpos: 12, adx: 14 })]) { const cc = I.celule(q); for (const r of I.RANDURI) assert.ok([...cc[r.k].t].length <= 6, `${r.k}: "${cc[r.k].t}" prea lung`); }
+  for (const q of [VVV[0].q, VVV[3].q, Q({ rsi: 74, stoch: 92, stochK: 92, stochRsiK: 90, bbpos: 3, adx: 14 })   /* v100.339: Stochasticul prețului (stochK); Bollinger „lipit” de la 95% / 5% */]) { const cc = I.celule(q); for (const r of I.RANDURI) assert.ok([...cc[r.k].t].length <= 6, `${r.k}: "${cc[r.k].t}" prea lung`); }
 });
 await test("valorile lipsa (MFI fara volum, NaN, null) -> '—', niciodata NaN pe ecran", () => {
   const c = I.celule(Q({ mfi: null, rsi: NaN, adx: undefined, bbpos: null, macd: undefined, supertrend: undefined }));
@@ -51,13 +51,13 @@ await test("rezumat VVV long (dimineata 26.09): impotriva doar pe termen scurt -
   const r = I.rezumat(VVV, "long");
   assert.equal(r.ton, "atentie"); assert.match(r.text, /Cu botul \(long\): 1 din 4/); assert.match(r.text, /15 min, 1 oră/); assert.match(r.text, /termen scurt/);
 });
-await test("rezumat: 4 ore SI 1 zi impotriva -> rau; unul din ele -> atentie; toate cu botul -> bine", () => {
+await test("rezumat: 4 ore SI 1 zi impotriva -> de urmarit (atentie), nu rosu; unul din ele -> atentie; toate cu botul -> neutru, nu verde (v100.339: directia indicatorilor e nedovedita)", () => {
   const contra = VVV.map((x) => ({ ...x, q: { ...x.q, ver: "BEARISH" } }));
-  assert.equal(I.rezumat(contra, "long").ton, "rau");
-  assert.equal(I.rezumat(contra, "short").ton, "bine");
+  assert.equal(I.rezumat(contra, "long").ton, "atentie"); assert.match(I.rezumat(contra, "long").text, /Și 4 ore, și 1 zi arată coborâre: indicatorii nu mai susțin botul/);
+  assert.equal(I.rezumat(contra, "short").ton, "neutru");
   // 26.09 dupa-amiaza: 15m/1h/4h neutre, 1 zi urca -> spune si care sunt neutre, nu doar "1 din 4"
   const neutre = VVV.map((x) => ({ ...x, q: { ...x.q, ver: x.eticheta === "1 zi" ? "BULLISH" : "NEUTRAL" } }));
-  const n = I.rezumat(neutre, "long"); assert.equal(n.ton, "bine"); assert.match(n.text, /1 din 4 \(1 zi\)/); assert.match(n.text, /neutru: 15 min, 1 oră, 4 ore/);
+  const n = I.rezumat(neutre, "long"); assert.equal(n.ton, "neutru"); assert.match(n.text, /1 din 4 \(1 zi\)/); assert.match(n.text, /neutru: 15 min, 1 oră, 4 ore/);
   const unul = VVV.map((x) => ({ ...x, q: { ...x.q, ver: x.eticheta === "4 ore" ? "BEARISH" : "BULLISH" } }));
   assert.equal(I.rezumat(unul, "long").ton, "atentie");
 });
@@ -80,10 +80,10 @@ await test("estimarea pe interval: '↑64%' / '↓61%', gri cand e in zgomot, ex
 await test("predictia: pe 4 ore (orizontul botului), cu directia, fata de bot si eticheta 'cat dat cu banul' MEREU", () => {
   const r = [{ eticheta: "15 min", hp: HP({ up: 30, down: 70 }) }, { eticheta: "4 ore", hp: HP() }, { eticheta: "1 zi", hp: null }];
   const p = I.predictie(r, "long");
-  assert.match(p.text, /16 ore/); assert.match(p.text, /64%/); assert.match(p.text, /în favoarea botului/); assert.match(p.text, /48,8%/);
+  assert.match(p.text, /16 ore/); assert.match(p.text, /64%/); assert.match(p.text, /în favoarea botului/); assert.match(p.text, /50 din 100 de cazuri/);   // v100.339: cifra măsurată pe piață
   assert.match(I.predictie([{ eticheta: "4 ore", hp: HP({ up: 35, down: 65 }) }], "long").text, /împotriva botului/);
   const z = I.predictie([{ eticheta: "4 ore", hp: HP({ up: 53, down: 47, inBanda: true }) }], "long");
-  assert.match(z.text, /fără semn/); assert.match(z.text, /48,8%/);
+  assert.match(z.text, /fără semn/); assert.match(z.text, /50 din 100 de cazuri/);
   // 26.09: "a urcat in 32%, adica in zgomot" suna fals -> spune directia MAJORITARA si de ce nu conteaza (zgomotul)
   const zj = I.predictie([{ eticheta: "4 ore", hp: HP({ up: 32, down: 68, banda: 22, inBanda: true }) }], "long").text;
   assert.match(zj, /a coborât în 68%/); assert.match(zj, /±22/); assert.doesNotMatch(zj, /urcat în 32%/);

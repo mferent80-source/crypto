@@ -46,7 +46,7 @@ await test("banda folosește aceeași celulă (o singură regulă, nu două)", (
   const SRC = citeste("public", "lib", "indicatori-bot.js");
   assert.doesNotMatch(SRC, /function emaSimetric/, "regula stă într-un singur loc: celule");
   const b = J(IB.banda([{ eticheta: "4 ore", q: Q(1, 2, 0) }], "short"))[0];
-  assert.ok(b.numeNeutru.includes("Medii EMA"), "20 < 50 dar 50 > 200 ⇒ neutru și în bandă");
+  assert.ok(b.familii[0].membri.includes("Medii EMA ↔"), "20 < 50 dar 50 > 200 ⇒ neutru și în bandă (v100.339: în familia „trend”) · " + JSON.stringify(b.familii[0]));
 });
 
 // ───────────── 2. spațiile goale ─────────────

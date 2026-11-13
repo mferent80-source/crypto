@@ -7,13 +7,21 @@
 // intervalele scannerului: sufixul coloanei („” = 1 zi) și numele arătat
 export const TV_INTERVALE = [["5", "5m"], ["15", "15m"], ["60", "1h"], ["240", "4h"], ["", "1D"], ["1W", "1W"]];
 const GRUPE = ["Recommend.All", "Recommend.MA", "Recommend.Other"];
-export function tvColoane() { const o = ["name", "exchange"]; for (const [s] of TV_INTERVALE) for (const g of GRUPE) o.push(s ? g + "|" + s : g); return o; }
+export function tvColoane() { const o = ["name", "exchange", "close"];   /* v100.339: + prețul, ca pagina să vadă că e instrumentul botului */ for (const [s] of TV_INTERVALE) for (const g of GRUPE) o.push(s ? g + "|" + s : g); return o; }
 
-// Pionex nu e în TradingView: contractul perpetuu Binance (același preț în practică), spotul Binance pentru boții spot
-export function tvDinPionex(s) {
-  const m = /^([A-Z0-9]{1,20})_(USDT|USDC)(_PERP)?$/.exec(String(s || "").toUpperCase());
-  return m ? "BINANCE:" + m[1] + m[2] + (m[3] ? ".P" : "") : null;
+// v100.339 (I-869, auditul din 13.11): TradingView ARE Pionex (PIONEX:HYPEUSDT.P verificat pe scanner în 13.11) ⇒ întâi instrumentul botului,
+// apoi contractul Binance. La Binance unele monede se tranzacționează „în mii” (1000PEPEUSDT): fără hartă, PEPE / SHIB / BONK / FLOKI
+// rămâneau fără notă („TradingView n-are simbolul”). scara = de câte ori e mai mare prețul contractului decât al monedei.
+export const IN_MII = { PEPE: "1000PEPE", SHIB: "1000SHIB", BONK: "1000BONK", FLOKI: "1000FLOKI", LUNC: "1000LUNC", XEC: "1000XEC", SATS: "1000SATS", RATS: "1000RATS", CAT: "1000CAT", CHEEMS: "1000CHEEMS", WHY: "1000WHY", MOG: "1000000MOG", BABYDOGE: "1MBABYDOGE" };
+const scaraDin = (b) => (/^(1000000|1M)/.test(b) ? 1000000 : /^1000/.test(b) ? 1000 : 1);
+// candidații în ordine: [{ ticker, scara }]; simbol nerecunoscut ⇒ [] (pagina spune „nu știu ce simbol îi corespunde”)
+export function tvLantPionex(s) {
+  const m = /^([A-Z0-9]{1,20})_(USDT|USDC)(_PERP)?$/.exec(String(s || "").toUpperCase()); if (!m) return [];
+  const suf = m[3] ? ".P" : "", bz = m[3] && IN_MII[m[1]] ? IN_MII[m[1]] : m[1];
+  return [{ ticker: "PIONEX:" + m[1] + m[2] + suf, scara: 1 }, { ticker: "BINANCE:" + bz + m[2] + suf, scara: bz === m[1] ? 1 : scaraDin(bz) }];
 }
+// contractul Binance al simbolului Pionex (ultimul din lanț); păstrat pentru cine vrea un singur simbol
+export function tvDinPionex(s) { const l = tvLantPionex(s); return l.length ? l[l.length - 1].ticker : null; }
 
 // simbolul de bursă (Yahoo, din functions/_shared/simboluri.js) ⇒ TradingView. Acțiunile americane n-au bursa în simbol: se caută după nume
 // (pe NASDAQ / NYSE / AMEX); restul au bursa în sufix. Necunoscut ⇒ null (rândul arată „—”, nu o notă de la altă firmă).
@@ -25,9 +33,9 @@ export function tvDinYahoo(y) {
   return m && BURSE[m[2]] ? { ticker: BURSE[m[2]] + ":" + m[1].replace(/-/g, ".") } : null;
 }
 
-// cererile către scanner (cel mult două): „global” cu tickere întregi, „america” după nume. tinte: [{cheie, ticker} | {cheie, us}]
+// cererile către scanner (cel mult două): „global” cu tickere întregi, „america” după nume. tinte: [{cheie, tickere: [{ticker, scara}]} | {cheie, ticker} | {cheie, us}]
 export function tvCereri(tinte) {
-  const col = tvColoane(), tick = [...new Set(tinte.filter((t) => t.ticker).map((t) => t.ticker))], us = [...new Set(tinte.filter((t) => t.us).map((t) => t.us))], o = [];
+  const col = tvColoane(), tick = [...new Set(tinte.flatMap((t) => (Array.isArray(t.tickere) ? t.tickere.map((x) => x.ticker) : t.ticker ? [t.ticker] : [])))], us = [...new Set(tinte.filter((t) => t.us).map((t) => t.us))], o = [];
   if (tick.length) o.push({ piata: "global", corp: { symbols: { tickers: tick, query: { types: [] } }, columns: col } });
   if (us.length) o.push({ piata: "america", corp: { filter: [{ left: "name", operation: "in_range", right: us }, { left: "exchange", operation: "in_range", right: ["NASDAQ", "NYSE", "AMEX"] }], columns: col, range: [0, Math.min(100, us.length * 3)] } });
   return o;
@@ -36,10 +44,11 @@ export function tvCereri(tinte) {
 // un rând al scannerului ⇒ { tv, iv: { "5m": {all, ma, osc}, … } }; valorile lipsă rămân null (nu 0 - 0 ar însemna „neutru”)
 export function tvRand(d) {
   if (!d || !Array.isArray(d.d)) return null;
-  const v = d.d, iv = {}; let k = 2, vreuna = false;
+  const v = d.d, iv = {}; let k = 3, vreuna = false;   /* v100.339: coloana 2 = prețul */
+  const close = typeof v[2] === "number" && Number.isFinite(v[2]) && v[2] > 0 ? v[2] : null;
   const n = (x) => (typeof x === "number" && Number.isFinite(x) ? Math.max(-1, Math.min(1, x)) : null);
   for (const [, nume] of TV_INTERVALE) { const all = n(v[k]), ma = n(v[k + 1]), osc = n(v[k + 2]); k += 3; if (all !== null) vreuna = true; iv[nume] = { all, ma, osc }; }
-  return vreuna ? { tv: String(d.s || ""), iv } : null;
+  return vreuna ? { tv: String(d.s || ""), close, iv } : null;
 }
 
 // răspunsurile scannerului ⇒ notele pe cheia cerută (simbolul Pionex / Yahoo); la US, primul rând cu numele lui (NASDAQ / NYSE înaintea AMEX)
@@ -51,6 +60,13 @@ export function tvPotriveste(tinte, raspunsuri) {
     if (nume && (peNume[nume] === undefined || (rang[bursa] ?? 9) < (rang[peNume[nume].bursa] ?? 9))) peNume[nume] = { bursa, r };
   }
   const o = {};
-  for (const t of tinte) o[t.cheie] = t.ticker ? peTicker[t.ticker] || null : t.us ? (peNume[t.us] && peNume[t.us].r) || null : null;
+  // v100.339: lipsa își spune motivul (înainte: null ⇒ „TradingView n-are simbolul ăsta” pentru orice) - nemapat (nu știu ce simbol îi
+  // corespunde) / negasit (căutat și inexistent, cu ce s-a căutat); din lanț se ia primul candidat găsit, cu scara lui
+  for (const t of tinte) {
+    if (Array.isArray(t.tickere)) {
+      const g = t.tickere.find((x) => peTicker[x.ticker]);
+      o[t.cheie] = !t.tickere.length ? { lipsa: "nemapat" } : g ? Object.assign({}, peTicker[g.ticker], { scara: g.scara }) : { lipsa: "negasit", cautat: t.tickere.map((x) => x.ticker) };
+    } else o[t.cheie] = t.ticker ? peTicker[t.ticker] || { lipsa: "negasit", cautat: [t.ticker] } : t.us ? (peNume[t.us] && peNume[t.us].r) || { lipsa: "negasit", cautat: [t.us] } : { lipsa: "nemapat" };
+  }
   return o;
 }

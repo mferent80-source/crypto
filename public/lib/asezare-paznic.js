@@ -65,7 +65,8 @@
   function randuriKv(t) {
     return String(t).split(" · ").map(function (p) {
       // valoarea = prima cifră cu unitatea ei (și „≈ x USDT” / „pe zi” lipite); eticheta = restul frazei
-      var m = p.match(/[+−\-–~≈]?\s?\d[\d.,]*\s?(?:%|USDT|lei|×|zile|zi|h|min)?(?:\s?(?:≈|~)\s?[\d.,]+\s?(?:USDT|lei)?)?(?:\s(?:pe zi|pe săptămână))?(?:\s?[-–]\s?[\d.,]+)?/);
+      /* v100.339: o oră întreagă (23:44 sau 23:44:05) e valoarea ei - înainte „citit 23:44:05” ieșea „citit :44:05 … 23” */
+      var m = p.match(/\s?\d{1,2}:\d{2}(?::\d{2})?(?![\d.,:])|[+−\-–~≈]?\s?\d[\d.,]*\s?(?:%|USDT|lei|×|zile|zi|h|min)?(?:\s?(?:≈|~)\s?[\d.,]+\s?(?:USDT|lei)?)?(?:\s(?:pe zi|pe săptămână))?(?:\s?[-–]\s?[\d.,]+)?/);
       if (!m) return '<div class="pzKv"><span class="pzKfara">' + esc(p) + '</span></div>';
       var et = (p.slice(0, m.index) + " " + p.slice(m.index + m[0].length)).replace(/\s+,/g, ",").replace(/\s+/g, " ").replace(/^[,:\s]+|[,:≈\s]+$/g, "").trim();
       et = et.replace(/^funding\s*,?\s*media (\d+) zile$/i, "funding, media $1 zile").replace(/^din ([\d.]+) investiți$/i, "față de $1 USDT investiți").replace(/^prețul trebuie să scadă până la$/i, "lichidarea la").replace(/^plătești$/i, "funding plătit");

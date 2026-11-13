@@ -144,7 +144,7 @@ var Consilier = (function () {
     var fg = ctx.fg;
     // v100.329 (revizia Opus 🟡2): cuvântul de pe cardul paginii (la 25 sursa zice „Fear”, cardul „frică extremă”), clasa sursei doar fără Acasa
     if (fg && fgOk(fg.valoare) && (fg.valoare >= 75 || fg.valoare <= 25)) out.push({ nivel: "n", sursa: "piata", titlu: "Frica/lăcomia crypto e la " + fg.valoare + " (" + (fgNumePagina(fg.valoare) || FG[fg.clasa] || fg.clasa) + ")",
-      text: "Piața e la o extremă: mișcările mari vin mai des în astfel de zile.", ceAsFace: "N-aș pune bani în plus azi și aș ține stopul pornit." });
+      text: "Piața e la o extremă de frică / lăcomie; ce urmează după o astfel de zi nu e măsurat aici.",   /* v100.339 (auditul din 13.11): „mișcările mari vin mai des” era dat ca fapt, nemăsurat */ ceAsFace: "N-aș pune bani în plus azi și aș ține stopul pornit." });
     var s = stiriRecente(ctx.stiri, acum);
     if (s.length) out.push({ nivel: "n", sursa: "stiri", titlu: cate(s.length, "știre", "știri") + " despre " + m + " în ultimele 48 h", text: "", ceAsFace: null, stiri: s });
     return ordoneaza(out);

@@ -88,10 +88,22 @@ var Alerte = (function () {
     // iese din alerta abia cand pretul e inapoi in grid cu 1% din latime
     var marg = fost("grid") !== "ok" && jos !== null && sus !== null ? (sus - jos) * 0.01 : 0;
     var afara = p !== null && jos !== null && sus !== null && (p < jos + marg || p > sus - marg);
-    out.grid = (p === null || jos === null || sus === null) ? null : afara
-      ? { nivel: "atentie", titlu: nume + ": prețul a ieșit din grid pe " + (p < jos ? "jos" : "sus"),
-        mesaj: msg("Prețul " + pret(p) + " e " + (p < jos ? "sub" : "peste") + " interval (" + pret(jos) + " – " + pret(sus) + "): botul nu face perechi cât stă afară.",
-          "Aș aștepta o zi; dacă nu revine în interval, aș închide botul și aș porni din fișă unul la prețul de acum.") }
+    // v100.339 (auditul din 13.11): ieșirea pe partea CÂȘTIGULUI (short sub grid, long peste: botul a încasat și stă fără poziție) nu e aceeași
+    // veste ca ieșirea pe partea pierderii (poziția întreagă merge contra) - înainte amândouă primeau „Aș aștepta o zi…”. Partea = marginea
+    // mai apropiată (în banda de 1% de la revenire prețul e încă în interval, lângă marginea aceea).
+    var parteG = p !== null && jos !== null && sus !== null && p < (jos + sus) / 2 ? "jos" : "sus", dirG = String(b.directie || "").toLowerCase();
+    var peCastigG = !!afara && ((dirG === "short" && parteG === "jos") || (dirG === "long" && parteG === "sus")), totG = nr(b.profitTotal);
+    // revizia independentă (14.11): în banda de 1% de la revenire prețul e ÎN interval, lângă margine - nu „sub interval”, nu „nu mai are poziție”
+    var inBandaG = !!afara && p >= jos && p <= sus;
+    var undeG = "Prețul " + pret(p) + " e " + (inBandaG ? "la marginea de " + parteG + " a intervalului" : (parteG === "jos" ? "sub" : "peste") + " interval") + " (" + pret(jos) + " – " + pret(sus) + ")";
+    out.grid = (p === null || jos === null || sus === null) ? null : inBandaG
+      ? { nivel: "atentie", parte: parteG, peCastig: peCastigG, laMargine: true, titlu: nume + ": prețul e la marginea de " + parteG + " a gridului",
+        mesaj: msg(undeG + ": abia întors; alerta se stinge când intră în interval cu 1% din lățime.", "N-aș face nimic încă: aștept să văd dacă rămâne în interval.") }
+      : afara
+      ? { nivel: "atentie", parte: parteG, peCastig: peCastigG, titlu: nume + ": prețul a ieșit din grid pe " + parteG,
+        mesaj: peCastigG ? msg(undeG + ": botul a încasat ce putea și nu mai are poziție; stă cât prețul e afară.", "Aș încasa sau aș porni din fișă unul nou, la prețul de acum.")
+          : msg(undeG + ": botul nu face perechi cât stă afară" + (totG !== null && totG < 0 && (dirG === "short" || dirG === "long") ? ", iar poziția merge contra lui (total " + TextRo.usdt(totG, 1) + ")" : "") + ".",
+            "Aș aștepta o zi; dacă nu revine în interval, aș închide botul și aș porni din fișă unul la prețul de acum.") }
       : { nivel: "ok", titlu: nume + ": prețul e din nou în grid", mesaj: p === null ? "" : "Prețul " + pret(p) + "." };
 
     if (ctx && ctx.fata4h) {

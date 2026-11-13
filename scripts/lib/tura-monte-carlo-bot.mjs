@@ -110,11 +110,13 @@ export async function turaMonteCarloBot(d) {
       /* v100.271 (ideile auditului 29.10): drumurile țin cât cel mai lung orizont citit (7 zile), nu 14 - verdictul, riscul scurt, p7, regimul și
          KV-ul citesc doar 1 h … 7 zile; ~40% mai puțin timp pe bot, aceleași cifre în limita tragerii (proba-v100271-o) */
       opt.zile = Math.max(...opt.orizonturi);
-      let rez = d.GridSim.simuleaza(b15, set, Object.assign({ pornitLa: s.pornitLa, stPrefix: s.pornitLa ? set : null }, opt)), nota = "";
+      /* v100.339 (I-868): botul e activ ⇒ botRuleaza; dacă reluarea îl oprea pe stop / țintă, pragurile se socotesc de aici încolo */
+      let rez = d.GridSim.simuleaza(b15, set, Object.assign({ pornitLa: s.pornitLa, stPrefix: s.pornitLa ? set : null, botRuleaza: true }, opt)), nota = "";
+      if (rez.praguriDeAici) nota = "stopul și ținta socotite de aici încolo (pe drumul real prețul le-a atins, dar botul rulează): ";
       if (rez.eroare && s.pornitLa) { const motiv = String(rez.eroare).split(/[.:]/)[0]; rez = d.GridSim.simuleaza(b15, set, Object.assign({ pornitLa: null }, opt)); if (!rez.eroare) nota = "ca bot pornit acum (" + motiv + "): "; }
       if (rez.eroare) throw new Error(rez.eroare);
       const v = d.GridSim.verdictScurt(rez, set, plan, b), cat = categorie(v.faCe), text = nota + v.text;
-      out.simulati++; out.p7[String(b.id)] = pCastig7(rez);
+      out.simulati++; out.p7[String(b.id)] = p7DeNotat(rez);
       // v101.92 (I-579): și pe regimul Busolei (ferestrele cu starea de acum), pe aceleași setări; nevalidat ⇒ se ține în KV, nu se arată
       let regim = null, regimLa = null;
       if (d.regim) {
@@ -129,7 +131,8 @@ export async function turaMonteCarloBot(d) {
             else {
               // revizia Opus: aceeași reluare ca verdictul principal (prefixul de la pornire; căzut ⇒ ca bot nou), altfel cele două n-ar fi comparabile
               const starturi = d.GridSim.starturiRegim(b15, rg.ferestre, 96), zile = Math.ceil(starturi.length / 96);
-              let rr = d.GridSim.simuleaza(b15, set, Object.assign({ pornitLa: s.pornitLa, stPrefix: s.pornitLa ? set : null }, opt, { starturi })), notaR = "";
+              let rr = d.GridSim.simuleaza(b15, set, Object.assign({ pornitLa: s.pornitLa, stPrefix: s.pornitLa ? set : null, botRuleaza: true }, opt, { starturi })), notaR = "";
+              if (rr.praguriDeAici) notaR = "stopul și ținta socotite de aici încolo (pe drumul real prețul le-a atins, dar botul rulează): ";
               if (rr.eroare && s.pornitLa && !/regimul de acum/.test(String(rr.eroare))) { rr = d.GridSim.simuleaza(b15, set, Object.assign({ pornitLa: null }, opt, { starturi })); if (!rr.eroare) notaR = "ca bot pornit acum: "; }
               regim = rr.eroare ? { stare: rg.stare, zile, text: String(rr.eroare).slice(0, 200), eroare: true, nevalidat: !d.regimValidat }
                 : { stare: rg.stare, zile, text: notaR + d.GridSim.verdictScurt(rr, set, plan, b).text, nevalidat: !d.regimValidat };
@@ -162,6 +165,9 @@ export async function turaMonteCarloBot(d) {
 // cele de la momentul notării, rezultatul se citește abia după.
 const ZI_MS = 86400000, MAX_MC_JURNAL = 800, JUDECAT_DE_LA = 7 * ZI_MS, EXPIRAT_DUPA = 9 * ZI_MS, MIN_JUDECATE = 30;
 // șansa pe plus la 7 zile: „de aici încolo” (botul pornit, cu pozițiile de acum) când există, altfel a drumului întreg (bot pornit acum)
+// v100.339 (auditul din 13.11): reluarea care oprește botul pe drumul real dă „0% / 0% / pe zero 100%” - nu e o șansă, deci nu intră în
+// jurnalul de scor (intra ca verdict „sub 50%”); la fel verdictul cu pragurile socotite de aici încolo (starea reluată e o aproximare)
+export function p7DeNotat(rez) { return !rez || (rez.acum && rez.acum.oprit) || rez.praguriDeAici ? null : pCastig7(rez); }
 export function pCastig7(rez) {
   const o = rez && Array.isArray(rez.orizonturi) ? rez.orizonturi.find((x) => x && x.zile === 7) : null; if (!o) return null;
   const p = o.deAici && nr(o.deAici.pCastig) !== null ? nr(o.deAici.pCastig) : nr(o.pCastig);
@@ -291,7 +297,7 @@ export function noteazaScurtBoti(jurnal, { boti, stareBoti, la, deLa } = {}) {
   for (const b of Array.isArray(boti) ? boti : []) {
     if (!b || b.id == null || b.activ === false) continue;
     // revizia: și „ca bot pornit acum” (simularea n-a putut relua botul real - cifrele sunt ale unui bot nou) nu se notează
-    const sb = st[String(b.id)]; if (!sb || !(nr(sb.ultima) >= de) || /«Reluarea arată|ca bot pornit acum/.test(String(sb.text || ""))) continue;
+    const sb = st[String(b.id)]; if (!sb || !(nr(sb.ultima) >= de) || /«Reluarea arată|ca bot pornit acum|socotite de aici încolo/.test(String(sb.text || ""))) continue;
     const areStop = nr(b.opritorPierdere) > 0 || nr(b.opritorPierdereRaport) !== null;   /* revizia: botul fără stop nu intră în scorul stopului */
     j = noteazaScurt(j, { id: b.id, scurt: sb.scurt, total: b.profitTotal === null || b.profitTotal === undefined || b.profitTotal === "" ? null : Number(b.profitTotal), acum: la, areStop });
   }

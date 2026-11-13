@@ -28,36 +28,37 @@ function modul() {
 }
 const { IB, TV } = modul();
 const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-// urcă: medii ↑, Supertrend ↑, MACD ↑, ADX 30 cu +DI, RSI 60, Bollinger 60%, MFI 55 = 7 „sus”; Stochastic 85 = încins
-const Q_SUS = () => ({ ver: "BULLISH", score: 72, prag: 66, ema: true, emaDir: "UP", e20Now: 3, e50Now: 2, e200Now: 1, supertrend: "BULL", macd: true, adx: 30, pdi: 25, mdi: 15, rsi: 60, stoch: 85, bbpos: 60, mfi: 55 });
-// coboară: medii ↓ (20 < 50 < 200), Supertrend ↓, MACD ↓, RSI 40, Stochastic 30 = 5 „jos”; ADX 15 (fără trend) și Bollinger 50% neutri; MFI fără volum
-const Q_JOS = () => ({ ver: "BEARISH", score: 30, prag: 64, ema: false, emaDir: "DOWN", e20Now: 1, e50Now: 2, e200Now: 3, supertrend: "BEAR", macd: false, adx: 15, pdi: 10, mdi: 20, rsi: 40, stoch: 30, bbpos: 50, mfi: null });
+// v100.339 (auditul din 13.11): banda numără TREI familii (trend, impuls, poziție), nu 8 indicatori; rândul „Stochastic” e al prețului (stochK)
+// urcă: trend (medii ↑, Supertrend ↑, ADX 30 cu +DI) și impuls (MACD ↑, RSI 60, MFI 55, Stoch RSI 60) sus; poziția (Stochastic 85, Bollinger 97%) la extreme
+const Q_SUS = () => ({ ver: "BULLISH", score: 72, prag: 66, ema: true, emaDir: "UP", e20Now: 3, e50Now: 2, e200Now: 1, supertrend: "BULL", macd: true, adx: 30, pdi: 25, mdi: 15, rsi: 60, stoch: 85, stochK: 85, stochRsiK: 60, bbpos: 97, mfi: 55 });
+// coboară: trend (medii ↓, Supertrend ↓; ADX 15 fără trend), impuls (MACD ↓, RSI 40, Stoch RSI 30; MFI fără volum), poziția (Stochastic 30; Bollinger 50% neutru) - toate trei jos
+const Q_JOS = () => ({ ver: "BEARISH", score: 30, prag: 64, ema: false, emaDir: "DOWN", e20Now: 1, e50Now: 2, e200Now: 3, supertrend: "BEAR", macd: false, adx: 15, pdi: 10, mdi: 20, rsi: 40, stoch: 30, stochK: 30, stochRsiK: 30, bbpos: 50, mfi: null });
 const R = () => [{ eticheta: "15 min", q: Q_SUS() }, { eticheta: "1 oră", q: null }, { eticheta: "4 ore", q: Q_JOS() }, { eticheta: "1 zi", q: Q_SUS() }];
 
 // ───────────── I-857 banda ─────────────
-await test("I-857 banda: 4 intervale, cei 8 indicatori numărați față de bot (short: „coboară” e cu botul); încinșii sunt neutri, lipsa nu se numără", () => {
+await test("I-857 banda: 4 intervale, cele trei familii numărate față de bot (short: „coboară” e cu botul); familia la extreme e neutră, lipsa nu se numără", () => {
   const b = J(IB.banda(R(), "short"));
   assert.deepEqual(b.map((x) => x.scurt), ["15m", "1h", "4h", "1z"]);
   assert.deepEqual(b.map((x) => x.lung), [false, false, true, true]);
   assert.equal(b[1].lipsa, true);
   const j = b[2];   // 4 ore, coboară, bot short
   assert.equal(j.sageata, "↓"); assert.equal(j.scor, 30); assert.equal(j.prag, 64); assert.equal(j.fata, "cu");
-  assert.deepEqual([j.cu, j.neutru, j.contra, j.incinsi, j.total], [5, 2, 0, 0, 7]);
-  assert.deepEqual(j.numeCu, ["Medii EMA", "Supertrend", "MACD", "RSI", "Stochastic"]);
-  assert.deepEqual(j.numeNeutru, ["ADX", "Bollinger"]);
+  assert.deepEqual([j.cu, j.neutru, j.contra, j.incinsi, j.total], [3, 0, 0, 0, 3]);
+  assert.deepEqual(j.numeCu, ["trend (Medii EMA ↓, Supertrend ↓, ADX ↔)", "impuls (MACD ↓, RSI ↓, Stoch RSI ↓)", "poziție (Stochastic ↓, Bollinger ↔)"]);
+  assert.deepEqual(j.numeNeutru, []);
   const s = b[0];   // 15 min, urcă, bot short ⇒ împotrivă
-  assert.equal(s.fata, "contra"); assert.deepEqual([s.cu, s.neutru, s.contra, s.incinsi, s.total], [0, 1, 7, 1, 8]);
-  assert.deepEqual(s.numeIncinsi, ["Stochastic"]);
+  assert.equal(s.fata, "contra"); assert.deepEqual([s.cu, s.neutru, s.contra, s.incinsi, s.total], [0, 1, 2, 1, 3]);
+  assert.deepEqual(s.numeIncinsi, ["poziție (Stochastic la extrem, Bollinger la extrem)"]);
 });
 await test("I-857 banda: la long se întoarce; la botul fără direcție nu e „cu / împotrivă”, ci sus / jos", () => {
   const l = J(IB.banda(R(), "long"));
-  assert.equal(l[0].fata, "cu"); assert.deepEqual([l[0].cu, l[0].contra], [7, 0]);
-  assert.equal(l[2].fata, "contra"); assert.deepEqual([l[2].cu, l[2].contra], [0, 5]);
+  assert.equal(l[0].fata, "cu"); assert.deepEqual([l[0].cu, l[0].contra], [2, 0]);
+  assert.equal(l[2].fata, "contra"); assert.deepEqual([l[2].cu, l[2].contra], [0, 3]);
   const n = J(IB.banda(R(), "neutral"));
-  assert.equal(n[0].fata, null); assert.equal(n[0].faraDirectie, true); assert.deepEqual([n[0].cu, n[0].contra], [7, 0], "fără direcție: „cu” = sus, „contra” = jos");
+  assert.equal(n[0].fata, null); assert.equal(n[0].faraDirectie, true); assert.deepEqual([n[0].cu, n[0].contra], [2, 0], "fără direcție: „cu” = sus, „contra” = jos");
 });
 await test("revizia 11.11: mediile EMA numărate SIMETRIC în bandă — 20 > 50 > 200 sus, 20 < 50 < 200 jos, altfel neutru (tabelul număra „20 sub 50” ca jos și când 50 > 200, iar oglinda lui ca neutru)", () => {
-  const pe = (e20, e50, e200, dir) => { const q = Object.assign(Q_SUS(), { ema: e20 > e50 && e50 > e200, emaDir: e20 > e50 ? "UP" : "DOWN", e20Now: e20, e50Now: e50, e200Now: e200 }); const x = J(IB.banda([{ eticheta: "4 ore", q }], dir))[0]; return x.numeCu.includes("Medii EMA") ? "cu" : x.numeContra.includes("Medii EMA") ? "contra" : x.numeNeutru.includes("Medii EMA") ? "neutru" : "?"; };
+  const pe = (e20, e50, e200, dir) => { const q = Object.assign(Q_SUS(), { ema: e20 > e50 && e50 > e200, emaDir: e20 > e50 ? "UP" : "DOWN", e20Now: e20, e50Now: e50, e200Now: e200 }); const x = J(IB.banda([{ eticheta: "4 ore", q }], dir))[0], m = x.familii[0].membri.find((t) => t.startsWith("Medii EMA")) || "?"; return /↔$/.test(m) ? "neutru" : /↑$/.test(m) === (dir === "long") ? "cu" : "contra"; };   // v100.339: semnul mediilor din familia „trend”
   assert.equal(pe(1, 2, 0, "short"), "neutru", "20 < 50, dar 50 > 200: nu e coborâre așezată");
   assert.equal(pe(2, 1, 3, "long"), "neutru", "oglinda: 20 > 50, dar 50 < 200");
   assert.equal(pe(1, 2, 3, "short"), "cu"); assert.equal(pe(3, 2, 1, "long"), "cu");
@@ -66,11 +67,11 @@ await test("revizia 11.11: mediile EMA numărate SIMETRIC în bandă — 20 > 50
 await test("I-857 desenul benzii: căsuța spune săgeata, scorul și cele trei numere în text (nu doar culoare), cu numele în titlu; escape", () => {
   const b = IB.banda(R(), "short");
   const h = IB.bandaHtml(b, null, null, "short", esc);
-  assert.match(h, /^<span class="ibBanda" role="group" aria-label="Indicatorii pe 4 intervale, față de botul tău \(short\)">/);
-  assert.match(h, /<span class="ibCel ibLung ibCu" title="4 ore: coboară, scor 30 · cu botul: Medii EMA, Supertrend, MACD, RSI, Stochastic · neutri: ADX, Bollinger"><span class="ibTf">4h<\/span><span class="ibVer">↓ 30<\/span>/);
-  assert.match(h, /<span class="ibBara" aria-hidden="true"><i class="ibB ibBCu" style="flex-grow:5"><\/i><i class="ibB ibBNeutru" style="flex-grow:2"><\/i><\/span><span class="ibNr">5 cu · 2 · 0 împ\.<\/span>/);
+  assert.ok(h.startsWith('<span class="ibBanda" role="group" aria-label="Indicatorii pe 4 intervale, pe trei familii (trend, impuls, poziție), față de botul tău (short)">'), h.slice(0, 200));
+  assert.ok(h.includes('<span class="ibCel ibLung ibCu" title="4 ore: coboară, scor 30 · cu botul: trend (Medii EMA ↓, Supertrend ↓, ADX ↔), impuls (MACD ↓, RSI ↓, Stoch RSI ↓), poziție (Stochastic ↓, Bollinger ↔)"><span class="ibTf">4h</span><span class="ibVer">↓ 30</span>'), "căsuța de 4 ore");
+  assert.ok(h.includes('<span class="ibBara" aria-hidden="true"><i class="ibB ibBCu" style="flex-grow:3"></i></span><span class="ibNr">3 cu · 0 · 0 împ.</span>'), "bara de 4 ore");
   // revizia: „la extreme” (RSI 25 e epuizat, nu încins)
-  assert.match(h, /<span class="ibCel ibContra" title="15 min: urcă, scor 72 · împotrivă: Medii EMA, Supertrend, MACD, ADX, RSI, Bollinger, MFI \(bani\) · la extreme: Stochastic"><span class="ibTf">15m<\/span><span class="ibVer">↑ 72<\/span>/);
+  assert.ok(h.includes('<span class="ibCel ibContra" title="15 min: urcă, scor 72 · împotrivă: trend (Medii EMA ↑, Supertrend ↑, ADX ↑), impuls (MACD ↑, RSI ↑, MFI (bani) ↑, Stoch RSI ↑) · la extreme: poziție (Stochastic la extrem, Bollinger la extrem)"><span class="ibTf">15m</span><span class="ibVer">↑ 72</span>'), "căsuța de 15 minute");
   assert.match(h, /<span class="ibCel ibLipsa" title="1 oră: prea puține bare închise"><span class="ibTf">1h<\/span><span class="ibVer">—<\/span><\/span>/);
   // revizia: căsuța goală spune motivul adevărat când îl are
   assert.match(IB.bandaHtml(IB.banda([{ eticheta: "1 oră", q: null, eroare: "doar 41 de bare închise" }], "short"), null, null, "short", esc), /title="1 oră: doar 41 de bare închise"/);
@@ -83,8 +84,8 @@ await test("I-857 desenul benzii: căsuța spune săgeata, scorul și cele trei 
   assert.match(IB.bandaHtml([lp], null, null, "long", esc), /<span class="ibVer">↔ 63,6<\/span>/);
   assert.match(h, /<i class="ibB ibBIncins" style="flex-grow:1"><\/i>/, "încinsul are bucata lui (aurie), în partea neutră");
   const n = IB.bandaHtml(IB.banda(R(), "neutral"), null, null, "neutral", esc);
-  assert.match(n, /aria-label="Indicatorii pe 4 intervale \(botul n-are direcție: sus \/ jos\)"/);
-  assert.match(n, /<span class="ibNr">7 sus · 1 · 0 jos<\/span>/);
+  assert.match(n, /aria-label="Indicatorii pe 4 intervale, pe trei familii \(trend, impuls, poziție\) \(botul n-are direcție: sus \/ jos\)"/);
+  assert.match(n, /<span class="ibNr">2 sus · 1 · 0 jos<\/span>/);   // v100.339: trei familii (trend și impuls sus, poziția la extreme)
 });
 
 // ───────────── I-858 rigla ─────────────
@@ -102,7 +103,7 @@ await test("I-858 rigla: pe 1h, 4h, 1z, cu pragul ADEVĂRAT al intervalului (q.p
 });
 await test("I-858: calc întoarce pragul cu care a hotărât verdictul (prag: threshold), ca rigla să nu-l scrie a doua oară", () => {
   const APP = citeste("public", "app.js");
-  assert.match(APP, /ver,prag:threshold,breakout:bo/);
+  assert.match(APP, /ver,prag:threshold,regimProfil:regimP,breakout:bo/);   /* v100.339: și regimul profilului (histerezis) */
   assert.match(APP, /let threshold=p\.signal,ver=score>=threshold\?"BULLISH":score<=100-threshold\?"BEARISH":"NEUTRAL"/);
 });
 
@@ -111,7 +112,8 @@ await test("I-859 TradingView: nota aceluiași interval sub căsuță (15m, 1h, 
   const n = { iv: { "15m": { all: -0.62 }, "1h": { all: 0.05 }, "4h": { all: -0.3 }, "1D": { all: -0.2 } } };
   const t = J(IB.tvBanda(n, IB.banda(R(), "short"), TV.clasa));
   assert.deepEqual(t.map((x) => x && x.cod), ["vinde-tare", "neutru", "vinde", "vinde"]);
-  assert.deepEqual(t.map((x) => x && x.diferit), [true, false, false, true], "15m: Radar urcă, TV vinde tare ⇒ ≠; 1z: Radar urcă, TV vinde ⇒ ≠");
+  // v100.339 (auditul din 13.11): „≠” doar la o notă limpede (|nota| ≥ 0,3) - pe 1z nota −0,2 nu mai dă „≠”
+  assert.deepEqual(t.map((x) => x && x.diferit), [true, false, false, false], "15m: Radar urcă, TV vinde tare ⇒ ≠; 1z: nota −0,2 e sub 0,3 ⇒ fără ≠");
   const h = IB.bandaHtml(IB.banda(R(), "short"), IB.tvBanda(n, IB.banda(R(), "short"), TV.clasa), null, "short", esc);
   assert.match(h, /<span class="ibTv ibTvCu" title="TradingView 4 ore: vinde \(−0,3\)">TV vinde<\/span>/);
   assert.match(h, /<span class="ibTv ibTvCu" title="TradingView 15 min: vinde tare \(−0,6\)">TV vinde tare<\/span><em class="ibDif" title="Radarul \(bare închise, Pionex\) și TradingView \(bara în curs, Binance\) arată direcții opuse pe 15 min">≠<\/em>/);
@@ -135,7 +137,7 @@ await test("I-861 istoricScor: scorul pe ultimele N bare închise, cu calculul d
   const j = Array.from({ length: 100 }, (_, i) => ({ c: i }));
   const fals = (x) => ({ score: x.length, prag: 65 });
   const s = J(IB.istoricScor(j, 5, fals));
-  assert.deepEqual(s, [{ s: 96, prag: 65 }, { s: 97, prag: 65 }, { s: 98, prag: 65 }, { s: 99, prag: 65 }, { s: 100, prag: 65 }]);
+  assert.deepEqual(s, [96, 97, 98, 99, 100].map((x) => ({ s: x, prag: 65, ver: "NEUTRAL" })));   // v100.339: fiecare bară își ține și verdictul de atunci
   assert.equal(IB.istoricScor(j.slice(0, 62), 24, fals).length, 3, "sub 60 de bare calculul nu se face");
   assert.deepEqual(J(IB.istoricScor(j, 3, () => null)), [], "calcul picat ⇒ nimic");
 });
@@ -183,7 +185,7 @@ await test("revizia I-861: istoria pe 4 ore nu se socotește pe loc — după de
   assert.equal(ctx.gata("STX|short"), null);
   ruleaza();
   assert.equal(n(), 24); assert.equal(d(), 1, "un singur redesen la final");
-  const g = J(ctx.gata("STX|short")); assert.equal(g.length, 24); assert.deepEqual(g[23], { s: 0, prag: 65 }, "ultimul punct = fereastra întreagă (200 de bare)");
+  const g = J(ctx.gata("STX|short")); assert.equal(g.length, 24); assert.deepEqual({ s: g[23].s, prag: g[23].prag }, { s: 0, prag: 65 }, "ultimul punct = fereastra întreagă (200 de bare)"); assert.equal(typeof g[23].ver, "string", "v100.339: punctul își ține verdictul");
 });
 await test("revizia I-861: aceleași bare ⇒ niciun calcul; o bară nouă ⇒ un singur calcul; altă monedă ⇒ de la capăt", () => {
   const { ctx, ruleaza, n } = istoric();

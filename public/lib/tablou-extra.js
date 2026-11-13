@@ -95,7 +95,13 @@ var TabloExtra = (function () {
   function grileVsCosturi(b, acum) {
     var d = bu(b), p = nr(b && b.pornitLa), zile = p > 0 ? Math.max(1 / 24, ((acum || Date.now()) - p) / ZI) : null;
     var fund = nr(b && b.finantare), com = nr(b && b.comisioane), g24 = nr(d.gridProfit24h), tx = taxaIntrare(b, com);
+    /* umpleri24h = trx24h de la Pionex: PERECHI încheiate în 24 h (verificat pe botul viu, 14.11: trx24h ÷ perechile socotite din grile = 0,99); numele cheii a rămas */
     var out = { grile24h: g24, umpleri24h: nr(d.trx24h), zile: zile, fundingZi: fund !== null && zile ? fund / zile : null, comisionZi: com !== null && zile ? (com - (tx || 0)) / zile : null, taxaIntrare: tx, netZi: null, fundingMananca: null };
+    // v100.339 (auditul din 13.11): grilele sunt pe ultimele 24 h, iar comisionul era MEDIA de la pornire - un bot activ la început și liniștit
+    // acum ieșea „costurile mănâncă grilele” (0,08 pe zi față de 0,004 real). Comisionul zilei = comisionul pe pereche × perechile din 24 h
+    // (aceeași fereastră ca grilele); fără numărul de perechi de la pornire rămâne media. Funding-ul rămâne medie (nu depinde de umpleri).
+    var per = nr(b && b.ordinePerechi), per24 = nr(d.trx24h); out.comisionMedieZi = out.comisionZi; out.fereastra = "medie";
+    if (out.comisionZi !== null && per > 0 && per24 !== null && per24 >= 0) { out.comisionZi = (com - (tx || 0)) * Math.min(1, per24 / per); out.fereastra = "24h"; }
     // v100.39 (audit 30.09): sub o zi de viata comisionul e aproape numai taxa de CUMPARARE de la pornire (platita o data) -
     // impartita la 3 ore devenea „−0,68 USDT pe zi” si orice bot nou iesea ATENTIE „costurile depasesc grilele” de la secunda 27.
     // Costurile pe zi se judeca doar de la o zi de viata (grilele pe 24 h fata de costurile pe zi, ferestre egale).
@@ -287,7 +293,9 @@ var TabloExtra = (function () {
   }
   function cifreActiuni(b, o) {
     o = o || {}; var dir = String(b && b.directie || "").toLowerCase(), p = nr(b && b.pretCurent), pr = nr(o.protectie);
-    var stop = { laOpritor: totalLaOpritor(b), laPropus: pr !== null ? totalCuGridLa(b, pr) : null, pretPropus: pr, frecventa: null, opritor: b && b.opritorPierdereActiv ? nr(b.opritorPierdere) : null };
+    var stop = { laOpritor: totalLaOpritor(b), laPropus: pr !== null ? totalCuGridLa(b, pr) : null, pretPropus: pr, frecventa: null, opritor: b && b.opritorPierdereActiv ? nr(b.opritorPierdere) : null,
+      /* v100.339 (auditul din 13.11): fără stop, pe marjă izolată, pierderea maximă e marja pusă, la prețul de lichidare */
+      laLichidare: b && nr(b.pretLichidare) > 0 && nr(b.investit) > 0 ? -nr(b.investit) : null, pretLichidare: b && nr(b.pretLichidare) > 0 ? nr(b.pretLichidare) : null };
     if (pr !== null && p !== null && p > 0) stop.frecventa = frecventaAtingere(o.b15, Math.abs(p - pr) / p, dir);
     var z = dacaInchizi(b);
     return { stop: stop, inchide: { iei: z.iei, total: nr(b && b.profitTotal), comision: z.comisionInchidere } };
@@ -666,7 +674,10 @@ var TabloExtra = (function () {
     var acum = o.acum || Date.now(), out = [], dateLa = nr(o.dateLa);
     function norm(x) { return String(x || "").toLowerCase().normalize("NFD").replace(/\p{M}/gu, "").replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim(); }
     function cuv(x) { return norm(x).split(" ").filter(function (w) { return w.length >= 4; }); }
+    // v100.339 (auditul din 13.11): „marginea de jos …” și „marginea de sus …” nu sunt același fapt (la botul neutru a doua dispărea)
+    function parteaDin(t) { var n = " " + norm(t) + " "; return / (de|pe) sus /.test(n) ? "sus" : / (de|pe) jos /.test(n) ? "jos" : null; }
     function acelasi(a, b) {
+      var pa = parteaDin(a), pb = parteaDin(b); if (pa && pb && pa !== pb) return false;
       var A = cuv(a), B = cuv(b); if (!A.length || !B.length) return false;
       var comune = A.filter(function (w) { return B.indexOf(w) >= 0; }).length;
       return comune >= Math.min(3, A.length, B.length);

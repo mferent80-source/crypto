@@ -32,7 +32,9 @@ var Conteaza = (function () {
   function norm(t) { return String(t || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim(); }
   function fel(t) { return norm(t).replace(/[0-9]+/g, " ").replace(/\s+/g, " ").trim(); }
   function cuv(t) { return norm(t).split(" ").filter(function (w) { return w.length >= 4; }); }
-  function acelasi(a, b) { if (fel(a) === fel(b)) return true; var A = cuv(a), B = cuv(b); if (!A.length || !B.length) return false; return A.filter(function (w) { return B.indexOf(w) >= 0; }).length >= Math.min(3, A.length, B.length); }
+  // v100.339 (auditul din 13.11): „marginea de jos …” și „marginea de sus …” nu sunt același fapt (la botul neutru a doua dispărea)
+  function parteaDin(t) { var n = " " + norm(t) + " "; return / (de|pe) sus /.test(n) ? "sus" : / (de|pe) jos /.test(n) ? "jos" : null; }
+  function acelasi(a, b) { var pa = parteaDin(a), pb = parteaDin(b); if (pa && pb && pa !== pb) return false; if (fel(a) === fel(b)) return true; var A = cuv(a), B = cuv(b); if (!A.length || !B.length) return false; return A.filter(function (w) { return B.indexOf(w) >= 0; }).length >= Math.min(3, A.length, B.length); }
   function despartePrin(t) { var s = String(t || ""), i = s.indexOf("👉"); return i < 0 ? { sub: s.trim(), faCe: "" } : { sub: s.slice(0, i).trim(), faCe: s.slice(i + 2).trim() }; }
 
   // pragul pe cifra ARĂTATĂ (rotunjită): „~30” pe grafic intră, „~29” nu; „~50” e roșu (revizia, 08.11)
