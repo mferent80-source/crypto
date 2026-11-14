@@ -90,15 +90,53 @@ Observațiile de statistică ale reviziei (numărătoarea testelor, histerezisul
   Jumătate din retragere era însă pripită: aceeași măsură apărea roșie, la vedere, în „Cele șapte măsuri”.
 - Am scris că „cam 10% din întoarcerile verdictului” vin din săritura parametrilor. Măsurat: ~1% (zece la sută era din comutările de profil).
 
+## Restul, făcut în v100.340 (14.11.2026, „repară tot și fă ideile”)
+
+Cele cinci rânduri rămase „nefăcute” în v100.339 sunt făcute:
+
+- **Regimul pentru grid, măsurat cinstit (M5).** Clasificatorul (ADX 25 / 20, percentila lățimii benzilor Bollinger 30 / 70) e pe pagină, pe
+  1 oră și pe 4 ore, ca stare de acum. Ce urmează după un regim s-a măsurat pe 21 de perechi, cu dovada pe blocuri de 5 zile și cu mărimea
+  testului verificată înainte pe 20.000 de serii fără efect: **nedovedit** peste tot. După „lateral” prețul nu oscilează mai mult decât după
+  „trend” (eficiența următoarelor 24 de ore: 0,21 cu 0,21); după benzi largi drumul e de 1,2–1,3 ori mai lung, dar sub pragul scris
+  dinainte. Pagina scrie „ce urmează: nedovedit”. Cifrele: `docs/cercetare/2026-11-13-tablou-acuratete.md`, „M5 — rezultatul”.
+- **„Bun pentru grid” a dispărut.** Becul lateral spune „nici cu botul, nici împotrivă” și e gri. O piață toată laterală nu mai apare „Cu
+  botul” (KPI-ul „Piața”, banda prețului viu) și nu mai e motiv verde în Consilier: stă în „Restul”, ca fapt. Verdictul nu se schimbă.
+- **Perechile din drumul prețului.** Sub „Cele șapte măsuri”: câte perechi ar fi dat închiderile de 5 minute mergând pe liniile gridului
+  botului (aritmetic sau geometric, cu loturile pe care le ține deja). Lângă ultima oră a botului stă ultima oră a drumului; media botului
+  pe 24 de ore e spusă ca altă fereastră. La gridul neutru fără preț de pornire cifra nu se dă.
+- **Totalul la prețul viu**, lângă ora citirii, când diferă de cel citit.
+- **Modelul pe linii.** „Dacă prețul ajunge la…”, prețul de zero și țintele se socotesc pe liniile gridului (cu linia goală de lângă preț),
+  nu cu loturile întinse uniform; poziția vine din același model; când poziția nu se potrivește cu liniile, nota spune că e aproximare.
+- **Cardul vechi al verdictului** e scos; avertismentele care se văd au rândul lor sub verdict, cu butonul spre parolă când e cazul.
+- **Simbolurile de două litere de la Londra** primesc nota TradingView (`LSE:XX.`, cu `LSE:XX` ca rezervă).
+- **Jurnalul colectorului** (v101.179) scrie lângă nota TradingView verdictul Radarului din aceeași clipă — cel arătat de pagină, confirmat
+  pe două bare, cu al barei alături (4 ore și 1 zi, pe bare proaspete); bilanțul: `npm run raport:nota-tv` (sub 30 de zile spune că e
+  prea devreme).
+
+Prima revizie independentă a acestor schimbări a găsit 8 galbene și câteva albastre (unitatea scrisă de două ori la totalul viu; perechile
+din drum numărate de până la 4,6 ori prea multe; rândul avertismentelor ajuns la coada paginii; regimul altei monede sub botul nou; și, cea
+de fond, procedura statistică dintâi respingea de zece ori prea des pe serii fără efect — oprită înainte să atingă piața și înlocuită).
+Toate reparate, cu proba întâi.
+
+A doua revizie independentă, pe reparații: niciun roșu, 6 galbene. Rândul de avertismente cădea sub grafic pe calculator (acum stă în capul
+cifrelor acolo, și sub verdict pe telefon și tabletă — măsurat în browser la 1920, 768 și 412); sfatul „Marginea de jos / sus” arăta
+poziția din modelul vechi lângă totalul nou (un lot în plus); un sfat de trend mai zicea „lateral e bine pentru un grid”; perechile din
+drum se numărau pe linii aritmetice și la gridul geometric, iar gridul neutru fără preț de pornire ieșea ca un long; comparația cu botul
+nu era pe aceeași fereastră. Reparate la fel, fiecare cu testul verificat și „pe roșu” (codul stricat anume într-o copie).
+
 ## Ce NU s-a făcut
 
-- Clasificatorul de regim pentru grid (ADX + eficiență + percentila Bollinger) și „becul tradus pentru grid”: măsurătoarea n-a confirmat ideea.
-- Cardul vechi al verdictului a rămas în pagină, ascuns ca până acum.
-- Totalul botului nu se recalculează la prețul viu (s-a adăugat doar ora citirii lângă el).
-- Jumătatea de treaptă a modelului continuu; simbolurile LSE de două litere cu punct la coadă.
-- Jurnalul colectorului ține nota TradingView și prețul, nu și verdictul Radarului din aceeași clipă.
+- **Căderea legăturii de administrare de după paza paginilor** (de două ori, câteva minute): cauza n-a fost găsită. Jurnalele serverului nu
+  arată nimic în acele minute, iar Radarul a răspuns normal în tot acest timp. De prins la următoarea cădere, cu diagnosticul pornit chiar
+  atunci.
+- Categoria „Bun pentru grid” din sugestiile scannerului (liniștit, lateral) e aceeași idee nedovedită, în altă pagină; a rămas neatinsă:
+  e numele unei categorii cerute anume, de hotărât separat.
+- `npm run test:ecran` (`scripts/proba-ecran-tablou.mjs`, în afara lanțului) pică la fel și pe pagina neatinsă: e o probă veche, rămasă
+  în urmă; nereparată aici.
+- Efectul B (benzi largi ⇒ drum mai lung) nu se mai încearcă pe aceleași date cu alte praguri; s-ar putea relua doar pe date noi.
 
 ## Probe
 
-`npm run test:v100339` (`scripts/proba-v100339-a.mjs` … `-d.mjs`), în lanțul `npm test`. Planul, cu bifele și starea celor parțiale:
-`docs/superpowers/plans/2026-11-13-audit-tablou-reparatii.md`.
+`npm run test:v100339` (`scripts/proba-v100339-a.mjs` … `-d.mjs`) și `npm run test:v100340` (`scripts/proba-v100340-a.mjs`, `-b.mjs`), în lanțul
+`npm test`. Planurile, cu bifele: `docs/superpowers/plans/2026-11-13-audit-tablou-reparatii.md` și
+`docs/superpowers/plans/2026-11-14-rest-audit-tablou.md`.

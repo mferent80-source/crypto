@@ -98,7 +98,7 @@ var PretViu = (function () {
     var dg = o.distanteGrid;
     if (dg) parti.push({ k: "grid", t: textGrid(dg) });
     var z = o.piata;
-    if (z && z.ton !== "nu-se-poate") parti.push({ k: "piata", t: z.ton === "rau" ? "piața: împotrivă" : z.ton === "bine" ? "piața: cu botul" : "piața: amestecat" });
+    if (z && z.ton !== "nu-se-poate") parti.push({ k: "piata", t: z.ton === "rau" ? "piața: împotrivă" : z.ton === "bine" ? "piața: cu botul" : z.ton === "lateral" ? "piața: laterală" : "piața: amestecat" });
     var rau = (dist !== null && (bl.lichidareDepasita || Math.abs(dist) < 15)) || (z && z.ton === "rau");
     return { parti: parti, clasa: rau ? "bad" : (tot === null || dist === null || tot < 0) ? "tbWarn" : "good", pret: pa };
   }

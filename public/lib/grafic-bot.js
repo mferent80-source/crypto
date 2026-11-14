@@ -85,7 +85,7 @@ var GraficBot = (function () {
 
   // v100.106 (el, 06.10: „la grafic să arăți și trend și un semafor cu tf 5min/15min/30/1h/1zi”; a adăugat 4 h; demo aprobat): semaforul
   // trendului pe TF-uri - aceeași regulă ca „Direcția” Tabloului (Directie.analizeaza: EMA 20/50 + cât de curat merge prețul + panta EMA 50),
-  // doar bare ÎNCHISE. Culoarea = față de bot (verde: cu botul sau lateral, bun pentru grid · roșu: împotriva botului · galben: împinge un
+  // doar bare ÎNCHISE. Culoarea = față de bot (verde: cu botul · gri: lateral, nici cu, nici împotrivă · roșu: împotriva botului · galben: împinge un
   // grid neutru spre o margine); săgeata = încotro merge piața. ADX și RSI pe aceleași bare închise. pe = {"5M": rândurile Pionex, ...}
   var TF_SEM = [{ tf: "5M", et: "5 min", sc: "5m" }, { tf: "15M", et: "15 min", sc: "15m" }, { tf: "30M", et: "30 min", sc: "30m" },
     { tf: "60M", et: "1 oră", sc: "1h" }, { tf: "4H", et: "4 ore", sc: "4h" }, { tf: "1D", et: "1 zi", sc: "1z" }];
@@ -122,13 +122,13 @@ var GraficBot = (function () {
   }
   // rândul unic din „Ce spune graficul acum” (Tabloul): câte becuri cu botul / împotrivă / fără lumânări ⇒ { stare, text }
   function trendSumar(sem) {
-    var l = Array.isArray(sem) ? sem : [], n = { bine: 0, rau: 0, atentie: 0 }, aprinse = 0;
+    var l = Array.isArray(sem) ? sem : [], n = { bine: 0, rau: 0, atentie: 0, neutru: 0 }, aprinse = 0;   /* neutru = becul lateral (v100.340: nu mai e „bine”) */
     l.forEach(function (s) { if (s && s.dir) { aprinse++; if (n[s.ton] != null) n[s.ton]++; } });
     if (!aprinse) { var tx = l.map(function (s) { return s && s.text; }).filter(function (x, i, a) { return x && a.indexOf(x) === i; });   /* revizia (R9): motivul comun, nu doar al lui 5 min */
       return { stare: "info", text: tx.length === 1 ? tx[0] : tx.length ? "lumânările n-au venit pe niciun TF" : "se aduc lumânările…" }; }
-    var b = [n.bine + " din " + l.length + " cu botul sau laterale"];
+    var b = [(n.bine + n.neutru) + " din " + l.length + " cu botul sau laterale"];
     if (n.rau) b.push(n.rau + " împotrivă"); if (n.atentie) b.push(cate(n.atentie, "bec împinge gridul", "becuri împing gridul")); if (l.length > aprinse) b.push((l.length - aprinse) + " fără lumânări");
-    return { stare: n.rau >= 2 || n.rau > n.bine ? "rau" : n.rau || n.atentie ? "atentie" : "bine", text: b.join(" · ") + " — tabelul de sub grafic" };
+    return { stare: n.rau >= 2 || n.rau > n.bine + n.neutru ? "rau" : n.rau || n.atentie ? "atentie" : n.bine ? "bine" : "info", text: b.join(" · ") + " — tabelul de sub grafic" };
   }
   function semafor(pe, dirBot, opt) {
     var d = String(dirBot || "").toLowerCase(); opt = opt || {};
@@ -696,7 +696,7 @@ var GraficBot = (function () {
       q.push('<path class="gbRsi" d="' + d + '" fill="none" stroke="' + COL.intrare + '" stroke-width="1.4"/>');
       var rl = S.rsi[raw.length - 1]; q.push('<text x="' + f1(cmp ? LX : plotW + 6) + '" y="' + (ry0 + (cmp ? 11 : 14)) + '" font-size="' + (ingust ? 11 : 12.5) + '" fill="' + COL.intrare + '">RSI ' + (rl != null ? Math.round(rl) : "—") + '</text>');
     }
-    // v100.98 (05.10): ADX 14 - sub 20 piața stă pe loc (bun pentru grid), peste 25 e în trend (rău pentru grid); scala 0–60
+    // v100.98 (05.10): ADX 14 - sub 20 piața stă pe loc, peste 25 e în trend; scala 0–60
     var ay0 = ry0 + (rsiH ? rsiH + gap : 0);
     if (st.adx) {
       S.adx = adx(raw, 14);

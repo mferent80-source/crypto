@@ -37,7 +37,8 @@ await test("(1) zero-ul pe plus cade în grid ⇒ cartela spune câte grile mor 
   assert.ok(z.pretZero > 90 && z.pretZero < 110, "premisa: zero-ul e în grid (" + z.pretZero + ")");
   const c = cartela(BOT1());
   const tot = [c.act, c.deCe, c.text].join(" | ");
-  assert.match(tot, /10 din 20 de grile/, tot);
+  assert.match(tot, /9 din 20 de grile/, tot);   /* v100.340: zero-ul pe NIVELURILE gridului e 99,283 (continuu: cu o jumătate de pas mai sus ⇒ 10) */
+  assert.ok(Math.abs(z.pretZero - 148.85 / 1.49925) < 1e-6, "zero-ul, socotit linie cu linie: " + z.pretZero);
   assert.match(c.deCe, /cade în grid/);
   assert.equal(c.tag.t, "zero în grid");
   assert.equal(c.tag.c, "warn");
@@ -57,7 +58,7 @@ await test("(1) zero-ul pe plus SUB grid (dincolo de margine) ⇒ rămâne propu
 await test("(1) „mișcarea e cu botul” (pasiCuBotul) spune și ea grilele tăiate de stopul la zero", () => {
   const b = BOT1(), z = TE.dacaInchizi(b);
   const pc = SB.pasiCuBotul(b, "long", z);
-  assert.match(pc.faCe, /zero-ul botului \([\d.]+\), știind că taie 10 din 20 de grile\./);
+  assert.match(pc.faCe, /zero-ul botului \([\d.]+\), știind că taie 9 din 20 de grile\./);
   assert.ok(pc.faCe.length <= 110, pc.faCe);
 });
 await test("(1) ținta devine podea: podeaua din grid ⇒ semaforul și alerta spun grilele tăiate", () => {

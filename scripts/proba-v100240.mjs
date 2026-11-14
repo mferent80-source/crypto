@@ -21,7 +21,7 @@ await test("blocurile Tabloului rămân în pagină, plus locul Monte Carlo", ()
   const i0 = idx.indexOf('id="tabloubot"'), i1 = idx.indexOf('id="tbDetalii"');
   assert.ok(i0 >= 0 && i1 > i0);
   const tab = idx.slice(i0, i1 + 40);
-  for (const id of ["tbMcSus", "tbVerdictCard", "tbGridLarg", "tbKpi", "tbKpiTotal", "tbKpiLich", "tbKpiPret", "tbKpiPiata", "tbGrafic", "tbCitire", "tbCitireMobil", "tbTrendCard", "tbSemaforCard", "tbMotive", "tbConcret", "tbIdei", "tbAcumCard", "tbPl-plan", "tbPl-sfaturi", "tbPl-avert", "tbPl-alerte", "tbPl-prob", "tbPl-risc", "tbPl-fisa", "tbPl-sapt", "tbPl-socoteala", "tbPl-port", "tbGridNou", "tbTodo", "tbBotAles"]) {
+  for (const id of ["tbMcSus", /* v100.340: cardul vechi al verdictului a fost scos din pagină */ "tbGridLarg", "tbKpi", "tbKpiTotal", "tbKpiLich", "tbKpiPret", "tbKpiPiata", "tbGrafic", "tbCitire", "tbCitireMobil", "tbTrendCard", "tbSemaforCard", "tbMotive", "tbConcret", "tbIdei", "tbAcumCard", "tbPl-plan", "tbPl-sfaturi", "tbPl-avert", "tbPl-alerte", "tbPl-prob", "tbPl-risc", "tbPl-fisa", "tbPl-sapt", "tbPl-socoteala", "tbPl-port", "tbGridNou", "tbTodo", "tbBotAles"]) {
     assert.ok(tab.includes('id="' + id + '"'), id);
   }
   assert.ok(tab.includes("contTot") && tab.includes("piataAzi") && tab.includes("tbGraficRand") && tab.includes("tbGrilaNoua"));
@@ -33,7 +33,6 @@ await test("ordinea veche rămâne în fișier; așezarea nouă o acoperă", () 
   for (const s of [
     ".pzDemo #tabloubot .tbCadru>*{order:900}",
     ".pzDemo #tabloubot .tbCadru>.sectionHead{order:0}",
-    ".pzDemo #tabloubot .tbCadru>#tbVerdictCard{order:5}",
     ".pzDemo #tabloubot .tbCadru>#pzVerdict{order:10}",
     ".pzDemo #tabloubot .tbCadru>#tbGridLarg{order:12}",
     ".pzDemo #tabloubot .tbCadru>#pzDrumCard{order:20}",
@@ -50,7 +49,6 @@ await test("ordinea veche rămâne în fișier; așezarea nouă o acoperă", () 
     ".pzDemo #tabloubot .tbCadru>#tbDetalii{order:990}",
     "#tabloubot.pzCuColoana.on{display:grid!important",
     "@media (min-width:1181px){#tabloubot .tbGrCol{display:contents}#tabloubot .tbGrStanga{grid-column:1;grid-row:1}#tabloubot #tbCitireCard{grid-column:2;grid-row:1;align-self:start}#tabloubot #tbTrendCard{grid-column:1/-1;grid-row:2}}",
-    "#tabloubot #tbVerdictCard{display:none}",
   ]) assert.ok(css.includes(s), s);
   assert.match(css, /html\.pzDemo #tabloubot\.pzCuColoana\.on\{display:flex!important/);
   assert.match(css, /\.pzDemo #tabloubot \.tbCadru>#tbMcSus\{order:18\}/);

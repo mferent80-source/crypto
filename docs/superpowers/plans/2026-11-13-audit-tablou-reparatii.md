@@ -72,7 +72,7 @@ REGULĂ (verdictul stabil, estimarea din situații asemănătoare, mișcarea fa�
 
 ### D. Reguli noi, cu măsurătoare (jurnalul scris înainte)
 - [x] D1 Verdict stabil (I-873): regim cu histerezis, confirmare pe 2 bare închise, „ține de N bare”, componenta care l-a mișcat.
-- [ ] D2 (PARȚIAL, vezi „Starea la 14.11”) Mișcarea față de grid (I-872): trepte străbătute, ritmul perechilor, becul tradus pentru grid; cardul vechi ascuns scos.
+- [x] D2 (închis în v100.340, 14.11: regimul măsurat în M5 = nedovedit, „bun pentru grid” scos, perechile din drum, cardul vechi scos) Mișcarea față de grid (I-872): trepte străbătute, ritmul perechilor, becul tradus pentru grid; cardul vechi ascuns scos.
 - [x] D3 „Cât de des nimerește” (I-871) pe cartelă + măsurătoarea reluabilă în repo.
 - [x] D4 Jurnalul notei TradingView în colector (I-875).
 
@@ -80,7 +80,7 @@ REGULĂ (verdictul stabil, estimarea din situații asemănătoare, mișcarea fa�
 - [x] E1 Probe: serie de referință pentru formule; generatorul LCG din `proba-ecran-tablou.mjs` înlocuit; probele vechi aduse la zi.
 - [x] E2 Suita întreagă; inventarul „nimic pierdut”; pozele la 412 / 768 / 1920 / 2560, zi și noapte.
 - [x] E3 Revizie independentă pe diferență; reparat ce găsește.
-- [ ] E4 Versiunea v100.339 (badge, BUILD_INFO, cheia SW), raportul de audit, un commit, întrebarea „livrez acum?”, livrarea, paza paginilor.
+- [x] E4 Versiunea v100.339 (badge, BUILD_INFO, cheia SW), raportul de audit, un commit, întrebarea „livrez acum?”, livrarea, paza paginilor. (livrată 14.11.2026, `72c2e92`)
 
 ## Starea la 14.11.2026 (după revizia independentă)
 

@@ -143,8 +143,9 @@ var Consiliu = (function () {
     // v100.65 (el, 02.10: „FA TOT” pe problema (a) din raportul reviziei): motivul VERDE spune doar ce e adevarat - piata linistita,
     // laterala sau cu botul. Directia contra are motivul ei galben (pasul 3), cea amestecata ramane in „Restul” cu titlul ei
     // („Piața dă semnale amestecate”); inainte intrau amandoua aici, sub „Piața e cu botul”. Verdictul nu se schimba (motivul verde nu-l atinge).
-    // revizia Opus a 2b (I1): directia intra in verde DOAR cu tonul „bine” (laterala sau cu botul); „laterală” se citeste din concluzie,
-    // nu din dovezi - amestecata cu un interval lateral iesea verde „Piața e laterală”
+    // revizia Opus a 2b (I1): directia intra in verde DOAR cu tonul „bine”; „laterală” se citeste din concluzie, nu din dovezi - amestecata cu un
+    // interval lateral iesea verde „Piața e laterală”. v100.340 (I-872, M5): piata laterala vine acum cu ton informativ (Directie.rezumat: „lateral”),
+    // deci sta in „Restul”, ca directia amestecata; ramura `lateral` de mai jos mai prinde doar sfaturile vechi, tinute de dinainte
     var li = sfCod("liniste"), di = di0 && di0.ton === "bine" ? di0 : null;
     if (li || di) {
       var lateral = di && /^Piața e laterală/.test(di.rezumat || di.text || "");   // sfaturile vechi (fara „rezumat”) aveau concluzia in text

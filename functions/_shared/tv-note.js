@@ -30,7 +30,11 @@ export function tvDinYahoo(y) {
   const s = String(y || "").toUpperCase();
   if (/^[A-Z][A-Z0-9-]{0,9}$/.test(s)) return { us: s.replace(/-/g, ".") };   // BRK-B (Yahoo) = BRK.B (TradingView)
   const m = /^([A-Z0-9][A-Z0-9-]{0,11})(\.[A-Z]{1,2})$/.exec(s);
-  return m && BURSE[m[2]] ? { ticker: BURSE[m[2]] + ":" + m[1].replace(/-/g, ".") } : null;
+  if (!m || !BURSE[m[2]]) return null;
+  const t = BURSE[m[2]] + ":" + m[1].replace(/-/g, ".");
+  /* v100.340: la LSE simbolul de două litere se scrie cu punct la coadă (LSE:BP., LSE:RR.) - verificat pe scannerul public, 14.11.2026;
+     se cere întâi cu punct, apoi fără (lanț, ca la Pionex → Binance), ca o excepție să nu rămână fără notă */
+  return m[2] === ".L" && /^[A-Z0-9]{2}$/.test(m[1]) ? { tickere: [{ ticker: t + ".", scara: 1 }, { ticker: t, scara: 1 }] } : { ticker: t };
 }
 
 // cererile către scanner (cel mult două): „global” cu tickere întregi, „america” după nume. tinte: [{cheie, tickere: [{ticker, scara}]} | {cheie, ticker} | {cheie, us}]

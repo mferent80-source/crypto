@@ -26,7 +26,7 @@ var IndicatoriBot = (function () {
     { k: "ema", eticheta: "Medii EMA", titlu: "Mediile de 20, 50 și 200 de bare: 20 peste 50 peste 200 = urcare așezată; 20 sub 50 sub 200 = coborâre așezată; altfel neutru." },
     { k: "supertrend", eticheta: "Supertrend", titlu: "Urmăritorul de trend: ↑ cât prețul stă peste linia lui, ↓ sub ea. Aici linia e la ATR 14 × 2,4–3,0 (după cât de agitată e moneda); în TradingView, implicit, ATR 10 × 3 - poate arăta altfel pe aceeași bară." },
     { k: "macd", eticheta: "MACD", titlu: "Impulsul: histograma peste 0 = împinge în sus, sub 0 = în jos." },
-    { k: "adx", eticheta: "ADX", titlu: "Tăria trendului: sub 20 = fără trend (bun pentru grid), peste 25 = trend. Culoarea = cine trage (+DI / −DI)." },
+    { k: "adx", eticheta: "ADX", titlu: "Tăria trendului: sub 20 = fără trend, peste 25 = trend. Culoarea = cine trage (+DI / −DI)." },
     { k: "rsi", eticheta: "RSI", titlu: "Forța: peste 50 cumpărătorii, sub 50 vânzătorii; peste 70 încins, sub 30 epuizat." },
     // v100.339 (I-870): rândul afișa Stoch RSI brut sub numele „Stochastic” („85 încins” cu prețul la mijlocul intervalului) - acum e
     // Stochasticul prețului, ca în TradingView; Stoch RSI are rândul lui

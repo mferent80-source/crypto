@@ -265,10 +265,33 @@ var TabloBot = (function () {
         // v100.339 (I-872, auditul din 13.11): „amplitudine vs treaptă” ieșea „rău” cam o oră din patru cât botul făcea 2 perechi pe oră (ATR-ul
         // pe 70 de minute sub o treaptă nu înseamnă că gridul nu lucrează). Pagina arată în locul ei FAPTUL de care depinde un grid: cât a mers
         // prețul, în trepte, pe lumânările avute (100 × 5 min ≈ 8 h). Nu se judecă: nu e măsurat ce prag „e rău”.
-        var drumT = 0, nT = 0, tPrim = null, tUlt = null;
-        for (var li = 1; li < lumanari.length; li++) { var cA = nr(lumanari[li - 1].close), cB = nr(lumanari[li].close); if (cA !== null && cB !== null && cA > 0 && cB > 0) { drumT += Math.abs(cB - cA); nT++; if (tPrim === null) tPrim = nr(lumanari[li - 1].time); tUlt = nr(lumanari[li].time); } }
+        var drumT = 0, nT = 0, tPrim = null, tUlt = null, cPrim = null, cUltim = null;
+        for (var li = 1; li < lumanari.length; li++) { var cA = nr(lumanari[li - 1].close), cB = nr(lumanari[li].close); if (cA !== null && cB !== null && cA > 0 && cB > 0) { drumT += Math.abs(cB - cA); nT++; if (tPrim === null) { tPrim = nr(lumanari[li - 1].time); cPrim = cA; } tUlt = nr(lumanari[li].time); cUltim = cB; } }
         var oreT = tPrim !== null && tUlt !== null && tUlt > tPrim ? (tUlt - tPrim) / 3600000 : nT * 5 / 60;
-        if (nT >= 12 && treapta > 0 && oreT > 0) m.trepte = { valoare: drumT / treapta / oreT, prag: null, stare: "info", eticheta: cate(Math.round(drumT / treapta), "treaptă", "trepte") + " în ultimele " + String(Math.round(oreT * 10) / 10).replace(".", ",") + " h" };
+        // v100.340 (I-872; revizia independentă: (drum − înaintare) ÷ 2 număra și oscilațiile mai mici de o treaptă, de până la 4,6 ori prea multe):
+        // perechile se numără mergând cu ÎNCHIDERILE pe LINIILE gridului botului. Pe fiecare interval dintre două linii: prețul trebuie să-l
+        // treacă întreg într-un sens (botul intră) și apoi întreg înapoi (botul iese) = o pereche. Long: intră jos, iese sus; short invers.
+        // La începutul ferestrei gridul ȚINE deja loturi (long: pe intervalele de deasupra prețului; short: pe cele de dedesubt) și le închide
+        // când prețul merge în favoarea lui - fiecare închidere e o pereche, ca în socoteala Pionex. Gridul neutru lucrează ca un short peste
+        // prețul de pornire și ca un long sub el. Intervalul în care stă prețul la început nu se poate ști (linia goală) ⇒ cel mult o pereche
+        // lipsă. Între închideri prețul mai atinge linii ⇒ numărul adevărat poate fi mai mare.
+        // Revizia a doua: liniile gridului GEOMETRIC sunt în progresie geometrică (pe linii aritmetice cifra ieșea de 0,4–1,9 ori cea adevărată);
+        // gridul neutru FĂRĂ preț de pornire nu se numără deloc (nu se poate ști ce loturi ține; înainte ieșea ca un long cu loturi); perechile
+        // din ULTIMA ORĂ se numără și separat, ca să stea lângă ultima oră a botului (aceeași fereastră).
+        var nInt = linii - 1, areL = [], scurtInt = [], LJ = [], LS = [], perL = 0, perOra = 0, vazut = false, initL = tr === "long" || tr === "short" ? null : nr(x.initPrice);
+        var geoL = String(x.gridType || "").toLowerCase() === "geometric", poateL = nInt >= 1 && jos > 0 && sus > jos && (tr === "long" || tr === "short" || (initL !== null && initL > 0));
+        var linieL = function (k) { return geoL ? jos * Math.pow(sus / jos, k / nInt) : jos + k * treapta; }, tOra = tUlt !== null && tPrim !== null && tUlt - tPrim >= 3600000 ? tUlt - 3600000 : null;
+        for (var ki = 0; poateL && ki < nInt; ki++) { LJ.push(linieL(ki)); LS.push(linieL(ki + 1)); areL.push(false); scurtInt.push(tr === "short" || (tr !== "long" && LJ[ki] >= initL * (1 - 1e-9))); }
+        for (var lj = 0; poateL && lj < lumanari.length; lj++) { var cx = nr(lumanari[lj].close); if (cx === null || !(cx > 0)) continue; var tx = nr(lumanari[lj].time), epsL = cx * 1e-9;
+          for (ki = 0; ki < nInt; ki++) { var sc = scurtInt[ki];
+            if (!vazut) { areL[ki] = sc ? LS[ki] < cx - epsL : LJ[ki] > cx + epsL; continue; }   /* prima închidere așază starea de pornire */
+            if (!areL[ki]) { if (sc ? cx >= LS[ki] : cx <= LJ[ki]) areL[ki] = true; }
+            else if (sc ? cx <= LJ[ki] : cx >= LS[ki]) { areL[ki] = false; perL++; if (tOra !== null && tx !== null && tx > tOra) perOra++; } }
+          vazut = true; }
+        if (nT >= 12 && treapta > 0 && oreT > 0) m.trepte = { valoare: drumT / treapta / oreT, prag: null, stare: "info", eticheta: cate(Math.round(drumT / treapta), "treaptă", "trepte") + " în ultimele " + String(Math.round(oreT * 10) / 10).replace(".", ",") + " h",
+          // perechiDinDrum: perechile numărate pe liniile gridului (mai sus), pe oră; perechiUltimaOra: câte s-au închis în ultimele 60 de minute
+          // (fără cifră când lumânările nu acoperă o oră); oreDrum: fereastra lumânărilor. Fără cifre la neutrul fără preț de pornire.
+          perechiDinDrum: poateL ? perL / oreT : undefined, perechiUltimaOra: poateL && tOra !== null ? perOra : undefined, oreDrum: oreT };
       }
     }
 

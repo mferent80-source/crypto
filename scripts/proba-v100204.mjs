@@ -32,12 +32,12 @@ await test("urcă / coboară / lateral pe fiecare interval, cu aceeași regulă 
   assert.equal(JSON.stringify(r.map((x) => x.dir)), JSON.stringify(["urca", "coboara", "lateral", "urca", "coboara"]));
   for (const x of r) assert.equal(x.dir, D.analizeaza(pe[x.tf], D.INTERVALE_GRID.find((y) => y.tf === x.tf).orizont, "long").dir);
 });
-await test("față de gridul ales: long ⇒ „coboară” e împotrivă; short invers; neutru ⇒ trendul împinge spre o margine; lateral = bun pentru grid", () => {
+await test("față de gridul ales: long ⇒ „coboară” e împotrivă; short invers; neutru ⇒ trendul împinge spre o margine; lateral = nici cu, nici împotrivă (v100.340: fără „bun pentru grid”, nedovedit)", () => {
   const pe = { "5M": sus(300, 5 * 60000), "15M": jos(300, 15 * 60000), "60M": lat(300, H) };
   const L = D.peIntervale(pe, "long"), S = D.peIntervale(pe, "short"), N = D.peIntervale(pe, "neutru");
-  assert.equal(L[0].fata.ton, "bine"); assert.equal(L[1].fata.ton, "rau"); assert.equal(L[2].fata.ton, "bine");
+  assert.equal(L[0].fata.ton, "bine"); assert.equal(L[1].fata.ton, "rau"); assert.equal(L[2].fata.ton, "neutru");
   assert.equal(S[0].fata.ton, "rau"); assert.equal(S[1].fata.ton, "bine");
-  assert.equal(N[0].fata.ton, "atentie"); assert.equal(N[2].fata.eticheta, "bun pentru grid");
+  assert.equal(N[0].fata.ton, "atentie"); assert.equal(N[2].fata.eticheta, "nu împinge gridul spre o margine");
 });
 await test("„de cât timp”: barele aceleiași stări × intervalul, pe românește (min / h / zile)", () => {
   assert.equal(D.durataTf(6, "5M"), "30 min"); assert.equal(D.durataTf(12, "15M"), "3 h"); assert.equal(D.durataTf(30, "60M"), "1,3 zile");

@@ -331,7 +331,10 @@ async function celula(b, i) {
     return { nume: c[0]?.textContent.trim(), valoare: c[1]?.textContent.trim(), stare: c[2]?.textContent.trim() };
   })()`);
 }
+// v100.340: cardul vechi al verdictului (ascuns din v82) a fost scos din pagină; ce scria în el stă în tbStare.verdictCard
+const CARD_VECHI = { tbNivel: "nivel", tbTitlu: "titlu", tbCeFac: "ceFac", tbDeCe: "deCe" };
 async function textEl(b, id) {
+  if (CARD_VECHI[id]) return b.ev(`(() => { const v = (typeof tbStare !== "undefined" && tbStare.verdictCard) || {}; const x = v[${JSON.stringify(CARD_VECHI[id])}]; return x == null ? null : String(x).trim(); })()`);
   return b.ev(`document.getElementById(${JSON.stringify(id)})?.textContent?.trim() ?? null`);
 }
 async function toasturi(b) {
@@ -923,12 +926,11 @@ async function main() {
       assert.match(r.avert, /429/, `problema nu se vede pe ecran: ${r.avert}`);
     });
 
-    await test("A6. verdictul OPRIT (Task 2) are culoarea lui - nici verde, nici gri de 'nu stiu'", async () => {
-      const cls = await b.ev(`tbNivelClasa("OPRIT")`);
-      assert.ok(cls && cls !== "good" && cls !== "mutedInfo", `OPRIT a primit clasa ${cls}`);
-      const culoare = await b.ev(`(() => { const x = document.getElementById('tbNivel'); const v = x.className; x.className = tbNivelClasa("OPRIT"); const c = getComputedStyle(x).color; x.className = v; return c })()`);
-      const gri = await b.ev(`(() => { const x = document.getElementById('tbNivel'); const v = x.className; x.className = "mutedInfo"; const c = getComputedStyle(x).color; x.className = v; return c })()`);
-      assert.notEqual(culoare, gri, "OPRIT se vede la fel ca 'nu stiu'");
+    await test("A6. (v100.340) cardul vechi al verdictului nu mai e in pagina; verdictul lui se tine in stare, de unde il citesc probele", async () => {
+      const inDom = await b.ev(`["tbVerdictCard","tbNivel","tbTitlu","tbCeFac","tbDeCe"].filter((id) => document.getElementById(id)).join(",")`);
+      assert.equal(inDom, "", `inca in pagina: ${inDom}`);
+      const v = await b.ev(`JSON.stringify(tbStare.verdictCard || null)`);
+      assert.ok(v && v !== "null" && /"nivel":"[A-Z]/.test(v) && /"titlu":"/.test(v), `verdictul nu e in stare: ${v}`);
     });
 
     await test("A7. reteaua cazuta ajunge la explicaEroarea CU numele TypeError; perechile lipsa intra in istoric ca null", async () => {

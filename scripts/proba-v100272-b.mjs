@@ -120,7 +120,7 @@ await test("2b banda de sus: lângă prețul viu, distanța la lichidare din pre
 });
 await test("2c KPI „Lichidare” din Tablou pe prețul viu (tbKpiLichDeseneaza, chemat și la fiecare tranzacție prin tbKpiPretDeseneaza)", () => {
   const { els, $ } = pagina();
-  const box = ruleaza(["tbKpiLichDeseneaza", "tbKpiPretDeseneaza"], { $, TextRo, botiNr, tbPretScurt: String, TabloExtra: { distanteGrid: () => null }, pvBotLive: (b) => PV.botLaPret(b, 95) });
+  const box = ruleaza(["tbKpiLichDeseneaza", "tbKpiTotalViuDeseneaza" /* v100.340: totalul la prețul viu */, "tbKpiPretDeseneaza"], { $, TextRo, botiNr, tbPretScurt: String, TabloExtra: { distanteGrid: () => null }, pvBotLive: (b) => PV.botLaPret(b, 95) });
   box.tbKpiPretDeseneaza(BOT_L);
   assert.equal(els.tbKpiLich.textContent, "5,3%"); assert.match(els.tbKpiLich.className, /bad/); assert.equal(els.tbKpiLichSub.textContent, "prețul trebuie să scadă până la 90");
   assert.doesNotMatch(fnApp("tbDeseneazaKpi"), /b\.distantaLichidarePct/, "tbDeseneazaKpi nu mai scrie distanța din citire");

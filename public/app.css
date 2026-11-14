@@ -1150,8 +1150,14 @@ body{min-height:100vh;overflow-x:hidden}
 .accountCell .accountLabel{display:block;color:var(--muted);font-size:12px;letter-spacing:0;margin-top:2px}
 .accountCell .fine{color:var(--muted);font-size:12px}
 .noticeBad{margin:6px 0;padding:8px 10px;border:1px solid rgba(224,82,74,.34);border-radius:5px;background:rgba(224,82,74,.07);font-size:13px;line-height:1.4}
-#tbSpreSetari{margin-top:8px}
-#tbNivel.tbOprit{color:#5B8FC7}
+#tbSpreSetari{margin:0 0 0 8px}
+#tbRegimGrid{white-space:pre-line}
+/* v100.340 (cele două revizii + măsurat în browser): pe calculator rândul de avertismente (și butonul spre parolă) stă în capul cartelei cifrelor,
+   chiar sub verdict; pe telefon / tabletă și fără bot e frate cu gridul larg - acolo îi trebuie ordinea lui (copiii fără regulă merg la coadă, order:900) */
+#tabloubot .tbSus>#tbAvertVizibil{grid-column:1 / -1;margin:0 0 10px}
+.pzDemo #tabloubot .tbCadru>#tbAvertVizibil{order:3}
+/* „la prețul viu”, ascuns, nu ține loc nici pe ecranul lat (acolo copiii coloanei de detalii sunt display:block) */
+#tabloubot #tbKpiTotalViu[hidden]{display:none!important}
 /* "—" = lipsa, nu valoare: gri estompat (ambra .neutral se citea ca o cifra) */
 .lipsa,b.lipsa,.n.lipsa{color:#8799AA!important;font-weight:600}
 .parolaLipsa{margin:0 0 10px}.parolaLipsa button{margin-left:6px}
@@ -1218,15 +1224,6 @@ body.peTablou .toolbar,body.peTablou .heroStrip,body.peTablou .tabs{display:none
 #tabloubot .tbIdent h3{margin:0;font-size:18.5px}
 #tabloubot .tbActiuni{display:flex;gap:8px;align-items:center}
 
-#tabloubot .tbVerdict{display:grid;grid-template-columns:minmax(220px,1fr) 2fr;gap:18px;align-items:center;padding:14px 18px;border-radius:var(--tb-r);background:var(--tb-fond);border:1px solid var(--tb-linie);border-left:4px solid var(--muted);margin-bottom:12px}
-#tabloubot .tbVerdict:has(#tbNivel.bad){border-left-color:var(--bad)}
-#tabloubot .tbVerdict:has(#tbNivel.good){border-left-color:var(--good)}
-#tabloubot .tbVerdict:has(#tbNivel.tbWarn){border-left-color:var(--warn)}
-#tabloubot .tbVerdictStanga{display:flex;flex-direction:column;gap:2px}
-#tabloubot #tbNivel{font-size:13px;font-weight:600;letter-spacing:0}
-#tabloubot #tbTitlu{margin:0;font-size:19.5px;line-height:1.2}
-#tabloubot .tbVerdictDreapta p{margin:0 0 4px}
-#tabloubot #tbCeFac{font-size:15px;color:var(--text)}
 
 #tabloubot .tbKpi{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr;border-radius:var(--tb-r);background:var(--tb-fond);border:1px solid var(--tb-linie);margin-bottom:12px}
 #tabloubot .tbKpiCel{display:flex;flex-direction:column;gap:6px;padding:16px 18px;min-width:0}
@@ -1288,8 +1285,6 @@ body.peTablou .toolbar,body.peTablou .heroStrip,body.peTablou .tabs{display:none
   #tabloubot .tbRand,#gridset .tbRand{grid-template-columns:minmax(0,1fr)}
 }
 @media(max-width:560px){
-  #tabloubot .tbVerdict{grid-template-columns:1fr;gap:6px;padding:12px 14px}
-  #tabloubot #tbTitlu{font-size:17px}
   #tabloubot .tbKpiCel{padding:12px 14px}
   #tabloubot .tbKpiVal{font-size:19.5px}#tabloubot .tbKpiCel:first-child .tbKpiVal{font-size:21px}
   #tabloubot .tbAntet{flex-wrap:wrap}
@@ -1439,7 +1434,6 @@ body.peTablou main>.note{display:none}
 #tabloubot .grTabel th,#tabloubot .grTabel td{padding:5px 8px;text-align:left;border-bottom:1px solid var(--tb-linie)}
 @media (max-width:600px){#tabloubot .tbSemCap{flex-direction:column;gap:6px}}
 /* v82: semaforul inlocuieste verdictul vechi (masuratoarea ritmului ramane in "Masurile, dovada") */
-#tabloubot #tbVerdictCard{display:none}
 #jurnaltrade .jtCireasa{border:1px solid rgba(224,82,74,.5);border-radius:5px;padding:14px 16px;margin-bottom:12px;background:linear-gradient(135deg,rgba(224,82,74,.10),rgba(20,28,36,.6))}
 #jurnaltrade .jtCireasa h4{margin:0 0 10px;font-size:16px}
 #jurnaltrade .jtCirGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
@@ -2635,7 +2629,6 @@ body:before{background-image:none!important}
 /* Ordinea: decizie → poziție → acțiune → context → grafic → de ce → bani → planul tău → istoric → următorul bot → detalii (doar CSS order, nimic mutat în DOM) */
 .pzDemo #tabloubot .tbCadru>*{order:900}
 .pzDemo #tabloubot .tbCadru>.sectionHead{order:0}
-.pzDemo #tabloubot .tbCadru>#tbVerdictCard{order:5}
 .pzDemo #tabloubot .tbCadru>#pzVerdict{order:10}
 .pzDemo #tabloubot .tbCadru>#tbGridLarg{order:12}
 .pzDemo #tabloubot .tbCadru>#pzDrumCard{order:20}
@@ -3748,8 +3741,6 @@ button.pzVoce{width:auto;min-height:0;margin:0;background:transparent;font-weigh
 #tabloubot .tbTvBtn{font-size:13.5px}
 #tabloubot .tbPretViu b{font-size:15px}
 #tabloubot .tbIdent h3{font-size:20px}
-#tabloubot #tbNivel{font-size:13.5px}
-#tabloubot #tbTitlu{font-size:20px}
 #tabloubot .tbKpiVal{font-size:30px}
 #tabloubot .tbKpiCel:first-child .tbKpiVal{font-size:30px}
 :is(#tabloubot,#t212,#dash,#rangefilter) .grPlanCap{font-size:13.5px}
@@ -3759,7 +3750,7 @@ button.pzVoce{width:auto;min-height:0;margin:0;background:transparent;font-weigh
 #tabloubot .tbLinie{font-size:13.5px}
 #tabloubot .tbLinieTotal{font-size:15px}
 #tabloubot .tbAvert{font-size:13.5px}
-@media(max-width:560px){#tabloubot #tbTitlu{font-size:20px}#tabloubot .tbKpiVal{font-size:20px}#tabloubot .tbKpiCel:first-child .tbKpiVal{font-size:20px}}
+@media(max-width:560px){#tabloubot .tbKpiVal{font-size:20px}#tabloubot .tbKpiCel:first-child .tbKpiVal{font-size:20px}}
 @media(max-width:560px){#tabloubot .tbIdent h3{font-size:15px}#tabloubot .tbActiuni .actionGhost{font-size:13.5px}}
 #tabloubot .tbSfat p{font-size:13.5px}
 #tabloubot .tbScenCap{font-size:13.5px}
@@ -4400,7 +4391,6 @@ button.pzVoce{width:auto;min-height:0;margin:0;background:transparent;font-weigh
 :is(#tabloubot,#t212,#dash,#rangefilter).tbZi .edgeCalRow.warn b{color:#8A5A00}
 body :is(#tabloubot,#t212,#dash,#rangefilter).tbZi .dashOperations .decisionTool.bad{outline:1px solid rgba(204,58,50,.28)}
 :is(#tabloubot,#t212,#dash,#rangefilter).tbZi .noticeBad{border:1px solid rgba(204,58,50,.34);background:rgba(204,58,50,.07)}
-:is(#tabloubot,#t212,#dash,#rangefilter).tbZi #tbNivel.tbOprit{color:#2456E6}
 :is(#tabloubot,#t212,#dash,#rangefilter).tbZi .lipsa,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi b.lipsa,:is(#tabloubot,#t212,#dash,#rangefilter).tbZi .n.lipsa{color:#66768B!important}
 #tabloubot.tbZi,#dash.tbZi{--tb-linie:rgba(14,26,43,.16);--tb-fond:#FFFFFF;--tb-fond2:#F5F7FA}
 #tabloubot.tbZi .tbGauge{background:rgba(14,26,43,.14)}

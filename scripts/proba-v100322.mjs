@@ -239,7 +239,7 @@ await test("așezarea: blocul v100.322 e doar pe calculator (≥ 1181 px) și pu
 });
 await test("detaliile cifrelor: 4 coloane sub grafic, în ordinea cifrelor; tbKpiAsezare le mută acolo pe calculator și ÎNAPOI sub cifre pe ecranele înguste", () => {
   assert.match(HTML, /<div class="tbKpiDetalii" id="tbKpiDetalii" hidden aria-label="Detaliile cifrelor"><div class="tbKpiDetCol"><span class="tbEt2">Rezultat total<\/span><\/div><div class="tbKpiDetCol"><span class="tbEt2">Până la lichidare<\/span><\/div><div class="tbKpiDetCol"><span class="tbEt2">Prețul în grid<\/span><\/div><div class="tbKpiDetCol"><span class="tbEt2">Piața față de bot<\/span><\/div><\/div><div class="tbGraficRand">/);
-  assert.match(APP, /var TB_KPI_DET=\[\["tbKpiGrid","tbKpiTotalSub"\],\["tbKpiLichSub"\],\["tbKpiPretSub"\],\["tbKpiPiataSub"\]\];/);
+  assert.match(APP, /var TB_KPI_DET=\[\["tbKpiGrid","tbKpiTotalSub","tbKpiTotalViu"\],\["tbKpiLichSub"\],\["tbKpiPretSub"\],\["tbKpiPiataSub"\]\];/);   /* v100.340: și „la prețul viu”, lângă ora citirii */
   const f = functie(APP, "tbKpiAsezare");
   assert.match(f, /var t=lat\?dest\.children\[i\]:cel\[i\]/, "pe îngust se întorc în cartela cifrei");
   assert.match(f, /dest\.hidden=!lat;/);

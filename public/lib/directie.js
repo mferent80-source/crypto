@@ -114,7 +114,9 @@ var Directie = (function () {
   // Un grid neutru castiga din oscilatie - orice trend il impinge spre o margine.
   function fataDeBot(dir, directieBot) {
     var d = String(directieBot || "").toLowerCase();
-    if (dir === "lateral") return { eticheta: "bun pentru grid", ton: "bine" };
+    // v100.340 (I-872, M5): eticheta veche lăuda lateralul ca prielnic gridului, lucru nedovedit - becul lateral spune doar ce e (nici cu, nici împotrivă)
+    // și nu mai e verde. Vorba se schimbă doar dacă o măsurătoare o dovedește (docs/cercetare/2026-11-13-tablou-acuratete.md, M5 testul C).
+    if (dir === "lateral") return { eticheta: d === "long" || d === "short" ? "nici cu botul, nici împotrivă" : "nu împinge gridul spre o margine", ton: "neutru" };
     if (d === "long") return dir === "urca" ? { eticheta: "cu botul", ton: "bine" } : { eticheta: "împotriva botului", ton: "rau" };
     if (d === "short") return dir === "coboara" ? { eticheta: "cu botul", ton: "bine" } : { eticheta: "împotriva botului", ton: "rau" };
     return { eticheta: "împinge gridul spre o margine", ton: "atentie" };
@@ -165,7 +167,7 @@ var Directie = (function () {
       var contra = (b4.dir === "urca" && b4.formare.pct < 0) || (b4.dir === "coboara" && b4.formare.pct > 0) || b4.dir === "lateral";
       if (contra) {
         nota = "dar în bara de 4 ore de acum prețul " + (b4.formare.pct < 0 ? "scade" : "crește") + " cu " + Math.abs(b4.formare.pct).toFixed(1).replace(".", ",") + "%";
-        if (z.ton === "bine") z.ton = "atentie";
+        if (z.ton === "bine" || z.ton === "lateral") z.ton = "atentie";
       }
     }
     // v100.62 (specul „sfaturi concise”, pachetul 2): o fraza, fara majuscule de strigat, virgula zecimala; „dovezi” = textul fara
@@ -177,7 +179,7 @@ var Directie = (function () {
   function rezumatBare(mari, imp, cu, lat) {
     if (imp.length === mari.length) return { concluzie: "Piața merge împotriva botului", ton: "rau" };
     if (imp.length) return { concluzie: "Semnale amestecate", detaliu: "o parte merge împotriva botului", ton: "atentie" };
-    if (lat.length === mari.length) return { concluzie: "Piața e laterală", detaliu: "regimul potrivit unui grid", ton: "bine" };
+    if (lat.length === mari.length) return { concluzie: "Piața e laterală", ton: "lateral" };   /* v100.340: ton propriu (nici „cu botul”, nici verde); fără lauda regimului (nedovedită) */
     if (cu.length) return { concluzie: "Piața merge cu botul", ton: "bine" };
     return { concluzie: "", ton: "atentie" };
   }

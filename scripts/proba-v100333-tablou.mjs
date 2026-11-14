@@ -75,13 +75,14 @@ await test("🔵1a. Scenariu.scenarii(…, totalLa): totalul rândului e cel al 
       assert.ok(Math.abs(r.total - t) < 1e-9, o.dir + " la " + r.pret + ": " + r.total + " ≠ " + t);
       assert.equal(r.pozitie, vechi.randuri[i].pozitie); assert.equal(r.gol, vechi.randuri[i].gol);
     });
-    assert.ok(vechi.randuri.some((r, i) => Math.abs(r.total - nou.randuri[i].total) > 0.5), "premisa: modelele chiar diferă (comisionul de închidere)");
+    /* v100.340: TabloExtra socotește acum pe nivelurile gridului (ca Scenariu.la) ⇒ la gridul aritmetic diferența e doar comisionul de închidere */
+    assert.ok(vechi.randuri.some((r, i) => Math.abs(r.total - nou.randuri[i].total) > 0.005), "premisa: modelele chiar diferă (comisionul de închidere)");
   }
 });
 await test("🔵1b. pagina: „Dacă prețul ajunge la…” și banii din „Contează acum” (tbCtBani) dau totalul lui TabloExtra.totalCuGridLa", () => {
   const { ctx, pune } = pagina(ACUM), d = dom(), b = bot(LONG5());
   Object.assign(ctx, { $: d.$, tbStare: { bot: b, botBrut: b.brut, routeOk: true, scenariuPropriu: null } });
-  pune("botiNr", "botiBan", "tbPretScurt", "tbFormateazaSemn", "tbTinteScenariu", "tbScenLichidat", "renderTabloScenarii", "tbCtBani");   /* v100.339: + tbScenLichidat */ try { pune("tbTotalLa"); } catch (e) { /* v100.332 nu o are */ }
+  pune("botiNr", "botiBan", "tbPretScurt", "tbFormateazaSemn", "tbTinteScenariu", "tbScenLichidat", "renderTabloScenarii", "tbCtBani");   /* v100.339: + tbScenLichidat */ try { pune("tbTotalLa"); } catch (e) { /* v100.332 nu o are */ } try { pune("tbPozitieLa"); } catch (e) { /* până la v100.339 nu există (v100.340: poziția din același model ca totalul) */ }
   const t = ctx.TabloExtra.totalCuGridLa(b, 90);
   assert.ok(Math.abs(ctx.tbCtBani(b, 90) - t) < 1e-9, "tbCtBani " + ctx.tbCtBani(b, 90) + " ≠ " + t);
   ctx.renderTabloScenarii();

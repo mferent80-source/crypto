@@ -15,6 +15,7 @@ Scriptul: `scripts/cercetare-v100339-acuratete.mjs` (rulează codul paginii prin
 | M3b | 13.11.2026 | banda estimării pe cuantila Student (K3), doar mărimea pe mers aleator | 0 pe piață (mărimea) | K3 5,3% ⇒ regula paginii |
 | M4 | 13.11.2026 | confirmarea lui E1 pe date de dinaintea explorării | 2 | vezi mai jos |
 | R1 | 14.11.2026 | revizia independentă: mărimea lui K1 / K2 / K3 pe altă sămânță (777) | 0 pe piață | K3 5,8% — vezi „Revizia independentă” |
+| M5 | 14.11.2026 | regimul pentru grid: ADX și lățimea benzilor față de eficiența și drumul următoarelor 24 h; becul „lateral” | 12 | toate NEDOVEDITE (A și C: efect zero; B: ×1,2–1,3, sub prag) — vezi „M5 — rezultatul” |
 
 Corecția pentru câte teste s-au făcut: fiecare măsurătoare își corectează intervalele cu numărul TUTUROR testelor cu verdict de până la ea
 inclusiv (M1: 6; M2: 8; M3: 10; M4: 12).
@@ -208,3 +209,211 @@ rezultatul la i + 4; vecinii estimării au rezultatele în trecut; M4 e pe date 
 **Ce s-a schimbat în cod după revizie (fără nicio măsurătoare nouă pe piață):** randamentul exact zero al unui vecin nu mai e numărat
 „coborâre” (se împarte pe jumătate; pe mers aleator nu apare, deci mărimea e aceeași); fraza de pe pagină spune că nota TradingView măsurată
 e formula ei refăcută pe bare închise, iar pe fișa unei acțiuni că cifra e a crypto-ului.
+
+---
+
+## M5 — regimul pentru grid (regulile scrise 14.11.2026, ÎNAINTE de orice cifră a lui)
+
+**De ce.** Ideea I-872 cerea, pe lângă faptele deja puse pe pagină (drumul prețului în trepte, ritmul perechilor), un regim spus în vorbele
+gridului și „becul tradus pentru grid”. M4 n-a confirmat că becul lateral aduce mai puțină mișcare, așa că regimul nu poate apărea ca sfat
+fără o probă a lui. Un grid câștigă din oscilație (drumul prețului) și pierde din înaintarea într-o singură parte (poziția rămasă), deci
+întrebarea botului e: după eticheta de acum, următoarele 24 de ore sunt mai mult oscilație sau mai mult înaintare, și cât drum fac?
+
+**Ipotezele (mecanism).**
+- (A) Înaintarea are o inerție scurtă pe perp-uri (lichidări în lanț, ordine care urmăresc mișcarea), iar intervalele țin cât cei care vând
+  sus și cumpără jos sunt mai mulți: după un ADX mare, eficiența următoarelor 24 h (cât din drum e înaintare) e mai mare decât după un ADX mic.
+- (B) Volatilitatea vine în ciorchini (fapt cunoscut): după benzi Bollinger largi, drumul următoarelor 24 h e mai lung decât după benzi strânse.
+- (C) Becul „lateral” al paginii (`Directie.analizeaza`) e o etichetă pentru aceeași stare ca ADX-ul mic din (A).
+
+**Clasificatorul (fixat acum, din pragurile de manual; nu se reglează după rezultat).** Pe bare închise, la bara i, doar cu bare ≤ i:
+- axa trendului: ADX(14) al paginii (`calc`) ≥ 25 ⇒ „trend”; < 20 ⇒ „lateral”; între ele ⇒ „tranziție”;
+- axa volatilității: lățimea benzilor Bollinger (20; 2) împărțită la media lor, ca percentilă în ultimele 100 de bare (cu bara i):
+  < 30 ⇒ „joasă”; > 70 ⇒ „ridicată”; altfel „normală”.
+Același cod îl folosesc pagina și măsurătoarea (`public/lib/regim-grid.js`).
+
+**Ce se măsoară, pe următoarele 24 de ore** (1h: 24 de bare; 4h: 6 bare; pe închideri):
+- eficiența înainte: EF = |c[i+h] − c[i]| ÷ Σ|c[k+1] − c[k]|, k = i … i+h−1 (0 = numai oscilație, 1 = numai înaintare);
+- drumul înainte: D = Σ|c[k+1] − c[k]| ÷ c[i], în procente.
+
+**Testele** (fiecare pe 1h și pe 4h, pe fereastra principală și pe cea mai veche ⇒ 12 intervale cu verdict):
+- A: media EF după „trend” minus media EF după „lateral” (se așteaptă > 0);
+- B: media D după volatilitate „ridicată” împărțită la media D după „joasă” (se așteaptă > 1);
+- C: media EF după becul cu direcție minus media EF după becul „lateral” (becul socotit ca în M4; se așteaptă > 0).
+
+**Dovada.** Unitatea e ziua barei i; bootstrap pe blocuri de 5 zile × 2.000, sămânța 20261113; eșantion la fiecare a 4-a bară; datele:
+aceleași 21 de perechi Binance perp, cu `--pana=1794596400000`. Corecția: la **32 de teste** (cele ~20 de până acum, numărate cum a cerut
+revizia, plus aceste 12). O afirmație e „dovedită” pe un interval doar dacă marginea de jos corectată trece de 0 (A, C) sau de 1 (B) pe
+**ambele** ferestre, principală și veche. Ca să conteze și ca mărime: la A și C diferența estimată ≥ 0,02; la B raportul estimat ≥ 1,2, tot
+pe ambele ferestre. O clasă cu sub 500 de eșantioane pe o fereastră ⇒ „prea puține”, nu se judecă.
+
+**Datele nu sunt neatinse.** Fereastra principală a fost folosită la M1–M3 (direcția), cea veche la M4 (becul lateral față de mișcarea
+absolută la 4 bare, neconfirmat). M5 pune altă întrebare, dar pe aceleași prețuri: de aceea intră în corecție și se cere pe ambele ferestre.
+Bare cu adevărat nevăzute nu există încă (doar cele de după 13.11.2026 19:00 UTC).
+
+**Ce NU e.** Nu e o probă că botul câștigă într-un regim; nu dă nimănui culoare (verde / roșu).
+
+**Hotărârea, scrisă dinainte.**
+- A dovedit pe un interval ⇒ rândul „oscilație sau trend” spune regimul pe acel interval și fraza măsurată (eficiența următoarelor 24 h după
+  „lateral” față de după „trend”). Nedovedit ⇒ regimul apare doar ca descriere a ultimelor bare, cu „ce urmează: nedovedit”.
+- B dovedit ⇒ lângă volatilitate, de câte ori e mai lung drumul următor după benzi largi față de benzi strânse. Nedovedit ⇒ doar percentila.
+- C dovedit ⇒ becul „lateral” își păstrează „bun pentru grid”, cu cifra măsurată în explicația lui. Nedovedit ⇒ „bun pentru grid” se scoate
+  (rămâne „lateral de N bare”): e o afirmație fără dovadă pe o pagină cu bani reali.
+- Oricum ar ieși: fără culoare, și se oprește aici — nu se încearcă alte praguri sau alte orizonturi.
+
+### M5-H0 — mărimea testelor pe serii fără efect (scris 14.11.2026, înaintea rulării pe piață)
+
+Testele A, B și C sunt statistici noi (diferențe și rapoarte de medii pe clase, cu ferestre de 24 h care se suprapun), deci întâi se vede cât
+de des „găsesc” ceva unde nu e nimic. Serii sintetice, 21 pe rulare × 2.000 de bare, mulberry32:
+- pentru A și C: mers aleator cu volatilitate în ciorchini (log-volatilitatea e un AR(1) cu 0,98), fără nicio inerție a direcției — eficiența
+  următoarelor 24 h nu depinde de trecut, deci diferența adevărată e 0;
+- pentru B: mers aleator cu volatilitate constantă — lățimea benzilor nu spune nimic despre drumul următor, deci raportul adevărat e 1.
+Pe fiecare rulare, exact procedura M5 (aceleași clase, eșantion la a 4-a bară, bootstrap pe blocuri de 5 zile, 500 de trageri), pe 1h.
+**Se numără** în câte rulări din 200 intervalul de 95% (necorectat) lasă afară valoarea adevărată. **Poarta:** cel mult 7,5% la fiecare test
+(5% nominal, plus zgomotul simulării). Dacă un test trece de 7,5%, verdictul lui din M5 se ia cu blocuri de 10 zile în loc de 5 — o singură
+schimbare, scrisă acum — și se spune în rezultat.
+
+*Notă de calcul, pusă înaintea rezultatului:* în simulare ADX-ul vine din implementarea de referință (`scripts/lib/indicatori-referinta.mjs`),
+socotit o dată pe serie; e egal cu al paginii în limita a 0,3 (proba E1 din v100.339). Cu motorul paginii (≈ 21 ms pe chemare) cele 200 de
+rulări ar fi cerut vreo 8 ore. M5 pe piață rămâne cu `calc`, cum scrie mai sus, și își arată verdictul și cu blocuri de 10 zile, ca regula
+porții să nu ceară o a doua rulare.
+
+### M5 — amendament, scris ÎNAINTEA rulării pe piață (14.11.2026, după revizia independentă)
+
+**Ce s-a întâmplat.** Simularea de mai sus a fost oprită la 180 de rulări din 200: în afara intervalului de 95% au ieșit A 15 (8,3%), B 15
+(8,3%), C 12 (6,7%) — peste cele 5% nominale. Un revizor independent a refăcut-o cu 1.000 de rulări: A 9,0% și B 8,6% la 95%, iar la marginea
+corectată la 32 de teste **1,9% și 1,6% în loc de 0,16%** (de vreo zece ori prea des). Cauza: prea puține blocuri (12–21), iar marginea
+corectată e a treia cea mai mică din 2.000 de trageri. Remediul scris de mine (blocuri de 10 zile) o face mai rău (11% și 3–4%), fiindcă
+înjumătățește numărul de blocuri. **Măsurătoarea pe piață n-a pornit: am oprit-o înainte; nicio cifră de piață n-a fost văzută.** Regulile
+de mai jos le înlocuiesc pe cele de dovadă de mai sus; clasificatorul, testele A / B / C, datele, ferestrele și oprirea rămân neschimbate.
+
+**Dovada, cea nouă.** Zilele se grupează în blocuri de 5 zile calendaristice la rând (de la prima zi a ferestrei). Pe fiecare bloc, cu toate
+perechile la un loc: A = media EF după „trend” minus media EF după „lateral”; B = logaritmul raportului dintre media D după benzi largi și
+media D după benzi strânse; C = ca A, pe becul paginii. Un bloc în care una dintre clase are sub 20 de eșantioane se sare. Testul: Student,
+într-o singură parte (media blocurilor > 0), cu n − 1 grade de libertate. Pragul verdictului: p ≤ 0,05 ÷ 64 (într-o parte; e același prag
+ca „marginea corectată la 32 de teste” de dinainte).
+
+**Mărimea, verificată ÎNAINTEA pieței** (`--ce=m5h0`, rescris): două lumi fără efect, 21 de serii × 3.000 de bare (ca fereastra de 1h) —
+serii independente și serii legate (factor comun cu corelația ≈ 0,7 și volatilitate comună) — cel puțin 10.000 de rulări fiecare pentru A și
+B. Se numără respingerile la 2,5% într-o parte și la pragul verdictului (nominal 0,078%). **Poarta:** la pragul verdictului, cel mult de două
+ori nominalul (0,16%) în ambele lumi. Dacă trece, pragul lui t se ridică la cuantila din simulare (lumea mai rea) la care respingerile ajung
+la nominal — calibrare pe ipoteza nulă, ca la K3 — și se spune în rezultat. Testul C e aceeași statistică precum A (aceeași formă, altă
+etichetă) și ia pragul lui A; mărimea lui se verifică pe 300 de rulări la 2,5% (becul cere o socoteală lentă pe fiecare eșantion).
+În simulare etichetele vin din `RegimGrid.clasificaSerie` (aceleași praguri, socotite pe toată seria deodată; proba cere egalitatea cu
+`clasifica` bară cu bară) și din ADX-ul de referință; pe piață rămâne `etichetaM5` (cu `calc`), drumul verificat mecanic de probă.
+
+**Mărimile minime, ridicate** (revizorul: prea joase): A și C: diferența estimată ≥ 0,03; B: raportul estimat ≥ 1,3 — pe ambele ferestre,
+ca estimare pe toată fereastra.
+
+**Ce cifră se pune pe pagină** dacă un test e dovedit: efectul mai MIC dintre cele două ferestre.
+
+**Becul „bun pentru grid”** (revizorul: o diferență de eficiență nu arată că gridul câștigă, iar regula „C dovedit ⇒ rămâne «bun pentru
+grid»” nu decurge din test). Regula se înăsprește: vorba „bun pentru grid” se scoate **oricum ar ieși C**, iar culoarea becului lateral nu
+mai e verde. Dacă C e dovedit, becul lateral spune ce s-a măsurat („de obicei oscilează mai mult decât înaintează”); dacă nu, rămâne
+„lateral de N bare”. La fel explicația rândului ADX („sub 20 = fără trend”), fără „bun pentru grid”.
+
+**De știut și după:** la 1h cele două ferestre sunt perioade vecine din aceeași piață (nu două piețe diferite); pe 4h simularea de mărime nu
+se face (aceeași procedură, cu de patru ori mai multe blocuri).
+
+### M5-H0, a doua: mărimea dovezii pe blocuri (14.11.2026, 10:21–10:44; ÎNAINTEA pieței)
+
+`node scripts/cercetare-v100339-acuratete.mjs --ce=m5h0 --rulari=10000 --lume=indep|legate` (sămânța 20261113; 21 de serii × 3.000 de bare
+de 1h, fără efect; testul Student pe blocuri de 5 zile, într-o parte).
+
+| lumea | test | respingeri la 2,5% (nominal 2,50%) | la pragul verdictului, p ≤ 0,05 ÷ 64 (nominal 0,078%) | t la care respingerile ajung la nominal |
+|---|---|---|---|---|
+| serii independente | A | 1,24% | 0,030% (3 din 10.000) | 3,41 |
+| serii independente | B | 2,13% | 0,090% (9 din 10.000) | 3,75 |
+| serii legate (factor comun 0,7, volatilitate comună) | A | 0,00% | 0,000% (0 din 10.000) | 1,49 |
+| serii legate (factor comun 0,7, volatilitate comună) | B | 0,71% | 0,000% (0 din 10.000) | 2,84 |
+
+**Poarta: trecută** în ambele lumi (cel mult 0,090% față de limita de 0,16%). Pragul verdictului rămâne p ≤ 0,05 ÷ 64, fără calibrare
+(`--tprag` nu se folosește).
+
+**De știut:** în lumea legată testul e mult prea prudent (la 2,5% n-a respins niciodată din 10.000; cu seriile legate, toate monedele poartă
+aceeași etichetă în același timp, deci blocurile cu ambele clase sunt puține și zgomotoase). Piața adevărată seamănă mai mult cu lumea
+legată. Urmarea: un „DOVEDIT” e de crezut; un „NEDOVEDIT” spune puțin (testul are putere mică acolo) — „nu s-a dovedit” nu înseamnă „s-a
+dovedit că nu”.
+
+**Regula pentru C, scrisă acum, înainte să văd fie simularea lui, fie piața.** Simularea lui C (becul paginii pe fiecare eșantion; 3 × 100
+de rulări, semințele 101, 102, 103, lumea independentă) e încă în lucru. Dacă la 2,5% C respinge de mai mult de două ori nominalul (16 sau
+mai multe din 300), verdictul lui C nu se dă: rămâne „nemăsurat corect”, iar pagina nu spune nimic măsurat despre bec. Altfel C se judecă
+la fel ca A (p ≤ 0,05 ÷ 64, diferența ≥ 0,03 pe ambele ferestre).
+
+**Ordinea păstrată:** măsurătoarea pe piață pornește acum în fundal, cu ieșirea într-un fișier pe care NU îl citesc până nu se termină
+simularea lui C și nu îi scriu aici rezultatul.
+
+#### M5-H0, diagnostic (14.11.2026, 11:05; tot înaintea cifrelor de piață)
+
+De ce e testul prea prudent în lumea legată — 400 de rulări cu altă sămânță (`--samanta=7`), doar ca să văd media lui t și câte blocuri
+intră în test (nu schimbă nicio regulă):
+
+| lumea | test | media lui t | mediana | blocuri în test |
+|---|---|---|---|---|
+| independente | A | −0,33 | −0,29 | 21 |
+| independente | B | −0,06 | −0,06 | 21 |
+| legate | A | −1,74 | −1,67 | 21 |
+| legate | B | −0,62 | −0,67 | 21 |
+
+Nu lipsesc blocurile (intră toate cele 21); **statistica lui A e trasă în jos chiar fără efect**: când volatilitatea vine în ciorchini
+comuni tuturor monedelor, după eticheta „trend” eficiența următoarelor 24 de bare iese ceva mai mică decât după „lateral”, deși prețul nu
+are nicio inerție. Testul rămâne cum e scris (nu scad din el o abatere luată dintr-o lume simulată: ar depinde de cât de bine seamănă
+simularea cu piața). Urmarea, spusă dinainte: pe piață un „NEDOVEDIT” la A sau la C nu arată că efectul lipsește — testul pornește cu un
+handicap de vreo 1,7 unități de t; un „DOVEDIT” ar fi cu atât mai de crezut.
+
+#### M5-H0, testul C (14.11.2026, 10:21–11:17; scris înainte de a citi piața)
+
+`--ce=m5h0 --bec --rulari=100 --lume=indep --samanta=101 | 102 | 103` (becul paginii, `Directie.analizeaza`, pe fiecare eșantion):
+
+| sămânța | respingeri C la 2,5% | la pragul verdictului |
+|---|---|---|
+| 101 | 1 din 100 | 0 |
+| 102 | 2 din 100 | 0 |
+| 103 | 2 din 100 | 0 |
+
+În total **5 din 300 (1,7%; nominal 2,5%)**, sub limita scrisă (16). Testul C se judecă la fel ca A: p ≤ 0,05 ÷ 64 și diferența ≥ 0,03 pe
+ambele ferestre. Abia acum deschid rezultatul măsurătorii pe piață.
+
+### M5 — rezultatul (rulat 14.11.2026, 10:45–11:05, o singură dată; citit 11:18, după simularea lui C)
+
+`node scripts/cercetare-v100339-acuratete.mjs --ce=m5 --pana=1794596400000` (lumânările din cache-ul auditului; sămânța nu intră în test:
+dovada pe blocuri nu trage la sorți). Pragul: p ≤ 0,05 ÷ 64 = 0,078%, într-o parte; mărimi minime A, C ≥ 0,03 și B ≥ 1,3 pe ambele ferestre.
+
+| interval | fereastra | test | după eticheta „sus” (eșantioane) | după eticheta „jos” (eșantioane) | efectul | blocuri | t | p |
+|---|---|---|---|---|---|---|---|---|
+| 1h | principală | A · eficiența: trend / lateral | 0,21 (6.096) | 0,21 (4.301) | −0,00 | 21 | −2,09 | 97,5% |
+| 1h | veche | A | 0,21 (5.962) | 0,21 (4.309) | 0,00 | 21 | −1,15 | 86,8% |
+| 1h | principală | B · drumul: benzi largi / strânse | 16,94% (4.170) | 13,70% (4.182) | ×1,24 | 21 | 3,43 | 0,134% |
+| 1h | veche | B | 15,25% (4.068) | 12,48% (4.159) | ×1,22 | 21 | 3,18 | 0,235% |
+| 1h | principală | C · eficiența: bec cu direcție / bec lateral | 0,21 (4.465) | 0,21 (8.555) | 0,00 | 21 | −0,80 | 78,2% |
+| 1h | veche | C | 0,20 (4.414) | 0,21 (8.606) | −0,01 | 21 | −1,58 | 93,5% |
+| 4h | principală | A | 0,41 (6.423) | 0,42 (4.115) | −0,01 | 65 | −2,15 | 98,2% |
+| 4h | veche (18 perechi) | A | 0,42 (5.568) | 0,44 (3.484) | −0,02 | 55 | −2,82 | 99,7% |
+| 4h | principală | B | 8,38% (3.953) | 6,91% (4.183) | ×1,21 | 50 | 1,80 | 3,889% |
+| 4h | veche (18 perechi) | B | 9,63% (3.558) | 7,40% (3.515) | ×1,30 | 51 | 2,56 | 0,681% |
+| 4h | principală | C | 0,42 (4.578) | 0,41 (8.514) | 0,01 | 81 | −0,52 | 69,8% |
+| 4h | veche (18 perechi) | C | 0,41 (4.036) | 0,43 (7.129) | −0,02 | 76 | −2,51 | 99,3% |
+
+**Verdictul, după regulile scrise:** 1h — A NEDOVEDIT, B NEDOVEDIT, C NEDOVEDIT; 4h — A NEDOVEDIT, B NEDOVEDIT, C NEDOVEDIT.
+
+Verdict M5 pentru pagină: 1h A=NEDOVEDIT B=NEDOVEDIT C=NEDOVEDIT; 4h A=NEDOVEDIT B=NEDOVEDIT C=NEDOVEDIT
+
+(Rândul de mai sus e citit de `scripts/proba-v100340-a.mjs`: ce scrie pagina ca „măsurat” trebuie să fie exact ce e DOVEDIT aici.)
+
+**Ce înseamnă, fără înflorituri.**
+- **A și C (lateral ⇒ mai multă oscilație decât înaintare):** nimic. Eficiența următoarelor 24 de ore e aceeași după „trend” și după
+  „lateral” (0,21 cu 0,21 pe 1h; 0,41–0,44 pe 4h), iar unde diferă, diferă pe dos și sub pragul minim. Cu handicapul testului (vezi
+  diagnosticul), asta nu dovedește că efectul lipsește, dar estimările înseși stau pe zero: n-am pe ce clădi o afirmație.
+- **B (benzi largi ⇒ drum mai lung):** efectul există ca semn (drumul e de 1,2–1,3 ori mai lung după benzi largi, pe toate cele patru
+  ferestre), dar nu trece nici pragul corectat (cel mai bun: p = 0,134% față de 0,078%), nici mărimea minimă pe ambele ferestre (1,24 și
+  1,22 pe 1h; 1,21 și 1,30 pe 4h, sub 1,3). Rămâne „nedovedit”; nu se mai încearcă alte praguri pe aceleași date.
+
+**Hotărârile, cele scrise dinainte:**
+1. `RegimGrid.MASURAT` rămâne gol pe ambele intervale ⇒ pagina arată regimul ca stare de acum și scrie „ce urmează: nedovedit”.
+2. Vorba „bun pentru grid” s-a scos și becul lateral nu mai e verde (regula din amendament, oricum ar fi ieșit C). Pe aceeași regulă, piața
+   toată laterală nu mai apare „cu botul” (KPI, bandă) și nu mai e motiv verde în Consilier; eticheta becului lateral spune doar „nici cu
+   botul, nici împotrivă”.
+3. Explicația rândului ADX: „sub 20 = fără trend”, fără laudă.
+
+**Numărul de încercări:** 12 teste (A, B, C × 1h, 4h × două ferestre), o singură procedură pe piață (cea din amendament); procedura dintâi
+(bootstrap pe blocuri) n-a atins piața. Simulări fără efect: 180 + 1.000 (revizorul) pe procedura veche; 2 × 10.000 + 3 × 100 + 2 × 400
+(diagnostic) pe cea nouă.

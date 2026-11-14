@@ -140,7 +140,7 @@ var Sfaturi = (function () {
         // nu exista „tare pe 1 zi”); aceeasi in semafor (o singura voce)
         faCe: contra ? (typeof SemnaleBot !== "undefined" && SemnaleBot.textTrend ? SemnaleBot.textTrend(d.tarie, opreste) : d.tarie === "tare" ? (opreste ? "N-aș adăuga bani; aș închide botul lângă zero, iar unul pe trend din fișă abia după liniște." : "N-aș adăuga bani; trendul e „tare”, deci aș închide botul lângă zero și aș porni din fișă unul pe trend.")
             : opreste ? "N-aș adăuga bani; dacă trece pe „tare”, aș închide botul lângă zero, iar unul nou abia după liniște." : "N-aș adăuga bani; dacă trece pe „tare”, aș închide botul lângă zero și aș porni din fișă unul pe trend.")
-          : afaraS ? "Aș hotărî după „prețul a ieșit din grid”: botul nu lucrează acum." : cu ? "L-aș lăsa să lucreze." : "L-aș lăsa să facă perechi: lateral e bine pentru un grid." });
+          : afaraS ? "Aș hotărî după „prețul a ieșit din grid”: botul nu lucrează acum." : cu ? "L-aș lăsa să lucreze." : "L-aș lăsa să facă perechi." });   /* v100.340: fără lauda lateralului (nedovedită, M5) */
     }
 
     // B) Regimul acum: miscare mare vs liniste (cu frecventa "cat mai tine").
@@ -256,7 +256,7 @@ var Sfaturi = (function () {
     // 5) Directia fata de bot, spusa ca stare masurata.
     if (x.rezumat && x.rezumat.ton && x.rezumat.ton !== "nu-se-poate") {
       out.push({ cod: "directie", ton: x.rezumat.ton === "rau" ? "atentie" : x.rezumat.ton === "bine" ? "bine" : "info",
-        titlu: x.rezumat.ton === "rau" ? "Piața merge împotriva botului" : x.rezumat.ton === "bine" ? "Piața nu lucrează împotriva botului" : "Piața dă semnale amestecate",
+        titlu: x.rezumat.ton === "rau" ? "Piața merge împotriva botului" : x.rezumat.ton === "bine" ? "Piața nu lucrează împotriva botului" : x.rezumat.ton === "lateral" ? "Piața e laterală" : "Piața dă semnale amestecate",   /* v100.340: lateralul are tonul lui */
         // v100.62: textul = dovezile (concluzia e in titlu); ce face gridul contra pietei si „bare închise, nu prognoză” stau in legenda Consilierului
         // revizia Opus (M1, 02.10): si fraza intreaga (concluzie + dovezi), pentru motivul pietei din Consilier, unde titlul sfatului nu se vede
         text: x.rezumat.dovezi || x.rezumat.text, rezumat: x.rezumat.text,
@@ -322,7 +322,8 @@ var Sfaturi = (function () {
     // v100.257: short-ul cere scenariul si frecventa la marginea de SUS. Jos ramane pentru long si directia lipsa.
     // v100.259 (auditul 23.10, punctul 10): neutrul cere frecventa la AMBELE margini
     // v100.333 (🔵1): totalul la margine = același model ca zero-ul, stopul și Consilierul (TabloExtra.totalCuGridLa, cu comisionul de închidere)
-    var scen = S ? S.scenarii(b.brut || null, b, shortM ? [{ eticheta: "sus", pret: sus }] : [{ eticheta: "jos", pret: jos }], TE && TE.totalCuGridLa ? function (x) { return TE.totalCuGridLa(b, x); } : undefined) : null;
+    var scen = S ? S.scenarii(b.brut || null, b, shortM ? [{ eticheta: "sus", pret: sus }] : [{ eticheta: "jos", pret: jos }], TE && TE.totalCuGridLa ? function (x) { return TE.totalCuGridLa(b, x); } : undefined,
+      TE && TE.pozitieCuGridLa ? function (x) { return TE.pozitieCuGridLa(b, x); } : undefined) : null;   /* v100.340 (revizia a doua): și poziția din același model - sfatul zicea 23 de loturi pe un grid care ține cel mult 22 */
     var sanse = {};
     if (S && o.k4 && p !== null && neutruI) {
       if (jos !== null) { sanse.josZi = S.sansaAtingere(o.k4, p, jos, 6); sanse.josSapt = S.sansaAtingere(o.k4, p, jos, 42); }

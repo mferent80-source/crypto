@@ -32,7 +32,7 @@ const sfaturi = (bot, o = {}) => {
   return SF.sfaturi(x);
 };
 const cod = (l, c) => l.find((s) => s.cod === c);
-// revizia Opus a 2b (I1): fata de bot din modulul real (lateralul are ton „bine”, nu „neutru” cum il dadea fixtura)
+// revizia Opus a 2b (I1): fata de bot din modulul real; v100.340: lateralul are ton „neutru” (nu mai e „bine” - lauda lui era nedovedita, M5)
 const R = (d4, d1, dirBot) => [d4, d1].map((d, i) => ({ tf: i ? "1D" : "4H", eticheta: i ? "1 zi" : "4 ore", dir: d, fata: D.fataDeBot(d, dirBot || "long") }));
 
 // ---- sarcina 1: (a) motivul verde al pietei spune doar ce e adevarat ----
@@ -166,9 +166,10 @@ await test("revizia 2b (I1): piața amestecată cu un interval lateral nu mai e 
     assert.ok(c.rest.some((x) => x.titlu === "Piața dă semnale amestecate"), a + "+" + b2 + ": " + c.rest.map((x) => x.titlu).join(" | "));
   }
 });
-await test("revizia 2b (I1): „laterală” vine din concluzie - urcă + lateral = „Piața e cu botul”, lateral + lateral = „Piața e laterală”", () => {
+await test("revizia 2b (I1) + v100.340: urcă + lateral = verde „Piața e cu botul”; lateral + lateral NU mai e verde - „Piața e laterală” stă în „Restul”, fără îndemn", () => {
   assert.deepEqual(verzi(piata("urca", "lateral")), ["Piața e cu botul"]);
-  assert.deepEqual(verzi(piata("lateral", "lateral")), ["Piața e laterală"]);
+  const c = piata("lateral", "lateral"); assert.deepEqual(verzi(c), []);
+  const r = c.rest.find((x) => x.titlu === "Piața e laterală"); assert.ok(r, c.rest.map((x) => x.titlu).join(" | ")); assert.doesNotMatch(r.text, /👉|potrivit unui grid|bun pentru grid/);
 });
 await test("revizia 2b (2): pe piața contra, trendul „cu botul” nu mai apare singur în „Restul” cu „L-aș lăsa să lucreze”; structura stă lângă direcție", () => {
   const c = piata("coboara", "coboara");
@@ -176,11 +177,13 @@ await test("revizia 2b (2): pe piața contra, trendul „cu botul” nu mai apar
   const m = c.motive.find((x) => x.titlu === "Piața merge împotriva botului");
   assert.ok(m && /; mediile EMA arată long, mediu\.$/.test(m.text), m && m.text);
 });
-await test("revizia 2b (10): motivul verde cu liniștea și direcția - o frază ≤ 160 în text, direcția pe rândul de dedesubt", () => {
-  const c = piata("lateral", "lateral", FISA()), m = c.motive.find((x) => x.c === "v");
+await test("revizia 2b (10): motivul verde cu liniștea și direcția - o frază ≤ 160 în text, direcția pe rândul de dedesubt; v100.340: piața laterală nu mai intră în verde", () => {
+  const c = piata("urca", "urca", FISA()), m = c.motive.find((x) => x.c === "v");
   assert.ok(m, verzi(c).join(" | "));
   assert.ok(m.text.length <= 160 && !/\.\s+[A-ZĂÂÎȘȚ]/.test(m.text), m.text.length + ": " + m.text);
-  assert.match(m.extra || "", /^Trendul: piața e laterală/);
+  assert.match(m.extra || "", /^Trendul: piața merge cu botul/);
+  const l = piata("lateral", "lateral", FISA()), ml = l.motive.find((x) => x.c === "v");
+  assert.equal(ml.titlu, "Piața e liniștită"); assert.equal(ml.extra, null); assert.ok(l.rest.some((x) => x.titlu === "Piața e laterală"), l.rest.map((x) => x.titlu).join(" | "));
 });
 await test("revizia 2b (3): intervalul funding-ului urmează schimbarea (ultimele două la 1 oră ⇒ „la o oră”); 16 h din două rate ⇒ 8 ore", () => {
   const h = ist(8, 20).concat([1, 2, 3].map((k) => ({ fundingTime: T0 + k * ORA, fundingRate: "0.0008" })));

@@ -52,11 +52,11 @@ await test("sub 60 de bare inchise -> nu-se-poate, fara directie inventata", () 
   assert.equal(a.stare, "nu-se-poate");
 });
 
-await test("fata de bot: long + coboara = impotriva; long + urca = cu botul; lateral = bun pentru grid", () => {
+await test("fata de bot: long + coboara = impotriva; long + urca = cu botul; lateral = nici cu, nici impotriva (v100.340: fara „bun pentru grid”, nedovedit)", () => {
   assert.equal(D.fataDeBot("coboara", "long").ton, "rau");
   assert.equal(D.fataDeBot("urca", "long").ton, "bine");
   assert.equal(D.fataDeBot("urca", "short").ton, "rau");
-  assert.equal(D.fataDeBot("lateral", "long").eticheta, "bun pentru grid");
+  assert.equal(D.fataDeBot("lateral", "long").eticheta, "nici cu botul, nici împotrivă"); assert.equal(D.fataDeBot("lateral", "long").ton, "neutru");
   assert.equal(D.fataDeBot("urca", "neutral").ton, "atentie");
 });
 

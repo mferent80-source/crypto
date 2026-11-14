@@ -165,6 +165,15 @@ var TabloExtra = (function () {
 
   // v96.5: totalul botului daca se inchide la pretul X (dupa comisionul de inchidere), pe POZITIA DE ACUM - reperul „fara grilele de pe drum”.
   // v100.196 (🔴1): nicio promisiune nu se mai socoteste cu el (podeaUrca, planStare, zero-ul: totalCuGridLa / totalLaOpritor)
+  // v100.340: totalul botului la prețul VIU, între două citiri (auditul din 13.11: lângă un preț viu stătea totalul citirii). Poziția de la
+  // citire, mutată la prețul viu: total = totalul citirii + semn × |poziția| × (prețul viu − prețul citirii). E o estimare (o grilă umplută
+  // între timp schimbă poziția cu un lot), de aceea pagina o scrie cu „≈”. Doar long / short cu semnul sigur și cu poziție.
+  function totalLaPretViu(b, pretViu) {
+    var tot = nr(b && b.profitTotal), q = nr(b && b.pozitie), pc = nr(b && b.pretCurent), pv = nr(pretViu), dir = String(b && b.directie || "").toLowerCase();
+    if (tot === null || q === null || !(Math.abs(q) > 0) || !(pc > 0) || !(pv > 0) || (b && b.pnlNerealizatSigur === false) || (dir !== "long" && dir !== "short")) return null;
+    var dif = (dir === "long" ? 1 : -1) * Math.abs(q) * (pv - pc);
+    return { total: tot + dif, dif: dif };
+  }
   function totalLaPret(b, X, comision) {
     comision = comision == null ? C.COMISION : comision;
     var net = nr(b && b.profitNet), q = nr(b && b.pozitie), pd = nr(b && b.pretDeschidere), x = nr(X), dir = String(b && b.directie || "").toLowerCase();
@@ -176,7 +185,52 @@ var TabloExtra = (function () {
   // mai cumpara pana la marginea de jos, unde pozitia e plina = (randuri - 1) x cantitatea pe grila (masurat pe LIGHTER,
   // JTO, BCH - inchisi sub grid: 105 = 15 x 7, 868 = 14 x 62, 0,435 = 29 x 0,015). Ordinele ramase se iau intinse uniform
   // intre pret si margine, deci la pretul lor mediu. Short oglindit. Fara row/perVolume -> doar pozitia de acum.
+  // v100.340 (🔵 15 din auditul din 13.11): modelul de mai sus întinde loturile uniform între preț și margine, deci le închide în medie cu o
+  // jumătate de pas mai aproape de preț decât liniile adevărate (câștigul ieșea mai mic cu ≈ loturi × pas ÷ 2; prețul de zero, mai departe).
+  // totalPeNiveluri închide / deschide fiecare lot pe LINIA lui. Linia goală (ultima umplută, fără ordin) se află din numărul de loturi
+  // deschise: dacă loturile = liniile dinspre închidere (long: deasupra prețului; short: dedesubt), e goală linia de la preț / prima de pe
+  // cealaltă parte; dacă sunt cu una mai puține, e goală prima linie dinspre închidere. Doar grid aritmetic, cu row și perVolume și cu
+  // loturi care se potrivesc cu liniile; altfel null ⇒ rămâne modelul continuu (totalCuGridContinuu), ca până acum.
+  function totalPeNiveluri(b, X, comision) { var s = starePeNiveluri(b, X, comision); return s ? s.total : null; }
+  // starea botului la prețul X în modelul pe niveluri: { total, pozitie } sau null (când modelul nu se aplică)
+  function starePeNiveluri(b, X, comision) {
+    comision = comision == null ? C.COMISION : comision;
+    var net = nr(b && b.profitNet), q = nr(b && b.pozitie), pd = nr(b && b.pretDeschidere), p = nr(b && b.pretCurent), x = nr(X);
+    var jos = nr(b && b.gridJos), sus = nr(b && b.gridSus), dir = String(b && b.directie || "").toLowerCase(), u = bu(b), rand = nr(u.row), pv = nr(u.perVolume);
+    if (net === null || q === null || !(x > 0) || !(p > 0) || (b && b.pnlNerealizatSigur === false) || (dir !== "long" && dir !== "short")) return null;
+    if (String(u.gridType || "").toLowerCase() === "geometric" || !(rand >= 2) || !(pv > 0) || !(jos > 0) || !(sus > jos)) return null;
+    q = Math.abs(q); if (q > 0 && !(pd > 0)) return null;
+    var N = Math.round(rand) - 1, pas = (sus - jos) / N, eps = pas * 1e-6, n = Math.round(q / pv);
+    if (Math.abs(q / pv - n) > 0.2) return null;
+    var lung = dir === "long", spreInchidere = [], cealalta = [], laPret = false, k, L, i;
+    for (k = 0; k <= N; k++) { L = jos + k * pas; if (Math.abs(L - p) <= eps) laPret = true; else if (lung ? L > p : L < p) spreInchidere.push(L); else cealalta.push(L); }
+    spreInchidere.sort(function (a, c) { return lung ? a - c : c - a; }); cealalta.sort(function (a, c) { return lung ? c - a : a - c; });   // cea mai apropiată de preț întâi
+    var inchid, deschid;
+    if (n === spreInchidere.length) { inchid = spreInchidere; deschid = laPret ? cealalta : cealalta.slice(1); }
+    else if (n === spreInchidere.length - 1 && !laPret) { inchid = spreInchidere.slice(1); deschid = cealalta; }
+    else return null;
+    if (lung ? x > p : x < p) {   // partea câștigului: loturile se închid pe liniile lor, cele mai apropiate întâi
+      var rest = q, real = 0, val = 0;
+      for (i = 0; i < inchid.length && rest > 1e-12; i++) { L = inchid[i]; if (lung ? L > x + eps : L < x - eps) break;
+        var cat = i === inchid.length - 1 ? rest : Math.min(pv, rest);   /* pe ultima linie se închide tot ce a rămas (un rest parțial sub toleranță nu rămâne deschis dincolo de margine) */
+        real += cat * (lung ? L - pd : pd - L); val += cat * L; rest -= cat; }
+      if (rest < 1e-12) rest = 0;
+      return { total: net + real + (rest > 0 ? rest * (lung ? x - pd : pd - x) : 0) - (val + rest * x) * comision, pozitie: rest };
+    }
+    var tot = net + (q > 0 ? q * (lung ? x - pd : pd - x) : 0), qt = q;   // partea pierderii: loturi noi pe liniile de pe drum
+    for (i = 0; i < deschid.length; i++) { L = deschid[i]; if (lung ? L < x - eps : L > x + eps) break; tot += pv * (lung ? x - L : L - x); qt += pv; }
+    return { total: tot - qt * x * comision, pozitie: qt };
+  }
+  // poziția botului (în monedă, fără semn) dacă prețul ajunge la X, din ACELAȘI model ca totalul; null când modelul pe niveluri nu se aplică
+  function pozitieCuGridLa(b, X) { var s = starePeNiveluri(b, X); return s ? s.pozitie : null; }
+  // ce model dă acum totalul botului: „niveluri” (pe liniile gridului) sau „continuu” (aproximarea întinsă uniform); null fără total
+  function modelTotal(b) { var p = nr(b && b.pretCurent); if (!(p > 0)) return null; return starePeNiveluri(b, p) ? "niveluri" : totalCuGridContinuu(b, p) !== null ? "continuu" : null; }
   function totalCuGridLa(b, X, comision) {
+    comision = comision == null ? C.COMISION : comision;
+    var t = totalPeNiveluri(b, X, comision);
+    return t !== null ? t : totalCuGridContinuu(b, X, comision);
+  }
+  function totalCuGridContinuu(b, X, comision) {
     comision = comision == null ? C.COMISION : comision;
     var net = nr(b && b.profitNet), q = nr(b && b.pozitie), pd = nr(b && b.pretDeschidere), p = nr(b && b.pretCurent), x = nr(X);
     var jos = nr(b && b.gridJos), sus = nr(b && b.gridSus), dir = String(b && b.directie || "").toLowerCase(), u = bu(b);
@@ -837,7 +891,7 @@ var TabloExtra = (function () {
     return Object.keys(pe).map(function (k) { var g = pe[k]; g.text = "«" + (NUME_ALERTA[k] || k) + "»: prețul a scăzut în " + g.peMinus + " din " + g.n + " după 24 h" + (g.n < 10 ? " (prea puține)" : ""); return g; }).sort(function (a, b) { return b.n - a.n; });
   }
 
-  return { stopDincoloDeLichidare: stopDincoloDeLichidare, stopPropus: stopPropus, grileDincolo: grileDincolo, grileDincoloK: grileDincoloK, dupaAlerta: dupaAlerta, bilantAlerte: bilantAlerte, cifreActiuni: cifreActiuni, textBani: textBani, frecventaAtingere: frecventaAtingere, codTVBot: codTVBot, gridDiferitDeBot: gridDiferitDeBot, alertaRezolvata: alertaRezolvata, alerteleBotului: alerteleBotului, marcheazaDepasite: marcheazaDepasite, ritmRecuperare: ritmRecuperare, comisionDinUmplere: comisionDinUmplere, ceAiDeFacut: ceAiDeFacut, oraSfat: oraSfat, distanteGrid: distanteGrid, geometrieBot: geometrieBot, profitPeGrila: profitPeGrila, fundingBot: fundingBot, fundingPct: fundingPct, notaTotal: notaTotal, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, pretPentruTotal: pretPentruTotal, totalLaPret: totalLaPret, totalCuGridLa: totalCuGridLa, gridVsPlan: gridVsPlan, pragDinPlanuri: pragDinPlanuri, totalLaOpritor: totalLaOpritor, pretOpritorPentru: pretOpritorPentru, pretStopLive: pretStopLive, pretTpLive: pretTpLive, totalLaTinta: totalLaTinta, pretTintaPentru: pretTintaPentru, miscareZi: miscareZi, podeaUrca: podeaUrca, propunePlan: propunePlan, fisaInchidere: fisaInchidere, legaturaJurnal: legaturaJurnal,
+  return { stopDincoloDeLichidare: stopDincoloDeLichidare, stopPropus: stopPropus, grileDincolo: grileDincolo, grileDincoloK: grileDincoloK, dupaAlerta: dupaAlerta, bilantAlerte: bilantAlerte, cifreActiuni: cifreActiuni, textBani: textBani, frecventaAtingere: frecventaAtingere, codTVBot: codTVBot, gridDiferitDeBot: gridDiferitDeBot, alertaRezolvata: alertaRezolvata, alerteleBotului: alerteleBotului, marcheazaDepasite: marcheazaDepasite, ritmRecuperare: ritmRecuperare, comisionDinUmplere: comisionDinUmplere, ceAiDeFacut: ceAiDeFacut, oraSfat: oraSfat, distanteGrid: distanteGrid, geometrieBot: geometrieBot, profitPeGrila: profitPeGrila, fundingBot: fundingBot, fundingPct: fundingPct, notaTotal: notaTotal, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, pretPentruTotal: pretPentruTotal, totalLaPret: totalLaPret, totalLaPretViu: totalLaPretViu, totalCuGridLa: totalCuGridLa, totalCuGridContinuu: totalCuGridContinuu, pozitieCuGridLa: pozitieCuGridLa, modelTotal: modelTotal, gridVsPlan: gridVsPlan, pragDinPlanuri: pragDinPlanuri, totalLaOpritor: totalLaOpritor, pretOpritorPentru: pretOpritorPentru, pretStopLive: pretStopLive, pretTpLive: pretTpLive, totalLaTinta: totalLaTinta, pretTintaPentru: pretTintaPentru, miscareZi: miscareZi, podeaUrca: podeaUrca, propunePlan: propunePlan, fisaInchidere: fisaInchidere, legaturaJurnal: legaturaJurnal,
     peZile: peZile, marjaNoua: marjaNoua, vsPozitie: vsPozitie, planStare: planStare, evenimente: evenimente };
 })();
 if (typeof globalThis !== "undefined") globalThis.TabloExtra = TabloExtra;

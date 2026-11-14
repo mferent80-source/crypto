@@ -94,18 +94,18 @@ await test("2b citirea bună: botLa = acum și istoricul primește rândul (ca �
 });
 
 // ---------------------------------------------------------------- 3. avertismentele Tabloului se văd
-await test("3a avertismentele (lumânări învechite, botul ales dispărut, stocarea) apar într-un rând VIZIBIL, nu doar în cardul ascuns din v82", () => {
-  const card = { id: "tbVerdictCard", parentNode: null }, inainte = [];
-  const parinte = { insertBefore: (x, ref) => { assert.equal(ref, card); inainte.push(x); } }; card.parentNode = parinte;
-  const els = { tbVerdictCard: card }, $ = (id) => els[id] || null;
-  const document = { createElement: () => { const x = { hidden: false, textContent: "", className: "", setAttribute(k, v) { this[k] = v; } }; Object.defineProperty(x, "id", { set(v) { els[v] = x; this._id = v; }, get() { return this._id; } }); return x; } };
-  const f = inLume({ $, document }, fnApp("tbAvertVizibil"), "tbAvertVizibil");
+await test("3a avertismentele (lumânări învechite, botul ales dispărut, stocarea) apar într-un rând VIZIBIL (v100.340: cardul ascuns din v82 a fost scos; pe ecran îngust rândul stă înaintea gridului larg - pe calculator, în capul cifrelor: proba v100340-b)", () => {
+  const card = { id: "tbGridLarg", parentNode: null }, inainte = [];
+  const parinte = { insertBefore: (x, ref) => { assert.equal(ref, card); inainte.push(x); x.parentNode = parinte; } }; card.parentNode = parinte;
+  const els = { tbGridLarg: card }, $ = (id) => els[id] || null;
+  const document = { createElement: () => { const x = { hidden: false, textContent: "", className: "", setAttribute(k, v) { this[k] = v; }, appendChild() {} }; Object.defineProperty(x, "id", { set(v) { els[v] = x; this._id = v; }, get() { return this._id; } }); return x; } };
+  const f = inLume({ $, document, tbStare: { routeOk: true, bot: { id: "x" }, citireGoala: false }, matchMedia: () => ({ matches: false }) }, fnApp("tbAvertGazda") + "\n" + fnApp("tbAvertVizibil"), "tbAvertVizibil");   /* v100.340: gazda rândului depinde de lățime (aici: îngust) */
   f(["lumânările sunt învechite - ultima citire a picat", "botul ales de tine nu mai e în listă - se arată SOL"]);
   assert.equal(inainte.length, 1, "rândul vizibil trebuia creat lângă card");
-  assert.equal(els.tbAvertVizibil.hidden, false); assert.match(els.tbAvertVizibil.textContent, /învechite.*nu mai e în listă/);
+  assert.equal(els.tbAvertVizibil.hidden, false); assert.match(els.tbAvertText.textContent, /învechite.*nu mai e în listă/);
   f([]); assert.equal(els.tbAvertVizibil.hidden, true, "fără avertismente rândul se ascunde"); assert.equal(inainte.length, 1, "creat o singură dată");
-  assert.match(fnApp("renderTabloBot"), /tbAvertVizibil\(\(!eroareActiva&&b&&tbStare\.stocareStricata\?\[v\.titlu\]:\[\]\)\.concat\(note\)\)/, "renderTabloBot nu trimite notele în rândul vizibil");
-  assert.match(fs.readFileSync(path.join(RAD, "public", "app.css"), "utf8"), /#tabloubot #tbVerdictCard\{display:none\}/, "premisa: cardul e ascuns");
+  assert.match(fnApp("renderTabloBot"), /tbAvertVizibil\(\(parolaE\?\[[^\]]+\]:\(!eroareActiva&&b&&tbStare\.stocareStricata\?\[v\.titlu\]:\[\]\)\)\.concat\(note\),parolaE\)/, "renderTabloBot nu trimite notele în rândul vizibil");
+  assert.doesNotMatch(fs.readFileSync(path.join(RAD, "public", "index.html"), "utf8"), /tbVerdictCard/, "cardul vechi nu mai e în pagină");
 });
 
 console.log(picate ? `\n${picate} PICA din ${teste}\n` : `\ntoate ${teste} ok\n`);
