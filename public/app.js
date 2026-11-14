@@ -6889,7 +6889,7 @@ function tbBtcPortofoliu(boti){if(typeof Busola==="undefined"||!Busola.rezumat()
 // v100.90 (I-513): Busola pe toți boții deschiși, pe un rând („AAVE mai agitată de 8 h · LIT mai calmă de 2,5 h”); fără rezumat ⇒ nimic
 function tbBusolaPortofoliu(boti){if(typeof Busola==="undefined"||!Busola.rezumat())return "";var acum=Date.now(),t=Busola.liniaBoti(boti.map(function(b){var k=tbPazaKv.boti[b.id],s=Busola.pazaStare(Busola.rezumat(),tbCheieBusola(b),acum);return {nume:String(b.baza||"").replace(/\.PERP$/,""),stare:s?s.stare:null,de:k&&s&&k.stare===s.stare?k.de:null}}),acum);return t?'<div class="tbLinie"><span>Busola, pe 4h</span><b>'+escapeHtml(t)+'</b></div>':""}
 // v97.8 (27.09, fara niciun bot pornit): in locul semaforului, pregatirea urmatorului bot - fisa de inchidere a ultimului,
-// vremea pietei (ca pe Home) si primele 3 monede "Bun pentru grid" din Scan, fiecare cu fisa ei
+// vremea pietei (ca pe Home) si primele 3 monede din reteta de grid a Scanului („Candidați de grid”), fiecare cu fisa ei
 var tbPreg={la:0,inLucru:false,fisa:null,vreme:null,grid:null};
 async function tbPregatireAdu(){
   if(tbPreg.inLucru||Date.now()-tbPreg.la<5*60000)return;
@@ -6922,7 +6922,7 @@ function tbPregatire(el){
   /* v100.332 (12.11, pe pagina vie): raportul contului sau calendarul încă nevenite ⇒ frâna e NECUNOSCUTĂ, nu netrasă - se spune „încă verific” */
   var fcStiut=typeof acFranaContStiut==="function"?acFranaContStiut():true;
   if(v)h+='<div class="tbPregBloc"><h5>Vremea pieței</h5><p class="tbPregTitlu">'+escapeHtml(v.eticheta)+' — '+escapeHtml(v.titlu)+'</p>'+(v.faCe?'<p class="tbFac">👉 <b>Ce aș face eu:</b> '+escapeHtml(v.faCe)+'</p>':'')+(fcT?'<p class="tbWarn">⛔ <b>Frâna contului azi:</b> '+escapeHtml(fcT)+'</p>':!fcStiut?'<p class="tbSub">⏳ Frâna contului: încă verific raportul contului și calendarul zilei.</p>':'')+'</div>';
-  if(g&&g.length)h+='<div class="tbPregBloc"><h5>'+(nu?'Bun pentru grid, din Scan (🟦) · azi nu pornesc':'Pe ce aș porni (🟦 Bun pentru grid, din Scan)')+'</h5>'+(nu?acAziNuHtml(an):'')+g.map(function(q){return '<div class="tbPregMon"><b>'+escapeHtml(q.s)+'</b><span class="tbSub">'+(q.grile?TextRo.cate(q.grile+1,"grilă","grile")+" · pas "+(q.pas*100).toFixed(2).replace(".",",")+"% · ~"+(q.traversari||0).toFixed(1).replace(".",",")+" treceri/zi":"")+' · 7 zile '+(q.ch7>=0?"+":"−")+Math.abs(q.ch7).toFixed(1).replace(".",",")+'%</span><button type="button" class="tbBtnLinie" data-action-click="gridDeschideMoneda(\''+argActiune(q.s)+'\')">Fișa</button></div>'}).join("")
+  if(g&&g.length)h+='<div class="tbPregBloc"><h5>'+(nu?'Candidați de grid, din Scan (🟦) · azi nu pornesc':'Pe ce aș porni (🟦 candidații de grid, din Scan)')+'</h5>'+(nu?acAziNuHtml(an):'')+g.map(function(q){return '<div class="tbPregMon"><b>'+escapeHtml(q.s)+'</b><span class="tbSub">'+(q.grile?TextRo.cate(q.grile+1,"grilă","grile")+" · pas "+(q.pas*100).toFixed(2).replace(".",",")+"% · ~"+(q.traversari||0).toFixed(1).replace(".",",")+" treceri/zi":"")+' · 7 zile '+(q.ch7>=0?"+":"−")+Math.abs(q.ch7).toFixed(1).replace(".",",")+'%</span><button type="button" class="tbBtnLinie" data-action-click="gridDeschideMoneda(\''+argActiune(q.s)+'\')">Fișa</button></div>'}).join("")
     +'</div>';
   el.innerHTML=h+'</div>';
 }
@@ -7704,8 +7704,14 @@ function renderTabloTv(){
   var el=$("tbTvNote");if(!el||typeof TvNote==="undefined")return;
   var b=tbStare.routeOk===false?null:tbStare.bot,d=b&&tbStare.directie&&tbStare.directie.simbol===tbCheieDir(b)?tbStare.directie:null,t=tbTvDe(d);
   if(!b){el.innerHTML='<p class="tbSub">Fără bot, n-am pe ce monedă să citesc notele TradingView.</p>';return}
-  el.innerHTML=TvNote.tabel(t?t.n:null,{directie:String(b.directie||"").toLowerCase(),la:t?t.la:null,pret:Number(b.pretCurent)>0?Number(b.pretCurent):null,radar:"Pionex"});   /* v100.339 (I-869): prețul botului la verificarea instrumentului, ora serverului, bazele la vedere */
+  /* v100.341 (I-878): sub tabel, bilanțul pe viu al notei și al verdictului (din jurnalul colectorului) - apare abia de la 30 de zile, ca fapt */
+  var bil=TvNote.bilantText?TvNote.bilantText(tbStare.notaBilant&&tbStare.notaBilant.b):"";
+  el.innerHTML=TvNote.tabel(t?t.n:null,{directie:String(b.directie||"").toLowerCase(),la:t?t.la:null,pret:Number(b.pretCurent)>0?Number(b.pretCurent):null,radar:"Pionex"})+(bil?'<p class="tbSub" id="tbTvBilant">'+escapeHtml(bil)+'</p>':'');   /* v100.339 (I-869): prețul botului la verificarea instrumentului, ora serverului, bazele la vedere */
+  tbAduBilantNota();
 }
+/* bilanțul notei (I-878): o cerere pe oră, mică; răspunsul redesenează cartela doar dacă s-a schimbat ceva */
+function tbAduBilantNota(){var s=tbStare.notaBilant||(tbStare.notaBilant={la:0,b:null,inLucru:false});if(s.inLucru||Date.now()-s.la<3600000)return;s.inLucru=true;
+  getJSON("/api/istoric-bot?action=notaTv").then(function(d){var b=d&&d.bilant||null,schimbat=JSON.stringify(b)!==JSON.stringify(s.b);s.b=b;s.la=Date.now();s.inLucru=false;if(schimbat)renderTabloTv()},function(){s.la=Date.now()-3600000+300000;s.inLucru=false})}   /* la eroare reîncearcă peste 5 minute, nu peste o oră */
 // v100.111 (I-542, demo aprobat 06.10, el: „ok”): UN tabel „Trendul pe TF-uri” în locul a trei liste (rândurile din „Ce spune graficul acum”,
 // „Ce spun indicatorii”, „Direcția pieței”) - becul e regula; scorul, cât de des s-a întors și bara de acum sunt dovezi lângă el
 function renderTabloTrend(){

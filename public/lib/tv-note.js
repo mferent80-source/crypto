@@ -71,5 +71,24 @@ var TvNote = (function () {
     if (c.cod === "lipsa") return "";
     return '<span class="t212Mic tvMic ' + c.ton + (cls ? " " + cls : "") + '" title="' + esc("TradingView · Technicals pe " + tf + ": " + c.text + " (" + valoare(v.all) + ") · informație, nu intră în semafor") + '">TV ' + tf + ": " + esc(c.text) + "</span>";
   }
-  return { TF: TF, clasa: clasa, valoare: valoare, tabel: tabel, mic: mic, textLipsa: textLipsa };
+  // v100.341 (I-878): bilanțul pe viu al notei și al verdictului Radarului (jurnalul colectorului, judecat după 4 bare), de la 30 de zile.
+  // Fapt, fără culoare și fără verdict până la judecata unică de la 90 de zile (regulile: docs/cercetare/2026-11-13-tablou-acuratete.md).
+  // b = { zile, serii: { tv4h: { n, k, zile }, radar4h: {…} }, judecata: null | { tv4h: { gata, blocuri, verdict, medie }, radar4h: {…} } }
+  // O serie apare doar de la 30 de zile ALE EI (revizia: pragul era pe zilele celeilalte serii). Procentul e cel simplu, din note.
+  function bilantText(b) {
+    if (!b || !b.serii) return "";
+    var cate = function (n, unu, multe) { return TextRo.cate(n, unu, multe); };   /* pluralul și „de” de la 20: regula casei, într-un singur loc (text-ro.js) */
+    var pc = function (x) { return Math.round(100 * x) + "%"; }, pc1 = function (x) { return (Math.round(1000 * x) / 10).toFixed(1).replace(".", ",") + "%"; };
+    var are = function (x) { return !!x && x.n > 0 && x.zile >= 30 && x.k >= 0 && x.k <= x.n; }, cat = function (x) { return "(" + cate(x.n, "notă judecată", "note judecate") + " în " + cate(x.zile, "zi", "zile") + ")"; };
+    var tv = b.serii.tv4h, rd = b.serii.radar4h, parti = [];
+    if (are(tv)) parti.push("nota TradingView pe 4 ore a nimerit direcția în " + pc(tv.k / tv.n) + " din note " + cat(tv));
+    if (are(rd)) parti.push("verdictul Radarului pe 4 ore " + (parti.length ? "" : "a nimerit direcția ") + "în " + pc(rd.k / rd.n) + (parti.length ? " " : " din note ") + cat(rd));
+    if (!parti.length) return "";
+    var j = b.judecata || {}, zj = function (x, nume) { return !x || !x.gata || !x.verdict ? null : nume + " — " + (x.verdict === "DOVEDIT" ? "nimerește direcția" : "nedovedit") + (bun(x.medie) ? " (" + pc1(x.medie) + " în medie pe bloc)" : ""); };
+    var jud = [are(tv) ? zj(j.tv4h, "nota TradingView") : null, are(rd) ? zj(j.radar4h, "verdictul Radarului") : null].filter(Boolean);
+    var coada = jud.length ? "Judecat o singură dată, pe primele " + cate((j.tv4h && j.tv4h.gata ? j.tv4h : j.radar4h).blocuri, "bloc", "blocuri") + " de 5 zile: " + jud.join("; ") + "."
+      : "Numărătoare, nu dovadă: judecata se face o singură dată, pe primele 36 de blocuri de 5 zile.";
+    return "Pe viu, din jurnalul colectorului, pe monedele boților tăi: " + parti.join("; ") + ". " + coada;
+  }
+  return { TF: TF, clasa: clasa, valoare: valoare, tabel: tabel, mic: mic, textLipsa: textLipsa, bilantText: bilantText };
 })();

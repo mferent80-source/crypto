@@ -248,6 +248,8 @@ function livreaza(nume) {
   if (atinse.some((x) => x.startsWith("public/")) && fs.existsSync(path.join(RAD, "scripts", "proba-ecran-telefon.mjs"))) {
     scrie("Ai atins public/ ⇒ proba de telefon pe serverul de acasă (8788 servește principalul)…");
     if (!ruleaza(RAD, "node", ["scripts/proba-ecran-telefon.mjs"])) scrie("⚠ proba de telefon a PICAT pe principal — uită-te acum (codul e publicat).");
+    // v100.341 (I-879): și stările Tabloului cu date de probă (~30 s)
+    if (fs.existsSync(path.join(RAD, "scripts", "proba-ecran-tablou.mjs")) && !ruleaza(RAD, "node", ["scripts/proba-ecran-tablou.mjs"])) scrie("⚠ proba de ecran a Tabloului a PICAT pe principal — uită-te acum (codul e publicat).");
   }
   // v100.211: serverul 8788 rulează Worker-ul PRE-CONSTRUIT (wrangler dev --no-bundle, fără esbuild în watch) ⇒ Functions atinse
   // se reconstruiesc aici, în principal. v100.213: în worker-local, NU sub .wrangler (acolo wrangler nu vede schimbarea — „probat

@@ -249,7 +249,7 @@ await test("ce scrie pagina ca „măsurat” e exact ce a dovedit M5 în jurnal
   const D = new Function(citeste("public", "lib", "directie.js") + "; return Directie;")(), cDovedit = V["1h"].C === "DOVEDIT" && V["4h"].C === "DOVEDIT";
   assert.equal(/oscilează mai mult/.test(D.fataDeBot("lateral", "long").eticheta), cDovedit); assert.equal(D.fataDeBot("lateral", "long").ton, "neutru", "verde nu mai e, oricum ar fi ieșit C");
   // rezultatul chiar e scris: tabelul cu cele 12 teste și regula porții
-  assert.match(J, /### M5 — rezultatul \(rulat 14\.11\.2026/); assert.equal((J.split("### M5 — rezultatul")[1].match(/^\| (1h|4h) \|/gm) || []).length, 12, "12 rânduri de test"); assert.match(J, /\*\*Poarta: trecută\*\*/);
+  assert.match(J, /### M5 — rezultatul \(rulat 14\.11\.2026/); assert.equal((J.split("### M5 — rezultatul")[1].split(/\n## /)[0].match(/^\| (1h|4h) \|/gm) || []).length, 12, "12 rânduri de test");   /* doar secțiunea rezultatului (v100.341: după ea vin și alte tabele) */ assert.match(J, /\*\*Poarta: trecută\*\*/);
 });
 
 await test("regimul din pagină, RULAT (revizia: era ținut doar de o expresie regulată): tbCalculeazaIndicatorii îl pune pe 1 oră și 4 ore, din închiderile barelor ÎNCHISE și din ADX-ul lui calc; pe 15 min și 1 zi nu", () => {

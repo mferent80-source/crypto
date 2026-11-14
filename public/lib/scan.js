@@ -57,8 +57,10 @@ var Scan = (function () {
   // retetele: aceleasi reguli pe amandoua pietele; gridul doar pe crypto (T212 n-are boti)
   var RETETE = [
     { k: "toate", t: "Toate", sub: "tot universul", f: function () { return true; }, e: "Toată lista, ordonată după scor. Alege o rețetă ca să vezi doar ce răspunde la o întrebare." },
-    { k: "grid", t: "🟦 Bun pentru grid", sub: "liniștit, lateral", f: function (x) { return x.fel === "c" && x.stare === "candidat" && !x.miscare && nr(x.rang) !== null && x.rang <= 60; },
-      e: "Monede liniștite, cu volum mare și prețul care se întoarce des prin aceeași zonă: exact ce-i trebuie unui bot grid. Ordonate după clasamentul de grid (aceleași ca pe Home și pe „Grid: ce setez?”)." },
+    // v100.341 (I-876): numele vechi lăuda categoria ca prielnică gridului. Că aceste monede ar merge mai bine într-un grid nu s-a măsurat (M5, 14.11.2026: că după
+    // „lateral” prețul oscilează mai mult decât după „trend” a ieșit nedovedit) ⇒ numele spune ce sunt: candidați, după clasamentul de grid.
+    { k: "grid", t: "🟦 Candidați de grid", sub: "fără mișcare mare", f: function (x) { return x.fel === "c" && x.stare === "candidat" && !x.miscare && nr(x.rang) !== null && x.rang <= 60; },
+      e: "Monede care nu sunt într-o mișcare mare (singura regulă dovedită: nu se pornește grid după o mișcare mare), primele 60 din clasamentul de grid. Clasamentul le ordonează după cât ar aduce un grid pe zi, socotit din trecerile estimate ale prețului. De aici pornește alegerea; că ar merge mai bine decât restul nu e măsurat. Aceleași ca pe Home și pe „Grid: ce setez?”." },
     { k: "trend", t: "📈 Trend confirmat", sub: "peste 20·50·200 zile", f: function (x) { return x.e20 && x.e50 && x.e200 !== false && nr(x.ch30) > 0 && x.rsi >= 50 && x.rsi <= 72; },
       e: "Prețul peste mediile de 20, 50 și 200 de zile, sus pe ultima lună, RSI între 50 și 72 (urcă, dar nu e deja fugit). Aceeași idee ca poarta de trend de la Trading 212." },
     { k: "revenire", t: "🔁 Revenire", sub: "vândut exagerat", f: function (x) { return nr(x.rsi) !== null && x.rsi < 35 && x.e200 !== false; },

@@ -264,7 +264,7 @@ await test("(F5f) revizia: verdictul „din aceeași clipă” cere bare proaspe
   const J = [{ t: "stricat", s: "A", p: 10, tv4h: 0.4, d4: 11, rv4: "BULLISH" }, { t: 9e15, s: "A", p: 10, tv4h: 0.4, d4: 11 }, { s: "A", p: 10, tv4h: 0.4, d4: 11 }, { t: T0N, s: "A", p: 10, tv4h: 0.4, d4: 11, rv4: "BULLISH" }];
   const r = NTV.raportNotaTv(J); assert.deepEqual(r["4h"], { n: 1, k: 1 }); assert.deepEqual(r.radar4h, { n: 1, k: 1 }); assert.equal(r.zile, 1);
   // cititorul bilanțului: există, citește data/nota-tv.json și spune limpede când e prea devreme
-  const cit = citeste("scripts", "raport-nota-tv.mjs"); assert.match(cit, /raportNotaTv\(/); assert.match(cit, /prea devreme/); assert.match(citeste("package.json"), /"raport:nota-tv": "node scripts\/raport-nota-tv\.mjs"/);
+  const cit = citeste("scripts", "raport-nota-tv.mjs"); assert.match(cit, /bilantDinZile\(/);   /* v100.341: bilanțul pe zile ținute, nu numărătoarea pe note */ assert.match(cit, /prea devreme/); assert.match(citeste("package.json"), /"raport:nota-tv": "node scripts\/raport-nota-tv\.mjs"/);
 });
 
 console.log(`\n${teste - picate}/${teste} teste trecute${picate ? " — " + picate + " PICATE" : ""}`);

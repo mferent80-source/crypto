@@ -270,7 +270,7 @@ try {
     assert.equal(r.bara, "none"); assert.equal(r.hero, "none");
     assert.equal(r.vechi, false); assert.ok(r.btn && r.out, "scannerul vechi a pierdut butonul sau tabelul");
   });
-  await test("Scan: reteta 'Bun pentru grid' lasa doar monede; fila Actiuni la grid spune de ce e goala; cautarea gaseste NVDA", async () => {
+  await test("Scan: reteta de grid ('Candidați de grid') lasa doar monede; fila Actiuni la grid spune de ce e goala; cautarea gaseste NVDA", async () => {
     await b.ev(`document.querySelector('#scRetete [data-scr="grid"]').click();true`); await asteapta(200);
     const g = await b.ev(`[...document.querySelectorAll("#scLista .scRand")].map(x=>x.dataset.scid[0]).join("")`);
     assert.ok(g.length > 0 && /^c+$/.test(g), "la grid au apărut și acțiuni: " + g);
@@ -395,7 +395,7 @@ try {
   });
 
   // v97.8: Tabloul fara bot -> pregatirea urmatorului (ultimul bot inchis cu fisa lui, vremea, 3 monede de grid cu Fisa)
-  await test("Tablou fara bot: pregatirea urmatorului - fisa de inchidere a ultimului bot, vremea, 3 monede 'Bun pentru grid' cu Fisa", async () => {
+  await test("Tablou fara bot: pregatirea urmatorului - fisa de inchidere a ultimului bot, vremea, 3 monede din reteta de grid cu Fisa", async () => {
     await b.ev(`navTo("tabloubot");tbPreg={la:0,inLucru:false,fisa:null,vreme:null,grid:null};tbPregatire(document.getElementById("tbSemafor"));true`);
     await panaCand(b, `!tbPreg.inLucru&&tbPreg.la>0`, 60000, "datele pregatirii");
     await b.ev(`tbPregatire(document.getElementById("tbSemafor"));true`);

@@ -10,6 +10,7 @@
 // 4 ore și 1 zi, cu scorul), iar bilanțul îl judecă la fel ca nota. Verdictul vine printr-o funcție dată de colector; fără ea, sau dacă ea
 // cade, nota se scrie oricum.
 import * as TV from "../../functions/_shared/tv-note.js";
+import { testBlocuri } from "./statistica-blocuri.mjs";
 
 const ORA = 3600000, BARA = 4 * ORA, MAX = 4000;
 export const PAUZA_MS = 15 * 60000;
@@ -47,7 +48,7 @@ export function verdictDinLumanari(o) {
 // întoarce { stare: { felia, incercat, jurnal }, notate, judecate, expirate, cerut, eroare }; nu aruncă
 export async function turaNotaTv(d) {
   const acum = d.acum || Date.now(), st = d.stare && typeof d.stare === "object" ? d.stare : {}, j = Array.isArray(st.jurnal) ? st.jurnal.slice() : [];
-  const out = { stare: { felia: st.felia == null ? null : st.felia, incercat: nr(st.incercat), jurnal: j }, notate: 0, judecate: 0, expirate: 0, cerut: false, eroare: null };
+  const out = { stare: { felia: st.felia == null ? null : st.felia, incercat: nr(st.incercat), jurnal: j }, notate: 0, judecate: 0, expirate: 0, cerut: false, eroare: null, zileIesite: {} };   /* zileIesite: zilele tăiate acum din jurnal (v101.180) */
   const simb = [...new Set((Array.isArray(d.simboluri) ? d.simboluri : []).filter(Boolean))];
   // nota nejudecată la timp (colectorul oprit, moneda scoasă din scanner) nu se mai judecă: după 2× orizontul n-ar mai măsura „după 4 bare”
   for (const e of j) for (const tf of ["4h", "1D"]) if (scadent(e, tf, acum) && acum - e.t >= 2 * ORIZONT_MS[tf]) { e[CAMP[tf][2]] = 1; out.expirate++; }
@@ -74,10 +75,67 @@ export async function turaNotaTv(d) {
       j.push({ t: acum, s, tv: n.tv, tv4h: a, tvZ: z, p, d4: null, dZ: null, rv4: rv && rv.v4 ? rv.v4 : null, rs4: rv ? nr(rv.s4) : null, rvZ: rv && rv.vZ ? rv.vZ : null, rsZ: rv ? nr(rv.sZ) : null, rb4: rv && rv.b4 ? rv.b4 : null, rbZ: rv && rv.bZ ? rv.bZ : null });   /* rb = verdictul barei, lângă cel arătat */ out.notate++; }
     out.stare.felia = felia(acum);   // și când scannerul a răspuns fără nimic de notat: bara asta nu se mai cere
   }
-  out.stare.jurnal = j.slice(-MAX);
+  const taiat = taieJurnalPeZile(j, MAX); out.stare.jurnal = taiat.jurnal; out.zileIesite = zileDinJurnal(taiat.scoase);   /* v101.180: pe zile întregi; zilele ieșite merg în cele ținute */
   return out;
 }
-// bilanțul: câte note cu direcție (|nota| > 0,1) au fost judecate și câte au nimerit; zile = zile UTC distincte cu note judecate
+// v101.180 (Radar v100.341, I-878): bilanțul pe viu și judecata unică a notei TradingView și a verdictului Radarului („N1”). Regulile sunt
+// scrise în docs/cercetare/2026-11-13-tablou-acuratete.md („Jurnalul notei pe viu — regulile judecății”), înaintea primei cifre:
+//  - intră notele de la N1.deLa încolo, judecate la timp (cel mult N1.tarziu după notă: 4 bare + una îngăduită);
+//  - zilele se țin separat de jurnal (jurnalul se taie pe zile întregi), deci o zi odată ieșită din jurnal nu se mai schimbă;
+//  - unitatea testului e blocul de 5 zile ÎNCHEIAT (urmările notelor vecine se suprapun 16 ore; pe blocuri testul își ține mărimea - simulat);
+//  - judecata fiecărei serii se face o singură dată, pe primele N1.blocuri blocuri încheiate și valide, și rămâne înghețată;
+//  - pragul numără toate testele cu verdict de până acum (regula din capul jurnalului): 32 până la M5, unul la M5b, două aici ⇒ 0,05 ÷ 70.
+export const N1 = { deLa: Date.UTC(2026, 10, 14, 10, 45), zileArata: 30, blocuri: 36, zilePeBloc: 5, minNoteBloc: 12, prag: 0.55, alfa: 0.05 / 70, tarziu: 20 * ORA };
+const SEMN_RADAR = (v) => (v === "BULLISH" ? 1 : v === "BEARISH" ? -1 : 0), SEMN_NOTA = (x) => (nr(x) !== null && Math.abs(x) > 0.1 ? Math.sign(x) : 0);
+const ORA_BUNA = (e) => !!e && e.p > 0 && typeof e.t === "number" && e.t > 0 && e.t < 8.64e15;
+const ziuaUtc = (t) => new Date(t).toISOString().slice(0, 10), nrZi = (z) => Math.round(Date.parse(z + "T00:00:00Z") / 86400000), ziGoala = () => ({ tv4h: { n: 0, k: 0 }, radar4h: { n: 0, k: 0 }, tv1D: { n: 0, k: 0 }, radar1D: { n: 0, k: 0 }, asteapta: false });
+// zilele jurnalului: pe ziua UTC a notei și pe fiecare serie { n, k } (note cu direcție, judecate la timp; câte au nimerit);
+// asteapta = ziua mai are note pe 4 ore cu direcție, nici judecate, nici expirate (deci cifrele ei se mai pot schimba)
+export function zileDinJurnal(jurnal) {
+  const out = {};
+  for (const e of Array.isArray(jurnal) ? jurnal : []) { if (!ORA_BUNA(e) || e.t < N1.deLa) continue; const zi = ziuaUtc(e.t), z = out[zi] || (out[zi] = ziGoala());
+    for (const [cheie, sg] of [["tv4h", SEMN_NOTA(e.tv4h)], ["radar4h", SEMN_RADAR(e.rv4)]]) { if (!sg) continue;
+      if (nr(e.d4) === null) { if (!e.x4) z.asteapta = true; continue; }
+      if (nr(e.t4) !== null && e.t4 - e.t > N1.tarziu) continue;   /* judecată târziu: n-ar mai măsura „după 4 bare” */
+      z[cheie].n++; if ((e.d4 - e.p) * sg > 0) z[cheie].k++; }
+    for (const [cheie, sg] of [["tv1D", SEMN_NOTA(e.tvZ)], ["radar1D", SEMN_RADAR(e.rvZ)]]) { if (!sg || nr(e.dZ) === null) continue; z[cheie].n++; if ((e.dZ - e.p) * sg > 0) z[cheie].k++; } }
+  return out;
+}
+// zilele ținute pe disc + cele de acum din jurnal: ziua din jurnal o înlocuiește pe cea ținută; cea ieșită din jurnal rămâne cum era
+export function imbinaZile(tinute, noi) { return Object.assign({}, tinute && typeof tinute === "object" && !Array.isArray(tinute) ? tinute : {}, noi && typeof noi === "object" ? noi : {}); }
+// bilanțul de arătat: pe fiecare serie câte note, câte nimerite și în câte zile; zile = zilele cu note judecate pe 4 ore
+export function bilantDinZile(zile) {
+  const serii = {}, Z = Object.values(zile && typeof zile === "object" ? zile : {}).filter((z) => z && typeof z === "object");
+  for (const cheie of ["tv4h", "radar4h", "tv1D", "radar1D"]) { let n = 0, k = 0, zl = 0; for (const z of Z) { const x = z[cheie]; if (x && x.n > 0) { n += x.n; k += x.k; zl++; } } serii[cheie] = { n, k, zile: zl }; }
+  return { zile: Z.filter((z) => (z.tv4h && z.tv4h.n > 0) || (z.radar4h && z.radar4h.n > 0)).length, serii };
+}
+// judecata, pe serie: blocurile de 5 zile de la ziua lui N1.deLa, luate la rând până la primul NEÎNCHEIAT (ultima lui zi nu e încă în urma
+// celei mai noi zile cu note, sau are note în așteptare); dintre cele încheiate, valide sunt cele cu destule note; se judecă primele
+// N1.blocuri valide: Student într-o parte pe (partea nimerită a blocului − 0,5). DOVEDIT = p ≤ N1.alfa și media blocurilor ≥ N1.prag.
+export function judecataDinZile(zile) {
+  const Z = zile && typeof zile === "object" ? zile : {}, chei = Object.keys(Z).filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort(), z0 = nrZi(ziuaUtc(N1.deLa)), maxZi = chei.length ? nrZi(chei[chei.length - 1]) : -Infinity, out = {};
+  const zi = (nrul) => Z[new Date(nrul * 86400000).toISOString().slice(0, 10)];
+  for (const cheie of ["tv4h", "radar4h"]) { const v = []; let deLa = null, panaLa = null;
+    for (let bl = 0; v.length < N1.blocuri; bl++) { const prima = z0 + bl * N1.zilePeBloc, ultima = prima + N1.zilePeBloc - 1; if (!(ultima < maxZi)) break;
+      let n = 0, k = 0, asteapta = false; for (let d = prima; d <= ultima; d++) { const x = zi(d); if (!x) continue; if (x.asteapta) asteapta = true; if (x[cheie]) { n += x[cheie].n; k += x[cheie].k; } }
+      if (asteapta) break; if (n < N1.minNoteBloc) continue;
+      v.push(k / n - 0.5); if (deLa === null) deLa = new Date(prima * 86400000).toISOString().slice(0, 10); panaLa = new Date(ultima * 86400000).toISOString().slice(0, 10); }
+    if (v.length < N1.blocuri) { out[cheie] = { gata: false, blocuri: v.length, trebuie: N1.blocuri }; continue; }
+    const T = testBlocuri(v), medie = 0.5 + T.medie;
+    out[cheie] = { gata: true, blocuri: N1.blocuri, deLa, panaLa, medie, t: T.t, p: T.p, verdict: Number.isFinite(T.p) && T.p <= N1.alfa && medie >= N1.prag ? "DOVEDIT" : "NEDOVEDIT" }; }
+  return out;
+}
+export function bilantNotaTv(jurnal) { return bilantDinZile(zileDinJurnal(jurnal)); }
+export function judecataNotaTv(jurnal) { return judecataDinZile(zileDinJurnal(jurnal)); }
+// jurnalul se scurtează pe ZILE ÎNTREGI (cele mai vechi), ca o zi să fie ori toată în jurnal, ori toată în zilele ținute; ultimele două zile
+// rămân oricum (dacă și așa trece de plafon - caz de neînchipuit - se taie ca înainte, pe intrări)
+export function taieJurnalPeZile(jurnal, max) {
+  let j = Array.isArray(jurnal) ? jurnal : []; const scoase = [];
+  while (j.length > max) { const zl = [...new Set(j.filter(ORA_BUNA).map((e) => ziuaUtc(e.t)))].sort(); if (zl.length <= 2) break;
+    const veche = zl[0], raman = []; for (const e of j) { if (ORA_BUNA(e) && ziuaUtc(e.t) === veche) scoase.push(e); else raman.push(e); } if (raman.length === j.length) break; j = raman; }
+  return { jurnal: j.length > max ? j.slice(-max) : j, scoase };
+}
+// numărătoarea pe NOTE (cea dintâi): câte note cu direcție (|nota| > 0,1) au fost judecate și câte au nimerit; zile = zile UTC distincte cu note judecate
 export function raportNotaTv(jurnal) {
   const r = { "4h": { n: 0, k: 0 }, "1D": { n: 0, k: 0 }, radar4h: { n: 0, k: 0 }, radar1D: { n: 0, k: 0 }, zile: 0 }, zile = new Set(), semn = (v) => (v === "BULLISH" ? 1 : v === "BEARISH" ? -1 : 0);
   for (const e of Array.isArray(jurnal) ? jurnal : []) { if (!e || !(e.p > 0) || !(typeof e.t === "number" && e.t > 0 && e.t < 8.64e15)) continue;   /* ora stricată: intrarea se sare (new Date(…).toISOString() ar arunca) */

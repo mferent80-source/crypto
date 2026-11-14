@@ -117,6 +117,8 @@ async function istoricGet(request,env){
   // v100.177 (jurnalul verdictelor): verdictele ținute minte și calibrarea lor (cu registrul testelor și corecția pentru teste multiple)
   if(action==="verdicte"){let l=[];try{l=JSON.parse(await env.ISTORIC.get("verdicte:jurnal")||"[]")}catch{l=[]}return json({verdicte:Array.isArray(l)?l:[]})}
   if(action==="verdicteCalibrare"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("verdicte:calibrare")||"null")}catch{c=null}return json({calibrare:c})}
+  /* v100.341 (I-878): bilanțul pe viu al notei TradingView și al verdictului Radarului, trimis de colector (jurnalul lui, pe zile) */
+  if(action==="notaTv"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("nota-tv:bilant")||"null")}catch{c=null}return json({bilant:c})}
   // v100.178: volatilitatea opțiunilor (DVOL), sectorul unui simbol / universul SUA, topul pe sectoare (Sugestii)
   if(action==="dvol"){let v=null;try{v=JSON.parse(await env.ISTORIC.get("piata:dvol")||"null")}catch{v=null}return json({dvol:v})}
   if(action==="sectoareTop"){let v=null;try{v=JSON.parse(await env.ISTORIC.get("sugestii:sectoare")||"null")}catch{v=null}return json({sectoare:v})}
@@ -399,6 +401,13 @@ export async function onRequestPost({request,env}){
     return peCheie("kv:verdicte:jurnal",async()=>{let l=[];try{l=JSON.parse(await env.ISTORIC.get("verdicte:jurnal")||"[]")}catch{l=[]}if(!Array.isArray(l))l=[];   // audit 19.10: pe rand
     const m=new Map();for(const x of l.concat(noi)){const c=x.s+"|"+x.k+"|"+z(x.t),v=m.get(c);if(!v||x.t<v.t)m.set(c,x)}
     const out=[...m.values()].sort((a,b)=>a.t-b.t).slice(-20000);await env.ISTORIC.put("verdicte:jurnal",JSON.stringify(out));return json({ok:true,n:out.length})})}
+  if(action==="notaTv"){const c=corp,S=c&&c.serii,CHEI=["tv4h","radar4h","tv1D","radar1D"],intreg=(v)=>Number.isInteger(v)&&v>=0,bunaS=(x)=>!!x&&typeof x==="object"&&intreg(x.n)&&intreg(x.k)&&x.k<=x.n&&intreg(x.zile);
+    /* judecata: lipsă sau, pe fiecare serie de 4 ore, { gata, blocuri, … } - se țin doar câmpurile știute */
+    const J=c&&c.judecata,bunaJ=(x)=>!!x&&typeof x==="object"&&typeof x.gata==="boolean"&&intreg(x.blocuri),ziS=(v)=>typeof v==="string"&&/^\d{4}-\d{2}-\d{2}$/.test(v)?v:null;
+    const curJ=(x)=>x.gata?{gata:true,blocuri:x.blocuri,deLa:ziS(x.deLa),panaLa:ziS(x.panaLa),medie:nr(x.medie),p:nr(x.p),verdict:["DOVEDIT","NEDOVEDIT"].includes(x.verdict)?x.verdict:null}:{gata:false,blocuri:x.blocuri,trebuie:intreg(x.trebuie)?x.trebuie:null};
+    if(!c||typeof c!=="object"||!(nr(c.la)>0)||c.la>Date.now()+600000||!intreg(c.zile)||!S||typeof S!=="object"||!CHEI.every((k)=>bunaS(S[k]))||(J!=null&&(typeof J!=="object"||!["tv4h","radar4h"].every((k)=>bunaJ(J[k])))))return json({error:"notaTv: la + zile + serii (tv4h, radar4h, tv1D, radar1D: n, k, zile) + judecata (tv4h, radar4h)"},400);
+    const serii={};CHEI.forEach((k)=>{serii[k]={n:S[k].n,k:S[k].k,zile:S[k].zile}});
+    await env.ISTORIC.put("nota-tv:bilant",JSON.stringify({la:c.la,zile:c.zile,serii,judecata:J?{tv4h:curJ(J.tv4h),radar4h:curJ(J.radar4h)}:null}));return json({ok:true})}
   if(action==="verdicteCalibrare"){const c=corp;if(!c||typeof c!=="object"||!(nr(c.la)>0)||!Array.isArray(c.calibrare))return json({error:"verdicteCalibrare: la + calibrare"},400);await env.ISTORIC.put("verdicte:calibrare",JSON.stringify(c));return json({ok:true})}
   if(action==="disciplinaBanda"){if(!(nr(corp&&corp.la)>0)||!Array.isArray(corp.tabel))return json({error:"disciplinaBanda: la + tabel"},400);await env.ISTORIC.put("disciplina:banda",JSON.stringify(corp));return json({ok:true})}
   if(action==="lectie"){const x=corp;if(!x||!(nr(x.la)>0)||!x.lectie||typeof x.lectie!=="object")return json({error:"lectie: la + lectie"},400);let l=[];try{l=JSON.parse(await env.ISTORIC.get("disciplina:lectii")||"[]")}catch{l=[]}if(!Array.isArray(l))l=[];l=l.filter(y=>y&&y.sapt!==x.sapt).concat([x]).slice(-26);await env.ISTORIC.put("disciplina:lectii",JSON.stringify(l));return json({ok:true,n:l.length})}

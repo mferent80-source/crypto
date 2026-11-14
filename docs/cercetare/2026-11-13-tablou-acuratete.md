@@ -16,6 +16,8 @@ Scriptul: `scripts/cercetare-v100339-acuratete.mjs` (rulează codul paginii prin
 | M4 | 13.11.2026 | confirmarea lui E1 pe date de dinaintea explorării | 2 | vezi mai jos |
 | R1 | 14.11.2026 | revizia independentă: mărimea lui K1 / K2 / K3 pe altă sămânță (777) | 0 pe piață | K3 5,8% — vezi „Revizia independentă” |
 | M5 | 14.11.2026 | regimul pentru grid: ADX și lățimea benzilor față de eficiența și drumul următoarelor 24 h; becul „lateral” | 12 | toate NEDOVEDITE (A și C: efect zero; B: ×1,2–1,3, sub prag) — vezi „M5 — rezultatul” |
+| M5b | din 14.11.2026, în așteptare | reluarea efectului B (benzi largi ⇒ drum mai lung) pe date noi, pe 1h, pe raportul din interiorul blocului | 1 (nerulat) | regulile scrise; se judecă pe primele 30 de blocuri noi încheiate, nu înainte de mijlocul lui aprilie 2027; prag 0,05 ÷ 70 |
+| N1 | din 14.11.2026, în așteptare | jurnalul pe viu: nota TradingView și verdictul Radarului, judecate după 4 bare, pe blocuri de 5 zile | 2 (nerulate) | regulile scrise; pagina arată bilanțul de la 30 de zile, judecata pe primele 36 de blocuri încheiate; prag 0,05 ÷ 70 |
 
 Corecția pentru câte teste s-au făcut: fiecare măsurătoare își corectează intervalele cu numărul TUTUROR testelor cu verdict de până la ea
 inclusiv (M1: 6; M2: 8; M3: 10; M4: 12).
@@ -417,3 +419,118 @@ Verdict M5 pentru pagină: 1h A=NEDOVEDIT B=NEDOVEDIT C=NEDOVEDIT; 4h A=NEDOVEDI
 **Numărul de încercări:** 12 teste (A, B, C × 1h, 4h × două ferestre), o singură procedură pe piață (cea din amendament); procedura dintâi
 (bootstrap pe blocuri) n-a atins piața. Simulări fără efect: 180 + 1.000 (revizorul) pe procedura veche; 2 × 10.000 + 3 × 100 + 2 × 400
 (diagnostic) pe cea nouă.
+
+## M5b — reluarea efectului B pe date noi (regulile scrise 14.11.2026, înaintea oricărei bare noi)
+
+*(Rescrise în aceeași zi, după o revizie independentă a primei forme, tot înaintea oricărei bare noi. Ce a schimbat revizia: blocurile
+trebuie să fie încheiate; pragul numără toate testele de până acum, cum cere regula din capul jurnalului; un singur test, pe 1h; tabelul
+de putere refăcut prin simulare, cu tot cu pragul de mărime.)*
+
+**De ce.** Din cele 12 teste ale lui M5, singurul efect cu același semn pe toate ferestrele a fost B: după benzi Bollinger largi drumul
+următoarelor 24 de ore e mai lung decât după benzi strânse. N-a trecut pragul. Pe aceleași date nu se mai încearcă nimic; se poate relua o
+singură dată, pe date care nu existau când s-au scris regulile.
+
+**Ce au arătat, de fapt, blocurile din M5** (scos din rezultatul rulării, nu rulat din nou). Cifra de pe fereastra întreagă (×1,21–1,30)
+amestecă săptămâni agitate cu săptămâni liniștite: într-o săptămână agitată sunt și benzile largi, și drumul lung, oricum. În interiorul
+aceluiași bloc de 5 zile raportul e mai mic:
+
+| interval | fereastra | raportul pe bloc (media geometrică) | abaterea log-raportului pe bloc | blocuri valide din cele ale ferestrei | raportul pe fereastra întreagă |
+|---|---|---|---|---|---|
+| 1h | principală | ×1,18 | 0,222 | 21 din 21 | ×1,24 |
+| 1h | veche | ×1,13 | 0,171 | 21 din 21 | ×1,22 |
+| 4h | principală | ×1,08 | 0,286 | 50 din 84 | ×1,21 |
+| 4h | veche | ×1,11 | 0,284 | 51 din 84 | ×1,30 |
+
+Pe 1h: ×1,18 și ×1,13. Deci mărimea de judecat e raportul PE BLOC (cel pe care îl testează Student), nu cel de pe fereastra întreagă.
+
+**Ipoteza.** În aceeași perioadă de 5 zile, după benzi largi (percentila lățimii > 70) drumul următoarelor 24 de ore e mai lung decât după
+benzi strânse (percentila < 30). Mecanismul: volatilitatea ține de la o zi la alta. Nu e un semnal de direcție, e o măsură a cât se mișcă
+prețul; de aceea ar putea ține.
+
+**Un singur test, pe 1h.** Pe 4h doar ~60% din blocuri au fost valide (ambele clase cu destule eșantioane), iar abaterea e mai mare:
+ar trebui peste un an de date. Nu se judecă.
+
+**Mărimea care contează.** Raportul pe bloc de cel puțin ×1,2. Sub el nu s-ar schimba nicio setare de grid. Pragul e pus acum, înaintea
+datelor noi, și e peste ce au arătat blocurile vechi.
+
+**Pragul testului.** Regula din capul jurnalului: se numără toate testele cu verdict de până acum. 32 până la M5 inclusiv, acesta, plus
+cele două ale jurnalului notei (mai jos) = 35 ⇒ p ≤ 0,05 ÷ 70 (0,071%), într-o parte.
+
+**Datele.** Aceleași 21 de perechi (lista din script), lumânări Binance perp de 1h. Intră doar eșantioanele a căror bară etichetată se
+închide din 14.11.2026 încolo (tăietura = capătul datelor din M5, 13.11.2026 19:00 UTC); eticheta poate privi în urmă peste tăietură,
+urmarea (cele 24 de ore) e toată nouă. Blocuri de 5 zile calendaristice de la 14.11.2026, luate la rând și doar **încheiate** (ultima zi
+a blocului e în urma celei mai noi zile cu eșantioane); un bloc încheiat în care o clasă are sub 20 de eșantioane se sare.
+
+**Câte blocuri și ce șanse.** 30 de blocuri încheiate (150 de zile). Simulat (100.000 de rulări pe rând, abaterea 0,222, testul și pragul
+de mai sus, cu tot cu mărimea minimă):
+
+| raportul adevărat pe bloc | iese semnificativ | iese DOVEDIT (semnificativ și cel puțin ×1,2) |
+|---|---|---|
+| ×1,00 (niciun efect) | 0,07% | 0,00% |
+| ×1,13 (cât a arătat fereastra veche) | 33% | 7% |
+| ×1,18 (cât a arătat fereastra principală) | 71% | 34% |
+| ×1,20 | 82% | 50% |
+| ×1,25 | 96% | 84% |
+| ×1,30 | 99,6% | 97,5% |
+
+Adică: dacă efectul adevărat e cât s-a văzut în M5, **șansa de „dovedit” e de 7–34%**; ca să iasă dovedit în patru cazuri din cinci,
+efectul adevărat trebuie să fie pe la ×1,25. Reluarea merită doar fiindcă nu costă nimic (scriptul așteaptă singur); cel mai probabil
+rezultat e „există, dar prea mic”. Un „nedovedit” de aici nu va însemna că efectul lipsește.
+
+**Verdictul.** Pe PRIMELE 30 de blocuri încheiate și valide de după tăietură — eșantion fix, deci rularea de mai târziu nu e „încă o
+privire”. DOVEDIT = p ≤ 0,05 ÷ 70 și raportul pe bloc de cel puțin ×1,2. Altfel NEDOVEDIT, iar ideea se închide: nu se mai reia cu alt prag.
+
+**Ce se schimbă pe pagină.** Dovedit ⇒ rândul de 1 oră din „Regimul pentru grid” spune cifra („după benzi largi drumul următoarelor 24 h a
+fost de N ori mai lung decât după benzi strânse”). Nedovedit ⇒ rămâne „nedovedit”.
+
+**Când.** Nu înainte de mijlocul lui aprilie 2027 (30 de blocuri încheiate + ziua care arată că ultimul e întreg). Scriptul refuză până
+atunci: `node scripts/cercetare-v100339-acuratete.mjs --ce=m5b --tf=1h` scrie „PREA DEVREME” și câte blocuri sunt. Fără `--pana` nu ține
+nimic în cache (o rulare de probă de azi nu poate îngheța datele rulării adevărate). Judecata e în `scripts/lib/m5b-reluare.mjs`, probată
+în `scripts/proba-v100341.mjs`.
+
+**Încercări.** A doua măsurătoare a efectului B (prima: M5, nedovedit). Un test nou, pe date noi.
+
+## Jurnalul notei pe viu — regulile judecății (scrise 14.11.2026, înaintea primei cifre)
+
+*(Rescrise în aceeași zi, după revizia independentă, tot înaintea primei cifre. Ce a schimbat revizia: unitatea testului e blocul de 5
+zile, nu ziua — urmările notelor vecine se suprapun; zilele se țin separat de jurnal, ca eșantionul să fie chiar fix; pragul numără toate
+testele; notele judecate târziu nu intră.)*
+
+**Ce se adună.** Colectorul notează, o dată pe bară de 4 ore, pentru monedele boților porniți: nota TradingView pe 4 ore (cu bara în curs,
+așa cum o arată pagina), verdictul Radarului arătat de pagină în aceeași clipă (confirmat pe două bare) și prețul. După 4 bare (16 ore)
+notează prețul de atunci. Intră notele de la 14.11.2026 10:45 UTC încolo (de când se notează verdictul arătat, colector v101.179) și doar
+cele judecate la timp: cel mult 20 de ore după notă (4 bare și una îngăduită). Dacă se schimbă ce se notează sau cum se judecă, ceasul
+pornește de la capăt, cu altă dată de început scrisă aici.
+
+**Cum se numără.** O notă cu direcție (|nota| > 0,1; verdictul BULLISH sau BEARISH) a nimerit dacă prețul de după e de partea ei. Zilele
+(UTC, a notei) se țin într-un fișier al lor, separat de jurnal: jurnalul își taie cu timpul zilele vechi, întregi, iar o zi ieșită din
+jurnal nu se mai schimbă.
+
+**Ce arată pagina.** Pentru fiecare serie, de la 30 de zile ale ei cu note judecate: un rând în cartela TradingView, ca fapt — partea
+notelor care au nimerit, câte note, în câte zile — fără culoare și fără verdict. E pe toate monedele boților, nu pe moneda de pe ecran.
+
+**De ce blocuri, nu zile.** Notele se iau la 4 ore și se judecă după 16: urmările notelor vecine împart același drum al prețului, și peste
+miezul nopții. Pe zile, un test fără niciun efect a ieșit „dovedit” de 1,4–1,8 ori mai des decât pragul (revizia independentă: 1,7–2,2%
+la un prag de 1,25%). Pe blocuri de 5 zile, simulat (preț la întâmplare, 20.000 de rulări pe lume, patru feluri de note — mereu aceeași
+direcție, după impuls, care ține, la întâmplare): respingeri la 2,5% între 2,4% și 2,8%; la pragul verdictului 9–18 din 20.000 (nominal
+14). Poarta (cel mult de două ori nominalul) e trecută.
+
+**Judecata, o singură dată pe serie.** Blocuri de 5 zile calendaristice de la 14.11.2026, luate la rând și doar **încheiate** (toate cele
+5 zile au trecut și nicio notă din ele nu mai așteaptă judecata); un bloc încheiat cu sub 12 note ale seriei se sare. Se judecă **primele
+36 de blocuri** încheiate și valide ale seriei (eșantion fix). Două teste — nota TradingView și verdictul Radarului — fiecare Student
+într-o parte pe (partea nimerită a blocului − 50%). Pragul, după regula din capul jurnalului (35 de teste cu verdict, cu M5b): p ≤ 0,05 ÷
+70. „Nimerește direcția” = p sub prag și media blocurilor de cel puțin 55%. Altfel „nedovedit”. Colectorul îngheață judecata fiecărei
+serii când se împlinește și nu o mai reface; cititorul din linia de comandă citește judecata înghețată.
+
+**Ce șanse are.** Simulat (20.000 de rulări, cu suprapunerea urmărilor): cu 36 de blocuri, o nimerire adevărată de 58% iese dovedită în
+38% din cazuri, una de 60% în 66%, una de 65% în 99%. Cu 30 de blocuri: 28%, 53%, 96%. Deci un „nedovedit” va spune doar că nota nu
+nimerește cu mult peste 60%; nu că nu nimerește deloc. 36 de blocuri înseamnă cel puțin 180 de zile cu boți porniți.
+
+**Notele pe 1 zi** (judecate după 4 zile, deci suprapuse mult) se numără, dar nu se judecă.
+
+**Față de ce s-a măsurat pe istoric.** Pe motorul refăcut și pe bare închise, direcția a fost nimerită în 47–50 din 100 de cazuri (M1,
+13.11.2026). Jurnalul pe viu măsoară altceva — nota adevărată, cu bara în curs — deci o cifră diferită nu e o contradicție; una apropiată de
+50% ar întări ce scrie deja pagina („nedovedit”).
+
+**Ce urmează după judecată.** „Nimerește direcția” ⇒ pagina o spune lângă notă, cu cifra. „Nedovedit” ⇒ rămâne cum e azi: informație, nu
+intră în verdict. În niciunul din cazuri nota nu intră în verdictul botului fără o măsurătoare separată.

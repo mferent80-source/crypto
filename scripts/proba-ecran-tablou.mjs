@@ -21,7 +21,9 @@
 // masura fisiere VECHI si ar trece degeaba. Vezi porneste() mai jos.
 //
 // Rulare (are nevoie de server pe :8788 - PORNESTE-CRYPTO-RADAR.bat - si de
-// Chrome sau Edge instalat local; NU intra in `npm test`):
+// Chrome sau Edge instalat local; NU intra in `npm test`, care nu deschide niciun browser;
+// v100.341: ruleaza singura inainte de push si dupa publicare, langa proba de telefon -
+// scripts/inainte-de-push.mjs, scripts/copie-de-lucru.mjs):
 //   node scripts/proba-ecran-tablou.mjs [url] [token] [dosarProfil] [--doar=text]
 //
 // `token` nu e folosit de scenariile mocked (ele nu ating deloc reteaua reala
@@ -320,7 +322,9 @@ async function seedIstoricCopt(b, id, minute, pretPerp) {
 }
 
 async function seteazaMock(b, cheie, valoare) {
-  await b.ev(`window.__proba.${cheie} = ${JSON.stringify(valoare)}; apiTokenRespins = null;`);
+  // v100.341 (I-879): de la v100.318 (I-848) pagina ține 3 s un răspuns bun la aceeași adresă (getJsonProaspat) - fără golirea plasei, datele
+  // false puse aici nu mai ajungeau la pagină (citea răspunsul de dinainte), iar 32 de pași picau din cauza probei, nu a paginii
+  await b.ev(`window.__proba.${cheie} = ${JSON.stringify(valoare)}; apiTokenRespins = null; if (typeof getJsonGoleste === "function") getJsonGoleste();`);
 }
 
 async function celula(b, i) {
@@ -527,11 +531,13 @@ async function main() {
       // v100.9: si deschiderea zilei (pvAduZi, lumanarea 1D a botului, v100.7) pornita inainte de pana
       for (let i = 0; i < 60; i++) { if (await b.ev(`!(tbStare.directie&&tbStare.directie.inLucru)&&!(tbStare.grafic&&tbStare.grafic.inLucru)&&!(typeof pvStare!=="undefined"&&pvStare.ziInLucru)`)) break; await asteapta(500); }
       await b.ev(`window.__proba.setItemLog = []`);
-      const apeluriMarketInainte = await b.ev(`window.__proba.calls.market`);
+      // v100.341 (I-879): doar cererile de LUMÂNĂRI - prețul viu (tickerul) se cere periodic și nimerea uneori în fereastră (55 ≠ 54)
+      const lumanariCerute = () => b.ev(`window.__proba.apeluri.filter(x => /^market\\?.*klines/.test(x)).length`);
+      const apeluriMarketInainte = await lumanariCerute();
       await seteazaMock(b, "botOrders", { reteaPicata: true });
       await b.ev(`tbAduDate()`);
       const scrieriInTimpulPenei = await b.ev(`window.__proba.setItemLog.filter(k=>k.startsWith('tabloBotIstoric_v1_')).length`);
-      const apeluriMarketDupa = await b.ev(`window.__proba.calls.market`);
+      const apeluriMarketDupa = await lumanariCerute();
       assert.equal(scrieriInTimpulPenei, 0, `n-ar trebui nicio scriere in istoric in timpul penei, au fost ${scrieriInTimpulPenei}`);
       assert.equal(apeluriMarketDupa, apeluriMarketInainte, "n-ar trebui cerute lumanari in timpul penei de ruta");
     });
@@ -743,8 +749,8 @@ async function main() {
       const ceFac = await textEl(b, "tbCeFac");
       assert.ok(!/AUTH_REQUIRED/.test(String(titlu) + String(ceFac)),
         `omul nu are ce face cu "AUTH_REQUIRED": titlu="${titlu}" ceFac="${ceFac}"`);
-      assert.match(String(ceFac), /Crypto Radar pornire/,   // v100.306: pe VPS, nu .bat
-        `trebuie sa-i spuna cu ce sa porneasca: "${ceFac}"`);
+      assert.match(String(ceFac), /parola în Setări/,   // v100.341: la 401 îndemnul e parola din Setări (era „cu ce pornești serverul”)
+        `trebuie sa-i spuna ce sa faca: "${ceFac}"`);
     });
 
     await test("13. lumanarile se sorteaza dupa timp, nu se presupune ordinea de la ruta", async () => {
@@ -823,12 +829,12 @@ async function main() {
 
     await test("A2. lista: Realizat NET / Nerealizat (poziție) / Total, eticheta NET o singura data", async () => {
       const r = await incarcaLista([botNormalizat(botBrut({ strategyId: "7201" }))]);
-      assert.match(r.randuri, /Realizat NET\s*\+4\.9000 USDT/, r.randuri);
-      assert.match(r.randuri, /Nerealizat \(poziție\)\s*\+7\.5000 USDT/, r.randuri);
-      assert.match(r.randuri, /Total\s*\+12\.4000 USDT/, r.randuri);
+      assert.match(r.randuri, /Realizat NET\s*\+4,9 USDT/, r.randuri);   // v100.196: o zecimală, virgula
+      assert.match(r.randuri, /Nerealizat \(poziție\)\s*\+7,5 USDT/, r.randuri);
+      assert.match(r.randuri, /Total\s*\+12,4 USDT/, r.randuri);
       const netPeRand = await b.ev(`(() => { const c = document.querySelectorAll('#botiRanduri .accountRow')[1]; return c ? (c.textContent.match(/NET/g) || []).length : -1 })()`);
       assert.equal(netPeRand, 1, `eticheta NET trebuie sa apara o singura data, pe cifra neta (are ${netPeRand})`);
-      assert.equal(r.nerealizat, "+7.5000 USDT"); assert.equal(r.total, "+12.4000 USDT");
+      assert.equal(r.nerealizat, "+7,5 USDT"); assert.equal(r.total, "+12,4 USDT");
     });
 
     await test("A2b. Tabloul arata banii (investit, realizat NET, nerealizat, total, lichidare) si avertismentele serverului", async () => {
@@ -839,17 +845,17 @@ async function main() {
       await b.ev(`tbAduDate()`);
       const bani = await textEl(b, "tbBani");
       assert.ok(bani, "lipseste #tbBani pe Tablou");
-      for (const re of [/Investit\s*150\.00 USDT/, /Realizat, după comisioane\s*\+4\.9000 USDT/, /Poziția deschisă nerealizat\s*\+7\.5000 USDT/, /Total\s*\+12\.4000 USDT/])
+      for (const re of [/Investit\s*150,00 USDT/, /Realizat, după comisioane\s*\+4,9 USDT/, /Poziția deschisă nerealizat\s*\+7,5 USDT/, /Total\s*\+12,4 USDT/])   // v100.196: virgula
         assert.match(String(bani), re, `Tabloul nu arata ${re}: ${bani}`);
       const kpi = await textEl(b, "tbKpi");
-      for (const re of [/Rezultat total, USDT\s*\+12\.40/, /0[.,]80000/, /trebuie să scadă până la/])
+      for (const re of [/Rezultat total, USDT\s*\+12,4/, /trebuie să scadă până la\s*0[.,]8000/])
         assert.match(String(kpi), re, `banda de sus nu arata ${re}: ${kpi}`);
       const av = await textEl(b, "tbAvertismente");
       assert.match(String(av), /STINS/, `avertismentul serverului lipseste de pe Tablou: ${av}`);
       await seteazaMock(b, "botOrders", { corp: { bots: [botNormalizat(brut, { profitNet: null, pnlNerealizat: null, profitTotal: null })] }, stare: 200 });
       await b.ev(`tbAduDate()`);
       const gol = await textEl(b, "tbBani");
-      assert.ok(!/0\.0000 USDT/.test(String(gol)), `pe Tablou lipsa a devenit 0: ${gol}`);
+      assert.ok(!/[^\d,.]0[.,]0+ USDT/.test(String(gol)), `pe Tablou lipsa a devenit 0: ${gol}`);
       const totGol = await textEl(b, "tbKpiTotal");
       assert.equal(String(totGol).trim(), "—", `in banda de sus un total necunoscut a devenit "${totGol}"`);
     });
@@ -858,14 +864,14 @@ async function main() {
       await b.ev(`(() => { if (TabloBot.__masoaraOriginal) return; const o = TabloBot.masoara; TabloBot.__masoaraOriginal = o;
         TabloBot.masoara = function (a) { const m = o.apply(this, arguments);
           m.comision = Object.assign({}, m.comision, { valoare: 62.5, unitate: "%", stare: "rau" });
-          m.amplitudine = Object.assign({}, m.amplitudine, { unitate: "×" });
+          m.trepte = Object.assign({}, m.trepte, { unitate: "×" });   // v100.339: rândul al patrulea e „drumul prețului, în trepte”
           return m; }; })()`);
       try {
         await incarcaBotSanatos({ strategyId: "7301" });
         const com = await celula(b, 6);
-        assert.equal(com?.valoare, "62.50%", `comisionul trebuie afisat cu unitatea lui: ${com?.valoare}`);
+        assert.equal(com?.valoare, "62,5%", `comisionul trebuie afisat cu unitatea lui: ${com?.valoare}`);   // v100.196: o zecimală, virgula
         const amp = await celula(b, 3);
-        assert.match(String(amp?.valoare), /×$|^—$/, `amplitudinea trebuie sa poarte "×": ${amp?.valoare}`);
+        assert.match(String(amp?.valoare), /×$|^—$/, `drumul în trepte trebuie sa poarte unitatea din modul ("×"): ${amp?.valoare}`);
       } finally {
         await b.ev(`if (TabloBot.__masoaraOriginal) { TabloBot.masoara = TabloBot.__masoaraOriginal; delete TabloBot.__masoaraOriginal; }`);
       }
@@ -1202,7 +1208,7 @@ async function main() {
       assert.deepEqual(iesite, [], `ies din ecranul de telefon: ${iesite.join(', ')}`);
     });
 
-    await test("D14. Health inainte de orice analiza: verificarile locale sunt NEINCERCAT, nu FAIL; watchdog-ul nu intra in SAFE MODE pentru asta", async () => {
+    await test("D14. Health inainte de orice analiza: verificarile locale sunt NEINCERCAT, nu FAIL; starea generala vine din furnizori (v100.196); watchdog-ul nu intra in SAFE MODE pentru asta", async () => {
       const r = await b.ev(`(async () => {
         // "inainte de orice analiza": fara stare, fara mostra REST, fara tick WS
         const stare = window.__radarState, rest = dataFresh.rest, ws = lastWsTick;
@@ -1219,8 +1225,8 @@ async function main() {
         } finally { window.__radarState = stare; dataFresh.rest = rest; lastWsTick = ws; delete window.__proba.rute["provider-health"]; }
       })()`);
       assert.ok(r.local.every((x) => x === "NEÎNCERCAT"), `verificari locale fara analiza: ${r.local.join(", ")}`);
-      assert.equal(r.stare, "NEÎNCERCAT", `Overall fara analiza: ${r.stare}`);
-      assert.equal(r.ecran, "NEÎNCERCAT");
+      assert.equal(r.stare, "DEGRADED", `Overall fara analiza, cu 3 din 4 furnizori ceruti OK: ${r.stare}`);   // v100.196 (🟡7): din furnizori, nu „NEÎNCERCAT” deasupra pastilelor
+      assert.match(String(r.ecran), /^DEGRADED/, `pe ecran: ${r.ecran}`);
       assert.ok(!/SAFE MODE|EMERGENCY/.test(String(r.ops)), `watchdog-ul intra in ${r.ops} doar fiindca nu s-a analizat nimic`);
       assert.ok(!r.prov || r.prov.ok || r.prov.sev !== "HARD", `verificarea PROVIDER e HARD: ${JSON.stringify(r.prov)}`);
     });
@@ -1402,8 +1408,8 @@ async function main() {
         await incarcaBotSanatos({ strategyId: "7801" });
         const rigla = await textEl(b, "tbRigla"), masura = (await celula(b, 4))?.valoare, bani = await textEl(b, "tbKpi");
         assert.match(String(rigla), /lichidare jos la −37[.,]5%/,   /* v100.259: virgula */ `rigla: ${rigla}`);
-        assert.match(String(masura), /jos −37\.50%/, `masura: ${masura}`);
-        assert.match(String(bani), /Până la lichidare\s*38\.5%\s*prețul trebuie să scadă până la/, `banda de sus: ${bani}`);
+        assert.match(String(masura), /jos −37,5%/, `masura: ${masura}`);
+        assert.match(String(bani), /Până la lichidare\s*38,5%\s*prețul trebuie să scadă până la/, `banda de sus: ${bani}`);
         await b.ev(`window.__lichProba = { valoare: -2.1, partea: "sus", depasita: true, pretLichidare: 1.26, stare: "rau", unitate: "%" }`);
         await b.ev(`renderTabloBot()`);
         const rigla2 = await b.ev(`[...document.querySelectorAll('#tbRigla .bad')].map(x => x.textContent).join(' ')`);
@@ -1522,6 +1528,24 @@ async function main() {
       await asteapta(800);
       const scrieri = await b.ev(`window.__proba.setItemLog.filter(k=>k.startsWith('tabloBotIstoric_v1_')).length`);
       assert.equal(scrieri, 0, "o pana de retea nu are voie sa devina dovada in istoric");
+    });
+
+    await test("N1. bilantul notei TradingView (I-878): sub 30 de zile nu apare; de la 30 apare sub tabelul notei, ca text simplu, fara culoare", async () => {
+      await incarcaBotSanatos({ strategyId: "9601" });
+      const bil = (zile) => ({ la: Date.now(), inLucru: false, b: { zile, serii: { tv4h: { n: 172, k: 85, zile }, radar4h: { n: 150, k: 77, zile }, tv1D: { n: 0, k: 0, zile: 0 }, radar1D: { n: 0, k: 0, zile: 0 } }, judecata: { tv4h: { gata: false, blocuri: 6, trebuie: 36 }, radar4h: { gata: false, blocuri: 6, trebuie: 36 } } } });
+      await b.ev(`tbStare.notaBilant = ${JSON.stringify(bil(29))}; renderTabloTv(); true`);
+      assert.equal(await b.ev(`!!document.getElementById('tbTvBilant')`), false, "sub 30 de zile randul nu exista");
+      await b.ev(`tbStare.notaBilant = ${JSON.stringify(bil(34))}; navTo('tabloubot', true); renderTabloTv(); true`);
+      await asteapta(400);
+      // pliurile Tabloului deschise chiar înainte de măsurat (pe ecran îngust cartela trendului e strânsă), apoi cartela redesenată
+      await b.ev(`(() => { const P = document.getElementById('tabloubot'); P.querySelectorAll('details').forEach((d) => { d.open = true; }); P.querySelectorAll('[data-rand]').forEach((e) => e.setAttribute('data-rand', 'deschis')); renderTabloTv(); return true; })()`);
+      const r = await b.ev(`(() => { const e = document.getElementById('tbTvBilant'); if (!e) return null; const q = e.getBoundingClientRect(), t = document.querySelector('#tbTvNote table');
+        return { text: e.textContent, cls: e.className, vizibil: q.width > 0 && q.height > 0, subTabel: !t || q.top >= t.getBoundingClientRect().bottom - 1, inCartela: !!e.closest('#tbTvNote'), latime: Math.round(q.right), ecran: document.documentElement.clientWidth }; })()`);
+      assert.ok(r && r.vizibil && r.inCartela && r.subTabel, `randul trebuie sa fie la vedere, in cartela TradingView, sub tabel: ${JSON.stringify(r)}`);
+      assert.ok(r.latime <= r.ecran + 1, `randul iese din ecran: ${r.latime} > ${r.ecran}`);
+      assert.match(r.text, /^Pe viu, din jurnalul colectorului, pe monedele boților tăi: nota TradingView pe 4 ore a nimerit direcția în 49% din note \(172 de note judecate în 34 de zile\); verdictul Radarului pe 4 ore în 51% \(150 de note judecate în 34 de zile\)\. Numărătoare, nu dovadă/);
+      assert.equal(r.cls, "tbSub", "fara clasa de culoare");
+      await b.ev(`tbStare.notaBilant = null; true`);
     });
 
     await test("24. in fundal NU se deschide WebSocket - doar cand esti pe tablou", async () => {

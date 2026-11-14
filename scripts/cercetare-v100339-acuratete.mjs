@@ -1,6 +1,6 @@
 // Măsurătorile din docs/cercetare/2026-11-13-tablou-acuratete.md (regulile sunt ACOLO, scrise înainte de cifre). Rulează codul paginii
 // (scripts/lib/motor-pagina.mjs), pe lumânări publice Binance perp. Nimic din vreun cont; nu scrie nimic în afara dosarului de cache.
-//   node scripts/cercetare-v100339-acuratete.mjs --ce=m1|m2|m3|m3h0|m4 [--tf=1h|4h] [--cache=<dosar>] [--out=<fișier.json>] [--samanta=<număr>] [--pana=<ms UTC>]
+//   node scripts/cercetare-v100339-acuratete.mjs --ce=m1|m2|m3|m3h0|m4|m5|m5h0|m5b [--tf=1h|4h] [--cache=<dosar>] [--out=<fișier.json>] [--samanta=<număr>] [--pana=<ms UTC>]
 // --samanta = sămânța generatorului (implicit cea din jurnal, 20261113): aceeași măsurătoare pe altă sămânță arată cât din cifră e noroc.
 // --pana = capătul datelor: barele care se închid după clipa aceea nu intră, iar o aducere nouă cere de la Binance exact până acolo
 // (fără el capătul e clipa rulării, deci cifrele nu se pot reface întocmai mai târziu; capătul rulărilor din 13.11 e scris în jurnal).
@@ -19,6 +19,7 @@ import { rating } from "./lib/tv-rating-calc.mjs";
 import * as REF from "./lib/indicatori-referinta.mjs";
 import { etichetaM5 } from "./lib/m5-etichete.mjs";
 import { testBlocuri, blocuriDinZile, valoriPeBlocuri } from "./lib/statistica-blocuri.mjs";
+import { judecaM5b, primaZiNoua, TAIETURA_M5 } from "./lib/m5b-reluare.mjs";
 
 const ARG = Object.fromEntries(process.argv.slice(2).map((a) => { const m = /^--([^=]+)=(.*)$/.exec(a); return m ? [m[1], m[2]] : [a.replace(/^--/, ""), true]; }));
 const CE = String(ARG.ce || "m1"), CACHE = ARG.cache || path.join(os.tmpdir(), "radar-cercetare"); fs.mkdirSync(CACHE, { recursive: true });
@@ -26,7 +27,7 @@ const SYMS = ["BTCUSDT", "ETHUSDT", "ZECUSDT", "HYPEUSDT", "SOLUSDT", "BNBUSDT",
 const TFS = { "1h": { ms: 3600000, orizont: 24 }, "4h": { ms: 14400000, orizont: 6 } }, TF_LISTA = ARG.tf && TFS[ARG.tf] ? [ARG.tf] : Object.keys(TFS);
 const FER = 499, H = 4, PAS = 4, SAMANTA = Number(ARG.samanta) > 0 ? Number(ARG.samanta) : 20261113, B = 2000, BLOC = 5, PANA = Number(ARG.pana) > 0 ? Number(ARG.pana) : null;
 // câte teste cu verdict s-au făcut până la fiecare măsurătoare inclusiv (registrul din jurnal)
-const TESTE = { m1: 6, m2: 8, m3: 10, m3h0: 10, m4: 12, m5: 32, m5h0: 32 };   /* la m5 corecția e în pragul dovezii pe blocuri: p ≤ 0,05 ÷ 64 într-o parte */   /* m5: cele ~20 de până la el, numărate cum a cerut revizia, + 12 */
+const TESTE = { m1: 6, m2: 8, m3: 10, m3h0: 10, m4: 12, m5: 32, m5h0: 32, m5b: 35 };   /* m5b: al 33-lea test; pragul lui numără și cele două ale jurnalului notei (35) */   /* la m5 corecția e în pragul dovezii pe blocuri: p ≤ 0,05 ÷ 64 într-o parte */   /* m5: cele ~20 de până la el, numărate cum a cerut revizia, + 12 */
 function mulberry32(a) { return function () { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const asteapta = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -43,6 +44,21 @@ async function bare(sym, tf, vechi) {
     if (k.length < 1500) break;
   }
   fs.writeFileSync(f, JSON.stringify(toate)); return toate;
+}
+// M5b: lumânările de DUPĂ capătul datelor din M5 (cu destul trecut înaintea lui pentru etichetă), cerute înainte, pagină cu pagină
+async function bareDupa(sym, tf) {
+  // cache doar cu --pana (capăt fix, deci același răspuns mereu); fără el fiecare rulare aduce din nou - altfel o rulare de probă din 2026
+  // ar îngheța datele și judecata din 2027 ar citi fișierul vechi (revizia independentă)
+  const f = PANA ? path.join(CACHE, sym + "-" + tf + "-dupa-" + PANA + ".json") : null; if (f && fs.existsSync(f)) return JSON.parse(fs.readFileSync(f, "utf8"));
+  let start = TAIETURA_M5 - (FER + 120) * TFS[tf].ms, toate = []; const capat = PANA || Date.now();
+  for (let p = 0; p < 40 && start < capat; p++) {
+    const r = await fetch(`https://fapi.binance.com/fapi/v1/klines?symbol=${sym}&interval=${tf}&limit=1500&startTime=${start}` + (PANA ? "&endTime=" + PANA : ""), { signal: AbortSignal.timeout(30000) });
+    const k = await r.json(); if (!Array.isArray(k)) throw new Error("M5b: Binance n-a dat lumânări pentru " + sym + " " + tf + " (" + JSON.stringify(k).slice(0, 120) + ") - rularea se oprește, nu judecă pe o serie trunchiată");
+    if (!k.length) break;
+    toate = toate.concat(k.map((x) => [+x[0], +x[1], +x[2], +x[3], +x[4], +x[5]])); start = k[k.length - 1][0] + TFS[tf].ms; await asteapta(250);
+    if (k.length < 1500) break;
+  }
+  if (f) fs.writeFileSync(f, JSON.stringify(toate)); return toate;
 }
 const inchise = (k, tf) => { const t = PANA || Date.now(); let n = k.length; while (n && k[n - 1][0] + TFS[tf].ms > t) n--; return n === k.length ? k : k.slice(0, n); };   /* doar barele închise până la capăt (--pana sau acum) */
 const inCalc = (w) => w.map((x) => [x[0], String(x[1]), String(x[2]), String(x[3]), String(x[4]), String(x[5]), x[0] + 1, String(x[5] * x[4])]);
@@ -200,6 +216,17 @@ for (const tf of TF_LISTA) {
     const verd = (K, minim, x, y) => (!destule(x, y) ? "PREA PUȚINE" : [P, V].every((w) => trece(w[K]) && w[K].est >= minim) ? "DOVEDIT" : "NEDOVEDIT");
     out.ferestre = fer; out.pragT = T_PRAG; out.verdict = { A: verd("A", 0.03, "trend", "lateral"), B: verd("B", 1.3, "rid", "joasa"), C: verd("C", 0.03, "becDir", "becLat") };
     console.log(`\n⇒ M5 · ${tf} (pragul: ${T_PRAG ? "t ≥ " + f2(T_PRAG) : "p ≤ 0,078%"}): A (trend / lateral → eficiența) ${out.verdict.A} · B (benzi largi / strânse → drumul) ${out.verdict.B} · C (becul → eficiența) ${out.verdict.C}`);
+  }
+  if (CE === "m5b") {   // reluarea efectului B pe date NOI (regulile: jurnal, „M5b”, scrise 14.11.2026); refuză până sunt destule blocuri de după tăietură
+    if (tf !== "1h") { console.log(`\n⇒ M5b · ${tf}: nu se judecă (regulile: doar 1h - pe 4h ar trebui peste un an de blocuri valide)`); continue; }
+    const HF = tf === "1h" ? 24 : 6, zile = {}, primaZi = primaZiNoua(); let perechi = 0;
+    for (const sm of SYMS) { const k = inchise(await bareDupa(sm, tf), tf); if (k.length < FER + HF + 10) continue; perechi++; const cl = k.map((x) => x[4]);
+      for (let i = FER - 1; i + HF < k.length; i += PAS) { const zi = ziua(k[i][0], tf); if (zi < primaZi) continue;   /* doar barele etichetate care se închid după tăietură */
+        const dr = RegimGrid.drumInainte(cl, i, HF), e = RegimGrid.clasifica(cl, i, null); if (dr === null || !e || (e.vol !== "ridicata" && e.vol !== "joasa")) continue;   /* eticheta benzilor: aceeași ca în M5, doar din barele ≤ i */
+        const z = zile[zi] || (zile[zi] = {}), K = e.vol === "ridicata" ? "rid" : "joasa", o = z[K] || (z[K] = { n: 0, s: 0 }); o.n++; o.s += dr; } }
+    const J = judecaM5b(zile); out.m5b = J; out.perechi = perechi;
+    if (!J.gata) console.log(`\n⇒ M5b · ${tf}: PREA DEVREME — ${J.blocuri} din ${J.trebuie} blocuri de 5 zile încheiate și valide de după ${J.primaZi} (${perechi} perechi). Nu se judecă nimic până atunci.`);
+    else console.log(`\n⇒ M5b · ${tf} (primele ${J.blocuri} blocuri încheiate de după ${J.primaZi}, până la ${J.panaLa}; pragul p ≤ 0,05 ÷ 70, raportul pe bloc cel puțin 1,2): raportul ×${f2(J.raport)} · t = ${f2(J.t)} · p = ${(100 * J.p).toFixed(4).replace(".", ",")}% ⇒ ${J.verdict}`);
   }
   out.secunde = Math.round((Date.now() - t0) / 1000);
 }
