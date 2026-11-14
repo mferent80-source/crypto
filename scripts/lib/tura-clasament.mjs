@@ -20,6 +20,14 @@ export function deTrimis(m) {
 export async function turaClasament(d) {
   const top = d.top || 100, pauzaMs = d.pauzaMs == null ? 1600 : d.pauzaMs, maxEsecuri = d.maxEsecuri || 15;
   const t0 = Date.now();
+  // v101.181 (I-887): perpetuele noi cu formă de acțiune tokenizată (se termină în X, preț cu 2 zecimale) se scot din clasamentul crypto ÎNAINTE de
+  // alegerea după volum și se spun o singură dată în jurnal; lista scrisă de mână din GridCalcul se completează după verificare. d.simboluriPerp()
+  // dă lista simbolurilor PERP; fără ea (probele vechi) sau dacă pică, tura merge ca înainte.
+  if (d.simboluriPerp && d.GridCalcul.nuCryptoDupaForma) {
+    try { const noi = d.GridCalcul.invataNuCrypto(d.GridCalcul.nuCryptoDupaForma(await d.simboluriPerp()));
+      if (noi.length) d.jurnal("clasament: simboluri noi cu formă de acțiune (se termină în X, preț cu 2 zecimale), scoase din clasamentul crypto până la verificare:", noi.join(" ")); }
+    catch (e) { d.jurnal("clasament: lista simbolurilor", e && e.message); }
+  }
   const tk = await d.cere("/api/market?type=pionex_tickers&market=PERP");
   const lista = d.GridClasament.topDupaVolum(tk && tk.data && tk.data.tickers, top);
   // v101.166 (I-838): lumânările de 4h vin incremental (d.klines4h: barele închise de pe disc + bara în curs închisă la prețul tickerului de

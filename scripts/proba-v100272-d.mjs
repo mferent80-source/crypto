@@ -421,7 +421,10 @@ await test("4f niciun argument de acțiune din app.js nu mai trece prin escapeHt
     if (/escapeHtml\(/.test(w) && !/^'\+escapeHtml\(x\.actiune\)\+'$/.test(w.replace(/"$/, ""))) rele.push(APP.slice(0, m.index).split("\n").length + ": " + w.slice(0, 70));
   }
   assert.deepEqual(rele, []);
-  assert.match(fnApp("tbPregatire"), /gridDeschideMoneda\(\\''\+argActiune\(q\.s\)\+'\\'\)/);
+  /* v100.343 (I-884): cartela „fără bot” nu mai are buton pe monedă (lista s-a mutat în banda de candidați); i-a rămas „Scan →”, cu acțiune fixă.
+     Butonul benzii își curăță moneda la litere, cifre și . _ - înainte s-o pună în acțiune: nimic de escapat */
+  assert.doesNotMatch(fnApp("tbPregatire"), /gridDeschideMoneda/); assert.match(fnApp("tbPregatire"), /data-action-click="navTo\(\\'scan\\',true\)"/);
+  assert.match(citeste("public", "lib", "t212-ecran.js"), /gridDeschideMoneda\(\\'' \+ String\(x\.moneda\)\.replace\(\/\[\^A-Za-z0-9\._-\]\/g, ""\) \+ '\\'\)/);
   /* argActiune: escaparea JS (\ ' ") apoi cea HTML - aceeași cale ca în 4e */
   const b = lumeApp({ String }, ["escapeHtml", "argActiune"]);
   for (const s of CAPCANE) { const box = lumeDispecer(); box.gridDeschideMoneda = box.spion("gridDeschideMoneda"); box.v54RunActionExpression(decodeaza("gridDeschideMoneda('" + b.argActiune(s) + "')"), {}, {}); assert.deepEqual(box.chemate, [["gridDeschideMoneda", s]], s); }

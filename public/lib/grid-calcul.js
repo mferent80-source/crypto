@@ -49,7 +49,35 @@ var GridCalcul = (function () {
    "IBMX INTCX IRENX KLACX KORUX LITEX LLYX LMTX LNGX LRCXX METAX MOSX MPX MRNAX MRVLX MSFTX MSTRX MUX NATGAS NBISX NETX NFLXX NIOX NKEX NOKX NOWX NTRX " +
    "NVDAX NVDLX OKLOX ONDSX ONX OPENAI ORCLX PANWX PAXG PAYPX PLTRX QCOMX QNTX QQQX RGTIX RKLBX RTXX SHAZX SITMX SLVX SMCIX SMHX SNDKX SNXXX SOXLX SOXSX " +
    "SOXXX SPCX SPYX STXX TQQQX TSLAX TSMX TTEX TXNX UNGX UNHX UNITREEX URAX USARX USOX VGKX VSHX WDCX WTI XAG XAU XAUT XLPX XLVX XYZX").split(" ").forEach(function (s) { NU_CRYPTO[s] = 1; });
+  // v100.343 (I-887, 14.11.2026): perpetue listate după 30.09 care nu sunt crypto și intrau în clasamentul de grid, în Scan și în regimul crypto.
+  // După formă (baza în X, preț cu 2 zecimale, ca acțiunile tokenizate Pionex): 3SOXXX EWZX GMEX PENGX SKHX TTWOX URNMX. Verificate după nume:
+  // SKHX (SK Hynix) și SMSN (Samsung) - anunțul Pionex din 16.03.2026; CF (CF Industries) - anunțul din 20.03.2026; SKHY (SK Hynix: aceeași
+  // denumire pe alte cinci burse); XPD / XPT (paladiu, platină).
+  "3SOXXX CF EWZX GMEX PENGX SKHX SKHY SMSN TTWOX URNMX XPD XPT".split(" ").forEach(function (s) { NU_CRYPTO[s] = 1; });
+  // monedele adevărate al căror nume se termină în X: regula de formă de mai jos nu le atinge niciodată
+  var CRYPTO_CU_X = {};
+  "ARX AVAX BEAMX CFX CVX DYDX FLUX FRAX GMX IMX INX IOTX MBOX MYX POLYX SLX SNX SPX STRAX STX TRX ZRX".split(" ").forEach(function (s) { CRYPTO_CU_X[s] = 1; });
   function eCrypto(simbol) { return !NU_CRYPTO[String(simbol || "").toUpperCase().replace(/_USDT_PERP$/, "").replace(/\.PERP$/, "")]; }
+  // v100.343 (I-887): din lista simbolurilor Pionex (/api/v1/common/symbols, cu precizia prețului) - bazele care au FORMA unei acțiuni tokenizate
+  // (se termină în X și prețul are 2 zecimale) și nu sunt încă în lista de mai sus. Pe lista din 14.11.2026 regula prinde 112 din cele 115
+  // acțiuni știute cu X și nicio monedă (cele 17 monede cu X au prețul la 3–6 zecimale). Nu prinde ce n-are X (SMSN, CF, metalele): acelea
+  // se adaugă de mână, după verificare.
+  function nuCryptoDupaForma(simboluri) {
+    var out = {};
+    (Array.isArray(simboluri) ? simboluri : []).forEach(function (x) {
+      var s = String(x && x.symbol || "").toUpperCase(); if (!/_USDT_PERP$/.test(s)) return;
+      var b = s.replace(/_USDT_PERP$/, "");
+      if (/X$/.test(b) && Number(x.quotePrecision) === 2 && !NU_CRYPTO[b] && !CRYPTO_CU_X[b]) out[b] = 1;
+    });
+    return Object.keys(out).sort();
+  }
+  // le ține minte cât trăiește procesul care o cheamă - azi doar colectorul (tura de clasament); pagina nu o cheamă, deci listele ei care
+  // folosesc eCrypto direct scot doar ce e în lista scrisă de mână. De aici înainte eCrypto le scoate; întoarce doar numele cu adevărat noi
+  function invataNuCrypto(nume) {
+    var noi = [];
+    (Array.isArray(nume) ? nume : []).forEach(function (n) { var b = String(n || "").toUpperCase().replace(/_USDT_PERP$/, ""); if (b && !NU_CRYPTO[b] && !CRYPTO_CU_X[b]) { NU_CRYPTO[b] = 1; noi.push(b); } });
+    return noi;
+  }
 
   function nr(v) {
     if (typeof v === "number") return isFinite(v) ? v : null;
@@ -438,6 +466,6 @@ var GridCalcul = (function () {
   return { C: C, bare: bare, bareToate: bareToate, bareBursa: bareBursa, pretCurent: pretCurent, agrega: agrega, imbinaRanduri: imbinaRanduri, mediana: mediana, percentila: percentila, procent: procent, oriDe: oriDe,
     latimi: latimi, pasi: pasi, plaseaza: plaseaza, nrGrile: nrGrile, niveluri: niveluri, niveluriArit: niveluriArit, lichidare: lichidare,
     levierSigur: levierSigur, stopuri: stopuri, construieste: construieste, ema: ema, directie: directie,
-    regim: regim, regimPeBare: regimPeBare, miscareMare: miscareMare, pozitie7z: pozitie7z, verdict: verdict, wilson: wilson, linisteTine: linisteTine, eCrypto: eCrypto };
+    regim: regim, regimPeBare: regimPeBare, miscareMare: miscareMare, pozitie7z: pozitie7z, verdict: verdict, wilson: wilson, linisteTine: linisteTine, eCrypto: eCrypto, nuCryptoDupaForma: nuCryptoDupaForma, invataNuCrypto: invataNuCrypto };
 })();
 if (typeof globalThis !== "undefined") globalThis.GridCalcul = GridCalcul;

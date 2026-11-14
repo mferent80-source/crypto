@@ -1243,13 +1243,26 @@ function tbIdeiRender() {
   var box = $("tbIdei"); if (!box || typeof Idei === "undefined") return;
   // v100.306 (I-824): regula comună „azi nu” (frâna zilei, pauza, piața în MIȘCARE) - lista rămâne la vedere, cu motivul, fără tonul de sfat
   var cl = contTot.clasament, an = typeof acAziNu === "function" ? acAziNu() : null, nu = !!(an && an.nu), l = Idei.ideiBoti(cl, contTot.inchise || [], 5);
+  // v100.343 (I-884): candidații pe care îi arăta cartela „fără bot” a Consilierului (primii 3 din rețeta 🟦 a Scanului) rămân pe pagină, în aceeași
+  // listă: cei care nu sunt deja printre primii 5 după scor se adaugă la coadă, cu eticheta „din Scan 🟦” (nimic pierdut, nimic de două ori)
+  var faraBot = typeof tbStare === "undefined" || !tbStare || !tbStare.bot;   /* cartela îi arăta doar fără bot; cu bot, banda rămâne cea de dinainte */
+  var dinScan = faraBot && typeof tbPreg !== "undefined" && tbPreg && Array.isArray(tbPreg.grid) ? tbPreg.grid.map(function (q) { return q && q.s; }).filter(Boolean) : [];
+  if (dinScan.length && cl && Array.isArray(cl.monede)) {
+    var am = {}; l.forEach(function (x) { am[x.moneda] = 1; });
+    var lipsa = dinScan.filter(function (s) { return !am[s]; });
+    if (lipsa.length) l = l.concat(Idei.ideiBoti({ la: cl.la, monede: cl.monede.filter(function (m) { return m && lipsa.indexOf(String(m.simbol || "").replace(/_USDT_PERP$/, "").replace(/_USDT$/, "")) >= 0; }) }, contTot.inchise || [], lipsa.length).map(function (x) { return Object.assign({ dinScan: true }, x); }));
+  }
   var h = '<div class="tbTodoCap"><h4>' + (nu ? "💡 Candidatele pentru un bot · azi nu pornesc" : "💡 Pe ce aș porni un bot acum") + '</h4><span class="tbSub">' + (cl && cl.la ? "clasamentul de la " + escapeHtml(new Date(cl.la).toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" })) + ", top 100 PERP" : "colectorul face clasamentul o dată pe oră") + '</span></div>';
   if (nu) h += acAziNuHtml(an);
   if (!l.length) h += '<p class="tbSub tbTodoGol">' + (cl ? "Acum nicio monedă nu e candidată." : "Aștept clasamentul…") + '</p>';
   else { tbIngustAdu(l.map(function (x) { return x.simbol; }).filter(Boolean)); }
   if (l.length) h += l.map(function (x) {
     var ist = tbIstoricBoti(x.istoric);
-    var det = [x.latime != null ? "interval " + (typeof grProc === "function" ? grProc(x.latime) : GridCalcul.procent(x.latime)) : "", x.profitGrila != null ? GridCalcul.procent(x.profitGrila) + " net pe grilă" : "", x.traversariZi != null ? "~" + Math.round(x.traversariZi) + " treceri pe zi" : ""].filter(Boolean).join(" · ");
+    var det = [x.latime != null ? "interval " + (typeof grProc === "function" ? grProc(x.latime) : GridCalcul.procent(x.latime)) : "", x.profitGrila != null ? GridCalcul.procent(x.profitGrila) + " net pe grilă" : "", x.traversariZi != null ? "~" + Math.round(x.traversariZi) + " treceri pe zi" : "",
+      /* v100.343 (I-884): detaliile care erau doar în cartela „fără bot” a Consilierului - câte grile, pasul, mișcarea pe 7 zile (din Scan, când e adusă) */
+      x.grile > 0 ? TextRo.cate(x.grile + 1, "grilă", "grile") : "", x.pas > 0 ? "pas " + (x.pas * 100).toFixed(2).replace(".", ",") + "%" : "",
+      (function () { var c = typeof tbPreg !== "undefined" && tbPreg && tbPreg.ch7 ? tbPreg.ch7[x.moneda] : null; return c != null && isFinite(c) ? "7 zile " + (c >= 0 ? "+" : "−") + Math.abs(c).toFixed(1).replace(".", ",") + "%" : ""; })(),
+      x.dinScan ? "din Scan 🟦" : ""].filter(Boolean).join(" · ");
     return '<div class="tbTodoRand"><span class="tbDunga ' + (tbIstoricRosu(x) ? "r" : nu ? "n" : "v") + '"></span><div><b>' + escapeHtml(x.moneda) + '</b> <span class="tbSub">' + escapeHtml(det) + '</span><p' + (tbIstoricRosu(x) ? ' class="bad"' : '') + '>' + escapeHtml(ist) + '</p>' + (function () { try { var g = typeof GridProba !== "undefined" && x.simbol ? tbIngustPt(x.simbol) : null; if (!g) return ''; var v = GridProba.varstaIngust(g, Date.now()); return '<p class="tbSub' + (g.propus ? '' : ' t212Estompat') + '">' + escapeHtml(GridProba.rezumatIngust(g)) + (v.text ? ' · ' + escapeHtml(v.text) : '') + '</p>'; } catch (e) { return ''; } })() + '</div><button type="button" class="tbBtnLinie" data-action-click="gridDeschideMoneda(\'' + String(x.moneda).replace(/[^A-Za-z0-9._-]/g, "") + '\')">Fișa</button></div>';
   }).join("");
   tbUrmAdu();

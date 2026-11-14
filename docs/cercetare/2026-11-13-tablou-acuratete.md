@@ -19,7 +19,9 @@ Scriptul: `scripts/cercetare-v100339-acuratete.mjs` (rulează codul paginii prin
 | M5b | din 14.11.2026, în așteptare | reluarea efectului B (benzi largi ⇒ drum mai lung) pe date noi, pe 1h, pe raportul din interiorul blocului | 1 (nerulat) | regulile scrise; se judecă pe primele 30 de blocuri noi încheiate, nu înainte de mijlocul lui aprilie 2027; prag 0,05 ÷ 70 |
 | N1 | din 14.11.2026, în așteptare | jurnalul pe viu: nota TradingView și verdictul Radarului, judecate după 4 bare, pe blocuri de 5 zile | 2 (nerulate) | regulile scrise; pagina arată bilanțul de la 30 de zile, judecata pe primele 36 de blocuri încheiate; prag 0,05 ÷ 70 |
 | G1 | 14.11.2026 | „Candidați de grid”: primele din clasament față de ceilalți candidați — grilele încasate (A) și rezultatul total (B) al gridului propus, pe ziua următoare | 2 | A (grilele încasate): NEDOVEDIT, ×1,05; B (rezultatul total): NEDOVEDIT, +0,34% pe zi, p = 0,015; a măsurat ordinea după scor, nu tăietura după volum a rețetei, iar testele au fost aproape oarbe — vezi „G1 — rezultatul” și „G1 — îndreptări”; prag 0,05 ÷ 74 |
-| E2 | 14.11.2026 | de văzut, după G1: de unde vine rezultatul total negativ al gridului de o zi (pe direcții, forma) | 0 | grilele +0,46% pe zi, restul −0,88% ⇒ −0,42% pe zi (−0,28% fără cele 6 monede cu cele mai mari pierderi); fără verdict — vezi „E2” |
+| E2 | 14.11.2026 | de văzut, după G1: de unde vine rezultatul total negativ al gridului de o zi (pe direcții, forma) | 0 | grilele +0,46% pe zi, restul −0,88% ⇒ −0,42% pe zi (−0,28% fără cele 6 monede cu cele mai mari pierderi); fără verdict — vezi „E2”. Îndreptat 15.11: minusul e costuri + partea nevăzută de motor, vezi „G2 — îndreptări”, punctul 7 |
+| G2-V | 14.11.2026 | pe date nevăzute (400 de zile dinaintea lui G1, univers ales la început): tăietura după volum a rețetei — candidații cu volum mare față de cei cu volum mic | 2 | grilele încasate ×1,01, rezultatul total −0,006% pe zi — NEDOVEDITE, cu teste care vedeau ×1,2 și +0,2% pe zi; vezi „G2 — rezultatul”; prag 0,05 ÷ 82 |
+| G2-M | 14.11.2026 | pe aceleași date nevăzute: gridul clasamentului cu stopul casei, ținut 3 și 7 zile — rezultatul mediu față de zero | 2 | față de zero: −0,75% pe 3 zile (p = 0,0004) și −1,29% pe 7 zile (p = 0,00002), formal „dovedit pe minus”; dar motorul dă −0,83% și −1,12% și pe un preț fără direcție ⇒ față de reperul lui, nimic (+0,08% și −0,18%). NU se citește ca „gridul pierde”; vezi „G2 — îndreptări”; prag 0,05 ÷ 82 |
 
 Corecția pentru câte teste s-au făcut: fiecare măsurătoare își corectează intervalele cu numărul TUTUROR testelor cu verdict de până la ea
 inclusiv (M1: 6; M2: 8; M3: 10; M4: 12).
@@ -709,6 +711,10 @@ după volum nu e măsurată.” Culorile și ordinea nu s-au schimbat.
 
 ### E2 — de văzut, fără verdict (scris DUPĂ G1, pe aceleași monede-zi; nu e un test și nu intră la numărătoarea testelor)
 
+*(Îndreptare, 15.11.2026: media negativă de mai jos NU e „ce pierde gridul”. Motorul nu vede toate dus-întorsurile din interiorul unei lumânări,
+deci scoate un minus și pe un preț fără nicio direcție; minusul de aici e costuri plus partea aceea. Explicația cu „mișcarea² ÷ (2 × lățimea)”
+e greșită ca explicație a unei medii negative. Vezi „G2 — îndreptări după revizia independentă”, punctele 1 și 7.)*
+
 Rezultatul total a ieșit negativ la ambele clase, ceea ce nu era întrebarea lui G1. Ca să văd dacă e o greșeală a măsurătorii (semnul
 funding-ului, motorul, datele), am descompus aceleași 15.863 de monede-zi. Nu e o întrebare nouă cu prag; e o descriere.
 
@@ -774,3 +780,236 @@ identice — și a găsit cele de mai jos. Le-am verificat pe fiecare (`verif-re
 **Ce rămâne în picioare.** Cifrele (refăcute independent), lipsa oricărei scurgeri din viitor (verificată și pe date tăiate, nu doar
 stricate), unitățile, semnul funding-ului, numărătoarea testelor (37: sunt două teste făcute, cu verdict „nedovedit”). **Ce nu:** că G1 ar
 fi fost despre rețeta din Scan și că ar fi putut vedea o diferență de un sfert.
+
+---
+
+## G2 — pe date nevăzute: tăietura după volum a rețetei (V) și „merită gridul, în medie?” (M) — regulile scrise 14.11.2026, ÎNAINTEA oricărei lumânări
+
+**De ce.** După G1 au rămas două întrebări: tăietura după volum a rețetei „Candidați de grid” (primele 60 de monede după volum) n-a fost
+măsurată, iar descrierea E2 (gridul de o zi iese, în medie, pe minus) nu e un test și stă pe un univers ales după fapt. G1 a mai arătat că
+testul pe blocuri, cum era, e aproape orb și că poarta lui (etichete amestecate în fiecare zi) e prea blândă. G2 pune amândouă întrebările pe
+**date pe care nu le-am văzut**, cu universul ales la ÎNCEPUTUL ferestrei și cu porțile îndreptate. Scriptul:
+`scripts/cercetare-v100343-grid-date-nevazute.mjs`; logica: `scripts/lib/g2-grid-date-nevazute.mjs` (peste cea din G1).
+
+**Fereastra.** Cele 400 de zile de dinaintea ferestrei lui G1: 24.03.2025 – 27.04.2026 (capătul fix: 28.04.2026 00:00 UTC). Nicio lumânare
+din ele n-a fost adusă sau privită până acum.
+
+**Universul, ales la început.** Perpetuele USDT de pe Binance care se tranzacționează azi, sunt monede (nu acțiuni, nu mărfuri) și erau
+listate de cel puțin 84 de zile la începutul ferestrei; dintre ele, primele 100 după volumul în USDT al celor 7 zile de dinaintea ferestrei.
+Lista nu se mai schimbă pe parcurs. Stă lângă date, nu în depozit. (Monedele scoase de la tranzacționare între timp lipsesc — nu am de unde
+le lua; cele care au explodat DUPĂ începutul ferestrei nu mai sunt alese pentru asta.)
+
+**Clasamentul și gridul** — ca la G1: clasamentul unei zile din cel mult 500 de lumânări de 4 ore închise până atunci; gridul pe care îl
+socotește clasamentul (intervalul din `plaseaza`, pasul minim, geometric, direcția lui), fără levier; lumânări de 15 minute; comisioanele
+motorului; funding-ul real.
+
+### G2-V — tăietura după volum (două teste)
+
+**Ipoteza și mecanismul.** Rețeta lasă doar candidații dintre primele 60 de monede după volum („volum mic nu e bun de grid”). Rostul ei cel
+mai probabil e executarea (carnet subțire, ordine neumplute), iar asta **nu se vede în lumânări**: motorul socotește executat orice ordin a
+cărui linie e atinsă. Ce se poate vedea în lumânări e altceva: monedele mici sar mai des cu zeci de procente într-o zi, iar un grid prins pe
+partea greșită pierde mult (la G1, 8 din 10 lichidări au fost la monedele din coada listei). Deci: **candidații cu volum mare ar trebui să
+iasă mai bine la rezultatul total (B)**; la grilele încasate (A) nu am nicio așteptare.
+
+**Clasele**, în fiecare zi la 00:00 UTC: locul după volum = locul monedei în univers după volumul în USDT al ultimelor 24 de ore (cele 6
+lumânări de 4 ore închise). „Mari” = candidații cu locul 1–60; „mici” = candidații cu locul de după 60. Monedele „de evitat” nu intră.
+Rezultatul: gridul rulat 24 de ore, fără stop (ca la G1), A și B ca la G1.
+
+**Statistica și testul:** ca la G1 (blocuri de 5 zile ⇒ 80 de blocuri; A = ln al raportului mediilor; B = diferența; Student într-o parte cu
+garda pentru blocuri legate), **plus o poartă pe etichete statornice**: de 10.000 de ori, o ordine întâmplătoare a monedelor, aceeași în toate
+zilele, ține locul volumului (același număr de „mari” în fiecare zi). **DOVEDIT cere amândouă:** p-ul testului cu gardă sub prag ȘI t-ul
+adevărat peste aproape toate cele 10.000 (p de permutare = (1 + câte îl ajung) ÷ 10.001, sub același prag). Așa, un „dovedit” spune că
+VOLUMUL alege mai bine decât o împărțire oarecare, mereu aceeași — ce G1 nu putea spune. Mărimi minime ca la G1: ×1,2 la A; 0,05% din sumă
+pe zi la B. Verdictele: DOVEDIT / EXISTĂ, DAR MIC / PE DOS (aceleași două condiții, pe întrebarea inversă) / NEDOVEDIT.
+
+### G2-M — merită gridul, în medie? (două teste)
+
+**Ipoteza.** Niciuna în favoarea vreunei părți. Un grid încasează puțin de multe ori și pierde rar și mult; pe un mers la întâmplare, media
+ar fi minus costurile. E2 a arătat minus pe o zi, pe un univers ales după fapt. Întrebarea: **cu stopul și ținta casei, ținut 3 zile și
+7 zile, rezultatul mediu e peste sau sub zero?**
+
+**Ce se rulează.** Fereastra se împarte în perioade care nu se suprapun: 133 de perioade de 3 zile și 57 de perioade de 7 zile. La începutul
+fiecărei perioade, pentru fiecare candidat (oricare ar fi volumul): gridul clasamentului, fără levier, cu **stopul casei**
+(`GridCalcul.stopuri`: sub și peste interval cu cel puțin un pas, cel mult o optime din lățime; la long, cel de sus e ținta; la short invers;
+la neutru amândouă sunt stopuri). Rulează până la stop sau până la capătul perioadei, când se închide la piață. Funding-ul: media pe zi a
+ratelor reale din perioadă. O monedă-perioadă cu sub 94% din lumânări nu se rulează și se numără. Valoarea perioadei = media rezultatului
+total (`net`, din sumă) peste candidații ei. O perioadă cu mai puțin de 10 candidați rulați nu intră în test *(rând adăugat la 21:26 UTC, tot
+înaintea oricărei cifre: pragul era în cod și lipsea de aici)*.
+
+**Testul.** Media valorilor pe perioade față de zero, pe AMBELE părți. Rezultatul unui grid are coadă în jos, iar testul Student simplu, pe
+asemenea valori, „dovedește” fals PLUSUL. Simularea de mărime, înaintea datelor (`sim-medie.mjs`, mulberry32, 200.000 de rulări pe rând, medie
+adevărată zero; respingeri la pragul verdictului, unde nominal ar fi 122):
+
+| perioade | lumea | ρ | Student cu gardă: „pe plus” / „pe minus” | **Johnson cu gardă (ales): „pe plus” / „pe minus”** |
+|---|---|---|---|---|
+| 57 | normală | 0 / 0,3 | 23 / 34 · 51 / 42 | **34 / 30 · 58 / 55** |
+| 57 | coadă în jos | 0 / 0,3 | 456 / 0 · 366 / 4 | **61 / 4 · 35 / 17** |
+| 57 | coadă groasă în jos | 0 / 0,3 | 1.794 / 0 · 1.335 / 0 | **149 / 3 · 96 / 4** |
+| 133 | normală | 0 / 0,3 | 34 / 41 · 49 / 51 | **32 / 46 · 48 / 46** |
+| 133 | coadă în jos | 0 / 0,3 | 303 / 3 · 292 / 4 | **48 / 29 · 24 / 35** |
+| 133 | coadă groasă în jos | 0 / 0,3 | 1.180 / 0 · 1.019 / 0 | **154 / 10 · 57 / 16** |
+
+**Testul ales:** statistica Johnson (1978), care îndreaptă t pentru asimetrie —
+t_J = [m + μ₃ ÷ (6·s²·n) + μ₃·m² ÷ (3·s⁴)] · √n ÷ s — cu aceeași gardă de autocorelație ca la G1. Ține pragul în toate lumile simulate, cu o
+depășire mică (149 și 154 față de 122) doar la coada cea mai groasă, pe partea „pe plus”; pe partea „pe minus” e prudent.
+**Mărimea minimă:** 0,1% din sumă pe zi (0,3% la 3 zile; 0,7% la 7 zile). **Verdictele:** DOVEDIT PE PLUS / DOVEDIT PE MINUS (p sub prag și
+mărimea cel puțin cea minimă) / EXISTĂ, DAR MIC / NEDOVEDIT.
+
+### Comune
+
+**Pragul.** 37 de teste până acum + acestea patru = 41 ⇒ **p ≤ 0,05 ÷ 82 într-o parte**.
+
+**Înaintea cifrelor adevărate (`--ce=g2h0`), pe aceleași date:**
+1. *Autenticitatea:* pe 5 zile și pe 3 perioade alese la întâmplare, cu tot viitorul stricat anume (prețuri, volume, funding), clasele,
+   locurile după volum și rezultatele trebuie să iasă identice.
+2. *Ce putea vedea fiecare test, pe seria ADEVĂRATĂ* (lecția lui G1): valorile adevărate pe blocuri / pe perioade, cu media scoasă, se mută
+   la un efect pus anume și se trec prin regula de verdict întreagă (la V, cu tot cu poarta pe etichete statornice). Se scrie cel mai mic
+   efect care ar fi ieșit „dovedit”. Media adevărată nu se arată în pasul acesta.
+3. *Poarta pe etichete statornice* (cele 10.000 de ordini) se socotește tot acum; cifra adevărată nu se arată.
+Scriptul refuză `--ce=g2` până nu există `g2h0` pe aceleași date.
+
+**De văzut alături, fără verdict (declarate acum):** semnul pe fiecare jumătate a ferestrei; câte perioade ies pe plus și mediana lor;
+câte monede-perioadă se opresc pe stop și câte sunt lichidări; G2-M încă o dată cu comisioanele dublate.
+
+**Ce nu pot spune, oricum ar ieși.** Prețurile și volumele sunt ale Binance, nu ale Pionex. Monedele scoase de la tranzacționare lipsesc. Un
+ordin se socotește executat când prețul îi atinge linia — tocmai unde monedele cu volum mic stau, de fapt, mai prost; deci G2-V poate cel
+mult să subestimeze rostul tăieturii. Gridul e fără levier; boții adevărați au levier, altă lățime și sunt porniți când alege el, nu la
+date fixe. Nu se caută niciun parametru.
+
+**Ce se scrie pe pagină, hotărât acum.**
+- G2-V înlocuiește în explicația rețetei „Tăietura după volum nu e măsurată.” cu: DOVEDIT — „Tăietura după volum: măsurat pe 400 de zile,
+  candidații cu volum mare au ieșit mai bine (…).”; PE DOS — „…au ieșit mai prost (…).”; altfel — „Tăietura după volum: măsurată pe 400 de
+  zile, nedovedit că ar conta; rămâne o măsură de prudență, nu un câștig măsurat.”
+- G2-M ajunge pe pagină doar dacă iese DOVEDIT, într-o parte sau alta: o propoziție în aceeași explicație, cu orizontul, stopul și cifra.
+  Altfel pagina rămâne cum e, iar cifrele stau aici.
+- Nimic nu-și schimbă culoarea sau ordinea după G2.
+
+### G2 — rezultatul (rulat 14.11.2026, o singură dată, după regulile de mai sus)
+
+**Ordinea.** Regulile au intrat în jurnal la 21:08 UTC (un rând adăugat la 21:26). Universul s-a ales la 21:13, lumânările s-au adus între
+21:13 și 21:31, `--ce=g2h0` s-a încheiat la 21:42 și `--ce=g2` (cifrele adevărate) la 21:43. Scriptul a refuzat `--ce=g2` cât n-a existat `g2h0`.
+
+**Datele.** 100 de monede din 262 eligibile (listate de cel puțin 84 de zile la începutul ferestrei, cu volum în cele 7 zile de dinainte).
+Amprenta: `7c2d0dbe4372dace`. V: 399 de zile din 400 (într-o zi nicio monedă n-a fost candidată), 80 de blocuri, 36.314 monede-zi — „mari”
+21.450, „mici” 14.864 (pe zi, în medie, 53,8 și 37,3). M: 131 de perioade de 3 zile din 133 (două au avut sub 10 candidați) cu 12.201
+monede-perioadă; 57 de perioade de 7 zile din 57, cu 5.349. Nimic sărit din lipsă de lumânări.
+
+**Înaintea cifrelor adevărate.**
+- *Autenticitatea:* 5 zile (V) și câte 3 perioade pe orizont (M) — 11 din 11 identice cu tot viitorul stricat (prețuri, volume, funding).
+- *Poarta pe etichete statornice (V):* 10.000 de ordini. Ca să treacă, t-ul adevărat (cu gardă) trebuia să fie peste 9,80 la A și peste 3,42
+  la B — adică o împărțire oarecare a monedelor, mereu aceeași, dă ușor t-uri mari la grilele încasate; testul simplu ar fi fost păcălit.
+- *Ce putea vedea fiecare test, pe seria adevărată cu media scoasă:*
+
+| testul | seria | ce ar fi ieșit „dovedit” | ce n-ar fi ieșit |
+|---|---|---|---|
+| V-A (grilele) | 80 de blocuri, abaterea 0,074, autocorelația 0,21 | de la ×1,2 în sus | ×1,1 |
+| V-B (rezultatul) | 80 de blocuri, abaterea 0,0041, autocorelația 0,01 | de la +0,2% pe zi | +0,1% pe zi |
+| M, 3 zile | 131 de perioade, abaterea 2,30%, asimetria −0,34, autocorelația −0,04 | de la ±0,3% pe zi | ±0,2% pe zi |
+| M, 7 zile | 57 de perioade, abaterea 2,25%, asimetria −0,12, autocorelația −0,26 | de la ±0,2% pe zi | ±0,1% pe zi |
+
+  Spre deosebire de G1, testele acestea vedeau: V-A chiar mărimea minimă scrisă (×1,2); V-B și M, efecte de câteva zecimi de procent pe zi.
+
+**Cifrele adevărate.**
+
+| | „mari” | „mici” | pe blocuri | t | t cu gardă | p (invers) | p de permutare (invers) | verdict |
+|---|---|---|---|---|---|---|---|---|
+| V-A — grilele încasate, din sumă pe zi | 0,464% | 0,457% | ×1,01 | 1,68 | 1,11 | 0,138 (0,862) | 0,354 (0,646) | **NEDOVEDIT** |
+| V-B — rezultatul total, din sumă pe zi | −0,424% | −0,425% | −0,006% pe zi | −0,14 | −0,11 | 0,546 (0,455) | 0,497 (0,503) | **NEDOVEDIT** |
+
+| | media pe perioadă | pe zi | perioade | t | Johnson | cu gardă | p „pe plus” | p „pe minus” | minim | verdict |
+|---|---|---|---|---|---|---|---|---|---|---|
+| M — 3 zile, cu stopul casei | −0,746% | −0,249% | 131 | −3,71 | −3,85 | −3,47 | 0,9996 | 0,0004 | 0,30% | **DOVEDIT PE MINUS** |
+| M — 7 zile, cu stopul casei | −1,292% | −0,185% | 57 | −4,33 | −4,44 | −4,44 | 1,0000 | 0,00002 | 0,70% | **DOVEDIT PE MINUS** |
+
+Pragul: 0,05 ÷ 82 = 0,00061.
+
+**De văzut alături (fără verdict).**
+- V: pe jumătățile ferestrei — A ×1,04 și ×1,00; B +0,033% și −0,029% pe zi. Lichidări: 3 (una la „mari”, două la „mici”).
+- M, 3 zile: 55 de perioade pe plus din 131 (42%); mediana −0,39%; cea mai proastă −5,96%, cea mai bună +3,28%; pe jumătăți −1,16% și
+  −0,33%; 53% din monedele-perioadă au ieșit pe stop sau pe țintă înainte de capăt; nicio lichidare; cu comisioane duble media e −0,95%.
+- M, 7 zile: 16 perioade pe plus din 57 (28%); mediana −1,30%; cea mai proastă −7,02%, cea mai bună +3,37%; pe jumătăți −1,66% și
+  −0,91%; 85% din monedele-perioadă au ieșit pe stop sau pe țintă; nicio lichidare; cu comisioane duble media e −1,57%.
+
+**Cum se citește.**
+- **V.** În lumânări, tăietura după volum nu schimbă nimic măsurabil: candidații cu volum mare și cei cu volum mic au încasat la fel de multe
+  grile (×1,01) și au rămas cu același rezultat (diferență de −0,006% pe zi), iar testele ar fi văzut o diferență de ×1,2, respectiv de
+  +0,2% pe zi. Ipoteza mea (monedele mici sar mai des și strică rezultatul) nu s-a văzut. Rostul adevărat al tăieturii — executarea pe monede
+  cu carnet subțire — nu se poate vedea în lumânări, deci G2-V nu spune că tăietura e de prisos; spune că nu aduce un câștig măsurabil aici.
+- **M — verdictul formal NU se poate citi ca „gridul pierde”** (îndreptare după revizia independentă; vezi secțiunea următoare). După regula
+  scrisă dinainte iese „dovedit pe minus”, dar regula compară cu zero, iar „zeroul” motorului nu e zero: pe un preț fără nicio direcție
+  (aceleași lumânări, întoarse la întâmplare) același motor dă −0,83% la 3 zile și −1,12% la 7. Față de reperul acesta, datele adevărate nu
+  au nimic în plus (+0,08% și −0,18%; t = 0,3 și −0,6). Minusul are două părți: costurile și felul în care motorul citește lumânarea —
+  a doua e a instrumentului, nu a gridului.
+
+**Ce NU spune G2-M.** Nu spune că gridul pierde și nici că nu pierde. Spune doar că, pe aceste 400 de zile, gridul brut al clasamentului
+n-a ieșit nici mai bine, nici mai rău decât pe un preț fără direcție — iar acolo rămâi cu costurile. Nu e despre boții lui (el alege moneda
+și clipa, pune levier, alt interval și alte ținte) și nu e despre fișă (fișa își alege pasul și intervalul pe istoricul monedei). *(În prima
+formă scrisesem aici că minusul vine „din felul în care e pus gridul… cu stopul lipit de el”: greșit — pe un preț fără direcție nici
+intervalul, nici stopul nu scot o medie sub costuri.)*
+
+**Pe pagină.** Explicația rețetei din Scan spune, în locul lui „Tăietura după volum nu e măsurată.”: „Tăietura după volum: măsurată pe 400
+de zile de lumânări, nedovedit că ar conta; rămâne o măsură de prudență, nu un câștig măsurat.” **Despre M nu se scrie nimic.** Regula scrisă
+dinainte cerea o propoziție la „dovedit”; verdictul formal stă însă pe un reper greșit (secțiunea următoare), deci propoziția nu se pune —
+o abatere de la regulă, în partea prudentă.
+
+### G2 — îndreptări după revizia independentă (15.11.2026, după rezultat)
+
+O revizie independentă (alt agent, doar citire) a refăcut identic toate cifrele lui G2, cu un simulator scris separat, și a găsit că
+**verdictul lui M stă pe un reper greșit**. Am verificat singur, cu altă construcție (`--ce=reper`, intrat în script după rezultat).
+
+1. **„Zeroul” motorului nu e zero.** Motorul merge prin fiecare lumânare pe drumul cel mai scurt care atinge deschiderea, maximul, minimul
+   și închiderea. Prețul adevărat face mai multe dus-întorsuri în aceeași lumânare, iar fiecare e o grilă încasată pe care simularea n-o
+   vede; poziția rămasă la sfârșit e însă socotită întreagă. Deci, pe un preț fără nicio direcție, motorul nu arată „minus costurile”, ci mai
+   puțin. Regula lui M compara cu zero; ipoteza mea spunea chiar ea „pe un mers la întâmplare, media ar fi minus costurile”, dar n-am
+   măsurat cât dă MOTORUL pe un asemenea mers înainte să scriu regula.
+
+   *Fără niciun model* — aceleași griduri pe datele adevărate, cu lumânarea tot mai mare:
+
+   | lumânarea | 3 zile | 7 zile |
+   |---|---|---|
+   | 15 minute (cea din reguli) | −0,746% | −1,292% |
+   | 30 de minute | −0,906% | −1,520% |
+   | o oră | −1,065% | −1,747% |
+
+   Rezultatul nu s-a așezat la 15 minute: fiecare înjumătățire a lumânării aduce cam +0,16 puncte la 3 zile și +0,23 la 7.
+
+   *Reperul fără direcție* — aceleași lumânări de 15 minute ale fiecărei monede-perioadă, fiecare întoarsă pe dos cu probabilitate 1/2 și
+   lipite cap la cap (aceeași agitație, niciun sens), același grid, același motor: **−0,829% la 3 zile și −1,116% la 7 zile** (ieșiri pe stop
+   sau țintă 54% și 86%, față de 53% și 85% pe datele adevărate). Revizia, cu un preț tras la sorți, a găsit −0,72% și −1,09%.
+
+   | | datele adevărate | reperul fără direcție | adevărat − reper | t (Johnson cu gardă) |
+   |---|---|---|---|---|
+   | 3 zile | −0,746% | −0,829% | +0,082% | 0,34 |
+   | 7 zile | −1,292% | −1,116% | −0,176% | −0,58 |
+
+   **Față de reperul potrivit, datele adevărate nu au nimic în plus, nici în minus.** Minusul lui M are două părți: costurile (după revizie,
+   pe un drum fin: cam 0,3% din sumă la 3 zile și 0,4% la 7) și partea nevăzută de motor la lumânarea de 15 minute (cam 0,4 și 0,5–0,7 puncte
+   — o estimare, din mers la întâmplare, nu din lumânări de un minut). Prima e reală pentru un bot; a doua e a instrumentului.
+2. **Chiar și față de zero, verdictul stătea pe muchie.** La 3 zile p = 0,00038 față de pragul 0,00061; fără cea mai proastă perioadă,
+   0,00062. Cu pornirea perioadelor mutată cu o zi, două sau patru (ales de revizie după fapt — arată fragilitatea, nu e un test), 7 zile
+   pică de fiecare dată (p = 0,006; 0,0008; 0,003), iar 3 zile pică o dată din trei.
+3. **Minusul nu e „în toate”.** Pe direcții, la 3 zile: neutru −0,84%, long −0,82%, short −0,40%. Pe sferturile ferestrei: 3 zile −1,31 /
+   −1,05 / −0,40 / −0,24%; 7 zile −1,51 / −1,90 / −0,15 / −1,59%. „De trei ori mai puțin în jumătatea a doua” e adevărat doar la 3 zile. O
+   perioadă e practic un singur pariu: aproape toți candidații au aceeași direcție, iar cele mai proaste perioade sunt „piața a urcat mult cu
+   aproape toți pe short”. Cele două orizonturi sunt aceleași griduri, nu două confirmări.
+4. **„Pe zi” din tabel e diluat.** Botul stă pornit în medie 2,25 zile din 3 și 3,23 din 7 (iese pe stop sau pe țintă); pe zi de bot pornit
+   cifra e −0,34% și −0,39%, nu −0,249% și −0,185%.
+5. **Universul are doar monedele care se tranzacționează azi** (cele scoase între timp lipsesc); în ce parte împinge nu se poate spune din
+   datele acestea. Altfel alegerea e curată: volumul celor 7 zile de dinaintea ferestrei.
+6. **Mărunte.** T-ul de trecut la poarta statornică e al 6-lea de sus (9,80 la A, 3,42 la B), nu al 7-lea cum afișa scriptul (îndreptat;
+   verdictele nu țin de cifra aceasta). „+0,2% pe zi se vedea” la V-B e la limită. Clasele lui V sunt locul în universul fix de 100, nu
+   locul între toate perpetuele de atunci.
+7. **Ce înseamnă pentru E2 (ieri) și pentru fișă.** E2 („gridul de o zi iese în medie pe −0,42% pe zi”) are aceleași două părți: costuri
+   și partea nevăzută de motor. Explicația de acolo — „pierderea așteptată pe poziție ≈ mișcarea² ÷ (2 × lățimea)… măsurătoarea e consecventă”
+   — era greșită ca explicație a unei MEDII negative: pe un preț fără direcție, ce pierde poziția e, în medie, exact ce încasează grilele;
+   diferența sunt costurile și instrumentul. Iar același motor judecă și proba fișei, care la orizont de două zile sau mai mult rulează pe
+   lumânări de o oră și cere „medie peste zero” ca să spună PORNEȘTE: ștacheta ei adevărată e „bate costurile PLUS partea nevăzută”. Asta e
+   de măsurat separat (propunere în backlog), nu de schimbat din mers.
+
+**Ce rămâne în picioare.** Cifrele (refăcute identic), lipsa oricărei scurgeri din viitor, testul scris cum spune jurnalul, numărătoarea
+testelor (41), și cele două „nedovedit” ale lui V. **Ce nu:** că „dovedit pe minus” ar spune ceva despre grid, despre candidați sau despre
+piață. După regula scrisă dinainte verdictul formal rămâne cel din tabel; adevărul lui e: *gridul brut al clasamentului n-a ieșit nici mai
+bine, nici mai rău decât pe un preț fără direcție, iar acolo rămâi cu costurile.* **Pe pagină nu se scrie nimic despre M.**
+
+**Lecția.** Un test „față de zero” făcut cu un instrument cere întâi zeroul instrumentului: îl rulez pe o intrare fără niciun efect (aici,
+un preț fără direcție) și compar cu aceea, nu cu zeroul din teorie.

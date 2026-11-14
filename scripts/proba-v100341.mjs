@@ -32,7 +32,7 @@ await test("(I-876) rețeta de grid a scannerului se numește „Candidați de g
   assert.deepEqual(JSON.parse(JSON.stringify(Scan.RETETE.map((x) => x.k).slice(0, 3))), ["toate", "grid", "trend"], "cheile și ordinea rețetelor rămân");
   for (const f of [["public", "app.js"], ["public", "index.html"], ["public", "lib", "scan.js"], ["public", "lib", "scan-ecran.js"], ["public", "lib", "acasa-ecran.js"]]) assert.doesNotMatch(citeste(...f), /[Bb]un(e)? pentru grid/, f.join("/"));
   // cartela „fără bot” a Tabloului
-  assert.match(APP, /'Candidați de grid, din Scan \(🟦\) · azi nu pornesc':'Pe ce aș porni \(🟦 candidații de grid, din Scan\)'/);
+  assert.match(APP, /'Candidați de grid · azi nu pornesc':'Pe ce aș porni'/); /* v100.343 (I-884): cartela trimite la bandă, nu mai repetă lista */
 });
 
 // ---------------- I-879: proba de ecran a Tabloului ----------------

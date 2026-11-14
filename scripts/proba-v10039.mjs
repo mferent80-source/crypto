@@ -140,7 +140,8 @@ await test("Scan si harta Acasa: fara actiuni/marfuri tokenizate (TSLAX, NVDAX, 
 await test("afisarile de grile din pagina sunt in numarul Pionex (N+1): Scan, „Pe ce aș porni”, boti de hartie, jurnalul gridurilor, platoul", () => {
   assert.ok(/scNf\(x\.grile \+ 1, 0\)/.test(scanEcran), "Scan");
   /* v100.76: tot N+1, acum prin TextRo.cate („47 de grile”) */
-  assert.ok(/TextRo\.cate\(q\.grile\+1,"grilă","grile"\)\+" · pas "/.test(app), "Pe ce as porni");
+  /* v100.343 (I-884): rândurile de candidați s-au mutat din cartela „fără bot” a Consilierului în banda „Pe ce aș porni” (t212-ecran.js) - tot N+1 */
+  assert.ok(/x\.grile > 0 \? TextRo\.cate\(x\.grile \+ 1, "grilă", "grile"\) : "", x\.pas > 0 \? "pas "/.test(lib("t212-ecran.js")), "Pe ce as porni");
   assert.ok(/TextRo\.cate\(s\.grile\+1,"grilă","grile"\)\+" · "\+grPret\(s\.jos,null\)/.test(app), "boti de hartie");
   assert.ok(/\(e\.grile\?TextRo\.cate\(e\.grile\+1,"grilă","grile"\):"\? grile"\)\+" · "/.test(app), "jurnalul gridurilor");
   assert.ok(/gridul rar al probei: "\+TextRo\.cate\(f\.aleasa\.setare\.grile\+1,/.test(app), "platoul");

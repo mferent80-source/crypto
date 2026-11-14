@@ -6903,7 +6903,9 @@ async function tbPregatireAdu(){
     /* v100.329 (el: verdictele „la fel la crypto și la nasdaq”): vremea din funcțiile comune ale paginii Piața azi - aceleași date, același BTC,
        ACEEAȘI frână (înainte: socotită aici, fără frână și fără frica / lăcomia; 12.11 „Aș porni boți…” lângă frâna paginii) */
     if(sc&&sc.crypto&&typeof Scan!=="undefined"){var g=Scan.RETETE.find(function(q){return q.k==="grid"});
-      tbPreg.grid=(sc.crypto.randuri||[]).map(function(q){return Object.assign({fel:"c"},q)}).filter(g.f).sort(function(a,b2){return (b2.gs||0)-(a.gs||0)}).slice(0,3)}
+      tbPreg.grid=(sc.crypto.randuri||[]).map(function(q){return Object.assign({fel:"c"},q)}).filter(g.f).sort(function(a,b2){return (b2.gs||0)-(a.gs||0)}).slice(0,3);
+      /* v100.343 (I-884): mișcarea pe 7 zile a fiecărei monede din Scan - banda „Pe ce aș porni” o arată pe rândurile ei */
+      tbPreg.ch7={};(sc.crypto.randuri||[]).forEach(function(q){if(q&&q.s&&isFinite(q.ch7))tbPreg.ch7[q.s]=q.ch7});if(typeof tbIdeiRender==="function")tbIdeiRender()}
     /* revizia Opus: vremea după candidații grid (nu-i mai ține pe loc) */
     try{if(typeof acVremeAsigura==="function"&&typeof acVremeCrypto==="function"){await acVremeAsigura();tbPreg.vreme=acVremeCrypto(acasa.d)}}catch(e){}
     tbPreg.la=Date.now();
@@ -6922,8 +6924,9 @@ function tbPregatire(el){
   /* v100.332 (12.11, pe pagina vie): raportul contului sau calendarul încă nevenite ⇒ frâna e NECUNOSCUTĂ, nu netrasă - se spune „încă verific” */
   var fcStiut=typeof acFranaContStiut==="function"?acFranaContStiut():true;
   if(v)h+='<div class="tbPregBloc"><h5>Vremea pieței</h5><p class="tbPregTitlu">'+escapeHtml(v.eticheta)+' — '+escapeHtml(v.titlu)+'</p>'+(v.faCe?'<p class="tbFac">👉 <b>Ce aș face eu:</b> '+escapeHtml(v.faCe)+'</p>':'')+(fcT?'<p class="tbWarn">⛔ <b>Frâna contului azi:</b> '+escapeHtml(fcT)+'</p>':!fcStiut?'<p class="tbSub">⏳ Frâna contului: încă verific raportul contului și calendarul zilei.</p>':'')+'</div>';
-  if(g&&g.length)h+='<div class="tbPregBloc"><h5>'+(nu?'Candidați de grid, din Scan (🟦) · azi nu pornesc':'Pe ce aș porni (🟦 candidații de grid, din Scan)')+'</h5>'+(nu?acAziNuHtml(an):'')+g.map(function(q){return '<div class="tbPregMon"><b>'+escapeHtml(q.s)+'</b><span class="tbSub">'+(q.grile?TextRo.cate(q.grile+1,"grilă","grile")+" · pas "+(q.pas*100).toFixed(2).replace(".",",")+"% · ~"+(q.traversari||0).toFixed(1).replace(".",",")+" treceri/zi":"")+' · 7 zile '+(q.ch7>=0?"+":"−")+Math.abs(q.ch7).toFixed(1).replace(".",",")+'%</span><button type="button" class="tbBtnLinie" data-action-click="gridDeschideMoneda(\''+argActiune(q.s)+'\')">Fișa</button></div>'}).join("")
-    +'</div>';
+  /* v100.343 (I-884): candidații nu se mai repetă aici (erau 3 din Scan aici și 5 în banda „Pe ce aș porni”, uneori alte monede) - lista e o singură
+     dată, în bandă (#tbIdei), care poartă acum și grilele, pasul și mișcarea pe 7 zile; toți candidații rămân la un clic, în Scan */
+  if(g&&g.length)h+='<div class="tbPregBloc"><h5>'+(nu?'Candidați de grid · azi nu pornesc':'Pe ce aș porni')+'</h5><p class="tbPregRand">Lista e o singură dată, în „'+(nu?'Candidatele pentru un bot':'Pe ce aș porni un bot acum')+'”, mai sus pe pagină'+(nu?'':' (pliată, banda se numește „Candidatele pentru un bot”)')+': cu istoricul tău pe fiecare monedă și cu Fișa (și cei din Scan pe care îi vedeai aici). Toți candidații sunt în Scan, la rețeta 🟦.</p><button type="button" class="tbBtnLinie" data-action-click="navTo(\'scan\',true)">Scan →</button></div>';
   el.innerHTML=h+'</div>';
 }
 // v100 (demo-ul aprobat 28.09): verdictul SCURT (nivel + motivul principal + "ce as face" + "si inca N motive"), celelalte motive pe
@@ -7251,7 +7254,10 @@ function tbRenderTodo(){
   tbContTot();
 }
 // v100.342 (revizia independentă): cât contul lipsește (Trading 212 nu răspunde), cererea pleacă cel mult o dată pe minut - nu la fiecare desen al listei
-function tbContTot(){if(typeof contTotRender==="function"){contTotRender();if(!contTot.inLucru&&(!t212.cont||!t212.istoric)&&Date.now()-(contTot.tbCerutLa||0)>=60000){contTot.tbCerutLa=Date.now();contTotAsigura()}}}
+// v100.343 (I-885): cu contul adus, aducerea se reia la 5 minute cât Tabloul e la vedere și fila e în față (înainte: o singură dată, deci cifrele
+// Trading 212 din bandă și clasamentul din „Pe ce aș porni” rămâneau cele de la deschidere); contTotAsigura își ține limitele ei pe fiecare sursă
+function tbContTot(){if(typeof contTotRender==="function"){contTotRender();var lipsa=!t212.cont||!t212.istoric,de=Date.now()-(contTot.tbCerutLa||0),laVedere=!(typeof document!=="undefined"&&document.hidden)&&(typeof tbPanouVizibil!=="function"||tbPanouVizibil());
+  if(!contTot.inLucru&&(lipsa?de>=60000:de>=300000&&laVedere)){contTot.tbCerutLa=Date.now();contTotAsigura()}}}
 function tbDeschidePlan(){var d=$("tbPl-plan");if(!d)return;d.open=true;if(d.scrollIntoView)d.scrollIntoView({block:"center",behavior:"smooth"});var i=d.querySelector("input");if(i)setTimeout(function(){i.focus()},250)}
 function renderTabloAlerte(){
   var el=$("tbAlerteStare");if(!el)return;
