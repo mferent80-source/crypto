@@ -18,6 +18,8 @@ Scriptul: `scripts/cercetare-v100339-acuratete.mjs` (rulează codul paginii prin
 | M5 | 14.11.2026 | regimul pentru grid: ADX și lățimea benzilor față de eficiența și drumul următoarelor 24 h; becul „lateral” | 12 | toate NEDOVEDITE (A și C: efect zero; B: ×1,2–1,3, sub prag) — vezi „M5 — rezultatul” |
 | M5b | din 14.11.2026, în așteptare | reluarea efectului B (benzi largi ⇒ drum mai lung) pe date noi, pe 1h, pe raportul din interiorul blocului | 1 (nerulat) | regulile scrise; se judecă pe primele 30 de blocuri noi încheiate, nu înainte de mijlocul lui aprilie 2027; prag 0,05 ÷ 70 |
 | N1 | din 14.11.2026, în așteptare | jurnalul pe viu: nota TradingView și verdictul Radarului, judecate după 4 bare, pe blocuri de 5 zile | 2 (nerulate) | regulile scrise; pagina arată bilanțul de la 30 de zile, judecata pe primele 36 de blocuri încheiate; prag 0,05 ÷ 70 |
+| G1 | 14.11.2026 | „Candidați de grid”: primele din clasament față de ceilalți candidați — grilele încasate (A) și rezultatul total (B) al gridului propus, pe ziua următoare | 2 | A (grilele încasate): NEDOVEDIT, ×1,05; B (rezultatul total): NEDOVEDIT, +0,34% pe zi, p = 0,015; a măsurat ordinea după scor, nu tăietura după volum a rețetei, iar testele au fost aproape oarbe — vezi „G1 — rezultatul” și „G1 — îndreptări”; prag 0,05 ÷ 74 |
+| E2 | 14.11.2026 | de văzut, după G1: de unde vine rezultatul total negativ al gridului de o zi (pe direcții, forma) | 0 | grilele +0,46% pe zi, restul −0,88% ⇒ −0,42% pe zi (−0,28% fără cele 6 monede cu cele mai mari pierderi); fără verdict — vezi „E2” |
 
 Corecția pentru câte teste s-au făcut: fiecare măsurătoare își corectează intervalele cu numărul TUTUROR testelor cu verdict de până la ea
 inclusiv (M1: 6; M2: 8; M3: 10; M4: 12).
@@ -534,3 +536,241 @@ nimerește cu mult peste 60%; nu că nu nimerește deloc. 36 de blocuri înseamn
 
 **Ce urmează după judecată.** „Nimerește direcția” ⇒ pagina o spune lângă notă, cu cifra. „Nedovedit” ⇒ rămâne cum e azi: informație, nu
 intră în verdict. În niciunul din cazuri nota nu intră în verdictul botului fără o măsurătoare separată.
+
+---
+
+## G1 — „Candidați de grid”: aduc primele din clasament mai mult decât ceilalți candidați? (regulile scrise 14.11.2026, ÎNAINTEA oricărei lumânări)
+
+*(Îndreptare scrisă DUPĂ rezultat, 14.11.2026, în urma reviziei independente: propoziția „exact filtrul rețetei din Scan” de mai jos e
+greșită. Rețeta din Scan taie după VOLUM (primele 60 de monede după volum), nu după poziția în lista ordonată după scor. Clasele de mai jos
+— pozițiile 1–60 ale listei ordonate — sunt lista ferestrei „Grid: ce setez?”, deci G1 a măsurat ORDINEA DUPĂ SCOR, nu tăietura rețetei.
+Regulile rămân cum au fost scrise; vezi „G1 — îndreptări după revizia independentă”.)*
+
+**De ce.** Pagina Scan spune despre rețeta „Candidați de grid”: „Clasamentul le ordonează după cât ar aduce un grid pe zi […]; că ar merge
+mai bine decât restul nu e măsurat.” Clasamentul e o funcție curată de lumânări de 4 ore (`GridClasament.judeca`), deci se poate reface
+pentru orice zi din trecut numai cu ce se știa atunci, iar gridul propus se poate rula pe ziua următoare cu motorul casei
+(`GridProba.simuleaza`, cel al fișei). Scriptul: `scripts/cercetare-v100342-candidati-grid.mjs`; logica, fără rețea, în
+`scripts/lib/g1-candidati-grid.mjs`.
+
+**Ipoteza și mecanismul.** Scorul = profitul pe grilă × trecerile estimate pe zi ÷ numărul de grile, iar trecerile se estimează din mișcarea
+mediană pe 4 ore a ultimelor ~83 de zile. Agitația unei monede ține (volatilitatea vine în ciorchini), deci o monedă care a trecut des prin
+liniile unui grid ar trebui să treacă des și mâine: **primele din clasament ar trebui să încaseze mai multe grile pe zi (A)**. De partea
+cealaltă a fiecărei grile încasate e cineva care cumpără sau vinde la piață moneda aceea; cât timp moneda rămâne tranzacționată activ,
+trecerile rămân. Pentru **rezultatul total (B)** nu am niciun mecanism: mai multă mișcare înseamnă și mai multe grile încasate, și o
+poziție rămasă deschisă care se mișcă mai tare. Îl măsor fiindcă e întrebarea care contează („rămân cu mai mulți bani?”), nu fiindcă m-aș
+aștepta la un răspuns.
+
+**Ce se compară.** În fiecare zi, la 00:00 UTC, clasamentul se reface din cel mult 500 de lumânări de 4 ore închise până atunci (cel puțin
+50, ca pe pagină). Lista se ordonează ca pe pagină (`GridClasament.ordoneaza`: întâi cele „de evitat”, apoi candidații după scor).
+- **primele** = candidații (nu sunt într-o mișcare mare) de pe pozițiile 1–60 ale listei — exact filtrul rețetei din Scan;
+- **ceilalți** = candidații de pe pozițiile de după 60.
+Monedele „de evitat” nu intră în niciuna: regula „nu se pornește grid după o mișcare mare” e deja dovedită și ar umfla diferența.
+
+**Universul.** Cele 100 de perpetue Pionex cu cel mai mare volum în clipa aducerii datelor (aceeași regulă ca a colectorului:
+`GridClasament.topDupaVolum`, fără acțiuni și mărfuri), fiecare cu perechea ei de pe Binance (USDT, perpetuu; cu multiplicatorul 1000 /
+1000000 unde Binance îl are). Moneda fără pereche pe Binance rămâne pe dinafară și se numără. Lista stă lângă date, nu în depozit.
+
+**Zilele.** Ultimele 200 de zile încheiate înainte de 14.11.2026 00:00 UTC (28.04.2026 – 13.11.2026), adică 40 de blocuri de câte 5 zile
+la rând, numărate de la prima zi. Capătul e fix (`--pana`), deci aceleași date dau mereu aceleași cifre.
+
+**Gridul rulat.** Cel pe care îl socotește clasamentul însuși: intervalul din `GridCalcul.plaseaza` (lățimea = percentila 75 a mișcării pe
+două zile, înclinat după direcție), pasul minim al casei (0,30%), geometric, direcția din clasament (long / short / neutru). Fără levier,
+fără stop, fără țintă. Pornește la deschiderea primei lumânări de 15 minute de după 00:00 UTC și se închide la piață după 96 de lumânări
+(24 de ore). Comisioanele sunt ale motorului (0,02% pe grile, 0,05% la pornire și la închidere). Funding-ul e cel real al zilei de pe
+Binance (suma ratelor plătite în cele 24 de ore), împărțit egal pe cele trei plăți ale motorului. O monedă-zi cu mai puțin de 90 din cele
+96 de lumânări nu se rulează și se numără.
+
+**Ce se măsoară pe fiecare monedă-zi.**
+- **A — grilele încasate, în unitatea scorului:** profitul pe grilă × grilele încasate în 24 h ÷ numărul de grile (cât din sumă au adus
+  grilele, fără poziția rămasă);
+- **B — rezultatul total:** cât a rămas din sumă după 24 h, cu tot cu comisioane, funding și poziția rămasă închisă la piață (`net`).
+
+**Statistica, pe blocuri (unitatea de dovadă e timpul, nu moneda).** Pe fiecare bloc de 5 zile se adună toate monedele-zi ale fiecărei clase.
+- A: ln(media „primelor” ÷ media „celorlalți”) pe bloc;
+- B: media „primelor” − media „celorlalți” pe bloc.
+Blocul în care o clasă are sub 20 de monede-zi se sare.
+
+**Testul.** Student într-o singură parte pe cele (cel mult) 40 de valori, cu o **gardă pentru blocuri legate între ele**. Diferența dintre
+două grupuri de monede se poate ține săptămâni la rând (aceleași monede stau sus, piața rămâne agitată), iar testul simplu presupune blocuri
+independente. Simularea de mărime, făcută înaintea oricărei date de piață (`sim-garda.mjs`, mulberry32, 200.000 de rulări pe rând, 40 de
+blocuri cu autocorelație ρ, fără niciun efect; respingeri la 2,5% nominal / la pragul verdictului, unde nominal ar fi 135):
+
+| ρ între blocuri | testul simplu | garda cu autocorelația estimată | + 1/√n | **+ 1,5/√n (aleasă)** | aleasă, cu cozi groase |
+|---|---|---|---|---|---|
+| 0 | 2,50% / 142 | 1,96% / 100 | 1,23% / 46 | **0,86% / 31** | 0,71% / 12 |
+| 0,2 | 5,45% / 753 | 2,86% / 275 | 1,48% / 102 | **0,94% / 55** | 0,78% / 24 |
+| 0,4 | 9,98% / 3.118 | 3,14% / 465 | 1,44% / 139 | **0,88% / 66** | 0,75% / 45 |
+| 0,6 | 16,49% / 10.262 | 3,45% / 708 | 1,41% / 200 | **0,78% / 95** | 0,68% / 61 |
+
+Testul simplu ar da „dovedit” de 5 până la 75 de ori prea des. **Garda aleasă:** r = autocorelația de ordinul 1 a valorilor pe blocuri,
+corectată de deplasare (r + (1 + 3r) ÷ n), plus 1,5 ÷ √n, plafonată la 0,9; dacă r > 0, t se înmulțește cu √((1 − r) ÷ (1 + r)), iar gradele
+de libertate sunt ale eșantionului efectiv (n · (1 − r) ÷ (1 + r) − 1, cel puțin 2). Garda nu umflă niciodată t. Prețul: fără nicio
+legătură între blocuri, t scade cam cu un sfert — plătit ca să nu apară un „dovedit” fals.
+
+**Pragul.** Regula din capul jurnalului: se numără toate testele cu verdict de până acum — 35 (cu M5b și cele două ale jurnalului notei)
+plus acestea două = 37 ⇒ **p ≤ 0,05 ÷ 74 într-o parte**. Aceeași întrebare se pune și invers („primele aduc MAI PUȚIN?”), cu același prag.
+
+**Mărimile minime (scrise acum).** A: raportul pe bloc cel puțin ×1,2 (ca la M5b). B: cel puțin 0,05% din sumă pe zi.
+
+**Verdictele, pentru fiecare din cele două teste:**
+- **DOVEDIT** — p ≤ prag și mărimea cel puțin cea minimă;
+- **EXISTĂ, DAR MIC** — p ≤ prag, mărimea sub cea minimă;
+- **PE DOS** — întrebarea inversă trece pragul;
+- **NEDOVEDIT** — altfel (nu înseamnă „dovedit că nu”).
+
+**Înaintea cifrei adevărate, pe aceleași date (`--ce=g1h0`):**
+1. *Mărimea pe structura reală (P1).* De 4.000 de ori, în fiecare zi eticheta „primele” se dă la întâmplare aceluiași număr de candidați.
+   Rata de respingere la 2,5% nominal trebuie să rămână **sub 4%** la ambele teste. Dacă nu rămâne, testul nu e bun pentru datele acestea:
+   cifra adevărată nu se mai citește și rezultatul se scrie „nemăsurat — testul nu ține mărimea”.
+2. *Ce se poate vedea (puterea).* Din abaterea valorilor pe blocuri sub P1 se scrie cel mai mic efect care ar ieși „dovedit” în 4 cazuri
+   din 5, înainte de a vedea efectul adevărat.
+3. *Aceleași monede mereu sus (P2), doar de știut, fără urmare asupra verdictului.* De 4.000 de ori, o ordine întâmplătoare a monedelor,
+   aceeași în toate zilele, ține locul scorului. Arată cât de des un grup oarecare de monede, mereu același, iese „diferit” de rest.
+4. *Autenticitatea.* Pe 5 zile alese la întâmplare: clasele și rezultatele refăcute din date tăiate la sfârșitul zilei respective și cu
+   toate lumânările de după stricate anume trebuie să iasă identice (nimic din viitor nu intră în clasament sau în rezultat).
+
+Scriptul refuză `--ce=g1` până nu există rezultatul lui `--ce=g1h0` cu P1 sub limită.
+
+**Ce nu poate spune G1, oricum ar ieși.** Prețurile sunt ale Binance, nu ale Pionex (aceeași monedă, altă bursă: pe monedele mici pot
+diferi la vârfuri). Universul e cel de azi: monedele scoase de la tranzacționare între timp lipsesc, iar cele de azi erau, unele, mult mai
+mici acum 200 de zile. Un ordin-limită se socotește executat când prețul îi atinge linia (pe monedele subțiri, optimist), iar drumul din
+interiorul unei lumânări de 15 minute e convenția motorului. Un grid de 24 de ore fără levier nu e botul lui de câteva zile cu levier.
+Nu se caută niciun parametru: un singur grid, un singur orizont, o singură tăietură (60) — cele ale paginii.
+
+**Ce se scrie pe pagină, hotărât acum.** Explicația rețetei din Scan înlocuiește „că ar merge mai bine decât restul nu e măsurat” cu
+rezultatul, în cuvinte simple, pentru fiecare întrebare:
+- A DOVEDIT: „Măsurat pe 200 de zile: primele din clasament au încasat de ×… mai multe grile pe zi decât ceilalți candidați.”
+  A EXISTĂ, DAR MIC: „…au încasat ceva mai multe grile (×…), prea puțin ca să conteze.” A NEDOVEDIT: „Că primele încasează mai multe
+  grile decât ceilalți candidați e nedovedit (măsurat pe 200 de zile).” A PE DOS: „Măsurat pe 200 de zile: primele din clasament au
+  încasat mai PUȚINE grile decât ceilalți candidați.”
+- B, la fel: „Că rămâi cu mai mulți bani la sfârșitul zilei, cu tot cu poziția rămasă deschisă: dovedit (+…% pe zi) / diferență prea
+  mică / nedovedit / pe dos.”
+Culorile și ordinea listelor nu se schimbă după G1; un rezultat „pe dos” devine propunere în backlog, nu o schimbare făcută din mers.
+
+### G1 — rezultatul (rulat 14.11.2026, o singură dată, după regulile de mai sus)
+
+**Ordinea.** Regulile au intrat în jurnal la 17:18 UTC; datele s-au adus după aceea (17:22–17:41 UTC); `--ce=g1h0` s-a încheiat la 17:43;
+`--ce=g1` (cifra adevărată) la 17:44. Scriptul a refuzat `--ce=g1` cât n-a existat `g1h0`.
+
+**Datele.** 100 de perpetue Pionex în clipa aducerii, 90 cu pereche pe Binance (10 au rămas pe dinafară). 200 de zile din 200, 40 de
+blocuri. 15.863 de monede-zi: „primele” 10.059, „ceilalți” 5.804 (pe zi, în medie, 50,3 și 29,0). Nimic sărit (nicio zi fără lumânări de
+15 minute, niciun grid imposibil). Amprenta datelor: `aaefbc81a0a2c3ac`.
+
+**Înaintea cifrei adevărate.**
+- *Autenticitatea:* 5 zile alese la întâmplare (23.05, 06.06, 14.06, 13.07, 26.09.2026; 70, 37, 84, 88, 75 de monede-zi) — cu tot viitorul
+  stricat, clasele și rezultatele au ieșit identice.
+- *P1 (etichete la întâmplare în fiecare zi, 4.000 de rulări):* A respinge în 0,07% din rulări la 2,5% nominal și niciodată la pragul
+  verdictului; B în 0,70% și niciodată. Sub limita de 4% ⇒ testul ține mărimea (cu garda e chiar prudent).
+- *Puterea, pe 40 de blocuri cu abaterea din P1 (A: 0,0646; B: 0,00453):*
+
+| dacă efectul adevărat ar fi | ×1,20 | ×1,25 | ×1,30 și peste |
+|---|---|---|---|
+| A iese DOVEDIT în | 49% | 100% | 100% |
+
+| dacă diferența adevărată ar fi (pe zi) | +0,05% | +0,10% | +0,20% | +0,30% | +0,50% | +1,00% |
+|---|---|---|---|---|---|---|
+| B iese DOVEDIT în | 0% | 1% | 9% | 37% | 90% | 100% |
+
+  **Tabelele acestea sunt prea optimiste** (îndreptare după revizia independentă): sunt socotite pe blocuri independente, cu abaterea de sub
+  P1, iar P1 amestecă etichetele în fiecare zi și șterge tocmai statornicia lor. Seria adevărată a lui A are abaterea 0,147 (nu 0,065) și
+  autocorelația 0,55, deci garda îi lasă cam 2 grade de libertate din 39: mutată la un efect de ×1,25, ×2 sau ×5, tot „nedovedit” ar fi
+  ieșit (p = 0,055; 0,006; 0,001); abia la ×8 trece pragul. La B (abaterea 0,0058, autocorelația 0,14) trece abia între +0,5% și +0,75% pe
+  zi. **Amândouă testele au fost, deci, aproape oarbe; „nedovedit” spune puțin la A și la B deopotrivă.**
+- *P2 (aceeași ordine întâmplătoare a monedelor în toate zilele, doar de știut):* la 2,5% nominal respinge în 4,88% (A) și 4,95% (B) din
+  rulări; la pragul verdictului, de 33 și de 7 ori din 4.000 (nominal 2,7). Un grup oarecare de monede, mereu același, iese deci „diferit”
+  de rest mai des decât ar ieși din întâmplare curată: monedele se deosebesc între ele în mod statornic, cu sau fără scor.
+
+**Cifra adevărată.**
+
+| | „primele” | „ceilalți” | pe blocuri | t | autocorelația | t cu gardă | p (invers) | verdict |
+|---|---|---|---|---|---|---|---|---|
+| A — grilele încasate, din sumă pe zi | 0,468% | 0,447% | ×1,05 | 2,08 | 0,55 | 0,58 | 0,309 (0,691) | **NEDOVEDIT** |
+| B — rezultatul total, din sumă pe zi | −0,286% | −0,646% | +0,341% pe zi | 3,70 | 0,14 | 2,39 | 0,015 (0,985) | **NEDOVEDIT** |
+
+Pragul: 0,05 ÷ 74 = 0,00068.
+
+- **A.** Primele din lista ordonată după scor au încasat aproape la fel de multe grile ca ceilalți candidați (×1,05 pe blocuri; 0,468% față
+  de 0,447%). Blocurile sunt puternic legate între ele (0,55): raportul stă săptămâni la rând peste 1, apoi săptămâni sub 1 (de la ×0,72 la
+  ×1,35). Cu o asemenea serie testul nu putea dovedi nimic (vezi puterea, mai sus): nedovedit — nici că ordinea contează, nici că nu.
+  Ipoteza mea („agitația ține, deci primele încasează mai mult”) nu s-a văzut în cifra brută.
+- **B.** Semnul e în favoarea primelor (+0,34% pe zi), dar nu trece pragul, iar testul nu putea vedea o asemenea diferență.
+  Față de P2, t-ul adevărat (2,39) stă la percentila 97,5 a grupurilor întâmplătoare (2,41): un grup oarecare de monede, mereu același, iese
+  la fel de „diferit” cam o dată din 40. Nedovedit — nu „dovedit că nu”.
+  **Diferența se sprijină pe câteva monede** (găsit de revizie, verificat): 10 monede-zi au fost lichidări (rezultat −100%: grid short sau
+  neutru, fără levier, pe o monedă care a urcat de la +90% în sus într-o zi), 8 la „ceilalți” și 2 la „primele”. Fără ele diferența scade la
+  +0,23% pe zi; fără 3 monede, la +0,14%; fără 6 monede din 90, la +0,04%. Iar monedele acestea sunt în univers tocmai fiindcă au explodat
+  de curând: universul e luat după volumul din ziua aducerii.
+
+**Pe pagină.** Vorbele hotărâte dinainte porneau de la premisa greșită (că „primele” ar fi rețeta din Scan) și sunau mai sigur decât e
+rezultatul. După revizie, explicația rețetei spune: „…dintre primele 60 după volum. Lista le ordonează după scorul de grid […]. Că ordinea
+după scor ar conta e nedovedit: măsurat pe 200 de zile (14.11.2026), cu un grid de o zi fără levier, cele din frunte n-au ieșit dovedit mai
+bune decât celelalte candidate, nici la grilele încasate, nici la rezultatul de după o zi. Măsurătoarea vedea doar diferențe mari. Tăietura
+după volum nu e măsurată.” Culorile și ordinea nu s-au schimbat.
+
+### E2 — de văzut, fără verdict (scris DUPĂ G1, pe aceleași monede-zi; nu e un test și nu intră la numărătoarea testelor)
+
+Rezultatul total a ieșit negativ la ambele clase, ceea ce nu era întrebarea lui G1. Ca să văd dacă e o greșeală a măsurătorii (semnul
+funding-ului, motorul, datele), am descompus aceleași 15.863 de monede-zi. Nu e o întrebare nouă cu prag; e o descriere.
+
+| | monede-zi | grilele încasate (A) | rezultatul total (B) | restul (B − A)* | mișcarea monedei în 24 h: medie / în modul | grile | lățimea intervalului |
+|---|---|---|---|---|---|---|---|
+| toate | 15.863 | +0,460% | −0,418% | −0,878% | +0,25% / 3,86% | 50 | 15,1% |
+| primele | 10.059 | +0,468% | −0,286% | −0,754% | +0,10% / 3,42% | 42 | 12,9% |
+| ceilalți | 5.804 | +0,447% | −0,646% | −1,094% | +0,51% / 4,64% | 63 | 18,9% |
+| long | 4.621 | +0,612% | −0,526% | −1,138% | +0,37% / 4,93% | 50 | 15,5% |
+| neutru | 4.970 | +0,393% | −0,291% | −0,684% | +0,07% / 3,56% | 50 | 15,3% |
+| short | 6.272 | +0,402% | −0,438% | −0,840% | +0,30% / 3,31% | 49 | 14,7% |
+
+\* La neutru, „restul” e chiar poziția rămasă plus costurile. La long și short, A numără și vânzările celulelor cumpărate la piață la pornire
+(al căror câștig nu e un pas de grid), deci acolo diferența nu se citește așa.
+
+Forma: 59% din monedele-zi ies pe plus, mediana e +0,17% pe zi, dar cea mai proastă zecime e sub −3,2% și cea mai proastă sutime sub
+−12,5%. Zece monede-zi sunt lichidări (−100%); fără ele media e −0,36% pe zi, iar fără cele 6 monede cu cele mai mari pierderi adunate,
+−0,28% pe zi. Pe zile (media tuturor candidaților din ziua aceea): 76 de zile pe plus din 200, mediana zilei −0,23%, cea mai proastă zi −6,1%,
+cea mai bună +1,8%.
+
+**Cum se citește.** Nu e o piață care a căzut (monedele au urcat, în medie, cu +0,25% pe zi) și nu ține de direcție: pierd toate trei. E
+ce face orice grid: încasează puțin de multe ori și, când moneda se duce într-o parte, rămâne cu poziția cumpărată sau vândută pe drum. Cu o
+mișcare obișnuită de ~3,9% pe zi într-un interval lat de ~15%, pierderea așteptată pe poziție e cam mișcarea² ÷ (2 × lățimea) ≈ 0,5–1,1% —
+adică ordinul de mărime ieșit la neutru (−0,7%). Măsurătoarea e deci consecventă cu ea însăși; nu am găsit o greșeală de calcul.
+
+**Media e trasă în jos de felul în care s-a ales universul.** Monedele sunt cele cu volum mare în ziua aducerii, deci printre ele sunt
+tocmai cele care au explodat de curând; zilele acelea (și lichidările lor) intră în medie. Mediana (+0,17%) și partea de monede-zi pe plus
+(59%) țin mai bine decât media.
+
+**Ce NU spune E2.** Nu spune că un bot grid pierde bani: aici gridul e închis cu forța după 24 de ore, la piață, fără levier, fără stop și
+fără țintă; un bot lăsat să meargă își poate recupera poziția când prețul se întoarce (sau o poate adânci). Nu e un test: n-are prag, n-are
+ipoteză scrisă dinainte și vine după ce am văzut cifra lui B. Nu se scrie pe pagină. Rămâne ca propunere în backlog: aceeași întrebare pusă
+cum trebuie (ipoteză și prag dinainte, pe orizontul și cu setările boților adevărați).
+
+### G1 — îndreptări după revizia independentă (14.11.2026, după rezultat; verdictele nu se schimbă)
+
+O revizie independentă (alt agent, doar citire) a refăcut cu cod propriu cifrele din `g1.json`, monedele-zi și simularea gărzii — ies
+identice — și a găsit cele de mai jos. Le-am verificat pe fiecare (`verif-revizie.mjs`, pe aceleași fișiere, fără rețea).
+
+1. **Premisa greșită: G1 n-a măsurat rețeta din Scan.** În rețetă, `rang ≤ 60` e locul monedei în lista trimisă de colector, iar colectorul
+   o trimite în ordinea volumului (`GridClasament.topDupaVolum`). Rețeta înseamnă deci „candidații dintre primele 60 de monede după volum”,
+   arătați în ordinea scorului. G1 a comparat candidații de pe pozițiile 1–60 ale listei ordonate ca în fereastra „Grid: ce setez?” (întâi
+   cele de evitat, apoi după scor) cu ceilalți candidați — adică a măsurat **dacă ordinea după scor contează**. E o întrebare bună (pe
+   ordinea aceasta se sprijină lista din Scan, cea din Grid și candidații de pe Home), dar nu cea anunțată. Greșeala e a mea și e mai veche
+   de o zi: textul „primele 60 din clasamentul de grid” a intrat pe pagină în v100.341. **Tăietura după volum a rețetei rămâne nemăsurată.**
+2. **Puterea era socotită greșit** — vezi îndreptarea de la „Înaintea cifrei adevărate”. Fraza „o diferență de un sfert ar fi ieșit aproape
+   sigur” a fost scoasă: era falsă. Amândouă testele au fost aproape oarbe.
+3. **Diferența lui B stă în câteva monede și într-un univers ales după fapt** — vezi B, mai sus. Cu testul simplu, fără gardă, B ar fi
+   trecut pragul (p = 0,00033): garda e cea care a oprit un „dovedit” sprijinit pe 6 monede din 90.
+4. **Poarta P1 e prea blândă.** Etichetele amestecate în fiecare zi rup tocmai statornicia lor (o monedă rămâne în aceeași clasă de la o zi
+   la alta în 94% din cazuri), deci „sub 4%” era aproape garantat. Pe P2 (aceeași ordine mereu) testul NU ține mărimea: 33 de respingeri din
+   4.000 la pragul verdictului pentru A, față de 2,7. Azi nu strică nimic (ambele verdicte sunt „nedovedit”), dar **un „dovedit” ieșit cu
+   unealta aceasta nu se citește fără o poartă pe etichete statornice** — scris și în capul `scripts/lib/g1-candidati-grid.mjs`.
+5. **Garda e simulată doar până la ρ = 0,6 și pe valori simetrice.** La ρ = 0,8 și 0,9 respinge de 150 și de 259 de ori din 200.000
+   (nominal 135); pe valori cu coadă într-o parte, întrebarea inversă („pe dos”) respinge mult prea des (546 pe exponențială, 3.863 pe
+   lognormală). Un „pe dos” ar fi cerut aceeași prudență ca un „dovedit”.
+6. **„Grilele încasate” la long și short.** Motorul numără drept grilă încasată și vânzarea unei celule cumpărate la piață la pornire, al
+   cărei câștig nu e un pas de grid. La neutru A e curat; la long și short e o numărătoare în unitatea scorului, nu banii încasați. În E2,
+   coloana „B − A” e „poziția rămasă și costurile” doar la neutru — redenumită.
+7. **Mărunte.** Orele (aducerea s-a încheiat la 17:41 UTC, `g1h0` la 17:43). Cinci din cele 10 monede fără pereche pe Binance par, după
+   nume, acțiuni tokenizate care lipsesc din lista „nu e crypto” a paginii (propunere în backlog, de verificat).
+
+**Ce rămâne în picioare.** Cifrele (refăcute independent), lipsa oricărei scurgeri din viitor (verificată și pe date tăiate, nu doar
+stricate), unitățile, semnul funding-ului, numărătoarea testelor (37: sunt două teste făcute, cu verdict „nedovedit”). **Ce nu:** că G1 ar
+fi fost despre rețeta din Scan și că ar fi putut vedea o diferență de un sfert.

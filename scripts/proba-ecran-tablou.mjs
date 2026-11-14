@@ -478,6 +478,36 @@ async function main() {
       assert.match(String(rigla), /f[ăa]r[ăa] bot/i, `rigla nu spune "fara bot": ${rigla}`);
     });
 
+    // v100.342 (I-882): defect păzit - fără bot, desenul listei ieșea devreme și nu mai ajungea la banda contului ⇒ la deschiderea directă a
+    // Tabloului rămâneau trei benzi goale (contul, „Piața azi”, „Pe ce aș porni”); cu rândurile pliate, grila botului apărea cu „—”
+    await test("(I-882) fara bot: banda contului, Piata azi si Pe ce as porni au continut; grila botului ramane ascunsa si cu randurile pliate", async () => {
+      await seteazaMock(b, "botOrders", { corp: { bots: [] }, stare: 200 });
+      // benzile se golesc întâi (cu tot cu ținerea de minte a ultimului desen): pașii dinainte le-au umplut pe ramura cu bot, iar proba trebuie să
+      // vadă că le umple desenul FĂRĂ bot - altfel trece și cu reparația scoasă (proba de roșu din 14.11.2026)
+      await b.ev(`(function(){ [].slice.call(document.querySelectorAll('#tabloubot [data-cont-tot], #tabloubot [data-piata-azi], #tbIdei')).forEach(function (e) { e.innerHTML = ''; e._contH = null; }); return 1; })()`);
+      await b.ev(`tbAduDate()`);
+      const r = await b.ev(`(async function(){
+        for (var i = 0; i < 50; i++) { if (document.getElementById('tabloubot').classList.contains('tbFaraBot') && (document.querySelector('#tabloubot [data-cont-tot]').textContent || '').indexOf('Pionex') >= 0) break; await new Promise(function (ok) { setTimeout(ok, 200); }); }
+        var P = document.getElementById('tabloubot'), txt = function (sel) { var e = P.querySelector(sel); return e ? (e.textContent || '').replace(/\\s+/g, ' ').trim().length : -1; };
+        var g = P.querySelector('.tbGrilaNoua'), pliuri = g ? g.querySelectorAll('[data-rand]') : [], vechi = [];
+        for (var k = 0; k < pliuri.length; k++) { vechi.push(pliuri[k].getAttribute('data-rand')); pliuri[k].setAttribute('data-rand', 'pliat'); }
+        var afisat = g ? getComputedStyle(g).display : 'lipsa';
+        for (var q = 0; q < pliuri.length; q++) pliuri[q].setAttribute('data-rand', vechi[q]);
+        var ct = P.querySelector('[data-cont-tot]'), it = document.getElementById('tbIdei');
+        return JSON.stringify({ faraBot: P.classList.contains('tbFaraBot'), demo: document.documentElement.classList.contains('pzDemo'), cont: txt('[data-cont-tot]'), piata: txt('[data-piata-azi]'), idei: txt('#tbIdei'), pliuri: pliuri.length, grila: afisat,
+          contPionex: !!ct && (ct.textContent || '').indexOf('Pionex') >= 0, ideiTitlu: !!it && !!it.querySelector('h4') });
+      })()`);
+      const o = JSON.parse(r);
+      assert.equal(o.faraBot, true, "panoul nu e în starea fără bot: " + r);
+      assert.ok(o.cont > 0, "banda contului e goală: " + r);
+      // rândul Pionex al benzii (cifrele lui vin din rețea și nu țin de pasul acesta; că desenul a rulat se vede din rândul însuși)
+      assert.ok(o.contPionex, "banda contului n-are rândul Pionex: " + r);
+      assert.ok(o.ideiTitlu, "„Pe ce aș porni” n-are titlul ei: " + r);
+      assert.ok(o.piata > 0, "banda „Piața azi” e goală: " + r);
+      assert.ok(o.idei > 0, "„Pe ce aș porni” e gol: " + r);
+      if (o.demo) { assert.ok(o.pliuri > 0, "grila botului nu are rânduri de pliat: " + r); assert.equal(o.grila, "none", "grila botului se vede cu rândurile pliate: " + r); }
+    });
+
     /* ═══ 1. Pretul invechit ══════════════════════════════════════════════
        Defect pazit: pretul putea ingheta pe veci si era aratat ca viu. */
     await test("1. pretul vechi de peste un minut se marcheaza (invechit) si basis-ul devine nu-se-poate", async () => {

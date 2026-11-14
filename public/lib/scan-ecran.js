@@ -169,7 +169,7 @@ function scanDeseneaza() {
 // v96.2: "cat a mers reteta in trecut" - calculat de colector pe barele zilnice, o data pe zi
 function scIstoricHtml(k) {
   if (k === "toate") return "";
-  if (k === "grid") return '<span class="scIst">📏 <b>În trecut:</b> gridul nu se poate măsura în urmă, fiindcă depinde de clasamentul de grid din ziua aceea. Ce a mers pe boții tăi e pe pagina „Grid: ce setez?”.</span>';
+  if (k === "grid") return '<span class="scIst">📏 <b>În trecut:</b> pagina nu poate reface singură clasamentul de grid al fiecărei zile, deci aici nu arată „cât a mers”. Măsurătoarea de mai sus s-a făcut separat, o singură dată. Ce a mers pe boții tăi e pe pagina „Grid: ce setez?”.</span>';   /* v100.342: înainte rândul spunea că gridul nu poate fi măsurat pe trecut - contrazicea măsurătoarea G1 de deasupra */
   var ist = scanSt.d.scan && scanSt.d.scan.istoric || {}, l = [];
   [["c", "Crypto"], ["a", "Acțiuni"]].forEach(function (m) {
     if (scanSt.fel !== "toate" && scanSt.fel !== m[0]) return;

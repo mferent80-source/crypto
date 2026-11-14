@@ -75,7 +75,9 @@ var TvNote = (function () {
   // Fapt, fără culoare și fără verdict până la judecata unică de la 90 de zile (regulile: docs/cercetare/2026-11-13-tablou-acuratete.md).
   // b = { zile, serii: { tv4h: { n, k, zile }, radar4h: {…} }, judecata: null | { tv4h: { gata, blocuri, verdict, medie }, radar4h: {…} } }
   // O serie apare doar de la 30 de zile ALE EI (revizia: pragul era pe zilele celeilalte serii). Procentul e cel simplu, din note.
-  function bilantText(b) {
+  // v100.342 (I-880): acum = clipa paginii; rândul își spune și data ultimei trimiteri a colectorului - ca fapt, nu ca alarmă (colectorul
+  // trimite când judecă o notă nouă și la fiecare pornire a lui; fără boți nu are ce judeca, deci data rămâne veche fără să fie o pană)
+  function bilantText(b, acum) {
     if (!b || !b.serii) return "";
     var cate = function (n, unu, multe) { return TextRo.cate(n, unu, multe); };   /* pluralul și „de” de la 20: regula casei, într-un singur loc (text-ro.js) */
     var pc = function (x) { return Math.round(100 * x) + "%"; }, pc1 = function (x) { return (Math.round(1000 * x) / 10).toFixed(1).replace(".", ",") + "%"; };
@@ -88,7 +90,10 @@ var TvNote = (function () {
     var jud = [are(tv) ? zj(j.tv4h, "nota TradingView") : null, are(rd) ? zj(j.radar4h, "verdictul Radarului") : null].filter(Boolean);
     var coada = jud.length ? "Judecat o singură dată, pe primele " + cate((j.tv4h && j.tv4h.gata ? j.tv4h : j.radar4h).blocuri, "bloc", "blocuri") + " de 5 zile: " + jud.join("; ") + "."
       : "Numărătoare, nu dovadă: judecata se face o singură dată, pe primele 36 de blocuri de 5 zile.";
-    return "Pe viu, din jurnalul colectorului, pe monedele boților tăi: " + parti.join("; ") + ". " + coada;
+    var la = Number(b.la), cand = "";
+    if (la > 0 && acum > 0 && la <= acum + 600000) cand = " Adus la zi de colector: " + new Date(la).toLocaleString("ro-RO", { timeZone: "Europe/Bucharest", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })
+      + (acum - la > 7 * 86400000 ? " (de atunci n-a mai trimis nimic nou)" : "") + ".";
+    return "Pe viu, din jurnalul colectorului, pe monedele boților tăi: " + parti.join("; ") + ". " + coada + cand;
   }
   return { TF: TF, clasa: clasa, valoare: valoare, tabel: tabel, mic: mic, textLipsa: textLipsa, bilantText: bilantText };
 })();

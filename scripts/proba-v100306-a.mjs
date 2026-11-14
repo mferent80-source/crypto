@@ -142,7 +142,7 @@ await test("FB.1 Comportament: raport vechi și NICIUN bot ⇒ „Niciun bot por
 await test("FB.2 Tabloul fără bot: „Ce ai de făcut acum” nu mai rămâne „Aștept botul…”; cardul unic spune ultimul bot și duce la Grid", () => {
   const el = {}, ctx = vm.createContext({ console, Date, Math, JSON, Object, Array, Number, String, Intl, isFinite, TextRo: globalThis.TextRo, escapeHtml: esc, $: (id) => (el[id] = el[id] || { id, innerHTML: "", hidden: false, classList: { toggle() {} } }),
     tbStare: { routeOk: true, bot: null, boti: [] }, acUltimInchisText: () => "XMR long 5× −2,1 USDT · joi 11:19", document: { getElementById: (id) => el[id] || null } });
-  vm.runInContext(["tbTextFaraBot", "renderTabloSfaturi", "tbRenderTodo", "tbFaraBotHtml"].map(fnApp).join("\n"), ctx);
+  vm.runInContext(["tbTextFaraBot", "renderTabloSfaturi", "tbRenderTodo", "tbFaraBotHtml", "tbContTot"].map(fnApp).join("\n"), ctx);   /* v100.342: desenul listei cheamă banda contului și fără bot */
   ctx.renderTabloSfaturi();
   assert.doesNotMatch(el.tbTodoLista.innerHTML, /Aștept botul/); assert.match(el.tbTodoLista.innerHTML, /Niciun bot/);
   const card = ctx.tbFaraBotHtml();

@@ -311,7 +311,7 @@ try {
     const t = await b.ev(`document.getElementById("scExplic").innerText`);
     assert.match(t, /În trecut/); assert.match(t, /Crypto · \d+ intrări/); assert.match(t, /Acțiuni · \d+ intrări/); assert.match(t, /după o săptămână \d+% pe plus/); assert.match(t, /orice zi: \d+%/);
     await b.ev(`document.querySelector('#scRetete [data-scr="grid"]').click();true`); await asteapta(200);
-    assert.match(await b.ev(`document.getElementById("scExplic").innerText`), /nu se poate măsura în urmă/);
+    assert.match(await b.ev(`document.getElementById("scExplic").innerText`), /pagina nu poate reface singură clasamentul de grid/);   /* v100.342: după măsurătoarea G1 rândul nu mai spune „nu se poate măsura în urmă” */
     await b.ev(`document.querySelector('#scRetete [data-scr="toate"]').click();true`);
   });
   await test("Scan: 'Anunta-ma' pe NVDA pune 🔔 pe rand, lista se salveaza pe server; 'Nu mai anunta' o scoate (proba nu lasa nimic)", async () => {

@@ -24,7 +24,7 @@ const APP = citeste("public", "app.js"), taiePagina = (nume) => taie(APP, nume);
 await test("(I-876) rețeta de grid a scannerului se numește „Candidați de grid”: spune ce sunt, nu că ar fi buni; explicația zice ce e măsurat și ce nu; filtrul e neschimbat", () => {
   const Scan = incarcaLib(["scan.js"], "Scan"), r = Scan.RETETE.find((x) => x.k === "grid");
   assert.equal(r.t, "🟦 Candidați de grid"); assert.equal(r.sub, "fără mișcare mare", "subtitlul spune ce verifică filtrul (era „liniștit, lateral”: „lateral” nu e verificat)");
-  assert.doesNotMatch(r.e, /exact ce-i trebuie|s-a întors des/); assert.match(r.e, /nu e măsurat/); assert.match(r.e, /după o mișcare mare/, "singura regulă dovedită rămâne spusă"); assert.match(r.e, /primele 60 din clasamentul de grid/);
+  assert.doesNotMatch(r.e, /exact ce-i trebuie|s-a întors des/); assert.match(r.e, /nu e măsurat|nedovedit/); /* v100.342: după măsurătoarea G1 explicația spune rezultatul */ assert.match(r.e, /după o mișcare mare/, "singura regulă dovedită rămâne spusă"); assert.match(r.e, /dintre primele 60 după volum/); /* v100.342: `rang` e locul după volum, nu poziția după scor */
   assert.match(citeste("public", "lib", "grid-clasament.js"), /out\.stare = out\.regim\.miscare \? "evita" : "candidat";/, "premisa: „candidat” înseamnă doar „nu e în mișcare mare”");
   // filtrul: același ca înainte (candidat în clasamentul de grid, nu în mișcare, în primele 60)
   const m = (o) => Object.assign({ fel: "c", stare: "candidat", miscare: false, rang: 12 }, o);
@@ -116,7 +116,7 @@ await test("(I-878c) pagina: fiecare serie apare abia de la 30 de zile ALE EI, c
   assert.match(tj, /Judecat o singură dată, pe primele 36 de blocuri de 5 zile: nota TradingView — nedovedit \(54,6% în medie pe bloc\); verdictul Radarului — nimerește direcția \(55,1% în medie pe bloc\)\.$/, tj);
   assert.match(TvNote.bilantText({ zile: 200, serii: S(200, 200), judecata: { tv4h: { gata: true, blocuri: 36, verdict: "NEDOVEDIT", medie: 0.5, p: 0.5 }, radar4h: { gata: false, blocuri: 30, trebuie: 36 } } }), /blocuri de 5 zile: nota TradingView — nedovedit \(50,0% în medie pe bloc\)\.$/);
   // pagina: îl aduce o dată pe oră (la eroare reîncearcă peste 5 minute) și îl pune sub tabelul notei, scăpat, în text simplu
-  assert.match(taiePagina("renderTabloTv"), /TvNote\.bilantText\(tbStare\.notaBilant&&tbStare\.notaBilant\.b\)/); assert.match(taiePagina("renderTabloTv"), /<p class="tbSub" id="tbTvBilant">'\+escapeHtml\(bil\)\+'<\/p>/);
+  assert.match(taiePagina("renderTabloTv"), /TvNote\.bilantText\(tbStare\.notaBilant&&tbStare\.notaBilant\.b[,)]/); /* v100.342: + clipa de acum */ assert.match(taiePagina("renderTabloTv"), /<p class="tbSub" id="tbTvBilant">'\+escapeHtml\(bil\)\+'<\/p>/);
   assert.match(taiePagina("tbAduBilantNota"), /\/api\/istoric-bot\?action=notaTv/); assert.match(taiePagina("tbAduBilantNota"), /Date\.now\(\)-s\.la<3600000/); assert.match(taiePagina("tbAduBilantNota"), /s\.la=Date\.now\(\)-3600000\+300000/);
 });
 await test("(I-878d) serverul ține bilanțul trimis de colector (action=notaTv): cere forma întreagă, păstrează doar câmpurile știute, nu primește „la” din viitor; colectorul - RULAT - ține zilele pe disc, îngheață judecata pe serie și reîncearcă trimiterea picată", async () => {

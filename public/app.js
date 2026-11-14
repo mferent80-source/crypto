@@ -7223,7 +7223,7 @@ function tbPlanStareAcum(b){
 function tbRenderTodo(){
   var box=$("tbTodoLista");if(!box)return;
   var b=tbStare.routeOk===false?null:tbStare.bot;
-  if(!b){box.innerHTML='<p class="tbSub tbTodoGol">'+escapeHtml(tbTextFaraBot())+'</p>';tbStare.todoLista=[];if(typeof tbRenderConteaza==="function")tbRenderConteaza(true);return}
+  if(!b){box.innerHTML='<p class="tbSub tbTodoGol">'+escapeHtml(tbTextFaraBot())+'</p>';tbStare.todoLista=[];if(typeof tbRenderConteaza==="function")tbRenderConteaza(true);if(tbStare.routeOk===true)tbContTot();return}   /* v100.342 (I-882): și fără bot (ruta a răspuns, niciun bot) - banda contului, „Piața azi” și „Pe ce aș porni” se desenau doar de aici în jos, deci la deschiderea directă a Tabloului fără bot rămâneau benzi goale; înaintea primului răspuns și la ruta picată rămâne ca înainte */
   /* v100.332 (auditul 12.11, 🟡3): „Nu ai un plan” doar când planul a fost CITIT și e gol - neadus sau cu cererea picată nu e „fără plan” */
   var stPl=typeof tbPlanCitire==="function"?tbPlanCitire(b):(tbPlan.botId===b.id&&tbPlan.plan&&(tbPlan.plan.plus||tbPlan.plan.minus||tbPlan.plan.afaraOre)?"pus":"gol"),planGol=stPl==="gol";
   var alerte=TabloExtra.alerteleBotului(tbStare.alerteServer,b.id,Date.now());
@@ -7250,7 +7250,8 @@ function tbRenderTodo(){
   pune("tbPlSub-plan",stPl==="gol"?"niciun plan încă — scrie-l la rece":stPl==="pus"?"planul e pus · colectorul te anunță":stPl==="eroare"?(tbPlan.faraServer?"planul se ține doar pe Radarul de pe server":"planul n-a putut fi citit · reîncerc"):"aduc planul…");
   tbContTot();
 }
-function tbContTot(){if(typeof contTotRender==="function"){contTotRender();if(!contTot.inLucru&&(!t212.cont||!t212.istoric))contTotAsigura()}}
+// v100.342 (revizia independentă): cât contul lipsește (Trading 212 nu răspunde), cererea pleacă cel mult o dată pe minut - nu la fiecare desen al listei
+function tbContTot(){if(typeof contTotRender==="function"){contTotRender();if(!contTot.inLucru&&(!t212.cont||!t212.istoric)&&Date.now()-(contTot.tbCerutLa||0)>=60000){contTot.tbCerutLa=Date.now();contTotAsigura()}}}
 function tbDeschidePlan(){var d=$("tbPl-plan");if(!d)return;d.open=true;if(d.scrollIntoView)d.scrollIntoView({block:"center",behavior:"smooth"});var i=d.querySelector("input");if(i)setTimeout(function(){i.focus()},250)}
 function renderTabloAlerte(){
   var el=$("tbAlerteStare");if(!el)return;
@@ -7705,7 +7706,7 @@ function renderTabloTv(){
   var b=tbStare.routeOk===false?null:tbStare.bot,d=b&&tbStare.directie&&tbStare.directie.simbol===tbCheieDir(b)?tbStare.directie:null,t=tbTvDe(d);
   if(!b){el.innerHTML='<p class="tbSub">Fără bot, n-am pe ce monedă să citesc notele TradingView.</p>';return}
   /* v100.341 (I-878): sub tabel, bilanțul pe viu al notei și al verdictului (din jurnalul colectorului) - apare abia de la 30 de zile, ca fapt */
-  var bil=TvNote.bilantText?TvNote.bilantText(tbStare.notaBilant&&tbStare.notaBilant.b):"";
+  var bil=TvNote.bilantText?TvNote.bilantText(tbStare.notaBilant&&tbStare.notaBilant.b,Date.now()):"";
   el.innerHTML=TvNote.tabel(t?t.n:null,{directie:String(b.directie||"").toLowerCase(),la:t?t.la:null,pret:Number(b.pretCurent)>0?Number(b.pretCurent):null,radar:"Pionex"})+(bil?'<p class="tbSub" id="tbTvBilant">'+escapeHtml(bil)+'</p>':'');   /* v100.339 (I-869): prețul botului la verificarea instrumentului, ora serverului, bazele la vedere */
   tbAduBilantNota();
 }

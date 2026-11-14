@@ -3545,6 +3545,8 @@ button.pzVoce{width:auto;min-height:0;margin:0;background:transparent;font-weigh
 #tabloubot .tbFaraBotBtn{margin-left:auto;min-height:36px}
 #tabloubot.tbFaraBot .tbSus,#tabloubot.tbFaraBot #tbGraficCard>:not(#pzUltimii),#tabloubot.tbFaraBot #tbGraficCard:not(:has(#pzUltimii)),#tabloubot.tbFaraBot #tbTodo,#tabloubot.tbFaraBot .tbGrCol,#tabloubot.tbFaraBot .tbGrilaNoua,#tabloubot.tbFaraBot #tbAcumCard,#tabloubot.tbFaraBot #tbPl-plan,#tabloubot.tbFaraBot #tbPl-sfaturi,#tabloubot.tbFaraBot #tbPl-avert,#tabloubot.tbFaraBot #tbPl-alerte,#tabloubot.tbFaraBot #tbPl-fisa,#tabloubot.tbFaraBot #tbPl-sapt,#tabloubot.tbFaraBot #tbPl-socoteala,#tabloubot.tbFaraBot #tbPl-port,#tabloubot.tbFaraBot #tbDetalii{display:none!important}
 #tabloubot.tbFaraBot .tbGraficRand{grid-template-columns:minmax(0,1fr)!important}
+/* v100.342 (I-882): fără bot grila botului rămâne ascunsă și cu rândurile pliate - regula rândurilor pliate din desenul nou (.tbGrilaNoua:has(…[data-rand="pliat"]){display:block!important}) o scotea la vedere cu „—” în loc de conținut; aceasta are o clasă în plus, deci câștigă oriunde ar sta în foaie */
+html.pzDemo #tabloubot.tbFaraBot .tbGrilaNoua:is(:has(>.tbMain>[data-rand]),:has(>.tbSideNou>[data-rand]),.tbGrilaNoua){display:none!important}
 /* I-836: fișa Grid pe telefon - după „Calculează”, formularul strâns într-un rând (cu tot ce ai ales și „✎ Schimbă”) */
 #gridset #grFormStrans{display:none}
 @media (max-width:600px){#gridset .grIntrari.grStrans>:not(#grFormStrans){display:none}#gridset .grIntrari.grStrans>#grFormStrans{display:flex;align-items:center;gap:8px 10px;width:100%;flex-wrap:wrap;font-weight:600}#gridset #grFormStrans .actionGhost{margin-left:auto;min-height:36px}}
