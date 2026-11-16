@@ -38,22 +38,26 @@ export function urmarireSectoare(urm, bare, univ, acum, o) {
   const membri = {}; for (const u of Array.isArray(univ) ? univ : []) if (u && u.sector && bare && bare[u.s] && bare[u.s].length) (membri[u.sector] = membri[u.sector] || []).push(u.s);
   const ziU = (t) => new Date(t).toISOString().slice(0, 10), idx = new Map();
   const harta = (s) => { if (!idx.has(s)) { const m = new Map(), b = bare && bare[s]; if (Array.isArray(b)) for (let k = 0; k < b.length; k++) m.set(ziU(b[k].t), k); idx.set(s, m); } return idx.get(s); };
-  const ret = (s, zi) => { const b = bare && bare[s]; if (!Array.isArray(b) || !b.length) return null; const i = harta(s).get(zi); if (i == null) return ziU(b[b.length - 1].t) < zi ? undefined : null; if (i + H >= b.length) return undefined; const a = b[i + 1], z = b[i + H], pa = a.o > 0 ? a.o : a.c; return pa > 0 && z.c > 0 ? z.c / pa - 1 : null; };
+  // v101.186 (revizia 2, 🟡1 + 🔵3): ce lipsește (bare neaduse azi, bursa încă n-a ajuns la orizont, firmă delistată) AȘTEAPTĂ până la 45 de zile de
+  // la notare - ziua nu intră cu jumătate din date; după 45 de zile lipsa e definitivă (null)
+  const ret = (s, zi, vechi) => { const b = bare && bare[s], A = vechi ? null : undefined; if (!Array.isArray(b) || !b.length) return A; const i = harta(s).get(zi); if (i == null) return ziU(b[b.length - 1].t) < zi ? A : null; if (i + H >= b.length) return A; const a = b[i + 1], z = b[i + H], pa = a.o > 0 ? a.o : a.c; return pa > 0 && z.c > 0 ? z.c / pa - 1 : null; };
   for (const x of (Array.isArray(urm) ? urm : []).slice().sort((p, q) => p.tb - q.tb)) {
-    const dif = [], zi = ziU(x.tb); let asteapta = false;
+    const dif = [], zi = ziU(x.tb), vechi = acum - x.tb > 45 * 86400000; let asteapta = false;
     for (const sec of Object.keys(x.top || {})) {
       const mem = x.mem && Array.isArray(x.mem[sec]) ? x.mem[sec] : membri[sec] || [];
-      const tR = (x.top[sec] || []).map((s) => ret(s, zi)); if (tR.some((v) => v === undefined)) { asteapta = true; continue; }
+      const tR = (x.top[sec] || []).map((s) => ret(s, zi, vechi)); if (tR.some((v) => v === undefined)) { asteapta = true; continue; }
       if (tR.some((v) => v == null)) continue;   // o firmă din top fără prețuri: sectorul zilei nu se judecă (nu se aleg doar cele rămase)
-      const mOk = mem.map((s) => ret(s, zi)).filter((v) => v != null && v !== undefined); if (mOk.length < 5) continue;
+      const mR = mem.map((s) => ret(s, zi, vechi)); if (mR.some((v) => v === undefined)) { asteapta = true; continue; }
+      const mOk = mR.filter((v) => v != null); if (mOk.length < 5) continue;
       dif.push(tR.reduce((p, q) => p + q, 0) / tR.length - COST - mOk.reduce((p, q) => p + q, 0) / mOk.length);
     }
-    if (dif.length) zile.push({ t: x.tb, e: dif.reduce((p, q) => p + q, 0) / dif.length }); else if (asteapta) inAsteptare++; else nejudecate++;
+    if (asteapta) { inAsteptare++; zile.push({ t: x.tb, gata: false }); }   // v101.186: ziua intră doar întreagă
+    else if (dif.length) zile.push({ t: x.tb, e: dif.reduce((p, q) => p + q, 0) / dif.length }); else nejudecate++;
   }
   // fereastra: 32 de zile calendaristice (21 de zile de bursă, cu sărbători, nu depășesc 31) - ferestrele nu se suprapun
   const RF = registruFerestre(o.registru || null, zile, 32 * 86400000); if (o.laRegistru) o.laRegistru(RF.reg);
-  const med = zile.length ? zile.reduce((p, z) => p + z.e, 0) / zile.length : null;
-  return { vf: RF.vf, zile: zile.length, exces: med, zilePeste: zile.length ? zile.filter((z) => z.e > 0).length / zile.length : null, inAsteptare, nejudecate, notate: (Array.isArray(urm) ? urm : []).length, la: acum };
+  const jud = zile.filter((z) => z.gata !== false), med = jud.length ? jud.reduce((p, z) => p + z.e, 0) / jud.length : null;
+  return { vf: RF.vf, zile: jud.length, exces: med, zilePeste: jud.length ? jud.filter((z) => z.e > 0).length / jud.length : null, inAsteptare, nejudecate, notate: (Array.isArray(urm) ? urm : []).length, la: acum };
 }
 
 export async function turaSectoare(d, st) {

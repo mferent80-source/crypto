@@ -23,12 +23,12 @@ export function urmarireRevine(ist, barePe, reper, acum, o) {
   o = o || {}; const p = o.piata, cost = o.cost == null ? URM_COST : o.cost, Rp = reper && Array.isArray(reper[p]) ? reper[p] : null;
   const dupa = (bb, t) => { for (let i = 0; i < bb.length; i++) if (bb[i].t > t) return i; return -1; };
   const laZi = (bb, t) => { const z = ziUtc(t); for (let i = 0; i < bb.length; i++) if (ziUtc(bb[i].t) === z) return bb[i]; return null; };
-  const ultim = new Map(), peZi = new Map(); let inAsteptare = 0, nejudecate = 0;
+  const ultim = new Map(), peZi = new Map(), asteaptaZi = new Map(); let inAsteptare = 0, nejudecate = 0;
   const sem = (Array.isArray(ist) ? ist : []).filter((x) => x && x.piata === p && x.lista === "revine" && x.ticker && x.tBara > 0).sort((x, y) => x.tBara - y.tBara);
   for (const x of sem) {
     const u = ultim.get(x.ticker); if (u != null && x.tBara - u < REV_PAUZA) continue; ultim.set(x.ticker, x.tBara);
     const bb = barePe && barePe[x.ticker]; if (!Array.isArray(bb) || !bb.length) { nejudecate++; continue; }
-    const i = dupa(bb, x.tBara); if (i < 0 || i + REV_ZILE - 1 >= bb.length) { inAsteptare++; continue; }
+    const i = dupa(bb, x.tBara); if (i < 0 || i + REV_ZILE - 1 >= bb.length) { if (acum - x.tBara > 30 * ZI) { nejudecate++; continue; } inAsteptare++; asteaptaZi.set(x.zi, x.tBara); continue; }   // v101.186: barele oprite > 30 z ⇒ fără prețuri
     const A = bb[i], Z = bb[i + REV_ZILE - 1]; if (!(A.o > 0) || !(Z.c > 0)) { nejudecate++; continue; }
     const r = Z.c / A.o - 1, ra = Rp ? laZi(Rp, A.t) : null, rz = Rp ? laZi(Rp, Z.t) : null;
     const e = ra && rz && ra.o > 0 && rz.c > 0 ? r - (rz.c / ra.o - 1) - cost : null;
@@ -39,7 +39,10 @@ export function urmarireRevine(ist, barePe, reper, acum, o) {
   const zileL = [...peZi.values()].sort((x, y) => x.t - y.t), mr = zileL.map((z) => med(z.r)), me = zileL.filter((z) => z.e.length).map((z) => med(z.e));
   let ferestre = 0, ultimaF = -Infinity; for (const z of zileL) if (z.t - ultimaF >= REV_PAUZA) { ferestre++; ultimaF = z.t; }
   const n = zileL.reduce((s1, z) => s1 + z.r.length, 0);
-  const RF = registruFerestre(o.registru || null, zileL.filter((z) => z.e.length).map((z) => ({ t: z.t, e: med(z.e) })), REV_PAUZA), vf = RF.vf;   // v101.184: fereastra = pauza dintre semnale; v101.185: registrul
+  // v101.186 (revizia 2, 🟡1): o zi cu un semnal încă în așteptare (altă bursă, altă sărbătoare) nu intră parțial în registru
+  const intr = [...peZi.entries()].filter(([, z]) => z.e.length).map(([zi, z]) => ({ t: z.t, e: med(z.e), gata: !asteaptaZi.has(zi) }));
+  for (const [zi, t] of asteaptaZi) if (!peZi.has(zi)) intr.push({ t, gata: false });
+  const RF = registruFerestre(o.registru || null, intr, REV_PAUZA), vf = RF.vf;   // v101.184: fereastra = pauza dintre semnale; v101.185: registrul
   if (o.laRegistru) o.laRegistru(RF.reg);
   ferestre = vf.ferestre;   // v101.185 (🟡4): reperul lipsă azi nu mai coboară ferestrele la 0; un singur număr în text
   const u = { vf, n, zile: zileL.length, medie: med(mr), exces: me.length ? med(me) : null, zilePeste: me.length ? me.filter((v) => v > 0).length / me.length : null, ferestre, inAsteptare, nejudecate, reper: REPER[p] || null };

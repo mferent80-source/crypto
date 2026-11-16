@@ -155,7 +155,12 @@ export async function turaProbaGrid(d, st) {
       d.jurnal("proba grid: judecată " + j.zi + " - listă " + (j.l == null ? "—" : (j.l * 100).toFixed(2) + "%") + " (" + j.nL + "), aleatori " + (j.a == null ? "—" : (j.a * 100).toFixed(2) + "%") + " (" + j.nA + ")");
     }
     st.judecate = st.judecate.slice(-400);
-    if (schimbat) await d.trimite("/api/istoric-bot?action=probaGrid", { la: acum, start: st.start, deschise: st.deschise.length, zile: st.judecate.slice(-120), rezumat: rezumat(st.judecate) });
+    // v101.186: verdictul se îngheață în starea turei la prima apariție - după ~400 de zile primele zile ies din `judecate`, iar „primele 26 de
+    // ferestre” s-ar muta; de atunci se trimite tot el
+    const rz = rezumat(st.judecate);
+    if (!st.verdictInghetat && rz.verdict && rz.verdict !== "în probă") { st.verdictInghetat = { verdict: rz.verdict, la: acum }; schimbat = true; d.jurnal("proba grid: VERDICT " + rz.verdict + " (înghețat)"); }
+    if (st.verdictInghetat) rz.verdict = st.verdictInghetat.verdict;
+    if (schimbat) await d.trimite("/api/istoric-bot?action=probaGrid", { la: acum, start: st.start, deschise: st.deschise.length, zile: st.judecate.slice(-120), rezumat: rz });
     return { schimbat };
   } catch (e) { st.esecLa = acum; d.jurnal("proba grid ESEC (reîncerc peste 2 ore)", String(e && e.message || e)); return null; }
   finally { st.inLucru = false; }

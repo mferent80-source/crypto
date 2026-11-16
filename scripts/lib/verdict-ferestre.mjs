@@ -18,9 +18,11 @@ const eticheta = (V) => (V.t != null && V.t >= REG_VERDICT.pragT && V.m > 0 ? "m
  *  orice fereastră de timp) intră lacom după ultima fereastră; o zi mai veche decât ea nu mai intră. Altă lungime L ⇒ registru nou. */
 export function registruFerestre(reg, zile, L) {
   const r = reg && reg.L === L && Array.isArray(reg.f) ? { L, f: reg.f.filter((x) => x && Number.isFinite(x.t) && Number.isFinite(x.e)), verdict: reg.verdict || null } : { L, f: [], verdict: null };
-  const z = (Array.isArray(zile) ? zile : []).filter((x) => x && Number.isFinite(x.t) && Number.isFinite(x.e)).sort((a, b) => a.t - b.t);
+  // v101.186 (revizia 2, 🟡1): o zi cu ceva încă în așteptare vine cu gata: false ⇒ registrul se OPREȘTE la ea (nu intră parțial, nici nu se sare
+  // peste ea - altfel ar intra zilele după cum au venit datele); revine la tura următoare
+  const z = (Array.isArray(zile) ? zile : []).filter((x) => x && Number.isFinite(x.t) && (x.gata === false || Number.isFinite(x.e))).sort((a, b) => a.t - b.t);
   let ult = r.f.length ? r.f[r.f.length - 1].t : -Infinity;
-  for (const x of z) if (x.t - ult >= L) { r.f.push({ t: x.t, e: r6(x.e) }); ult = x.t; }
+  for (const x of z) if (x.t - ult >= L) { if (x.gata === false) break; r.f.push({ t: x.t, e: r6(x.e) }); ult = x.t; }
   if (r.f.length > REG_VERDICT.maxFerestre) r.f = r.f.slice(0, REG_VERDICT.ferestre).concat(r.f.slice(-(REG_VERDICT.maxFerestre - REG_VERDICT.ferestre)));   // primele 26 rămân mereu
   if (!r.verdict && r.f.length >= REG_VERDICT.ferestre) { const V = st(r.f.slice(0, REG_VERDICT.ferestre).map((x) => x.e)); r.verdict = { v: eticheta(V), la: r.f[REG_VERDICT.ferestre - 1].t, medie: r6(V.m), t: V.t == null ? null : Math.round(V.t * 100) / 100 }; }
   const tot = st(r.f.map((x) => x.e));
