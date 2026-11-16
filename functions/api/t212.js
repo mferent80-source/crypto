@@ -208,6 +208,7 @@ export async function onRequestPost({ request, env }) {
     const rest2 = (Array.isArray(corp && corp.restul) ? corp.restul : []).slice(0, 40).map(curata).filter((x) => x.ticker && x.pret > 0);
     // v100.85 (reveniri): acțiunile pe revenire (≤ 10, doar long), istoricul regulii și urmărirea lor - notările separat de ale ideilor
     const curataRev = (x) => ({ ticker: tk(x && x.ticker), simbol: sim(x && x.simbol), pret: nr(x && x.pret), cadere: nr(x && x.cadere), deLaMin: nr(x && x.deLaMin), zileDeLaMin: nr(x && x.zileDeLaMin), stop: nr(x && x.stop), tinta: nr(x && x.tinta),
+      spark: Array.isArray(x && x.spark) ? x.spark.map(nr).filter((v) => v > 0).slice(-30) : null,   /* v100.346: mini-graficul de pe rând */
       istoric: x && x.istoric ? { n: nr(x.istoric.n), pePlus: nr(x.istoric.pePlus), total: nr(x.istoric.total) } : null });
     const rev2 = (Array.isArray(corp && corp.reveniri) ? corp.reveniri : []).slice(0, 10).map(curataRev).filter((x) => x.ticker && x.pret > 0);
     const dvR = corp && corp.dovadaReveniri, dov2 = dvR && typeof dvR === "object" ? { n: nr(dvR.n), saptamani: nr(dvR.saptamani), pePlus: nr(dvR.pePlus), medie: nr(dvR.medie), mediana: nr(dvR.mediana),

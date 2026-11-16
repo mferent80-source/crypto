@@ -3,6 +3,7 @@
 // prețurile de acum din tickerele Pionex PERP). Un filtru, nu o predicție: istoricul se arată lângă liste, „mai slab” la vedere.
 // deps: { acum, zi, ora, stare:{zi}, Reveniri, Idei, G (GridCalcul), simboluriDepozit() -> [simbol], bare1h(simbol) -> [{t,o,h,l,c}],
 //         boti() -> [{simbol, dir, pornit, net}], cere(cale), trimite(cale, corp), jurnal(...), scrieStare(st) }
+import { verdictFerestre, preaDevreme } from "./verdict-ferestre.mjs";   // v101.184: verdictul listei, calculat (26 de ferestre)
 const H4 = 4 * 3600000, ZI = 86400000;
 // numărătorile din texte - „1 zi”, „25 de zile” (TextRo.cate; rezerva știe aceeași regulă, ca tura-idei)
 function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
@@ -34,7 +35,8 @@ export function urmarireFixa(ist, o) {
   const mediiZi = zileL.map((z) => med(z.r)), excesZi = zileL.filter((z) => z.e.length).map((z) => med(z.e));
   // ferestrele de `zile` zile care nu se suprapun: zilele judecate, în ordine; o fereastră nouă începe la cel puțin `zile` zile după precedenta
   let ferestre = 0, ultima = -Infinity; for (const zi of [...peZi.keys()].sort()) { const t = Date.parse(zi + "T06:00:00Z"); if (t - ultima >= zile * ZI) { ferestre++; ultima = t; } }
-  const u = { n: toateR.length, zile: zileL.length, pePlus: toateR.length ? toateR.filter((r) => r > 0).length / toateR.length : null, medie: med(mediiZi), exces: med(excesZi), zilePeste: excesZi.length ? excesZi.filter((e) => e > 0).length / excesZi.length : null, nejudecate, inAsteptare, ferestre, zileCuPiata: excesZi.length };
+  const vf = verdictFerestre([...peZi.entries()].filter(([, z]) => z.e.length).map(([zi, z]) => ({ t: Date.parse(zi + "T06:00:00Z"), e: med(z.e) })), zile * ZI);   // v101.184
+  const u = { vf, n: toateR.length, zile: zileL.length, pePlus: toateR.length ? toateR.filter((r) => r > 0).length / toateR.length : null, medie: med(mediiZi), exces: med(excesZi), zilePeste: excesZi.length ? excesZi.filter((e) => e > 0).length / excesZi.length : null, nejudecate, inAsteptare, ferestre, zileCuPiata: excesZi.length };
   // v100.333 (el, 13.11: graficul din „Listele Radarului”): seria PE ZILE - fiecare zi judecată cu lista (după cost, în direcția ei), mediana pieței
   // din aceleași zile și diferența (pp), aceeași socoteală ca media de mai sus; doar zilele cu piață, ultimele 90 (corpul trimis rămâne mic)
   const r4 = (v) => Math.round(v * 1e6) / 1e6;
@@ -45,7 +47,8 @@ export function urmarireFixa(ist, o) {
   u.text = !u.n ? "Sugestiile se urmăresc de azi, la " + cate(zile, "zi", "zile") + " fiecare, în direcția botului (neutru: ca long): după ~30 de zile cu rezultat se poate spune cu cifre dacă merită" + nej + "."
     : "Din " + cate(u.n, "sugestie", "sugestii") + " (" + cate(u.zile, "zi", "zile") + ") la " + cate(zile, "zi", "zile") + ", în direcția botului (neutru: ca long): " + Math.round(u.pePlus * 100) + "% pe plus, " + P(u.medie) + " în medie după cost, " + pp(u.exces) + " față de piața din aceleași zile" + (u.zilePeste != null ? " (peste piață în " + Math.round(u.zilePeste * 100) + "% din zile)" : "") + " · ferestre de " + cate(zile, "zi", "zile") + " care nu se suprapun: " + ferestre + nej + ".";
   // v101.182 (auditul 16.11): „peste piață în 100% din zile” pe o singură fereastră arăta ca o dovadă - sub 8 ferestre se spune că e prea devreme
-  if (u.n && u.ferestre < 8) u.text = u.text.replace(/\.$/, "") + " · prea devreme pentru o concluzie: " + cate(u.ferestre, "fereastră", "ferestre") + " din cel puțin 8.";
+  // v101.184: pragul e cel al verdictului calculat (26 de ferestre față de piață), nu 8 ales de mână
+  if (u.n && vf.verdict === "prea devreme") u.text = u.text.replace(/\.$/, "") + " · " + preaDevreme(vf.ferestre, cate) + ".";
   return u;
 }
 // v101.182 (auditul 16.11, el: „Costuri de acum”): notările „porn” ale regulii noi (reg 2, de la 16.11: lichiditate, funding, cel mult 2 pe direcție)

@@ -97,7 +97,7 @@ await test("3. pauza sezonului (v100.306, I-824: regula „azi nu”) NU mai gol
 await test("4. sugFisa: celulele, de ce e în listă, regula, „cum a mers” cu urmărirea înainte la vedere (nu tăiată), verdictul, acțiunile potrivite", () => {
   const c = ecran(), l = plain(c.sugRanduri(D, ACUM)), fisa = (k) => plain(c.sugFisa(l.filter((x) => x.k === k)[0], D, ACUM));
   const h = fisa("porn:HYPE");
-  assert.equal(h.verdict, "N-AM AFLAT"); assert.ok(h.cele.length >= 5); assert.ok(h.cele.some((x) => x.et === "Volum" && x.v === "5,0 M USDT/zi")); assert.match(h.regula, /Un filtru \(liniște, interval, treceri\), nu o predicție/);
+  assert.match(h.verdict, /^(N-AM AFLAT|PREA DEVREME · \d+ DIN 26)$/);   /* v100.346: eticheta calculată din urmărire */ assert.ok(h.cele.length >= 5); assert.ok(h.cele.some((x) => x.et === "Volum" && x.v === "5,0 M USDT/zi")); assert.match(h.regula, /Un filtru \(liniște, interval, treceri\), nu o predicție/);
   assert.match(h.motiv, /candidat/); assert.match(h.regula, /fără mișcare mare/);
   assert.ok(h.dovada.some((t) => /Din 12 sugestii \(4 zile\) de cel puțin 7 zile/.test(t)), "urmărirea colectorului, întreagă: " + JSON.stringify(h.dovada));
   assert.ok(h.dovada.some((t) => /941 de boți ai tăi/.test(t) && /−0,7 pp/.test(t)), "auditul din 01.11, pe boții lui");
@@ -118,7 +118,7 @@ await test("5. sugHtml: fără cardurile scoase; rândul celor 4 verdicte; lista
   const h = c.sugHtml(D, ACUM), fara = h.replace(/<p class="tbSub" data-sug="nota">[\s\S]*?<\/p>/, "");   // nota de subsol le NUMEȘTE pe cele scoase (cu motivul); în rest nu mai apar
   for (const t of ["Pentru short", "Idei de cumpărare", "Început de urcare", "Revers timpuriu", "Pre-market", "Gap la deschidere", "monede care au scăzut puternic"]) assert.ok(fara.indexOf(t) < 0, "scos: " + t);
   assert.match(h, /data-sug="nota">[^<]*Scoase de pe pagină la cererea ta \(01\.11\)[^<]*Pentru short/);
-  assert.match(h, /class="sugVerdicte"/); const vb = h.slice(h.indexOf('data-sug="verdicte"'), h.indexOf('data-sug="lista"')); assert.equal((vb.match(/<span class="sugVerdict sugVerdict-/g) || []).length, 4, "rândul verdictelor: 4 celule (v100.308: + „După o cădere mare · monede”; v100.312: ea a plecat pe pagina Probe)"); assert.equal((h.match(/N-AM AFLAT/g) || []).length >= 4, true); assert.match(h, /ÎN PROBĂ/);
+  assert.match(h, /class="sugVerdicte"/); const vb = h.slice(h.indexOf('data-sug="verdicte"'), h.indexOf('data-sug="lista"')); assert.equal((vb.match(/<span class="sugVerdict sugVerdict-/g) || []).length, 4, "rândul verdictelor: 4 celule (v100.308: + „După o cădere mare · monede”; v100.312: ea a plecat pe pagina Probe)"); assert.equal((h.match(/N-AM AFLAT|PREA DEVREME · \d+ DIN 26/g) || []).length >= 4, true);   /* v100.346 */ assert.match(h, /ÎN PROBĂ/);
   assert.match(h, /<th>Direcția pe 84 z<\/th>/); assert.doesNotMatch(h, /Direcția 4h</);
   assert.match(h, /class="rlSec sugLista2"/); assert.match(h, /data-sug="lista"/); assert.match(h, /class="sugRand[^"]*" id="sugR-porn:HYPE"[^>]*aria-pressed="true"/, "primul rând e ales implicit"); assert.match(h, /id="sugFisa"/);
   assert.match(h, /<h4 class="sugGrup">🤖 Boți · 💡 Pe ce aș porni un bot/); assert.ok(h.indexOf("order:") < 0, "fără order: ordinea din DOM (alinierea pe loc nu sincronizează style-ul)"); assert.match(h, /📈 Acțiuni US · 🔁 Pe revenire/); assert.match(h, /🏆 Cele mai tari pe sectoare/); assert.match(h, /📈 Trend 12 luni \(în probă\)/);

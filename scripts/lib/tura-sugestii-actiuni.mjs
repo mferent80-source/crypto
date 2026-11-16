@@ -4,6 +4,8 @@
 //   și EU (aduse aici), istoricul fiecărei reguli pe 2 ani (SugestiiActiuni.dovada), baza pentru intraday (volumul mediu, închiderea de ieri)
 //   și urmărirea înainte (fiecare listă a zilei, judecată la închiderea de după 14 zile, −0,3%; v100.196: orizont FIX, nu „prețul de acum”).
 // (sugestiiIntraday - pre-market / gap - scoasă în v100.345; listele ei au fost scoase de pe pagină pe 01.11)
+import { verdictFerestre, preaDevreme } from "./verdict-ferestre.mjs";   // v101.184: verdictul listei, calculat (26 de ferestre)
+import { spark } from "./spark.mjs";   // v101.184: seria mini-graficului de pe rândurile Sugestiilor
 const ZI = 86400000, URM_ZILE = 14, URM_COST = 0.003, PASTRARE = 120;
 // numărătorile din jurnal - „1 acțiune”, „25 de acțiuni” (TextRo.cate; rezerva știe aceeași regulă, ca tura-laborator)
 function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); const k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
@@ -37,12 +39,13 @@ export function urmarireRevine(ist, barePe, reper, acum, o) {
   const zileL = [...peZi.values()].sort((x, y) => x.t - y.t), mr = zileL.map((z) => med(z.r)), me = zileL.filter((z) => z.e.length).map((z) => med(z.e));
   let ferestre = 0, ultimaF = -Infinity; for (const z of zileL) if (z.t - ultimaF >= REV_PAUZA) { ferestre++; ultimaF = z.t; }
   const n = zileL.reduce((s1, z) => s1 + z.r.length, 0);
-  const u = { n, zile: zileL.length, medie: med(mr), exces: me.length ? med(me) : null, zilePeste: me.length ? me.filter((v) => v > 0).length / me.length : null, ferestre, inAsteptare, nejudecate, reper: REPER[p] || null };
+  const vf = verdictFerestre(zileL.filter((z) => z.e.length).map((z) => ({ t: z.t, e: med(z.e) })), REV_PAUZA);   // v101.184: fereastra = pauza dintre semnale
+  const u = { vf, n, zile: zileL.length, medie: med(mr), exces: me.length ? med(me) : null, zilePeste: me.length ? me.filter((v) => v > 0).length / me.length : null, ferestre, inAsteptare, nejudecate, reper: REPER[p] || null };
   const fara = !Rp ? " (fără reper: doar rezultatul brut)" : "";
   u.text = !n ? "Semnalele se judecă la " + cate(REV_ZILE, "zi", "zile") + " de bursă după intrare, față de " + (REPER[p] || "piață") + fara + ", după 0,3%: încă niciunul ajuns la capăt" + (inAsteptare ? " (" + cate(inAsteptare, "semnal", "semnale") + " în așteptare)" : "") + "."
     : "Din " + cate(n, "semnal", "semnale") + " (" + cate(u.zile, "zi", "zile") + ") la " + cate(REV_ZILE, "zi", "zile") + " de bursă, de la deschiderea de după semnal, după 0,3%: media " + pc(u.medie)
       + (u.exces != null ? ", față de " + REPER[p] + " din aceleași zile " + pp(u.exces) + " (peste el în " + Math.round(u.zilePeste * 100) + "% din zile)" : fara)
-      + " · ferestre care nu se suprapun: " + ferestre + (ferestre < 8 ? " · prea devreme pentru o concluzie (cel puțin 8)" : "") + (inAsteptare ? " · " + inAsteptare + " în așteptare" : "") + (nejudecate ? " · " + nejudecate + " fără prețuri" : "") + ".";
+      + " · ferestre care nu se suprapun: " + ferestre + (vf.verdict === "prea devreme" ? " · " + preaDevreme(vf.ferestre, cate) : "") + (inAsteptare ? " · " + inAsteptare + " în așteptare" : "") + (nejudecate ? " · " + nejudecate + " fără prețuri" : "") + ".";
   return u;
 }
 
@@ -60,7 +63,7 @@ export async function sugestiiDimineata(d) {
       // revizia (M5): fără bara EU încă în lucru (dimineața târzie)
       const bInch = acum - b[b.length - 1].t < sesiuneOre * 3600000 ? b.slice(0, -1) : b; barePe[tk] = bInch;
       // regula veche (Reveniri) n-are igiena: seria cu un salt de unitate iese de tot
-      if (cuRevine && !(d.SA && d.SA.areSalt && d.SA.areSalt(b, 1, b.length - 1))) { try { const rv = d.Reveniri.actiunePeRevenire(bInch); if (rv && rv.revine) revine.push({ ticker: tk, simbol: simbolTicker(tk), ...rv, tBara: bInch[bInch.length - 1].t }); serieRev.push(d.Reveniri.puncte(bInch, { r: d.Reveniri.REGULI.actiune })); } catch {} }
+      if (cuRevine && !(d.SA && d.SA.areSalt && d.SA.areSalt(b, 1, b.length - 1))) { try { const rv = d.Reveniri.actiunePeRevenire(bInch); if (rv && rv.revine) revine.push({ ticker: tk, simbol: simbolTicker(tk), ...rv, tBara: bInch[bInch.length - 1].t, spark: spark(bInch) }); serieRev.push(d.Reveniri.puncte(bInch, { r: d.Reveniri.REGULI.actiune })); } catch {} }
     }
     if (d.jurnal) d.jurnal("sugestii " + p + ": " + cate(judecate, "acțiune judecată", "acțiuni judecate") + ", fără prețuri: " + fara + (cuRevine ? " · pe revenire: " + revine.length : ""));
     const rez = { judecate, fara };

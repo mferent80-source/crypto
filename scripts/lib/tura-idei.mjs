@@ -4,6 +4,7 @@
 //         Idei, inchise, pauza, jurnal, acum, ndx?: Set(simboluri Nasdaq 100), rezumat?: Acasa.rezumatActiune }
 // v93: pentru actiunile din Nasdaq 100 pune si rezumatul zilei (Home: largimea, cine se misca, cele 7 mari).
 // v101.55 (ideea 2): numărătorile din jurnal - „1 bot”, „25 de boți” (TextRo.cate; rezerva știe aceeași regulă)
+import { spark } from "./spark.mjs";   // v101.184: seria mini-graficului de pe rândurile Sugestiilor
 function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
 // v100.223: regimul macro ținut, doar dacă ștampila lui (macroLa) e în ultimele 2 ore. Lipsa, codul gol sau o ștampilă veche
 // rămân „fără regim” (riscul cade pe 1 %). Nu se trimite { macro: null }: aia ar scrie „necunoscut” și tot ar lăsa cumpărarea.
@@ -30,7 +31,7 @@ export async function turaIdei(d) {
     if (r.trece) { let rz = null; try { rz = await d.cereRezultate(tk); } catch {} r = d.Idei.judecaActiune(bare, bare[bare.length - 1].c, { acum: d.acum, rezultate: rz || null, rezultateStiut: true, Probabilitati: d.Probabilitati, ProfilMoneda: d.ProfilMoneda, simbol: tk, regim: d.regim }); }
     l.push({ ticker: tk, simbol: s, r });
     // v101.58 (reveniri): aceleași bare zilnice - acțiunea pe revenire (doar long) și punctele pentru istoricul regulii
-    if (d.Reveniri) { try { const rv = d.Reveniri.actiunePeRevenire(bare); if (rv && rv.revine) rev.push({ ticker: tk, simbol: s, ...rv }); serii.push(d.Reveniri.puncte(bare, { r: d.Reveniri.REGULI.actiune })); } catch {} }
+    if (d.Reveniri) { try { const rv = d.Reveniri.actiunePeRevenire(bare); if (rv && rv.revine) rev.push({ ticker: tk, simbol: s, ...rv, spark: spark(bare) }); serii.push(d.Reveniri.puncte(bare, { r: d.Reveniri.REGULI.actiune })); } catch {} }
   }
   // v101.57 (03.10, ideea 1): și celelalte care trec de poartă (după scor, cel mult 40) - pagina le arată pliate; primele 5 rămân exact ca înainte
   const trecute = l.filter((x) => x.r.trece).length, toate = d.Idei.alegeActiuni(l, Math.min(Math.max(trecute, 5), 45), d.inchise), actiuni = toate.slice(0, 5), restul = toate.slice(5);

@@ -6,8 +6,9 @@
 // Ruta publica a serverului are 45 de cereri/minut pe IP, impartite cu browserul:
 // la 1,6 s intre cereri raman ~35/min. O lista cu >20% goluri NU se urca.
 // v101.55 (ideea 2): numărătorile din jurnal - „1 bot”, „25 de boți” (TextRo.cate; rezerva știe aceeași regulă)
+import { spark } from "./spark.mjs";   // v101.184: seria mini-graficului de pe rândurile Sugestiilor
 function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
-const CAMPURI_RUTA = ["simbol", "stare", "dir", "tarie", "revenire", "volum", "pret", "latime", "pas", "grile", "profitGrila", "traversariZi", "scor", "f7"];   // v101.182: + f7
+const CAMPURI_RUTA = ["simbol", "stare", "dir", "tarie", "revenire", "volum", "pret", "latime", "pas", "grile", "profitGrila", "traversariZi", "scor", "f7", "spark"];   // v101.182: + f7 · v101.184: + spark
 // v101.182 (auditul 16.11, „Pe ce aș porni” după costurile de acum): funding-ul pe 7 zile (7 × rata pe zi din ultimele 7, GridSim.rataFunding -
 // același motor ca Simulatorul) pentru candidații lichizi (≥ 1 M USDT/zi), cel mult 40; ținut 4 ore pe monedă (funding-ul se
 // decontează la 4–8 h), deci la fiecare oră aproape nicio cerere Pionex în plus. Cerere picată ⇒ f7 = null (pagina spune „funding necitit”).
@@ -64,6 +65,7 @@ export async function turaClasament(d) {
       const j = d.GridClasament.judeca(m.simbol, bare, m.volum);
       // v101.58 (reveniri + short): starea de revenire din aceleași bare de 4h (doar cele închise) - fără cereri în plus
       if (d.Reveniri) { try { j.revenire = d.Reveniri.monedaPeRevenire(bare, d.acum ? d.acum() : Date.now()); } catch { j.revenire = null; } }
+      if (j.stare === "candidat" && Number(j.volum) >= FUND_PRAG) j.spark = spark(bare, { pas: 6 });   // v101.184: o închidere pe zi (6 bare de 4 h), 30 de zile
       monede.push(j);
     } catch (e) {
       esecuri++; monede.push(d.GridClasament.judeca(m.simbol, null, m.volum));

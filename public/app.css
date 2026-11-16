@@ -3463,6 +3463,7 @@ button.pzVoce{width:auto;min-height:0;margin:0;background:transparent;font-weigh
 .sugVerdict-v{background:rgba(233,185,73,.14);color:var(--warn);border-color:rgba(233,185,73,.55)}
 .sugVerdict-p{background:rgba(91,143,199,.16);color:var(--accent);border-color:rgba(91,143,199,.55)}
 .sugVerdict-n{background:rgba(159,179,196,.12);color:var(--text);border-color:rgba(159,179,196,.4)}
+.sugVerdict-b{background:rgba(76,195,138,.14);color:var(--good);border-color:rgba(76,195,138,.55)}.sugVerdict-r{background:rgba(240,112,112,.14);color:var(--bad);border-color:rgba(240,112,112,.55)}   /* v100.346: verdictul calculat */
 .sugVerdicte{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--tb-linie);border-radius:5px;background:var(--tb-fond);margin:10px 0}
 .sugVerdicte>div{padding:8px 12px;border-left:1px solid var(--tb-linie);min-width:0;display:flex;flex-direction:column;gap:3px;align-items:flex-start}
 .sugVerdicte>div:first-child{border-left:0}.sugVerdicte>div .tbSub{margin:0}
@@ -3473,6 +3474,7 @@ button.pzVoce{width:auto;min-height:0;margin:0;background:transparent;font-weigh
 .sugRandSim{grid-area:sim;min-width:0;line-height:1.5}.sugRandSim b{font-size:14.5px}.sugRandSim .sugDir{display:inline-block;vertical-align:middle}
 .sugRandPret{grid-area:pret;font-weight:600;white-space:nowrap}
 .sugRandSub{grid-area:sub;white-space:normal;margin:0}.sugAv{color:var(--warn);font-weight:600;white-space:nowrap}
+.sugRandSpark{float:right;margin:2px 0 2px 8px;line-height:0}   /* v100.346: mini-graficul sub preț, în dreapta primului rând de text (textul îl ocolește, apoi ia toată lățimea) */
 .sugDir.neutru{color:var(--muted)}.sugDir.proba{color:var(--accent);border-color:var(--accent)}
 .sugFisa{margin:0}.sugFisaCap{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:10px}.sugFisaCap>div:first-child{flex:1;min-width:220px}
 .sugFisaSim{font-size:22px;font-weight:800;margin-top:4px}.sugFisaPret{text-align:right;display:flex;flex-direction:column;gap:2px}.sugFisaPret b{font-size:24px;font-weight:800}
