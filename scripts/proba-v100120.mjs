@@ -90,7 +90,7 @@ await test("(R-min) numerele „1.234,56”; data din viitor refuzată; a doua o
 await test("(R-I4) colectorul: Salt doar DUPĂ tura ideilor de azi (nu în paralel); peste 10% fără prețuri ⇒ eșec (rămâne raportul de ieri); intraday nu rămâne blocat după o așteptare", () => {
   const c = citeste("scripts", "colector.mjs"), f = c.slice(c.indexOf("async function turaSaltZi()"), c.indexOf("async function turaSaltZi()") + 2500);
   assert.match(f, /m\.ideiZi !== zi \|\| ideiInLucru/); assert.match(f, /r\.fara > 0\.1 \* /);
-  const g = c.slice(c.indexOf("async function turaSugestiiIntraday()"), c.indexOf("async function turaSugestiiIntraday()") + 3000); assert.match(g, /finally \{ sugIntradayInLucru = false; \}/);
+  assert.doesNotMatch(c, /async function turaSugestiiIntraday\(\)|sugIntradayInLucru/, "v100.344: tura intraday scoasă (nu mai are ce rămâne blocat)");
 });
 // ---------------- (2) serverul ----------------
 function kvFals() { const m = new Map(); return { m, get: async (k) => (m.has(k) ? m.get(k) : null), put: async (k, v) => { m.set(k, v); }, list: async ({ prefix }) => ({ keys: [...m.keys()].filter((k) => k.startsWith(prefix || "")).map((name) => ({ name })) }) }; }

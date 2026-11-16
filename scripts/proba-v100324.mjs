@@ -226,12 +226,12 @@ await test("stilul: blocul v100.324 are banda, rigla, nota TV, schimbarea și is
   // revizia: în afara scării (11 px, 14 px) stratul generat nu le prindea (stătea înaintea blocului)
   for (const m of B.matchAll(/font-size:([\d.]+)px/g)) assert.ok(["12", "13.5", "15", "20", "30"].includes(m[1]), "mărime în afara scării: " + m[1] + " px");
   // 4 pe rând când e loc; 2 × 2 în jumătatea cardului Trend la 1181–1699 (~446–700 px) și pe telefon (~366 px) — nu 3 + 1
-  assert.match(B, /:is\(#tabloubot,#t212\) \.ibBanda\{display:grid;grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
+  assert.match(B, /:is\(#tabloubot,#t212,#sugestii,#probe\) \.ibBanda\{display:grid;grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
   assert.match(B, /@media \(min-width:1181px\) and \(max-width:1699px\)\{\n#tabloubot \.ibBanda\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)\}/);
-  assert.match(B, /@media \(max-width:640px\)\{\n:is\(#tabloubot,#t212\) \.ibBanda\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+  assert.match(B, /@media \(max-width:640px\)\{\n:is\(#tabloubot,#t212,#sugestii,#probe\) \.ibBanda\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
   assert.match(B, /\.ibNr\{[^}]*white-space:normal/); assert.match(B, /\.ibTv\{[^}]*white-space:normal/);
   // singurul „ascuns”: atributul hidden (fără bot / fără lumânări), pe care display:flex îl bătea
-  assert.deepEqual(B.match(/[^\n{}]*\{display:none[^}]*\}/g).map((r) => r.trim()), [":is(#tabloubot,#t212) .tbIndSumar[hidden]{display:none}"]);
+  assert.deepEqual(B.match(/[^\n{}]*\{display:none[^}]*\}/g).map((r) => r.trim()), [":is(#tabloubot,#t212,#sugestii,#probe) .tbIndSumar[hidden]{display:none}"]);
   assert.doesNotMatch(B, /visibility:hidden/);
 });
 

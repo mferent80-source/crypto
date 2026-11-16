@@ -1250,7 +1250,8 @@ function tbIdeiRender() {
   if (dinScan.length && cl && Array.isArray(cl.monede)) {
     var am = {}; l.forEach(function (x) { am[x.moneda] = 1; });
     var lipsa = dinScan.filter(function (s) { return !am[s]; });
-    if (lipsa.length) l = l.concat(Idei.ideiBoti({ la: cl.la, monede: cl.monede.filter(function (m) { return m && lipsa.indexOf(String(m.simbol || "").replace(/_USDT_PERP$/, "").replace(/_USDT$/, "")) >= 0; }) }, contTot.inchise || [], lipsa.length).map(function (x) { return Object.assign({ dinScan: true }, x); }));
+    // v100.344 (revizia Opus): direct, fără filtrele listei (≥ 1 M USDT/zi, cel mult 2 pe direcție) - altfel cei din Scan sub prag dispăreau; lichiditatea mică se spune pe rând
+    if (lipsa.length) l = l.concat(cl.monede.filter(function (m) { return m && m.stare === "candidat" && lipsa.indexOf(String(m.simbol || "").replace(/_USDT_PERP$/, "").replace(/_USDT$/, "")) >= 0; }).map(Idei.cuIstoric(contTot.inchise || [])).map(function (x) { return Object.assign({ dinScan: true, subPrag: Number(x.volum) < (Idei.PRAG_VOL_BOT || 1e6) }, x); }));
   }
   var h = '<div class="tbTodoCap"><h4>' + (nu ? "💡 Candidatele pentru un bot · azi nu pornesc" : "💡 Pe ce aș porni un bot acum") + '</h4><span class="tbSub">' + (cl && cl.la ? "clasamentul de la " + escapeHtml(new Date(cl.la).toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" })) + ", top 100 PERP" : "colectorul face clasamentul o dată pe oră") + '</span></div>';
   if (nu) h += acAziNuHtml(an);
@@ -1262,7 +1263,7 @@ function tbIdeiRender() {
       /* v100.343 (I-884): detaliile care erau doar în cartela „fără bot” a Consilierului - câte grile, pasul, mișcarea pe 7 zile (din Scan, când e adusă) */
       x.grile > 0 ? TextRo.cate(x.grile + 1, "grilă", "grile") : "", x.pas > 0 ? "pas " + (x.pas * 100).toFixed(2).replace(".", ",") + "%" : "",
       (function () { var c = typeof tbPreg !== "undefined" && tbPreg && tbPreg.ch7 ? tbPreg.ch7[x.moneda] : null; return c != null && isFinite(c) ? "7 zile " + (c >= 0 ? "+" : "−") + Math.abs(c).toFixed(1).replace(".", ",") + "%" : ""; })(),
-      x.dinScan ? "din Scan 🟦" : ""].filter(Boolean).join(" · ");
+      x.dinScan ? "din Scan 🟦" : "", x.subPrag ? "sub 1 M USDT/zi" : ""].filter(Boolean).join(" · ");
     return '<div class="tbTodoRand"><span class="tbDunga ' + (tbIstoricRosu(x) ? "r" : nu ? "n" : "v") + '"></span><div><b>' + escapeHtml(x.moneda) + '</b> <span class="tbSub">' + escapeHtml(det) + '</span><p' + (tbIstoricRosu(x) ? ' class="bad"' : '') + '>' + escapeHtml(ist) + '</p>' + (function () { try { var g = typeof GridProba !== "undefined" && x.simbol ? tbIngustPt(x.simbol) : null; if (!g) return ''; var v = GridProba.varstaIngust(g, Date.now()); return '<p class="tbSub' + (g.propus ? '' : ' t212Estompat') + '">' + escapeHtml(GridProba.rezumatIngust(g)) + (v.text ? ' · ' + escapeHtml(v.text) : '') + '</p>'; } catch (e) { return ''; } })() + '</div><button type="button" class="tbBtnLinie" data-action-click="gridDeschideMoneda(\'' + String(x.moneda).replace(/[^A-Za-z0-9._-]/g, "") + '\')">Fișa</button></div>';
   }).join("");
   tbUrmAdu();

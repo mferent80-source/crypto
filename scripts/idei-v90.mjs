@@ -43,7 +43,7 @@ await test("alegerea: cele care trec, ordonate dupa scor, primele n; istoricul L
   assert.deepEqual(a.map((x) => x.ticker), ["C_US_EQ", "A_US_EQ"]); assert.equal(a[0].istoric.n, 2); assert.equal(a[0].istoric.pePlus, 1);
 });
 await test("boti: candidatii din clasament dupa scor, primii n, cu istoricul LUI pe moneda; cei 'de evitat' nu", () => {
-  const cl = { la: ACUM, monede: [{ simbol: "MET_USDT_PERP", stare: "candidat", scor: 3 }, { simbol: "X_USDT_PERP", stare: "evita", scor: 9 }, { simbol: "BTC_USDT_PERP", stare: "candidat", scor: 5 }] };
+  const cl = { la: ACUM, monede: [{ simbol: "MET_USDT_PERP", stare: "candidat", volum: 5e6, scor: 3 }, { simbol: "X_USDT_PERP", stare: "evita", scor: 9 }, { simbol: "BTC_USDT_PERP", stare: "candidat", volum: 5e6, scor: 5 }] };
   const b = I.ideiBoti(cl, [{ moneda: "MET", rezultat: -2 }, { moneda: "MET", rezultat: -1 }], 5);
   assert.deepEqual(b.map((x) => x.moneda), ["BTC", "MET"]); assert.equal(b[1].istoric.n, 2); assert.ok(b[1].istoric.total < 0);
   assert.deepEqual(I.ideiBoti(null, [], 5), []);

@@ -75,7 +75,7 @@ function textNod(n) { return n.childNodes.filter((c) => c.nodeType === 3).map((c
 
 await test("urmărirea stă întreagă în fișă; pânda ține 14em; ultima linie rămâne topLive", () => {
   const fis = citeste("public", "lib", "sugestii-ecran.js");
-  assert.match(fis, /f\.dovada = \[urmP && urmP\.text \? urmP\.text/, "v100.292: istoricul și urmărirea stau ÎNTREGI în fișă, nu tăiate într-un title");
+  assert.match(fis, /f\.dovada = \["Regula de la 16\.11 \(după costurile de acum\): " \+ \(urmP && urmP\.n \? urmP\.text/, "v100.292: istoricul și urmărirea stau ÎNTREGI în fișă, nu tăiate într-un title");
   const css = citeste("public", "app.css");
   assert.match(css, /#sugPagina>\.sugPanda\{[^}]*min-height:14em/);
   assert.match(css.trim().split("\n").pop(), /#topLive\{display:none!important\}/);

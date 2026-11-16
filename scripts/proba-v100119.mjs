@@ -126,12 +126,12 @@ await test("(4a) dimineața: listele US din barele aduse deja + EU (aduse acum; 
   const r = await TS.sugestiiDimineata({ SA, bareUS, tickereEU: ["SAPd_EQ", "LIPSAd_EQ"], cereBare: async (tk) => { cerute.push(tk); return tk === "SAPd_EQ" ? cuRevers().map((x) => Object.assign({}, x, { t: x.t + 25 * ZI })) : null; },
     acum: acum + 25 * ZI, jurnal: () => {}, pauza: async () => {}, istoric: [{ zi: "2025-01-01", piata: "us", lista: "urcare", ticker: "AAA_US_EQ", pret: 50, t: T0 }] });
   assert.deepEqual(cerute, ["SAPd_EQ", "LIPSAd_EQ"]);
-  assert.equal(r.raport.us.urcare.length, 1); assert.equal(r.raport.us.urcare[0].ticker, "AAA_US_EQ"); assert.equal(r.raport.us.urcare[0].simbol, "AAA");
-  assert.equal(r.raport.eu.revers[0].ticker, "SAPd_EQ"); assert.equal(r.raport.eu.fara, 1); assert.equal(r.raport.us.judecate, 2);
-  for (const p of ["us", "eu"]) for (const k of ["urcare", "revers", "gap"]) assert.ok(r.raport[p].dovada[k] && "verdict" in r.raport[p].dovada[k], p + " " + k);
-  assert.ok(r.baza["AAA_US_EQ"].vol > 0 && r.baza["AAA_US_EQ"].inchidere > 0); assert.ok(r.baza["SAPd_EQ"]);
-  assert.ok(r.istoric.some((x) => x.ticker === "AAA_US_EQ" && x.lista === "urcare" && x.zi !== "2025-01-01"), "lista de azi intră în istoric");
-  assert.ok(r.raport.urmarire && r.raport.urmarire.us && r.raport.urmarire.us.urcare.n === 1, "intrarea veche (>14 zile) e judecată: " + JSON.stringify(r.raport.urmarire));
+  assert.equal(r.raport.eu.fara, 1); assert.equal(r.raport.us.judecate, 2);
+  // v100.344 (auditul 16.11): listele scoase de el pe 01.11 (urcare, revers, gap) nu se mai calculează - păzit că LIPSESC; „revine” e în (4e) și proba-v100344-urm
+  for (const p of ["us", "eu"]) for (const k of ["urcare", "revers", "gap"]) assert.equal(r.raport[p][k], undefined, p + " " + k + " a rămas");
+  assert.deepEqual(r.baza, {}, "baza intraday nu se mai face (tura intraday e scoasă)");
+  assert.ok(!r.istoric.some((x) => x.lista === "urcare"), "intrările vechi ale listelor scoase ies din istoric");
+  assert.ok(r.raport.urmarire && r.raport.urmarire.us && r.raport.urmarire.us.revine && r.raport.urmarire.eu.revine, "urmărirea e acum pe „revine”");
 });
 await test("(4b) intraday: pre-market US / gap EU pe baza de dimineață; tickerele fără rânduri se numără; lista e sortată după gap", async () => {
   const acum = Date.UTC(2026, 9, 6, 13, 0), rows = (g) => Array.from({ length: 12 }, (_, i) => ({ time: Date.UTC(2026, 9, 6, 12, i * 5), open: 100 * (1 + g), high: 100 * (1 + g), low: 100 * (1 + g), close: 100 * (1 + g), volume: 5000 }));
@@ -149,11 +149,10 @@ await test("(4c) universul EU: DAX 40 + CAC 40 + AEX 25 + ale lui (din istoricul
 await test("(4d) colectorul: SugestiiActiuni încărcat, dimineața după idei, intraday la 10:20 (EU) și 15:50 (US) în zilele lucrătoare, o dată pe zi; fără rânduri azi ⇒ nu scrie peste lista bună", () => {
   const c = citeste("scripts", "colector.mjs");
   assert.match(c, /const SugestiiActiuni = incarca\("sugestii-actiuni\.js", "SugestiiActiuni"\);/);
-  assert.match(c, /import \{ sugestiiDimineata, sugestiiIntraday \} from "\.\/lib\/tura-sugestii-actiuni\.mjs";/); assert.match(c, /import \{ universEU \} from "\.\/lib\/univers-eu\.mjs";/);
-  assert.match(c, /await trimite\("\/api\/t212\?action=sugestii", \{ sugestii: /); assert.match(c, /await trimite\("\/api\/t212\?action=premarket", /);
-  assert.match(c, /async function turaSugestiiIntraday\(\)/); assert.match(c, /turaSugestiiIntraday\(\)\.catch\(/);
-  const f = c.slice(c.indexOf("async function turaSugestiiIntraday()"), c.indexOf("async function turaSugestiiIntraday()") + 2500);
-  assert.match(f, /10 \* 60 \+ 20/); assert.match(f, /sugEuZi/);   /* US: din deschiderea NY, nu 15:50 fix (R-I3) */ assert.match(f, /sugUsZi/); assert.match(f, /if \(r\.judecate > 0\)/);
+  assert.match(c, /import \{ sugestiiDimineata \} from "\.\/lib\/tura-sugestii-actiuni\.mjs";/); assert.match(c, /import \{ universEU \} from "\.\/lib\/univers-eu\.mjs";/);
+  assert.match(c, /await trimite\("\/api\/t212\?action=sugestii", \{ sugestii: /);
+  // v100.344 (auditul 16.11): tura intraday (pre-market US, gap EU) scoasă - listele ei erau scoase de pe pagină din 01.11, iar t212:premarket nu-l citea nimic
+  assert.doesNotMatch(c, /async function turaSugestiiIntraday\(\)|turaSugestiiIntraday\(\)\.catch\(|action=premarket/);
 });
 await test("(4e) EU are și „Pe revenire” (regula existentă Reveniri.actiune) cu istoricul ei, când colectorul dă Reveniri", async () => {
   vm.runInThisContext(citeste("public", "lib", "reveniri.js"), { filename: "reveniri.js" });
@@ -176,7 +175,8 @@ await test("(R-I4) gap EU: fără un rând de după primele 20 de minute (Yahoo 
 });
 await test("(R-I2) urmărirea: același semnal (aceeași bară) intră o singură dată, chiar dacă tura rulează sâmbătă, duminică și luni", async () => {
   const b = cuUrcare(100), m = new Map([["AAA_US_EQ", b]]); let ist = [];
-  for (const z of [1, 2, 3]) { const r = await TS.sugestiiDimineata({ SA, bareUS: m, tickereEU: [], cereBare: async () => null, acum: b[60].t + z * ZI, jurnal: () => {}, istoric: ist }); ist = r.istoric; }
+  // v100.344: semnalele urmărite sunt acum cele „revine” (US din tura ideilor); aceeași bară ⇒ o singură intrare
+  for (const z of [1, 2, 3]) { const r = await TS.sugestiiDimineata({ SA, bareUS: m, tickereEU: [], cereBare: async () => null, acum: b[60].t + z * ZI, jurnal: () => {}, istoric: ist, reveniriUS: [{ ticker: "AAA_US_EQ", simbol: "AAA", pret: b[60].c }] }); ist = r.istoric; }
   assert.equal(ist.filter((x) => x.ticker === "AAA_US_EQ").length, 1);
 });
 await test("(R-I5) textul spune sensul: „dovedit mai slab” / „la limită, mai bun”; fără istoric nu scrie „0%”", () => {
@@ -188,13 +188,13 @@ await test("(R-I6) istoricul gap-ului EU cumpără la ÎNCHIDEREA zilei (la 10:2
   const g = [bara(0, 100)]; for (let i = 1; i < 40; i++) g.push(bara(i, 100, { o: i === 20 ? 103 : 100 }));
   const pu = SA.puncte(g, "gap").find((q) => q.t === g[20].t), pe = SA.puncte(g, "gap", { intrare: "inchidere" }).find((q) => q.t === g[20].t);
   assert.ok(Math.abs(pu.r - (g[29].c / g[20].o - 1 - 0.003)) < 1e-12); assert.ok(Math.abs(pe.r - (g[29].c / g[20].c - 1 - 0.003)) < 1e-12);
-  assert.match(citeste("scripts", "lib", "tura-sugestii-actiuni.mjs"), /SA\.puncte\(b, "gap", p === "eu" \? \{ intrare: "inchidere" \} : null\)/);
+  assert.doesNotMatch(citeste("scripts", "lib", "tura-sugestii-actiuni.mjs"), /SA\.puncte\(b, "gap"/, "v100.344: tura de dimineață nu mai calculează gap-ul (lista scoasă pe 01.11); regula din SA rămâne păzită mai sus");
 });
 await test("(R-I1/I3) colectorul: baza are ziua ei și intraday rulează doar pe baza de azi; fereastra US = din deschiderea NY (−40 min), nu 15:50 fix; EU reîncearcă până vin primele 20 de minute", () => {
-  const c = citeste("scripts", "colector.mjs"), f = c.slice(c.indexOf("async function turaSugestiiIntraday()"), c.indexOf("async function turaSugestiiIntraday()") + 3000);
-  assert.match(c, /scrieAtomic\(SUG_BAZA_FIS, \{ zi, la: Date\.now\(\), tickere: s\.baza \}\)/);   // zi = ziua din România a turei de idei
-  assert.match(f, /baza\.zi !== zi/); assert.match(f, /SugestiiActiuni\.deschidereNY\(acum\)/); assert.match(f, /deschNY - 40 \* 60000/);
-  assert.match(f, /if \(r\.asteapta > 0 && min < 11 \* 60 \+ 20\) return;/);
+  // v100.344 (auditul 16.11): tura intraday și baza ei scoase (listele lor erau scoase de pe pagină din 01.11) - păzit că lipsesc
+  const c = citeste("scripts", "colector.mjs");
+  assert.doesNotMatch(c, /SUG_BAZA_FIS|async function turaSugestiiIntraday\(\)|sugIntradayInLucru/);
+  assert.match(c, /scrieAtomic\(SUG_IST_FIS, s\.istoric\);/, "istoricul semnalelor „revine” se scrie în continuare");
 });
 await test("(R-min) textul urmăririi „de cel puțin 14 zile, la prețul de acum”; lista intraday veche își spune data; acțiunile tale din Elveția / Milano intră în EU", () => {
   assert.doesNotMatch(citeste("public", "lib", "sugestii-ecran.js"), /14 zile fixe/, "revizia 01.11 (🔴4): urmărirea US e Reveniri.urmarire - semnalele de cel puțin 14 zile, la prețul de azi, pe semnal - nu „14 zile fixe”");
@@ -219,12 +219,12 @@ await test("(5a) pagina: trei secțiuni (boți, US, EU), fiecare listă cu rând
   for (const t of ["🤖 Boți · 💡 Pe ce aș porni un bot", "📈 Acțiuni US · 🔁 Pe revenire", "📈 Acțiuni EU (DAX, CAC, AEX + ale tale) · 120 de acțiuni judecate, 5 fără prețuri · 🔁 Pe revenire", "🏆 Cele mai tari pe sectoare", "📈 Trend 12 luni (în probă)"]) assert.ok(h.includes(t), t);   /* v100.292: listele rămase (el: „da scoate” pentru restul) */
   assert.ok(!h.includes("99 de acțiuni judecate"), "v100.293: titlul US fără numărătoarea turei listelor scoase (urcare, revers, gap)"); assert.ok(h.includes("1 din 201 acțiuni judecate la 8:00"), "numărătoarea turei Idei rămâne sub titlu");
   assert.ok(h.includes("<b>INTU</b>"), "INTU (pe revenire) e rând");
-  assert.match(h, /Urmărirea înainte începe/, "fără urmărire încă (DATE n-are urmarireReveniri)");
+  assert.match(h, /începe cu tura de mâine|Urmărirea înainte începe/, "fără urmărire încă (DATE n-are urmarireReveniri)");   /* v100.344: urmărirea la orizont fix începe cu tura de mâine */
   assert.doesNotMatch(h, /undefined|NaN|null/);
   const r = globalThis.sugHtml(Object.assign({}, DATE, { idei: { idei: { reveniri: [{ ticker: "X", simbol: "<img src=x>", pret: 1, cadere: 0.5, deLaMin: 0.1 }] } } }), T0); assert.doesNotMatch(r, /<img src=x>/);
 });
 await test("(5a') din poză (06.10): fără steaguri (pe Windows ies litere), fără „scor 0” la boți (detaliile Tabloului), „se face la 15:50” o singură dată, prețurile cu virgulă", () => {
-  const cl = { monede: [{ simbol: "LIT_USDT_PERP", stare: "candidat", latime: 0.06, profitGrila: 0.004, traversariZi: 3.2 }] };
+  const cl = { monede: [{ simbol: "LIT_USDT_PERP", stare: "candidat", volum: 5e6, latime: 0.06, profitGrila: 0.004, traversariZi: 3.2 }] };
   const h = globalThis.sugHtml(Object.assign({}, DATE, { clasament: cl, sugActiuni: { sugestii: DATE.sugActiuni.sugestii, premarket: null } }), T0);
   assert.doesNotMatch(h, /🇺🇸|🇪🇺/); assert.doesNotMatch(h, /scor 0/); assert.match(h, /<b>LIT<\/b>/); assert.match(h, /treceri pe zi/);
 });

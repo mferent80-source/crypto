@@ -120,7 +120,7 @@ await test("4. deTrimis: s24h și mr (din regim.mare.r), rotunjite; r4h / r24h l
 await test("5. titlul US fără numărătoarea turei listelor scoase; sub titlu: tăietura și câte trec regula (doar când tura o spune); EU își păstrează numărătoarea (lista vine din tura ei)", () => {
   const g = plain(ecran().sugGrupuri(D, ACUM)), us = g.filter((x) => x.k === "revUS")[0], eu = g.filter((x) => x.k === "revEU")[0];
   assert.equal(us.titlu, "📈 Acțiuni US · 🔁 Pe revenire", "fără „202 acțiuni judecate, 1 fără prețuri” (tura urcare / revers / gap, scoase de el)");
-  assert.match(us.sub, /au scăzut puternic și acum revin · 2 din 203 acțiuni judecate la 8:00/, "propoziția veche rămâne");
+  assert.match(us.sub, /au scăzut puternic și acum revin · (?:(?:tura|VECHE, ) din [^·]+· (?:închiderea din [^·]+· )?)?2 din 203 acțiuni judecate la 8:00/, "propoziția veche rămâne");
   assert.match(us.sub, /cel mult 10 pe zi, cea mai mare cădere întâi/); assert.match(us.sub, /trec regula: 14/);
   assert.match(eu.titlu, /133 de acțiuni judecate, 5 fără prețuri/); assert.match(eu.sub, /cel mult 10 pe zi, cea mai mare cădere întâi/);
   const D2 = clone(D); delete D2.idei.idei.nReveniri;

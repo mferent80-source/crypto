@@ -7,7 +7,28 @@
 // la 1,6 s intre cereri raman ~35/min. O lista cu >20% goluri NU se urca.
 // v101.55 (ideea 2): numărătorile din jurnal - „1 bot”, „25 de boți” (TextRo.cate; rezerva știe aceeași regulă)
 function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
-const CAMPURI_RUTA = ["simbol", "stare", "dir", "tarie", "revenire", "volum", "pret", "latime", "pas", "grile", "profitGrila", "traversariZi", "scor"];
+const CAMPURI_RUTA = ["simbol", "stare", "dir", "tarie", "revenire", "volum", "pret", "latime", "pas", "grile", "profitGrila", "traversariZi", "scor", "f7"];   // v101.182: + f7
+// v101.182 (auditul 16.11, „Pe ce aș porni” după costurile de acum): funding-ul pe 7 zile (7 × rata pe zi din ultimele 7, GridSim.rataFunding -
+// același motor ca Simulatorul) pentru candidații lichizi (≥ 1 M USDT/zi), cel mult 40; ținut 4 ore pe monedă (funding-ul se
+// decontează la 4–8 h), deci la fiecare oră aproape nicio cerere Pionex în plus. Cerere picată ⇒ f7 = null (pagina spune „funding necitit”).
+const FUND_TINE_MS = 4 * 3600000, FUND_TOP = 40, FUND_PRAG = 1e6, fundCache = new Map();   // revizia Opus: toți candidații lichizi (azi ~25), nu doar primii 20 după scor
+export async function adaugaFunding(monede, d) {
+  const acum = d.acum ? d.acum() : Date.now();
+  const tinte = (Array.isArray(monede) ? monede : []).filter((x) => x && x.stare === "candidat" && Number(x.volum) >= FUND_PRAG).sort((a, b) => (b.scor || 0) - (a.scor || 0)).slice(0, FUND_TOP);
+  let cerute = 0;
+  for (const m of tinte) {
+    const c = fundCache.get(m.simbol);
+    if (c && acum - c.la < FUND_TINE_MS) { m.f7 = c.f7; continue; }
+    if (cerute++ && d.pauza) await d.pauza(1600);
+    try {
+      const r = await d.cere("/api/market?type=pionex_funding&symbol=" + encodeURIComponent(m.simbol));
+      const F = d.GridSim && d.GridSim.rataFunding ? d.GridSim.rataFunding(r && r.data && r.data.rates, acum) : null;
+      m.f7 = F && !F.veche && Number.isFinite(F.rataZi) ? 7 * F.rataZi : null;
+      fundCache.set(m.simbol, { la: acum, f7: m.f7 });
+    } catch { m.f7 = null; }
+  }
+  return cerute;
+}
 export function deTrimis(m) {
   const o = {};
   for (const k of CAMPURI_RUTA) if (m && k in m) o[k] = m[k];
@@ -50,6 +71,7 @@ export async function turaClasament(d) {
     }
     if (pauzaMs && !d.klines4h) await d.pauza(pauzaMs);   /* v101.166: incremental, pauza o ține d.klines4h, doar înaintea unei cereri */
   }
+  if (d.GridSim) { try { await adaugaFunding(monede, d); } catch (e) { d.jurnal("clasament: funding", e && e.message); } }   // v101.182
   const rz = d.GridClasament.rezumat({ la: Date.now(), monede });
   if (!monede.length || rz.faraDate > monede.length * 0.2) {
     d.jurnal("clasament NEURCAT:", rz.faraDate, "fara date din", monede.length);

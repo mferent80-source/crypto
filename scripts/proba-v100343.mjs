@@ -54,7 +54,7 @@ await test("(I-887) tura de clasament a colectorului citește lista simbolurilor
   const L2 = incarcaLib(["text-ro.js", "grid-calcul.js", "grid-clasament.js"], "({ G: GridCalcul, GC: GridClasament })"), j2 = [];
   const r2 = await turaClasament(Object.assign({}, d, { GridCalcul: L2.G, GridClasament: L2.GC, simboluriPerp: undefined, jurnal: (...a) => j2.push(a.join(" ")) })); assert.deepEqual(r2.monede.map((m) => m.simbol), ["BTC_USDT_PERP", "NOUX_USDT_PERP", "ETH_USDT_PERP"]);
   const r3 = await turaClasament(Object.assign({}, d, { GridCalcul: L2.G, GridClasament: L2.GC, simboluriPerp: async () => { throw new Error("Pionex a refuzat"); }, jurnal: (...a) => j2.push(a.join(" ")) })); assert.equal(r3.monede.length, 3); assert.ok(j2.some((x) => /lista simbolurilor/.test(x) && /Pionex a refuzat/.test(x)));
-  assert.match(COL, /const VERSIUNE_COLECTOR = "v101\.181";/); assert.match(COL, /simboluriPerp: simboluriPerpLista,/, "colectorul dă turei lista simbolurilor");
+  assert.match(COL, /const VERSIUNE_COLECTOR = "v101\.1(8[1-9]|9\d)";/);   /* v100.344: de la v101.181 în sus */ assert.match(COL, /simboluriPerp: simboluriPerpLista,/, "colectorul dă turei lista simbolurilor");
 });
 
 // ---------------- I-885: banda contului se reîmprospătează ----------------
@@ -100,8 +100,8 @@ await test("(I-884) banda „Pe ce aș porni” poartă acum și detaliile care 
   ctx.tbPreg = {}; box._contH = null; ctx.tbIdeiRender(); assert.doesNotMatch(text(box.innerHTML), /7 zile/); assert.match(text(box.innerHTML), /AAA interval 9,2% · 0,3% net pe grilă · ~17 treceri pe zi · 59 de grile · pas 0,30%/);
   // candidații din Scan pe care îi arăta cartela Consilierului rămân în aceeași listă: cel care nu e printre primii 5 după scor intră la coadă,
   // cu eticheta lui; cel care e deja acolo nu apare de două ori (aici cu modulul Idei adevărat și un clasament de 7 candidați)
-  const IdeiA = incarcaLib(["idei.js"], "Idei"), mon = (s, scor, extra) => Object.assign({ simbol: s + "_USDT_PERP", stare: "candidat", scor, latime: 0.1, profitGrila: 0.0026, traversariZi: 10, grile: 30, pas: 0.003 }, extra || {});
-  const clasament = { la: Date.UTC(2026, 10, 14, 20, 0), monede: [mon("A1", 9), mon("A2", 8), mon("A3", 7), mon("A4", 6), mon("A5", 5), mon("A6", 4), mon("A7", 3), mon("A8", 2, { stare: "evita" })] };
+  const IdeiA = incarcaLib(["idei.js"], "Idei"), mon = (s, scor, extra) => Object.assign({ simbol: s + "_USDT_PERP", stare: "candidat", volum: 5e6, scor, latime: 0.1, profitGrila: 0.0026, traversariZi: 10, grile: 30, pas: 0.003 }, extra || {});
+  const clasament = { la: Date.UTC(2026, 10, 14, 20, 0), monede: [mon("A1", 9, { dir: "long" }), mon("A2", 8, { dir: "long" }), mon("A3", 7, { dir: "short" }), mon("A4", 6, { dir: "short" }), mon("A5", 5, { dir: "neutru" }), mon("A6", 4, { dir: "neutru" }), mon("A7", 3, { dir: "neutru" }), mon("A8", 2, { stare: "evita" })] };   /* v100.344: cel mult 2 pe aceeași direcție */
   ctx.Idei = IdeiA; ctx.contTot = { clasament, inchise: [] }; ctx.tbPreg = { grid: [{ s: "A2" }, { s: "A7" }, { s: "A8" }], ch7: { A7: 1.26 } }; box._contH = null; ctx.tbIdeiRender();
   const u = text(box.innerHTML), nume = (box.innerHTML.match(/gridDeschideMoneda\('([A-Z0-9]+)'\)/g) || []).map((x) => x.replace(/^.*\('|'\)$/g, ""));
   assert.deepEqual(nume, ["A1", "A2", "A3", "A4", "A5", "A7"], "primii 5 după scor + cel din Scan care lipsea; A2 o singură dată; A8 (de evitat) nu intră");

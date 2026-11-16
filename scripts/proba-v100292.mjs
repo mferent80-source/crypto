@@ -87,8 +87,8 @@ await test("3. pauza sezonului (v100.306, I-824: regula „azi nu”) NU mai gol
   assert.ok(lp.filter((x) => x.grup === "porn").every((x) => x.aziNu && /^Azi nu: /.test(x.avert[0])), "fiecare rând de pornire spune „azi nu” întâi");
   const l = plain(ecran().sugRanduri(D, ACUM)), f = (k) => l.filter((x) => x.k === k)[0];
   assert.ok(f("sect:MRNA").avert.some((a) => /\+302% în 3 luni: verifică seria/.test(a)));
-  assert.ok(f("trend:SNDK").avert.some((a) => /13 din cele 20 sunt în Technology/.test(a))); assert.ok(!f("trend:MRNA").avert.some((a) => /13 din cele 20/.test(a)), "MRNA e Health Care");
-  assert.ok(f("trend:MRNA").avert.some((a) => /Salt \+177,0% într-o zi \(2026-08-19\)/.test(a))); assert.ok(f("trend:MRNA").avert.some((a) => /Raportează în \d+z \(2026-11-05\)/.test(a)));
+  assert.ok(f("trend:SNDK").avert.some((a) => /13 din cele 20 sunt în Tehnologie/.test(a))); assert.ok(!f("trend:MRNA").avert.some((a) => /13 din cele 20/.test(a)), "MRNA e Health Care");
+  assert.ok(f("trend:MRNA").avert.some((a) => /Salt \+177,0% într-o zi \(19\.08\.2026\)/.test(a))); assert.ok(f("trend:MRNA").avert.some((a) => /Raportează (?:azi|mâine|în \d+ (?:de )?zile) \(05\.11\.2026\)/.test(a)));
   assert.ok(f("revUS:CRBP").avert.some((a) => /doar 4 zile/.test(a))); assert.ok(f("revUS:DYN").avert.some((a) => /Cădere de −85% de la maxim/.test(a)));
   assert.ok(f("revEU:SMST").sub.indexOf("−90% de la maxim, revine") >= 0 && /stop 0,49 · țintă 8,38/.test(f("revEU:SMST").sub), f("revEU:SMST").sub);
 });
@@ -109,7 +109,7 @@ await test("4. sugFisa: celulele, de ce e în listă, regula, „cum a mers” c
   assert.deepEqual(r.actiuni.map((a) => a.et), ["Poarta Trading 212"]); assert.match(r.actiuni[0].act, /sugLaPoarta\('CRBP'\)/);
   const t = fisa("trend:SNDK"); assert.equal(t.verdict, "ÎN PROBĂ"); assert.match(t.actiuni[0].act, /sugLaPoarta\('SNDK','trend12',''\)/); assert.ok(t.dovada.some((x) => /proba: 0 zile cu rezultat/.test(x)));
   const s = fisa("sect:CRWD"); assert.ok(s.dovada.some((x) => /9 luni/.test(x) && /4 din 9/.test(x))); assert.ok(s.dovada.some((x) => /\+1,1% pe lună, 8 din 11 luni/.test(x)), "refăcut pe date, după cost");
-  const e = fisa("revEU:SMST"); assert.ok(e.dovada.some((x) => /nu e încă urmărire înainte/.test(x)));
+  const e = fisa("revEU:SMST"); assert.ok(e.dovada.some((x) => /Euro Stoxx 50/.test(x)));   /* v100.344: urmărirea EU există (față de Euro Stoxx 50), nu mai e promisă */
 });
 
 // ================================================================ 5. pagina
@@ -157,7 +157,7 @@ await test("7. urmarireFixa (colector): fiecare sugestie judecată la 7 zile FIX
 });
 await test("8. tura trimite notările „porn” ale zilei și urmarire.porn (orizont fix); ruta le primește și le păstrează", () => {
   const T = citeste("scripts", "lib", "tura-sugestii.mjs");
-  assert.match(T, /export function urmarireFixa\(/); assert.match(T, /lista: "porn"/); assert.match(T, /urm\.porn = urmarireFixa\(ist\.filter\(\(x\) => x && x\.lista === "porn"\)/);   /* v100.333: urmăririle pe rând, cu respirație */
+  assert.match(T, /export function urmarireFixa\(/); assert.match(T, /lista: "porn"/); assert.match(T, /urm\.porn = urmarireFixa\(pa\.nou,/);   /* v100.333: urmăririle pe rând, cu respirație */
   assert.match(T, /d\.Idei\.ideiBoti\(cl, \[\], 5\)/);
   const R = citeste("functions", "api", "istoric-bot.js");
   assert.match(R, /x&&x\.lista==="porn"\?"porn":/); assert.match(R, /porn:ur\(w\.porn\)/);
@@ -220,9 +220,9 @@ await test("12. revizia 01.11, textele adevărate: maximul pe 60 de zile de burs
   const crbp = f("revUS:CRBP"), smst = f("revEU:SMST"), hype = f("porn:HYPE"), sect = f("sect:CRWD"), tr = f("trend:SNDK");
   for (const t of [crbp.motiv, crbp.regula, crbp.cele.map((x) => x.sub).join(" ")]) assert.doesNotMatch(t, /pe un an/);
   assert.match(crbp.regula, /maximul pe 60 de zile de bursă/); assert.ok(crbp.cele.some((x) => x.et === "De la maxim" && /60 de zile de bursă/.test(x.sub)), JSON.stringify(crbp.cele));
-  assert.doesNotMatch(crbp.dovada.join(" | "), /14 zile fixe|orizont fix/); assert.match(crbp.dovada.join(" | "), /semnalele de cel puțin 14 zile, la prețul de azi, numărate pe semnal, fără comparație cu piața/);
+  assert.doesNotMatch(crbp.dovada.join(" | "), /14 zile fixe/);   /* v100.344: urmărirea nouă e la orizont fix (10 zile de bursă, față de QQQ); cea veche rămâne spusă „la prețul de azi” */ assert.match(crbp.dovada.join(" | "), /semnalele de cel puțin 14 zile, la prețul de azi, numărate pe semnal, fără comparație cu piața/);
   assert.equal(smst.actiuni.length, 0, "fără Poarta pe EU"); assert.match(smst.actNota, /Poarta știe doar acțiunile US/); assert.doesNotMatch(smst.dovada.join(" | "), /e „cam la fel” cu o zi oarecare/);
-  assert.match(hype.motiv, /primele 100 PERP după volum, ordonate după scor/); assert.doesNotMatch(hype.motiv, /100 PERP după scor/);
+  assert.match(hype.motiv, /primele 100 PERP după volum, cu cel puțin 1 M USDT\/zi, ordonată după câștigul estimat pe 7 zile \(7 × scor/); assert.doesNotMatch(hype.motiv, /100 PERP după scor/);
   assert.equal(sect.dovada.filter((t) => /Verdict: n-am aflat/.test(t)).length, 1, sect.dovada.join(" | "));
   assert.ok(hype.dovada.some((t) => /Gridul îngust/.test(t) && /auditul din 01\.11/.test(t)), hype.dovada.join(" | ")); assert.match(tr.dovada[0], /auditul din 14\.10/);
   const h = l.filter((x) => x.k === "porn:HYPE")[0]; assert.ok(h.avert.some((a) => /24 h s-a mișcat \+4,7%: aproape de pragul ei de „mișcare mare” \(5,0%, percentila 90/.test(a)), JSON.stringify(h.avert));

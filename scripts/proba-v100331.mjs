@@ -40,7 +40,7 @@ await test("1a. tura sugestiilor: revenireFata / shortFata = urmarireFixa (short
 });
 await test("1a. ruta păstrează revenireFata / shortFata (și ferestrele) la salvarea sugestiilor", () => {
   const R = citeste("functions", "api", "istoric-bot.js");
-  assert.match(R, /urmarire:\{revenire:ur\(w\.revenire\),short:ur\(w\.short\),porn:ur\(w\.porn\),revenireFata:ur\(w\.revenireFata\),shortFata:ur\(w\.shortFata\)\}/);
+  assert.match(R, /urmarire:\{revenire:ur\(w\.revenire\),short:ur\(w\.short\),porn:ur\(w\.porn\),(?:\.\.\.\(w\.pornScor\?\{pornScor:ur\(w\.pornScor\)\}:\{\}\),)?revenireFata:ur\(w\.revenireFata\),shortFata:ur\(w\.shortFata\)\}/);
   assert.match(R, /const ur=x=>x&&typeof x==="object"\?\{n:nr\(x\.n\),pePlus:nr\(x\.pePlus\),medie:nr\(x\.medie\),zile:nr\(x\.zile\),exces:nr\(x\.exces\),zilePeste:nr\(x\.zilePeste\),ferestre:nr\(x\.ferestre\),/);
   assert.match(citeste("scripts", "lib", "tura-sugestii.mjs"), /inAsteptare, ferestre, zileCuPiata: excesZi\.length \}/, "urmarireFixa întoarce și numărul ferestrelor independente");
 });

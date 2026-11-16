@@ -26,12 +26,15 @@ export function trendDinJson(j, b, acum) {
   let concentrare = null;
   if (sectoare) for (const [k, v] of Object.entries(sectoare)) if (!concentrare || v > concentrare.n) concentrare = { sector: k, n: v };
   if (concentrare && concentrare.n / 20 < 0.4) concentrare = null;
-  const bilant = b && typeof b === "object" && b.versiune === 1 ? {
-    zile: nr(b.zile) || 0, n20: nr(b.n20) || 0, ferestre20: nr(b.ferestre20), exces20: nr(b.exces20), nulB20: nr(b.nulB20),
+  // v101.182 (auditul 16.11, 🔴): din 31.10 robotul scrie `versiune` ca hash („tc-268dd7fd71ef”), nu 1 ⇒ `=== 1` arunca bilanțul TĂCUT o lună
+  // (pagina: „fără bilanț încă”; robotul: −18,6% față de alte acțiuni). Acum se citește după câmpuri; fără ele ⇒ { forma: "necunoscuta" }, spus pe pagină
+  const areCampuri = b && typeof b === "object" && !Array.isArray(b) && (nr(b.n20) != null || nr(b.zile) != null) && typeof b.verdict === "string";
+  const bilant = !b || typeof b !== "object" ? null : !areCampuri ? { forma: "necunoscuta" } : {
+    la: text(b.la, 40), zile: nr(b.zile) || 0, n20: nr(b.n20) || 0, ferestre20: nr(b.ferestre20), exces20: nr(b.exces20), nulB20: nr(b.nulB20),
     diferenta20: b.diferenta20 && typeof b.diferenta20 === "object" ? { medie: nr(b.diferenta20.medie), interval: Array.isArray(b.diferenta20.interval) ? b.diferenta20.interval.map(nr) : null } : null,
     verdict: text(b.verdict || "în probă", 60), t20: nr(b.t20),   /* v101.115: criteriul pe ferestre nesuprapuse (t > 3,2) + abaterea scrisă înainte */
     abatere: b.abatere && typeof b.abatere === "object" ? { k: nr(b.abatere.k), medie: nr(b.abatere.medie), prag: nr(b.abatere.prag), atinsa: b.abatere.atinsa === true } : null,
-  } : null;
+  };
   return {
     la: acum, dataUltimei: j.dataUltimei, regim, sectoare, concentrare, raportari: j.raportari && j.raportari.sursa === "finnhub" ? "finnhub" : null,
     iesiri: (Array.isArray(j.iesiri) ? j.iesiri : []).slice(0, 20).map((x) => ({ s: text(x && x.s, 12), motiv: text(x && x.motiv, 80) })),
@@ -58,12 +61,15 @@ export async function turaTrend(d, st) {
     const t = trendDinJson(j, b, acum);
     if (!t) { st.esecLa = acum; d.jurnal("trend: fișierul robotului n-are forma așteptată"); return null; }
     st.zi = ziRo(acum);
+    // v101.182: bilanțul se face sâmbăta, pe aceeași zi de date ⇒ o zi nouă de date SAU un bilanț nou (alt `la`) se trimit; verdictele doar la zi nouă
+    const bilLa = t.bilant && t.bilant.la ? t.bilant.la : null, bilNou = !!bilLa && bilLa !== st.bilantLa;
+    if (st.dataUltimei === t.dataUltimei && bilNou) { await d.trimite("/api/istoric-bot?action=trend12", t); st.bilantLa = bilLa; d.jurnal("trend: aceeași zi de date (" + t.dataUltimei + "), bilanț nou (" + bilLa + ") trimis"); return { noua: false, bilant: true }; }
     if (st.dataUltimei === t.dataUltimei) { d.jurnal("trend: aceeași zi de date (" + t.dataUltimei + "), nimic nou"); return { noua: false }; }
     await d.trimite("/api/istoric-bot?action=trend12", t);
     const v = verdicteTrend(t, acum);
     if (v.length) await d.trimite("/api/istoric-bot?action=verdict", { verdicte: v });
-    st.dataUltimei = t.dataUltimei;
-    d.jurnal("trend: " + t.dataUltimei + " · regim " + (t.regim && t.regim.peste ? "pornit" : "oprit") + " · " + v.length + " în jurnalul verdictelor" + (t.concentrare ? " · " + t.concentrare.n + "/20 " + t.concentrare.sector : "") + (t.bilant ? " · proba: " + t.bilant.verdict : " · proba: fără bilanț încă"));
+    st.dataUltimei = t.dataUltimei; if (bilLa) st.bilantLa = bilLa;
+    d.jurnal("trend: " + t.dataUltimei + " · regim " + (t.regim && t.regim.peste ? "pornit" : "oprit") + " · " + v.length + " în jurnalul verdictelor" + (t.concentrare ? " · " + t.concentrare.n + "/20 " + t.concentrare.sector : "") + (t.bilant && t.bilant.verdict ? " · proba: " + t.bilant.verdict : t.bilant && t.bilant.forma ? " · bilanțul robotului: formă necunoscută" : " · proba: fără bilanț încă"));
     return { noua: true, n: v.length };
   } finally { st.inLucru = false; }
 }

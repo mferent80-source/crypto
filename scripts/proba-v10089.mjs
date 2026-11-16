@@ -22,8 +22,8 @@ async function test(nume, f) { try { await f(); ok++; console.log("  ✓ " + num
 console.log("Proba v100.89 · Acasă: moneda din ambele liste ⇒ „aș sări peste ea” · Tabloul: istoricul boților cu virgulă zecimală");
 
 const REV = (o) => ({ cadere: 0.62, deLaMin: 0.28, zileDeLaMin: 6, revine: true, ...o });
-const SH = (s, scor, o) => ({ simbol: s + "_USDT_PERP", volum: 10, stare: "candidat", dir: "short", tarie: "mediu", scor, latime: 0.15, profitGrila: 0.0026, traversariZi: 20, revenire: REV({ revine: false }), ...o });
-const CL = { la: 5, monede: [{ simbol: "AKE_USDT_PERP", volum: 90, stare: "evita", dir: "long", scor: 9, revenire: REV({ cadere: 0.79 }) }, SH("Q", 5, { volum: 30, revenire: REV() }), SH("LIT", 7)] };
+const SH = (s, scor, o) => ({ simbol: s + "_USDT_PERP", volum: 10e6, stare: "candidat", dir: "short", tarie: "mediu", scor, latime: 0.15, profitGrila: 0.0026, traversariZi: 20, revenire: REV({ revine: false }), ...o });
+const CL = { la: 5, monede: [{ simbol: "AKE_USDT_PERP", volum: 90e6, stare: "evita", dir: "long", scor: 9, revenire: REV({ cadere: 0.79 }) }, SH("Q", 5, { volum: 30e6, revenire: REV() }), SH("LIT", 7)] };
 
 // ---- (1) Acasă ----
 // v100.295 (el, 02.11: „da scoate-le și de pe Acasă”): monedele pe revenire / short scoase de pe Piața azi ⇒ nota n-are unde apărea
@@ -45,7 +45,7 @@ await test("(2) tbIstoricBoti: „istoricul tău: 5 boți, 3 pe plus, −7,22 US
   assert.equal(ctx.f({ n: 0, pePlus: 0, total: 0 }), "n-ai mai avut boți pe ea"); assert.equal(ctx.f(null), "n-ai mai avut boți pe ea");
 });
 await test("(2) Tabloul, candidații („Pe ce aș porni un bot acum”): rândul randat scrie „−121,18 USDT”, nu „−121.18”", () => {
-  const box = { innerHTML: "" }, cl = { la: 5, monede: [{ simbol: "VVV_USDT_PERP", volum: 50, stare: "candidat", dir: "long", tarie: "mediu", scor: 7, latime: 0.1633, profitGrila: 0.0026, traversariZi: 28 }] };
+  const box = { innerHTML: "" }, cl = { la: 5, monede: [{ simbol: "VVV_USDT_PERP", volum: 50e6, stare: "candidat", dir: "long", tarie: "mediu", scor: 7, latime: 0.1633, profitGrila: 0.0026, traversariZi: 28 }] };
   const ctx = { Idei: ID, GridCalcul: G, escapeHtml: esc, TextRo: globalThis.TextRo, contTot: { clasament: cl, inchise: [{ moneda: "VVV", rezultat: -100.5 }, { moneda: "VVV", rezultat: -20.68 }] },
     tbIngustAdu: () => {}, tbUrmAdu: () => {}, tbUrm: { v: null }, tbSugestiiHtml: () => "", $: (id) => (id === "tbIdei" ? box : null) };
   vm.createContext(ctx);

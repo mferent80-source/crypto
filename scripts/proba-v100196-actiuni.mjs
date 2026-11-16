@@ -403,9 +403,11 @@ await test("D6 (🔵12). Urmărirea listelor de sugestii: fiecare intrare judeca
   const zile = zileBursa(200), b = zile.map((t, i) => ({ t, o: 100 + i, h: 101 + i, l: 99 + i, c: 100 + i, v: 1000 }));
   const SA = { puncte: () => [], azi: () => null, volumMediu: () => null, dovada: () => ({ verdict: "x" }), textDovada: () => "" };
   const intrare = zile[150], la14 = b.find((x) => x.t >= intrare + 14 * ZI).c;
-  const r = await TS.sugestiiDimineata({ SA, bareUS: new Map([["AAA_US_EQ", b]]), tickereEU: [], cereBare: async () => null, acum: ACUM, jurnal() {}, pauza: async () => 0, istoric: [{ zi: "x", piata: "us", lista: "urcare", ticker: "AAA_US_EQ", pret: b[150].c, t: intrare }] });
-  const u = r.raport.urmarire.us.urcare;
-  assert.equal(u.n, 1); assert.ok(Math.abs(u.medie - (la14 / b[150].c - 1 - 0.003)) < 1e-9, "medie " + u.medie + " ≠ orizontul de 14 zile");
+  // v100.344: listele urcare / revers au fost scoase (01.11); urmărirea la orizont fix e acum pe „revine”: intrarea la DESCHIDEREA de după bara
+  // semnalului, ieșirea la închiderea barei a 10-a de bursă (de la intrare), după 0,3% - tot orizont fix, nu prețul de azi
+  void la14;
+  const u = TS.urmarireRevine([{ zi: "x", piata: "us", lista: "revine", ticker: "AAA_US_EQ", pret: b[150].c, t: intrare, tBara: intrare }], { AAA_US_EQ: b }, {}, ACUM, { piata: "us" });
+  assert.equal(u.n, 1); assert.ok(Math.abs(u.medie - (b[160].c / b[151].o - 1 - 0.003)) < 1e-9, "medie " + u.medie + " ≠ orizontul fix de 10 zile de bursă");
 });
 
 // ---------------- E. restul: prețuri găsite după nume, simbolurile din „Ce aș cumpăra azi” ----------------

@@ -37,9 +37,9 @@ await test("v100.292: fiecare rând Trend poartă 12-1 (pastila) și 60 z (sub),
   const d = { trend12: trendDinJson(jsonRobot(), null, ACUM) }, l = ctx.sugRanduri(d, ACUM).filter((x) => x.grup === "trend");
   assert.equal(l.length, 20); for (const r of l) assert.match(r.nume, / · 12-1 [+−]\d+,\d% · 60 z [+−]\d+,\d%/);
   assert.ok(l.some((r) => / · 12-1 \+150,0% · 60 z \+30,0%/.test(r.nume)));
-  assert.equal(l.filter((r) => /raportează în 7z$/.test(r.nume)).length, 1, "raportarea e ultimul lucru din linia de cifre");
+  assert.equal(l.filter((r) => /raportează în 7 zile$/.test(r.nume)).length, 1, "raportarea e ultimul lucru din linia de cifre");
   const salturi = l.map((r) => ctx.sugFisa(r, d, ACUM)).flatMap((f) => f.avert.filter((a) => /^Salt /.test(a)));
-  assert.equal(salturi.length, 1, "un singur salt peste prag"); assert.match(salturi[0], /^Salt \+177,0% într-o zi \(2026-05-12\): verifică seria/);
+  assert.equal(salturi.length, 1, "un singur salt peste prag"); assert.match(salturi[0], /^Salt \+177,0% într-o zi \(12\.05\.2026\): verifică seria/);
   assert.ok(!l.some((r) => r.s === "T3" && /⚠/.test(r.sub)) || !ctx.sugFisa(l.filter((r) => r.s === "T3")[0], d, ACUM).avert.some((a) => /^Salt/.test(a)), "0,2 nu e salt");
 });
 await test("CSS (v100.292): prețul rândului nu se rupe, avertismentul e galben, lista + fișa stau înaintea regulii pândei (ultima)", () => {

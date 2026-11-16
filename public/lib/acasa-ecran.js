@@ -229,7 +229,7 @@ function acZiRo(z) { var d = new Date(z + "T12:00:00Z"); return isFinite(d) ? d.
 // v100.82 (03.10, ideea 2): „💡 Ce aș cumpăra azi” sus, sub cele două verdicte - ideile stăteau doar în Trading 212 și pe Tablou (și jos, în
 // „Idei de azi”), iar el nu le găsea. Aceleași liste ca panourile la care duc butoanele: primele acțiuni care trec de poartă, monedele candidate.
 function acasaCumpar(d, aziNu) {
-  var cl = acClasamentSumar(d && d.clasament), m = cl ? cl.buni.slice(0, 3) : [];
+  var cl = acClasamentSumar(d && d.clasament), m = cl ? (typeof Idei !== "undefined" && Idei.ideiBoti ? Idei.ideiBoti(d.clasament, [], 3) : cl.buni.slice(0, 3)) : [];   /* v100.344 (revizia Opus): aceeași listă ca „Pe ce aș porni” (costurile de acum), nu primii 3 după scor */
   var lista = function (l, sau) { return l.length < 2 ? l.join("") : l.slice(0, -1).join(", ") + " " + sau + " " + l[l.length - 1]; };
   // v100.92 (I-521): o cartelă pe coloane - numele în bold, eticheta sub ele și butonul ei. v100.295 (el, 02.11: „da scoate-le și de pe Acasă”):
   // fără coloana ideilor T212 și fără monedele pe revenire / short. v100.330 (el, 12.11: „sugestii de monede la fel cum sunt sugestii de stocks”
@@ -325,7 +325,7 @@ function acIdeiHtml(d, cl, aziNu) {
   var an = arguments.length > 2 ? aziNu : typeof acAziNu === "function" ? acAziNu() : null;   /* v100.306 (I-824): sub „azi nu” monedele rămân, fără tonul de sfat */
   return '<div class="acCap"><h4>Idei de azi</h4><span class="acSub">filtre, nu predicții</span></div>'
     + (an && an.nu ? acAziNuHtml(an) + '<div class="acEt">Monede liniștite (azi nu pornesc):</div>' : '<div class="acEt">Monede liniștite pentru un bot grid:</div>')
-    + (cl && cl.buni.length ? '<div class="acChips">' + cl.buni.slice(0, 5).map(function (x) { return '<span>' + escapeHtml(String(x.simbol).replace(/_USDT_PERP$/, "")) + '</span>'; }).join("") + '</div>' : '<p class="acMut">Aștept clasamentul…</p>')
+    + (cl && cl.buni.length ? '<div class="acChips">' + (typeof Idei !== "undefined" && Idei.ideiBoti ? Idei.ideiBoti(d.clasament, [], 5) : cl.buni.slice(0, 5)).map(function (x) { return '<span>' + escapeHtml(String(x.simbol).replace(/_USDT_PERP$/, "")) + '</span>'; }).join("") + '</div>' : '<p class="acMut">Aștept clasamentul…</p>')
     + '<button class="acBtn" type="button" data-action-click="navTo(\'gridset\',true)">Deschide Grid</button>';
 }
 // v100.82: butoanele din „Ce aș cumpăra azi” - deschid pagina și aduc panoul sus (fără animație)
@@ -370,7 +370,7 @@ function acTrendZi(x) {
   }).join("");
   var b = x.bilant;
   if (b && b.abatere && b.abatere.atinsa) h += '<p class="acEt"><b class="bad">ABATERE</b>: media pe ' + escapeHtml(acCate(b.abatere.k || 0, "fereastră", "ferestre")) + ' de 20 z, ' + P1(b.abatere.medie / 100) + ' față de alte acțiuni, sub pragul scris înainte (' + P1(b.abatere.prag / 100) + ') — de revăzut, nu de cumpărat.</p>';   /* v100.195 */
-  h += '<div class="acLin" style="margin-top:4px"><span>' + (x.concentrare ? escapeHtml(x.concentrare.n + " din 20 " + x.concentrare.sector) + " — un singur pariu · " : "") + 'proba: ' + escapeHtml(acCate(b && b.n20 || 0, "zi", "zile")) + ' cu rezultat</span><button type="button" class="acLink" data-action-click="navTo(&#39;sugestii&#39;,true)">toate 20 în Sugestii ›</button></div>';
+  h += '<div class="acLin" style="margin-top:4px"><span>' + (x.concentrare ? escapeHtml(x.concentrare.n + " din 20 " + x.concentrare.sector) + " — un singur pariu · " : "") + 'proba: ' + escapeHtml(!b ? "bilanțul robotului lipsește" : b.forma ? "bilanțul robotului are o formă necunoscută" : acCate(b.n20 || 0, "zi", "zile") + " cu rezultat") + '</span><button type="button" class="acLink" data-action-click="navTo(&#39;sugestii&#39;,true)">toate 20 în Sugestii ›</button></div>';
   return h;
 }
 // v100.193: „Cele mai tari pe sector · SUA” — primul din fiecare sector din topul colectorului (screenerul Nasdaq), după randamentul pe 3 luni

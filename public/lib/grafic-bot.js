@@ -760,7 +760,7 @@ var GraficBot = (function () {
       return { svg: svg, inaltime: HT, legenda: Lg.join(""), valori: valori, harta: { bare: B, S: S, cw: cw, plotW: plotW, grupuri: gr2, per: o.per, f: f, W: W, H: HT, lo: lo, hi: hi, mainH: mainH, sus: bandaSem, gut: gut } };
     }
     if (!o.actiune) Lg.push('<span><i class="gbPct" style="background:' + COL.bad + '"></i>critic</span><span><i class="gbPct" style="background:' + COL.warn + '"></i>atenție</span><span><i class="gbPct" style="background:' + COL.info + '"></i>info</span>');
-    if (o.actiune) { if (f > 1) Lg.push('<span class="mutedInfo">o lumânare = ' + cate(f, "zi", "zile") + ' de bursă</span>'); }
+    if (o.actiune) { if (f > 1) Lg.push('<span class="mutedInfo">o lumânare = ' + (o.unitate && o.unitate.length === 2 ? cate(f, o.unitate[0], o.unitate[1]) : cate(f, "zi", "zile") + ' de bursă') + '</span>'); }   /* v100.344: o.unitate (Sugestii: monedele pe 4h / 1z, acțiunile pe 1h) */
     else Lg.push('<span class="mutedInfo">' + cate(evs.length, "alertă", "alerte") + ' ale botului în perioadă' + (f > 1 ? " · o lumânare = " + cate(f, "bară", "bare") : "") + '</span>');
     return { svg: svg, inaltime: HT, legenda: Lg.join(""), valori: valori, harta: { bare: B, S: S, cw: cw, plotW: plotW, grupuri: gr2, per: o.per, f: f, W: W, H: HT, lo: lo, hi: hi, mainH: mainH, sus: bandaSem, gut: gut } };
   }

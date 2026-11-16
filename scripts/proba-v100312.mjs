@@ -111,7 +111,7 @@ await test("🔑 nimic pierdut la mutare: grupurile, rândurile și fișele căd
   P.sugStare.vedere = "sugestii";
   const hs = P.sugHtml(d, ACUM);
   assert.doesNotMatch(hs, /sugR-cad:|sugR-dir:/, "Sugestii fără rândurile mutate");
-  assert.match(hs, /<p class="rlRasp" data-sug="rasp">[^<]*Căderile mari și direcția pe 7 zile \(monede Pionex, în probă\) sunt pe pagina lor, cu caietul de păreri: <button type="button" class="t212BtnLinie sugSpreProbe" data-action-click="navTo\('probe',true\)">🧪 Probe ›<\/button><\/p>/);
+  assert.match(hs, /<p class="tbSub">[^<]*Căderile mari și direcția pe 7 zile \(monede Pionex, în probă\) sunt pe pagina lor, cu caietul de păreri: <button type="button" class="t212BtnLinie sugSpreProbe" data-action-click="navTo\('probe',true\)">🧪 Probe ›<\/button><\/p>/);
   assert.equal((hs.match(/data-sug="/g) || []).length, 4, "locurile paginii scrise de JS (rasp, verdicte, lista, nota; pânda le are în index.html) - niciun loc nou");
 });
 await test("revizia 🔵10: rândul ales și intervalul rămân ale fiecărei pagini (un clic pe Probe nu mută alegerea din Sugestii)", () => {
@@ -312,7 +312,7 @@ await test("🔑 I-847: panoul zilnic - a doua cerere a aceleiași serii zilnice
   assert.equal(cheiePanou(K), "k:AUSDT:200"); assert.equal(cheiePanou("https://fapi.binance.com/fapi/v1/klines?symbol=AUSDT&interval=1d&limit=200&endTime=5"), null);
   const C = citeste("scripts", "colector.mjs");
   assert.match(C, /const binancePanou = cuPanouZilnic\(binanceDirect, \{ jurnal \}\);/);
-  assert.match(C, /turaCaderiModul\(\{ binance: binancePanou,/); assert.match(C, /\.then\(\(\) => turaDirectieColector\(\)\)\.catch\(\(e\) => jurnal\("directie", e\.message\)\)\.then\(\(\) => binancePanou\.goleste\(\)\)\.then\(\(\) => turaProbeColector\(\)\)/); assert.match(C, /turaDirectieModul\(\{ binance: binancePanou,/);
+  assert.match(C, /turaCaderiModul\(\{ binance: binancePanou,/); assert.match(C, /\.then\(\(\) => turaDirectieColector\(\)\)\.catch\(\(e\) => jurnal\("directie", e\.message\)\)(?:\.then\(\(\) => turaProbaGridColector\(\)\))?\.then\(\(\) => binancePanou\.goleste\(\)\)\.then\(\(\) => turaProbeColector\(\)\)/); assert.match(C, /turaDirectieModul\(\{ binance: binancePanou,/);
   const TC = citeste("scripts", "lib", "tura-caderi.mjs"), TD = citeste("scripts", "lib", "tura-directie.mjs");
   assert.match(TC, /klines\?symbol=\$\{encodeURIComponent\(s\)\}&interval=1d&limit=\$\{r\.bare\}/); assert.match(TD, /klines\?symbol=\$\{encodeURIComponent\(s\)\}&interval=1d&limit=\$\{s === "BTCUSDT" \? r\.bareBtc : r\.bare\}/);
   assert.match(TC, /bare: 200,/); assert.match(TD, /bare: 200, bareBtc: 1000/);   /* aceeași adresă ⇒ același răspuns */
@@ -361,7 +361,7 @@ await test("colectorul v101.170: tura probelor după direcție (caietul o dată 
   assert.match(C, /const VERSIUNE_COLECTOR = "v101\.(1[7-9]\d|[2-9]\d\d)"/);
   assert.match(C, /import \{ turaPareri \} from "\.\/lib\/tura-pareri\.mjs";/); assert.match(C, /import \{ cuPanouZilnic \} from "\.\/lib\/panou-binance\.mjs";/); assert.match(C, /import \{ liniiProbeRaport, zileLipsa \} from "\.\/lib\/probe-raport\.mjs";/);
   assert.match(C, /const Caiet = incarca\("caiet\.js", "Caiet"\);/);
-  assert.match(C, /\.then\(\(\) => turaDirectieColector\(\)\)\.catch\(\(e\) => jurnal\("directie", e\.message\)\)\.then\(\(\) => binancePanou\.goleste\(\)\)\.then\(\(\) => turaProbeColector\(\)\)\.catch\(\(e\) => jurnal\("probe", e\.message\)\);/);
+  assert.match(C, /\.then\(\(\) => turaDirectieColector\(\)\)\.catch\(\(e\) => jurnal\("directie", e\.message\)\)(?:\.then\(\(\) => turaProbaGridColector\(\)\))?\.then\(\(\) => binancePanou\.goleste\(\)\)\.then\(\(\) => turaProbeColector\(\)\)\.catch\(\(e\) => jurnal\("probe", e\.message\)\);/);
   assert.match(C, /await trimite\("\/api\/istoric-bot\?action=probaA", \{ la: acum, \.\.\.stadiuProbaA\(pa\) \}\);/);
   assert.match(C, /if \(process\.env\.COLECTOR_FARA_PROBE\) return;/);
 });

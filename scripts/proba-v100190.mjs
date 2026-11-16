@@ -42,7 +42,7 @@ await test("trendDinJson: fișier stricat ⇒ null (versiune, dată, clasament g
   assert.equal(trendDinJson({ ...jsonRobot(), versiune: 2 }, null, ACUM), null);
   assert.equal(trendDinJson({ ...jsonRobot(), dataUltimei: "ieri" }, null, ACUM), null);
   assert.equal(trendDinJson({ ...jsonRobot(), clasament: [] }, null, ACUM), null);
-  assert.equal(trendDinJson(jsonRobot(), { zile: 3 }, ACUM).bilant, null);
+  assert.deepEqual(trendDinJson(jsonRobot(), { zile: 3 }, ACUM).bilant, { forma: "necunoscuta" });   /* v100.344: bilanțul de formă necunoscută se spune pe pagină, nu dispare tăcut */
   const gol = trendDinJson(jsonRobot(), { ...bilantRobot, n20: 0, zile: 1, diferenta20: { medie: null, interval: [null, null] }, exces20: null }, ACUM).bilant;
   assert.equal(gol.diferenta20.medie, null, "null rămâne null, nu devine 0 (bilanțul real din 14.10)"); assert.equal(gol.exces20, null); assert.equal(gol.n20, 0);
 });
@@ -88,7 +88,7 @@ await test("v100.292: Trend 12 luni ca listă + fișă - nota (EOD, regim, 11 di
   assert.equal(g.verdict, "ÎN PROBĂ"); assert.match(g.sub, /EOD 2026-10-14 · regim pornit · 11 din 20 Technology — un singur pariu · proba: 17 zile cu rezultat/); assert.match(g.sub, /\+0,9% vs alte acțiuni/); assert.match(g.sub, /au ieșit: DOCN/);
   const l = ctx.sugRanduri(d, ACUM).filter((x) => x.grup === "trend"); assert.equal(l.length, 20);
   const acte = l.map((r) => ctx.sugFisa(r, d, ACUM).actiuni[0].act); assert.equal(acte.filter((a) => /^sugLaPoarta\('T\d+','trend12','1?'\)$/.test(a)).length, 20);
-  assert.ok(l.some((r) => / · 12-1 \+150,0% · 60 z \+30,0%/.test(r.nume))); assert.ok(l.some((r) => /raportează în 7z/.test(r.nume)));
+  assert.ok(l.some((r) => / · 12-1 \+150,0% · 60 z \+30,0%/.test(r.nume))); assert.ok(l.some((r) => /raportează în 7 zile/.test(r.nume)));
   const f = ctx.sugFisa(l[0], d, ACUM); assert.match(f.regula, /fixată înainte de cifre/); assert.match(f.dovada.join(" | "), /nu e un buton de cumpărat/);
   const h = ctx.sugListaHtml(d, ACUM); assert.ok(!h.includes("<script>"), "numele cu <script> e escapat"); assert.match(h, /&lt;script&gt;/);
   assert.match(ctx.sugGrupuri({ trend12: null }, ACUM).filter((x) => x.k === "trend")[0].sub, /lasamentul vine o dată pe zi/);

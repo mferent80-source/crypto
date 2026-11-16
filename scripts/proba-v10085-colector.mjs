@@ -108,7 +108,7 @@ const val = (i) => 100 * (1 + 0.2 * Math.sin(i / 300));
 function depsSugestii(o) {
   const trimise = [], st = o.stare || { zi: null };
   const CL = { la: 5, monede: [{ simbol: "AAA_USDT_PERP", volum: 10, stare: "evita", dir: "long", scor: 1, revenire: { cadere: 0.3, deLaMin: 0.1, zileDeLaMin: 4, revine: true } },
-    { simbol: "BBB_USDT_PERP", volum: 5, stare: "candidat", dir: "short", scor: 2, revenire: null }] };
+    { simbol: "BBB_USDT_PERP", volum: 5e6, stare: "candidat", dir: "short", scor: 2, revenire: null }] };
   return { trimise, stare: st, d: { acum: Date.UTC(2026, 9, 3, 9), zi: "2026-10-03", ora: o.ora === undefined ? 9 : o.ora, stare: st, Reveniri: R, Idei: ID, G,
     simboluriDepozit: () => ["AAA_USDT_PERP", "BBB_USDT_PERP"], bare1h: () => ore(2400, val),
     boti: async () => [{ simbol: "AAA_USDT_PERP", dir: "long", pornit: T0 + 2000 * ORA, net: 2 }, { simbol: "BBB_USDT_PERP", dir: "short", pornit: T0 + 2000 * ORA, net: -1 }],
@@ -125,7 +125,7 @@ await test("(6) tura sugestiilor: o dată pe zi, de la 8:00; istoricul pieței �
   assert.ok(c.dovada.revenire.piata && c.dovada.revenire.piata.baza.n > 0 && c.dovada.short.piata && c.dovada.short.piata.baza.n > 0, JSON.stringify(c.dovada).slice(0, 300));
   assert.ok(c.dovada.revenire.boti && c.dovada.revenire.boti.reper.n === 2 && c.dovada.short.boti.reper.n === 1);
   assert.equal(c.urmarire.revenire.n, 1); assert.equal(c.urmarire.revenire.pePlus, 1); assert.equal(c.urmarire.short.n, 1); assert.equal(c.urmarire.short.pePlus, 1);
-  assert.deepEqual(c.noi, [{ simbol: "AAA_USDT_PERP", pret: 1.1, lista: "revenire" }, { simbol: "BBB_USDT_PERP", pret: 1.9, lista: "short" }, { simbol: "BBB_USDT_PERP", pret: 1.9, lista: "porn", dir: "short" }]);   /* v100.292: și „Pe ce aș porni”, cu direcția */
+  assert.deepEqual(c.noi, [{ simbol: "AAA_USDT_PERP", pret: 1.1, lista: "revenire" }, { simbol: "BBB_USDT_PERP", pret: 1.9, lista: "short" }, { simbol: "BBB_USDT_PERP", pret: 1.9, lista: "porn", dir: "short", reg: 2 }]);   /* v100.344: reg 2 = regula nouă (costurile de acum) */   /* v100.292: și „Pe ce aș porni”, cu direcția */
   assert.ok(r && r.noi.length === 3);
 });
 await test("(6) ruta sugestii: se scrie și se citește înapoi, curățată; notările fără dubluri (zi + simbol + listă), cel mult 20 pe trimitere", async () => {

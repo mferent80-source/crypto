@@ -137,10 +137,10 @@ await test("„era ↗” (ce s-a schimbat de la ultima privire) și pe fișă: 
 });
 
 await test("stilul: regulile benzii, riglei, istoriei, rândului închis și tabelului prind și fișa T212 (:is(#tabloubot,#t212)); tabelul rămâne TABEL în celula fișei; banda 2 × 2 când fișa e îngustă", () => {
-  for (const r of [":is(#tabloubot,#t212) .ibBanda{display:grid;", ":is(#tabloubot,#t212) .ibCel{", ":is(#tabloubot,#t212) .tbIndSumar{container-type:inline-size}",
-    ":is(#tabloubot,#t212) .ibGrafice{display:grid;", ":is(#tabloubot,#t212) .ibSpG{flex:1 1 0;min-width:120px;height:56px}", ":is(#tabloubot,#t212) :is(.ibSpVal,.ibSpEtP){paint-order:stroke;",
-    ":is(#tabloubot,#t212) .tbIndTab td{", ":is(#tabloubot,#t212) .tbIndPred{", ":is(#tabloubot,#t212) .tbTrendDet>summary{cursor:pointer;",
-    ":is(#tabloubot,#t212) .tbIndTab{font-size:12px}", ":is(#tabloubot,#t212).tbZi .tbIndTab th{"])
+  for (const r of [":is(#tabloubot,#t212,#sugestii,#probe) .ibBanda{display:grid;", ":is(#tabloubot,#t212,#sugestii,#probe) .ibCel{", ":is(#tabloubot,#t212,#sugestii,#probe) .tbIndSumar{container-type:inline-size}",
+    ":is(#tabloubot,#t212,#sugestii,#probe) .ibGrafice{display:grid;", ":is(#tabloubot,#t212,#sugestii,#probe) .ibSpG{flex:1 1 0;min-width:120px;height:56px}", ":is(#tabloubot,#t212) :is(.ibSpVal,.ibSpEtP){paint-order:stroke;",
+    ":is(#tabloubot,#t212,#sugestii,#probe) .tbIndTab td{", ":is(#tabloubot,#t212) .tbIndPred{", ":is(#tabloubot,#t212,#sugestii,#probe) .tbTrendDet>summary{cursor:pointer;",
+    ":is(#tabloubot,#t212,#sugestii,#probe) .tbIndTab{font-size:12px}", ":is(#tabloubot,#t212,#sugestii,#probe).tbZi .tbIndTab th{"])
     assert.ok(CSS.includes(r), "lipsește: " + r);
   assert.ok(!/(^|\n|\})#tabloubot \.(ib[A-Z]|tbInd(Tab|Wrap|Pred|Nota|Est|Sumar)|tbTrendDet)[^{]*\{/.test(CSS.replace("@media (min-width:1181px) and (max-width:1699px){\n#tabloubot .ibBanda{", "")), "nicio regulă rămasă doar pe Tablou");
   assert.ok(CSS.includes("@media (min-width:1181px) and (max-width:1699px){\n#tabloubot .ibBanda{grid-template-columns:repeat(2,minmax(0,1fr))}\n}"), "2 × 2 în jumătatea cardului Trend: doar Tabloul");

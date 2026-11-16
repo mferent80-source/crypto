@@ -49,7 +49,7 @@ function prProbe(d, acum) {
     sta: a && a.nSemnal ? "net pe semnal " + sugP1(a.netSemnal) + ", pe rest " + sugP1(a.netRest) + " (medii pe trade; verdictul se face pe zile)" : "pe istoric: +0,42% pe semn la IS și OOS (z 2,1); acum se vede pe zile noi",
     ultima: a && a.ultima ? "ultima zi: " + prZi(a.ultima) : "", drum: pa, act: ["Trade-ul zilei ›", "navTo('tradezilei',true)"] });
   var T = d.trend12, b = T && T.bilant;
-  R.push({ k: "trend", nume: "📈 Trend 12 luni · acțiuni SUA", de: b && b.zile ? "de " + sugCate(b.zile, "zi", "zile") : "—", jud: b ? sugCate(b.n20 || 0, "zi", "zile") + " cu rezultat" + (b.ferestre20 != null ? " (" + sugCate(b.ferestre20, "fereastră", "ferestre") + " de 20 z)" : "") : T ? "0 zile cu rezultat (robotul n-a trimis încă bilanțul)" : "aștept robotul (după 8:00)",
+  R.push({ k: "trend", nume: "📈 Trend 12 luni · acțiuni SUA", de: b && b.zile ? "de " + sugCate(b.zile, "zi", "zile") : "—", jud: b && b.forma ? "bilanțul robotului are o formă necunoscută (nu-l citesc)" : b ? sugCate(b.n20 || 0, "zi", "zile") + " cu rezultat" + (b.ferestre20 != null ? " (" + sugCate(b.ferestre20, "fereastră", "ferestre") + " de 20 z)" : "") : T ? "0 zile cu rezultat (robotul n-a trimis încă bilanțul)" : "aștept robotul (după 8:00)",
     sta: b ? (b.diferenta20 && b.diferenta20.medie != null && b.n20 ? sugP1(b.diferenta20.medie / 100) + " față de alte acțiuni" : "fără cifre încă") + (b.t20 != null ? ", t " + sugZec(b.t20) : "") + " · " + (b.verdict || "în probă") + (b.abatere && b.abatere.atinsa ? " · ABATERE sub pragul scris înainte" : "") : T ? "fără cifre încă" : "—",
     ultima: T && T.dataUltimei ? "EOD " + prZi(T.dataUltimei) : "", drum: { svg: prDrumSvg(b && b.ferestre20 != null ? b.ferestre20 / 12 : 0, [], "Trend 12 luni: " + (b && b.ferestre20 != null ? b.ferestre20 : 0) + " din cele 12 ferestre cerute"), text: "fără dată fixă: „probat” cere t peste 3,2 pe cel puțin 12 ferestre de 20 de zile" },
     act: ["în Sugestii ›", "navTo('sugestii',true)"] });
@@ -166,5 +166,5 @@ async function prPorneste(fortat) {
   } finally { prStare.inLucru = false; }
   if (sugStare.vedere !== "probe") return;
   sugDeseneaza(); prCaietDeseneaza();
-  try { await sugGraficAdu(sugRandAles()); } catch (e) {}
+  try { var ra = sugRandAles(); await Promise.all([sugGraficAdu(ra), typeof sugIndAdu === "function" ? sugIndAdu(ra) : null]); } catch (e) {}   // v100.344: și detaliile indicatorilor + TradingView ale fișei
 }

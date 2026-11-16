@@ -67,10 +67,24 @@ var Idei = (function () {
       .map(function (x) { return Object.assign({ ticker: x.ticker, simbol: x.simbol || String(x.ticker).split("_")[0], istoric: stat(inch.filter(function (t) { return t.ticker === x.ticker; })) }, x.r); });
   }
   // clasamentul colectorului (istoric-bot?action=clasament) + botii lui inchisi (JurnalTrade.din)
+  // v100.344 (16.11, el a ales „Costuri de acum” după audit): scorul e o trăsătură a monedei pe 83 de zile (aceeași listă zi de zi, și pe mers
+  // aleator), iar ordinea primilor ~15 e la nivelul zgomotului ⇒ între candidați se ordonează după COSTURI cunoscute acum, nu după o predicție:
+  // (1) volum ≥ 1 M USDT/zi; (2) net7 = 7 × scor − s × f7 × 0,5 (f7 = funding-ul pe 7 zile la rata din ultimele 7, s = +1 long / −1 short /
+  // 0 neutru; un grid direcționat ține în medie ~jumătate din sumă în poziție); (3) cel mult 2 pe aceeași direcție (restul = același pariu).
+  // Fără f7 (funding necitit) ordinea e doar după scor pentru moneda aceea, marcat fNecitit. Verdictul listei rămâne N-AM AFLAT.
+  var PRAG_VOL_BOT = 1e6, EXPUNERE_FUNDING = 0.5, MAX_PE_DIR = 2;
+  function net7(x) { var s = x.dir === "long" ? 1 : x.dir === "short" ? -1 : 0, f = x.f7 != null && isFinite(x.f7) ? Number(x.f7) : null; return 7 * (Number(x.scor) || 0) - (f == null ? 0 : s * f * EXPUNERE_FUNDING); }
+  function ideiBotiInfo(cl, n) {
+    var m = cl && Array.isArray(cl.monede) ? cl.monede : [], cand = m.filter(function (x) { return x && x.stare === "candidat"; });
+    var lichizi = cand.filter(function (x) { return Number(x.volum) >= PRAG_VOL_BOT; }).map(function (x) { return Object.assign({}, x, { net7: net7(x), fNecitit: x.f7 === null || (x.f7 !== undefined && !isFinite(x.f7)), fNecerut: x.f7 === undefined }); })   // null = cererea a picat; lipsă = necerut (colectorul vechi)
+      .sort(function (a, b) { return b.net7 - a.net7; });
+    var pe = {}, lista = [], sarite = 0;
+    for (var i = 0; i < lichizi.length && lista.length < (n || 5); i++) { var k = lichizi[i].dir || "neutru"; if ((pe[k] || 0) >= MAX_PE_DIR) { sarite++; continue; } pe[k] = (pe[k] || 0) + 1; lista.push(lichizi[i]); }
+    return { lista: lista, subPrag: cand.length - lichizi.length, lichizi: lichizi.length, candidati: cand.length, sarite: sarite, prag: PRAG_VOL_BOT, maxPeDir: MAX_PE_DIR, expunere: EXPUNERE_FUNDING };
+  }
   function ideiBoti(cl, trades, n) {
-    var m = cl && Array.isArray(cl.monede) ? cl.monede : [], tr = Array.isArray(trades) ? trades : [];
-    return m.filter(function (x) { return x && x.stare === "candidat"; }).sort(function (a, b) { return (b.scor || 0) - (a.scor || 0); }).slice(0, n || 5)
-      .map(function (x) { var mo = String(x.simbol || "").replace(/_USDT_PERP$/, "").replace(/_USDT$/, ""); return Object.assign({ moneda: mo, istoric: stat(tr.filter(function (t) { return t && t.moneda === mo; })) }, x); });
+    var tr = Array.isArray(trades) ? trades : [];
+    return ideiBotiInfo(cl, n).lista.map(function (x) { var mo = String(x.simbol || "").replace(/_USDT_PERP$/, "").replace(/_USDT$/, ""); return Object.assign({ moneda: mo, istoric: stat(tr.filter(function (t) { return t && t.moneda === mo; })) }, x); });
   }
   // v100.85 (reveniri + short, 03.10): din același clasament, cu istoricul LUI pe monedă (aceeași formă ca ideiBoti)
   function cuIstoric(tr) { return function (x) { var mo = String(x.simbol || "").replace(/_USDT_PERP$/, "").replace(/_USDT$/, ""); return Object.assign({ moneda: mo, istoric: stat(tr.filter(function (t) { return t && t.moneda === mo; })) }, x); }; }
@@ -108,6 +122,6 @@ var Idei = (function () {
     var l = [].concat(id.actiuni || [], id.restul || []).filter(tine).slice(0, 45);
     return { actiuni: l.slice(0, 5), restul: l.slice(5), trecute: l.length };
   }
-  return { judecaActiune: judecaActiune, alegeActiuni: alegeActiuni, ideiBoti: ideiBoti, reveniriBoti: reveniriBoti, shortBoti: shortBoti, urmarire: urmarire, ideiInca: ideiInca };
+  return { judecaActiune: judecaActiune, alegeActiuni: alegeActiuni, ideiBoti: ideiBoti, ideiBotiInfo: ideiBotiInfo, PRAG_VOL_BOT: PRAG_VOL_BOT, cuIstoric: cuIstoric, reveniriBoti: reveniriBoti, shortBoti: shortBoti, urmarire: urmarire, ideiInca: ideiInca };
 })();
 if (typeof globalThis !== "undefined") globalThis.Idei = Idei;
