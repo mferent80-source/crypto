@@ -134,10 +134,8 @@ await test("(4a) dimineața: listele US din barele aduse deja + EU (aduse acum; 
   assert.ok(r.raport.urmarire && r.raport.urmarire.us && r.raport.urmarire.us.revine && r.raport.urmarire.eu.revine, "urmărirea e acum pe „revine”");
 });
 await test("(4b) intraday: pre-market US / gap EU pe baza de dimineață; tickerele fără rânduri se numără; lista e sortată după gap", async () => {
-  const acum = Date.UTC(2026, 9, 6, 13, 0), rows = (g) => Array.from({ length: 12 }, (_, i) => ({ time: Date.UTC(2026, 9, 6, 12, i * 5), open: 100 * (1 + g), high: 100 * (1 + g), low: 100 * (1 + g), close: 100 * (1 + g), volume: 5000 }));
-  const baza = { "A_US_EQ": { vol: 1e6, inchidere: 100 }, "B_US_EQ": { vol: 1e6, inchidere: 100 }, "C_US_EQ": { vol: 1e6, inchidere: 100 }, "D_US_EQ": { vol: 1e6, inchidere: 100 } };
-  const r = await TS.sugestiiIntraday({ SA, piata: "us", baza, acum, pauza: async () => {}, jurnal: () => {}, cere5m: async (tk) => tk === "A_US_EQ" ? rows(0.03) : tk === "B_US_EQ" ? rows(0.05) : tk === "C_US_EQ" ? rows(0.005) : [] });
-  assert.deepEqual(r.lista.map((x) => x.ticker), ["B_US_EQ", "A_US_EQ"]); assert.equal(r.judecate, 3); assert.equal(r.fara, 1); assert.ok(r.la > 0);
+  // v100.345: tura intraday (pre-market / gap) a fost oprită în v100.344, iar funcția ei scoasă din lib acum - păzit că lipsește
+  assert.equal(TS.sugestiiIntraday, undefined);
 });
 await test("(4c) universul EU: DAX 40 + CAC 40 + AEX 25 + ale lui (din istoricul T212), fără dubluri, doar burse cunoscute", () => {
   assert.equal(UE.DAX40.length, 40); assert.equal(UE.AEX25.length, 25); assert.ok(UE.CAC40.length >= 36);
@@ -171,7 +169,7 @@ await test("(R-I4) gap EU: fără un rând de după primele 20 de minute (Yahoo 
   const acum = Date.UTC(2026, 9, 6, 7, 20), d0 = Date.UTC(2026, 9, 6, 7, 0), r = [];
   for (let m = 0; m < 10; m += 5) r.push({ time: d0 + m * 60000, open: 103, high: 103, low: 103, close: 103, volume: 50000 });
   assert.equal(SA.gapEU(r, 100, 1e6, acum).asteapta, true);
-  const t = await TS.sugestiiIntraday({ SA, piata: "eu", baza: { "SAPd_EQ": { vol: 1e6, inchidere: 100 } }, acum, cere5m: async () => r, jurnal: () => {} }); assert.equal(t.asteapta, 1); assert.equal(t.judecate, 0);
+  // v100.345: regula SA.gapEU rămâne păzită mai sus; tura intraday care număra așteptările a fost scoasă (v100.344 oprită, v100.345 ștearsă)
 });
 await test("(R-I2) urmărirea: același semnal (aceeași bară) intră o singură dată, chiar dacă tura rulează sâmbătă, duminică și luni", async () => {
   const b = cuUrcare(100), m = new Map([["AAA_US_EQ", b]]); let ist = [];

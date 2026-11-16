@@ -29,7 +29,7 @@ export async function turaIngust(d) {
       judeca(x.simbol, b);
       const ing = d.GridProba.ingust(b, { dir: x.dir, miscare: !!(x.regim && x.regim.miscare), pret: b.length ? b[b.length - 1].c : null, suma: 100 });
       await d.trimite("/api/istoric-bot?action=ingust", { simbol: x.simbol, ingust: { ...ing, la: acum, zile: Math.round(b.length / 96) } });
-      if (ing.latime > 0 && ing.ore > 0) lista.push({ simbol: x.simbol, la: acum, dir: ing.dir, ore: ing.ore, latime: ing.latime, pas: ing.pas, propus: !!ing.propus });
+      if (ing.latime > 0 && ing.ore > 0) lista.push({ simbol: x.simbol, la: acum, dir: ing.dir, ore: ing.ore, latime: ing.latime, pas: ing.pas, propus: !!ing.propus, reg: 2 });   // v101.183: reg 2 = lista de la 16.11 (costurile de acum)
       monede++; if (ing.propus) propuse++;
     } catch (e) { d.jurnal("ingust " + x.simbol, e.message); }
   }

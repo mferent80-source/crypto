@@ -5573,7 +5573,7 @@ function grIngustPt(s){var c=grIngust[s];if(!c||(!c.inLucru&&Date.now()-c.la>10*
 // v100.59 (I-480): urmarirea inainte a gridului ingust (toate monedele), o data la 10 min
 var grUrm={la:0,v:null,inLucru:false};
 function grUrmHtml(){if(!grUrm.inLucru&&Date.now()-grUrm.la>10*60000){grUrm.inLucru=true;getJSON("/api/istoric-bot?action=ingustUrmarire").then(function(d){grUrm={la:Date.now(),v:d&&d.lista||[],inLucru:false};renderGrid()}).catch(function(){grUrm.inLucru=false;grUrm.la=Date.now()})}
-  return grUrm.v?'<p class="tbSub">📈 '+escapeHtml(GridProba.socotealaUrmarire(grUrm.v).text)+'</p>':""}
+  return grUrm.v?'<p class="tbSub">📈 '+escapeHtml(GridProba.socotealaUrmarirePeReguli(grUrm.v).text)+'</p>':""}
 function grIngustHtml(f){
   // revizia 01.10 (I3): rezultatul colectorului doar proaspat, pe aceeasi directie ca fisa si fara miscare acum - altfel calculul de aici
   var g0=grIngustPt(f.simbol),vg=g0?GridProba.varstaIngust(g0,Date.now()):null,g=g0&&!vg.vechi&&g0.dir===f.dir&&!(f.regim&&f.regim.miscare)?g0:null,loc=!g,r=g||f.ingustLocal;if(!r)return "";

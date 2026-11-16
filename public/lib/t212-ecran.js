@@ -1267,7 +1267,7 @@ function tbIdeiRender() {
     return '<div class="tbTodoRand"><span class="tbDunga ' + (tbIstoricRosu(x) ? "r" : nu ? "n" : "v") + '"></span><div><b>' + escapeHtml(x.moneda) + '</b> <span class="tbSub">' + escapeHtml(det) + '</span><p' + (tbIstoricRosu(x) ? ' class="bad"' : '') + '>' + escapeHtml(ist) + '</p>' + (function () { try { var g = typeof GridProba !== "undefined" && x.simbol ? tbIngustPt(x.simbol) : null; if (!g) return ''; var v = GridProba.varstaIngust(g, Date.now()); return '<p class="tbSub' + (g.propus ? '' : ' t212Estompat') + '">' + escapeHtml(GridProba.rezumatIngust(g)) + (v.text ? ' · ' + escapeHtml(v.text) : '') + '</p>'; } catch (e) { return ''; } })() + '</div><button type="button" class="tbBtnLinie" data-action-click="gridDeschideMoneda(\'' + String(x.moneda).replace(/[^A-Za-z0-9._-]/g, "") + '\')">Fișa</button></div>';
   }).join("");
   tbUrmAdu();
-  if (tbUrm.v && typeof GridProba !== "undefined") { try { h += '<p class="tbSub">⚡ ' + escapeHtml(GridProba.socotealaUrmarire(tbUrm.v).text) + '</p>'; } catch (e) {} }
+  if (tbUrm.v && typeof GridProba !== "undefined") { try { h += '<p class="tbSub">⚡ ' + escapeHtml(GridProba.socotealaUrmarirePeReguli(tbUrm.v).text) + '</p>'; } catch (e) {} }
   var hI = h + '<p class="tbSub tbTodoGol">Un filtru (liniște, interval, treceri), nu o predicție: laboratorul n-a găsit încă o diferență clară. Fișa îți dă setările și proba pe istoricul monedei.</p>'; if (box._contH !== hI) { box._contH = hI; box.innerHTML = hI; }   /* audit 23.10: doar când s-a schimbat. v100.295: listele de revenire / short de sub notă scoase (el, 02.11) */
 }
 // v100.85 (reveniri + short, 03.10): sub „Pe ce aș porni un bot acum” - două liste cu istoricul pe față și urmărirea (filtre, nu predicții)

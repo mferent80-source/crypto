@@ -3,7 +3,7 @@
 // sugestiiDimineata - după tura ideilor de la 8:00: listele zilei (început de urcare, revers timpuriu) pe US (barele aduse deja pentru idei)
 //   și EU (aduse aici), istoricul fiecărei reguli pe 2 ani (SugestiiActiuni.dovada), baza pentru intraday (volumul mediu, închiderea de ieri)
 //   și urmărirea înainte (fiecare listă a zilei, judecată la închiderea de după 14 zile, −0,3%; v100.196: orizont FIX, nu „prețul de acum”).
-// sugestiiIntraday - pre-market US (~16:00 RO) / gap la deschidere EU (~10:20 RO), pe baza de dimineață.
+// (sugestiiIntraday - pre-market / gap - scoasă în v100.345; listele ei au fost scoase de pe pagină pe 01.11)
 const ZI = 86400000, URM_ZILE = 14, URM_COST = 0.003, PASTRARE = 120;
 // numărătorile din jurnal - „1 acțiune”, „25 de acțiuni” (TextRo.cate; rezerva știe aceeași regulă, ca tura-laborator)
 function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); const k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
@@ -79,19 +79,4 @@ export async function sugestiiDimineata(d) {
   return { raport: { la: acum, zi, us, eu, urmarire }, baza: {}, istoric: ist };
 }
 
-export async function sugestiiIntraday(d) {
-  const SA = d.SA, acum = d.acum || Date.now(), lista = []; let judecate = 0, fara = 0, asteapta = 0;
-  for (const [tk, b] of Object.entries(d.baza || {})) {
-    if (d.piata === "us" ? !/_US_EQ$/.test(tk) : /_US_EQ$/.test(tk)) continue;
-    let r = null; try { r = await d.cere5m(tk); } catch { r = null; }
-    const x = d.piata === "us" ? SA.premarket(r || [], b.inchidere, b.vol, acum) : SA.gapEU(r || [], b.inchidere, b.vol, acum);
-    if (d.pauza) await d.pauza(d.pauzaMs || 200);   // și după eșec (revizia M8)
-    if (x.asteapta) { asteapta++; continue; }   // revizia (I4): primele 20 de minute EU n-au venit încă
-    if (x.fara) { fara++; continue; }
-    judecate++;
-    if (x.da) lista.push({ ticker: tk, simbol: simbolTicker(tk), gap: x.gap, pret: x.pret, volPct: x.volPct });
-  }
-  lista.sort((a, b) => b.gap - a.gap);
-  if (d.jurnal) d.jurnal((d.piata === "us" ? "pre-market US" : "gap EU") + ": " + cate(judecate, "acțiune cu rânduri azi", "acțiuni cu rânduri azi") + ", fără rânduri: " + fara + " · peste +2%: " + lista.length);
-  return { la: acum, lista: lista.slice(0, 20), judecate, fara, asteapta };
-}
+// v100.345: sugestiiIntraday (pre-market US / gap EU) scoasă - tura ei a fost oprită în v100.344, listele ei scoase de pe pagină din 01.11

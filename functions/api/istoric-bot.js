@@ -656,7 +656,7 @@ export async function onRequestPost({request,env}){
   if(action==="ingustUrmarire"){
     const DIR=["long","short","neutru"],l=(Array.isArray(corp&&corp.lista)?corp.lista:[]).slice(-2000).map(e=>{if(!e||typeof e!=="object")return null;const s=simbolKv(e.simbol),la=nr(e.la),ore=nr(e.ore),lat=nr(e.latime),pas=nr(e.pas);
       if(!s||!(la>0)||!DIR.includes(e.dir)||!(ore>0)||!(lat>0)||!(pas>0))return null;const r=e.r&&typeof e.r==="object"&&e.r.lipsa===true?{lipsa:true}:e.r&&typeof e.r==="object"&&nr(e.r.net)!==null?{net:nr(e.r.net),oprit:e.r.oprit===true,lichidat:e.r.lichidat===true}:undefined;
-      return {simbol:s,la,dir:e.dir,ore,latime:lat,pas,propus:e.propus===true,...(r?{r}:{})}}).filter(Boolean);
+      return {simbol:s,la,dir:e.dir,ore,latime:lat,pas,propus:e.propus===true,...(e.reg===2?{reg:2}:{}),...(r?{r}:{})}}).filter(Boolean);   /* v100.345: reg 2 = notările listei de la 16.11 */
     await env.ISTORIC.put("ingust-urmarire",JSON.stringify(l));return json({ok:true,n:l.length});
   }
   // v100.58: gridul ingust al unei monede sugerate (colectorul, la 6 h) - doar campurile cunoscute

@@ -83,8 +83,8 @@ await test("tura: noteaza fiecare moneda si judeca notele vechi (si pe monedele 
 });
 await test("pagina: randul „urmărit înainte” in idei si in fisa (o singura cerere, cu cache)", () => {
   const e = fs.readFileSync(path.join(RAD, "public", "lib", "t212-ecran.js"), "utf8"), a = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8");
-  assert.ok(e.includes("GridProba.socotealaUrmarire(") && e.includes("action=ingustUrmarire"), "idei");
-  assert.ok(a.includes("GridProba.socotealaUrmarire("), "fisa");
+  assert.ok(/GridProba\.socotealaUrmarire(PeReguli)?\(/.test(e) && e.includes("action=ingustUrmarire"), "idei");   /* v100.345: pe reguli (regula nouă / cea veche) */
+  assert.ok(/GridProba\.socotealaUrmarire(PeReguli)?\(/.test(a), "fisa");
 });
 
 // ---- revizia finala (Opus, 01.10) ceas + urmarire ----
