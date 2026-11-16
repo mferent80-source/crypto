@@ -294,12 +294,16 @@ var Obiceiuri = (function () {
   }
 
   // botul de hartie: {setare:{dir,jos,sus,grile,levier,suma,stop?}, pornit}; bare = lumanari 15M (bare())
-  function hartie(h, bare) {
-    var b = (Array.isArray(bare) ? bare : []).filter(function (x) { return x.t >= h.pornit; });
+  // v100.349 (auditul Grid): lumânările care nu ajung la pornire ⇒ spus (lipsa), nu simulat de la alt preț; o.fundingZi = rata de acum a monedei
+  function hartie(h, bare, o) {
+    var toate = Array.isArray(bare) ? bare : [];
+    if (toate.length && toate[0].t > h.pornit + 15 * 60000) return { bare: 0, net: null, usdt: null, lipsa: true };
+    var b = toate.filter(function (x) { return x.t >= h.pornit; });
     if (!b.length) return { bare: 0, net: null, usdt: null };
-    var s = h.setare, st = { dir: s.dir, jos: s.jos, sus: s.sus, grile: s.grile, levier: s.levier, stop: s.stop || null };
+    var s = h.setare, st = { dir: s.dir, jos: s.jos, sus: s.sus, grile: s.grile, levier: s.levier, stop: s.stop || null }, F = o && o.fundingZi != null && isFinite(o.fundingZi) ? Number(o.fundingZi) : null;
+    if (F !== null) st.fundingZi = F;
     var r = GridProba.simuleaza(b, 0, b.length, st);
-    return { bare: b.length, net: r.net, usdt: r.net * (nr(s.suma) || 0), oprit: r.oprit, lichidat: r.lichidat, iesiri: r.iesiri, umpleri: r.umpleri, pretAcum: b[b.length - 1].c };
+    return { bare: b.length, net: r.net, usdt: r.net * (nr(s.suma) || 0), oprit: r.oprit, lichidat: r.lichidat, iesiri: r.iesiri, umpleri: r.umpleri, pretAcum: b[b.length - 1].c, funding: F !== null };
   }
 
   // v100.72 (pachetul 5): „Ce aș face eu” al portii de pornire (fisa Grid), ca functie pura - garda o genereaza; rez = poarta(...)

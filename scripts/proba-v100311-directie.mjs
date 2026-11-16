@@ -243,7 +243,7 @@ await test("colectorul: importă turaDirectie, o pornește o dată pe zi la ture
   assert.match(C, /const VERSIUNE_COLECTOR = "v101\.(169|1[7-9]\d|[2-9]\d\d)"/);   // v100.312: cel puțin v101.169
   assert.match(C, /const DIRECTIE_DIR = path\.join\(DATA, "directie"\)/);
   // după căderi, nu în paralel: amândouă cer ~520 de bare zilnice (ponderea 2) ⇒ împreună s-ar apropia de 2.400 / minut la Binance
-  assert.match(C, /if \(val\.grele\) turaCaderiColector\(\)\.catch\(\(e\) => jurnal\("caderi", e\.message\)\)\.then\(\(\) => turaDirectieColector\(\)\)\.catch\(\(e\) => jurnal\("directie", e\.message\)\)(?:\.then\(\(\) => turaProbaGridColector\(\)\))?(;|\.then\(\(\) => (binancePanou\.goleste|turaProbeColector)\(\)\))/);   // v100.312: apoi tura probelor (caietul, proba A)
+  assert.match(C, /if \(val\.grele\) turaCaderiColector\(\)\.catch\(\(e\) => jurnal\("caderi", e\.message\)\)\.then\(\(\) => turaDirectieColector\(\)\)\.catch\(\(e\) => jurnal\("directie", e\.message\)\)(?:\.then\(\(\) => turaProbaGridColector\(\)\))?(?:\.then\(\(\) => turaFiseColector\(\)\))?(;|\.then\(\(\) => (binancePanou\.goleste|turaProbeColector)\(\)\))/);   // v100.312: apoi tura probelor (caietul, proba A)
   assert.match(C, /stareDeDisc\("directie-stare\.json"\)/);
 });
 

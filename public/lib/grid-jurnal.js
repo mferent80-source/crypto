@@ -261,6 +261,12 @@ var GridJurnal = (function () {
     return "Recomandarea mea pe boții tăi: " + parte("urmată", b.urmata) + " · " + parte("neurmată", b.neurmata) + " — " + conc + ".";
   }
 
-  return { citeste: citeste, adauga: adauga, actualizeaza: actualizeaza, rezumat: rezumat, moneda: moneda, calibrare: calibrare, recunoaste: recunoaste, bilantFerestre: bilantFerestre, textFerestre: textFerestre, bilantRecomandare: bilantRecomandare, textRecomandare: textRecomandare };
+  // v100.349 (auditul Grid, el: „pe server”): unirea a două liste (telefon / PC / server) după id - câștigă cel modificat ultimul (m); cele șterse nu revin
+  function uneste(a, b, sterse) {
+    var s = {}; (Array.isArray(sterse) ? sterse : []).forEach(function (x) { s[x] = 1; });
+    var m = {}; (Array.isArray(a) ? a : []).concat(Array.isArray(b) ? b : []).forEach(function (e) { if (!e || !e.id || s[e.id]) return; var x = m[e.id]; if (!x || (Number(e.m) || 0) >= (Number(x.m) || 0)) m[e.id] = e; });
+    return Object.keys(m).map(function (k) { return m[k]; });
+  }
+  return { uneste: uneste, citeste: citeste, adauga: adauga, actualizeaza: actualizeaza, rezumat: rezumat, moneda: moneda, calibrare: calibrare, recunoaste: recunoaste, bilantFerestre: bilantFerestre, textFerestre: textFerestre, bilantRecomandare: bilantRecomandare, textRecomandare: textRecomandare };
 })();
 if (typeof globalThis !== "undefined") globalThis.GridJurnal = GridJurnal;

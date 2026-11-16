@@ -178,6 +178,25 @@ var GridLaborator = (function () {
       return { sursa: "Laboratorul gridului", afirmatie: q.titlu, p: q.net.p, pMin: q.net.pMin, dif: q.net.dif, felul: "laborator", regula: q.verdict === "dovedit", directie: q.net.dif > 0 ? q.eticheteA + " iese mai bine pe net" : q.eticheteA + " iese mai rău pe net" };
     });
   }
-  return { ferestre: ferestre, compara: compara, intrebari: intrebari, testNet: testNet, pentruRegistru: pentruRegistru };
+  // v100.349 (auditul Grid, el: „Înghețat + corecția”): laboratorul rulează zilnic pe ultimele ~62 de zile, deci „dovedit” apărea și dispărea (pe lumi
+  // fără efect, cel puțin un DOVEDIT pe rulare în ~20% din cazuri). Verdictul se dă O SINGURĂ DATĂ pe fiecare bloc de 60 de zile care nu se suprapune:
+  // prima rulare după capătul blocului îngheață întrebările ei (verdictul + netul: dif, p) - colectorul le ține pe disc (registrul), iar blocul
+  // înghețat intră în corecția Benjamini–Hochberg (pentruRegistru). reg = { start, blocuri: [{ de, pana, la, intrebari }] }.
+  var BLOC_MS = 60 * 86400000;
+  function ingheata(reg, intrebari, acum) {
+    var r = reg && reg.start > 0 ? { start: reg.start, blocuri: (Array.isArray(reg.blocuri) ? reg.blocuri : []).slice() } : { start: acum, blocuri: [] };
+    var cap = r.start + (r.blocuri.length + 1) * BLOC_MS;
+    if (acum >= cap && Array.isArray(intrebari) && intrebari.length) r.blocuri.push({ de: cap - BLOC_MS, pana: cap, la: acum, intrebari: intrebari.map(function (q) {
+      return { id: q.id, titlu: q.titlu, eticheteA: q.eticheteA, eticheteB: q.eticheteB, verdict: q.verdict, net: q.net ? { stare: q.net.stare, dif: q.net.dif, p: q.net.p, pMin: q.net.pMin || 0 } : null };
+    }) });
+    r.urmator = r.start + (r.blocuri.length + 1) * BLOC_MS;
+    return r;
+  }
+  // pe fiecare întrebare: în câte blocuri înghețate a ieșit dovedit / se contrazice
+  function bilantBlocuri(reg) {
+    var o = {}; (reg && Array.isArray(reg.blocuri) ? reg.blocuri : []).forEach(function (b) { (b.intrebari || []).forEach(function (q) { var x = o[q.id] || (o[q.id] = { n: 0, dovedit: 0, contrazis: 0, ultim: null }); x.n++; if (q.verdict === "dovedit") x.dovedit++; else if (q.verdict === "contrazis") x.contrazis++; x.ultim = q.verdict; }); });
+    return o;
+  }
+  return { ferestre: ferestre, compara: compara, intrebari: intrebari, testNet: testNet, pentruRegistru: pentruRegistru, ingheata: ingheata, bilantBlocuri: bilantBlocuri };
 })();
 if (typeof globalThis !== "undefined") globalThis.GridLaborator = GridLaborator;

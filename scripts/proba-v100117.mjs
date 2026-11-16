@@ -258,7 +258,7 @@ await test("(5b) pagina: secțiunea #carnet, butonul în Zilnic după „Grid: c
   assert.match(html, /moreNav\('carnet',true\)/);
 });
 await test("(5c) sub „Ce aș alege eu” din fișă: rândul carnetului + butonul spre pagină; Grid pornește citirea carnetului", () => {
-  const i = app.indexOf('<p class="grPlanAleg">'), f = app.slice(i, i + 900);
+  const i = app.indexOf('<p class="grPlanAleg">'), f = app.slice(i, i + 1800);   /* v100.349: + ramura „aș aștepta” (verdictul ferestrei) */
   assert.match(f, /Carnet\.randSubFisa\(carnetStare\.raport\)/); assert.match(f, /navTo\(\\'carnet\\',true\)/);   // în șirul JS apostrofurile sunt escapate
   assert.match(app, /id==="gridset"[^\n]*carnetPorneste\(false\)/);
 });

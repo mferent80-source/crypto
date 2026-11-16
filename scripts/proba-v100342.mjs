@@ -93,7 +93,8 @@ await test("(I-881) constantele G1 sunt cele din jurnal: 200 de zile până la 1
   assert.equal(G1.minRaport, 1.2); assert.equal(G1.minDiferenta, 0.0005); assert.equal(G1.bare4h, 500); assert.equal(G1.minBare4h, 50); assert.equal(G1.h0Limita, 0.04); assert.equal(ziIso(primaZi()), "2026-04-28");
   // premisele, verificate pe cod (revizia independentă a găsit că le luasem greșit): cele 60 de poziții ale lui G1 sunt lista ferestrei „Grid: ce
   // setez?” (ordonată după scor), NU tăietura rețetei din Scan - acolo `rang` e locul în lista colectorului, care vine în ordinea volumului
-  assert.match(APP, /var l=GridClasament\.ordoneaza\(c\.monede\)/); assert.match(APP, /l\.slice\(0,60\)\.forEach\(function\(m\)\{/, "fereastra Grid arată primele 60 din lista ordonată");
+  // v100.349 (auditul Grid): pagina arată acum lista din Sugestii (Idei.ideiBotiInfo); G1 rămâne despre ordinea după scor (GridClasament.ordoneaza), cea de până la v100.348
+  assert.match(citeste("public", "lib", "grid-clasament.js"), /function ordoneaza\(/); assert.match(APP, /Idei\.ideiBotiInfo\(c,5\)/);
   assert.match(citeste("scripts", "lib", "tura-clasament.mjs"), /const lista = d\.GridClasament\.topDupaVolum\(/); assert.match(citeste("scripts", "lib", "tura-scan.mjs"), /rang: i \+ 1,/, "rang = locul în lista colectorului (după volum)");
   assert.match(citeste("public", "lib", "scan.js"), /x\.rang <= 60/);
   const J = citeste("docs", "cercetare", "2026-11-13-tablou-acuratete.md"), iR = J.indexOf("## G1 — „Candidați de grid”"), iRez = J.indexOf("### G1 — rezultatul");

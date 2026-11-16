@@ -36,13 +36,14 @@ var GridPlan = (function () {
   function setare(o, d, u, L) {
     var P = o.pret, lung = o.dir === "long";
     var jos = lung ? P * (1 - d) : P * (1 - u), sus = lung ? P * (1 + u) : P * (1 + d);
-    var N = G.nrGrile(jos, sus, o.pas > 0 ? o.pas : C.PAS_MIN);
-    var mo = nr(o.minOrdin);
-    if (mo !== null && mo > 0 && o.suma * L / N < mo) N = Math.max(C.GRILE_MIN, Math.floor(o.suma * L / mo));
+    var N = o.grile > 0 ? o.grile : G.nrGrile(jos, sus, o.pas > 0 ? o.pas : C.PAS_MIN), sumaMica = false;   // v100.349: o.grile = fereastra mutată (fabrica)
+    var mo = nr(o.minOrdin), ms = nr(o.minSize);
+    if (ms !== null && ms > 0) mo = Math.max(mo || 0, ms * sus);   // v100.349 (auditul Grid): și minimul în monede (minSizeLimit × prețul de sus), ca fișa
+    if (!(o.grile > 0) && mo !== null && mo > 0 && o.suma * L / N < mo) { N = Math.max(C.GRILE_MIN, Math.floor(o.suma * L / mo)); sumaMica = o.suma * L / N < mo; }
     var g = Math.pow(sus / jos, 1 / N) - 1;
     return { dir: o.dir, pret: P, jos: jos, sus: sus, grile: N, pas: g, levier: L, suma: o.suma, d: d, u: u,
       stop: { jos: jos * (1 - g / 2), sus: sus * (1 + g / 2) },   // la margini, 1/2 pas dincolo (long: jos = stop, sus = tinta)
-      lichidare: G.lichidare(G.niveluri(jos, sus, N), P, o.dir, L), perOrdin: o.suma * L / N, profitGrila: g - 2 * C.COMISION_GRILA };
+      lichidare: G.lichidare(G.niveluri(jos, sus, N), P, o.dir, L), perOrdin: o.suma * L / N, profitGrila: g - 2 * C.COMISION_GRILA, minOrdin: mo || null, sumaMica: sumaMica };
   }
   // totalul in USDT daca pretul merge DREPT de la pornire pana la stop (parte = "pierdere") sau pana la tinta
   function laMargine(st, parte) {
@@ -57,10 +58,11 @@ var GridPlan = (function () {
   // timp, si media in USDT pe pornire (cu comisioanele; ce ramane deschis se socoteste la pretul de la capatul ferestrei).
   // v100.21: zile (implicit ZILE) - laboratorul cere 60; ceaMaiProastaUsdt = pornirea cu cel mai prost rezultat (riscul, nu doar media)
   // v100.196 (auditul 14.10, B4): fz = rata de funding pe zi a monedei (GridProba.fundingDe; fara ea, costul presupus 0,03%/zi)
-  function proba(b15, st, zile, fz) {
-    var Z = zile > 0 ? Math.floor(zile) : ZILE, W = FEREASTRA_ZILE * C.BARE_ZI, n0 = b15 ? b15.length - Z * C.BARE_ZI : -1, F = GP.fundingDe(fz);
+  function proba(b15, st, zile, fz, fzile) {
+    var FZ = fzile > 0 ? Math.round(fzile) : FEREASTRA_ZILE;   // v100.349 (auditul Grid): fereastra = cât îl ții (1/2/3 zile), nu fix 3
+    var Z = zile > 0 ? Math.floor(zile) : ZILE, W = FZ * C.BARE_ZI, n0 = b15 ? b15.length - Z * C.BARE_ZI : -1, F = GP.fundingDe(fz);
     if (!b15 || n0 < 0) return null;
-    var lung = st.dir === "long", out = { n: 0, stop: 0, tinta: 0, inGrid: 0, lichidari: 0, oreTipic: null, mediaUsdt: null, ceaMaiProastaUsdt: null, zile: Z, ferestreZile: FEREASTRA_ZILE, independente: Math.floor(Z / FEREASTRA_ZILE), funding: F };
+    var lung = st.dir === "long", out = { n: 0, stop: 0, tinta: 0, inGrid: 0, lichidari: 0, oreTipic: null, mediaUsdt: null, ceaMaiProastaUsdt: null, zile: Z, ferestreZile: FZ, independente: Math.floor(Z / FZ), funding: F };
     // v100.272 (ideile auditului 29.10): pornirile la 6 h au ferestre de 3 zile SUPRAPUSE (12 porniri pe fereastră): o singură cădere intra de 12 ori
     // în „77 din 109”. Pe lângă ele, aceleași rezultate pe ferestrele care NU se suprapun (prima pornire, apoi următoarea de după capătul ei: 10 pe
     // 30 de zile) - pe ele judecă „aș sări peste ea” (deSarit)
@@ -91,12 +93,34 @@ var GridPlan = (function () {
     return setare(x, d, u, L);
   }
   function complet(o, st, extra) {
-    st.laStop = laMargine(st, "pierdere"); st.laTinta = laMargine(st, "castig"); st.proba = proba(o.b15, st, o.zile, o.fundingZi);
+    st.laStop = laMargine(st, "pierdere"); st.laTinta = laMargine(st, "castig"); st.proba = proba(o.b15, st, o.zile, o.fundingZi, o.fereastraZile);
     for (var k in extra) st[k] = extra[k];
     return st;
   }
 
   // o: { pret, dir, suma, levier, plan: {plus, minus}, amp, pas, b15, minOrdin }
+  // v100.349 (auditul Grid, el: „verdict unic pe setarea pornită”): fereastra (ÎNGUST / LARG) mutată pe alt preț - aceleași fracții jos / sus,
+  // aceleași grile și același levier - pentru proba pe istoric (GridProba.probaSetare)
+  function fabrica(v) { return function (pret) { return setare({ pret: pret, dir: v.dir, suma: v.suma, pas: v.pas, grile: v.grile }, v.d, v.u, v.levier); }; }
+  // Verdictul FERESTREI pe care o pornești: aceeași regulă ca fișa (GridCalcul.verdict: mișcarea, proba pe zilele nevăzute, t pe ferestrele
+  // independente, lichidările), pe proba ei (aceleași bare, cât îl ții, funding-ul real), plus garda Pionex: minimul pe ordin (minNotional și
+  // minSizeLimit), pasul de preț al bursei, lichidarea înaintea stopului.
+  // o = { b, bz, H, fundingZi, regim, pozitie, zile, info: { minNotional, minSizeLimit, quotePrecision } }
+  function verdictFereastra(v, o) {
+    if (!v || v.eroare || !o) return null;
+    var info = o.info || {}, ps = o.b && o.H > 0 ? GP.probaSetare(o.b, o.H, o.fundingZi, fabrica(v), o.bz) : null;
+    var vd = G.verdict({ regim: o.regim, stat: ps, zile: o.zile, pozitie: o.pozitie, pesteSigur: false, nesigur: false, ferestreTest: ps && ps.test && ps.test.ind ? ps.test.ind.n : null, incercate: 0, cereT: o.bz === C.BARE_ZI_1H });
+    var rosu = [], galben = [], U = function (x) { return (Math.round(x * 10) / 10).toFixed(1).replace(".", ",") + " USDT"; };
+    var mo = GP.minOrdin({ minNotional: nr(info.minNotional), minSize: nr(info.minSizeLimit) }, v.sus);
+    if (mo !== null && v.perOrdin < mo) rosu.push("pe fiecare ordin ar intra " + U(v.perOrdin) + ", sub minimul Pionex de " + U(mo) + ": mărește suma sau alege mai puține grile");
+    var qp = nr(info.quotePrecision), tick = qp !== null && qp >= 0 ? Math.pow(10, -qp) : null;
+    if (tick && v.pret > 0 && 3 * tick / v.pret > v.pas) galben.push("pasul de preț al bursei (" + String(tick).replace(".", ",") + ") e mare față de pasul gridului (" + (v.pas * 100).toFixed(2).replace(".", ",") + "%): Pionex rotunjește liniile, iar câștigul pe grilă iese mai mic");
+    var lung = v.dir === "long", lq = v.lichidare ? (lung ? v.lichidare.jos : v.lichidare.sus) : null, sp = v.stop ? (lung ? v.stop.jos : v.stop.sus) : null;
+    if (lq != null && sp != null && (lung ? lq >= sp : lq <= sp)) rosu.push("lichidarea vine înaintea stopului: stopul nu te apără la levierul ăsta");
+    var mot = rosu.concat(vd.motive || []).concat(galben);
+    return { nivel: rosu.length ? "nu" : galben.length && vd.nivel === "porneste" ? "asteapta" : vd.nivel, motive: mot, stat: ps };
+  }
+
   function variante(o) {
     var P = nr(o && o.pret), dir = String(o && o.dir || ""), suma = nr(o && o.suma), plan = (o && o.plan) || {};
     var plus = nr(plan.plus), minus = nr(plan.minus), Lt = Math.max(1, Math.floor(nr(o && o.levier) || C.LEV_MAX)), amp = nr(o && o.amp);
@@ -107,7 +131,7 @@ var GridPlan = (function () {
     if (dir !== "long" && dir !== "short") return { eroare: "Gridul după plan are sens doar pentru long sau short (cel neutru pierde pe ambele părți)." };
     if (!(suma > 0)) return { eroare: "N-am suma investită." };
     if (!(plus > 0) || !(minus > 0)) return { eroare: "Îmi trebuie planul întreg: ținta pe plus și pragul pe minus, în USDT." };
-    var x = { pret: P, dir: dir, suma: suma, pas: nr(o.pas), minOrdin: o.minOrdin, b15: o.b15, zile: nr(o.zile), fundingZi: o.fundingZi };
+    var x = { pret: P, dir: dir, suma: suma, pas: nr(o.pas), minOrdin: o.minOrdin, minSize: o.minSize, b15: o.b15, zile: nr(o.zile), fundingZi: o.fundingZi, fereastraZile: o.fereastraZile };
     // TA: levierul tau, banda cat planul
     var dT = dPentru(suma * Lt, minus, plus), ta = complet(x, potriveste(x, Lt, dT, uPentru(suma * Lt, dT, plus), false, minus, plus), { cum: Lt < LtTau ? "levierul sigur de azi (" + Lt + "×; al tău e " + LtTau + "×), banda cât îți permite pragul de pierdere" : "levierul tău, banda cât îți permite pragul de pierdere", levierTau: LtTau });
     // MEA: banda cat o zi obisnuita, levierul cel mai mare (<= al tau) la care, pe simulator, marginea costa cel mult planul
@@ -285,6 +309,6 @@ var GridPlan = (function () {
     return { k: null, t: cand[0].t, simbol: cand[0].simbol, verdict: cand[0].verdict || null, rec: cand[0].rec || null };
   }
 
-  return { variante: variante, proba: proba, dePornire: dePornire, pierdere: pierdere, castig: castig, potrivire: potrivire, alege: alege, deSarit: deSarit, textPornit: textPornit, motive: motive, setareFereastra: setareFereastra, recunoaste: recunoaste, fereastraBotului: fereastraBotului };
+  return { fabrica: fabrica, verdictFereastra: verdictFereastra, variante: variante, proba: proba, dePornire: dePornire, pierdere: pierdere, castig: castig, potrivire: potrivire, alege: alege, deSarit: deSarit, textPornit: textPornit, motive: motive, setareFereastra: setareFereastra, recunoaste: recunoaste, fereastraBotului: fereastraBotului };
 })();
 if (typeof globalThis !== "undefined") globalThis.GridPlan = GridPlan;

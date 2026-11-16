@@ -44,6 +44,8 @@ export function uneNet(ev, deEvaluat, cache, acum) {
   const tot = (ev || []).slice(); for (const [k, x] of Object.entries(nou)) if (!are.has(k)) tot.push(x);
   return { ev: tot, cache: nou, acum };
 }
+// v100.349 (auditul Grid): în corecție intră doar blocul de 60 de zile ÎNGHEȚAT cel mai nou (zgomotul zilnic al laboratorului nu e un verdict)
+function labInghetat(lab) { const b = lab && lab.blocuri && Array.isArray(lab.blocuri.blocuri) ? lab.blocuri.blocuri : []; return b.length ? b[b.length - 1].intrebari || [] : []; }
 export async function turaVerdicte(d, st) {
   const acum = d.acum || Date.now();
   if (st.inLucru) return null;
@@ -100,7 +102,7 @@ export async function turaVerdicte(d, st) {
     /* v101.116 (auditul sever, 🟡2): și carnetul (de pe server) și modelele 🧠/🌳 (de pe disc) intră în corecție */
     const cn = d.Carnet ? await incearca(d, "carnetul", () => d.cere("/api/istoric-bot?action=carnet")) : null, rj = cn && cn.carnet && cn.carnet.rejoc;
     const lab = d.GridLaborator ? await incearca(d, "laboratorul", async () => (await d.cere("/api/istoric-bot?action=laborator")).laborator) : null;   /* v100.259: laboratorul pe net intră în corecție */
-    const alte = [].concat(d.GridLaborator && lab ? d.GridLaborator.pentruRegistru(lab.intrebari) : [], d.Carnet && rj ? d.Carnet.pentruRegistru(rj.intrebari) : [], d.Retea && d.modeleRetea ? d.Retea.pentruRegistru(d.modeleRetea(), "🧠") : [], d.Retea && d.modeleArbori ? d.Retea.pentruRegistru(d.modeleArbori(), "🌳") : []);
+    const alte = [].concat(d.GridLaborator && lab ? d.GridLaborator.pentruRegistru(labInghetat(lab)) : [], d.Carnet && rj ? d.Carnet.pentruRegistru(rj.intrebari) : [], d.Retea && d.modeleRetea ? d.Retea.pentruRegistru(d.modeleRetea(), "🧠") : [], d.Retea && d.modeleArbori ? d.Retea.pentruRegistru(d.modeleArbori(), "🌳") : []);
     const reg = d.Verdicte.registru({ calibrare: cal, risc, asemanatoare: caz && caz.bilant && Array.isArray(caz.bilant.teste) ? caz.bilant.teste : [], alte });
     const pe = {}; jurnal.forEach((v) => { pe[v.s] = (pe[v.s] || 0) + 1; });
     await d.trimite("/api/istoric-bot?action=verdicteCalibrare", { la: acum, n: jurnal.length, peSursa: pe, evaluate: ev.length, calibrare: cal, registru: reg });

@@ -312,7 +312,7 @@ await test("🔑 I-847: panoul zilnic - a doua cerere a aceleiași serii zilnice
   assert.equal(cheiePanou(K), "k:AUSDT:200"); assert.equal(cheiePanou("https://fapi.binance.com/fapi/v1/klines?symbol=AUSDT&interval=1d&limit=200&endTime=5"), null);
   const C = citeste("scripts", "colector.mjs");
   assert.match(C, /const binancePanou = cuPanouZilnic\(binanceDirect, \{ jurnal \}\);/);
-  assert.match(C, /turaCaderiModul\(\{ binance: binancePanou,/); assert.match(C, /\.then\(\(\) => turaDirectieColector\(\)\)\.catch\(\(e\) => jurnal\("directie", e\.message\)\)(?:\.then\(\(\) => turaProbaGridColector\(\)\))?\.then\(\(\) => binancePanou\.goleste\(\)\)\.then\(\(\) => turaProbeColector\(\)\)/); assert.match(C, /turaDirectieModul\(\{ binance: binancePanou,/);
+  assert.match(C, /turaCaderiModul\(\{ binance: binancePanou,/); assert.match(C, /\.then\(\(\) => turaDirectieColector\(\)\)\.catch\(\(e\) => jurnal\("directie", e\.message\)\)(?:\.then\(\(\) => turaProbaGridColector\(\)\))?(?:\.then\(\(\) => turaFiseColector\(\)\))?\.then\(\(\) => binancePanou\.goleste\(\)\)\.then\(\(\) => turaProbeColector\(\)\)/); assert.match(C, /turaDirectieModul\(\{ binance: binancePanou,/);
   const TC = citeste("scripts", "lib", "tura-caderi.mjs"), TD = citeste("scripts", "lib", "tura-directie.mjs");
   assert.match(TC, /klines\?symbol=\$\{encodeURIComponent\(s\)\}&interval=1d&limit=\$\{r\.bare\}/); assert.match(TD, /klines\?symbol=\$\{encodeURIComponent\(s\)\}&interval=1d&limit=\$\{s === "BTCUSDT" \? r\.bareBtc : r\.bare\}/);
   assert.match(TC, /bare: 200,/); assert.match(TD, /bare: 200, bareBtc: 1000/);   /* aceeași adresă ⇒ același răspuns */
@@ -361,7 +361,7 @@ await test("colectorul v101.170: tura probelor după direcție (caietul o dată 
   assert.match(C, /const VERSIUNE_COLECTOR = "v101\.(1[7-9]\d|[2-9]\d\d)"/);
   assert.match(C, /import \{ turaPareri \} from "\.\/lib\/tura-pareri\.mjs";/); assert.match(C, /import \{ cuPanouZilnic \} from "\.\/lib\/panou-binance\.mjs";/); assert.match(C, /import \{ liniiProbeRaport, zileLipsa \} from "\.\/lib\/probe-raport\.mjs";/);
   assert.match(C, /const Caiet = incarca\("caiet\.js", "Caiet"\);/);
-  assert.match(C, /\.then\(\(\) => turaDirectieColector\(\)\)\.catch\(\(e\) => jurnal\("directie", e\.message\)\)(?:\.then\(\(\) => turaProbaGridColector\(\)\))?\.then\(\(\) => binancePanou\.goleste\(\)\)\.then\(\(\) => turaProbeColector\(\)\)\.catch\(\(e\) => jurnal\("probe", e\.message\)\);/);
+  assert.match(C, /\.then\(\(\) => turaDirectieColector\(\)\)\.catch\(\(e\) => jurnal\("directie", e\.message\)\)(?:\.then\(\(\) => turaProbaGridColector\(\)\))?(?:\.then\(\(\) => turaFiseColector\(\)\))?\.then\(\(\) => binancePanou\.goleste\(\)\)\.then\(\(\) => turaProbeColector\(\)\)\.catch\(\(e\) => jurnal\("probe", e\.message\)\);/);
   assert.match(C, /await trimite\("\/api\/istoric-bot\?action=probaA", \{ la: acum, \.\.\.stadiuProbaA\(pa\) \}\);/);
   assert.match(C, /if \(process\.env\.COLECTOR_FARA_PROBE\) return;/);
 });

@@ -72,7 +72,7 @@ await test("tura verdictelor: măsura pe bani ținută pe disc (barele de 15 min
   const c = uneNet([], [deEv[1]], a.cache, 3e9);
   assert.equal(c.ev.length, 1); assert.equal(Object.keys(c.cache).length, 1);
   const tv = src("scripts", "lib", "tura-verdicte.mjs");
-  assert.match(tv, /d\.GridLaborator && lab \? d\.GridLaborator\.pentruRegistru\(lab\.intrebari\) : \[\]/);
+  assert.match(tv, /d\.GridLaborator && lab \? d\.GridLaborator\.pentruRegistru\(labInghetat\(lab\)\) : \[\]/);   /* v100.349: blocul de 60 de zile înghețat */
   assert.match(tv, /d\.Verdicte\.evalueaza\(deEvaluat, bare, reper, \{ bare15, GridProba: d\.GridProba \}\)/);
   assert.match(src("scripts", "colector.mjs"), /turaVerdicteModul\(\{[^\n]*GridLaborator, GridProba, lumanari15M, netCache/);
 });
@@ -80,7 +80,7 @@ await test("Contul întreg: măsura pe bani a porții gridului e pe zile, nu pe 
   assert.match(src("public", "lib", "cont-ecran.js"), /r\.masura === "linistit" \|\| r\.masura === "net" \? \(r\.h === 1 \? " zi" : " zile"\) : " zile de bursă"/);
 });
 await test("pagina laboratorului spune că „dovedit” e pe bani (net, pe zile, ferestre care nu se suprapun)", () => {
-  assert.match(src("public", "app.js"), /„Dovedit” = diferența de bani \(netul\) pe zile, pe ferestre care nu se suprapun, cu p sub 0,05 și același semn pe zilele de alegere și pe cele nevăzute/);
+  assert.match(src("public", "app.js"), /diferența de bani \(netul\) pe zile, pe ferestre care nu se suprapun, cu p sub 0,05 și același semn pe zilele de alegere și pe cele nevăzute/);
 });
 await test("Consilierul ține ambele margini la un bot neutru (jos și sus), nu doar prima", () => {
   const vm2 = { console, Math, Object, Array, String, Number, JSON, isFinite, TextRo: globalThis.TextRo };

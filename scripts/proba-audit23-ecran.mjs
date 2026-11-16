@@ -291,7 +291,7 @@ await test("15d Contul Pionex: soldurile cu num() (ro-RO, virgulă), lichidarea 
 await test("16 TextRo.volum: „4,5 M”, „16 M”, „1,2 mld”, „850 k”, „720”; Grid → coloana Volum îl folosește", () => {
   assert.equal(typeof TR.volum, "function");
   for (const [v, t] of [[4507000, "4,5 M"], [16228000, "16 M"], [1234000000, "1,2 mld"], [850400, "850 k"], [720, "720"], [null, "—"], [NaN, "—"], [9990, "10 k"]]) assert.equal(TR.volum(v), t, String(v));
-  assert.match(APP, /\(m\.volum!=null\?TextRo\.volum\(m\.volum\):"—"\)/);
+  assert.match(APP, /\((m|x)\.volum!=null\?TextRo\.volum\((m|x)\.volum\):"—"\)/);   /* v100.349: lista Grid ca Sugestii (rândul x) */
   assert.ok(!/Math\.round\(m\.volum\/1000\)\.toLocaleString\("ro-RO"\)\+" k"/.test(APP));
 });
 

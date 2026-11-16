@@ -97,7 +97,7 @@ await test("1c verdictul fișei: rândul „mișcare” citează cifra pe 24 h (
   const v = G.verdict({ regim: RG(), stat: { antren: { lichidari: 0, mediana: 0.01 }, test: { lichidari: 0, mediana: 0.01, medie: 0.01 } }, zile: 30, pozitie: 0.5 });
   const m = v.motive[0];
   assert.equal(v.nivel, "nu");
-  assert.equal(m, "prețul abia a făcut o mișcare mare: 1,6× obișnuitul pe 24 h — un grid pornit după mișcare iese cel mai rău");
+  assert.equal(m, "prețul abia a făcut o mișcare mare: 1,6× obișnuitul pe 24 h — după mișcare gridul a ieșit mai rău (neprobat)"   /* v100.349: nedovedit (Busola 14.10) */);
   assert.doesNotMatch(m, /dovedit|2,8/); assert.deepEqual(verifica(m, "rand"), [], m);
   /* fără cifra pe 24 h: tot „mișcare mare”, fără „NaN” */
   const v2 = G.verdict({ regim: { miscare: true, r4h: 2.8, r24h: null }, stat: { antren: { lichidari: 0, mediana: 0.01 } }, zile: 30 });

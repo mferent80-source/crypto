@@ -80,7 +80,7 @@ var Idei = (function () {
       .sort(function (a, b) { return b.net7 - a.net7; });
     var pe = {}, lista = [], sarite = 0;
     for (var i = 0; i < lichizi.length && lista.length < (n || 5); i++) { var k = lichizi[i].dir || "neutru"; if ((pe[k] || 0) >= MAX_PE_DIR) { sarite++; continue; } pe[k] = (pe[k] || 0) + 1; lista.push(lichizi[i]); }
-    return { lista: lista, subPrag: cand.length - lichizi.length, lichizi: lichizi.length, candidati: cand.length, sarite: sarite, prag: PRAG_VOL_BOT, maxPeDir: MAX_PE_DIR, expunere: EXPUNERE_FUNDING };
+    return { lista: lista, toti: lichizi, subPrag: cand.length - lichizi.length,   /* v100.349: toti = toți lichizii, ordonați (pagina Grid) */ lichizi: lichizi.length, candidati: cand.length, sarite: sarite, prag: PRAG_VOL_BOT, maxPeDir: MAX_PE_DIR, expunere: EXPUNERE_FUNDING };
   }
   function ideiBoti(cl, trades, n) {
     var tr = Array.isArray(trades) ? trades : [];

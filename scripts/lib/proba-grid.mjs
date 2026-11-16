@@ -43,16 +43,25 @@ export function simGrid(p, bare, o) {
     if (b < a) { for (let i = p.n - 1; i >= 0; i--) { const g = G[i]; if (g.tip === 1 && !g.tine && L[i] < a && L[i] >= b) { tran(q, L[i]); g.tine = true; } else if (g.tip === -1 && g.tine && L[i] < a && L[i] >= b) { tran(q, L[i]); g.tine = false; } } }
     else if (b > a) { for (let i = 0; i < p.n; i++) { const g = G[i], u = L[i + 1]; if (g.tip === 1 && g.tine && u > a && u <= b) { tran(-q, u); g.tine = false; } else if (g.tip === -1 && !g.tine && u > a && u <= b) { tran(-q, u); g.tine = true; } } }
   };
+  // v100.349 (urmărirea fișei gridului): o.iesiri = { jos, sus } - stopul și ținta la marginile ferestrei; prețul trece de una ⇒ totul se închide
+  // acolo (cu comision), fără funding după. Fără o.iesiri: ca înainte.
+  const ies = o.iesiri || null; let oprit = null;
   for (const x of bare) {
     while (fi < fund.length && fund[fi].t <= x.t) { cash -= pos * ultim * fund[fi].r; fi++; }
     // o.drum = "scurt": drumul cel mai scurt prin bară (închide în sus ⇒ întâi minimul) - cele mai puține dus-întorsuri, deci o margine de JOS;
     // altfel ordinea min / max trasă la sorți - inventează dus-întorsuri la mișcare mare, deci o margine de SUS (revizia Opus, 🔴1)
     const drum = o.drum === "scurt" ? (x.c >= x.o ? [x.o, x.l, x.h, x.c] : [x.o, x.h, x.l, x.c]) : rnd() < 0.5 ? [x.o, x.h, x.l, x.c] : [x.o, x.l, x.h, x.c];
-    let a = ultim; for (const b of drum) { misca(a, b); a = b; }
-    ultim = x.c;
+    let a = ultim;
+    for (const b of drum) {
+      if (ies && ies.jos > 0 && b <= ies.jos) { misca(a, ies.jos); a = ies.jos; oprit = "jos"; break; }
+      if (ies && ies.sus > 0 && b >= ies.sus) { misca(a, ies.sus); a = ies.sus; oprit = "sus"; break; }
+      misca(a, b); a = b;
+    }
+    ultim = oprit ? a : x.c;
+    if (oprit) break;
   }
-  const brut = cash + pos * ultim; comisioane += Math.abs(pos) * ultim * feeC;   // închiderea poziției de la final, cu comision
-  return { r: brut - comisioane, brut, comisioane, umpleri, pozFinala: pos };
+  const brut = cash + pos * ultim; comisioane += Math.abs(pos) * ultim * feeC;   // închiderea poziției de la final (sau la ieșire), cu comision
+  return Object.assign({ r: brut - comisioane, brut, comisioane, umpleri, pozFinala: oprit ? 0 : pos }, oprit ? { oprit } : {});
 }
 
 /** Alegerea zilei: cele din listă + aleatorii (mulberry32 pe zi) dintre candidații lichizi care nu sunt în listă. */

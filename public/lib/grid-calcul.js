@@ -434,7 +434,7 @@ var GridCalcul = (function () {
     if (rg.miscare) {
       // v100.271 (ideile auditului 29.10): cifra = cea pe 24 h (definiția comună miscareMare, ca alerta și sfatul), nu maximul cu 4 h
       var r24 = nr(rg.r24h);
-      rosu.push("prețul abia a făcut o mișcare mare" + (r24 !== null ? ": " + r24.toFixed(1).replace(".", ",") + "× obișnuitul pe 24 h" : " pe 24 h") + " — un grid pornit după mișcare iese cel mai rău");
+      rosu.push("prețul abia a făcut o mișcare mare" + (r24 !== null ? ": " + r24.toFixed(1).replace(".", ",") + "× obișnuitul pe 24 h" : " pe 24 h") + " — după mișcare gridul a ieșit mai rău (neprobat)");   // v100.349 (auditul Grid): Busola 14.10 - nedovedit
     }
     if (a.lichidari > 0) rosu.push("pe istoric, setarea asta a fost lichidată " + oriDe(a.lichidari));
     if (o.stat.test && o.stat.test.lichidari > 0) rosu.push("pe zilele nevăzute, setarea asta a fost lichidată " + oriDe(o.stat.test.lichidari));

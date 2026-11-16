@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ro"><head><link href="/manifest.webmanifest" rel="manifest"/><meta content="#0E141A" name="theme-color"/><meta content="dark" name="color-scheme"/><meta charset="utf-8"/><meta content="v100.348" name="app-version"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
+<html lang="ro"><head><link href="/manifest.webmanifest" rel="manifest"/><meta content="#0E141A" name="theme-color"/><meta content="dark" name="color-scheme"/><meta charset="utf-8"/><meta content="v100.349" name="app-version"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
 <title>Crypto Radar</title>
 <link href="/app.css" rel="stylesheet"/>
 </head><body><div aria-live="polite" class="offlineBanner" hidden="" id="offlineBanner" role="status">OFFLINE · read-only local research mode. Network analysis/scanners are disabled; cached UI, journal and reports remain available.</div>
@@ -75,7 +75,7 @@
 </details>
 </div>
 <div class="sideFooter">
-<div class="label">Build</div><div id="sideVersiune" style="font-size:11px;font-weight:800;margin-top:3px">v100.348 · REGISTRUL: ZILE ÎNTREGI, FIȘIER SIGUR</div>
+<div class="label">Build</div><div id="sideVersiune" style="font-size:11px;font-weight:800;margin-top:3px">v100.349 · GRID: CE SETEZ, REFĂCUTĂ</div>
 <div class="row"><span class="small">Spot source</span><b class="good">DIRECT</b></div>
 <div class="row"><span class="small">Engine</span><b class="good">READY</b></div>
 </div>
@@ -92,7 +92,7 @@
 <div class="logo">◈</div>
 <div><h1>Crypto Radar Pro · Multi-Market</h1><div class="subhead">Crypto + Nasdaq + US stocks · multi-timeframe research</div></div>
 </div>
-<div class="headerMeta"><span class="badge" id="antetVersiune">v100.348 · CRYPTO RADAR · PIONEX + TRADING 212 DOAR CITIRE</span><span class="metaChip">STRICT READ-ONLY · STATIC+RUNTIME</span><span class="metaChip">SPOT DATA · NO ORDER ROUTE</span><span class="metaChip">4 TIMEFRAMES</span></div>
+<div class="headerMeta"><span class="badge" id="antetVersiune">v100.349 · CRYPTO RADAR · PIONEX + TRADING 212 DOAR CITIRE</span><span class="metaChip">STRICT READ-ONLY · STATIC+RUNTIME</span><span class="metaChip">SPOT DATA · NO ORDER ROUTE</span><span class="metaChip">4 TIMEFRAMES</span></div>
 </div>
 <div class="toolbar"><button aria-expanded="false" class="tbarRezumat" data-action-click="tbarComuta()" id="tbarRezumat" title="Alege moneda, intervalul, modul și sursa" type="button">BTC · 4h · Auto · Binance ▾</button>
 <div class="controls">
@@ -163,7 +163,8 @@
 <details class="tbPl jtPl" id="jtPl-crypto"><summary><b>Fiecare trade</b><span class="tbSub" id="jtListaSub">cel mai nou primul · notițele tale rămân pe dispozitiv</span></summary><div id="jtLista"><p class="tbSub">—</p></div></details>
 </div>
 </section>
-<section class="panel" id="gridset"><div class="sectionHead"><h3>🧮 Grid: ce setez acum?</h3><span class="tbSub" id="grStare">futures grid Pionex · calcul + probă pe ultimele ~30 de zile</span></div>
+<section class="panel" id="gridset"><div class="sectionHead"><h3>🧮 Grid: ce setez acum?</h3><span class="tbSub" id="grStare">futures grid Pionex · calcul + proba ferestrei pe istoric</span><button class="acBtn sugTemaBtn" type="button" id="grTemaBtn" aria-pressed="false" data-action-click="tbTemaComuta()">Temă închisă</button></div>
+<div class="grFrazaBox" id="grFrazaBox"></div>
 <div class="tbBloc grIntrari">
 <div class="grFormStrans" id="grFormStrans"><span class="grFormText">—</span><button type="button" class="actionGhost" data-action-click="grStrangeForm(false)">✎ Schimbă</button></div>
 <label class="grCamp"><span class="tbEt2">Moneda (PERP)</span><input id="grMoneda" list="grMonede" autocomplete="off" placeholder="ex. MET" data-action-change="gridCalculeaza()"></label><datalist id="grMonede"></datalist>
@@ -176,8 +177,8 @@
 <button type="button" class="grCalc" data-action-click="gridCalculeaza('fortat')">Calculează acum</button>
 </div>
 <div id="grFisa"><div class="emptyState">Scrie o monedă (de exemplu MET) și suma. Fișa se recalculează singură la 5 minute cât stă deschisă.</div></div>
-<div class="tbBloc" id="grHartieCard"><div class="tbBlocCap"><h4>🧾 Boții de hârtie</h4><span class="tbSub">fișa pornită fără bani, pe prețurile reale de după pornire</span></div><div id="grHartie"><p class="tbSub">Niciun bot de hârtie. Pe o fișă, apasă „Pornește pe hârtie”.</p></div></div>
-<div class="tbBloc" id="grJurnalCard"><div class="tbBlocCap"><h4>📒 Jurnalul gridurilor: se dovedește?</h4><span class="tbSub" id="grJurnalSub">apasă „am pornit botul” pe o fișă; rezultatul real vine singur din Pionex</span></div><div id="grJurnal"><p class="tbSub">Niciun grid pornit din fișă încă.</p></div></div>
+<div class="tbBloc" id="grHartieCard"><div class="tbBlocCap"><h4>🧾 Boții de hârtie</h4><span class="tbSub">fișa pornită fără bani, pe prețurile reale de după pornire</span></div><div id="grHartie"><p class="tbSub">Niciun bot de hârtie. Pe o fișă, apasă „🧾 Pornește-o pe hârtie”.</p></div></div>
+<div class="tbBloc" id="grJurnalCard"><div class="tbBlocCap"><h4>📒 Jurnalul gridurilor: se dovedește?</h4><span class="tbSub" id="grJurnalSub">apasă „📒 Am pornit-o în Pionex” pe o fișă; rezultatul real vine singur din Pionex</span></div><div id="grJurnal"><p class="tbSub">Niciun grid pornit din fișă încă.</p></div></div>
 <details class="tbBloc" id="grClasamentCard"><summary><h4>🔭 Pe care monede pornesc grid acum?</h4><span class="tbSub" id="grClasamentSub">socotit acasă o dată pe oră, pe top 100 PERP</span></summary><div id="grClasament"><p class="tbSub">—</p></div></details>
 <details class="tbBloc" id="grLaboratorCard"><summary><h4>🧪 Laboratorul gridului: ce a ajutat, de fapt?</h4><span class="tbSub" id="grLaboratorSub">socotit acasă o dată pe zi, pe top 20 PERP × 30 de zile</span></summary><div id="grLaborator"><p class="tbSub">—</p></div></details>
 </section>
@@ -1212,7 +1213,7 @@
 <div class="cacheBox"><span class="label">Scannerul Pionex</span><b id="healthScanner">—</b></div>
 <div class="cacheBox"><span class="label">Reconectări WS</span><b id="healthReconnects">—</b></div>
 <div class="cacheBox"><span class="label">Mod PWA</span><b id="healthPwaMode">—</b></div>
-<div class="cacheBox"><span class="label">Versiunea aplicației</span><b id="healthAppVersion">v100.348</b></div>
+<div class="cacheBox"><span class="label">Versiunea aplicației</span><b id="healthAppVersion">v100.349</b></div>
 <div class="cacheBox"><span class="label">Contractul motorului</span><b>54.1</b></div>
 <div class="cacheBox"><span class="label">Ce s-a verificat</span><b>STATIC+RUNTIME · LIVE UNVERIFIED</b></div>
 <div class="cacheBox"><span class="label">Intel API</span><b id="healthIntel">—</b></div>
