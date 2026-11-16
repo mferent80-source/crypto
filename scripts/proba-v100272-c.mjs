@@ -143,7 +143,7 @@ await test("1g TP: alesul se verifică pe drumuri noi; nu se ține ⇒ rămâi; 
   const nu = G.mcsTpRecomandat([tu, x({ n: 2000, baza: g(-1.5, -9), g: g(-1.2, -9), drum: { maiBun: 0.5, maiRau: 0.4, egal: 0.1 } })], 50);
   assert.match(nu, /^Rămâi fără TP/, nu); assert.match(nu, /pe alte 2\.000 de drumuri nu s-a mai ținut/);
   const da = G.mcsTpRecomandat([tu, x({ n: 2000, baza: g(-1.5, -9), g: g(0.2, -8), drum: { maiBun: 0.78, maiRau: 0.12, egal: 0.1 } })], 50);
-  assert.match(da, /^Aș pune TP-ul la 1,05: de obicei \+0,2 USDT în loc de −1,5 USDT, mai bun în 78% din drumuri \(mai rău în 12%\)/, da);
+  assert.match(da, /^Aș pune TP-ul la 1,050: de obicei \+0,2 USDT în loc de −1,5 USDT, mai bun în 78% din drumuri \(mai rău în 12%\)/, da);
   assert.match(da, /cifrele de pe alte 2\.000 de drumuri/);
   /* pump & dump (ca proba v100.132 R7a): „ca protecție” e ales pe aceleași drumuri și se ține pe cele noi */
   const pd = (zile, seed, pas, p) => { const r0 = M.generator(seed), b = []; let c = 1, faza = 0, k = 0;
@@ -164,7 +164,7 @@ await test("1g TP: alesul se verifică pe drumuri noi; nu se ține ⇒ rămâi; 
 
 // ───────────── (3) asimetria „Aș porni” / „N-aș porni”: voită, justificată lângă cod, comportament neschimbat ─────────────
 await test("3 „Aș porni” cere marja ȘI istoria reală pe plus; „N-aș porni” doar marja (reluarea corectează o abatere într-o parte) - justificarea stă lângă cod", () => {
-  const GS = G.GridSim, OR = (pC, marja, media) => ({ zile: 7, pCastig: pC, pPierde: 1 - pC, pZero: 0, p50: pC > 0.5 ? 1.2 : -1.4, p5: -6, p95: 4, marja, zileDistincte: 20, pLich: 0, pStop: 0, plan: null, reluare: { media, pPlus: 0.5, n: 40, independente: 6 } });
+  const GS = G.GridSim, OR = (pC, marja, media) => ({ zile: 7, pCastig: pC, pPierde: 1 - pC, pZero: 0, p50: pC > 0.5 ? 1.2 : -1.4, p5: -6, p95: 4, marja, zileDistincte: 20, pLich: 0, pStop: 0, plan: null, reluare: { media, pPlus: 0.5, n: 40, independente: 6 }, media: 0.9, marjaMedie: 0.4 });   /* v100.350: + media drumurilor pe plus (aici se judecă marja și reluarea) */
   assert.match(GS.verdict({ orizonturi: [OR(0.70, 10, 0.8)] }, {}, null, 0, null).faCe, /^Aș porni/);
   assert.match(GS.verdict({ orizonturi: [OR(0.70, 10, -0.5)] }, {}, null, 0, null).faCe, /^O aruncare de ban/, "istoria reală pe minus ⇒ nu „Aș porni”");
   const v = GS.verdict({ orizonturi: [OR(0.30, 10, 0.8)] }, {}, null, 0, null);

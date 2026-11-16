@@ -100,13 +100,16 @@ await test("(3b) recomandarea țintei: alta doar cu media mai bună cu 1 punct �
   assert.match(s, /^Păstrează ținta de sus \(\+15,0%\)/); assert.match(s, /60% la \+7,5%, 20% la \+30,0%/);
   // revizia (R1): „sigur” = din drumurile decise, cel puțin 70% mai bune (70 / (70 + 20) = 78%)
   const r2 = [rows[0], rows[1], t(0.3, 0.2, 0.02, d(0.7, 0.2))];
-  assert.match(G.mcsTintaRecomandata(r2, 60, 0.15, "b"), /^Aș lua ținta \+30,0%: rezultatul mediu \+2,0%, față de −0,6%.*mai bună în 70% din drumuri/);
+  /* v100.350 (🔴3): altă țintă doar dacă ține și pe fiecare jumătate a istoriei - rândurile primesc jumătățile (aceleași cifre) */
+  const r2J = r2.map((x) => Object.assign({}, x, { jum: [{ media: x.media, drum: x.drum }, { media: x.media, drum: x.drum }] }));
+  assert.match(G.mcsTintaRecomandata(r2J, 60, 0.15, "b"), /^Aș lua ținta \+30,0%: rezultatul mediu \+2,0%, față de −0,6%.*mai bună în 70% din drumuri.*pe fiecare jumătate a istoriei/);
   assert.match(G.mcsTintaRecomandata([rows[0], rows[1], t(0.3, 0.2, 0.02, d(0.6, 0.3))], 60, 0.15, "b"), /^Păstrează/, "60 / 90 = 67% < 70%");
   const r3 = [rows[0], rows[1], t(0.3, 0.2, 0.02, d(0.3, 0.6))];
   assert.match(G.mcsTintaRecomandata(r3, 30, 0.15, "z"), /^Păstrează ținta de sus/);
   // revizia (R1): egalitățile nu contează - 29% mai bună / 12% mai rea / 59% la fel = 71% din cele decise ⇒ sigur (regula „> 0,5 din
   // toate” l-ar fi respins); 29 / 21 = 58% ⇒ nesigur
-  assert.match(G.mcsTintaRecomandata([rows[0], rows[1], t(0.3, 0.2, 0.02, d(0.29, 0.12))], 60, 0.15, "b"), /^Aș lua ținta \+30,0%/);
+  const cuJ = (l) => l.map((x) => Object.assign({}, x, { jum: [{ media: x.media, drum: x.drum }, { media: x.media, drum: x.drum }] }));   /* v100.350: jumătățile */
+  assert.match(G.mcsTintaRecomandata(cuJ([rows[0], rows[1], t(0.3, 0.2, 0.02, d(0.29, 0.12))]), 60, 0.15, "b"), /^Aș lua ținta \+30,0%/);
   assert.match(G.mcsTintaRecomandata([rows[0], rows[1], t(0.3, 0.2, 0.02, d(0.29, 0.21))], 60, 0.15, "b"), /^Păstrează ținta de sus/);
   const sr = (sp, media, drum) => ({ sp, pStop: 0.5, pTinta: 0.5, pNiciuna: 0, media, p5: -0.1, p50: 0, drum });
   assert.match(G.mcsStopRecomandat([sr(0.05, -0.03, null), sr(0.1, 0, d(0.45, 0.25))], 60, 0.05, "b"), /^Păstrează stopul de sus/, "la fel la stop (64%)");
@@ -127,7 +130,8 @@ await test("(3e) alarme false: pe 200 de serii fără avantaj (3,5%/zi), „Aș 
 });
 await test("(3f) putere: pe 40 de serii cu momentum (phi 0,6), „Aș lua” un alt nivel în cel puțin 10 (regula „> 0,5 din toate” dădea 0)", () => {
   let da = 0; for (let k = 0; k < 40; k++) if (recomanda(momentum(400, 7000 + k, 0.025, 0.6))) da++;
-  assert.ok(da >= 10, da + " din 40");
+  /* v100.350 (auditul MC, 🔴3): cu verificarea pe jumătăți alarmele false scad 23–24% ⇒ 2–3%, iar puterea pe momentum scade 51% ⇒ 12–17% (audit-mc/p12-putere.mjs); 7 din 40 aici */
+  assert.ok(da >= 5, da + " din 40");
 });
 await test("(3g) revizia R2/R3: „Păstrează” spune adevărul când un nivel are media mai bună dar nu e sigur; rândul de sus după semn (ref), nu după toleranță", () => {
   const t = (tp, pTinta, media, drum, ref) => ({ tp, pTinta, pStop: 1 - pTinta, pNiciuna: 0, media, p5: -0.1, p50: 0, drum, ref: !!ref });

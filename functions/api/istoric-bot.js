@@ -732,7 +732,7 @@ export async function onRequestPost({request,env}){
     const pm=corp&&corp.planMonede&&typeof corp.planMonede==="object"&&Array.isArray(corp.planMonede.monede)?corp.planMonede:null;
     const planMonede=pm?{dir:pm.dir==="short"?"short":"long",zile:nr(pm.zile),plan:{plus:nr(pm.plan&&pm.plan.plus),minus:nr(pm.plan&&pm.plan.minus)},suma:nr(pm.suma),levier:nr(pm.levier),nota:txt(pm.nota,200),
       monede:pm.monede.map(x=>x&&typeof x==="object"?{simbol:txt(x.simbol,40).toUpperCase().replace(/[^A-Z0-9_]/g,""),botulTau:x.botulTau===true,ta:v2(x.ta),mea:v2(x.mea),taS:v2(x.taS),meaS:v2(x.meaS)}:null).filter(x=>x&&x.simbol).slice(0,30)}:null;
-    await env.ISTORIC.put("laborator",JSON.stringify({la,H:nr(corp.H),monede:nr(corp.monede),ferestre:nr(corp.ferestre),intrebari:curate,planMonede,blocuri:bl}),{expirationTtl:3*24*3600});
+    await env.ISTORIC.put("laborator",JSON.stringify({la,H:nr(corp.H),monede:nr(corp.monede),ferestre:nr(corp.ferestre),intrebari:curate,planMonede,blocuri:bl,sursaLista:corp.sursaLista==="propuse"?"propuse":"volum"}),{expirationTtl:3*24*3600});
     return json({ok:true,intrebari:curate.length});
   }
   if(action==="alerte"){

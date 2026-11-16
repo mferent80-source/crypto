@@ -86,7 +86,7 @@ await test("1c aceleași cifre în limita zgomotului tragerii (7 vs 14 zile): c�
   }
   assert.deepEqual(rau, [], "diferențe peste zgomotul tragerii: " + rau.join(" · "));
 });
-await test("1d funding-ul la 7 zile: cu drumuri de 7 zile e EXACT suma plăților pe primele 7 zile ale fiecărui drum (cu 14 era o proporție liniară din cel pe 14 zile)", () => {
+await test("1d funding-ul la 7 zile: EXACT suma plăților pe primele 7 zile ale fiecărui drum, și cu drumuri de 7, și de 14 zile (v100.350: din traseu, nu proporție liniară)", () => {
   const Bx = bare15(31.25, 11, 0.015), P = Bx[Bx.length - 1].c, st = { jos: P * 0.92, sus: P * 1.08, grile: 20, levier: 3, dir: "long", suma: 100, stop: { jos: P * 0.92 }, tp: null, fundingZi: 0.0005, fundingCost: false };
   const masoara = (zile) => {
     const adevar = [], GP = Object.assign({}, GridProba, { simuleaza: (b, s, len, stS, opt) => { if (b !== Bx && s === 0 && opt && opt.traseu) adevar.push(GridProba.simuleaza(b, 0, Math.min(len, 7 * 96), stS, opt).funding); return GridProba.simuleaza(b, s, len, stS, opt); } });
@@ -95,7 +95,7 @@ await test("1d funding-ul la 7 zile: cu drumuri de 7 zile e EXACT suma plățilo
   };
   const z7 = masoara(7), z14 = masoara(14);
   assert.ok(Math.abs(z7.raportat - z7.adevarat) < 1e-9, "7 zile: raportat " + z7.raportat + " vs adevărat " + z7.adevarat);
-  assert.ok(Math.abs(z14.raportat - z14.adevarat) > 1e-4, "14 zile era aproximativ (proporția liniară): " + JSON.stringify(z14));
+  assert.ok(Math.abs(z14.raportat - z14.adevarat) < 1e-9, "14 zile: acum tot exact (v100.350, funding-ul din traseu): " + JSON.stringify(z14));
 });
 
 // ───────────────────────── (2) regimul o dată pe oră, cât e nevalidat ─────────────────────────

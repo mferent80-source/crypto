@@ -122,7 +122,7 @@ await test("(9) caseta: câmpul, Analizează, scurtăturile tale; rezultatele - 
   assert.match(h, /id="mcsStop"/); assert.match(h, /id="mcsTinta"/); assert.match(h, /data-action-click="mcsResimuleaza\(\)"/);
   assert.doesNotMatch(h, /NaN|undefined/);
   h = globalThis.mcsHtml({ sim: "RHM.DE", scurtaturi: [], rez: Object.assign({}, rez, { sim: "RHM.DE", tip: "stock", grid: null, setari: null, ist: { l: [], unit: "lei", K: 1, r: { cazuri: 0 } } }) });
-  assert.match(h, /Doar la coinuri/); assert.match(h, /N-ai tranzacții închise pe RHM\.DE/);
+  assert.match(h, /doar la coinuri/i); assert.match(h, /N-ai tranzacții închise pe RHM\.DE/);
   assert.match(globalThis.mcsHtml({ sim: "ZZZ", scurtaturi: [], eroare: "Nu găsesc <ZZZ>" }), /Nu găsesc &lt;ZZZ&gt;/);
 });
 await test("(9b) stock scris fără bursă (RHM): caută în lista Salt chiar dacă pagina Salt n-a fost deschisă (o aduce o dată); textul de așteptare spune cât durează", async () => {
@@ -137,7 +137,8 @@ await test("(R1) fără tendință = mijlocul la zero (centrat pe median): după
   for (const seed of [1, 2, 3]) { const r = M.pret(b, { orizonturi: [30], n: 800, blocZile: 5, seed }); assert.ok(Math.abs(r.orizonturi[0].p50) < 0.01, "mijlocul ~0, nu " + r.orizonturi[0].p50); }
   const bc = []; let c2 = 1; for (let i = 0; i < 31 * 96; i++) { const o = c2; c2 = i >= 28 * 96 ? c2 * Math.exp(-0.2 / (3 * 96)) : c2 * Math.exp((g() - 0.5) * 0.004); bc.push({ t: i * 9e5, o, h: Math.max(o, c2) * 1.001, l: Math.min(o, c2) * 0.999, c: c2, v: 1 }); }
   const gr = M.grid(bc, { jos: 0.9, sus: 1.1, grile: 20, levier: 1, dir: "neutru", suma: 100, pret: 1 }, { zile: 7, n: 150, seed: 3 });
-  assert.ok(Math.abs(gr.pretMijloc) < 0.01, "gridul pe drumuri centrate: prețul de la capăt, mijlocul ~0, nu " + gr.pretMijloc);
+  /* v100.350 (H0 h0media/p10-mc.mjs): botul grid e centrat pe MEDIA prețului de la capăt (joc corect) - mijlocul la zero dădea câștig fals la long; prețul (sus) rămâne pe mijloc */
+  assert.ok(Math.abs(gr.pretMedie) < 0.005, "gridul pe drumuri centrate: prețul de la capăt, media ~0, nu " + gr.pretMedie);
 });
 await test("(R2) botul neutral (Pionex: neutral / no_trend) rămâne neutru; „Refă” cu setările neatinse păstrează botul tău", () => {
   const bot = { activ: true, baza: "LIT.PERP", gridJos: 4, gridSus: 5, levier: 2, directie: "neutral", investit: 50, brut: { buOrderData: { row: 21 } } };
@@ -146,7 +147,7 @@ await test("(R2) botul neutral (Pionex: neutral / no_trend) rămâne neutru; „
   const st = globalThis.mcsSetariBot([bot], "LIT");
   assert.equal(globalThis.mcsAceleasiSetari(st, { jos: 4, sus: 5, grile: 20, levier: 2, dir: "neutru", suma: 50, stop: null }), true);
   assert.equal(globalThis.mcsAceleasiSetari(st, { jos: 4.1, sus: 5, grile: 20, levier: 2, dir: "neutru", suma: 50, stop: null }), false);
-  assert.match(globalThis.mcsFunctie("mcsResimuleaza"), /mcsAceleasiSetari\(/);
+  assert.match(globalThis.mcsFunctie("mcsSetariDinCampuri"), /mcsAceleasiSetari\(/); assert.match(globalThis.mcsFunctie("mcsResimuleaza"), /mcsSetariDinCampuri\(/);   /* v100.350: setările din câmpuri, pur */
 });
 await test("(R3) PUMPFUN: botul are baza PUMPFUN, dar pe Pionex e PUMP_USDT_PERP - scurtătura, botul și istoria merg pe simbolul Pionex", () => {
   const bot = { activ: true, baza: "PUMPFUN.PERP", simbolPionex: "PUMP_USDT_PERP", gridJos: 0.004, gridSus: 0.006, levier: 2, directie: "long", investit: 30, brut: { buOrderData: { row: 11 } } };
@@ -168,7 +169,7 @@ await test("(R4) Pionex: doar „simbol inexistent” (MARKET_INVALID_SYMBOL) tr
 await test("(R-min) gramatica „la 30 de zile”; eticheta intervalelor spune cum se scrie în Pionex (N+1 linii); lista Salt întâi la un simbol fără bursă", () => {
   const f = citeste("public", "lib", "monte-simbol-ecran.js");
   assert.doesNotMatch(f, /'… la ' \+ o\.H \+ ' de zile/); assert.doesNotMatch(f, /la ' \+ o\.H \+ ' de zile/);
-  assert.match(f, /Intervale \(în Pionex scrii/);
+  assert.match(f, /Linii \(ca în Pionex\)/);
   assert.match(globalThis.mcsFunctie("mcsAduStock"), /cand\.unshift\(/);
 });
 await test("(R5) mijlocul −0,0004 (afișat 0,0%) nu e colorat roșu: culoarea după valoarea ROTUNJITĂ, ca semnul", () => {

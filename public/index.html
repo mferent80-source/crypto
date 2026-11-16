@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ro"><head><link href="/manifest.webmanifest" rel="manifest"/><meta content="#0E141A" name="theme-color"/><meta content="dark" name="color-scheme"/><meta charset="utf-8"/><meta content="v100.349" name="app-version"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
+<html lang="ro"><head><link href="/manifest.webmanifest" rel="manifest"/><meta content="#0E141A" name="theme-color"/><meta content="dark" name="color-scheme"/><meta charset="utf-8"/><meta content="v100.350" name="app-version"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
 <title>Crypto Radar</title>
 <link href="/app.css" rel="stylesheet"/>
 </head><body><div aria-live="polite" class="offlineBanner" hidden="" id="offlineBanner" role="status">OFFLINE · read-only local research mode. Network analysis/scanners are disabled; cached UI, journal and reports remain available.</div>
@@ -75,7 +75,7 @@
 </details>
 </div>
 <div class="sideFooter">
-<div class="label">Build</div><div id="sideVersiune" style="font-size:11px;font-weight:800;margin-top:3px">v100.349 · GRID: CE SETEZ, REFĂCUTĂ</div>
+<div class="label">Build</div><div id="sideVersiune" style="font-size:11px;font-weight:800;margin-top:3px">v100.350 · SIMULATOR + MONTE CARLO, REFĂCUTE</div>
 <div class="row"><span class="small">Spot source</span><b class="good">DIRECT</b></div>
 <div class="row"><span class="small">Engine</span><b class="good">READY</b></div>
 </div>
@@ -92,7 +92,7 @@
 <div class="logo">◈</div>
 <div><h1>Crypto Radar Pro · Multi-Market</h1><div class="subhead">Crypto + Nasdaq + US stocks · multi-timeframe research</div></div>
 </div>
-<div class="headerMeta"><span class="badge" id="antetVersiune">v100.349 · CRYPTO RADAR · PIONEX + TRADING 212 DOAR CITIRE</span><span class="metaChip">STRICT READ-ONLY · STATIC+RUNTIME</span><span class="metaChip">SPOT DATA · NO ORDER ROUTE</span><span class="metaChip">4 TIMEFRAMES</span></div>
+<div class="headerMeta"><span class="badge" id="antetVersiune">v100.350 · CRYPTO RADAR · PIONEX + TRADING 212 DOAR CITIRE</span><span class="metaChip">STRICT READ-ONLY · STATIC+RUNTIME</span><span class="metaChip">SPOT DATA · NO ORDER ROUTE</span><span class="metaChip">4 TIMEFRAMES</span></div>
 </div>
 <div class="toolbar"><button aria-expanded="false" class="tbarRezumat" data-action-click="tbarComuta()" id="tbarRezumat" title="Alege moneda, intervalul, modul și sursa" type="button">BTC · 4h · Auto · Binance ▾</button>
 <div class="controls">
@@ -1213,7 +1213,7 @@
 <div class="cacheBox"><span class="label">Scannerul Pionex</span><b id="healthScanner">—</b></div>
 <div class="cacheBox"><span class="label">Reconectări WS</span><b id="healthReconnects">—</b></div>
 <div class="cacheBox"><span class="label">Mod PWA</span><b id="healthPwaMode">—</b></div>
-<div class="cacheBox"><span class="label">Versiunea aplicației</span><b id="healthAppVersion">v100.349</b></div>
+<div class="cacheBox"><span class="label">Versiunea aplicației</span><b id="healthAppVersion">v100.350</b></div>
 <div class="cacheBox"><span class="label">Contractul motorului</span><b>54.1</b></div>
 <div class="cacheBox"><span class="label">Ce s-a verificat</span><b>STATIC+RUNTIME · LIVE UNVERIFIED</b></div>
 <div class="cacheBox"><span class="label">Intel API</span><b id="healthIntel">—</b></div>
@@ -1669,29 +1669,30 @@
 <div class="sectionHead"><h3>Carnetul fișei</h3><span class="small">a avut fișa dreptate? · pe istoric și de acum înainte</span></div>
 <div class="card full" id="cnPagina"><p class="tbSub">Aștept carnetul…</p></div>
 </section>
-<section class="panel" id="gridsim"><div class="sectionHead"><h3>Simulator grid</h3><span class="small">un bot grid Pionex</span></div><div class="card full" id="gsPagina"><p class="tbSub">Simulator grid: se încarcă…</p></div></section>
+<section class="panel" id="gridsim"><div class="sectionHead"><h3>🎰 Simulator grid</h3><span class="tbSub">un bot grid Pionex · cum se termină drumurile, de aici încolo</span><button class="acBtn sugTemaBtn" type="button" id="gsTemaBtn" aria-pressed="false" data-action-click="tbTemaComuta()">Temă închisă</button></div><div class="card full" id="gsPagina"><p class="tbSub">Simulator grid: se încarcă…</p></div></section>
 <section class="panel" id="montecarlo">
+<div class="sectionHead"><h3>🎲 Monte Carlo</h3><span class="tbSub">un coin sau un stock pe drumuri din istoria lui · riscul și obiceiurile tale</span><button class="acBtn sugTemaBtn" type="button" id="mcTemaBtn" aria-pressed="false" data-action-click="tbTemaComuta()">Temă închisă</button></div>
 <div class="card full mcsCaseta" id="mcsPagina"><p class="tbSub">Monte Carlo pe un coin sau un stock: alege un simbol.</p></div>
 <div class="sectionHead"><h3>Riscul și obiceiurile tale</h3><span class="small">boții Pionex și acțiunile T212 · din istoria ta</span></div>
 <div class="card full" id="rlPagina"><p class="tbSub">Aștept raportul de noapte…</p></div>
-<details class="rlVechi"><summary>Monte Carlo pe semnale (vechiul laborator: jurnalul de semnale / paper)</summary>
+<details class="rlVechi"><summary>Monte Carlo pe semnale (vechiul laborator: jurnalul de semnale / paper, în R)</summary>
 <div class="card full">
 <div class="riskForm">
-<input aria-label="Mc Runs" id="mcRuns" max="10000" min="100" step="100" type="number" value="1000"/>
-<input aria-label="Mc Trades" id="mcTrades" max="1000" min="20" step="10" type="number" value="100"/>
-<select aria-label="Mc Source" id="mcSource"><option value="journal">Signal Journal</option><option value="paper">Paper Portfolio</option></select>
-<select aria-label="Mc Method" id="mcMethod"><option selected="" value="BLOCK">Block bootstrap</option><option value="IID">IID bootstrap</option></select>
-<select aria-label="Mc Block" id="mcBlock"><option value="3">Block 3</option><option selected="" value="5">Block 5</option><option value="10">Block 10</option></select>
+<label>Reluări <input id="mcRuns" max="10000" min="100" step="100" type="number" value="1000"/></label>
+<label>Rezultate pe reluare <input id="mcTrades" max="1000" min="20" step="10" type="number" value="100"/></label>
+<label>Din <select id="mcSource"><option value="journal">jurnalul de semnale</option><option value="paper">portofoliul de probă (paper)</option></select></label>
+<label>Cum le trag <select id="mcMethod"><option selected="" value="BLOCK">pe blocuri</option><option value="IID">una câte una</option></select></label>
+<label>Blocul <select id="mcBlock"><option value="3">3</option><option selected="" value="5">5</option><option value="10">10</option></select></label>
 <button data-action-click="runMonteCarlo()">Rulează simularea</button>
 </div>
 <div class="mcGrid" style="margin-top:10px">
-<div class="mcBox"><span class="label">Median ending R</span><b id="mcMedian">—</b></div>
-<div class="mcBox"><span class="label">5th percentile</span><b id="mcP5">—</b></div>
-<div class="mcBox"><span class="label">95th percentile</span><b id="mcP95">—</b></div>
-<div class="mcBox"><span class="label">Median max DD</span><b id="mcDd">—</b></div>
+<div class="mcBox"><span class="label">Rezultatul obișnuit (mijlocul, R)</span><b id="mcMedian">—</b></div>
+<div class="mcBox"><span class="label">5% din reluări, sub</span><b id="mcP5">—</b></div>
+<div class="mcBox"><span class="label">5% din reluări, peste</span><b id="mcP95">—</b></div>
+<div class="mcBox"><span class="label">Căderea maximă obișnuită</span><b id="mcDd">—</b></div>
 <div class="mcBox"><span class="label">Șansa de pierdere</span><b id="mcLossProb">—</b></div>
 </div>
-<p class="note" id="mcNote">Block bootstrap preserves short runs of wins/losses better than IID resampling. It still cannot prove future edge.</p>
+<p class="note" id="mcNote">Rezultatele închise ale semnalelor, reluate la întâmplare: pe blocuri păstrează seriile scurte de câștiguri / pierderi. Nu dovedește un avantaj în viitor.</p>
 </div>
 </details>
 </section>

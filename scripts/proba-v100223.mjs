@@ -45,7 +45,7 @@ await test("tura de dimineață: riskoff proaspăt scoate numele; fără regim s
   assert.equal((await tur({ macro: "prudent" })).trecute, 1);
 });
 
-const oz = (o) => Object.assign({ zile: 7, bare: 672, pCastig: 0.7, pPierde: 0.3, pZero: 0, marja: 2, reluare: { n: 20, media: 0, pPlus: 0.4, independente: 3 }, p5: -2, p50: 1.2, p95: 4, pLich: 0, pStop: 0 }, o);
+const oz = (o) => Object.assign({ zile: 7, bare: 672, pCastig: 0.7, pPierde: 0.3, pZero: 0, marja: 2, reluare: { n: 20, media: 0, pPlus: 0.4, independente: 3 }, p5: -2, p50: 1.2, p95: 4, pLich: 0, pStop: 0, media: 0.9, marjaMedie: 0.4 }, o);   /* v100.350: + media drumurilor (pe plus, ca poarta reluării să rămână cea judecată aici) */
 const fa = (o) => GS.verdict({ n: 108, orizonturi: [oz(o)] }, null, null, 0);
 await test("„Aș porni” pe poarta actuală: 108 intrări cu media reală ≤ 0 nu spun „Aș porni”; media pe plus încă spune; marginea la 50 e aruncare de ban", () => {
   let porniri = 0;

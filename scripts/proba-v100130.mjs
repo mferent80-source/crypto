@@ -146,7 +146,10 @@ await test("(4c) recomandarea stopului: media aproape aceeași (sub 1 punct) ⇒
   // revizia (R1): „Aș lua” cere ȘI drum cu drum mai bun în mai multe drumuri decât mai rău (media singură vine din centrarea pe mijloc)
   const d = (maiBun, maiRau) => ({ maiBun, maiRau, egal: 1 - maiBun - maiRau });
   const r2 = [Object.assign(s(0.05, 0.6, -0.03, -0.06), { drum: null }), Object.assign(s(0.1, 0.5, -0.001, -0.1), { drum: d(0.7, 0.2) })   /* v100.131: 70 / 90 = 78% din drumurile decise */, Object.assign(s(0.15, 0.4, -0.012, -0.16), { drum: d(0.4, 0.5) })];
-  assert.match(G.mcsStopRecomandat(r2, 60, 0.05), /^Aș lua −10,0%: rezultatul mediu −0,1%, față de −3,0% la stopul de sus.*mai bun în 70% din drumuri/);
+  /* v100.350 (auditul MC, 🔴3): alt stop doar dacă ține și pe FIECARE jumătate a istoriei - fără jumătăți rămâne stopul de sus; cu ele, recomandarea */
+  assert.match(G.mcsStopRecomandat(r2, 60, 0.05), /^Păstrează stopul de sus/);
+  const r2j = r2.map((x) => Object.assign({}, x, { jum: [{ media: x.media, drum: x.drum }, { media: x.media, drum: x.drum }] }));
+  assert.match(G.mcsStopRecomandat(r2j, 60, 0.05), /^Aș lua −10,0%: rezultatul mediu −0,1%, față de −3,0% la stopul de sus.*mai bun în 70% din drumuri.*pe fiecare jumătate a istoriei/);
   const r3 = [r2[0], Object.assign({}, r2[1], { drum: d(0.3, 0.6) }), r2[2]];
   assert.match(G.mcsStopRecomandat(r3, 60, 0.05), /^Păstrează stopul de sus \(−5,0%\)/, "media mai bună dar mai rău în mai multe drumuri ⇒ nu");
   // revizia (R5): intervalul mediilor peste 1 punct, dar stopul de sus printre cele mai bune ⇒ nu „aproape același”
@@ -199,7 +202,7 @@ await test("(3b) rândul Salt cu stopul DEPĂȘIT arată șansa; detaliul o spun
   const poz = { isin: "DE0007030009", simbol: "RHM.DE", nume: "Rheinmetall", qty: 1.0456, pretMediu: 1349.6, de: "2026-05-11", plata: "EUR" };
   const a = { p: { pret: 936.6, pretMediu: 1349.6 }, niv: { stopPozitie: 1109.1, tintaPozitie: 1436.5 }, cons: { nivel: "iesi", titlu: "x" }, st: { trend: { dir: "jos" } }, revine: { p: 0.13, pCapat: 0.07, zile: 60 } };
   const h = G.saltPozRandHtml({ a, p: poz, m: "EUR", pret: 936.6, fx: 1, rez: -400, pct: -0.3, cost: 1411, val: 979, pond: 1 }, { deschis: {}, incarcate: true });
-  assert.match(h, /DEPĂȘIT<\/span><button type="button" class="mcsRevBtn t212Mic saltRevMic" data-action-click="mcsPozitie\('RHM\.DE',936\.6,1349\.6,1109\.1\)" title="Monte Carlo pe poziție">🎲 revine la intrare: 13% în 60 z<\/button>/);   /* v100.132: buton */
+  assert.match(h, /DEPĂȘIT<\/span><button type="button" class="mcsRevBtn t212Mic saltRevMic" data-action-click="mcsPozitie\('RHM\.DE',936\.6,1349\.6,1109\.1\)" title="Monte Carlo pe poziție">🎲 revine la intrare: 13% în 60 de zile de bursă( · scade încă 10%: \d+%)?<\/button>/);   /* v100.350: și cât de des scade încă 10% */   /* v100.132: buton */
   assert.match(h, /Șansa să revină la prețul tău de intrare \(1\.349,60 EUR\) măcar o dată în 60 de zile de bursă: <b>13%<\/b>; la capăt peste intrare: 7%/);
   assert.match(functie(SE, "saltAnalizeazaUna"), /saltSansaRevenire\(b, a\)/);
 });

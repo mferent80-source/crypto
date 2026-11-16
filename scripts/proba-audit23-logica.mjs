@@ -144,11 +144,15 @@ await test("(3) Simulatorul și Monte Carlo pe drumuri: cu raportul, cel mai ră
   st.stop = { jos: P0 + (-0.1 + 0.0005 * Ql * P0) / Ql };
   const cu = GS.simuleaza(b, st, { n: 200, seed: 3, zile: 7, orizonturi: [7] }).orizonturi[0];
   const fara = GS.simuleaza(b, { ...st, stopRaport: undefined }, { n: 200, seed: 3, zile: 7, orizonturi: [7] }).orizonturi[0];
-  assert.ok(cu.pStop > fara.pStop, "raportul se atinge mai des decât prețul serverului: " + cu.pStop + " / " + fara.pStop);
+  /* v100.350 (drumurile centrate pe media prețului): pe o singură sămânță diferența e de un drum din 200 (vechi: 19 din 20 de semințe pe plus, nou: 17 din 20, media +0,027 / +0,020) ⇒ pe media a 10 semințe */
+  let dif = 0; for (let sd = 1; sd <= 10; sd++) dif += GS.simuleaza(b, st, { n: 200, seed: sd, zile: 7, orizonturi: [7] }).orizonturi[0].pStop - GS.simuleaza(b, { ...st, stopRaport: undefined }, { n: 200, seed: sd, zile: 7, orizonturi: [7] }).orizonturi[0].pStop;
+  assert.ok(dif / 10 > 0.005, "raportul se atinge mai des decât prețul serverului, în medie pe 10 semințe: " + (dif / 10));
   assert.ok(cu.p5 >= -11.5, "coada cu raportul ≈ −10: " + cu.p5);
   const mc = M.grid(b, { ...st }, { n: 200, seed: 3, zile: 7, GridProba: GP });
   const mc0 = M.grid(b, { ...st, stopRaport: undefined }, { n: 200, seed: 3, zile: 7, GridProba: GP });
-  assert.ok(mc.pStop > mc0.pStop, "Monte Carlo: " + mc.pStop + " / " + mc0.pStop);
+  /* v100.350: și botul de pe pagina Monte Carlo e centrat pe media prețului ⇒ diferența pe o sămânță e de un drum din 200 ⇒ media a 10 semințe */
+  let difM = 0; for (let sd = 1; sd <= 10; sd++) difM += M.grid(b, { ...st }, { n: 200, seed: sd, zile: 7, GridProba: GP }).pStop - M.grid(b, { ...st, stopRaport: undefined }, { n: 200, seed: sd, zile: 7, GridProba: GP }).pStop;
+  assert.ok(difM / 10 > 0.005, "Monte Carlo, în medie pe 10 semințe: " + (difM / 10) + " (o sămânță: " + mc.pStop + " / " + mc0.pStop + ")");
   assert.ok(mc.p5 >= -11.5, "Monte Carlo coada: " + mc.p5);
 });
 

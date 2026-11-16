@@ -116,7 +116,7 @@ await test("rândul scurt spune felia de funding; faCe și primul cuvânt rămâ
   assert.match(vd, /Aș porni: câștigă în /);
   assert.doesNotMatch(vd, /din care funding/);
   assert.match(vs, /din care funding/);
-  const baza = { zile: 7, bare: 672, pCastig: 0.62, pPierde: 0.38, pZero: 0, marja: 4, p5: -1, p50: 1.2, p95: 3, pLich: 0, pStop: 0, pTp: 0, plan: null, reluare: { media: 1, n: 12, independente: 8, pPlus: 0.6 } };
+  const baza = { zile: 7, bare: 672, pCastig: 0.62, pPierde: 0.38, pZero: 0, marja: 4, p5: -1, p50: 1.2, p95: 3, pLich: 0, pStop: 0, pTp: 0, plan: null, reluare: { media: 1, n: 12, independente: 8, pPlus: 0.6 }, media: 0.9, marjaMedie: 0.4 };   /* v100.350: + media drumurilor */
   const zi1 = Object.assign({}, baza, { zile: 1, bare: 96, funding: 0 });
   const scurt = (funding, st) => GS.verdictScurt({ n: 60, zile: 14, suma: 50, acum: null, orizonturi: [Object.assign({ funding }, baza), zi1] }, st || {}, null, null);
   const incasat = scurt(-1.2, { fundingCost: true });

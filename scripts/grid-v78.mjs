@@ -482,7 +482,8 @@ await test("F2 rezumat: pe verdict - cate, cate legate, media rezultatului in % 
     { id: "2", baza: "SOL.PERP", activ: true, pornitLa: T0 + 3 * ORA, investit: 200, profitTotal: -10 },
   ], T0 + 4 * ORA);
   const r = GJ.rezumat(l);
-  assert.equal(r.porneste.n, 2); assert.equal(r.porneste.legate, 2); aprox(r.porneste.mediaPct, (0.10 - 0.05) / 2, 1e-9); assert.equal(r.porneste.pePlus, 1);
+  /* v100.350 (auditul Grid, alegerea LUI): doar boții ÎNCHIȘI intră în medie - SOL (−5%) încă rulează ⇒ numărat separat, nu în rezultat */
+  assert.equal(r.porneste.n, 2); assert.equal(r.porneste.legate, 1); aprox(r.porneste.mediaPct, 0.10, 1e-9); assert.equal(r.porneste.pePlus, 1); assert.equal(r.porneste.deschise, 1);
   assert.equal(r.asteapta.n, 1); assert.equal(r.asteapta.legate, 0); assert.equal(r.asteapta.mediaPct, null);
   assert.equal(r.total, 3);
 });

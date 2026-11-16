@@ -59,7 +59,7 @@ var MonteSimbol = (function () {
       }
       ret.sort(function (a, c) { return a - c; });
       // istoricul sub 3× orizontul ⇒ simularea doar reamestecă aceleași zile (spus pe pagină)
-      var rez = { H: Z, scurt: zi < 3 * Z, p5: pc(ret, 0.05), p25: pc(ret, 0.25), p50: pc(ret, 0.5), p75: pc(ret, 0.75), p95: pc(ret, 0.95), pSus: sus / n, pJos: jos / n, pStop: st / n, pTinta: ti / n, pNiciuna: (n - st - ti) / n, hist: histograma(ret, 24), pIntrare: R ? ai / n : undefined, pPesteIntrare: R ? pi / n : undefined, pPesteIntrareStop: R ? pis / n : undefined };
+      var rez = { medie: ret.reduce(function (a, x) { return a + x; }, 0) / ret.length, H: Z, scurt: zi < 3 * Z, p5: pc(ret, 0.05), p25: pc(ret, 0.25), p50: pc(ret, 0.5), p75: pc(ret, 0.75), p95: pc(ret, 0.95), pSus: sus / n, pJos: jos / n, pStop: st / n, pTinta: ti / n, pNiciuna: (n - st - ti) / n, hist: histograma(ret, 24), pIntrare: R ? ai / n : undefined, pPesteIntrare: R ? pi / n : undefined, pPesteIntrareStop: R ? pis / n : undefined };
       // revizia (R1): fiecare nivel față de cel de sus (stopPct / tintaPct), drum cu drum - media singură favorizează stopul larg (drumurile
       // au mijlocul la zero, deci media e pe plus pe acțiunile agitate: cine stă mai mult în piață o adună)
       // revizia v100.131 (R3): nivelul de sus întâi după egalitate EXACTĂ (listele îl pun exact) - la ținte foarte mici (0,1%) ×0,75 / ×1,5
@@ -79,6 +79,8 @@ var MonteSimbol = (function () {
     }
     // revizia Opus (07.10): fără tendință = MIJLOCUL la zero, nu media - cu media scoasă, o cădere de câteva zile (restul liniștit) făcea
     // ca mijlocul să iasă pe plus (o „revenire” inventată de calcul). Prima trecere măsoară mijlocul log pe orizont, a doua îl scoate.
+    // v100.350: prețul RĂMÂNE centrat pe mijloc (H0 h0media/p10-mc.mjs: pe media prețului stopul / ținta ieșeau amestecat - mai bine la zile independente,
+    // stopul +1,9 pp la agitație grupată - iar după o cădere mijlocul arăta +1,4%, „revenirea” de mai sus). Botul grid, mai jos, trece pe media prețului.
     var orizonturi = (o.orizonturi || [7, 30]).map(function (Z, j) {
       var mF = mu; if (fara) { var p0 = trece(Z, j, mu); mF = mu + Math.log(1 + p0.p50) / (Z * bz); }
       var r = trece(Z, j, fara ? mF : 0, true);
@@ -124,10 +126,10 @@ var MonteSimbol = (function () {
       net.sort(function (a, c) { return a - c; });
       return { n: n, drumuri: peDrum, zile: zile, zileIstoric: Math.floor(b15.length / BZ), p5: pc(net, 0.05), p25: pc(net, 0.25), p50: pc(net, 0.5), p75: pc(net, 0.75), p95: pc(net, 0.95),
         pLichidare: lich / n, pIesire: ies / n, pStop: opr / n, pTp: tpa / n, pPlus: net.filter(function (x) { return x > 0; }).length / n, perechiMedii: per / n, hist: histograma(net, 24), funding: fund / n * suma,
-        pretMijloc: pc(cap.sort(function (a, c) { return a - c; }), 0.5) };
+        pretMijloc: pc(cap.sort(function (a, c) { return a - c; }), 0.5), pretMedie: cap.reduce(function (a, x) { return a + x; }, 0) / cap.length };   /* v100.350: centrat pe media prețului ⇒ pretMedie ≈ 0 */
     }
     // mijlocul prețului de la capătul drumurilor, cu tendința m scoasă (ieftin: fără simulatorul gridului) - pentru centrare, ca la preț
-    function mijlocLog(m) { var rnd = generator(o.seed || 1), v = []; for (var s = 0; s < n; s++) { var d = drum(b15, H, BZ, P, rnd, m); v.push(Math.log(d[d.length - 1].c / P)); } v.sort(function (a, c) { return a - c; }); return pc(v, 0.5); }
+    function mijlocLog(m) { var rnd = generator(o.seed || 1), v = []; for (var s = 0; s < n; s++) { var d = drum(b15, H, BZ, P, rnd, m); v.push(Math.log(d[d.length - 1].c / P)); } return Math.log(v.reduce(function (a, x) { return a + Math.exp(x); }, 0) / v.length); }   /* v100.350 (el: „repară și Monte Carlo”): botul grid pe MEDIA prețului de la capăt (martingală), ca Simulatorul - mijlocul la zero adăuga +σ²t/2 (câștig fals la long). H0 h0media/p10-mc.mjs, 150 × 800: media gridului +0,55 → +0,18 USDT (zile independente), +0,34 → −0,01 (agitație grupată) */
     var r = trece(fara ? mu + mijlocLog(mu) / H : 0); r.faraTendinta = fara; r.tendintaPeZi = Math.exp(mu * BZ) - 1;
     if (fara && !o.faraCuTendinta) { var c = trece(0); r.cuTendinta = { p50: c.p50, pPlus: c.pPlus, pLichidare: c.pLichidare, pStop: c.pStop }; }
     return r;

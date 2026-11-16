@@ -478,7 +478,7 @@ var TabloExtra = (function () {
       return { plus: r1(inv * nr(pp.tinta) / 100), minus: r1(inv * nr(pp.pierdere) / 100), afaraOre: oreP, sursa: "prag", nota: "pragul tău: −" + vp(nr(pp.pierdere)) + "% / +" + vp(nr(pp.tinta)) + "% din sumă, " + vp(oreP) + " h afară (setat în poartă)" }; }
     if (ult && (nr(ult.plus) > 0 || nr(ult.minus) > 0)) {
       // v100.102 (el: „chestia cu planul e cam ambiguă”): sursa și scalarea spuse într-o frază, fără paranteze în paranteze („aceleași sume” nu spunea nimic)
-      var ui = nr(ult.investit), k = ui > 0 && inv > 0 ? inv / ui : 1, v = function (x) { return String(x).replace(".", ","); }, bot = "botul tău " + (ult.nume || "de dinainte");
+      var ui = nr(ult.investit), k = ui > 0 && inv > 0 ? inv / ui : 1, v = function (x) { return String(x).replace(".", ","); }, bot = "botul tău " + (ult.nume || "de dinainte") + (nr(ult.la) > 0 ? " (planul din " + new Date(nr(ult.la)).toLocaleDateString("ro-RO", { day: "2-digit", month: "2-digit", timeZone: "Europe/Bucharest" }) + ")" : "");   // v100.350: de când e planul
       var nota = !(ui > 0 && inv > 0) ? "luat de la " + bot + "; suma lui n-o știu, deci nescalat: verifică cifrele"
         : Math.abs(k - 1) < 0.005 ? "luat de la " + bot + ", pe aceeași sumă (" + v(r1(ui)) + " USDT)"
         : "luat de la " + bot + ": +" + v(ult.plus) + " / −" + v(ult.minus) + " USDT pe " + v(r1(ui)) + " USDT, scalat la " + v(r1(inv)) + " USDT";

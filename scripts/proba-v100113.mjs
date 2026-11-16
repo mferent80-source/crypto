@@ -147,13 +147,13 @@ const RAPORT = () => ({ la: T0, boti: { n: 1735, ritm: { K: 159, S: 161.19, n30:
 await test("(3b) concluziile: ce înseamnă pentru tine și ce aș face eu - din cifre, nimic scris de mână", () => {
   const c = RL.concluzii(RAPORT());
   const b = c.boti.map((x) => x.titlu), a = c.actiuni.map((x) => x.titlu);
-  assert.deepEqual(b, ["Câțiva boți cu pierderi mari șterg câștigul celorlalți", "Boții ținuți peste o zi pierd", "Comisioanele iau 56% din câștigul grilelor", "Niciun obicei al boților nu e dovedit, nici bun, nici rău"]);
-  assert.match(c.boti[0].text, /^Cei mai răi 10% \(174 de boți, fiecare sub −4,9%\) au pierdut 5\.555 USDT la suma ta de acum \(~161,2 USDT pe bot\), iar ceilalți 90% au câștigat 4\.139\.$/);
-  assert.match(c.boti[1].text, /^Cei ținuți peste 24 h \(76\) au adus −1\.540 USDT, cei sub 4 h \(1360\) \+460\. /);
-  assert.match(c.boti[2].text, /^Grilele au adus \+4\.287 USDT, comisioanele −2\.388 \(bani reali\)\. 635 de boți au stat sub 15 minute\.$/);
+  assert.deepEqual(b, ["Câțiva boți cu pierderi mari șterg câștigul celorlalți", "Boții ținuți peste o zi au pierdut"   /* v100.350: netestat ⇒ „atentie”, titlu fără regulă */, "Comisioanele iau 56% din câștigul grilelor", "Niciun obicei al boților nu e dovedit, nici bun, nici rău"]);
+  assert.match(c.boti[0].text, /^Cei mai răi 10% \(174 de boți, fiecare sub −4,9%\) au pierdut 5\.555,0 USDT la suma ta de acum \(~161,2 USDT pe bot\), iar ceilalți 90% au câștigat 4\.139,0\.$/   /* v100.350: o zecimală */);
+  assert.match(c.boti[1].text, /^Cei ținuți peste 24 h \(76\) au adus −1\.540,0 USDT, cei sub 4 h \(1360\) \+460,0\. /);
+  assert.match(c.boti[2].text, /^Grilele au adus \+4\.287,0 USDT, comisioanele −2\.388,0 \(bani reali\)\. 635 de boți au stat sub 15 minute\.$/);
   assert.ok(c.boti.every((x) => !x.faCe || /^Aș /.test(x.faCe)), "„ce aș face eu” la persoana I");
   assert.deepEqual(a, ["Cumperi la preț mai mic pe pozițiile pe minus", "Comisioanele de conversie îți iau o mare parte din câștig", "Câteva poziții mari pe minus șterg câștigul celorlalte"]);
-  assert.match(c.actiuni[1].text, /^Ai plătit 6\.367 lei comision de conversie; rezultatul real e \+4\.659 lei \(T212 afișează \+11\.026, fără comisioane\)\.$/);
+  assert.match(c.actiuni[1].text, /^Ai plătit 6\.367,0 lei comision de conversie; rezultatul real e \+4\.659,0 lei \(T212 afișează \+11\.026,0, fără comisioane\)\.$/);
   for (const x of c.boti.concat(c.actiuni)) assert.ok((x.titlu + (x.text || "") + (x.faCe || "")).length && !/NaN|undefined|null/.test(x.titlu + x.text + (x.faCe || "")), x.titlu);
 });
 await test("(3c) pagina din meniu: „Monte Carlo · riscul tău” - pagina nouă sus, vechiul Monte Carlo pe semnale pliat (nimic pierdut); modulele în pagină și în cache", () => {
@@ -253,12 +253,12 @@ await test("(R9) monteCarlo pe listă goală ⇒ null (nu excepție); raportul f
   const r = RL.raport({ boti: [B({ lev: 20, t: T0 - 5 * ZI })], umpleri: [], acum: T0, reps: 50, n: 200 }); assert.deepEqual(r.boti.mc, []);
 });
 await test("(R10) textele: „pierdut 5.555” fără minus dublu, „1 din 20 ≈ o dată la 20 de luni”, mii la USDT, 0,25 h cu virgulă, alt ritm decât al tău spus ca atare, mediere cu limita de cauză", () => {
-  const c = RL.concluzii(RAPORT()); assert.match(c.boti[0].text, /au pierdut 5\.555 USDT/);
+  const c = RL.concluzii(RAPORT()); assert.match(c.boti[0].text, /au pierdut 5\.555,0 USDT/);
   assert.equal(RL.textLuna({ K: 60, S: 43.72, p5: -94.8, pMinus: 0.58 }, "USDT", null, false), "Luna proastă cu 60 de boți pe lună (~43,7 USDT fiecare): −94,8 USDT; luna iese pe minus în 58% din simulări.");
   assert.match(RL.textMediere(A1), /\. Mediezi doar ce scade deja, deci o parte din diferență ar fi venit oricum\.$/);
   assert.equal(RL.textMediere(Object.assign({}, A1, { stare: "nedovedit" })), null, "fără avertisment când nu e măcar la limită");
   const ctx = { RiscLuna: RL, TextRo: globalThis.TextRo }; vm.createContext(ctx); vm.runInContext(citeste("public", "lib", "risc-ecran.js"), ctx);
-  const h = ctx.rlHtml(RAPORT(), { kBoti: 159, kAct: 16 }); assert.match(h, /0–0,25 h/); assert.match(h, /cam o dată la 20 de luni/); assert.doesNotMatch(h, /un an și jumătate/); assert.match(h, /Bani rulați într-o lună/);
+  const h = ctx.rlHtml(RAPORT(), { kBoti: 159, kAct: 16 }); assert.match(h, /0–15 min/);   /* v100.350: sub o oră în minute */ assert.match(h, /cam o dată la 20 de luni/); assert.doesNotMatch(h, /un an și jumătate/); assert.match(h, /Bani rulați într-o lună/);
 });
 await test("(E) versiunea v100.113 / colector v101.76", () => {
   const html = citeste("public", "index.html");

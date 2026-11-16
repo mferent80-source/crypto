@@ -31,11 +31,11 @@ var GridJurnal = (function () {
   }
 
   // v100.103 (I-533): fe = { eticheta: "ingust"|"larg", setare } - fereastra apăsată; fără ea = gridul din „Alte setări” („alte”).
-  // Mediana probei e a gridului des ⇒ pe o fereastră rămâne null (nu se amestecă în calibrare).
+  // v100.350: pe o fereastră, mediana e a probei EI (fe.stat, verdictul ferestrei din v100.349) ⇒ intră și ea în calibrare; fără fe.stat rămâne null.
   function adauga(lista, f, acum, fe) {
     lista = Array.isArray(lista) ? lista.slice() : [];
     // f.stat = statistica setarii PROPUSE (gridul des cand fisa il propune); platoul brut ramane rezerva pentru fise vechi
-    var fs = fe && fe.setare ? fe.setare : null, st = fs || f.setare || {}, pe = fs ? null : f.stat || (f.proba && f.proba.pe && f.proba.pe[f.dir]), a = pe && pe.antren, t = pe && pe.test;
+    var fs = fe && fe.setare ? fe.setare : null, st = fs || f.setare || {}, pe = fs ? (fe.stat || null) : f.stat || (f.proba && f.proba.pe && f.proba.pe[f.dir]), a = pe && pe.antren, t = pe && pe.test;
     var e = {
       id: String(acum) + "-" + moneda(f.simbol).replace(/[^A-Z0-9]/g, ""), t: acum, simbol: f.simbol, dir: fs && fs.dir ? fs.dir : f.dir, H: f.H, pret: nr(f.pret),   // revizia 05.10: fișa neutră arată ferestrele pentru long
       verdict: f.verdict && f.verdict.nivel || null, suma: nr(st.suma),
@@ -99,12 +99,14 @@ var GridJurnal = (function () {
 
   function rezumat(lista) {
     var out = { total: 0 };
-    ["porneste", "asteapta", "nu", "fara-date"].forEach(function (v) { out[v] = { n: 0, legate: 0, pePlus: 0, sumaPct: 0, mediaPct: null }; });
+    ["porneste", "asteapta", "nu", "fara-date"].forEach(function (v) { out[v] = { n: 0, legate: 0, pePlus: 0, sumaPct: 0, mediaPct: null, deschise: 0 }; });
     (Array.isArray(lista) ? lista : []).forEach(function (e) {
       var v = out[e.verdict] || out["fara-date"];
       v.n++; out.total++;
       var baza = e.investit !== null && e.investit > 0 ? e.investit : e.suma;
-      if (e.botId && e.rezultat !== null && baza > 0) {
+      // v100.350 (auditul Grid): doar boții ÎNCHIȘI au un rezultat de numărat - cei care rulează au profit nerealizat (se numără separat)
+      if (e.botId && e.activ !== false) v.deschise++;
+      else if (e.botId && e.rezultat !== null && baza > 0) {
         v.legate++; v.sumaPct += e.rezultat / baza; if (e.rezultat > 0) v.pePlus++;
       }
     });

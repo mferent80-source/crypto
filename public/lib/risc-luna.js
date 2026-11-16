@@ -8,7 +8,7 @@ var RiscLuna = (function () {
   var ZI = 864e5, ORA = 36e5, LUNA = 30 * ZI, MARE = -0.05;
   function nr(v) { if (v === null || v === undefined || v === "") return NaN; var x = Number(v); return isFinite(x) ? x : NaN; }
   function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return k === 1 ? "1 " + sg : k + (k !== 0 && (r === 0 || r >= 20) ? " de " : " ") + pl; }
-  var v1 = function (x) { var p = Math.abs(x).toFixed(1).split("."); return p[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "," + p[1]; };   /* mii cu punct: 5.175,0 lei */
+  var v1 = function (x) { var p = Math.abs(Math.round(x * 10) / 10).toFixed(1).split(".");   /* v100.350: aceeași rotunjire ca pagina (202,95 ⇒ 203,0 peste tot) */ return p[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "," + p[1]; };   /* mii cu punct: 5.175,0 lei */
   var semn1 = function (x) { var r = Math.round(x * 10) / 10; return (r < 0 ? "−" : r > 0 ? "+" : "") + v1(r); };
   var pct = function (x) { return Math.round(x * 100) + "%"; };
   // mulberry32, ca Asemanatoare / GridJurnal (lecția Busolei, 04.10: un LCG pe numere zecimale pierde precizia și se repetă după ~10.000 de trageri)
@@ -231,7 +231,7 @@ var RiscLuna = (function () {
   }
 
   // ---------------- comportamentul spus explicit (pagina din meniu) ----------------
-  var mii = function (x) { var r = Math.round(Math.abs(x)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, "."); return (x < 0 ? "−" : x > 0 ? "+" : "") + r; };
+  var mii = function (x) { return (x < 0 ? "−" : x > 0 ? "+" : "") + v1(Math.abs(x)); };   /* v100.350: rezultatele cu o zecimală (era la leu / USDT întreg) */
   var LIMITA = { A1: "Mediezi doar ce scade deja, deci o parte din diferență ar fi venit oricum.", A3: "Ții mai mult ce merge prost, deci durata e și urmare, nu doar cauză." };
   // v100.222 (I-725): registrul respinge cauza la A3 și O2. Titlul și corpul nu mai spun „dovedit”.
   var LEGATURA = { A3: "Durata se știe abia la vânzare, iar ții mai mult ce merge prost: legătură, nu cauză.", O2: "Marja se adaugă când botul merge deja prost: legătură, nu cauză." };
@@ -252,13 +252,13 @@ var RiscLuna = (function () {
     var out = { boti: [], actiuni: [] }, B = rp && rp.boti, A = rp && rp.actiuni;
     if (B && B.desc) {
       var d = B.desc, S = B.ritm ? B.ritm.S : null, c = d.coada;
-      if (c && c.laS < 0 && c.restLaS > 0) out.boti.push({ nivel: "rau", titlu: "Câțiva boți cu pierderi mari șterg câștigul celorlalți",
+      if (c && c.laS < 0 && c.restLaS > 0) out.boti.push({ nivel: "atentie", titlu: "Câțiva boți cu pierderi mari șterg câștigul celorlalți",   /* v100.350 (auditul MC): netestat - cei mai răi 10% sunt pe minus aproape prin definiție; obiceiul «Stop pus» din tabel e cel testat */
         text: "Cei mai răi 10% (" + cate(c.n, "bot", "boți") + ", fiecare sub " + semn1(c.prag * 100) + "%) au pierdut " + mii(-c.laS).replace(/^[+−]/, "") + " USDT la suma ta de acum (~" + v1(S) + " USDT pe bot), iar ceilalți 90% au câștigat " + mii(c.restLaS).replace(/^[+−]/, "") + ".",
         faCe: "Aș pune stop la fiecare bot, la marginea gridului: fără el, o pierdere mare nu are margine." });
       var lung = (d.durate || []).filter(function (x) { return x.de >= 24; }), scurt = (d.durate || []).filter(function (x) { return x.pana !== null && x.pana <= 4; });
       var sl = lung.reduce(function (s, x) { return s + x.laS; }, 0), nl = lung.reduce(function (s, x) { return s + x.n; }, 0), ss = scurt.reduce(function (s, x) { return s + x.laS; }, 0), ns = scurt.reduce(function (s, x) { return s + x.n; }, 0);
-      if (nl >= 10 && sl < 0) out.boti.push({ nivel: "rau", titlu: "Boții ținuți peste o zi pierd", text: "Cei ținuți peste 24 h (" + nl + ") au adus " + mii(sl) + " USDT, cei sub 4 h (" + ns + ") " + mii(ss) + ". Durata e și urmare: ții mai mult ce merge prost.",
-        faCe: "Aș închide botul care stă de peste o zi pe minus, în loc să aștept să revină." });
+      if (nl >= 10 && sl < 0) out.boti.push({ nivel: "atentie", titlu: "Boții ținuți peste o zi au pierdut", text: "Cei ținuți peste 24 h (" + nl + ") au adus " + mii(sl) + " USDT, cei sub 4 h (" + ns + ") " + mii(ss) + ". Dar durata o știi abia la închidere: ții mai mult ce merge prost, deci e urmare cel puțin cât e cauză (n-am probat-o ca obicei).",
+        faCe: "Aș urmări obiceiurile din tabel: ele sunt probate pe istoria ta, cifra asta nu." });   /* v100.350 (auditul MC): informația nu era disponibilă la pornire ⇒ nu „rău” cu sfat */
       if (d.bani && d.bani.grile > 0 && -d.bani.comisioane > 0.3 * d.bani.grile) { var rapid = (d.durate || []).filter(function (x) { return x.pana !== null && x.pana <= 0.25; }).reduce(function (s, x) { return s + x.n; }, 0);
         out.boti.push({ nivel: "atentie", titlu: "Comisioanele iau " + pct(-d.bani.comisioane / d.bani.grile) + " din câștigul grilelor",   /* revizia (R5): aceeași bază ca textul */ text: "Grilele au adus " + mii(d.bani.grile) + " USDT, comisioanele " + mii(d.bani.comisioane) + " (bani reali)." + (rapid ? " " + cate(rapid, "bot", "boți") + " au stat sub 15 minute." : ""),
           faCe: "Aș lăsa botul măcar o oră: fiecare pornire plătește din nou comisionul." }); }

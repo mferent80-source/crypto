@@ -196,7 +196,7 @@ await test("🟡 B1 reluarea istoricului REAL (pornit în fiecare zi, cu tendin�
   assert.equal(meu.orizonturi[0].reluare, null);
 });
 // verdictul e pur pe rezultat - cazurile construite
-const oriz = (o) => Object.assign({ zile: 7, bare: 672, pCastig: 0.7, pPierde: 0.3, pZero: 0, p5: -2, p50: 1, p95: 3, marja: 4, marjaDrumuri: 4, marjaZile: 4, zileDistincte: 31, plan: null, pLich: 0, pStop: 0.1, pTp: 0, pIesire: 0.3, perechi: 5, funding: 0, reluare: { n: 25, media: 0.8, pPlus: 0.6, independente: 4 } }, o);
+const oriz = (o) => Object.assign({ zile: 7, bare: 672, pCastig: 0.7, pPierde: 0.3, pZero: 0, p5: -2, p50: 1, p95: 3, marja: 4, marjaDrumuri: 4, marjaZile: 4, zileDistincte: 31, plan: null, pLich: 0, pStop: 0.1, pTp: 0, pIesire: 0.3, perechi: 5, funding: 0, reluare: { n: 25, media: 0.8, pPlus: 0.6, independente: 4 }, media: 0.6, marjaMedie: 0.3 }, o);   // v100.350: + media drumurilor
 const rezDe = (o) => ({ n: 500, zile: 14, zileIstoric: 31, orizonturi: [oriz(o)], acum: null });
 await test("🟡 B1 „Aș porni” cere: P ≥ 55, mediana > 0, marginea de jos a incertitudinii peste 50% ȘI media pe istoria reală > 0", () => {
   assert.match(GS.verdict(rezDe({}), ST31, null, 0, null).faCe, /^Aș porni/);

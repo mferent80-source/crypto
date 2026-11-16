@@ -93,7 +93,7 @@ await test("(2e) recomandarea TP: alta doar cu mijlocul mai bun cu pragul (1 USD
   const tu = { nume: "fără TP", tp: null, tu: true, g: g(-2, -9) };
   /* v100.272: TP-ul ales se verifică pe drumuri noi înainte de „Aș pune” - aici cu aceleași cifre (testul e despre regula alegerii) */
   const x1 = { nume: "+¼ din grid", tp: 1.05, g: g(0, -8), drum: d(0.5, 0.1) }; x1.verif = { n: 2000, baza: tu.g, g: x1.g, drum: x1.drum };
-  assert.match(G.mcsTpRecomandat([tu, x1], 50), /^Aș pune TP-ul la 1,05: de obicei 0,0 USDT în loc de −2,0 USDT, mai bun în 50% din drumuri \(mai rău în 10%\)/);
+  assert.match(G.mcsTpRecomandat([tu, x1], 50), /^Aș pune TP-ul la 1,050: de obicei 0,0 USDT în loc de −2,0 USDT, mai bun în 50% din drumuri \(mai rău în 10%\)/);
   assert.match(G.mcsTpRecomandat([tu, { nume: "+¼ din grid", tp: 1.05, g: g(0, -8), drum: d(0.3, 0.3) }], 50), /^Rămâi fără TP/, "nesigur drum cu drum");
   assert.match(G.mcsTpRecomandat([tu, { nume: "+¼ din grid", tp: 1.05, g: g(-1.5, -8), drum: d(0.5, 0.1) }], 50), /^Rămâi fără TP/, "sub prag");
   assert.match(G.mcsTpRecomandat([tu, { nume: "+¼ din grid", tp: 1.05, g: g(0, -12), drum: d(0.5, 0.1) }], 50), /^Rămâi fără TP/, "coada mai rea");
@@ -101,7 +101,7 @@ await test("(2e) recomandarea TP: alta doar cu mijlocul mai bun cu pragul (1 USD
 await test("(2f) formularul are TP; „Refă” îl citește; aceleași setări cu alt TP ⇒ altele; variantele mută TP-ul cu marginea", () => {
   const st = G.mcsSetariBot([bot({})], "PONS");
   assert.match(G.mcsGridHtml({ tip: "coin", sim: "PONS", setari: st, grid: { eroare: "x" } }), /<input id="mcsTpBot" inputmode="decimal" placeholder="fără" value="0.47">/);
-  assert.match(functie(MSE, "mcsResimuleaza"), /mcsNumar\("mcsTpBot"\)/); assert.match(functie(MSE, "mcsTasta"), /TpBot/);
+  assert.match(functie(MSE, "mcsResimuleaza"), /tp: v\("mcsTpBot"\)/);   /* v100.350: prin mcsSetariDinCampuri */ assert.match(functie(MSE, "mcsTasta"), /TpBot/);
   assert.equal(G.mcsAceleasiSetari(st, Object.assign({}, st, { tp: 0.5 })), false); assert.equal(G.mcsAceleasiSetari(st, Object.assign({}, st)), true);
   const v = G.mcsVariante(st), larg = v.find((x) => /mai larg/.test(x.nume)).st;
   assert.ok(Math.abs((larg.tp - larg.sus) - (st.tp - st.sus)) < 1e-12, "TP-ul păstrează distanța de marginea de sus");
@@ -176,7 +176,7 @@ await test("(R8/R9) „Rămâi fără TP” / „Păstrează TP-ul la …”; te
 // ---------------- (3) 🎲 din rând ----------------
 await test("(3a) mcsRevineButon: butonul din rând deschide Monte Carlo pe poziție (mcsPozitie), cu clasa dată (ascunsă pe telefon)", () => {
   const h = G.mcsRevineButon("RHM.DE", 936.6, 1349.6, 1109.08, { p: 0.12, zile: 60 }, "t212RevMic");
-  assert.equal(h, '<button type="button" class="mcsRevBtn t212Mic t212RevMic" data-action-click="mcsPozitie(\'RHM.DE\',936.6,1349.6,1109.08)" title="Monte Carlo pe poziție">🎲 revine la intrare: 12% în 60 z</button>');
+  assert.equal(h, '<button type="button" class="mcsRevBtn t212Mic t212RevMic" data-action-click="mcsPozitie(\'RHM.DE\',936.6,1349.6,1109.08)" title="Monte Carlo pe poziție">🎲 revine la intrare: 12% în 60 de zile de bursă' + h.slice(h.indexOf(' · scade'), h.indexOf('</button>')) + '</button>');   /* v100.350: și „scade încă 10%” */
   assert.equal(G.mcsRevineButon("<x>", 1, 2, 3, { p: 0.1, zile: 60 }, ""), "");
   assert.match(functie(TE, "t212RevineHtml"), /mcsRevineButon\(/); assert.match(citeste("public", "lib", "salt-ecran.js"), /mcsRevineButon\(p\.simbol, pr, a\.p\.pretMediu, n\.stopPozitie, a\.revine, "saltRevMic"\)/);
   assert.match(citeste("public", "app.css"), /\.mcsRevBtn\{/);

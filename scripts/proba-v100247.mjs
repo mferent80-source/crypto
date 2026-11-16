@@ -24,16 +24,15 @@ await test("Monte Carlo: titlul și obiceiurile urcă, caseta de simbol rămâne
   assert.ok(html.indexOf('<details class="rlVechi">') > j);
   const css = citeste("public", "app.css");
   assert.match(css, /#montecarlo\.on\{[^}]*display:flex/);
-  assert.match(css, /#montecarlo>\.sectionHead\{[^}]*order:1/);
-  assert.match(css, /#montecarlo>#rlPagina\{[^}]*order:2/);
-  assert.match(css, /#montecarlo>#mcsPagina\{[^}]*order:3/);
-  assert.match(css, /#montecarlo>\.rlVechi\{[^}]*order:4/);
+  /* v100.350 (el: „fă și pagina [Monte Carlo] la fel cu restul”): ordinea din HTML - antetul paginii, unealta, apoi riscul tău (RISCUL TĂU deasupra raportului) */
+  assert.match(citeste("public", "app.css"), /#montecarlo>\*\{order:0\}/);
+  assert.doesNotMatch(css, /#montecarlo>#rlPagina\{[^}]*order:2/); assert.doesNotMatch(css, /#montecarlo>#mcsPagina\{[^}]*order:3/);   /* v100.350: fără ordinea forțată */
 });
 
 await test("simulatorul își spune numele, futures pune interpretarea întâi, motorul vechi e pliat, macro și sectoarele stau pe un rând", () => {
   const html = citeste("public", "index.html");
   const g = html.indexOf('id="gridsim"');
-  assert.match(html.slice(g, g + 180), /<div class="sectionHead"><h3>Simulator grid<\/h3><span class="small">un bot grid Pionex<\/span><\/div>/);
+  assert.match(html.slice(g, g + 260), /<div class="sectionHead"><h3>🎰 Simulator grid<\/h3><span class="tbSub">un bot grid Pionex · cum se termină drumurile, de aici încolo<\/span><button [^>]*id="gsTemaBtn"/);   /* v100.350: antetul paginilor refăcute (titlul + butonul temei) */
   assert.ok(html.indexOf('id="gsPagina"', g) > g);
   assert.match(html, /<section class="panel cryptoContextOnly" id="deriv"><div class="sectionHead"><h3>Futures · funding și OI<\/h3><span class="small">Binance USDⓈ-M · doar citire<\/span><\/div><div class="grid">/);
   const css = citeste("public", "app.css");

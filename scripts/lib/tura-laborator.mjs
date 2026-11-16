@@ -13,7 +13,9 @@ function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) ret
 export async function turaLaborator(d) {
   const top = d.top || 20, H = d.H || 2, pagini = d.pagini > 0 ? Math.floor(d.pagini) : 6, zile = d.zile > 0 ? Math.floor(d.zile) : 30, pauzaMs = d.pauzaMs == null ? 1600 : d.pauzaMs, t0 = Date.now();
   const tk = await d.cere("tickers");
-  const lista = d.GridClasament.topDupaVolum(tk && tk.data && tk.data.tickers, top);
+  // v100.350 (revizia independentă): rămâne top după VOLUM - lista paginii e aleasă după cum a mers gridul în aceleași ~60 de zile pe care le măsoară
+  // laboratorul (selecție pe rezultat ⇒ dovadă umflată; „informația era disponibilă atunci?”). Volumul nu se uită la rezultat.
+  const lista = d.GridClasament.topDupaVolum(tk && tk.data && tk.data.tickers, top), sursaLista = "volum";
   let rows = [], monede = 0, fara = 0;
   const cuPlan = !!(d.GridPlan && d.plan && d.plan.plus > 0 && d.plan.minus > 0), planMonede = [];
   const extra = (Array.isArray(d.extraSimboluri) ? d.extraSimboluri : []).map(String).filter(Boolean);
@@ -81,7 +83,7 @@ export async function turaLaborator(d) {
     if (pauzaMs) await d.pauza(pauzaMs);
   }
   const intrebari = d.GridLaborator.intrebari(rows, H);
-  const rez = { la: Date.now(), H, monede, fara, ferestre: rows.length, intrebari, carnet: carnet ? { cazuri: carnet.cazuri, oferteNoi: carnet.oferteNoi, ms: carnet.ms, fara: carnet.fara, erori: carnet.erori.n } : null,
+  const rez = { sursaLista, la: Date.now(), H, monede, fara, ferestre: rows.length, intrebari, carnet: carnet ? { cazuri: carnet.cazuri, oferteNoi: carnet.oferteNoi, ms: carnet.ms, fara: carnet.fara, erori: carnet.erori.n } : null,
     planMonede: cuPlan && planMonede.length ? { dir: "long", zile, plan: { plus: d.plan.plus, minus: d.plan.minus }, suma: d.suma || 100, levier: d.levier || 5, nota: d.notaPlan || "", monede: planMonede } : null };
   d.jurnal("laborator:", cate(monede, "monedă", "monede") + ",", cate(rows.length, "fereastră", "ferestre"), "in", Math.round((Date.now() - t0) / 1000) + " s; " + intrebari.map((q) => q.id + "=" + q.verdict).join(" "));
   return rez;

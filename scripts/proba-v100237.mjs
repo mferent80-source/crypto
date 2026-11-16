@@ -91,7 +91,8 @@ await test("CSS-ul pzDemo arată aceeași ordine; șirurile vechi 65 și 61 răm
   ];
   for (const s of ord) assert.ok(css.includes(s), s);
   assert.ok(!css.includes(".pzDemo #grFisa>.grVerdict{order:0}"));
-  assert.ok(css.includes(".pzDemo #gsPagina:has(.gsVerdict)>.gsSec:has(.gsVerdict){order:10}"));
+  /* v100.350: Simulatorul își scrie blocurile direct în ordinea bună (fraza, verdictul, riscurile, Setarea pliată…) - ordinea din CSS a fost scoasă */
+  assert.ok(!css.includes(".pzDemo #gsPagina:has(.gsVerdict)")); assert.match(fs.readFileSync(path.join(RAD, "public", "lib", "grid-sim-ecran.js"), "utf8"), /gsFrazaHtml\(s\) \+ gsVerdictHtml\(s\) \+ gsRiscuriHtml\(s\) \+ gsFormHtml\(s\)/);
 });
 
 await test("blocurile rămân: Busola pe 4h, setările, poarta, îngustă, banii, istoricul, trendul", () => {

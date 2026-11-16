@@ -505,10 +505,10 @@
   // riscul tău: concluzia cea mai gravă dintre cele ARĂTATE (cu culoarea ei); verbul = secțiunea (boții / acțiunile), nu un cuvânt al stratului
   function pagMonteCarlo() {
     var L = [].map.call(document.querySelectorAll("#rlPagina .rlCon"), function (x) { var s = x.closest(".rlSec"), h = s ? tx("h3", s) : ""; return { ton: tonCls(x), titlu: tx("b", x), fac: tx(".rlFac", x).replace(/^👉\s*/, ""), sec: h }; });
-    if (!L.length) { antet("pzV-mc", $("mcsPagina"), null); return; }
+    if (!L.length) { antet("pzV-mc", $("rlPagina"), null); return; }   /* v100.350: deasupra raportului de risc, nu a uneltei Monte Carlo */
     var ORD = { jos: 0, aur: 1, mut: 2, sus: 3 }, w = L.slice().sort(function (a, b) { return ORD[a.ton] - ORD[b.ton]; })[0];
-    antet("pzV-mc", $("mcsPagina"), { verb: "RISCUL TĂU", ton: w.ton, titlu: (w.sec ? w.sec + ": " : "") + w.titlu, fac: w.fac,
-      voci: L.map(function (x) { var t = (x.sec ? x.sec.split(" ")[0] + ": " : "") + x.titlu; return { n: t.length > 44 ? t.slice(0, 42) + "…" : t, ton: x.ton, tit: t }; }), din: "„Ce înseamnă pentru tine” din „Riscul și obiceiurile tale” (mai jos, după Monte Carlo pe simbol)" });
+    antet("pzV-mc", $("rlPagina"), { verb: "RISCUL TĂU", ton: w.ton, titlu: (w.sec ? w.sec + ": " : "") + w.titlu, fac: w.fac,
+      voci: L.map(function (x) { var t = (x.sec ? x.sec.split(" ")[0] + ": " : "") + x.titlu; return { n: t.length > 44 ? t.slice(0, 42) + "…" : t, ton: x.ton, tit: t }; }), din: "„Ce înseamnă pentru tine” din raportul de mai jos" });
   }
   function pagCarnet() {
     var st = null; try { st = carnetStare.raport.rejoc.intrebari.alegere.stare; } catch (e) {}

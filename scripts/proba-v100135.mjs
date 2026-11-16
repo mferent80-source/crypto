@@ -62,7 +62,7 @@ await test("(3c) pagina: funding-ul real se aduce o dată pe monedă (pionex_fun
   assert.match(functie(E, "gsCiteste"), /fundingSursa = "manual"/);
   const s = { mod: "nou", boti: [], sim: "PONS", st: { jos: 0.37, sus: 0.42, grile: 34, levier: 3, dir: "short", suma: 50, stop: { sus: 0.43 }, tp: null, tip: "geometric" }, plan: { minus: null, plus: null }, fundingZi: -0.00012, fundingSursa: "pionex", fundingInfo: { rataZi: -0.00012, intervalOre: 8, zile: 7, n: 21 }, pornitLa: null, rez: null, oriz: 2 };
   const h = G.gsFormHtml(s);
-  assert.match(h, /<input id="gsFunding"[^>]*value="-0\.012"/); assert.match(h, /funding-ul real Pionex \(PONS\): −0,012% pe zi \(media ultimelor 7 zile, la 8 h\) · short plătește, long încasează/);   // revizia (R4): pe semn
+  assert.match(h, /<input id="gsFunding"[^>]*value="-0,012"/);   /* v100.350: cu virgulă */ assert.match(h, /funding-ul real Pionex \(PONS\): −0,012% pe zi \(media ultimelor 7 zile, la 8 h\) · short plătește, long încasează/);   // revizia (R4): pe semn
   assert.match(G.gsFormHtml(Object.assign({}, s, { fundingSursa: "manual" })), /funding scris de tine/);
   assert.match(G.gsFormHtml(Object.assign({}, s, { fundingSursa: null, fundingZi: 0.0003 })), /cost fix presupus/);
 });
