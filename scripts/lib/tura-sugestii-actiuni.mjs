@@ -4,7 +4,7 @@
 //   și EU (aduse aici), istoricul fiecărei reguli pe 2 ani (SugestiiActiuni.dovada), baza pentru intraday (volumul mediu, închiderea de ieri)
 //   și urmărirea înainte (fiecare listă a zilei, judecată la închiderea de după 14 zile, −0,3%; v100.196: orizont FIX, nu „prețul de acum”).
 // (sugestiiIntraday - pre-market / gap - scoasă în v100.345; listele ei au fost scoase de pe pagină pe 01.11)
-import { verdictFerestre, preaDevreme } from "./verdict-ferestre.mjs";   // v101.184: verdictul listei, calculat (26 de ferestre)
+import { registruFerestre, registruPe, preaDevreme } from "./verdict-ferestre.mjs";   // v101.184: verdictul listei, calculat (26 de ferestre)
 import { spark } from "./spark.mjs";   // v101.184: seria mini-graficului de pe rândurile Sugestiilor
 const ZI = 86400000, URM_ZILE = 14, URM_COST = 0.003, PASTRARE = 120;
 // numărătorile din jurnal - „1 acțiune”, „25 de acțiuni” (TextRo.cate; rezerva știe aceeași regulă, ca tura-laborator)
@@ -39,7 +39,9 @@ export function urmarireRevine(ist, barePe, reper, acum, o) {
   const zileL = [...peZi.values()].sort((x, y) => x.t - y.t), mr = zileL.map((z) => med(z.r)), me = zileL.filter((z) => z.e.length).map((z) => med(z.e));
   let ferestre = 0, ultimaF = -Infinity; for (const z of zileL) if (z.t - ultimaF >= REV_PAUZA) { ferestre++; ultimaF = z.t; }
   const n = zileL.reduce((s1, z) => s1 + z.r.length, 0);
-  const vf = verdictFerestre(zileL.filter((z) => z.e.length).map((z) => ({ t: z.t, e: med(z.e) })), REV_PAUZA);   // v101.184: fereastra = pauza dintre semnale
+  const RF = registruFerestre(o.registru || null, zileL.filter((z) => z.e.length).map((z) => ({ t: z.t, e: med(z.e) })), REV_PAUZA), vf = RF.vf;   // v101.184: fereastra = pauza dintre semnale; v101.185: registrul
+  if (o.laRegistru) o.laRegistru(RF.reg);
+  ferestre = vf.ferestre;   // v101.185 (🟡4): reperul lipsă azi nu mai coboară ferestrele la 0; un singur număr în text
   const u = { vf, n, zile: zileL.length, medie: med(mr), exces: me.length ? med(me) : null, zilePeste: me.length ? me.filter((v) => v > 0).length / me.length : null, ferestre, inAsteptare, nejudecate, reper: REPER[p] || null };
   const fara = !Rp ? " (fără reper: doar rezultatul brut)" : "";
   u.text = !n ? "Semnalele se judecă la " + cate(REV_ZILE, "zi", "zile") + " de bursă după intrare, față de " + (REPER[p] || "piață") + fara + ", după 0,3%: încă niciunul ajuns la capăt" + (inAsteptare ? " (" + cate(inAsteptare, "semnal", "semnale") + " în așteptare)" : "") + "."
@@ -78,7 +80,7 @@ export async function sugestiiDimineata(d) {
   const adauga = (p, x, tBara) => { const e = { zi, piata: p, lista: "revine", ticker: x.ticker, pret: x.pret, t: acum, tBara }; if (!(x.pret > 0) || !(tBara > 0) || vazut.has(cheieU(e))) return; vazut.add(cheieU(e)); ist.push(e); };
   for (const x of eu.revine || []) adauga("eu", x, x.tBara);
   for (const x of Array.isArray(d.reveniriUS) ? d.reveniriUS : []) { const bb = barePe[x.ticker]; if (bb && bb.length) adauga("us", x, bb[bb.length - 1].t); }
-  const urmarire = { us: { revine: urmarireRevine(ist, barePe, d.reper, acum, { piata: "us" }) }, eu: { revine: urmarireRevine(ist, barePe, d.reper, acum, { piata: "eu" }) } };
+  const urmarire = { us: { revine: urmarireRevine(ist, barePe, d.reper, acum, { piata: "us", ...registruPe(d, "revUS") }) }, eu: { revine: urmarireRevine(ist, barePe, d.reper, acum, { piata: "eu", ...registruPe(d, "revEU") }) } };
   return { raport: { la: acum, zi, us, eu, urmarire }, baza: {}, istoric: ist };
 }
 

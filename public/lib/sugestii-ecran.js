@@ -443,11 +443,13 @@ function sugAlegeTf(tf) { var r = sugRandAles(); if (!r) return; var L = SUG_TF[
 // v100.346 (el: „DE CE TOT APARE N-AM AFLAT?”): eticheta listei calculată din urmărirea ei înainte (vf, colectorul v101.184) - regula fixată
 // pe 16.11: 26 de ferestre care nu se suprapun, verdictul o singură dată (t ≥ 2); sub 26 se vede cât s-a strâns. Fără datele noi: eticheta veche.
 var SUG_REPER = { porn: "CA PIAȚA", revUS: "CA QQQ", revEU: "CA INDICELE EU", sect: "CA SECTORUL" };
+// v100.347 (revizia, 🟡5): „colectorul nou” = măcar o urmărire din aceeași sursă are vf; altfel (colectorul vechi / cheia scrisă înainte) eticheta veche
+function sugAreVf(o) { if (!o || typeof o !== "object") return false; if (o.vf && o.vf.verdict) return true; for (var k in o) if (o[k] && typeof o[k] === "object" && o[k] !== o && sugAreVf(o[k])) return true; return false; }
 function sugVf(k, d) {
   d = d || {}; var sm = d.sugMonede && d.sugMonede.sugestii, u = null;
-  if (k === "porn") { if (!sm || !sm.urmarire) return null; u = sugUrmPorn(sm).nou; }
-  else if (k === "revUS" || k === "revEU") { if (!(d.sugActiuni && d.sugActiuni.sugestii)) return null; u = sugUrmRev(d, k === "revUS" ? "us" : "eu"); }
-  else if (k === "sect") { if (!d.sectoare) return null; u = d.sectoare.urmarire; }
+  if (k === "porn") { if (!sm || !sugAreVf(sm.urmarire)) return null; u = sugUrmPorn(sm).nou; }
+  else if (k === "revUS" || k === "revEU") { var ua = d.sugActiuni && d.sugActiuni.sugestii && d.sugActiuni.sugestii.urmarire; if (!sugAreVf(ua)) return null; u = sugUrmRev(d, k === "revUS" ? "us" : "eu"); }
+  else if (k === "sect") { if (!d.sectoare || !d.sectoare.urmarire) return null; u = d.sectoare.urmarire; }
   else return null;
   return u && u.vf && u.vf.verdict ? u.vf : { ferestre: 0, nVerdict: 26, verdict: "prea devreme" };
 }
@@ -460,7 +462,8 @@ function sugVerdictEt(k, d) {
   return ["PREA DEVREME · " + (vf.ferestre || 0) + " DIN " + (vf.nVerdict || 26), "p"];
 }
 // v100.346: urmărirea înainte a topului (colectorul v101.184): primele 3 pe sector față de media sectorului, la 21 de zile de bursă, după 0,3%
-function sugSectUrm(S) { var u = S && S.urmarire; return u && u.zile ? "urmărit înainte: " + sugCate(u.zile, "zi judecată", "zile judecate") + ", " + sugPctZ(u.exces) + " față de media sectorului la 21 de zile de bursă, după 0,3%" + (u.inAsteptare ? " · " + u.inAsteptare + " în așteptare" : "") : "urmărirea înainte (primele 3 față de media sectorului, la 21 de zile de bursă, după 0,3%) începe cu tura de mâine" + (u && u.inAsteptare ? " · " + u.inAsteptare + " în așteptare" : ""); }
+function sugSectUrm(S) { var u = S && S.urmarire; if (u && !u.zile && u.inAsteptare) return sugCate(u.inAsteptare, "zi notată", "zile notate") + ", judecate la 21 de zile de bursă după ce au fost notate (prima judecată după ~1 lună)";   /* v100.347 (🔵) */
+  return u && u.zile ? "urmărit înainte: " + sugCate(u.zile, "zi judecată", "zile judecate") + ", " + sugPctZ(u.exces) + " față de media sectorului la 21 de zile de bursă, după 0,3%" + (u.inAsteptare ? " · " + u.inAsteptare + " în așteptare" : "") : "urmărirea înainte (primele 3 față de media sectorului, la 21 de zile de bursă, după 0,3%) începe cu tura de mâine" + (u && u.inAsteptare ? " · " + u.inAsteptare + " în așteptare" : ""); }
 function sugSectIst(S) { var i = S && S.istoric; return i && i.luni ? "istoricul paginii: " + sugPctZ(i.medie) + " pe lună față de sector, pe plus în " + (i.luniPlus || 0) + " din " + sugCate(i.luni, "lună", "luni") + " (fără cost, pe firmele mari de azi)" : "auditul 01.11: +1,1% pe lună față de sector, după cost, 8 din 11 luni (t 1,1)"; }
 // v100.344: urmărirea „Pe ce aș porni” - regula nouă (porn) și cea veche (pornScor). Colectorul VECHI (fără pornScor) trimite în „porn”
 // regula veche: atunci ea e „vechea”, iar cea nouă n-a început (altfel pagina ar fi numit cifrele vechi „regula de la 16.11”)

@@ -73,6 +73,8 @@ export async function turaClasament(d) {
     }
     if (pauzaMs && !d.klines4h) await d.pauza(pauzaMs);   /* v101.166: incremental, pauza o ține d.klines4h, doar înaintea unei cereri */
   }
+  // v101.185 (revizia, 🟡7): seria doar la primii FUND_TOP lichizi după scor (corpul clasamentului rămâne departe de limita de 64 KB)
+  { const tin = new Set(monede.filter((m) => m && m.stare === "candidat" && Number(m.volum) >= FUND_PRAG).sort((a, b) => (b.scor || 0) - (a.scor || 0)).slice(0, FUND_TOP).map((m) => m.simbol)); for (const m of monede) if (m && m.spark && !tin.has(m.simbol)) delete m.spark; }
   if (d.GridSim) { try { await adaugaFunding(monede, d); } catch (e) { d.jurnal("clasament: funding", e && e.message); } }   // v101.182
   const rz = d.GridClasament.rezumat({ la: Date.now(), monede });
   if (!monede.length || rz.faraDate > monede.length * 0.2) {

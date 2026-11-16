@@ -5,7 +5,7 @@
 //     jurnalul verdictelor (sursa „top-sector”, judecat față de QQQ);
 // (2) la o oră: volatilitatea implicită a opțiunilor pe BTC și ETH (DVOL, Deribit, public) ⇒ KV piata:dvol (banda gridului din fișă).
 // d = { cere, trimite, jurnal, Factori, GridCalcul, bareZi(cale), fetch, universDisc: {citeste(), scrie(x)}, acum }
-import { verdictFerestre, preaDevreme } from "./verdict-ferestre.mjs";   // v101.184: verdictul listei, calculat (26 de ferestre)
+import { registruFerestre, registruPe } from "./verdict-ferestre.mjs";   // v101.184: verdictul listei, calculat (26 de ferestre)
 import { spark } from "./spark.mjs";   // v101.184: seria mini-graficului de pe rândurile Sugestiilor
 const ORA = 3600000;
 const ziRo = (t) => new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Bucharest" }).format(new Date(t));
@@ -30,22 +30,30 @@ export function universTop(u, o) {
 // v101.184 (el, 16.11: „de ce tot apare n-am aflat”): urmărirea ÎNAINTE a topului pe sectoare - fiecare zi notată (bara ei de închidere + primele 3 pe
 // sector) se judecă la 21 de zile de bursă: media celor 3 minus media sectorului (aceleași firme mari de azi, cu bare), după 0,3%; ziua = media pe
 // sectoare; ferestrele lunare (29 de zile) care nu se suprapun ⇒ verdictul la 26 (verdict-ferestre.mjs). Firmele sunt cele de azi (supraviețuitori).
-export function urmarireSectoare(urm, bare, univ, acum) {
-  const ZI = 86400000, H = 21, COST = 0.003, zile = []; let inAsteptare = 0, nejudecate = 0;
+export function urmarireSectoare(urm, bare, univ, acum, o) {
+  // v101.185 (revizia v100.346): 🔴2 hărți zi → index o dată pe simbol (era O(n²) cu toISOString: 60 de notări ≈ 19 s sincron); 🔴3 membrii
+  // sectorului din ziua notării (rec.mem), nu universul de azi; fără bare ⇒ „nejudecat” (null), doar orizontul neajuns ⇒ „în așteptare”
+  // (undefined); 🟡6 intrarea la DESCHIDEREA zilei de după clasare (tura rulează dimineața următoare), ieșirea la închiderea a 21-a zi de bursă.
+  o = o || {}; const H = 21, COST = 0.003, zile = []; let inAsteptare = 0, nejudecate = 0;
   const membri = {}; for (const u of Array.isArray(univ) ? univ : []) if (u && u.sector && bare && bare[u.s] && bare[u.s].length) (membri[u.sector] = membri[u.sector] || []).push(u.s);
-  const ziU = (t) => new Date(t).toISOString().slice(0, 10), ret = (s, tb) => { const b = bare[s]; if (!b) return undefined; let i = -1; for (let k = 0; k < b.length; k++) if (ziU(b[k].t) === ziU(tb)) { i = k; break; } if (i < 0) return null; if (i + H >= b.length) return undefined; return b[i].c > 0 && b[i + H].c > 0 ? b[i + H].c / b[i].c - 1 : null; };
-  for (const x of (Array.isArray(urm) ? urm : []).slice().sort((a, b) => a.tb - b.tb)) {
-    const dif = []; let asteapta = false;
+  const ziU = (t) => new Date(t).toISOString().slice(0, 10), idx = new Map();
+  const harta = (s) => { if (!idx.has(s)) { const m = new Map(), b = bare && bare[s]; if (Array.isArray(b)) for (let k = 0; k < b.length; k++) m.set(ziU(b[k].t), k); idx.set(s, m); } return idx.get(s); };
+  const ret = (s, zi) => { const b = bare && bare[s]; if (!Array.isArray(b) || !b.length) return null; const i = harta(s).get(zi); if (i == null) return ziU(b[b.length - 1].t) < zi ? undefined : null; if (i + H >= b.length) return undefined; const a = b[i + 1], z = b[i + H], pa = a.o > 0 ? a.o : a.c; return pa > 0 && z.c > 0 ? z.c / pa - 1 : null; };
+  for (const x of (Array.isArray(urm) ? urm : []).slice().sort((p, q) => p.tb - q.tb)) {
+    const dif = [], zi = ziU(x.tb); let asteapta = false;
     for (const sec of Object.keys(x.top || {})) {
-      const tR = (x.top[sec] || []).map((s) => ret(s, x.tb)), mR = (membri[sec] || []).map((s) => ret(s, x.tb));
-      if (tR.some((v) => v === undefined)) { asteapta = true; continue; }
-      const tOk = tR.filter((v) => v != null), mOk = mR.filter((v) => v != null); if (!tOk.length || mOk.length < 5) continue;
-      dif.push(tOk.reduce((a, b) => a + b, 0) / tOk.length - COST - mOk.reduce((a, b) => a + b, 0) / mOk.length);
+      const mem = x.mem && Array.isArray(x.mem[sec]) ? x.mem[sec] : membri[sec] || [];
+      const tR = (x.top[sec] || []).map((s) => ret(s, zi)); if (tR.some((v) => v === undefined)) { asteapta = true; continue; }
+      if (tR.some((v) => v == null)) continue;   // o firmă din top fără prețuri: sectorul zilei nu se judecă (nu se aleg doar cele rămase)
+      const mOk = mem.map((s) => ret(s, zi)).filter((v) => v != null && v !== undefined); if (mOk.length < 5) continue;
+      dif.push(tR.reduce((p, q) => p + q, 0) / tR.length - COST - mOk.reduce((p, q) => p + q, 0) / mOk.length);
     }
-    if (dif.length) zile.push({ t: x.tb, e: dif.reduce((a, b) => a + b, 0) / dif.length }); else if (asteapta) inAsteptare++; else nejudecate++;
+    if (dif.length) zile.push({ t: x.tb, e: dif.reduce((p, q) => p + q, 0) / dif.length }); else if (asteapta) inAsteptare++; else nejudecate++;
   }
-  const vf = verdictFerestre(zile, 29 * ZI), med = zile.length ? zile.reduce((a, z) => a + z.e, 0) / zile.length : null;
-  return { vf, zile: zile.length, exces: med, zilePeste: zile.length ? zile.filter((z) => z.e > 0).length / zile.length : null, inAsteptare, nejudecate, la: acum };
+  // fereastra: 32 de zile calendaristice (21 de zile de bursă, cu sărbători, nu depășesc 31) - ferestrele nu se suprapun
+  const RF = registruFerestre(o.registru || null, zile, 32 * 86400000); if (o.laRegistru) o.laRegistru(RF.reg);
+  const med = zile.length ? zile.reduce((p, z) => p + z.e, 0) / zile.length : null;
+  return { vf: RF.vf, zile: zile.length, exces: med, zilePeste: zile.length ? zile.filter((z) => z.e > 0).length / zile.length : null, inAsteptare, nejudecate, notate: (Array.isArray(urm) ? urm : []).length, la: acum };
 }
 
 export async function turaSectoare(d, st) {
@@ -82,17 +90,22 @@ export async function turaSectoare(d, st) {
     }
     const top = universTop(univers.l, { minCap: 1e10, peSector: 25 }), bare = {};
     for (const x of top) {
-      const b = await incearca(d, "bare " + x.s, async () => d.GridCalcul.bareBursa((await d.bareZi("/api/t212?action=preturi&interval=1d&yahoo=" + encodeURIComponent(x.s))).randuri || [], acum).map((y) => ({ t: y.t, c: y.c })));
+      const b = await incearca(d, "bare " + x.s, async () => d.GridCalcul.bareBursa((await d.bareZi("/api/t212?action=preturi&interval=1d&yahoo=" + encodeURIComponent(x.s))).randuri || [], acum).map((y) => ({ t: y.t, o: y.o, c: y.c })));   // v101.185: + deschiderea (intrarea urmăririi)
       if (b && b.length) bare[x.s] = b;
     }
     const rez = d.Factori.topSectoare(top, bare, { n: 3 }), ist = d.Factori.istoricRegula(top, bare, { n: 3 });
     const sectoare = Object.keys(rez).map((s) => ({ sector: s, ...rez[s] })).sort((a, b) => a.ro.localeCompare(b.ro, "ro"));
     // v101.184: notarea zilei pentru urmărirea înainte (o dată pe bara de închidere), păstrată ~2,5 ani în starea turei (pe disc)
     const tbZi = Math.max(0, ...Object.values(bare).map((b) => (b.length ? b[b.length - 1].t : 0)));
-    st.urm = (Array.isArray(st.urm) ? st.urm : []).filter((x) => x && x.tb > acum - 900 * 86400000);
-    if (tbZi > 0 && !st.urm.some((x) => x.tb === tbZi)) st.urm.push({ tb: tbZi, top: Object.fromEntries(sectoare.map((s) => [s.sector, (s.top || []).map((x) => x.s)])) });
+    // v101.185: notările se țin 60 de zile (judecata vine după ~31; ferestrele judecate stau în registru), cu membrii sectorului din ziua notării
+    st.urm = (Array.isArray(st.urm) ? st.urm : []).filter((x) => x && x.tb > acum - 60 * 86400000);
+    if (tbZi > 0 && !st.urm.some((x) => x.tb === tbZi)) st.urm.push({ tb: tbZi, top: Object.fromEntries(sectoare.map((s) => [s.sector, (s.top || []).map((x) => x.s)])), mem: Object.fromEntries(sectoare.map((s) => [s.sector, top.filter((u) => u.sector === s.sector && bare[u.s]).map((u) => u.s)])) });
+    // 🔴3: firmele notate care au ieșit din universul de azi își aduc și ele barele (altfel ar lipsi tocmai cele care au scăzut)
+    const lipsa = [...new Set(st.urm.flatMap((x) => Object.values(x.top || {}).flat().concat(Object.values(x.mem || {}).flat())))].filter((s) => !bare[s]).slice(0, 120);
+    if (lipsa.length) d.jurnal("sectoare: bare aduse și pentru " + d.Factori.cate(lipsa.length, "firmă notată", "firme notate") + " ieșite din universul de azi");
+    for (const s of lipsa) { const b = await incearca(d, "bare (notate) " + s, async () => d.GridCalcul.bareBursa((await d.bareZi("/api/t212?action=preturi&interval=1d&yahoo=" + encodeURIComponent(s))).randuri || [], acum).map((y) => ({ t: y.t, o: y.o, c: y.c }))); if (b && b.length) bare[s] = b; }
     for (const sec of sectoare) for (const x of sec.top || []) x.spark = spark(bare[x.s]);   // v101.184: mini-graficul de pe rând (30 de închideri)
-    await d.trimite("/api/istoric-bot?action=sectoareTop", { la: acum, sectoare, istoric: ist, univers: top.length, cuBare: Object.keys(bare).length, urmarire: urmarireSectoare(st.urm, bare, top, acum) });
+    await d.trimite("/api/istoric-bot?action=sectoareTop", { la: acum, sectoare, istoric: ist, univers: top.length, cuBare: Object.keys(bare).length, urmarire: urmarireSectoare(st.urm, bare, top, acum, registruPe(d, "sect")) });
     // topul intră în jurnalul verdictelor (judecat față de QQQ după 5 și 20 de zile de bursă) - sursa „top-sector”
     /* v101.116 (C5): ora verdictului = închiderea ultimei bare din care vine prețul (zi + 21:00 UTC), nu ora turei */
     const laInchidere = (s) => { const b = bare[s], u = b && b.length ? b[b.length - 1] : null; return u && u.t > 0 ? Date.parse(new Date(u.t).toISOString().slice(0, 10) + "T21:00:00Z") : acum; };

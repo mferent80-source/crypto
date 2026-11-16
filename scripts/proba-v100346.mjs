@@ -101,7 +101,7 @@ await test("🔑 sectoarele: urmărire NOUĂ înainte - topul zilei față de me
   const urm = [{ tb: T[0], top: { Tech: ["A"] } }, { tb: T[5], top: { Tech: ["A"] } }, { tb: T[40], top: { Tech: ["A"] } }, { tb: T[60], top: { Tech: ["A"] } }];
   const u = urmarireSectoare(urm, bare, univ, T[69]);
   assert.equal(u.zile, 3); assert.equal(u.inAsteptare, 1); assert.equal(u.vf.ferestre, 2); assert.ok(u.exces > 0); assert.equal(u.vf.verdict, "prea devreme");
-  const s = citeste("scripts", "lib", "tura-sectoare.mjs"); assert.match(s, /st\.urm = /); assert.match(s, /urmarire: urmarireSectoare\(st\.urm, bare, top, acum\)/);
+  const s = citeste("scripts", "lib", "tura-sectoare.mjs"); assert.match(s, /st\.urm = /); assert.match(s, /urmarire: urmarireSectoare\(st\.urm, bare, top, acum/);   /* v100.347: + registrul */
 });
 await test("ruta sugestii păstrează vf curățat (verdict doar din cele 4 cuvinte)", async () => {
   const TOKEN = "t-346b", kv = new Map(), env = { APP_API_TOKEN: TOKEN, ISTORIC: { get: async (k) => (kv.has(k) ? kv.get(k) : null), put: async (k, v) => { kv.set(k, v); }, delete: async () => {}, list: async () => ({ keys: [] }) } };
@@ -120,8 +120,8 @@ await test("🔑 pagina: eticheta listei din vf - PREA DEVREME · k din 26 / MAI
   assert.deepEqual([...ctx.sugVerdictEt("porn", sm({ ferestre: 26, nVerdict: 26, verdict: "mai slab" }))], ["MAI SLAB CA PIAȚA", "r"]);
   assert.deepEqual([...ctx.sugVerdictEt("porn", sm({ ferestre: 26, nVerdict: 26, verdict: "n-am aflat" }))], ["N-AM AFLAT · 26 DE FERESTRE", "v"]);
   assert.deepEqual([...ctx.sugVerdictEt("sect", { sectoare: { urmarire: { vf: { ferestre: 26, nVerdict: 26, verdict: "mai bine" } } } })], ["MAI BINE CA SECTORUL", "b"]);
-  // colectorul nou, dar regula nouă n-a început (doar cea veche) ⇒ 0 din 26; datele n-au venit ⇒ eticheta veche
-  assert.deepEqual([...ctx.sugVerdictEt("porn", { sugMonede: { sugestii: { urmarire: { porn: { n: 9 } } } } })], ["PREA DEVREME · 0 DIN 26", "p"]);
+  // v100.347 (revizia, 🟡5): fără vf nicăieri (colectorul vechi) ⇒ eticheta veche; colectorul nou cu lista neîncepută ⇒ 0 din 26 (proba-v100347)
+  assert.deepEqual([...ctx.sugVerdictEt("porn", { sugMonede: { sugestii: { urmarire: { porn: { n: 9 } } } } })], ["N-AM AFLAT", "v"]);
   assert.deepEqual([...ctx.sugVerdictEt("revEU", {})], ["N-AM AFLAT", "v"]);
   assert.deepEqual([...ctx.sugVerdictEt("trend", {})], ["ÎN PROBĂ", "p"]);
   assert.match(citeste("public", "app.css"), /\.sugVerdict-b\{/); assert.match(citeste("public", "app.css"), /\.sugVerdict-r\{/);

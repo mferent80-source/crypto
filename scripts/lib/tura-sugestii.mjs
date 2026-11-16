@@ -3,7 +3,7 @@
 // prețurile de acum din tickerele Pionex PERP). Un filtru, nu o predicție: istoricul se arată lângă liste, „mai slab” la vedere.
 // deps: { acum, zi, ora, stare:{zi}, Reveniri, Idei, G (GridCalcul), simboluriDepozit() -> [simbol], bare1h(simbol) -> [{t,o,h,l,c}],
 //         boti() -> [{simbol, dir, pornit, net}], cere(cale), trimite(cale, corp), jurnal(...), scrieStare(st) }
-import { verdictFerestre, preaDevreme } from "./verdict-ferestre.mjs";   // v101.184: verdictul listei, calculat (26 de ferestre)
+import { registruFerestre, registruPe, preaDevreme } from "./verdict-ferestre.mjs";   // v101.184: verdictul listei, calculat (26 de ferestre)
 const H4 = 4 * 3600000, ZI = 86400000;
 // numărătorile din texte - „1 zi”, „25 de zile” (TextRo.cate; rezerva știe aceeași regulă, ca tura-idei)
 function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
@@ -35,7 +35,10 @@ export function urmarireFixa(ist, o) {
   const mediiZi = zileL.map((z) => med(z.r)), excesZi = zileL.filter((z) => z.e.length).map((z) => med(z.e));
   // ferestrele de `zile` zile care nu se suprapun: zilele judecate, în ordine; o fereastră nouă începe la cel puțin `zile` zile după precedenta
   let ferestre = 0, ultima = -Infinity; for (const zi of [...peZi.keys()].sort()) { const t = Date.parse(zi + "T06:00:00Z"); if (t - ultima >= zile * ZI) { ferestre++; ultima = t; } }
-  const vf = verdictFerestre([...peZi.entries()].filter(([, z]) => z.e.length).map(([zi, z]) => ({ t: Date.parse(zi + "T06:00:00Z"), e: med(z.e) })), zile * ZI);   // v101.184
+  // v101.185 (revizia, 🔴1): registrul (dacă tura îl dă) - ferestrele strânse în timp, nu doar din notările păstrate; verdictul înghețat la 26
+  const RF = registruFerestre(o.registru || null, [...peZi.entries()].filter(([, z]) => z.e.length).map(([zi, z]) => ({ t: Date.parse(zi + "T06:00:00Z"), e: med(z.e) })), zile * ZI), vf = RF.vf;
+  if (o.laRegistru) o.laRegistru(RF.reg);
+  ferestre = vf.ferestre;   // v101.185 (🟡4): un singur număr de ferestre în text și pe etichetă
   const u = { vf, n: toateR.length, zile: zileL.length, pePlus: toateR.length ? toateR.filter((r) => r > 0).length / toateR.length : null, medie: med(mediiZi), exces: med(excesZi), zilePeste: excesZi.length ? excesZi.filter((e) => e > 0).length / excesZi.length : null, nejudecate, inAsteptare, ferestre, zileCuPiata: excesZi.length };
   // v100.333 (el, 13.11: graficul din „Listele Radarului”): seria PE ZILE - fiecare zi judecată cu lista (după cost, în direcția ei), mediana pieței
   // din aceleași zile și diferența (pp), aceeași socoteală ca media de mai sus; doar zilele cu piață, ultimele 90 (corpul trimis rămâne mic)
@@ -100,7 +103,7 @@ async function turaSugestiiPas(d) {
   await respira();
   // v100.292: „Pe ce aș porni” la orizont fix, pe zile, față de mediana pieței (pagina Sugestii o arată întreagă, lângă listă)
   const pa = alegePorn(ist);   // v101.182: regula nouă și cea veche, separat
-  urm.porn = urmarireFixa(pa.nou, { zile: 7, cost: 0.001, bare1h: bare1hO, toate: d.simboluriDepozit(), acum: d.acum });
+  urm.porn = urmarireFixa(pa.nou, { zile: 7, cost: 0.001, bare1h: bare1hO, toate: d.simboluriDepozit(), acum: d.acum, ...registruPe(d, "porn2") });   // v101.185: registrul listei de la 16.11
   urm.pornScor = urmarireFixa(pa.vechi, { zile: 7, cost: 0.001, bare1h: bare1hO, toate: d.simboluriDepozit(), acum: d.acum });
   await respira();
   // v100.331 (el, 12.11: „la 1 fă și integrează în detaliile indicatorilor”): listele de monede FAȚĂ DE PIAȚĂ, la orizont fix, pe zile (ca „porn”) -
