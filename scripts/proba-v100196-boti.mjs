@@ -307,7 +307,7 @@ await test("🔵5 stopul și ținta în aceeași lumânare ⇒ stopul întâi (p
 });
 await test("🔵6 Simulatorul de pe pagină trage 2.000 de drumuri (cozile p5 / p95), variantele rămân pe aceleași drumuri", () => {
   const src = LIB("grid-sim-ecran.js");
-  assert.match(src, /GridSim\.simuleaza\(gsStare\.date\.b15, st, \{[^}]*n: 2000, seed: 12/);
+  assert.match(src, /(?:GridSim\.simuleaza\(|gsInWorker\("simuleaza", )gsStare\.date\.b15, st, \{[^}]*n: 2000, seed: 12/);   /* v100.351: în worker, același motor */
 });
 await test("🔵7 disciplina: „se întorc în bandă” se numără pe episoade monedă × zi, nu pe boți (40 de boți pe aceeași monedă, aceeași zi = 1 episod)", () => {
   const ORA = 3600000, T0 = Date.parse("2026-05-01T00:00:00Z"), b = [];

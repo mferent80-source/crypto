@@ -217,7 +217,7 @@ await test("(e7) gsHtml: stările (calculez / eroare / fără rezultat / cu rezu
   const h = G.gsHtml(stare({ rez: Object.assign(REZ(), { tpIgnorat: 0.3 }) })); assert.match(h, /gsVerdict/); assert.match(h, /TP-ul \(0,3000\) e de partea greșită a prețului/);
   const E = citeste("public", "lib", "grid-sim-ecran.js");
   assert.match(functie(E, "gsTasta"), /gsSimuleaza\(\)/); assert.match(E, /addEventListener\("keydown", gsTasta\)/);
-  assert.match(functie(E, "gsSimuleaza"), /mcsAduCoin\(/); assert.match(functie(E, "gsSimuleaza"), /GridSim\.simuleaza\(/); assert.match(functie(E, "gsSimuleaza"), /setTimeout\(/);
+  assert.match(functie(E, "gsSimuleaza"), /mcsAduCoin\(/); assert.match(functie(E, "gsSimuleaza"), /GridSim\.simuleaza\(|gsInWorker\("simuleaza"/); /* v100.351: în worker (același motor); „calculez…” apare înainte: worker-ul e asincron, pe fir prin setTimeout */ assert.match(functie(E, "gsSimuleaza"), /setTimeout\(|gsInWorker\(/); assert.match(functie(E, "gsInWorker"), /setTimeout\(peFir, 30\)/);
   assert.match(functie(E, "gsAlegeBot"), /GridSim\.setariDinBot\(/); assert.match(functie(E, "gsDinCod"), /GridSim\.dinCod\(/);
 });
 

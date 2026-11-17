@@ -191,8 +191,8 @@
   {
    "nume": "ruta: mcVerdict pierde „Pe 7 zile”",
    "fisier": "functions/api/istoric-bot.js",
-   "cauta": ",sapt:typeof x.sapt===\"string\"?x.sapt.slice(0,400):null}",
-   "pune": "}"
+   "cauta": ",sapt:typeof x.sapt===\"string\"?x.sapt.slice(0,400):null,hot:",
+   "pune": ",hot:"
   },
   {
    "nume": "ruta: caietul stricat dat drept gol",

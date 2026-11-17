@@ -4,6 +4,7 @@
 importScripts("/lib/text-ro.js", "/lib/grid-calcul.js", "/lib/grid-proba.js", "/lib/monte-simbol.js", "/lib/grid-sim.js");
 self.onmessage = function (e) {
   var d = e && e.data || {};
-  try { self.postMessage({ id: d.id, rez: GridSim.simuleaza(d.b15, d.st, d.o) }); }
+  // v100.351 (el: „fă tot” - viteza): d.fel = "hotarare" (Ce fac cu botul ăsta?) / "compara" (alte setări pe aceleași drumuri) / lipsă = simuleaza
+  try { var rez = d.fel === "hotarare" ? GridSim.hotarare(d.b15, d.st, d.o) : d.fel === "compara" ? GridSim.compara(d.b15, d.st, d.o) : GridSim.simuleaza(d.b15, d.st, d.o); self.postMessage({ id: d.id, rez: rez }); }
   catch (err) { self.postMessage({ id: d.id, eroare: String(err && err.message || err) }); }
 };

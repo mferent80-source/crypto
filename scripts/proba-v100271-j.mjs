@@ -280,7 +280,7 @@ await test("20 colectorul: notarea în tura Monte Carlo (proaspete din tura asta
   assert.match(t, /Date\.now\(\) - ultimiiBotiLa <= 5 \* 60000/, "totalul citit de cel mult 5 min");
   assert.match(t, /noteazaScurtBoti\(js, \{ boti: ultimiiBoti, stareBoti: st\.boti, la: ultimiiBotiLa, deLa: tStart \}\)/);
   assert.match(t, /tineRitm\("mcScurt", js\); calibrareScurt = raportScurt\(js\)/);
-  assert.match(t, /trimite\("\/api\/istoric-bot\?action=mcVerdict", \{ la: Date\.now\(\), boti: st\.boti, calibrare: calibrare, calibrareScurt: calibrareScurt \}\)/, "raportul în KV, lângă calibrare");
+  assert.match(t, /trimite\("\/api\/istoric-bot\?action=mcVerdict", \{ la: Date\.now\(\), boti: st\.boti, calibrare: calibrare, calibrareScurt: calibrareScurt(?:, hotarari: hotarari)? \}\)/, "raportul în KV, lângă calibrare");   /* v101.189: + hotarari */
   assert.match(COL, /judecaMcInchis\(id, x\);[^\n]*\n\s*judecaScurtInchis\(id, x\);/, "la închidere, lângă jurnalul de 7 zile");
   const k = COL.indexOf("// v101.116 (auditul sever, C3): lista goală"), c = COL.lastIndexOf("judecaScurtCitire(", k);
   assert.ok(c > COL.indexOf("judecaScurtInchis(id, x);") && c < k, "citirea se judecă DUPĂ închideri (botul închis cât colectorul era oprit se judecă întâi la închidere)");

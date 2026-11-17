@@ -38,6 +38,9 @@ var GridProba = (function () {
     // negativ (incasat); traseul tine si MINIMUL / MAXIMUL rezultatului pe cele 4 puncte ale barei (pierderea maxima si planul in interiorul barei)
     // v100.269 (ideile auditului 29.10): opt.barePeZi (24 pe bare de 1 h) - funding-ul tot la 8 h (barePeZi / 3 bare), nu la 32 de bare
     var fper = opt && opt.barePeZi > 0 ? Math.max(1, Math.round(opt.barePeZi / 3)) : 32;
+    // v100.351 (mărunt rămas din v100.350): opt.tStart = ora (ms) primei bare ⇒ funding-ul la orele lui reale (00 / 08 / 16 UTC: bara care le cuprinde),
+    // nu la 8 h de la pornire - pe orizontul de o zi tot 3 plăți, dar la ora lor (botul pornit la 07:45 plătește la 08:00, nu la 07:45)
+    var tS = opt && opt.tStart > 1e11 ? Number(opt.tStart) : null, dtB = opt && opt.barePeZi > 0 ? 864e5 / opt.barePeZi : 9e5;
     var fundingZi = isFinite(st.fundingZi) ? Number(st.fundingZi) : 0, funding = 0, tr = opt && opt.traseu ? { net: [], perechi: [], iesiri: [], min: [], max: [], fund: [], poz: [], brut: [] } : null, bMin = Infinity, bMax = -Infinity;
     var P = b[start].o, tip = [], tine = [], intr = [], q = [];
     var Ql = 0, Cl = 0, Qs = 0, Cs = 0, real = 0, fee = 0, umpleri = 0, iesiri = 0, perechi = 0;   // perechi = grile INCASATE (o pereche = 2 umpleri; umplerile de pornire nu-s perechi)
@@ -125,13 +128,17 @@ var GridProba = (function () {
       if (sd && i - start === dinBara) { sj = sd.jos > 0 ? sd.jos : -Infinity; ss = sd.sus > 0 ? sd.sus : Infinity; if ("raport" in sd) sr = raportValid(sd.raport); sd = null; }   // v100.136; v100.259: și raportul
       // v100.134: la 8 h; v100.135: cu semn pe pozitia neta; revizia: de la bara 0 (Pionex ia la urmatoarea ora de funding: 3 plati pe zi
       // si pe orizontul de o zi); st.fundingCost (rata PRESUPUSA, nu cea reala) = cost oricare ar fi directia, pe |Ql - Qs|
-      if (fundingZi && (i - start) % fper === 0) { var fz = fundingZi / 3 * (st.fundingCost ? Math.abs(Ql - Qs) : Ql - Qs) * x.o; fee += fz; funding += fz; }
+      var plataF = false; if (fundingZi) { if (tS !== null) { var ta = tS + (i - start) * dtB, Tf = Math.ceil(ta / 288e5) * 288e5; plataF = Tf < ta + dtB; } else plataF = (i - start) % fper === 0; }
+      if (plataF) { var fz = fundingZi / 3 * (st.fundingCost ? Math.abs(Ql - Qs) : Ql - Qs) * x.o; fee += fz; funding += fz; }
       bMin = Infinity; bMax = -Infinity;
       // v100.196 (auditul 14.10, 🔵5): stopul si tinta in ACEEASI lumanare - ordinea din bara nu se stie, deci stopul intai (pesimist), nu cine vine
       // primul pe drumul conventional (rosie O→H→L→C dadea tinta la long). Partea stopului: long jos, short sus; la neutru amandoua sunt stopuri.
       var parteStop = st.dir === "long" ? "jos" : st.dir === "short" ? "sus" : null;
       // v100.350 (auditul Monte Carlo): o bară care se DESCHIDE dincolo de stop / țintă iese la deschidere (gap), nu la nivel - ordin la piață, ca la Pionex
       var gap = !st.faraGap;
+      // v100.351 (mărunt rămas din v100.350): stopul în PROCENTE și ținta în aceeași bară ⇒ întâi partea rea a barei (pesimist, ca la stopul pe preț - v100.196),
+      // nu ordinea după culoarea lumânării (verde O→L→H→C dădea stopul întâi la long, roșie O→H→L→C dădea ținta)
+      if (sr !== null && ((parteStop === "jos" && ss < Infinity && x.h >= ss) || (parteStop === "sus" && sj > -Infinity && x.l <= sj))) drum = parteStop === "jos" ? [x.o, x.l, x.h, x.c] : [x.o, x.h, x.l, x.c];
       if (gap && parteStop === "jos" && x.o >= ss && ss < Infinity) { misca(pret, x.o); if (inauntru) iesiri++; return inchide(x.o, "sus", i - start + 1); }   /* revizia: deschisă peste TP (long) ⇒ TP la deschidere, chiar dacă bara coboară apoi sub stop */
       if (gap && parteStop === "sus" && x.o <= sj && sj > -Infinity) { misca(pret, x.o); if (inauntru) iesiri++; return inchide(x.o, "jos", i - start + 1); }
       if (parteStop && x.l <= sj && x.h >= ss) { var nivS = parteStop === "jos" ? (gap && x.o < sj ? x.o : sj) : (gap && x.o > ss ? x.o : ss); misca(pret, nivS); if (inauntru) iesiri++; return inchide(nivS, parteStop, i - start + 1); }

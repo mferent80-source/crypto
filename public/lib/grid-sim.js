@@ -167,8 +167,27 @@ var GridSim = (function () {
   }
   function mediana(v) { if (!v.length) return null; var s = v.slice().sort(function (a, b) { return a - b; }); return pc(s, 0.5); }
   // o = { zile (14), orizonturi ([1,3,7,14]), n (500), seed (12), plan: { minus, plus } | null, pornitLa: ms | null }
+  // v100.351 (ideea 1): agitația pe zile numărate de la capăt (suma pătratelor randamentelor de 15 minute); r = media ultimelor 2 zile / media lunii
+  function agitatieAcum(b15) {
+    var Z = Math.floor(b15.length / BZ), rv = []; if (Z < 7) return null;
+    for (var d = 0; d < Z; d++) { var s = 0, de = b15.length - (d + 1) * BZ; for (var i = Math.max(1, de); i < de + BZ; i++) if (b15[i].c > 0 && b15[i - 1].c > 0) { var x = Math.log(b15[i].c / b15[i - 1].c); s += x * x; } rv.push(s); }
+    var med = medie(rv); if (!(med > 0)) return null;
+    return { r: Math.min(2.89, Math.max(0.36, (rv[0] + rv[1]) / 2 / med)), zile: Z };
+  }
+  // drumul tras fără tendință, cu randamentele × k pe ziua lui (k² = 1 + (r − 1)·0,9^(zi+1)), apoi tendința scoasă (mm pe bară) - ca M.drum
+  function scaleazaDrum(d, P0, r, mm) {
+    // pe loc: drumul vine nou din tragere (M.drum / drumDin), nimeni altcineva nu-l ține; k² = 1 + (r − 1)·0,9^(zi+1), socotit o dată pe zi
+    var cp = P0, cb = P0, dr = mm ? Math.exp(-mm) : 1, zi = -1, kv = 1;
+    for (var q = 0; q < d.length; q++) {
+      var x = d[q], z = (q / BZ) | 0; if (z !== zi) { zi = z; kv = Math.sqrt(Math.max(0.05, 1 + (r - 1) * Math.pow(0.9, z + 1))); }
+      var lb = Math.log(cb), f = cp * dr, c0 = x.c;
+      x.o = f * Math.exp(kv * (Math.log(x.o) - lb)); x.h = f * Math.exp(kv * (Math.log(x.h) - lb)); x.l = f * Math.exp(kv * (Math.log(x.l) - lb)); x.c = f * Math.exp(kv * (Math.log(c0) - lb));
+      cb = c0; cp = x.c;
+    }
+    return d;
+  }
   function simuleazaIntreg(b15, st, o) {
-    o = o || {}; var zile = o.zile > 0 ? o.zile : 14, oriz = Array.isArray(o.orizonturi) && o.orizonturi.length ? o.orizonturi : [1, 3, 7, 14], n = o.n > 0 ? o.n : 500, seed = o.seed || 12;
+    o = o || {}; var zile = o.zile > 0 ? o.zile : 14, oriz = Array.isArray(o.orizonturi) && o.orizonturi.length ? o.orizonturi : [1, 3, 7, 14], n = o.drumFix ? 1 : o.n > 0 ? o.n : 500, seed = o.seed || 12;   /* v100.351: o.drumFix = barele reale de după hotărâre (judecata ei) */
     var plan = o.plan && (nr(o.plan.minus) > 0 || nr(o.plan.plus) > 0) ? { minus: Math.abs(nr(o.plan.minus) || 0), plus: nr(o.plan.plus) || 0 } : null;
     if (!Array.isArray(b15) || b15.length < 7 * BZ) return { eroare: "Prea puțin istoric ca să simulez: " + cate(Math.floor((b15 ? b15.length : 0) / BZ), "zi", "zile") + " pe 15 minute; îmi trebuie cel puțin 7." };
     var suma = st.suma > 0 ? st.suma : 50, H = zile * BZ, zileIst = Math.floor(b15.length / BZ);
@@ -183,10 +202,12 @@ var GridSim = (function () {
     var prefix = s >= 0 ? b15.slice(s) : [], pre = prefix.length, P0 = b15[b15.length - 1].c, Pst = pre ? prefix[0].o : P0;
     // revizia (R1): stopul de partea greșită a prețului de la pornire (long: stopul sub, short: deasupra, neutru: fiecare pe partea lui) -
     // simulatorul l-ar atinge pe drumul spre el și ar „încasa” grilele: câștig inventat. Eroare pe nume, nu cifre.
+    // v100.351: o setare NOUĂ peste un bot care rulează (o.setareNoua, doar din hotarare) se verifică față de prețul de ACUM - de acolo se aplică
+    var Pv = pre && o.setareNoua ? P0 : Pst;
     if (st.stop) {
       var sj0 = st.stop.jos > 0 ? st.stop.jos : null, ss0 = st.stop.sus > 0 ? st.stop.sus : null;
-      var rauJ = sj0 !== null && sj0 >= Pst && st.dir !== "short", rauS = ss0 !== null && ss0 <= Pst && st.dir !== "long";
-      if (st.dir === "long" && ss0 !== null && sj0 === null) rauS = ss0 <= Pst;   // long cu stopul scris doar sus (TP-ul e aparte): peste preț
+      var rauJ = sj0 !== null && sj0 >= Pv && st.dir !== "short", rauS = ss0 !== null && ss0 <= Pv && st.dir !== "long";
+      if (st.dir === "long" && ss0 !== null && sj0 === null) rauS = ss0 <= Pv;   // long cu stopul scris doar sus (TP-ul e aparte): peste preț
       if (rauJ || rauS) return { eroare: "Stopul (" + pretTxt(rauJ ? sj0 : ss0) + ") e de partea greșită a prețului pentru " + st.dir + " (prețul " + (pre ? "de la pornire" : "de acum") + " e " + pretTxt(Pst) + "): la long stopul stă sub preț, la short deasupra, la neutru fiecare pe partea lui." };
     }
     var v = tpValid(st, P0), stS = {}; for (var k in v.st) stS[k] = v.st[k];
@@ -195,7 +216,7 @@ var GridSim = (function () {
     stS.stop = opr;
     // v100.136: o.stPrefix = setarea botului PE prefix (gridul lui, stopul lui, ținta lui de până acum); ținta / stopul din st se aplică abia
     // de la prima bară simulată - „schimb ținta acum” pe botul care rulează, cu pozițiile de acum (GridProba: dinBara + stopDupa)
-    var optGP = { traseu: true }, tpIgnoratPrefix = null;
+    var optGP = { traseu: true, tStart: pre ? prefix[0].t : b15[b15.length - 1].t + 9e5 }, tpIgnoratPrefix = null;   /* v100.351: funding-ul la orele lui reale */
     if (pre && o.stPrefix) {
       var vp = tpValid(o.stPrefix, Pst), rapP = raportValid(vp.st.stopRaport), oprP = vp.st.stop && rapP === null ? { jos: vp.st.stop.jos, sus: vp.st.stop.sus } : null, ptP = vp.st.tp > 0 ? (vp.st.dir === "long" ? "sus" : vp.st.dir === "short" ? "jos" : null) : null;
       if (ptP) { oprP = oprP || {}; oprP[ptP] = vp.st.tp; }
@@ -206,7 +227,11 @@ var GridSim = (function () {
     // v100.149 (I-579): pe regim, drumurile pornesc doar din ferestrele cu aceeași stare a Busolei; sub 3 zile de starturi ⇒ eroare pe nume
     var ST = Array.isArray(o.starturi) ? o.starturi.filter(function (i) { return i >= 1 && i <= b15.length - BZ; }) : null;
     if (ST && ST.length < MIN_STARTURI_REGIM) return { eroare: "Prea puține bare în regimul de acum (" + cate(Math.floor(ST.length / BZ), "zi", "zile") + "): îmi trebuie cel puțin 3 ca să trag drumuri doar din el." };
-    var DRUM = ST ? function (b, hh, bz, p, r, muu, urme) { return drumDin(b, hh, bz, p, r, muu, ST, urme); } : M.drum;
+    var DRUM0 = o.drumFix ? function () { return o.drumFix; } : ST ? function (b, hh, bz, p, r, muu, urme) { return drumDin(b, hh, bz, p, r, muu, ST, urme); } : M.drum;
+    // v100.351 (ideea 1, el: „fă tot”): agitația de acum (ultimele 2 zile față de lună), stinsă cu 10% pe zi - probat sub H0 (h0media/p15–p16): în lumea cu
+    // agitație persistentă eroarea mediei −19…−26% și „pe plus” fals 4,3% → 0%; în lumea cu zile independente la fel ca înainte
+    var agit = o.drumFix || ST || o.faraAgitatie ? null : agitatieAcum(b15), DRUM = DRUM0;
+    if (agit && Math.abs(agit.r - 1) > 0.02) DRUM = function (b, hh, bz, p, r, muu, urme) { return scaleazaDrum(DRUM0(b, hh, bz, p, r, mu, urme), p, agit.r, muu - mu); };   /* revizia (🔴1): tendința scoasă înainte de × k, altfel revenea pe orizonturile intermediare */
     var mu = tendinta(b15), m;
     { var rnd0 = M.generator(seed), v0 = []; for (var q = 0; q < n; q++) { var d0 = DRUM(b15, H, BZ, P0, rnd0, mu); v0.push(Math.log(d0[d0.length - 1].c / P0)); } v0.sort(function (a, c) { return a - c; }); m = mu + Math.log(v0.reduce(function (a, x) { return a + Math.exp(x); }, 0) / v0.length) / H; }   /* v100.350 (H0 al regulii mediei, scratchpad h0media/p9): centrate pe MEDIA prețului de la capăt (martingală), nu pe mediana lui - mediana la zero adăuga o tendință de +σ²t/2 (câștig fals la long, +0,5 USDT pe ±5% 2×; pierdere falsă la short) */
     var rnd = M.generator(seed), bareO = oriz.map(function (z) { return pre + Math.round(z * BZ); });   /* v100.269: orizonturile de 1 h / 4 h pe bare întregi */
@@ -251,12 +276,12 @@ var GridSim = (function () {
         media: medie(nets), marjaMedie: marjaMedieZile(c.net.map(function (x) { return x * suma; }), c.R, Def), terminari: terminari(c.net.map(function (x) { return x * suma; }), c.fel),   /* v100.350 */
         plan: plan ? { p: c.plan / n, pRau: c.planRau / n, zileMediana: c.planZile.length ? mediana(c.planZile) : null, dejaAtins: dejaAtins } : null,
         pLich: c.lich / n, pStop: c.stop / n, pTp: c.tp / n, pIesire: c.ies / n, perechi: c.per / n, maxJos: { p50: pc(mjs, 0.5), p5: pc(mjs, 0.05) }, funding: c.funding / n * suma };
-      if (o.peDrum) out.drumuri = c.net.map(function (x) { return x * suma; });   // revizia (R3): rezultatele în ordinea drumurilor (drum cu drum)
+      if (o.peDrum) out.drumuri = c.net.map(function (x) { return x * suma; });   // revizia (R3): rezultatele în ordinea drumurilor (drum cu drum)   // revizia (R3): rezultatele în ordinea drumurilor (drum cu drum)
       // revizia (R3): la botul care rulează, hotărârea lui („îl țin?”) depinde de ce URMEAZĂ ⇒ „de aici încolo” întreg: câștigă / pierde, marja, histograma
       if (acum) { var da = c.deAici.map(function (x) { return x * suma; }).sort(function (a, b) { return a - b; }), dc = 0, dp = 0; c.deAici.forEach(function (x) { if (x > 0) dc++; else if (x < 0) dp++; }); var mDa = marja(dc / n, n), mZa = marjaZile(c.deAici, c.R, D); var daD = c.deAici.map(function (x) { return x * suma; }); out.deAici = { media: medie(daD), marjaMedie: marjaMedieZile(daD, c.R, Def), terminari: terminari(daD, c.fel), p5: pc(da, 0.05), p50: pc(da, 0.5), p95: pc(da, 0.95), pCastig: dc / n, pPierde: dp / n, pZero: (n - dc - dp) / n, marja: mZa !== null ? Math.max(mZa, mDa) : mDa, marjaDrumuri: mDa, marjaZile: mZa, hist: M.histograma(da, 24) }; if (o.peDrum) out.drumuriDeAici = c.deAici.map(function (x) { return x * suma; }); }   // v100.136: și de aici încolo, pe drumuri
       return out;
     });
-    return { regim: ST ? { starturi: ST.length } : null, n: n, zile: zile, zileIstoric: zileIst, tendintaPeZi: Math.exp(mu * BZ) - 1, suma: suma, tpIgnorat: v.ignorat, tpIgnoratPrefix: tpIgnoratPrefix, acum: acum, opritImediat: pre ? imediat / n : 0, orizonturi: orizonturi };
+    return { agitatie: agit ? Math.round(agit.r * 100) / 100 : null, regim: ST ? { starturi: ST.length } : null, n: n, zile: zile, zileIstoric: zileIst, tendintaPeZi: Math.exp(mu * BZ) - 1, suma: suma, tpIgnorat: v.ignorat, tpIgnoratPrefix: tpIgnoratPrefix, acum: acum, opritImediat: pre ? imediat / n : 0, orizonturi: orizonturi };
   }
   // v100.339 (I-868, auditul din 13.11): o.botRuleaza = botul e pornit la Pionex ACUM. Dacă reluarea îl oprește pe stop / țintă pe drumul real
   // (prag pus după pornire sau neatins la Pionex), reluarea contrazice realitatea și toate drumurile stau pe loc („0% / 0% / pe zero 100%”).
@@ -326,6 +351,153 @@ var GridSim = (function () {
       x.drum = x.drumOriz[oriz];
     });
     return rows;
+  }
+  // ---------------- (2b) v100.351: „Ce fac cu botul ăsta?” ----------------
+  // el (16.11): „dezvoltă mai mult ideea nr 2, că are potențial” ⇒ alegerile LUI: toate 6 acțiunile, recomandare doar CU DOVADĂ, urmărirea pe bare reale.
+  // Pe ACELEAȘI drumuri (aceeași sămânță), din starea botului (prefixul real + poziția Pionex), fiecare acțiune de ACUM: îl țin · îl închid · TP-ul mai
+  // aproape / la margine / fără · stopul la margine / mai larg · planul tău ca stop · îl închid și pornesc (setarea fișei, altfel același bot centrat pe
+  // prețul de acum). Pe fiecare orizont: media, cele mai proaste 5%, câștigă %, stopul / TP-ul și, față de „îl țin”, diferența DRUM CU DRUM (pereche),
+  // cu marja ei pe zilele efective ale istoricului. Regula de alegere (alegeHotarare) e fixată înainte de cifre și probată sub H0 (proba-v100351).
+  function sigmaZi(b15) { var a = []; for (var i = b15.length - 1; i - BZ >= 0; i -= BZ) if (b15[i].c > 0 && b15[i - BZ].c > 0) a.push(Math.abs(Math.log(b15[i].c / b15[i - BZ].c))); return a.length ? mediana(a) : 0.03; }
+  function gresitAcum(x, P) {
+    var s = x.stop || {};
+    if (s.jos > 0 && s.jos >= P && x.dir !== "short") return "stopul (" + pretTxt(s.jos) + ") ar sta peste prețul de acum (" + pretTxt(P) + ")";
+    if (s.sus > 0 && s.sus <= P && x.dir !== "long") return "stopul (" + pretTxt(s.sus) + ") ar sta sub prețul de acum (" + pretTxt(P) + ")";
+    if (x.tp > 0 && ((x.dir === "long" && x.tp <= P) || (x.dir === "short" && x.tp >= P))) return "TP-ul (" + pretTxt(x.tp) + ") ar sta de partea greșită a prețului de acum (" + pretTxt(P) + ")";
+    return null;
+  }
+  function statHot(vals, ref, D) {
+    var n = vals.length, v = vals.slice().sort(function (a, b) { return a - b; }), m = medie(vals), poz = 0; vals.forEach(function (x) { if (x > 0.005) poz++; });
+    var o = { n: n, media: m, p5: pc(v, 0.05), p50: pc(v, 0.5), p95: pc(v, 0.95), pCastig: n ? poz / n : null, dif: null };
+    if (ref && ref.length === n && n > 1) {
+      var d = vals.map(function (x, i) { return x - ref[i]; }), md = medie(d), ss = 0, bun = 0, rau = 0;
+      d.forEach(function (x) { ss += (x - md) * (x - md); if (x > 0.005) bun++; else if (x < -0.005) rau++; });
+      o.dif = { media: md, marja: 1.96 * Math.sqrt(ss / (n - 1) / Math.max(1, D)), maiBun: bun / n, maiRau: rau / n, egal: (n - bun - rau) / n };
+    }
+    return o;
+  }
+  // regula (fixată înainte de cifre): o acțiune bate „îl țin” doar dacă, pe orizontul de hotărâre, media ei e mai bună cu cel puțin pragul, marginea de
+  // jos a diferenței (pe zile) e peste 0 și cele mai proaste 5% nu sunt mai rele cu mai mult de prag; dintre ele, cea cu diferența cea mai mare
+  function alegeHotarare(A, o) {
+    var h = o.oriz, prag = o.prag, t = A.filter(function (a) { return a.cheie === "tine"; })[0];
+    if (!t || !t.oriz || !t.oriz[h]) return { cheie: "tine", motiv: "fără cifre pentru „îl țin”" };
+    var c = A.filter(function (a) { var z = a.cheie !== "tine" && !a.eroare && a.oriz && a.oriz[h]; return z && z.dif && z.dif.media >= prag && z.dif.media - z.dif.marja > 0 && z.p5 >= t.oriz[h].p5 - prag; })
+      .sort(function (x, y) { return y.oriz[h].dif.media - x.oriz[h].dif.media; })[0];
+    if (!c) return { cheie: "tine", motiv: "nicio altă acțiune nu iese clar mai bună (cu cel puțin " + nrRo(prag, 1) + " USDT în medie, sigur pe zile și fără o coadă mai rea)" };
+    var d = c.oriz[h].dif;
+    return { cheie: c.cheie, motiv: "în medie " + bani1(d.media) + " față de „îl țin” (±" + nrRo(d.marja, 1) + " pe zile), mai bun pe " + pr(d.maiBun) + " din drumuri, mai rău pe " + pr(d.maiRau) + ", cu cele mai proaste 5% la " + bani1(c.oriz[h].p5) + " (îl țin: " + bani1(t.oriz[h].p5) + ")" };
+  }
+  // o = { pornitLa, pozitiePionex, plan: { minus, plus }, n, seed, orizonturi ([1, 7]), fisa: setarea fișei Grid pentru un bot nou (opțional), verifica (true) }
+  function hotarare(b15, st, o) {
+    o = o || {}; if (!Array.isArray(b15) || b15.length < 7 * BZ) return { eroare: "prea puțin istoric: îmi trebuie cel puțin 7 zile de bare de 15 minute" };
+    var P = b15[b15.length - 1].c, oriz = Array.isArray(o.orizonturi) && o.orizonturi.length ? o.orizonturi : [1, 7], zile = Math.max.apply(null, oriz), n = o.n > 0 ? o.n : 800, seed = o.seed || 12, suma = st.suma > 0 ? st.suma : 50;
+    var baza = { pornitLa: o.pornitLa, stPrefix: st, botRuleaza: true, n: n, seed: seed, orizonturi: oriz, zile: zile, peDrum: true, plan: null };
+    var r0 = simuleaza(b15, st, Object.assign({}, baza, { pozitiePionex: o.pozitiePionex }));
+    if (!r0 || r0.eroare) return { eroare: r0 && r0.eroare || "fără rezultat" };
+    if (!r0.acum) return { eroare: "botul nu rulează (fără pornire): pentru un bot nou nu e nimic de hotărât" };
+    if (r0.acum.oprit) return { eroare: "reluarea arată botul " + (r0.acum.oprit === "lichidat" ? "lichidat" : "oprit") + " pe drumul real: setările de aici nu se potrivesc cu Pionex" };
+    var k = r0.pozitie && r0.pozitie.potrivit ? r0.pozitie.scala : null, cuK = function (x) { return k ? Object.assign({}, x, { scalaQ: k }) : x; }, stK = cuK(st);
+    var bazaK = Object.assign({}, baza, { stPrefix: stK, setareNoua: true }), fee = r0.acum.inchidere > 0 ? r0.acum.inchidere : 0, D = zileEfective(b15, Math.floor(b15.length / BZ));
+    var dir = st.dir, lat = st.sus - st.jos, sz = sigmaZi(b15), A = [{ cheie: "tine", nume: "îl țin așa", st: st }, { cheie: "inchide", nume: "îl închid acum", fix: 0 }];   // referința „de aici” e deja rezultatul închis acum ⇒ 0
+    if (dir === "long" || dir === "short") {
+      var marg = dir === "long" ? st.sus : st.jos;
+      var tpA = st.tp > 0 ? P + (st.tp - P) / 2 : P + (marg - P) / 2;
+      A.push({ cheie: "tpAproape", nume: "TP-ul mai aproape (" + pretTxt(tpA) + ")", st: Object.assign({}, st, { tp: tpA }) });
+      if (!(st.tp > 0) || Math.abs(st.tp - marg) / P > 0.002) A.push({ cheie: "tpMargine", nume: "TP-ul la marginea gridului (" + pretTxt(marg) + ")", st: Object.assign({}, st, { tp: marg }) });
+      if (st.tp > 0) A.push({ cheie: "tpFara", nume: "fără TP", st: Object.assign({}, st, { tp: null }) });
+      var sv = st.stop ? (dir === "long" ? st.stop.jos : st.stop.sus) : null, dist = sv > 0 ? Math.abs(P - sv) / P : null;
+      var sM = dir === "long" ? st.jos * 0.999 : st.sus * 1.001, dL = Math.max(dist ? dist * 1.5 : 0, 2 * sz), sL = dir === "long" ? P * (1 - dL) : P * (1 + dL);
+      if (dir === "long" ? sL > st.jos * 0.999 : sL < st.sus * 1.001) sL = dir === "long" ? Math.min(sL, st.jos * 0.99) : Math.max(sL, st.sus * 1.01);
+      A.push({ cheie: "stopMargine", nume: "stopul la marginea gridului (" + pretTxt(sM) + ")", st: Object.assign({}, st, { stop: dir === "long" ? { jos: sM } : { sus: sM }, stopRaport: null }) });
+      A.push({ cheie: "stopLarg", nume: "stopul mai larg (" + pretTxt(sL) + ", dincolo de o zi obișnuită)", st: Object.assign({}, st, { stop: dir === "long" ? { jos: sL } : { sus: sL }, stopRaport: null }) });
+    }
+    if (o.plan && Number(o.plan.minus) > 0) A.push({ cheie: "plan", nume: "stopul la planul tău (−" + nrRo(Number(o.plan.minus), 1) + " USDT de la pornire)", st: Object.assign({}, st, { stop: null, stopRaport: -Number(o.plan.minus) / suma }) });
+    var nou = o.fisa && o.fisa.jos > 0 && o.fisa.sus > o.fisa.jos ? Object.assign({}, o.fisa, { suma: o.fisa.suma > 0 ? o.fisa.suma : suma }) : null, numeNou = "îl închid și pornesc setarea fișei Grid";
+    if (!nou) {
+      var hw = lat / 2, j2 = P - hw, s2 = P + hw;
+      nou = Object.assign({}, st, { jos: j2, sus: s2, stop: st.stop && (st.stop.jos > 0 || st.stop.sus > 0) ? { jos: st.stop.jos > 0 ? j2 - (st.jos - st.stop.jos) : null, sus: st.stop.sus > 0 ? s2 + (st.stop.sus - st.sus) : null } : null,   /* revizia (🔵9): ambele părți (neutru) */ tp: st.tp > 0 ? (dir === "long" ? s2 + (st.tp - st.sus) : dir === "short" ? j2 - (st.jos - st.tp) : null) : null });
+      numeNou = "îl închid și pornesc unul la fel, centrat pe prețul de acum (" + pretTxt(j2) + "–" + pretTxt(s2) + ")";
+    }
+    A.push({ cheie: "reporneste", nume: numeNou, nou: nou });
+    var ref = null;
+    A.forEach(function (a) {
+      if (a.cheie === "tine") { a.r = r0; return; }
+      if (a.fix !== undefined) return;
+      var stA = a.nou || a.st, g = gresitAcum(stA, P); if (g) { a.eroare = g; return; }
+      try {
+        a.r = a.nou ? simuleazaBaza(b15, stA, {   /* revizia (🟡6): botul nou fără scalaQ-ul celui vechi */ n: n, seed: seed, orizonturi: oriz, zile: zile, peDrum: true, plan: null }) : simuleazaBaza(b15, cuK(stA), bazaK);
+        if (!a.r || a.r.eroare) a.eroare = a.r && a.r.eroare || "fără rezultat"; else if (!a.nou && a.r.acum && a.r.acum.oprit) a.eroare = "botul s-ar fi oprit deja pe drumul real";
+      } catch (e) { a.eroare = String(e && e.message || e); }
+    });
+    // toate cifrele sunt „față de închiderea de acum”: traseul are deja scăzut comisionul de închidere (netLa) - acum și la capăt - deci „îl închid acum” = 0,
+    // „îl țin” / setările = drumuriDeAici (închise la capăt), „îl închid și pornesc” = drumurile botului nou (de la zero, închis la capăt)
+    var valori = function (a, h) { if (a.fix !== undefined) { var v = []; for (var i = 0; i < n; i++) v.push(a.fix); return v; } var z = a.r && a.r.orizonturi[h]; if (!z) return null; return a.nou ? z.drumuri : z.drumuriDeAici; };
+    var T = oriz.map(function (z, h) { return valori(A[0], h); });
+    A.forEach(function (a) {
+      if (a.eroare) return;
+      a.oriz = oriz.map(function (z, h) { var v = valori(a, h); if (!v) return null; var x = statHot(v, a.cheie === "tine" ? null : T[h], D); var zz = a.r && a.r.orizonturi[h]; x.zile = z; x.pStop = zz ? zz.pStop : null; x.pTp = zz ? zz.pTp : null; x.pLich = zz ? zz.pLich : null; return x; });
+      delete a.r;
+    });
+    var hH = oriz.length - 1, prag = Math.max(1, 0.02 * suma), ales = alegeHotarare(A, { oriz: hH, prag: prag });
+    // verificarea: alesul și „îl țin” reluate pe drumuri NOI (sămânța 13, de două ori mai multe) - ~8 încercări deodată, deci alesul e și cel mai norocos
+    if (ales.cheie !== "tine" && o.verifica !== false) {
+      var a2 = A.filter(function (x) { return x.cheie === ales.cheie; })[0];
+      var t2 = simuleazaBaza(b15, stK, Object.assign({}, bazaK, { seed: 13, n: n * 2 })), v2 = null;
+      if (a2.fix !== undefined) { v2 = []; for (var q = 0; q < n * 2; q++) v2.push(a2.fix); }
+      else { var r2 = a2.nou ? simuleazaBaza(b15, a2.nou, { n: n * 2, seed: 13, orizonturi: oriz, zile: zile, peDrum: true, plan: null }) : simuleazaBaza(b15, cuK(a2.st), Object.assign({}, bazaK, { seed: 13, n: n * 2 })); var z2 = r2 && !r2.eroare ? r2.orizonturi[hH] : null; v2 = z2 ? (a2.nou ? z2.drumuri : z2.drumuriDeAici) : null; }
+      var tz = t2 && !t2.eroare ? t2.orizonturi[hH].drumuriDeAici : null;
+      var ok = false; if (v2 && tz) { var sv2 = statHot(v2, tz, D), st2 = statHot(tz, null, D); ok = alegeHotarare([{ cheie: "tine", oriz: oriz.map(function (z, h) { return h === hH ? st2 : null; }) }, { cheie: a2.cheie, oriz: oriz.map(function (z, h) { return h === hH ? sv2 : null; }) }], { oriz: hH, prag: prag }).cheie === a2.cheie; ales.verif = { n: n * 2, dif: sv2.dif }; }
+      if (!ok) ales = { cheie: "tine", motiv: "„" + a2.nume + "” ieșea mai bun pe drumurile de aici, dar pe alte " + cate(n * 2, "drum", "drumuri") + " nu s-a mai ținut: ales dintre mai multe, poate fi noroc", respins: a2.cheie };
+      else ales.verificat = true;
+    }
+    // planul tău: coada (de la pornire) trece de minusul planului ⇒ stopul la plan (sau închiderea), oricât ar fi media - e regula TA, nu o statistică
+    if (ales.cheie === "tine" && o.plan && Number(o.plan.minus) > 0) {
+      var z0 = r0.orizonturi[hH], p5Tot = z0 ? z0.p5 : null;
+      if (p5Tot !== null && p5Tot < -Number(o.plan.minus)) { var pl = A.filter(function (x) { return x.cheie === "plan" && !x.eroare; })[0]; ales = { cheie: pl ? "plan" : "inchide", motiv: "în cele mai proaste 5% ajungi la " + bani1(p5Tot) + " de la pornire, planul tău zice −" + nrRo(Number(o.plan.minus), 1) + ": " + (pl ? "pune stopul la plan" : "închide-l"), plan: true }; }
+    }
+    return { P: P, fee: fee, prag: prag, oriz: oriz, scala: k, actiuni: A, ales: ales, n: n, zileEfective: D };
+  }
+  // v100.351 (alegerea LUI: „urmăresc hotărârile pe barele reale”): nota = ce s-a hotărât și pe ce (setările fiecărei acțiuni, poziția potrivită, ora
+  // ultimei bare știute); judecaHotarare = fiecare acțiune reluată pe barele REALE de după hotărâre, cu același motor (prefixul de la pornire + barele
+  // reale ca un singur drum), închisă la capăt ca în hotărâre. Nimic din viitor la notare; la judecată doar barele de după, cât a trecut de fapt.
+  function notaHotarare(h, st, o, b15, acum) {
+    if (!h || h.eroare || !Array.isArray(h.actiuni) || !b15 || !b15.length) return null;
+    var A = h.actiuni.filter(function (a) { return !a.eroare; }).map(function (a) { var x = { cheie: a.cheie, nume: a.nume }; if (a.fix !== undefined) x.fix = true; else if (a.nou) x.nou = a.nou; else if (a.cheie !== "tine") x.st = a.st; var z = a.oriz && a.oriz[h.oriz.length - 1]; if (z) { x.media = Math.round(z.media * 100) / 100; if (z.dif) x.dif = Math.round(z.dif.media * 100) / 100; } return x; });
+    return { t: acum || Date.now(), tUrm: b15[b15.length - 1].t + 9e5, pret: h.P, pornitLa: o.pornitLa, st: st, k: h.scala || null, ales: h.ales.cheie, plan: !!h.ales.plan, prag: Math.round(h.prag * 100) / 100, actiuni: A };
+  }
+  function judecaHotarare(bare, nota, zile) {
+    if (!nota || !Array.isArray(bare) || !bare.length) return { eroare: "fără bare" };
+    var i0 = -1; for (var i = 0; i < bare.length; i++) if (bare[i].t >= nota.tUrm) { i0 = i; break; }
+    var H = Math.round(zile * BZ); if (i0 < 0 || bare.length - i0 < H) return { asteapta: true };
+    if (bare[i0].t - nota.tUrm > 3600000) return { eroare: "gaură în bare după hotărâre" };
+    if (!(nota.pornitLa > 0) || bare[0].t > nota.pornitLa + 15 * 60000) return { eroare: "fără barele de la pornirea botului (botul era pornit de prea mult)" };
+    var hist = bare.slice(0, i0), real = bare.slice(i0, i0 + H), k = nota.k, cuK = function (x) { return k ? Object.assign({}, x, { scalaQ: k }) : x; }, stK = cuK(nota.st);
+    var baza = { pornitLa: nota.pornitLa, stPrefix: stK, botRuleaza: true, n: 1, drumFix: real, orizonturi: [zile], zile: zile, peDrum: true, plan: null };
+    var r0 = simuleazaBaza(hist, stK, baza); if (!r0 || r0.eroare || !r0.acum) return { eroare: r0 && r0.eroare || "reluarea n-a mers" };
+    var val = {};
+    nota.actiuni.forEach(function (a) {
+      var v = null;
+      try {
+        if (a.cheie === "tine") v = r0.orizonturi[0].drumuriDeAici[0];
+        else if (a.fix) v = 0;
+        else if (a.nou) { var rn = simuleazaBaza(hist, a.nou, { n: 1, drumFix: real, orizonturi: [zile], zile: zile, peDrum: true, plan: null }); v = rn && !rn.eroare ? rn.orizonturi[0].drumuri[0] : null; }
+        else if (a.st) { var ra = simuleazaBaza(hist, cuK(a.st), Object.assign({}, baza, { setareNoua: true })); v = ra && !ra.eroare ? ra.orizonturi[0].drumuriDeAici[0] : null; }
+      } catch (e) { v = null; }
+      val[a.cheie] = v === null || !isFinite(v) ? null : Math.round(v * 100) / 100;
+    });
+    return { zile: zile, val: val, pret: real[real.length - 1].c };
+  }
+  // v100.351 (ideea 3): verdictul Simulatorului pentru un bot NOU, judecat pe barele reale - botul pornit la prima bară de după notare (nota.tUrm),
+  // un singur drum = cel real, închis la capăt (comisionul de închidere scăzut, ca în hotărâre). nota = { tUrm, st }; 7 zile.
+  function judecaVerdict(bare, nota) {
+    if (!nota || !nota.st || !Array.isArray(bare) || !bare.length) return { eroare: "fără bare" };
+    var i0 = -1; for (var i = 0; i < bare.length; i++) if (bare[i].t >= nota.tUrm) { i0 = i; break; }
+    var H = 7 * BZ; if (i0 < 0 || bare.length - i0 < H) return { asteapta: true };
+    if (bare[i0].t - nota.tUrm > 3600000) return { eroare: "gaură în bare după notare" };
+    if (i0 < 7 * BZ) return { eroare: "prea puțin istoric înaintea notării" };
+    var r = simuleazaBaza(bare.slice(0, i0), nota.st, { n: 1, drumFix: bare.slice(i0, i0 + H), orizonturi: [7], zile: 7, peDrum: true, plan: null });
+    if (!r || r.eroare) return { eroare: r && r.eroare || "fără rezultat" };
+    return { val: r.orizonturi[0].drumuri[0] };
   }
   function comparaLa(rows, zile) {
     return (Array.isArray(rows) ? rows : []).map(function (x) { return x.gOriz && x.gOriz[zile] ? Object.assign({}, x, { g: x.gOriz[zile], drum: x.drumOriz ? x.drumOriz[zile] : x.drum, verif: x.verifOriz && x.verifOriz[zile] ? x.verifOriz[zile] : undefined }) : x; });   /* v100.350: și verificarea pe drumuri noi */
@@ -501,6 +673,6 @@ var GridSim = (function () {
     var stare = reluare ? "info" : atins === "minus" ? "rau" : atins === "plus" ? "bine" : rau ? "rau" : v.culoare === "good" ? "bine" : v.culoare === "bad" ? "rau" : "atentie";
     return { stare: stare, text: parti.join(" · "), culoare: v.culoare, faCe: v.faCe, rand: v.rand, atins: atins };
   }
-  return { riscSaptamana: riscSaptamana, textSaptamana: textSaptamana, riscScurt: riscScurt, ORIZ_SCURT: ORIZ_SCURT, LICHIDARI_ACCEPTATE: LICHIDARI_ACCEPTATE, lichidareAcceptata: lichidareAcceptata, starturiRegim: starturiRegim, dinCod: dinCod, inCod: inCod, setariDinBot: setariDinBot, tpValid: tpValid, simuleaza: simuleaza, compara: compara, comparaLa: comparaLa, verdict: verdict, verdictScurt: verdictScurt, rataFunding: rataFunding, marja: marja, bani1: bani1, pr: pr, NUME: NUME, textCalibrareMc: textCalibrareMc };
+  return { hotarare: hotarare, alegeHotarare: alegeHotarare, notaHotarare: notaHotarare, judecaHotarare: judecaHotarare, judecaVerdict: judecaVerdict, agitatieAcum: agitatieAcum, scaleazaDrum: scaleazaDrum, riscSaptamana: riscSaptamana, textSaptamana: textSaptamana, riscScurt: riscScurt, ORIZ_SCURT: ORIZ_SCURT, LICHIDARI_ACCEPTATE: LICHIDARI_ACCEPTATE, lichidareAcceptata: lichidareAcceptata, starturiRegim: starturiRegim, dinCod: dinCod, inCod: inCod, setariDinBot: setariDinBot, tpValid: tpValid, simuleaza: simuleaza, compara: compara, comparaLa: comparaLa, verdict: verdict, verdictScurt: verdictScurt, rataFunding: rataFunding, marja: marja, bani1: bani1, pr: pr, NUME: NUME, textCalibrareMc: textCalibrareMc };
 })();
 if (typeof globalThis !== "undefined") globalThis.GridSim = GridSim;

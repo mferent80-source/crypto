@@ -92,7 +92,7 @@ await test("CSS-ul pzDemo arată aceeași ordine; șirurile vechi 65 și 61 răm
   for (const s of ord) assert.ok(css.includes(s), s);
   assert.ok(!css.includes(".pzDemo #grFisa>.grVerdict{order:0}"));
   /* v100.350: Simulatorul își scrie blocurile direct în ordinea bună (fraza, verdictul, riscurile, Setarea pliată…) - ordinea din CSS a fost scoasă */
-  assert.ok(!css.includes(".pzDemo #gsPagina:has(.gsVerdict)")); assert.match(fs.readFileSync(path.join(RAD, "public", "lib", "grid-sim-ecran.js"), "utf8"), /gsFrazaHtml\(s\) \+ gsVerdictHtml\(s\) \+ gsRiscuriHtml\(s\) \+ gsFormHtml\(s\)/);
+  assert.ok(!css.includes(".pzDemo #gsPagina:has(.gsVerdict)")); assert.match(fs.readFileSync(path.join(RAD, "public", "lib", "grid-sim-ecran.js"), "utf8"), /gsFrazaHtml\(s\) \+ (?:gsHotHtml\(s\) \+ )?gsVerdictHtml\(s\) \+ gsRiscuriHtml\(s\) \+ gsFormHtml\(s\)/);   /* v100.351: „Ce fac cu botul ăsta?” imediat sub fraza (doar la botul meu) */
 });
 
 await test("blocurile rămân: Busola pe 4h, setările, poarta, îngustă, banii, istoricul, trendul", () => {

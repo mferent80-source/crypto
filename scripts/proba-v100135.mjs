@@ -117,7 +117,7 @@ await test("(R3) „așa cum e” din „Alte setări” = verdictul (același m
   const b = bare15(20, 3, 0.012), g0 = M.grid(b, { pret: 1, jos: 0.5, sus: 1.5, grile: 10, levier: 2, dir: "long", suma: 50, stop: null }, { zile: 7, n: 40, seed: 12, faraCuTendinta: true });
   assert.notEqual(M.grid(b, { pret: 1, jos: 0.5, sus: 1.5, grile: 10, levier: 2, dir: "long", suma: 50, stop: null, tip: "aritmetic" }, { zile: 7, n: 40, seed: 12, faraCuTendinta: true }).p50, g0.p50, "tipul ajunge la simulator");
   assert.ok(M.grid(b, { pret: 1, jos: 0.5, sus: 1.5, grile: 10, levier: 2, dir: "long", suma: 50, stop: null, fundingZi: 0.01 }, { zile: 7, n: 40, seed: 12, faraCuTendinta: true }).p50 < g0.p50, "funding-ul ajunge la simulator");
-  assert.match(functie(E, "gsCompara"), /GridSim\.compara\(/); assert.match(functie(E, "gsComparaTp"), /GridSim\.compara\(/);
+  assert.match(functie(E, "gsCompara"), /GridSim\.compara\(|gsInWorker\("compara"/); assert.match(functie(E, "gsComparaTp"), /GridSim\.compara\(|gsInWorker\("compara"/);   /* v100.351: în worker, același motor (gsPeFir / grid-sim-worker.js) */
 });
 await test("(R4) nota funding-ului după semn; costul presupus e cost oricare ar fi direcția (fundingCost pe |Ql − Qs|)", () => {
   const s = { mod: "nou", boti: [], sim: "PONS", st: { jos: 0.37, sus: 0.42, grile: 34, levier: 3, dir: "short", suma: 50, stop: null, tp: null, tip: "geometric" }, plan: {}, fundingZi: -0.0006, fundingSursa: "pionex", fundingInfo: { sim: "PONS", rataZi: -0.0006, intervalOre: 8, zile: 7, n: 21 }, rez: null, oriz: 2 };
