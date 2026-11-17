@@ -38,7 +38,8 @@ var GridProba = (function () {
     // negativ (incasat); traseul tine si MINIMUL / MAXIMUL rezultatului pe cele 4 puncte ale barei (pierderea maxima si planul in interiorul barei)
     // v100.269 (ideile auditului 29.10): opt.barePeZi (24 pe bare de 1 h) - funding-ul tot la 8 h (barePeZi / 3 bare), nu la 32 de bare
     var fper = opt && opt.barePeZi > 0 ? Math.max(1, Math.round(opt.barePeZi / 3)) : 32;
-    // v100.351 (mărunt rămas din v100.350): opt.tStart = ora (ms) primei bare ⇒ funding-ul la orele lui reale (00 / 08 / 16 UTC: bara care le cuprinde),
+    // v100.351 (mărunt rămas din v100.350): opt.tStart = ora (ms) primei bare ⇒ funding-ul la 00 / 08 / 16 UTC (bara care le cuprinde) - v100.352 (auditul): orele
+    // obișnuite; monedele cu plata la 4 h / 1 h au același total pe zi, doar momentul e aproximat;
     // nu la 8 h de la pornire - pe orizontul de o zi tot 3 plăți, dar la ora lor (botul pornit la 07:45 plătește la 08:00, nu la 07:45)
     var tS = opt && opt.tStart > 1e11 ? Number(opt.tStart) : null, dtB = opt && opt.barePeZi > 0 ? 864e5 / opt.barePeZi : 9e5;
     var fundingZi = isFinite(st.fundingZi) ? Number(st.fundingZi) : 0, funding = 0, tr = opt && opt.traseu ? { net: [], perechi: [], iesiri: [], min: [], max: [], fund: [], poz: [], brut: [] } : null, bMin = Infinity, bMax = -Infinity;
@@ -96,7 +97,7 @@ var GridProba = (function () {
       Ql = Cl = Qs = Cs = 0;
       return rezultat({ net: real - fee, oprit: true, iesit: parte, bare: nb });
     }
-    var pret = P, inauntru = true, sj = st.stop ? st.stop.jos : -Infinity, ss = st.stop ? st.stop.sus : Infinity;
+    var pret = P, inauntru = true, sj = st.stop && st.stop.jos > 0 ? st.stop.jos : -Infinity, ss = st.stop && st.stop.sus > 0 ? st.stop.sus : Infinity;   /* v100.352 (auditul): null / 0 nu e stop */
     // v100.259 (auditul 23.10): stopul pus în PROCENTE din investiție (Pionex profit_ratio) - st.stopRaport = r (negativ, fracție din marjă):
     // botul se închide când rezultatul, CU grilele umplute pe drum, ajunge la r. Prețul serverului e socotit pe poziția de la un moment dat
     // (fără grilele de pe drum) ⇒ ieșea prea jos (−14,1 în loc de −10). Fără stopRaport, drumul e exact cel de dinainte.

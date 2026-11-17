@@ -198,13 +198,16 @@ function gsBotulMeuHtml(s) {
 // el (16.11): „dezvoltă mai mult ideea nr 2, că are potențial” ⇒ pe ACELEAȘI drumuri, de aici încolo, din poziția Pionex: îl țin · îl închid · TP-ul / stopul
 // mutat · planul tău ca stop · îl închid și pornesc; altceva decât „îl țin” doar CU DOVADĂ (GridSim.alegeHotarare, probat sub H0). În worker.
 var GS_HOT = { n: 800, orizonturi: [1, 7] };
+// proba regulii sub H0 (refăcută pe codul v100.352, scratchpad h0hot) - spusă cum a ieșit, cu ce NU acoperă
+var GS_HOT_H0 = "Probată înainte (pe codul v100.352), pe 71 de boți inventați în două lumi (zile independente și agitație persistentă), cu adevărul socotit pe 300 de zile: a zis altceva decât „îl țin” de 15 ori - 14 „îl închid acum”, o dată „TP-ul mai aproape” - și de fiecare dată chiar era mai bine (0 recomandări false; o dată câștigul adevărat a fost sub prag). Stopul mutat și repornirea n-au ieșit niciodată recomandate în probă: pentru ele nu am încă dovadă că nu greșesc. Din 25 de situații în care exista o acțiune mai bună cu cel puțin pragul, a prins 14 - când zice „îl țin”, poate fi și din lipsă de dovadă.";
+function gsMajuscula(t) { t = String(t || ""); return t ? t.charAt(0).toUpperCase() + t.slice(1) : t; }
 function gsHotRand(a, i, ales, t) {
-  if (a.eroare) return '<tr class="gsHotEr"><td data-et="Acțiunea">' + mcsEsc(a.nume) + '</td><td data-et="" colspan="5" class="gsStins">' + mcsEsc("nu se poate: " + a.eroare) + '</td></tr>';
+  if (a.eroare) return '<tr class="gsHotEr"><td data-et="Acțiunea">' + mcsEsc(a.nume) + '</td><td data-et="De ce nu" colspan="5" class="gsStins">' + mcsEsc("nu se poate: " + a.eroare) + '</td></tr>';
   var z = a.oriz && a.oriz[i]; if (!z) return "";
   var d = z.dif, difTxt = !d ? "referința" : GridSim.bani1(d.media) + " ± " + gsNr(d.marja, 1), cls = !d ? "" : d.media - d.marja > 0 ? "good" : d.media + d.marja < 0 ? "bad" : "";
   var drum = !d ? "—" : "mai bun pe " + GridSim.pr(d.maiBun) + " · mai rău pe " + GridSim.pr(d.maiRau);
   var ies = a.cheie === "inchide" ? "acum, sigur (referința)" : [z.pStop > 0.005 ? "stop " + GridSim.pr(z.pStop) : null, z.pTp > 0.005 ? "TP " + GridSim.pr(z.pTp) : null, z.pLich > 0 ? "lichidare " + (z.pLich < 0.005 ? "sub 1%" : GridSim.pr(z.pLich)) : null].filter(Boolean).join(" · ") || "rulează";
-  return '<tr class="' + (a.cheie === ales ? "gsRandAles" : "") + '"><td data-et="Acțiunea">' + (a.cheie === ales ? "👉 " : "") + mcsEsc(a.nume) + '</td>' + gsTdE("Media", GridSim.bani1(z.media), gsCls(Math.round(z.media * 10) / 10)) + gsTdE("Cele mai proaste 5%", gsSemn1(z.p5), t && z.p5 < t.p5 - 0.05 ? "bad" : "")
+  return '<tr class="' + (a.cheie === ales ? "gsRandAles" : "") + '"><td data-et="Acțiunea">' + (a.cheie === ales ? "👉 " : "") + mcsEsc(a.nume + (a.inEsantion ? " (aleasă pe aceeași lună: doar de comparat)" : a.doarComparat ? " (doar de comparat)" : "")) + '</td>' + gsTdE("Media", GridSim.bani1(z.media), gsCls(Math.round(z.media * 10) / 10)) + gsTdE("Cele mai proaste 5% (de aici)", gsSemn1(z.p5) + " USDT", t && z.p5 < t.p5 - 0.05 ? "bad" : "")
     + gsTdE("Față de „îl țin”", difTxt, cls) + gsTdE("Drum cu drum", drum) + gsTdE("Cum iese", ies) + '</tr>';
 }
 function gsHotHtml(s) {
@@ -218,17 +221,19 @@ function gsHotHtml(s) {
   var fraza = ales.cheie === "tine" ? "Aș face: îl țin așa." : "Aș face: " + a.nume + ".";
   var cul = ales.cheie === "tine" ? "" : ales.plan ? "bad" : "good";
   var pastile = h.oriz.map(function (z, k) { return '<button type="button" class="gsOrizBtn" aria-pressed="' + (k === i) + '" data-action-click="gsHotOriz(' + k + ')">' + mcsEsc("pe " + gsCate(z, "zi", "zile")) + '</button>'; }).join("");
-  var tab = '<div class="rlTab"><table class="t212Tab gsDurate gsHot"><thead><tr><th>Acțiunea</th><th>Media</th><th>Cele mai proaste 5%</th><th>Față de „îl țin”</th><th>Drum cu drum</th><th>Cum iese</th></tr></thead><tbody>'
+  var tab = '<div class="rlTab"><table class="t212Tab gsDurate gsHot"><thead><tr><th>Acțiunea</th><th>Media (USDT)</th><th>Cele mai proaste 5% (USDT, de aici)</th><th>Față de „îl țin” (USDT)</th><th>Drum cu drum</th><th>Cum iese</th></tr></thead><tbody>'
     + A.map(function (x) { return gsHotRand(x, i, ales.cheie, t); }).join("") + '</tbody></table></div>';
   var bil = s.hotBilant, leg = gsHotLegatura(s, A, ales, hH);
   var surse = ["Fiecare rând e botul tău de ACUM (reluat pe barele reale de la pornire" + (s.rez.pozitie && s.rez.pozitie.potrivit ? ", cu poziția Pionex" : "") + ") cu o singură schimbare făcută acum, pe aceleași " + gsCate(h.n, "drum", "drumuri") + " de " + gsCate(h.oriz[hH], "zi", "zile") + ": diferența față de „îl țin” e drum cu drum, deci nu e noroc de drum.",
     "Cifrele sunt în USDT față de „îl închid acum” (care e 0): cât ai avea în plus sau în minus la capăt, cu botul închis atunci - comisionul de închidere e socotit și acum, și la capăt" + (h.fee >= 0.05 ? " (acum: " + gsNr(h.fee, 1) + " USDT)" : "") + ".",
-    "„± ” = cât de sigură e diferența pe zilele de istoric (fiecare zi distinctă e o observație), nu pe drumuri.",
-    "Regula, scrisă înainte de cifre: altceva decât „îl țin” doar dacă, pe " + gsCate(h.oriz[hH], "zi", "zile") + ", media e mai bună cu cel puțin " + gsNr(h.prag, 1) + " USDT (2% din sumă, minim 1), marginea de jos a diferenței e peste 0, cele mai proaste 5% nu sunt mai rele și se ține și pe alte " + gsCate(h.n * 2, "drum", "drumuri") + " (sunt ~8 încercări deodată, deci câștigătoarea e și cea mai norocoasă). Excepție: planul tău - când cele mai proaste 5% trec de minusul lui, aș pune stopul la plan.",
-    "Probată înainte, pe 71 de boți inventați în două lumi (zile independente și agitație persistentă), cu adevărul socotit pe 300 de zile: a zis altceva decât „îl țin” de 4 ori și de fiecare dată acțiunea chiar era mai bună (0 recomandări false). E prudentă: din 26 de situații în care exista o acțiune mai bună cu cel puțin pragul, a prins 4. Deci când zice altceva, merită ascultată; când zice „îl țin”, poate fi și din lipsă de dovadă.",
+    "„± ” = cât de sigură e diferența pe zilele de istoric (fiecare zi distinctă e o observație), nu pe drumuri. Socotită pe zile, ieșea de 2–3 ori mai largă decât variația reală (măsurat la audit), așa că e luată pe jumătate - probat înainte sub H0 că nu aduce recomandări false.",
+    "Fiecare hotărâre se judecă după 1 și 7 zile pe barele REALE de după ea (fiecare acțiune, ca în tabel), cu rata de funding de la notare; o gaură în bare ⇒ nejudecată, spus.",
+    "„Îl închid și pornesc unul la fel” e același bot centrat pe prețul de acum, ca în colector (Tabloul și Discordul aleg din aceleași rânduri); setarea fișei Grid, când e, se arată dar nu se recomandă: e aleasă pe aceeași lună din care se trag drumurile.",
+    "Regula, scrisă înainte de cifre: altceva decât „îl țin” doar dacă, pe " + gsCate(h.oriz[hH], "zi", "zile") + ", media e mai bună cu cel puțin " + gsNr(h.prag, 1) + " USDT (2% din sumă, minim 1), marginea de jos a diferenței e peste 0, cele mai proaste 5% nu sunt mai rele cu mai mult de " + gsNr(h.prag, 1) + " USDT și se ține și pe alte " + gsCate(h.n * 2, "drum", "drumuri") + " din aceeași lună (prinde norocul tragerii dintre ~8 încercări, nu norocul lunii). Excepție: planul tău - când cele mai proaste 5% ale acțiunii alese (de la pornire) trec de minusul lui, îl închid; rândul „stopul la planul tău” rămâne doar de comparat (la levier mare ieșea mai prost decât închiderea).",
+    GS_HOT_H0,
     "Recomandarea e a modelului (trecutul monedei reamestecat), nu o predicție: o mișcare mai rea decât orice a avut moneda nu apare. De aceea fiecare hotărâre se urmărește pe barele reale" + (bil && bil.text ? ": " + bil.text : " (bilanțul apare după primele hotărâri judecate).")];
   return '<section class="t212Panou gsSec gsHotBloc">' + cap
-    + '<p class="gsHotFraza ' + cul + '"><b>' + mcsEsc(fraza) + '</b> ' + mcsEsc(ales.motiv || "") + (ales.verificat ? " Se ține și pe alte " + mcsEsc(gsCate(h.n * 2, "drum", "drumuri")) + "." : "") + '</p>'
+    + '<p class="gsHotFraza ' + cul + '"><b>' + mcsEsc(fraza) + '</b> ' + mcsEsc(gsMajuscula(ales.motiv || "")) + (ales.verificat ? " Se ține și pe alte " + mcsEsc(gsCate(h.n * 2, "drum", "drumuri")) + "." : "") + '</p>'
     + (leg ? '<p class="tbSub gsNota">' + mcsEsc(leg) + '</p>' : '')
     + (bil && bil.text ? '<p class="tbSub gsNota">📒 ' + mcsEsc(bil.text) + '</p>' : '')
     + '<div class="gsOriz" role="group" aria-label="pe câte zile">' + pastile + '</div>' + tab
@@ -240,6 +245,8 @@ function gsHotLegatura(s, A, ales, hH) {
   var v = gsV(s, gsI(s)), fac = v && v.faCe || "", rand = function (k) { var x = A.filter(function (a) { return a.cheie === k && !a.eroare; })[0]; return x && x.oriz && x.oriz[hH] && x.oriz[hH].dif ? x.oriz[hH].dif : null; }, dt = function (d) { return GridSim.bani1(d.media) + " ± " + gsNr(d.marja, 1) + " USDT"; };
   if (ales.cheie === "tine" && /^Stopul e în zgomot/.test(fac)) { var d1 = rand("stopLarg"); return "Sus scrie „stopul e în zgomot”: e regula de așezare a stopului (dincolo de cât merge moneda într-o zi obișnuită), nu o dovadă că mutarea aduce bani" + (d1 ? "; pe aceleași drumuri, „stopul mai larg” iese " + dt(d1) + " față de „îl țin” - prea nesigur ca să-l recomand" : "") + "."; }
   if (ales.cheie === "tine" && /^(Aș opri|L-aș opri)/.test(fac)) { var d2 = rand("inchide"); return "Sus scrie „l-aș opri” (după șansele botului); aici, pe bani" + (d2 ? ", „îl închid acum” iese " + dt(d2) + " față de „îl țin”" : "") + " - nu destul de sigur ca să-l recomand. Dacă sus și aici nu se potrivesc, contează planul tău."; }
+  if (ales.plan) return "„Îl închid” vine din planul tău (regula ta, scrisă înainte), nu dintr-o statistică: cele mai proaste 5% trec de minusul planului.";
+  if (ales.cheie === "tine" && /planul tău/.test(fac)) return "Sus (pe 2.000 de drumuri) cele mai proaste 5% trec de planul tău; aici (pe " + gsNr(GS_HOT.n, 0) + ", altă tragere) nu trec: ești la limita planului - eu aș asculta de plan.";
   if (ales.cheie !== "tine" && /^(Aș ține|Aș porni)/.test(fac)) return "Sus scrie „aș ține” (după șansele botului); aici, pe bani, o schimbare iese mai bună cu dovadă: ținut așa, botul merge, dar schimbat merge mai bine.";
   return null;
 }
@@ -254,7 +261,8 @@ async function gsHotPorneste() {
   gsStare.hotInLucru = true; gsStare.hotEroare = null; gsStare.hot = null; gsDeseneaza();
   var fisa = gsFisaPentru(gsStare.sim);
   try {
-    var h = await gsInWorker("hotarare", d.b15, st, { pornitLa: gsStare.pornitLa, pozitiePionex: gsPozPionex(), plan: gsPlanOk(gsStare.plan) ? gsStare.plan : null, fisa: fisa ? Object.assign({}, fisa, { suma: st.suma, fundingZi: st.fundingZi, fundingCost: st.fundingCost }) : null, n: GS_HOT.n, seed: 12, orizonturi: GS_HOT.orizonturi });
+    var k7 = GS_ORIZ.indexOf(7), z7 = rez0 && rez0.orizonturi ? rez0.orizonturi[k7] : null;
+    var h = await gsInWorker("hotarare", d.b15, st, { p5Plan: z7 && isFinite(z7.p5) ? z7.p5 : null, pornitLa: gsStare.pornitLa, pozitiePionex: gsPozPionex(), plan: gsPlanOk(gsStare.plan) ? gsStare.plan : null, fisa: fisa ? Object.assign({}, fisa, { suma: st.suma, fundingZi: st.fundingZi, fundingCost: st.fundingCost }) : null, n: GS_HOT.n, seed: 12, orizonturi: GS_HOT.orizonturi });
     if (gsStare.rez !== rez0) { gsStare.hotInLucru = false; if (gsStare.rez && gsMeu()) gsHotPorneste(); return; }   /* revizia (🔵11): altă simulare între timp ⇒ hotărârea ei, nu asta */
     if (h && h.eroare) gsStare.hotEroare = "Nu pot compara acțiunile: " + h.eroare; else gsStare.hot = h;
   } catch (e) { gsStare.hotEroare = "Nu pot compara acțiunile: " + (e && e.message || e); }
@@ -271,13 +279,13 @@ function gsNoteazaVerdict() {
     var k7 = GS_ORIZ.indexOf(7), o = r.orizonturi[k7], v = o ? GridSim.verdict(r, st, null, k7, null) : null; if (!o || !v || !isFinite(o.media)) return;
     var sim = String(d.sim || "").toUpperCase() + "_USDT_PERP", ch = sim + "|" + new Date().toISOString().slice(0, 10) + "|" + JSON.stringify(st); if (gsNotate[ch]) return; gsNotate[ch] = 1;
     var fel = /^Aș porni/.test(v.faCe || "") ? "porni" : /^N-aș porni/.test(v.faCe || "") ? "nu" : "alt";
-    var n = { sim: sim, t: Date.now(), tUrm: d.b15[d.b15.length - 1].t + 9e5, st: st, p: o.pCastig, media: Math.round(o.media * 100) / 100, fel: fel };
+    var n = { sim: sim, t: Date.now(), tUrm: d.b15[d.b15.length - 1].t + 9e5, st: st, p: o.pCastig, media: Math.round(o.media * 100) / 100, fel: fel, v: GridSim.VERS_SIM || 1 };   /* v100.352: versiunea motorului (bilanțul pe versiune) */
     apiFetch("/api/istoric-bot?action=simNota", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(n) }).catch(function () { delete gsNotate[ch]; });
   } catch (e) { /* nota lipsește: pagina merge */ }
 }
 function gsSimUrmAdu() {
   if (gsSimUrm.inLucru || Date.now() - gsSimUrm.la < 10 * 60000 || typeof getJSON !== "function") return;
-  gsSimUrm.inLucru = true; getJSON("/api/istoric-bot?action=simUrmarire").then(function (j) { gsSimUrm.v = j && j.urmarire && j.urmarire.rezumat || null; }).catch(function () { /* fără bilanț */ }).then(function () { gsSimUrm.la = Date.now(); gsSimUrm.inLucru = false; });
+  gsSimUrm.inLucru = true; getJSON("/api/istoric-bot?action=simUrmarire").then(function (j) { gsSimUrm.v = j && j.urmarire && j.urmarire.rezumat || null; if (gsSimUrm.v && j.urmarire.la > 0) gsSimUrm.v = Object.assign({}, gsSimUrm.v, { text: gsSimUrm.v.text + " (socotit " + new Date(j.urmarire.la).toLocaleString("ro-RO", { timeZone: "Europe/Bucharest", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) + ")" }); }).catch(function () { /* fără bilanț */ }).then(function () { gsSimUrm.la = Date.now(); gsSimUrm.inLucru = false; });
 }
 // ---------------- v100.351 (viteza): simulările în worker (lib/grid-sim-worker.js, aceleași module) ----------------
 // fără Worker, worker picat sau fără răspuns în 30 s (pe telefon 20 s) ⇒ pe fir, ca înainte (același rezultat, aceeași sămânță)
@@ -290,12 +298,23 @@ function gsInWorker(fel, b15, st, o) {
     try {
       if (!gsWorker) {
         gsWorker = new Worker("/lib/grid-sim-worker.js");
-        gsWorker.onmessage = function (ev) { var d = ev && ev.data || {}, c = gsWorkerCereri[d.id]; if (!c) return; delete gsWorkerCereri[d.id]; clearTimeout(c.t); if (d.rez) c.fin(d.rez); else c.peFir(); };
-        gsWorker.onerror = function () { var l = gsWorkerCereri; gsWorkerCereri = {}; try { gsWorker.terminate(); } catch (e) { /* deja oprit */ } gsWorker = null; Object.keys(l).forEach(function (k) { clearTimeout(l[k].t); l[k].peFir(); }); };
+        // revizia: hotărârea (grea) nu cade pe fir nici la eroarea worker-ului - eroare cu „deschide din nou”; simularea da (ca înainte)
+        gsWorker.onmessage = function (ev) { var d = ev && ev.data || {}, c = gsWorkerCereri[d.id]; if (!c) return; delete gsWorkerCereri[d.id]; clearTimeout(c.t); if (d.rez) c.fin(d.rez); else c.cadere(); };
+        gsWorker.onerror = function () { var l = gsWorkerCereri; gsWorkerCereri = {}; try { gsWorker.terminate(); } catch (e) { /* deja oprit */ } gsWorker = null; Object.keys(l).forEach(function (k) { clearTimeout(l[k].t); l[k].cadere(); }); };
       }
       var id = ++gsWorkerId, ms = (typeof window !== "undefined" && window.innerWidth < 600 ? 20000 : 30000) * (1 + Object.keys(gsWorkerCereri).length);   /* revizia (🟡8): cererile la rând nu mai cad pe fir */
-      gsWorkerCereri[id] = { fin: fin, peFir: peFir, t: setTimeout(function () { if (!gsWorkerCereri[id]) return; var l = gsWorkerCereri; gsWorkerCereri = {}; try { gsWorker.terminate(); } catch (e) { /* deja oprit */ } gsWorker = null; Object.keys(l).forEach(function (k) { clearTimeout(l[k].t); l[k].peFir(); }); }, ms) };
-      gsWorker.postMessage({ id: id, fel: fel, b15: b15, st: st, o: o });
+      var mesaj = { id: id, fel: fel, b15: b15, st: st, o: o };
+      // v100.352 (auditul): la timeout iese DOAR cererea expirată (worker-ul e blocat în ea); celelalte se trimit într-un worker nou, cu termenul lor.
+      // Hotărârea (~8 simulări) nu cade pe fir - pe un telefon lent ar îngheța pagina zeci de secunde: eroare cu „refă”
+      var expira = function () {
+        var c = gsWorkerCereri[id]; if (!c) return; delete gsWorkerCereri[id];
+        var rest = gsWorkerCereri; gsWorkerCereri = {}; try { gsWorker.terminate(); } catch (e) { /* deja oprit */ } gsWorker = null;
+        if (fel === "hotarare") fin({ eroare: "a durat prea mult în fundal (peste " + Math.round(ms / 1000) + " de secunde) - deschide din nou botul ca să reîncerc" }); else peFir();
+        Object.keys(rest).forEach(function (k) { clearTimeout(rest[k].t); rest[k].retrimite(); });
+      };
+      gsWorkerCereri[id] = { fin: fin, peFir: peFir, t: setTimeout(expira, ms), retrimite: function () { fin(null); }, cadere: function () { if (fel === "hotarare") fin({ eroare: "calculul în fundal a picat - deschide din nou botul ca să reîncerc" }); else peFir(); } };
+      gsWorkerCereri[id].retrimite = function () { delete gsWorkerCereri[id]; gsInWorker(fel, b15, st, o).then(fin); };
+      gsWorker.postMessage(mesaj);
     } catch (e) { setTimeout(peFir, 30); }
   });
 }
@@ -338,6 +357,7 @@ function gsLista(i) {
   gsCiteste(true); gsStare.mod = "meu"; gsAlegeBot(i); gsSimuleaza();
 }
 function gsMod(m) {
+  if (gsStare.inLucru) { gsStare.dupa = function () { gsMod(m); }; return; }   // v100.352 (auditul): după simularea în lucru (altfel rezultatul vechi sub setarea nouă)
   gsCiteste(true);   // revizia (R5): ce ai tastat nu se pierde la redesenare
   gsStare.mod = m === "meu" ? "meu" : "nou"; gsStare.rez = null; gsStare.eroare = null;
   if (gsStare.mod === "meu" && gsBoti().length) { gsAlegeBot(gsStare.botIdx || 0); return; }
@@ -351,6 +371,7 @@ function gsAlegeBot(i) {
   gsDeseneaza();
 }
 function gsDinCod() {
+  if (gsStare.inLucru) { gsStare.dupa = gsDinCod; return; }   // v100.352 (auditul)
   gsCiteste(true);
   var t = gsEl("gsCod"), d = GridSim.dinCod(t ? t.value : gsStare.cod);
   gsStare.cod = t ? t.value : gsStare.cod; gsStare.rez = null; gsStare.eroare = null;
@@ -363,6 +384,7 @@ function gsDinCod() {
   gsDeseneaza();
 }
 function gsDirectie(d) {
+  if (gsStare.inLucru) { gsStare.dupa = function () { gsDirectie(d); }; return; }   // v100.352 (auditul): long → short în timpul calculului dădea verdictul long sub setarea short
   gsCiteste(true);
   gsStare.st = gsDirectieSt(gsStare.st, d === "short" ? "short" : d === "neutru" ? "neutru" : "long"); gsStare.rez = null;
   gsDeseneaza();
@@ -416,8 +438,10 @@ async function gsSimuleaza() {
     }
     if (gsStare.fundingSursa !== "manual" && gsStare.fundingSim !== sim) gsPuneFunding(sim, gsStare.date.fundingInfo);   // v100.136: rata reală vine cu barele (o singură cerere)
     var st = Object.assign({}, gsStare.st, { fundingZi: gsStare.fundingZi, fundingCost: gsStare.fundingSursa !== "pionex" && gsStare.fundingSursa !== "manual" });   // revizia (R4): rata presupusă = cost
+    var amprenta = gsStare.mod + "|" + JSON.stringify(gsStare.st) + "|" + JSON.stringify(gsStare.plan);   // v100.352: setarea pe care o simulez
     var rez = await gsInWorker("simuleaza", gsStare.date.b15, st, { plan: gsPlanOk(gsStare.plan) ? gsStare.plan : null, pornitLa: gsStare.mod === "meu" ? gsStare.pornitLa : null, stPrefix: gsStare.mod === "meu" ? st : null, pozitiePionex: gsStare.mod === "meu" ? gsPozPionex() : null, n: 2000, seed: 12, orizonturi: GS_ORIZ, zile: 14 });   /* v100.350: de aici încolo din poziția Pionex */   // revizia (I2): ținta de pe prefix cu aceeași regulă ca rândul 0
     if (rez.eroare) throw new Error(rez.eroare);
+    if (amprenta !== gsStare.mod + "|" + JSON.stringify(gsStare.st) + "|" + JSON.stringify(gsStare.plan)) throw new Error("Setarea s-a schimbat în timpul calculului: apasă din nou „Simulează”.");   // a doua plasă
     gsStare.rez = rez;
   } catch (e) { gsStare.eroare = e && e.message || String(e); }
   finally { gsStare.inLucru = false; }

@@ -96,7 +96,8 @@ await test("D8 notarea: o dată pe bot pe zi + fiecare anunț; judecata pe barel
   j = TMC.noteazaHotarare(j, { id: 7, sim: "X", nota, forta: true }); assert.equal(j.length, 2);
   const jj = TMC.judecaHotarari(j, { X: BL }, GS, nota.tUrm + 8 * 86400000);
   assert.ok(jj[0].y1 && jj[0].y1.val && jj[0].y7 && jj[0].y7.val, JSON.stringify(jj[0].y7));
-  const rp = TMC.raportHotarari(jj); assert.equal(rp.j7, 2); assert.ok(/judecate pe barele reale după 7 zile: 2 hotărâri/.test(rp.text) && /prea puține/.test(rp.text), rp.text);
+  // v100.352 (auditul): pe același bot doar note la cel puțin 7 zile una de alta (ferestrele suprapuse se lasă deoparte, spus)
+  const rp = TMC.raportHotarari(jj); assert.equal(rp.j7, 1); assert.equal(rp.suprapuse, 1); assert.ok(/judecate pe barele reale după 7 zile: 1 hotărâre/.test(rp.text) && /prea puține/.test(rp.text) && /ferestre suprapuse/.test(rp.text), rp.text);
   assert.ok(/încă niciuna/.test(TMC.raportHotarari(j).text));
 });
 await test("D9 tura colectorului pune hotărârea pe bot (la 30 de minute) și o dă la notat; ruta păstrează câmpul hot și bilanțul", async () => {
@@ -109,7 +110,7 @@ await test("D10 ruta mcVerdict păstrează hot (doar chei din listă) și bilan�
   const src = citeste("functions", "api", "istoric-bot.js");
   assert.ok(/const HOT=\["tine","inchide","tpAproape","tpMargine","tpFara","stopMargine","stopLarg","plan","reporneste"\]/.test(src));
   assert.ok(/hot:x\.hot&&typeof x\.hot==="object"&&HOT\.includes\(x\.hot\.cheie\)/.test(src) && /JSON\.stringify\(\{la,boti,calibrare,calibrareScurt,hotarari\}\)/.test(src));
-  const col = citeste("scripts", "colector.mjs"); assert.ok(/hotarari: hotarari \}/.test(col) && /tineRitm\("hotJurnal", jh\)/.test(col));
+  const col = citeste("scripts", "colector.mjs"); assert.ok(/hotarari: hotarari \}/.test(col) && /scrieHotJurnal\(jh\)/.test(col));   // v100.352: în fișierul lui (hot-jurnal.json + .bak)
 });
 
 // măruntele rămase din v100.350
@@ -118,7 +119,7 @@ await test("M1 „95.000” la BTC = 95 000, „1.325” la PENDLE = 1,325; „9
   assert.equal(f("95.000", 94800), 95000); assert.equal(f("1.325", 1.31), 1.325); assert.equal(f("95.000", null), 95);
   assert.equal(f("95.000,5", 1), 95000.5); assert.equal(f("95,000.5", 1), 95000.5); assert.equal(f("1,325", 1.3), 1.325); assert.equal(f("0.0123", 0.01), 0.0123);
   assert.equal(f("1.000.000", 1), 1000000); assert.equal(f("1 200", 1), 1200); assert.equal(f("abc", 1), null); assert.equal(f("", 1), null); assert.equal(f("1.5", 1), 1.5);
-  assert.ok(/mcsNumar\("mcsStop", mcsPretAcum\(\)\)/.test(src) && /num\(s, v\)/.test(src));
+  assert.ok(/mcsNumar\("mcsStop", null\)/.test(src) && /num\(s, v\)/.test(src));   // v100.352 (auditul): câmpurile de procente fără prețul ca reper
   assert.ok(/mcsNumar\(id, REF\[id\]\)/.test(lib("grid-sim-ecran.js")));
 });
 await test("M2 stopul în PROCENTE și TP-ul în aceeași bară ⇒ stopul întâi (pesimist), oricare ar fi culoarea lumânării", () => {
@@ -175,14 +176,15 @@ await test("🔑 I3a judecata unui verdict de bot nou: botul pornit la prima bar
   assert.ok(Math.abs(a.val - r.net * st.suma) < 0.05, a.val + " vs " + r.net * st.suma);
 });
 await test("I3b raportul: Brier față de ban și față de „mereu rata de bază”; pe fel (Aș porni / N-aș porni) câte pe plus și media reală vs prezisă; sub 30 ⇒ „prea puține”", () => {
-  const j = [{ p: 0.7, val: 2, fel: "porni", media: 1, z: "2026-11-01" }, { p: 0.6, val: -1, fel: "porni", media: 0.5, z: "2026-11-02" }, { p: 0.3, val: -3, fel: "nu", media: -2, z: "2026-11-02" }];
+  // v100.352: notele poartă versiunea motorului (v) și moneda; „orientativ” sub 300 de unități (o monedă pe zi)
+  const j = [{ sim: "A", t: 1, v: 2, p: 0.7, val: 2, fel: "porni", media: 1, z: "2026-11-01" }, { sim: "B", t: 2, v: 2, p: 0.6, val: -1, fel: "porni", media: 0.5, z: "2026-11-02" }, { sim: "C", t: 3, v: 2, p: 0.3, val: -3, fel: "nu", media: -2, z: "2026-11-02" }];
   const r = TSU.raportSim(j); assert.equal(r.n, 3); assert.ok(Math.abs(r.brier - ((0.3 ** 2 + 0.6 ** 2 + 0.3 ** 2) / 3)) < 1e-9);
-  assert.ok(/«Aș porni» \(2\): pe plus în 1, media reală \+0,5 USDT \(prezisă \+0,8\)/.test(r.text) && /«N-aș porni» \(1\)/.test(r.text) && /prea puține/.test(r.text), r.text);
+  assert.ok(/«Aș porni» \(2\): pe plus în 1, media reală \+0,5 USDT \(prezisă \+0,8\)/.test(r.text) && /«N-aș porni» \(1\)/.test(r.text) && /orientativ/.test(r.text), r.text);
   assert.ok(/încă niciunul/.test(TSU.raportSim([]).text));
 });
 await test("I3c tura: judecă doar notele ajunse la 7 zile, o dată; trimite raportul; ruta validează nota (monedă, setare, fel din listă)", async () => {
   const st = { jos: PD * 0.95, sus: PD * 1.05, grile: 12, levier: 2, dir: "long", suma: 100, stop: null, tp: null, tip: "aritmetic", fundingZi: 0, fundingCost: false };
-  const note = [{ id: "TST-1", sim: "TST_USDT_PERP", t: BD[ND - 1].t + 9e5, tUrm: BD[ND - 1].t + 9e5, st, p: 0.6, media: 0.4, fel: "porni" }, { id: "TST-2", sim: "TST_USDT_PERP", t: BL[BL.length - 10].t, tUrm: BL[BL.length - 10].t, st, p: 0.5, media: 0, fel: "alt" }];
+  const note = [{ id: "TST-1", sim: "TST_USDT_PERP", t: BD[ND - 1].t + 9e5, tUrm: BD[ND - 1].t + 9e5, st, p: 0.6, media: 0.4, fel: "porni", v: 2 }, { id: "TST-2", sim: "TST_USDT_PERP", t: BL[BL.length - 10].t, tUrm: BL[BL.length - 10].t, st, p: 0.5, media: 0, fel: "alt", v: 2 }];
   let trimis = null; const stare = {};
   const r = await TSU.turaSimUrmarire({ acum: BL[BL.length - 1].t + 9e5, cere: async () => ({ note }), trimite: async (c, b) => { trimis = b; }, GridSim: GS, GridCalcul, randuri15: async () => BL.map((b) => [b.t, b.o, b.h, b.l, b.c, b.v]).concat([[BL[BL.length - 1].t + 9e5, 1, 1, 1, 1, 1]]) }, stare);
   assert.ok(stare.judecate["TST-1"] && isFinite(stare.judecate["TST-1"].val) && !stare.judecate["TST-2"], JSON.stringify(stare.judecate));

@@ -482,6 +482,7 @@ function mcsGridHtml(r) {
   if (tIst) cap += '<p class="tbWarn mcsNota">' + mcsEsc(tIst + (r.istoric15.motiv === "pagina" ? " Apasă „Analizează” din nou peste un minut." : "")) + '</p>';
   if (!g || g.eroare) return cap + '<p class="tbWarn mcsNota">' + mcsEsc(g && g.eroare || "fără date") + '</p></section>';
   if (r.gsimCere || r.gsimInLucru) return cap + '<p class="tbSub mcsNota">calculez botul pe 1.000 de drumuri (în fundal, pagina merge)…</p></section>';   /* v100.351 */
+  if (r.gsimEroare) return cap + '<p class="tbWarn mcsNota">' + mcsEsc("Nu am putut simula botul: " + r.gsimEroare + " - apasă „Refă” ca să reîncerc.") + '</p></section>';   /* v100.352 (auditul) */
   var mk = [{ v: g.p5, t: "5%", c: "bad" }, { v: g.p50, t: "mijloc", c: "mijl" }, { v: g.p95, t: "95%", c: "good" }], stopV = st.stop ? (st.stop.sus || st.stop.jos) : null;
   // v100.350 (auditul MC, 🔴: aici „rezultatul obișnuit −12,6”, în Simulator „media −0,3 · 45/55” pentru ACELAȘI bot): cardul spune ce spune Simulatorul -
   // aceeași simulare (GridSim, r.gsim), același verdict (eticheta, cum se termină drumurile, media), aceeași histogramă pe semn
@@ -580,7 +581,7 @@ function mcsSalveazaRecente() { try { localStorage.setItem(MCS_RECENTE, JSON.str
 function mcsGsimPorneste() {
   var r = mcsStare.rez, d = mcsStare.date; if (!r || !r.gsimCere || !d || !d.b15) return;
   var c = r.gsimCere; r.gsimCere = null; r.gsimInLucru = true;
-  gsInWorker("simuleaza", d.b15, c.st, c.o).then(function (g) { r.gsim = g && !g.eroare ? g : null; r.gsimInLucru = false; if (mcsStare.rez === r) mcsDeseneaza(); });
+  gsInWorker("simuleaza", d.b15, c.st, c.o).then(function (g) { r.gsim = g && !g.eroare ? g : null; r.gsimEroare = r.gsim ? null : String(g && g.eroare || "fără rezultat"); r.gsimInLucru = false; if (mcsStare.rez === r) mcsDeseneaza(); });   /* v100.352 (auditul): picată ⇒ spusă, nu cifrele vechi pe tăcute */
 }
 function mcsDeseneaza() {
   var el = mcsEl("mcsPagina"); if (!el) return;
@@ -615,7 +616,7 @@ function mcsAlegeBot(v) {
   mcsStare.eroareBot = null; mcsStare.campuriBot = null;   /* revizia: eroarea câmpurilor e a botului de dinainte */
   var d = mcsStare.date; mcsStare.botIdx = Number(v) || 0;
   if (!d || d.tip !== "coin") return;
-  mcsStare.rez = mcsCalculeaza(d, { stop: mcsNumar("mcsStop", mcsPretAcum()), tinta: mcsNumar("mcsTinta", mcsPretAcum()), botIdx: mcsStare.botIdx, oriz: mcsStare.oriz[d.tip] }); mcsDeseneaza();
+  mcsStare.rez = mcsCalculeaza(d, { stop: mcsNumar("mcsStop", null), tinta: mcsNumar("mcsTinta", null),   /* v100.352 (auditul): câmpuri de PROCENTE - „7.125” e 7,125%, nu prețul */ botIdx: mcsStare.botIdx, oriz: mcsStare.oriz[d.tip] }); mcsDeseneaza();
 }
 function mcsCompara() {
   var r = mcsStare.rez, d = mcsStare.date;
@@ -663,6 +664,7 @@ function mcsNrRo(t, P) {
   if (s === "") return null;
   if (/^-?\d{1,3}(\.\d{3})+,\d+$/.test(s)) x = Number(s.replace(/\./g, "").replace(",", "."));
   else if (/^-?\d{1,3}(,\d{3})+\.\d+$/.test(s)) x = Number(s.replace(/,/g, ""));
+  else if (/^-?\d{1,3},\d{3}$/.test(s)) { var a2 = Number(s.replace(",", ".")), b2 = Number(s.replace(",", "")); x = P > 0 && Math.abs(Math.log(b2 / P)) < Math.abs(Math.log(a2 / P)) ? b2 : a2; }   /* v100.352 (auditul): „95,000” la BTC = 95 000, ca „95.000” */
   else if (/^-?\d*,\d+$/.test(s)) x = Number(s.replace(",", "."));
   else if (/^-?\d{1,3}(\.\d{3}){2,}$/.test(s)) x = Number(s.replace(/\./g, ""));
   else if (/^-?\d{1,3}(,\d{3}){2,}$/.test(s)) x = Number(s.replace(/,/g, ""));
@@ -859,7 +861,7 @@ function mcsSetariDinCampuri(c, vechi, P) {
   vechi = vechi || {}; var num = function (t, ref) { return mcsNrRo(t, ref > 0 ? ref : P); };   /* v100.351: „95.000” după preț (mcsNrRo) */
   var la = function (t, v, fmt) { var s = String(t == null ? "" : t).trim(); return v != null && isFinite(v) && s !== "" && s === fmt(v) ? v : num(s, v); };   /* v100.351: referința = valoarea veche a câmpului (suma rămâne sumă) */
   var stopV = vechi.stop ? (vechi.stop.sus || vechi.stop.jos) : null;
-  var jos = la(c.jos, vechi.jos, mcsCampPret), sus = la(c.sus, vechi.sus, mcsCampPret), g = c.linii != null ? (num(c.linii) || 0) - 1 : num(c.grile),   /* „Linii” ca în Pionex ⇒ intervale = linii − 1 */ lv = num(c.levier), suma = la(c.suma, vechi.suma, function (v) { return mcsCampNr(v, 2); }), dir = mcsDir(c.dir);
+  var jos = la(c.jos, vechi.jos, mcsCampPret), sus = la(c.sus, vechi.sus, mcsCampPret), g = c.linii != null ? (mcsNrRo(c.linii, null) || 0) - 1 : mcsNrRo(c.grile, null),   /* „Linii” ca în Pionex ⇒ intervale = linii − 1; v100.352: fără prețul ca reper */ lv = mcsNrRo(c.levier, null), suma = la(c.suma, vechi.suma, function (v) { return mcsCampNr(v, 2); }), dir = mcsDir(c.dir);
   var sb = la(c.stop, stopV, mcsCampPret), tpb = dir === "neutru" ? null : la(c.tp, vechi.tp > 0 ? vechi.tp : vechi.tpIgnorat, mcsCampPret); if (vechi.tpIgnorat > 0 && tpb === vechi.tpIgnorat) tpb = null;   /* revizia: TP-ul ignorat rămâne ignorat (nu „setări de probă”) */
   if (!(jos > 0) || !(sus > 0)) return { eroare: "Jos și Sus: prețuri peste zero." };
   if (!(sus > jos)) return { eroare: "Sus trebuie să fie peste jos." };
@@ -874,7 +876,7 @@ function mcsSetariDinCampuri(c, vechi, P) {
 }
 function mcsResimuleaza() {
   var d = mcsStare.date; if (!d) return;
-  var o = { stop: mcsNumar("mcsStop", mcsPretAcum()), tinta: mcsNumar("mcsTinta", mcsPretAcum()), poz: mcsStare.poz && mcsStare.poz.sim === d.sim ? mcsStare.poz : null, botIdx: mcsStare.botIdx, oriz: mcsStare.oriz[d.tip] };
+  var o = { stop: mcsNumar("mcsStop", null), tinta: mcsNumar("mcsTinta", null), poz: mcsStare.poz && mcsStare.poz.sim === d.sim ? mcsStare.poz : null, botIdx: mcsStare.botIdx, oriz: mcsStare.oriz[d.tip] };
   if (d.tip === "coin" && mcsEl("mcsJos")) {
     var v = function (id) { var el = mcsEl(id); return el ? el.value : ""; }, dirEl = mcsEl("mcsDir");
     var campuri = null, cs = mcsSetariDinCampuri({ jos: v("mcsJos"), sus: v("mcsSus"), linii: v("mcsGrile"), levier: v("mcsLevier"), dir: dirEl ? dirEl.value : "long", suma: v("mcsSuma"), stop: v("mcsStopBot"), tp: v("mcsTpBot") }, mcsStare.rez && mcsStare.rez.setari, d.b15 && d.b15.length ? d.b15[d.b15.length - 1].c : null);

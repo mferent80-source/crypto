@@ -74,7 +74,7 @@ export async function turaVarianteNoapte(d) {
           /* v100.196 (auditul sever 14.10, 🔵7): alegerea celei mai bune dintre mai multe variante pe ACELEAȘI drumuri e în eșantion - se spune */
           /* v100.272 (revizia): propunerea e aleasă pe aceleași drumuri, apoi VERIFICATĂ pe alte drumuri (mcsVerificaPeDrumuriNoi) - textul ei dă
              cifrele de acolo; numărul = variantele / țintele fără botul tău (K = rows.length − 1, ca în text), nu „cea mai bună dintre N încercări” */
-          + (fel === "variante" ? "; setarea e aleasă dintre " + cate(rowsV.filter((r) => !(r.g && r.g.eroare)).length - 1, "variantă", "variante") : "; ținta e aleasă dintre " + cate(rowsT ? rowsT.length - 1 : 0, "țintă", "ținte"))
+          + (fel === "variante" ? "; setarea e aleasă dintre " + cate(rowsV.filter((r) => !(r.g && r.g.eroare)).length - 1, "variantă", "variante") : "; ținta e aleasă dintre " + cate(rowsT ? rowsT.filter((r) => !(r.g && r.g.eroare)).length - 1 : 0, "țintă", "ținte"))   /* v100.352 (auditul): numărate ca variantele */
           + " pe aceleași drumuri, apoi verificată pe alte drumuri; nu o promisiune.)";
         const ok = await d.anunta({ nivel: "info", titlu: "🌙 " + sim + ": " + (fel === "variante" ? "altă setare, verificată pe drumuri noi" : "alt TP, verificat pe drumuri noi"), mesaj }, b.id, "noapte-" + fel);
         if (ok) { ist.push({ c: cheie, la: acum }); anuntate++; }

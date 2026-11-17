@@ -19,6 +19,8 @@ var GridSim = (function () {
   function pr(v) { return v == null || !isFinite(v) ? "—" : Math.round(v * 100) + "%"; }
   function prMic(v) { return v > 0 && v < 0.005 ? "sub 1%" : pr(v); }   // v100.196: o frecvență pozitivă nu se scrie „0%”
   function pretTxt(v) { if (v == null || !isFinite(v)) return "—"; var a = Math.abs(v); return a > 0 && a < 0.01 ? nrRo(Number(v.toPrecision(4)), Math.min(12, 3 - Math.floor(Math.log10(a)))) : nrRo(v, a < 1 ? 4 : 2); }
+  // v100.352 (auditul): prețul cu cel puțin o zecimală sub pasul gridului (PENDLE 1,325–1,45: „1,4485”, nu „1,45”), zerourile de la coadă tăiate
+  function pretH(v, pas) { if (v == null || !isFinite(v) || !(pas > 0)) return pretTxt(v); var a = Math.abs(v); if (a > 0 && a < 0.01) return pretTxt(v); var z = Math.min(10, Math.max(a < 1 ? 4 : 2, Math.ceil(-Math.log10(pas)) + 1)); return Number(v).toLocaleString("ro-RO", { minimumFractionDigits: a < 1 ? 4 : 2, maximumFractionDigits: z }); }
   function dataTxt(t) { return new Date(t).toLocaleString("ro-RO", { timeZone: "Europe/Bucharest", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }); }
   // fără exponent la monedele foarte ieftine: 6 cifre semnificative scrise întreg (ca în codTVBot)
   function f6(v) { v = nr(v); if (v === null || !(v > 0)) return "0"; var s = String(Number(v.toPrecision(6))); return /e/i.test(s) ? Number(v.toPrecision(6)).toFixed(Math.min(20, 5 - Math.floor(Math.log10(v)))).replace(/\.?0+$/, "") : s; }
@@ -168,24 +170,9 @@ var GridSim = (function () {
   function mediana(v) { if (!v.length) return null; var s = v.slice().sort(function (a, b) { return a - b; }); return pc(s, 0.5); }
   // o = { zile (14), orizonturi ([1,3,7,14]), n (500), seed (12), plan: { minus, plus } | null, pornitLa: ms | null }
   // v100.351 (ideea 1): agitația pe zile numărate de la capăt (suma pătratelor randamentelor de 15 minute); r = media ultimelor 2 zile / media lunii
-  function agitatieAcum(b15) {
-    var Z = Math.floor(b15.length / BZ), rv = []; if (Z < 7) return null;
-    for (var d = 0; d < Z; d++) { var s = 0, de = b15.length - (d + 1) * BZ; for (var i = Math.max(1, de); i < de + BZ; i++) if (b15[i].c > 0 && b15[i - 1].c > 0) { var x = Math.log(b15[i].c / b15[i - 1].c); s += x * x; } rv.push(s); }
-    var med = medie(rv); if (!(med > 0)) return null;
-    return { r: Math.min(2.89, Math.max(0.36, (rv[0] + rv[1]) / 2 / med)), zile: Z };
-  }
-  // drumul tras fără tendință, cu randamentele × k pe ziua lui (k² = 1 + (r − 1)·0,9^(zi+1)), apoi tendința scoasă (mm pe bară) - ca M.drum
-  function scaleazaDrum(d, P0, r, mm) {
-    // pe loc: drumul vine nou din tragere (M.drum / drumDin), nimeni altcineva nu-l ține; k² = 1 + (r − 1)·0,9^(zi+1), socotit o dată pe zi
-    var cp = P0, cb = P0, dr = mm ? Math.exp(-mm) : 1, zi = -1, kv = 1;
-    for (var q = 0; q < d.length; q++) {
-      var x = d[q], z = (q / BZ) | 0; if (z !== zi) { zi = z; kv = Math.sqrt(Math.max(0.05, 1 + (r - 1) * Math.pow(0.9, z + 1))); }
-      var lb = Math.log(cb), f = cp * dr, c0 = x.c;
-      x.o = f * Math.exp(kv * (Math.log(x.o) - lb)); x.h = f * Math.exp(kv * (Math.log(x.h) - lb)); x.l = f * Math.exp(kv * (Math.log(x.l) - lb)); x.c = f * Math.exp(kv * (Math.log(c0) - lb));
-      cb = c0; cp = x.c;
-    }
-    return d;
-  }
+  // v100.352: agitația și scalarea stau în MonteSimbol (aceleași drumuri pentru Simulator și pagina Monte Carlo); stingerea 0,6 aleasă pe barele reale
+  function agitatieAcum(b15) { return M.agitatieAcum ? M.agitatieAcum(b15) : null; }
+  function scaleazaDrum(d, P0, r, mm) { return M.scaleazaDrum(d, P0, r, mm); }
   function simuleazaIntreg(b15, st, o) {
     o = o || {}; var zile = o.zile > 0 ? o.zile : 14, oriz = Array.isArray(o.orizonturi) && o.orizonturi.length ? o.orizonturi : [1, 3, 7, 14], n = o.drumFix ? 1 : o.n > 0 ? o.n : 500, seed = o.seed || 12;   /* v100.351: o.drumFix = barele reale de după hotărâre (judecata ei) */
     var plan = o.plan && (nr(o.plan.minus) > 0 || nr(o.plan.plus) > 0) ? { minus: Math.abs(nr(o.plan.minus) || 0), plus: nr(o.plan.plus) || 0 } : null;
@@ -216,7 +203,7 @@ var GridSim = (function () {
     stS.stop = opr;
     // v100.136: o.stPrefix = setarea botului PE prefix (gridul lui, stopul lui, ținta lui de până acum); ținta / stopul din st se aplică abia
     // de la prima bară simulată - „schimb ținta acum” pe botul care rulează, cu pozițiile de acum (GridProba: dinBara + stopDupa)
-    var optGP = { traseu: true, tStart: pre ? prefix[0].t : b15[b15.length - 1].t + 9e5 }, tpIgnoratPrefix = null;   /* v100.351: funding-ul la orele lui reale */
+    var optGP = { traseu: true, tStart: pre ? prefix[0].t : b15[b15.length - 1].t + 9e5 }, tpIgnoratPrefix = null;   /* v100.351: funding-ul la 00 / 08 / 16 UTC (aproximarea pentru monedele la 4 h / 1 h) */
     if (pre && o.stPrefix) {
       var vp = tpValid(o.stPrefix, Pst), rapP = raportValid(vp.st.stopRaport), oprP = vp.st.stop && rapP === null ? { jos: vp.st.stop.jos, sus: vp.st.stop.sus } : null, ptP = vp.st.tp > 0 ? (vp.st.dir === "long" ? "sus" : vp.st.dir === "short" ? "jos" : null) : null;
       if (ptP) { oprP = oprP || {}; oprP[ptP] = vp.st.tp; }
@@ -228,8 +215,8 @@ var GridSim = (function () {
     var ST = Array.isArray(o.starturi) ? o.starturi.filter(function (i) { return i >= 1 && i <= b15.length - BZ; }) : null;
     if (ST && ST.length < MIN_STARTURI_REGIM) return { eroare: "Prea puține bare în regimul de acum (" + cate(Math.floor(ST.length / BZ), "zi", "zile") + "): îmi trebuie cel puțin 3 ca să trag drumuri doar din el." };
     var DRUM0 = o.drumFix ? function () { return o.drumFix; } : ST ? function (b, hh, bz, p, r, muu, urme) { return drumDin(b, hh, bz, p, r, muu, ST, urme); } : M.drum;
-    // v100.351 (ideea 1, el: „fă tot”): agitația de acum (ultimele 2 zile față de lună), stinsă cu 10% pe zi - probat sub H0 (h0media/p15–p16): în lumea cu
-    // agitație persistentă eroarea mediei −19…−26% și „pe plus” fals 4,3% → 0%; în lumea cu zile independente la fel ca înainte
+    // v100.351 (ideea 1, el: „fă tot”): agitația de acum (ultimele 2 zile față de zilele avute). v100.352 (auditul): stingerea 0,9 nu se confirma pe barele
+    // reale ⇒ 0,6, aleasă walk-forward (alegere / verificare pe zile diferite: QLIKE −0,113, t −2,65) - MonteSimbol.STINGERE
     var agit = o.drumFix || ST || o.faraAgitatie ? null : agitatieAcum(b15), DRUM = DRUM0;
     if (agit && Math.abs(agit.r - 1) > 0.02) DRUM = function (b, hh, bz, p, r, muu, urme) { return scaleazaDrum(DRUM0(b, hh, bz, p, r, mu, urme), p, agit.r, muu - mu); };   /* revizia (🔴1): tendința scoasă înainte de × k, altfel revenea pe orizonturile intermediare */
     var mu = tendinta(b15), m;
@@ -359,20 +346,20 @@ var GridSim = (function () {
   // prețul de acum). Pe fiecare orizont: media, cele mai proaste 5%, câștigă %, stopul / TP-ul și, față de „îl țin”, diferența DRUM CU DRUM (pereche),
   // cu marja ei pe zilele efective ale istoricului. Regula de alegere (alegeHotarare) e fixată înainte de cifre și probată sub H0 (proba-v100351).
   function sigmaZi(b15) { var a = []; for (var i = b15.length - 1; i - BZ >= 0; i -= BZ) if (b15[i].c > 0 && b15[i - BZ].c > 0) a.push(Math.abs(Math.log(b15[i].c / b15[i - BZ].c))); return a.length ? mediana(a) : 0.03; }
-  function gresitAcum(x, P) {
-    var s = x.stop || {};
-    if (s.jos > 0 && s.jos >= P && x.dir !== "short") return "stopul (" + pretTxt(s.jos) + ") ar sta peste prețul de acum (" + pretTxt(P) + ")";
-    if (s.sus > 0 && s.sus <= P && x.dir !== "long") return "stopul (" + pretTxt(s.sus) + ") ar sta sub prețul de acum (" + pretTxt(P) + ")";
-    if (x.tp > 0 && ((x.dir === "long" && x.tp <= P) || (x.dir === "short" && x.tp >= P))) return "TP-ul (" + pretTxt(x.tp) + ") ar sta de partea greșită a prețului de acum (" + pretTxt(P) + ")";
+  function gresitAcum(x, P, pas) {
+    var s = x.stop || {}, pt = function (v) { return pretH(v, pas); };
+    if (s.jos > 0 && s.jos >= P && x.dir !== "short") return "stopul (" + pt(s.jos) + ") ar sta peste prețul de acum (" + pt(P) + ")";
+    if (s.sus > 0 && s.sus <= P && x.dir !== "long") return "stopul (" + pt(s.sus) + ") ar sta sub prețul de acum (" + pt(P) + ")";
+    if (x.tp > 0 && ((x.dir === "long" && x.tp <= P) || (x.dir === "short" && x.tp >= P))) return "TP-ul (" + pt(x.tp) + ") ar sta de partea greșită a prețului de acum (" + pt(P) + ")";
     return null;
   }
-  function statHot(vals, ref, D) {
+  function statHot(vals, ref, D, fm) {
     var n = vals.length, v = vals.slice().sort(function (a, b) { return a - b; }), m = medie(vals), poz = 0; vals.forEach(function (x) { if (x > 0.005) poz++; });
     var o = { n: n, media: m, p5: pc(v, 0.05), p50: pc(v, 0.5), p95: pc(v, 0.95), pCastig: n ? poz / n : null, dif: null };
     if (ref && ref.length === n && n > 1) {
       var d = vals.map(function (x, i) { return x - ref[i]; }), md = medie(d), ss = 0, bun = 0, rau = 0;
       d.forEach(function (x) { ss += (x - md) * (x - md); if (x > 0.005) bun++; else if (x < -0.005) rau++; });
-      o.dif = { media: md, marja: 1.96 * Math.sqrt(ss / (n - 1) / Math.max(1, D)), maiBun: bun / n, maiRau: rau / n, egal: (n - bun - rau) / n };
+      o.dif = { media: md, marja: (fm > 0 ? fm : 1) * 1.96 * Math.sqrt(ss / (n - 1) / Math.max(1, D)), maiBun: bun / n, maiRau: rau / n, egal: (n - bun - rau) / n };
     }
     return o;
   }
@@ -381,9 +368,9 @@ var GridSim = (function () {
   function alegeHotarare(A, o) {
     var h = o.oriz, prag = o.prag, t = A.filter(function (a) { return a.cheie === "tine"; })[0];
     if (!t || !t.oriz || !t.oriz[h]) return { cheie: "tine", motiv: "fără cifre pentru „îl țin”" };
-    var c = A.filter(function (a) { var z = a.cheie !== "tine" && !a.eroare && a.oriz && a.oriz[h]; return z && z.dif && z.dif.media >= prag && z.dif.media - z.dif.marja > 0 && z.p5 >= t.oriz[h].p5 - prag; })
+    var c = A.filter(function (a) { var z = a.cheie !== "tine" && !a.eroare && !a.inEsantion && !a.doarComparat && a.oriz && a.oriz[h]; return z && z.dif && z.dif.media >= prag && z.dif.media - z.dif.marja > 0 && z.p5 >= t.oriz[h].p5 - prag; })
       .sort(function (x, y) { return y.oriz[h].dif.media - x.oriz[h].dif.media; })[0];
-    if (!c) return { cheie: "tine", motiv: "nicio altă acțiune nu iese clar mai bună (cu cel puțin " + nrRo(prag, 1) + " USDT în medie, sigur pe zile și fără o coadă mai rea)" };
+    if (!c) return { cheie: "tine", motiv: "nicio altă acțiune nu iese clar mai bună (cu cel puțin " + nrRo(prag, 1) + " USDT în medie, sigur pe zile și cu cele mai proaste 5% mai rele cu cel mult " + nrRo(prag, 1) + " USDT)" };
     var d = c.oriz[h].dif;
     return { cheie: c.cheie, motiv: "în medie " + bani1(d.media) + " față de „îl țin” (±" + nrRo(d.marja, 1) + " pe zile), mai bun pe " + pr(d.maiBun) + " din drumuri, mai rău pe " + pr(d.maiRau) + ", cu cele mai proaste 5% la " + bani1(c.oriz[h].p5) + " (îl țin: " + bani1(t.oriz[h].p5) + ")" };
   }
@@ -398,7 +385,7 @@ var GridSim = (function () {
     if (r0.acum.oprit) return { eroare: "reluarea arată botul " + (r0.acum.oprit === "lichidat" ? "lichidat" : "oprit") + " pe drumul real: setările de aici nu se potrivesc cu Pionex" };
     var k = r0.pozitie && r0.pozitie.potrivit ? r0.pozitie.scala : null, cuK = function (x) { return k ? Object.assign({}, x, { scalaQ: k }) : x; }, stK = cuK(st);
     var bazaK = Object.assign({}, baza, { stPrefix: stK, setareNoua: true }), fee = r0.acum.inchidere > 0 ? r0.acum.inchidere : 0, D = zileEfective(b15, Math.floor(b15.length / BZ));
-    var dir = st.dir, lat = st.sus - st.jos, sz = sigmaZi(b15), A = [{ cheie: "tine", nume: "îl țin așa", st: st }, { cheie: "inchide", nume: "îl închid acum", fix: 0 }];   // referința „de aici” e deja rezultatul închis acum ⇒ 0
+    var dir = st.dir, lat = st.sus - st.jos, sz = sigmaZi(b15), pas = lat / Math.max(1, Number(st.grile) || 1), pretTxt = function (v) { return pretH(v, pas); }, A = [{ cheie: "tine", nume: "îl țin așa", st: st }, { cheie: "inchide", nume: "îl închid acum", fix: 0 }];   // referința „de aici” e deja rezultatul închis acum ⇒ 0
     if (dir === "long" || dir === "short") {
       var marg = dir === "long" ? st.sus : st.jos;
       var tpA = st.tp > 0 ? P + (st.tp - P) / 2 : P + (marg - P) / 2;
@@ -410,20 +397,27 @@ var GridSim = (function () {
       if (dir === "long" ? sL > st.jos * 0.999 : sL < st.sus * 1.001) sL = dir === "long" ? Math.min(sL, st.jos * 0.99) : Math.max(sL, st.sus * 1.01);
       A.push({ cheie: "stopMargine", nume: "stopul la marginea gridului (" + pretTxt(sM) + ")", st: Object.assign({}, st, { stop: dir === "long" ? { jos: sM } : { sus: sM }, stopRaport: null }) });
       A.push({ cheie: "stopLarg", nume: "stopul mai larg (" + pretTxt(sL) + ", dincolo de o zi obișnuită)", st: Object.assign({}, st, { stop: dir === "long" ? { jos: sL } : { sus: sL }, stopRaport: null }) });
+    } else {
+      // v100.352 (auditul): neutrul are stopuri pe ambele părți ⇒ și ele se pot muta (TP-ul pe preț nu există la neutru)
+      var dJ = st.stop && st.stop.jos > 0 ? (P - st.stop.jos) / P : 0, dS = st.stop && st.stop.sus > 0 ? (st.stop.sus - P) / P : 0;
+      var nj = Math.min(P * (1 - Math.max(dJ * 1.5, 2 * sz)), st.jos * 0.99), ns = Math.max(P * (1 + Math.max(dS * 1.5, 2 * sz)), st.sus * 1.01);
+      A.push({ cheie: "stopMargine", nume: "stopurile la marginile gridului (" + pretTxt(st.jos * 0.999) + " / " + pretTxt(st.sus * 1.001) + ")", st: Object.assign({}, st, { stop: { jos: st.jos * 0.999, sus: st.sus * 1.001 }, stopRaport: null }) });
+      A.push({ cheie: "stopLarg", nume: "stopurile mai largi (" + pretTxt(nj) + " / " + pretTxt(ns) + ", dincolo de o zi obișnuită)", st: Object.assign({}, st, { stop: { jos: nj, sus: ns }, stopRaport: null }) });
     }
-    if (o.plan && Number(o.plan.minus) > 0) A.push({ cheie: "plan", nume: "stopul la planul tău (−" + nrRo(Number(o.plan.minus), 1) + " USDT de la pornire)", st: Object.assign({}, st, { stop: null, stopRaport: -Number(o.plan.minus) / suma }) });
-    var nou = o.fisa && o.fisa.jos > 0 && o.fisa.sus > o.fisa.jos ? Object.assign({}, o.fisa, { suma: o.fisa.suma > 0 ? o.fisa.suma : suma }) : null, numeNou = "îl închid și pornesc setarea fișei Grid";
-    if (!nou) {
-      var hw = lat / 2, j2 = P - hw, s2 = P + hw;
-      nou = Object.assign({}, st, { jos: j2, sus: s2, stop: st.stop && (st.stop.jos > 0 || st.stop.sus > 0) ? { jos: st.stop.jos > 0 ? j2 - (st.jos - st.stop.jos) : null, sus: st.stop.sus > 0 ? s2 + (st.stop.sus - st.sus) : null } : null,   /* revizia (🔵9): ambele părți (neutru) */ tp: st.tp > 0 ? (dir === "long" ? s2 + (st.tp - st.sus) : dir === "short" ? j2 - (st.jos - st.tp) : null) : null });
-      numeNou = "îl închid și pornesc unul la fel, centrat pe prețul de acum (" + pretTxt(j2) + "–" + pretTxt(s2) + ")";
-    }
-    A.push({ cheie: "reporneste", nume: numeNou, nou: nou });
-    var ref = null;
+    if (o.plan && Number(o.plan.minus) > 0) A.push({ cheie: "plan", doarComparat: true, nume: "stopul la planul tău (−" + nrRo(Number(o.plan.minus), 1) + " USDT de la pornire)", st: Object.assign({}, st, { stop: null, stopRaport: -Number(o.plan.minus) / suma }) });
+    // v100.352 (auditul): mereu „unul la fel, centrat” - și colectorul îl are, deci Simulatorul, Tabloul și Discordul aleg din aceleași acțiuni.
+    // Stopul nou doar cu părțile care există (un câmp null era citit de motor ca stop la 0 ⇒ ieșit la prima bară pe toate drumurile).
+    var hw = lat / 2, j2 = P - hw, s2 = P + hw, sNou = null;
+    if (st.stop && st.stop.jos > 0) (sNou = sNou || {}).jos = j2 - (st.jos - st.stop.jos);
+    if (st.stop && st.stop.sus > 0) (sNou = sNou || {}).sus = s2 + (st.stop.sus - st.sus);
+    var nou = Object.assign({}, st, { jos: j2, sus: s2, stop: sNou, tp: st.tp > 0 ? (dir === "long" ? s2 + (st.tp - st.sus) : dir === "short" ? j2 - (st.jos - st.tp) : null) : null });
+    A.push({ cheie: "reporneste", nume: "îl închid și pornesc unul la fel, centrat pe prețul de acum (" + pretTxt(j2) + "–" + pretTxt(s2) + ")", nou: nou });
+    // fișa Grid e aleasă de pagina Grid pe aceeași lună din care se trag drumurile ⇒ cifrele ei sunt optimiste; rândul se arată, dar nu poate fi recomandat
+    if (o.fisa && o.fisa.jos > 0 && o.fisa.sus > o.fisa.jos) A.push({ cheie: "reportFisa", nume: "îl închid și pornesc setarea fișei Grid", nou: Object.assign({}, o.fisa, { suma: o.fisa.suma > 0 ? o.fisa.suma : suma }), inEsantion: true });
     A.forEach(function (a) {
       if (a.cheie === "tine") { a.r = r0; return; }
       if (a.fix !== undefined) return;
-      var stA = a.nou || a.st, g = gresitAcum(stA, P); if (g) { a.eroare = g; return; }
+      var stA = a.nou || a.st, g = gresitAcum(stA, P, pas); if (g) { a.eroare = g; return; }
       try {
         a.r = a.nou ? simuleazaBaza(b15, stA, {   /* revizia (🟡6): botul nou fără scalaQ-ul celui vechi */ n: n, seed: seed, orizonturi: oriz, zile: zile, peDrum: true, plan: null }) : simuleazaBaza(b15, cuK(stA), bazaK);
         if (!a.r || a.r.eroare) a.eroare = a.r && a.r.eroare || "fără rezultat"; else if (!a.nou && a.r.acum && a.r.acum.oprit) a.eroare = "botul s-ar fi oprit deja pe drumul real";
@@ -435,25 +429,29 @@ var GridSim = (function () {
     var T = oriz.map(function (z, h) { return valori(A[0], h); });
     A.forEach(function (a) {
       if (a.eroare) return;
-      a.oriz = oriz.map(function (z, h) { var v = valori(a, h); if (!v) return null; var x = statHot(v, a.cheie === "tine" ? null : T[h], D); var zz = a.r && a.r.orizonturi[h]; x.zile = z; x.pStop = zz ? zz.pStop : null; x.pTp = zz ? zz.pTp : null; x.pLich = zz ? zz.pLich : null; return x; });
+      a.oriz = oriz.map(function (z, h) { var v = valori(a, h); if (!v) return null; var x = statHot(v, a.cheie === "tine" ? null : T[h], D, o.factorMarja > 0 ? o.factorMarja : FACTOR_MARJA); var zz = a.r && a.r.orizonturi[h]; x.zile = z; x.pStop = zz ? zz.pStop : null; x.pTp = zz ? zz.pTp : null; x.pLich = zz ? zz.pLich : null; return x; });
       delete a.r;
     });
     var hH = oriz.length - 1, prag = Math.max(1, 0.02 * suma), ales = alegeHotarare(A, { oriz: hH, prag: prag });
-    // verificarea: alesul și „îl țin” reluate pe drumuri NOI (sămânța 13, de două ori mai multe) - ~8 încercări deodată, deci alesul e și cel mai norocos
+    // verificarea: alesul și „îl țin” reluate pe alte drumuri din ACEEAȘI lună (sămânța 13, de două ori mai multe): prinde norocul tragerii, nu norocul lunii
     if (ales.cheie !== "tine" && o.verifica !== false) {
       var a2 = A.filter(function (x) { return x.cheie === ales.cheie; })[0];
       var t2 = simuleazaBaza(b15, stK, Object.assign({}, bazaK, { seed: 13, n: n * 2 })), v2 = null;
       if (a2.fix !== undefined) { v2 = []; for (var q = 0; q < n * 2; q++) v2.push(a2.fix); }
       else { var r2 = a2.nou ? simuleazaBaza(b15, a2.nou, { n: n * 2, seed: 13, orizonturi: oriz, zile: zile, peDrum: true, plan: null }) : simuleazaBaza(b15, cuK(a2.st), Object.assign({}, bazaK, { seed: 13, n: n * 2 })); var z2 = r2 && !r2.eroare ? r2.orizonturi[hH] : null; v2 = z2 ? (a2.nou ? z2.drumuri : z2.drumuriDeAici) : null; }
       var tz = t2 && !t2.eroare ? t2.orizonturi[hH].drumuriDeAici : null;
-      var ok = false; if (v2 && tz) { var sv2 = statHot(v2, tz, D), st2 = statHot(tz, null, D); ok = alegeHotarare([{ cheie: "tine", oriz: oriz.map(function (z, h) { return h === hH ? st2 : null; }) }, { cheie: a2.cheie, oriz: oriz.map(function (z, h) { return h === hH ? sv2 : null; }) }], { oriz: hH, prag: prag }).cheie === a2.cheie; ales.verif = { n: n * 2, dif: sv2.dif }; }
-      if (!ok) ales = { cheie: "tine", motiv: "„" + a2.nume + "” ieșea mai bun pe drumurile de aici, dar pe alte " + cate(n * 2, "drum", "drumuri") + " nu s-a mai ținut: ales dintre mai multe, poate fi noroc", respins: a2.cheie };
+      var ok = false; if (v2 && tz) { var sv2 = statHot(v2, tz, D, o.factorMarja > 0 ? o.factorMarja : FACTOR_MARJA), st2 = statHot(tz, null, D); ok = alegeHotarare([{ cheie: "tine", oriz: oriz.map(function (z, h) { return h === hH ? st2 : null; }) }, { cheie: a2.cheie, oriz: oriz.map(function (z, h) { return h === hH ? sv2 : null; }) }], { oriz: hH, prag: prag }).cheie === a2.cheie; ales.verif = { n: n * 2, dif: sv2.dif }; }
+      if (!ok) ales = { cheie: "tine", motiv: "„" + a2.nume + "” ieșea mai bun pe drumurile de aici, dar pe alte " + cate(n * 2, "drum", "drumuri") + " din aceeași lună nu s-a mai ținut: ales dintre mai multe, poate fi noroc", respins: a2.cheie };
       else ales.verificat = true;
     }
-    // planul tău: coada (de la pornire) trece de minusul planului ⇒ stopul la plan (sau închiderea), oricât ar fi media - e regula TA, nu o statistică
-    if (ales.cheie === "tine" && o.plan && Number(o.plan.minus) > 0) {
-      var z0 = r0.orizonturi[hH], p5Tot = z0 ? z0.p5 : null;
-      if (p5Tot !== null && p5Tot < -Number(o.plan.minus)) { var pl = A.filter(function (x) { return x.cheie === "plan" && !x.eroare; })[0]; ales = { cheie: pl ? "plan" : "inchide", motiv: "în cele mai proaste 5% ajungi la " + bani1(p5Tot) + " de la pornire, planul tău zice −" + nrRo(Number(o.plan.minus), 1) + ": " + (pl ? "pune stopul la plan" : "închide-l"), plan: true }; }
+    // planul tău (alegerea LUI, 16.11): coada de la pornire a acțiunii alese trece de minusul planului ⇒ „îl închid”, oricât ar fi media - e regula TA, nu o
+    // statistică. v100.352 (auditul, 🔴): înainte alegea „stopul la plan”, care pe 23 de cazuri din 23 ieșea mai prost decât închiderea și tot trecea de plan
+    // (alunecarea × levierul); acum rândul lui rămâne în tabel doar ca variantă. Se verifică la ORICE ales, nu doar la „îl țin”.
+    if (ales.cheie !== "inchide" && o.plan && Number(o.plan.minus) > 0) {
+      var mnP = Number(o.plan.minus), aP = A.filter(function (x) { return x.cheie === ales.cheie; })[0], zP = aP && aP.oriz ? aP.oriz[hH] : null;
+      var p5Tot = ales.cheie === "tine" ? (r0.orizonturi[hH] ? r0.orizonturi[hH].p5 : null) : zP ? r0.acum.usdt + zP.p5 : null;
+      if (ales.cheie === "tine" && isFinite(o.p5Plan) && o.p5Plan !== null && (p5Tot === null || o.p5Plan < p5Tot)) p5Tot = o.p5Plan;   // revizia: și pe drumurile verdictului (mai multe) - aceeași regulă sus și aici
+      if (p5Tot !== null && p5Tot < -mnP) ales = { cheie: "inchide", motiv: "în cele mai proaste 5% " + (ales.cheie === "tine" ? "" : "(cu „" + aP.nume + "”) ") + "ajungi la " + bani1(p5Tot) + " de la pornire, planul tău zice −" + nrRo(mnP, 1) + " USDT: închide-l (acum: " + bani1(r0.acum.usdt) + ")", plan: true, inLocDe: ales.cheie };
     }
     return { P: P, fee: fee, prag: prag, oriz: oriz, scala: k, actiuni: A, ales: ales, n: n, zileEfective: D };
   }
@@ -463,14 +461,21 @@ var GridSim = (function () {
   function notaHotarare(h, st, o, b15, acum) {
     if (!h || h.eroare || !Array.isArray(h.actiuni) || !b15 || !b15.length) return null;
     var A = h.actiuni.filter(function (a) { return !a.eroare; }).map(function (a) { var x = { cheie: a.cheie, nume: a.nume }; if (a.fix !== undefined) x.fix = true; else if (a.nou) x.nou = a.nou; else if (a.cheie !== "tine") x.st = a.st; var z = a.oriz && a.oriz[h.oriz.length - 1]; if (z) { x.media = Math.round(z.media * 100) / 100; if (z.dif) x.dif = Math.round(z.dif.media * 100) / 100; } return x; });
-    return { t: acum || Date.now(), tUrm: b15[b15.length - 1].t + 9e5, pret: h.P, pornitLa: o.pornitLa, st: st, k: h.scala || null, ales: h.ales.cheie, plan: !!h.ales.plan, prag: Math.round(h.prag * 100) / 100, actiuni: A };
+    return { v: VERS_HOT, t: acum || Date.now(), tUrm: b15[b15.length - 1].t + 9e5, pret: h.P, pornitLa: o.pornitLa, st: st, k: h.scala || null, ales: o.afisat || h.ales.cheie, cand: h.ales.cheie, plan: !!h.ales.plan, prag: Math.round(h.prag * 100) / 100, actiuni: A };
   }
+  // v100.352 (auditul): o gaură în barele reale (cache-ul colectorului) muta fereastra de „7 zile” pe 7,8 și înghițea saltul de preț ⇒ eroare pe nume
+  function gauraIn(bare, a, b) { for (var i = Math.max(1, a + 1); i < Math.min(b, bare.length); i++) if (bare[i].t - bare[i - 1].t > 3600000) return "gaură de " + nrRo((bare[i].t - bare[i - 1].t) / 3600000, 1) + " h în barele reale (" + dataTxt(bare[i - 1].t) + ")"; return null; }
+  // v100.352 (auditul: marja pe zile de 2–3,5 ori mai largă decât variația reală): × 0,5, probat sub H0 înainte (0 false din 71, puterea 4 → 14 din 25)
+  var FACTOR_MARJA = 0.5;
+  var VERS_HOT = 2, VERS_SIM = 2;   // v100.352: VERS_SIM = motorul verdictului de bot nou (stingerea 0,6) - notele Simulatorului   // v100.352: versiunea regulii de hotărâre din note (bilanțul se face pe versiune)
   function judecaHotarare(bare, nota, zile) {
     if (!nota || !Array.isArray(bare) || !bare.length) return { eroare: "fără bare" };
     var i0 = -1; for (var i = 0; i < bare.length; i++) if (bare[i].t >= nota.tUrm) { i0 = i; break; }
     var H = Math.round(zile * BZ); if (i0 < 0 || bare.length - i0 < H) return { asteapta: true };
     if (bare[i0].t - nota.tUrm > 3600000) return { eroare: "gaură în bare după hotărâre" };
-    if (!(nota.pornitLa > 0) || bare[0].t > nota.pornitLa + 15 * 60000) return { eroare: "fără barele de la pornirea botului (botul era pornit de prea mult)" };
+    if (!(nota.pornitLa > 0) || bare[0].t > nota.pornitLa + 15 * 60000) return { eroare: "botul era pornit de prea mult: Pionex dă cam 31 de zile de bare, iar judecata le cere de la pornire până la capătul celor " + cate(zile, "zi", "zile"), vechi: true };
+    var ip = 0; while (ip < i0 && bare[ip].t < nota.pornitLa) ip++;
+    var gH = gauraIn(bare, Math.max(0, ip - 1), i0 + H); if (gH) return { eroare: gH };
     var hist = bare.slice(0, i0), real = bare.slice(i0, i0 + H), k = nota.k, cuK = function (x) { return k ? Object.assign({}, x, { scalaQ: k }) : x; }, stK = cuK(nota.st);
     var baza = { pornitLa: nota.pornitLa, stPrefix: stK, botRuleaza: true, n: 1, drumFix: real, orizonturi: [zile], zile: zile, peDrum: true, plan: null };
     var r0 = simuleazaBaza(hist, stK, baza); if (!r0 || r0.eroare || !r0.acum) return { eroare: r0 && r0.eroare || "reluarea n-a mers" };
@@ -495,6 +500,7 @@ var GridSim = (function () {
     var H = 7 * BZ; if (i0 < 0 || bare.length - i0 < H) return { asteapta: true };
     if (bare[i0].t - nota.tUrm > 3600000) return { eroare: "gaură în bare după notare" };
     if (i0 < 7 * BZ) return { eroare: "prea puțin istoric înaintea notării" };
+    var gV = gauraIn(bare, i0, i0 + H); if (gV) return { eroare: gV };
     var r = simuleazaBaza(bare.slice(0, i0), nota.st, { n: 1, drumFix: bare.slice(i0, i0 + H), orizonturi: [7], zile: 7, peDrum: true, plan: null });
     if (!r || r.eroare) return { eroare: r && r.eroare || "fără rezultat" };
     return { val: r.orizonturi[0].drumuri[0] };
@@ -673,6 +679,6 @@ var GridSim = (function () {
     var stare = reluare ? "info" : atins === "minus" ? "rau" : atins === "plus" ? "bine" : rau ? "rau" : v.culoare === "good" ? "bine" : v.culoare === "bad" ? "rau" : "atentie";
     return { stare: stare, text: parti.join(" · "), culoare: v.culoare, faCe: v.faCe, rand: v.rand, atins: atins };
   }
-  return { hotarare: hotarare, alegeHotarare: alegeHotarare, notaHotarare: notaHotarare, judecaHotarare: judecaHotarare, judecaVerdict: judecaVerdict, agitatieAcum: agitatieAcum, scaleazaDrum: scaleazaDrum, riscSaptamana: riscSaptamana, textSaptamana: textSaptamana, riscScurt: riscScurt, ORIZ_SCURT: ORIZ_SCURT, LICHIDARI_ACCEPTATE: LICHIDARI_ACCEPTATE, lichidareAcceptata: lichidareAcceptata, starturiRegim: starturiRegim, dinCod: dinCod, inCod: inCod, setariDinBot: setariDinBot, tpValid: tpValid, simuleaza: simuleaza, compara: compara, comparaLa: comparaLa, verdict: verdict, verdictScurt: verdictScurt, rataFunding: rataFunding, marja: marja, bani1: bani1, pr: pr, NUME: NUME, textCalibrareMc: textCalibrareMc };
+  return { FACTOR_MARJA: FACTOR_MARJA, VERS_HOT: VERS_HOT, VERS_SIM: VERS_SIM, gauraIn: gauraIn, pretH: pretH, hotarare: hotarare, alegeHotarare: alegeHotarare, notaHotarare: notaHotarare, judecaHotarare: judecaHotarare, judecaVerdict: judecaVerdict, agitatieAcum: agitatieAcum, scaleazaDrum: scaleazaDrum, riscSaptamana: riscSaptamana, textSaptamana: textSaptamana, riscScurt: riscScurt, ORIZ_SCURT: ORIZ_SCURT, LICHIDARI_ACCEPTATE: LICHIDARI_ACCEPTATE, lichidareAcceptata: lichidareAcceptata, starturiRegim: starturiRegim, dinCod: dinCod, inCod: inCod, setariDinBot: setariDinBot, tpValid: tpValid, simuleaza: simuleaza, compara: compara, comparaLa: comparaLa, verdict: verdict, verdictScurt: verdictScurt, rataFunding: rataFunding, marja: marja, bani1: bani1, pr: pr, NUME: NUME, textCalibrareMc: textCalibrareMc };
 })();
 if (typeof globalThis !== "undefined") globalThis.GridSim = GridSim;

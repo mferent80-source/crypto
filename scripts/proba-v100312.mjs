@@ -270,7 +270,7 @@ await test("🔑 I-842: Tablou „Pe 7 zile” - gridul față de mișcarea obi�
   assert.match(A, /tbMc\.rand\.sapt=typeof tbMcSapt==="function"\?tbMcSapt\(rez,tbMc\.b15,b\):null;/); assert.match(A, /sapt:tbMc\.rand\.sapt\|\|null/);
   // și când verdictul vine de la colector (pagina nu mai simulează cât KV-ul e proaspăt): colectorul îl socotește cu același GridSim
   assert.match(A, /scurt:v\.scurt\|\|null,sapt:v\.sapt\|\|null(?:,hot:v\.hot\|\|null)?\};/);   /* v100.351: + hot (Ce fac cu botul ăsta?) */
-  const MC = citeste("scripts", "lib", "tura-monte-carlo-bot.mjs"); assert.equal((MC.match(/regimLa, scurt, sapt(?:, hot)? \}/g) || []).length, 4);   /* v101.189: + hot */
+  const MC = citeste("scripts", "lib", "tura-monte-carlo-bot.mjs"); assert.equal((MC.match(/regimLa, scurt, sapt, hot \}/g) || []).length, 4);   /* v101.189: + hot; v100.352 (auditul): în TOATE cele 4 scrieri, nu „poate” */
   assert.match(MC, /sapt = d\.GridSim\.textSaptamana && d\.GridSim\.riscSaptamana \? d\.GridSim\.textSaptamana\(d\.GridSim\.riscSaptamana\(rez, b15, b\), d\.laStop \? d\.laStop\(b\) : null\) \|\| null : null;/);
   assert.match(citeste("scripts", "colector.mjs"), /randuri15: lumanari15M, laStop: \(x\) => \(x && x\.opritorPierdereActiv \? TabloExtra\.totalLaOpritor\(x\) : null\),/);
   assert.match(A, /\+tbMcScurtHtml\(mc\.scurt(?:,[^+]*)?\)\+tbMcScurtVerifHtml\([^)]*:null\)\+\(mc\.sapt\?'<span class="tbSub tbMcScurt tbMcSapt">'\+escapeHtml\(mc\.sapt\)\+'<\/span>':''\)\+/);

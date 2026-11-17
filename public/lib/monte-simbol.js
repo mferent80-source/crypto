@@ -101,6 +101,29 @@ var MonteSimbol = (function () {
   // v100.259 (auditul 23.10, punctul 9): blocul rămâne de 1 zi. Măsurat pe 64 de monede (bare orare reale, ~185 de zile; criteriul scris înainte):
   // în eșantion blocurile de 3 / 5 zile apropie probabilitatea de atingere pe 7 zile (eroarea 6,6 → 4,3 / 3,4 puncte la 1,5× amplitudinea zilei),
   // dar în afara eșantionului, ca în producție (31 de zile ⇒ următoarele 7), Brier-ul se strică (26,53 → 26,89 / 27,44; 12,83 → 13,07 / 13,33 la 3×)
+  // v100.351 (ideea 1) / v100.352 (auditul): agitația de acum - suma pătratelor randamentelor de 15 minute pe zile numărate de la capăt; r = media ultimelor
+  // 2 zile / media zilelor avute (tăiat [0,36; 2,89]). Mutată aici din GridSim ca Simulatorul și pagina Monte Carlo (card, variante, ținte, „cu tendința”,
+  // varianta de noapte) să tragă pe ACELEAȘI drumuri (auditul: cardul 53% stop, tabelul de sub el 24%, pe același bot).
+  // Stingerea pe zi: 0,6, aleasă walk-forward pe barele reale (77 de monede; alegere 11.05–04.08, verificare 12.08–29.10: QLIKE −0,113, t −2,65; 0,9 din
+  // v100.351 nu trecea: t −1,0) - scratchpad h0media/wf-stingere.mjs, jurnal-idee1.txt pct. 7
+  var STINGERE = 0.6, BZA = 96;
+  function agitatieAcum(b15) {
+    var Z = Math.floor(b15.length / BZA), rv = []; if (Z < 7) return null;
+    for (var d = 0; d < Z; d++) { var s = 0, de = b15.length - (d + 1) * BZA; for (var i = Math.max(1, de); i < de + BZA; i++) if (b15[i].c > 0 && b15[i - 1].c > 0) { var x = Math.log(b15[i].c / b15[i - 1].c); s += x * x; } rv.push(s); }
+    var med = rv.reduce(function (a, c) { return a + c; }, 0) / rv.length; if (!(med > 0)) return null;
+    return { r: Math.min(2.89, Math.max(0.36, (rv[0] + rv[1]) / 2 / med)), zile: Z, stingere: STINGERE };
+  }
+  // drumul tras fără tendință, cu randamentele × k pe ziua lui (k² = 1 + (r − 1)·STINGERE^(zi+1)), apoi tendința mm pe bară scoasă; pe loc (drumul e nou)
+  function scaleazaDrum(d, P0, r, mm) {
+    var cp = P0, cb = P0, dr = mm ? Math.exp(-mm) : 1, zi = -1, kv = 1;
+    for (var q = 0; q < d.length; q++) {
+      var x = d[q], z = (q / BZA) | 0; if (z !== zi) { zi = z; kv = Math.sqrt(Math.max(0.05, 1 + (r - 1) * Math.pow(STINGERE, z + 1))); }
+      var lb = Math.log(cb), f = cp * dr, c0 = x.c;
+      x.o = f * Math.exp(kv * (Math.log(x.o) - lb)); x.h = f * Math.exp(kv * (Math.log(x.h) - lb)); x.l = f * Math.exp(kv * (Math.log(x.l) - lb)); x.c = f * Math.exp(kv * (Math.log(c0) - lb));
+      cb = c0; cp = x.c;
+    }
+    return d;
+  }
   function grid(b15, st, o) {
     o = o || {}; var GP = o.GridProba || (typeof GridProba !== "undefined" ? GridProba : null), BZ = 96, zile = o.zile || 7, H = zile * BZ;
     if (!GP) return { eroare: "lipsește simulatorul gridului" };
@@ -114,11 +137,14 @@ var MonteSimbol = (function () {
     // (cel al serverului, pe poziția de atunci) nu mai intră în simulare
     var sRap = st.stopRaport !== null && st.stopRaport !== undefined && isFinite(st.stopRaport) && Number(st.stopRaport) < 0 ? Number(st.stopRaport) : null;
     var parteTp = st.tp > 0 ? (st.dir === "long" ? "sus" : st.dir === "short" ? "jos" : null) : null, opr0 = st.stop && sRap === null ? { jos: st.stop.jos, sus: st.stop.sus } : null;
+    // v100.352: agitația de acum, ca în Simulator (o.faraAgitatie o oprește); tendința m se pune DUPĂ scalare (drumul tras cu mu, apoi m − mu)
+    var agit = o.faraAgitatie ? null : agitatieAcum(b15), cuA = !!(agit && Math.abs(agit.r - 1) > 0.02);
+    function drumA(rnd, m) { return cuA ? scaleazaDrum(drum(b15, H, BZ, P, rnd, mu), P, agit.r, m - mu) : drum(b15, H, BZ, P, rnd, m); }
     if (parteTp) { opr0 = opr0 || {}; opr0[parteTp] = st.tp; }
     function trece(m) {
       var rnd = generator(o.seed || 1), net = [], lich = 0, ies = 0, opr = 0, per = 0, cap = [], tpa = 0, fund = 0;   // v100.136: și funding-ul
       for (var s = 0; s < n; s++) {
-        var d = drum(b15, H, BZ, P, rnd, m), r = GP.simuleaza(d, 0, H, { jos: st.jos, sus: st.sus, grile: st.grile, levier: st.levier, dir: st.dir, stop: opr0, stopRaport: sRap, tip: st.tip, fundingZi: st.fundingZi, fundingCost: st.fundingCost });   // v100.135 (revizia): tipul și funding-ul nu se mai pierd
+        var d = drumA(rnd, m), r = GP.simuleaza(d, 0, H, { jos: st.jos, sus: st.sus, grile: st.grile, levier: st.levier, dir: st.dir, stop: opr0, stopRaport: sRap, tip: st.tip, fundingZi: st.fundingZi, fundingCost: st.fundingCost });   // v100.135 (revizia): tipul și funding-ul nu se mai pierd
         cap.push(d[d.length - 1].c / P - 1); net.push(r.net * suma); if (r.lichidat) lich++; if (r.iesiri > 0) ies++; if (r.oprit) { if (parteTp && r.iesit === parteTp) tpa++; else opr++; } per += r.perechi || 0; fund += r.funding || 0;
       }
       // v100.130: o.peDrum ⇒ rezultatele în ordinea drumurilor (variantele se compară drum cu drum, pe aceleași drumuri)
@@ -129,8 +155,8 @@ var MonteSimbol = (function () {
         pretMijloc: pc(cap.sort(function (a, c) { return a - c; }), 0.5), pretMedie: cap.reduce(function (a, x) { return a + x; }, 0) / cap.length };   /* v100.350: centrat pe media prețului ⇒ pretMedie ≈ 0 */
     }
     // mijlocul prețului de la capătul drumurilor, cu tendința m scoasă (ieftin: fără simulatorul gridului) - pentru centrare, ca la preț
-    function mijlocLog(m) { var rnd = generator(o.seed || 1), v = []; for (var s = 0; s < n; s++) { var d = drum(b15, H, BZ, P, rnd, m); v.push(Math.log(d[d.length - 1].c / P)); } return Math.log(v.reduce(function (a, x) { return a + Math.exp(x); }, 0) / v.length); }   /* v100.350 (el: „repară și Monte Carlo”): botul grid pe MEDIA prețului de la capăt (martingală), ca Simulatorul - mijlocul la zero adăuga +σ²t/2 (câștig fals la long). H0 h0media/p10-mc.mjs, 150 × 800: media gridului +0,55 → +0,18 USDT (zile independente), +0,34 → −0,01 (agitație grupată) */
-    var r = trece(fara ? mu + mijlocLog(mu) / H : 0); r.faraTendinta = fara; r.tendintaPeZi = Math.exp(mu * BZ) - 1;
+    function mijlocLog(m) { var rnd = generator(o.seed || 1), v = []; for (var s = 0; s < n; s++) { var d = drumA(rnd, m); v.push(Math.log(d[d.length - 1].c / P)); } return Math.log(v.reduce(function (a, x) { return a + Math.exp(x); }, 0) / v.length); }   /* v100.350 (el: „repară și Monte Carlo”): botul grid pe MEDIA prețului de la capăt (martingală), ca Simulatorul - mijlocul la zero adăuga +σ²t/2 (câștig fals la long). H0 h0media/p10-mc.mjs, 150 × 800: media gridului +0,55 → +0,18 USDT (zile independente), +0,34 → −0,01 (agitație grupată) */
+    var r = trece(fara ? mu + mijlocLog(mu) / H : 0); r.faraTendinta = fara; r.tendintaPeZi = Math.exp(mu * BZ) - 1; r.agitatie = cuA ? agit : null;
     if (fara && !o.faraCuTendinta) { var c = trece(0); r.cuTendinta = { p50: c.p50, pPlus: c.pPlus, pLichidare: c.pLichidare, pStop: c.pStop }; }
     return r;
   }
@@ -146,6 +172,6 @@ var MonteSimbol = (function () {
     if (r.putine) r.lista = c.slice();
     return r;
   }
-  return { generator: generator, drum: drum, pret: pret, grid: grid, istorie: istorie, histograma: histograma };
+  return { STINGERE: STINGERE, agitatieAcum: agitatieAcum, scaleazaDrum: scaleazaDrum, generator: generator, drum: drum, pret: pret, grid: grid, istorie: istorie, histograma: histograma };
 })();
 if (typeof globalThis !== "undefined") globalThis.MonteSimbol = MonteSimbol;

@@ -241,7 +241,7 @@ await test("3f pagina botului: aducerea întreagă tăiată de o eroare nu se li
 const FRAZA = "șanse pe drumuri trase din ultima lună de prețuri, nu o predicție";
 await test("4a „ultima lună” e adevărat: pagina aduce 6 pagini × 500 de bare de 15 minute, colectorul ține 3000 ⇒ 31,25 de zile", () => {
   const a = functie(MSE, "mcsAduCoin"); assert.match(a, /p < 6/); assert.match(a, /limit=500/);
-  const l = functie(COL, "lumanari15M"); assert.match(l, /imbinaRanduri\(randuri, r, 3000\)/); assert.match(l, /st \? 1 : 6/);
+  const l = functie(COL, "lumanari15M"); assert.match(l, /imbinaRanduri\(randuri, r, 3000\)/); assert.match(l, /st \? (?:1|Math\.min\(6, Math\.max\(1, Math\.ceil\(\(Date\.now\(\) - st\.la\) \/ \(450 \* 9e5\)\)\)\)) : 6/);   // v100.352 (auditul): peste un cache vechi, paginile după vârstă
   const zile = 6 * 500 * 15 / 1440; assert.ok(zile >= 28 && zile <= 32, zile);
 });
 await test("4b pagina botului și Discord spun fraza adevărată; „ultimele 14 zile” nu mai apare", async () => {

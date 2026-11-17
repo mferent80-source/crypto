@@ -29,9 +29,9 @@ const ziDimineata = (acum) => ziRo(minutRo(acum) >= NOAPTE_DE_LA * 60 ? acum + 3
 // ---------------- noaptea: ce așteaptă dimineața ----------------
 // treptele (T212, boți), mișcarea zilei pe acțiuni („% azi”: sim-miscare, miscare-), gărzile contului, „altă setare / alt TP” de noapte.
 // Lichidarea, stopul atins, boții nevăzuți și orice „critic” pleacă imediat, oricând.
-const CHEI_NOAPTE = [[/^t212-pas-/, "t212"], [/^astept-/, "t212"] /* v100.337 (revizia): poziția sub stop de N ședințe - treapta trece la 23:0x (închiderea NY) */, [/^bot-pas-/, "boti"], [/^sim-miscare-/, "azi"], [/^garda-/, "garda"], [/^noapte-/, "noapte"]];
+const CHEI_NOAPTE = [[/^t212-pas-/, "t212"], [/^astept-/, "t212"] /* v100.337 (revizia): poziția sub stop de N ședințe - treapta trece la 23:0x (închiderea NY) */, [/^bot-pas-/, "boti"], [/^sim-miscare-/, "azi"], [/^garda-/, "garda"], [/^noapte-/, "noapte"], [/^hot-/, "hot"] /* v100.352 (auditul): „Ce fac cu botul” așteaptă dimineața; „îl închid” pe planul tău (hotplan-) nu */];
 // numele fiecărui fel în rezumat: [singular, plural]
-const NUME_FEL = { t212: ["treaptă T212", "trepte T212"], boti: ["treaptă de bot", "trepte de boți"], azi: ["mișcare „% azi”", "mișcări „% azi”"], garda: ["gardă încălcată", "gărzi încălcate"], noapte: ["setare verificată noaptea", "setări verificate noaptea"], alte: ["altă alertă", "alte alerte"] };
+const NUME_FEL = { t212: ["treaptă T212", "trepte T212"], boti: ["treaptă de bot", "trepte de boți"], azi: ["mișcare „% azi”", "mișcări „% azi”"], garda: ["gardă încălcată", "gărzi încălcate"], noapte: ["setare verificată noaptea", "setări verificate noaptea"], hot: ["recomandare „Ce fac cu botul”", "recomandări „Ce fac cu botul”"], alte: ["altă alertă", "alte alerte"] };
 function felNoapte(m, cheie) {
   const k = String(cheie || (m && m.cheie) || "");
   for (const [re, fel] of CHEI_NOAPTE) if (re.test(k)) return fel;
