@@ -58,6 +58,11 @@ function prProbe(d, acum) {
   R.push({ k: "caiet", nume: "📓 Caietul de păreri · tu și Claude", de: l.length ? prZi(new Date(Math.min.apply(null, l.map(function (p) { return p.la; }))).toISOString().slice(0, 10)) : "de la prima părere", jud: P ? sugCate(l.length, "părere notată", "păreri notate") + ", " + sugCate(Object.keys(sc).reduce(function (s, k) { return s + sc[k].judecate; }, 0), "judecată", "judecate") : "aștept caietul",
     sta: ab.length ? "față de „50% la fiecare”: " + ab.join(" · ") + (nj < 30 ? " · sub 30 de păreri judecate, scorul e zgomot" : "") : "nicio părere judecată încă",
     ultima: "", drum: { svg: prDrumSvg(nj / 30, [], "Caietul: " + nj + " din cele 30 de păreri judecate de la care scorul începe să spună ceva"), text: "fără dată fixă: un prim semn de la 30 de păreri judecate pe autor" }, act: ["la caiet ›", "prLaCaiet()"] });
+  // v100.353: Oscilo (la capăt: probele vechi citesc rândurile după poziție) - fără dată fixă: privirile la 28 și 42 de zile judecate
+  var os = d.oscilo, uo = os && os.urmarire, oS = os && os.start, nz = uo && uo.zile || 0, po = uo && uo.principal || {}, g1 = uo && uo.G && uo.G.G1 || {};
+  R.push({ k: "osc", nume: "🔁 Oscilo · canal de ±5–10% pe 14 zile, primele 100 Pionex", de: oS ? prZi(oS) : "de la prima tură (după 00:30 UTC)", jud: nz ? sugCate(nz, "zi judecată", "zile judecate") + ", " + sugCate(po.nO || 0, "intrare Oscilo", "intrări Oscilo") : "nicio zi judecată încă: fiecare zi se judecă la 7 zile după ea",
+    sta: nz ? "canalul a ținut 7 zile la Oscilo în " + sugPc(po.O) + ", la restul în " + sugPc(po.R) + "; gridul ca în probă: Oscilo " + oscG(g1.O) + ", restul " + oscG(g1.R) + (nz < 28 ? "; sub 28 de zile, prea puține observații" : "") : "pe istoric: canalul ține mai des (23% față de 14%, t 3,1), dar gridul pe canal a pierdut (−2,7% în 7 zile)",
+    ultima: os && os.zi ? "ultima zi: " + prZi(os.zi) + (oscVeche(os, acum) ? " · LISTĂ VECHE" : "") : "aștept tura de după 00:30 UTC", drum: { svg: prDrumSvg(Math.min(nz, 42) / 42, [28 / 42], "Oscilo: " + Math.min(nz, 42) + " din cele 42 de zile judecate ale verdictului"), text: "fără dată fixă: prima privire la 28 de zile judecate, verdictul la 42 (cam 7 săptămâni de la start)" } });
   return R;
 }
 function prStadiuHtml(d, acum) {
@@ -159,6 +164,7 @@ async function prPorneste(fortat) {
     await Promise.all([
       pas("caderi", function () { return getJSON("/api/istoric-bot?action=caderi").then(function (r) { return r && r.caderi || null; }); }),
       pas("directie", function () { return getJSON("/api/istoric-bot?action=directie").then(function (r) { return r && r.directie || null; }); }),
+      pas("oscilo", function () { return getJSON("/api/istoric-bot?action=oscilo").then(function (r) { return r && r.oscilo || null; }); }),   /* v100.353 */
       pas("trend12", function () { return getJSON("/api/istoric-bot?action=trend12").then(function (r) { return r && r.trend || null; }); }),
       pas("probaA", function () { return getJSON("/api/istoric-bot?action=probaA").then(function (r) { return r && r.probaA || null; }); }),
       pas("pareri", function () { return getJSON("/api/istoric-bot?action=pareri"); })

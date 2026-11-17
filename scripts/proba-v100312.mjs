@@ -90,12 +90,12 @@ await test("🔑 „MAMastercard”: după alinierea pe loc, textul dintre simbo
 await test("🔑 vederile: Sugestii = boți, revenire US/EU, sectoare, Trend; Probe = căderi + direcție; fără vedere, toate (probele vechi)", () => {
   const P = pagina(), d = DATE();
   assert.deepEqual(J(P.sugGrupuri(d, ACUM, "sugestii").map((g) => g.k)), ["porn", "revUS", "revEU", "sect", "trend"]);
-  assert.deepEqual(J(P.sugGrupuri(d, ACUM, "probe").map((g) => g.k)), ["cad", "dir"]);
-  assert.deepEqual(J(P.sugGrupuri(d, ACUM).map((g) => g.k)), ["porn", "cad", "dir", "revUS", "revEU", "sect", "trend"]);
+  assert.deepEqual(J(P.sugGrupuri(d, ACUM, "probe").map((g) => g.k)), ["cad", "dir", "osc"]);   // v100.353: + Oscilo (în probă)
+  assert.deepEqual(J(P.sugGrupuri(d, ACUM).map((g) => g.k)), ["porn", "cad", "dir", "osc", "revUS", "revEU", "sect", "trend"]);   // v100.353
   const toate = P.sugRanduri(d, ACUM), pr = P.sugRanduri(d, ACUM, "probe"), su = P.sugRanduri(d, ACUM, "sugestii");
   assert.equal(pr.length + su.length, toate.length, "fiecare rând într-o singură vedere");
   assert.ok(pr.length >= 12 && pr.every((r) => r.grup === "cad" || r.grup === "dir"));
-  assert.ok(su.every((r) => r.grup !== "cad" && r.grup !== "dir"));
+  assert.ok(su.every((r) => r.grup !== "cad" && r.grup !== "dir" && r.grup !== "osc"));
 });
 await test("🔑 nimic pierdut la mutare: grupurile, rândurile și fișele căderilor / direcției sunt pe Probe identice cu cele din Sugestii de dinainte", () => {
   const P = pagina(), d = DATE();
@@ -124,7 +124,7 @@ await test("revizia 🔵10: rândul ales și intervalul rămân ale fiecărei pa
 });
 await test("🔑 „Unde e fiecare probă”: 5 probe (căderi, direcție, proba A, Trend 12 luni, caietul) cu de când, judecate, cum stă, privirile fixate", () => {
   const P = pagina(), d = DATE(), R = J(P.prProbe(d, ACUM));
-  assert.deepEqual(R.map((r) => r.k), ["cad", "dir", "a", "trend", "caiet"]);
+  assert.deepEqual(R.map((r) => r.k), ["cad", "dir", "a", "trend", "caiet", "osc"]);   // v100.353: Oscilo la capăt
   const c = R[0], dr = R[1], a = R[2], k = R[4];
   assert.equal(c.de, "20.10.2026"); assert.equal(c.drum.text, "prima privire 01.03.2027 · verdictul 08.11.2027");
   assert.equal(dr.drum.text, "doar cifrele 08.05.2027 · a doua privire 08.11.2027"); assert.match(dr.sta, /^M1 a nimerit \d+%, M2 \d+% \(față de piață \d+% \/ \d+%\)/);

@@ -261,7 +261,7 @@ const DIR = { la: Date.parse("2026-11-08T07:30:00Z"), zi: "2026-11-07", start: "
   lista: [m1("BTC_USDT_PERP", -1, 0.468, -1, 0.41), m1("SOL_USDT_PERP", 1, 0.49, 1, 0.64)], urmarire: { zile: 0, perechi: 0, brier: {}, M1: { abs: { n: 0 }, rel: { n: 0 } }, M2: { abs: { n: 0 }, rel: { n: 0 } }, priviri: [] }, istoric: D.ISTORIC };
 await test("🔑 pagina: grupul „🎯 Monede Pionex · direcția pe 7 zile (în probă)” după căderi, cu ÎN PROBĂ; rândurile cu M1 / M2 ▲▼ și probabilitățile", () => {
   const P = pagina(), d = { directie: DIR };
-  assert.deepEqual(J(P.SUG_GRUPURI.map((g) => g[0])), ["porn", "cad", "dir", "revUS", "revEU", "sect", "trend"]);
+  assert.deepEqual(J(P.SUG_GRUPURI.map((g) => g[0])), ["porn", "cad", "dir", "osc", "revUS", "revEU", "sect", "trend"]);   // v100.353: + Oscilo după direcție
   const g = P.sugGrupuri(d, DIR.la).find((x) => x.k === "dir");
   assert.equal(g.verdict, "ÎN PROBĂ"); assert.match(g.sub, /ziua UTC 07\.11\.2026 · primele 10 monede Pionex după volum/);
   const r = P.sugRanduri(d, DIR.la).filter((x) => x.grup === "dir");

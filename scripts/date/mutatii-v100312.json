@@ -113,8 +113,8 @@
   {
    "nume": "vederi: Trend și pe Probe",
    "fisier": "public/lib/sugestii-ecran.js",
-   "cauta": "probe: { el: \"prPagina\", grupuri: [\"cad\", \"dir\"] }",
-   "pune": "probe: { el: \"prPagina\", grupuri: [\"cad\", \"dir\", \"trend\"] }"
+   "cauta": "probe: { el: \"prPagina\", grupuri: [\"cad\", \"dir\", \"osc\"] }",
+   "pune": "probe: { el: \"prPagina\", grupuri: [\"cad\", \"dir\", \"osc\", \"trend\"] }"
   },
   {
    "nume": "Tablou: mișcarea pe o zi, nu pe 7",
