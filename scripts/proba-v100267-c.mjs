@@ -45,7 +45,7 @@ function bareSint(n, seed, vol = 0.004, drift = 0, p0 = 100) {
   return out;
 }
 const B5 = bareSint(30 * 96, 1023, 0.006), P5 = B5[B5.length - 1].c;
-const fisa = (o) => GP.fisa({ simbol: "S", pret: P5, H: 1, b15: B5, b4h: G.agrega(B5, 4 * 3600000).slice(0, -1), b1d: G.agrega(B5, 86400000).slice(0, -1), suma: 100, ...o });
+const fisa = (o) => GP.fisa({ probaFara15: true /* v100.357: premisa PORNEȘTE pe 15 minute (I-896 o oprește pe pagină) */, simbol: "S", pret: P5, H: 1, b15: B5, b4h: G.agrega(B5, 4 * 3600000).slice(0, -1), b1d: G.agrega(B5, 86400000).slice(0, -1), suma: 100, ...o });
 // Simulatorul de jucărie: ține minte cu ce a fost chemat și dă cifrele cerute
 const spion = (z, v) => { const vazut = []; return { vazut, simuleaza: (b, st, o) => { vazut.push(o); return { orizonturi: [Object.assign({ zile: o && o.orizonturi && o.orizonturi[0] }, z)] }; }, verdict: () => v }; };
 const ACORD = { pStop: 0.2, pPierde: 0.3, pCastig: 0.7, pLich: 0, p50: 1 };

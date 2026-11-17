@@ -5734,7 +5734,7 @@ function grFisaNoteaza(f,i){
   if(!f||!f.verdict||grStare.fisa!==f||grStare.eroareRefacere)return;var p=f.verdictPe,x=p&&p.x,st=x?null:(GridProba.setarePropusa(f)||f.setare);if(!x&&!st)return;
   var zi=new Date().toISOString().slice(0,10),ch=f.simbol+"|"+zi+"|"+(p?p.cheie:"des");if(grFiseNotate[ch])return;grFiseNotate[ch]=1;
   var s=x||st,ps=f.verdict.stat||f.stat,pr=ps&&ps.test&&typeof ps.test.medie==="number"?ps.test.medie:null;
-  var n={simbol:f.simbol,t:Date.now(),H:f.H,dir:x?x.dir:f.dir,nivel:f.verdict.nivel,cheie:p?p.cheie:"des",pret:f.pret,jos:s.jos,sus:s.sus,grile:s.grile,levier:s.levier,stopJos:s.stop&&s.stop.jos||null,stopSus:s.stop&&s.stop.sus||null,pr:pr};
+  var n={simbol:f.simbol,t:Date.now(),H:f.H,dir:x?x.dir:f.dir,nivel:f.verdict.nivel,cheie:p?p.cheie:"des",pret:f.pret,jos:s.jos,sus:s.sus,grile:s.grile,levier:s.levier,stopJos:s.stop&&s.stop.jos||null,stopSus:s.stop&&s.stop.sus||null,pr:pr,bare:f.proba&&f.proba.barePeZi||null/* v100.357 (I-896): pe ce bare s-a probat */};
   apiFetch("/api/istoric-bot?action=fisaNota",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(n)}).catch(function(){delete grFiseNotate[ch]});
 }
 function grFiseUrmAdu(){if(!grFiseUrm.inLucru&&Date.now()-grFiseUrm.la>10*60000){grFiseUrm.inLucru=true;getJSON("/api/istoric-bot?action=fiseUrmarire").then(function(j){grFiseUrm.v=j&&j.urmarire||null;grFiseUrm.la=Date.now();grFiseUrm.inLucru=false;if(grPanouVizibil()&&grStare.fisa)renderGrid()}).catch(function(){grFiseUrm.la=Date.now();grFiseUrm.inLucru=false})}return grFiseUrm.v}

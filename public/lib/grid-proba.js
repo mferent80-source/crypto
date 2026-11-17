@@ -384,7 +384,7 @@ var GridProba = (function () {
     }
     var sa = statPe(st, pas, ales), statAles = sa.stat;
     var rg = G.regim(o.b15), poz = G.pozitie7z(o.b4h, o.pret), liniste = G.linisteTine(o.b15, o.H);
-    var v = G.verdict({ regim: rg, stat: statAles, zile: pr.zile, pozitie: poz, pesteSigur: st.pesteSigur, nesigur: !st.sigur, ferestreTest: pr.ferestre.testIndependente, incercate: pr.incercate, cereT: pr.barePeZi === C.BARE_ZI_1H });
+    var v = G.verdict({ regim: rg, stat: statAles, zile: pr.zile, pozitie: poz, pesteSigur: st.pesteSigur, nesigur: !st.sigur, ferestreTest: pr.ferestre.testIndependente, incercate: pr.incercate, cereT: pr.barePeZi === C.BARE_ZI_1H, bare15: pr.barePeZi !== C.BARE_ZI_1H && !o.probaFara15 /* v100.357 (I-896); probaFara15 = doar probele vechi ale MC pe fișă */ });
     if (sumaMinima !== null) {
       v = { nivel: "nu", motive: ["suma e prea mică: Pionex cere cel puțin " + mo.toFixed(2) + " USDT pe ordin, deci pentru 2 grile la " + st.levier + "× îți trebuie cel puțin " + Math.ceil(sumaMinima) + " USDT"].concat(v.motive) };
     }
@@ -403,7 +403,7 @@ var GridProba = (function () {
       f.aleasa = { setare: st, verdict: v, treceriZi: f.treceriZi };
       f.stat = { antren: deasa.antren, test: deasa.test }; f.probaLa = sd.la;
       f.setare = deasa.setare; f.treceriZi = deasa.treceriZi;
-      f.verdict = G.verdict({ regim: rg, stat: f.stat, zile: pr.zile, pozitie: poz, pesteSigur: deasa.setare.pesteSigur, nesigur: !deasa.setare.sigur, ferestreTest: pr.ferestre.testIndependente, incercate: pr.incercate, cereT: pr.barePeZi === C.BARE_ZI_1H });
+      f.verdict = G.verdict({ regim: rg, stat: f.stat, zile: pr.zile, pozitie: poz, pesteSigur: deasa.setare.pesteSigur, nesigur: !deasa.setare.sigur, ferestreTest: pr.ferestre.testIndependente, incercate: pr.incercate, cereT: pr.barePeZi === C.BARE_ZI_1H, bare15: pr.barePeZi !== C.BARE_ZI_1H && !o.probaFara15 /* v100.357 (I-896); probaFara15 = doar probele vechi ale MC pe fișă */ });
     }
     // v100.259 (auditul 23.10, punctul 5): fișa poartă verdictul Monte Carlo pe 7 zile al setării PROPUSE (Simulatorul, 300 de drumuri, sămânța 12).
     // Sub H0 (mers aleator, 300 de monede, H = 1) fișa zicea PORNEȘTE în 52, iar MC o contrazicea în 49 (stopul atins în > 50% din drumuri / pierde

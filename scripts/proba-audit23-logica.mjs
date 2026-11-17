@@ -363,7 +363,7 @@ await test("(17) calibrarea are rândul „Poarta gridului · banii”: porneșt
 
 // ---------- (5) fișa poartă verdictul Monte Carlo pe 7 zile al setării propuse ----------
 const B5 = bareSint(30 * 96, 1023, 0.006), P5 = B5[B5.length - 1].c;
-const fisa5 = (o) => GP.fisa({ simbol: "S", pret: P5, H: 1, b15: B5, b4h: G.agrega(B5, 4 * 3600000).slice(0, -1), b1d: G.agrega(B5, 86400000).slice(0, -1), suma: 100, ...o });
+const fisa5 = (o) => GP.fisa({ probaFara15: true /* v100.357: premisa PORNEȘTE pe 15 minute (I-896 o oprește pe pagină) */, simbol: "S", pret: P5, H: 1, b15: B5, b4h: G.agrega(B5, 4 * 3600000).slice(0, -1), b1d: G.agrega(B5, 86400000).slice(0, -1), suma: 100, ...o });
 await test("(5) fără Monte Carlo (faraMc) fișa zice PORNEȘTE pe moneda asta (premisa)", () => {
   assert.equal(fisa5({ faraMc: true }).verdict.nivel, "porneste");
   assert.equal(fisa5({ faraMc: true }).mc, undefined);

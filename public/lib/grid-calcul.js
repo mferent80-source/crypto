@@ -460,6 +460,9 @@ var GridCalcul = (function () {
     if (ti && !(ti.t >= C.T_TEST)) galben.push("pe zilele nevăzute, media pe cele " + cate(ti.n, "fereastră independentă", "ferestre independente") + " (" + (ti.medie < 0 ? "−" : "+") + Math.abs(ti.medie * 100).toFixed(1).replace(".", ",") + "%) nu se vede peste zero (t " + (isFinite(ti.t) ? (ti.t < 0 ? "−" : "") + Math.abs(ti.t).toFixed(1).replace(".", ",") : "—") + ", cer cel puțin " + String(C.T_TEST).replace(".", ",") + ")");
     if (o.pozitie !== null && o.pozitie !== undefined && (o.pozitie < C.MARGINE_RANGE || o.pozitie > 1 - C.MARGINE_RANGE)) galben.push("prețul stă lângă " + (o.pozitie < C.MARGINE_RANGE ? "minimul" : "maximul") + " ultimelor 7 zile");
     if (o.zile < C.ZILE_PLINE) galben.push("moneda are doar " + cate(Math.floor(o.zile), "zi", "zile") + " de istoric aici");
+    // v100.357 (I-896, el: „fa tot si livreaza”): fără barele de o oră (proba pe 15 minute) fișa zicea PORNEȘTE pe date fără niciun avantaj în 20–22% din
+    // monede (sim-h0-v100269, 17.11), față de 0–1,7% pe o oră ⇒ pe 15 minute cel mult AȘTEAPTĂ, cu motivul. Doar chemătorii care știu barele dau o.bare15.
+    if (o.bare15 && !rosu.length && !galben.length) galben.push("n-am barele de o oră ale monedei, iar pe lumânări de 15 minute proba zice PORNEȘTE prea des pe date fără niciun avantaj (~20% din monede, sub H0): aștept barele de o oră ca să probez");
     return { nivel: rosu.length ? "nu" : galben.length ? "asteapta" : "porneste", motive: rosu.concat(galben) };
   }
 

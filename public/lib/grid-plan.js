@@ -109,7 +109,7 @@ var GridPlan = (function () {
   function verdictFereastra(v, o) {
     if (!v || v.eroare || !o) return null;
     var info = o.info || {}, ps = o.b && o.H > 0 ? GP.probaSetare(o.b, o.H, o.fundingZi, fabrica(v), o.bz) : null;
-    var vd = G.verdict({ regim: o.regim, stat: ps, zile: o.zile, pozitie: o.pozitie, pesteSigur: false, nesigur: false, ferestreTest: ps && ps.test && ps.test.ind ? ps.test.ind.n : null, incercate: 0, cereT: o.bz === C.BARE_ZI_1H });
+    var vd = G.verdict({ regim: o.regim, stat: ps, zile: o.zile, pozitie: o.pozitie, pesteSigur: false, nesigur: false, ferestreTest: ps && ps.test && ps.test.ind ? ps.test.ind.n : null, incercate: 0, cereT: o.bz === C.BARE_ZI_1H, bare15: o.bz !== C.BARE_ZI_1H /* v100.357 (I-896) */ });
     var rosu = [], galben = [], U = function (x) { return (Math.round(x * 10) / 10).toFixed(1).replace(".", ",") + " USDT"; };
     var mo = GP.minOrdin({ minNotional: nr(info.minNotional), minSize: nr(info.minSizeLimit) }, v.sus);
     if (mo !== null && v.perOrdin < mo) rosu.push("pe fiecare ordin ar intra " + U(v.perOrdin) + ", sub minimul Pionex de " + U(mo) + ": mărește suma sau alege mai puține grile");

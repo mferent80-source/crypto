@@ -244,12 +244,12 @@ await test("🔑 R3 (I-891 PICAT la poartă) fișa rămâne cum era: verdictul p
   assert.match(A, /\+'\. Deci un minus pe istoric nu e o dovadă, iar „media pe test peste zero” e o ștachetă mai înaltă decât pare\./);
   assert.match(P, /a PICAT poarta scrisă dinainte \(17\.11: cu gridul des inclus, PORNEȘTE fals \+2,5 \/ \+2,5 \/ \+4,2 puncte, peste \+2\)/);
 });
-await test("V versiunile v100.356 (index ×4, sw, versiune.js, package + lanț, BUILD_INFO) + colector v101.194", () => {
-  const h = citeste("public", "index.html"); assert.equal((h.match(/v100\.356/g) || []).length, 4); assert.match(h, /v100\.356 · CIFRELE PE BARELE REALE/);
-  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-356/); assert.match(citeste("functions", "_shared", "versiune.js"), /"v100\.356"/);
-  const p = JSON.parse(citeste("package.json")); assert.equal(p.version, "100.356.0"); assert.match(p.scripts.test, /npm run test:v100355 && npm run test:v100356/);
-  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.match(bi.badge, /^v100\.356/); assert.ok(bi.tot356 && bi.i888);
-  assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.194";/); assert.equal(TMC.VERS_HOT, GS.VERS_HOT);
+await test("V versiunile de la v100.356 încolo (index, sw, versiune.js, package + lanț, BUILD_INFO) + colector ≥ v101.194", () => {
+  const nr = (t) => Number((String(t).match(/100[.-](\d{3})/) || [])[1]);   // v100.357: versiunea curentă o verifică proba ei
+  assert.ok(nr(citeste("functions", "_shared", "versiune.js")) >= 356 && nr(citeste("public", "sw.js")) >= 356 && nr(JSON.parse(citeste("BUILD_INFO.json")).badge) >= 356);
+  const p = JSON.parse(citeste("package.json")); assert.ok(nr(p.version) >= 356); assert.match(p.scripts.test, /npm run test:v100355 && npm run test:v100356/);
+  assert.ok(JSON.parse(citeste("BUILD_INFO.json")).tot356);
+  assert.ok(Number((citeste("scripts", "colector.mjs").match(/const VERSIUNE_COLECTOR = "v101\.(\d+)";/) || [])[1]) >= 194); assert.equal(TMC.VERS_HOT, GS.VERS_HOT);
 });
 
 console.log(`\n${teste - picate}/${teste} trec`);
