@@ -161,12 +161,12 @@ var GridProba = (function () {
         if (lichidat(p)) return rezultat({ net: -1, lichidat: true, bare: i - start + 1 });
       }
       if (nv && x.h > x.l) { var loN = Math.max(x.l, niv[0]), hiN = Math.min(x.h, niv[N]);   // v100.355 (I-888, C1): dus-întorsurile nevăzute ale lumânării
-        if (hiN > loN) { var pasB = st.tip === "aritmetic" ? dA / ((x.h + x.l) / 2) : gG, kB = nv.a * Math.pow((x.h / x.l - 1) / pasB, nv.b) * (hiN - loN) / (x.h - x.l), unB = L / N * sq;
+        if (hiN > loN) { var pasB = st.tip === "aritmetic" ? dA / ((x.h + x.l) / 2) : gG, kB = nv.a * (isFinite(nv.c) ? Math.pow(x.h / x.l - 1, nv.b) * Math.pow(pasB, -nv.c) : Math.pow((x.h / x.l - 1) / pasB, nv.b)) * (hiN - loN) / (x.h - x.l), unB = L / N * sq;   /* v100.356 (I-890, C2): exponent separat pe pas (c); fără c ⇒ C1 */
           real += kB * unB * pasB; fee += kB * unB * 2 * comG; nevazut += kB * unB * (pasB - 2 * comG); } }
       if (tr) { tr.net.push(netLa(pret)); tr.perechi.push(perechi); tr.iesiri.push(iesiri); tr.min.push(bMin); tr.max.push(bMax); tr.fund.push(funding); tr.poz.push(Ql - Qs); tr.brut.push(Ql + Qs);   /* v100.350: funding-ul cumulat, poziția netă și brută (pe unitatea de sumă) */ }   // v100.134: traseul, la inchiderea barei
     }
     var fee2 = (Ql + Qs) * pret * com;   // comisionul de inchidere la final
-    return rezultat({ net: real - fee - fee2 + (Ql * pret - Cl) + (Cs - Qs * pret), bare: fin - start });
+    return rezultat({ net: real - fee - fee2 + (Ql * pret - Cl) + (Cs - Qs * pret), bare: fin - start, comInchidere: fee2 });   /* v100.356 (I-891): comisionul închiderii de la capăt, separat */
   }
 
   function statistici(rez) {
@@ -265,6 +265,35 @@ var GridProba = (function () {
       (s + W <= nA ? ra : rt).push(simuleaza(b15, s, W, cuFunding(fac(b15[s].o), F), optS));
     }
     return { antren: statistici(ra), test: cuIndependente(statistici(rt), rt, Math.round(W / PF)) };
+  }
+
+  // v100.356 (I-891, el: „fă tot”; regula în docs/cercetare/2026-11-17-v100356-calibrare-c2-reper.md, scrisă înainte de cod): pe un preț fără direcție
+  // un grid adevărat pierde doar costurile, dar motorul (4 puncte pe lumânare) arată și partea nevăzută (I-888). Pe fiecare fereastră de TEST (aceleași
+  // ca proba: s ≥ 2/3, una la PAS_FERESTRE): d = net − rezultatul ÎNAINTE de comisioane (funding-ul rămâne) al aceleiași setări pe aceleași lumânări
+  // întoarse pe dos la întâmplare (în logaritm, cu fitile; ca reperul G2), două trageri cu sămânță fixă pe fereastră. Ca regulă a fișei („media lui d peste
+  // zero”) a PICAT poarta scrisă dinainte (17.11: cu gridul des inclus, PORNEȘTE fals +2,5 / +2,5 / +4,2 puncte, peste +2) ⇒ fișa NU o folosește; rămâne
+  // doar ca unealtă de cercetare (proba-v100356 R1, R2).
+  function genR(seed) { var a = (seed >>> 0) || 1; return function () { a |= 0; a = a + 0x6D2B79F5 | 0; var t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  function intoarceLumanari(b, rnd) {
+    var o = [], p = b.length ? b[0].o : NaN;
+    for (var i = 0; i < b.length; i++) { var x = b[i], su = Math.log(x.h / x.o), jo = Math.log(x.l / x.o), r = Math.log(x.c / x.o);
+      if (rnd() < 0.5) { var a = su; su = -jo; jo = -a; r = -r; }
+      o.push({ t: x.t, o: p, h: p * Math.exp(su), l: p * Math.exp(jo), c: p * Math.exp(r), v: x.v }); p = p * Math.exp(r); }
+    return o;
+  }
+  function brutDe(r) { return r.lichidat ? -1 : r.net + (r.comisioane || 0) + (r.comInchidere || 0); }
+  function reperTest(b, H, fz, fac, bz) {
+    var z = bz > 0 ? bz : C.BARE_ZI, W = H * z, F = fundingDe(fz), PF = Math.max(1, Math.round(C.PAS_FERESTRE * z / C.BARE_ZI)), optS = z !== C.BARE_ZI ? { barePeZi: z } : undefined;
+    if (!b || b.length < 2 * W + z || typeof fac !== "function") return null;
+    var nA = Math.round(b.length * 2 / 3), dif = [], sumR = 0;
+    for (var s = 0; s + W <= b.length; s += PF) {
+      if (s < nA) continue;
+      var r = simuleaza(b, s, W, cuFunding(fac(b[s].o), F), optS), fr = b.slice(s, s + W), q = 0;
+      for (var k = 0; k < 2; k++) { var bi = intoarceLumanari(fr, genR(891 * 100003 + s * 7 + k)); q += brutDe(simuleaza(bi, 0, W, cuFunding(fac(bi[0].o), F), optS)); }
+      q /= 2; sumR += q; dif.push({ net: r.net - q, iesiri: 0, umpleri: 0, perechi: 0, lichidat: false, oprit: false });
+    }
+    if (!dif.length) return null;
+    return { dif: cuIndependente(statistici(dif), dif, Math.round(W / PF)), reper: sumR / dif.length, n: dif.length };
   }
 
   // Trendul si proba nu sunt de acord? Se spune doar cand directia recomandata
@@ -575,9 +604,17 @@ var GridProba = (function () {
   var NEVAZUT = Object.freeze({ la: "17.11.2026", m15: Object.freeze({ zi1: 0.46, zi3: 0.23, zi7: 0.11, pasMic: 0.79 }), h1: Object.freeze({ zi1: 0.98, zi3: 0.49, zi7: 0.26, pasMic: 1.46 }) });
   function nevazutText(fel) {
     var x = fel === "1h" ? NEVAZUT.h1 : NEVAZUT.m15, f = function (v) { return (Math.round(v * 10) / 10).toFixed(1).replace(".", ","); };
-    return "pe lumânări de " + (fel === "1h" ? "o oră" : "15 minute") + " motorul vede doar 4 puncte (deschidere, minim, maxim, închidere), nu dus-întorsurile dintre ele; măsurat pe lumânări de 1 minut (" + NEVAZUT.la + ", 40 de monede, 30 de zile), cifrele gridului ies cu ~" + f(x.zi3) + "–" + f(x.zi1) + "% din sumă pe zi SUB adevăr (~" + f(x.pasMic) + "% la pasul de 0,3%), deci sunt prudente";
+    return "pe lumânări de " + (fel === "1h" ? "o oră" : "15 minute") + " motorul vede doar 4 puncte (deschidere, minim, maxim, închidere), nu dus-întorsurile dintre ele; măsurat pe lumânări de 1 minut (" + NEVAZUT.la + ", " + (NEVAZUT.monede || 40) + " de monede, 30 de zile), cifrele gridului ies cu ~" + f(x.zi3) + "–" + f(x.zi1) + "% din sumă pe zi SUB adevăr (~" + f(x.pasMic) + "% la pasul de 0,3%), deci sunt prudente";
   }
-  return { NEVAZUT: NEVAZUT, nevazutText: nevazutText, bareOraFisa: bareOraFisa, statistici: statistici, fundingDe: fundingDe, FUNDING_PRESUPUS: FUNDING_PRESUPUS, potrivireIngust: potrivireIngust, judecaUrmarire: judecaUrmarire, socotealaUrmarire: socotealaUrmarire, socotealaUrmarirePeReguli: socotealaUrmarirePeReguli, directiaLa: directiaLa, verdictIngust: verdictIngust, ingust: ingust, rezumatIngust: rezumatIngust, notaBloc: notaBloc, inchise: inchise, varstaIngust: varstaIngust, simuleaza: simuleaza, statistici: statistici, alegePlatou: alegePlatou, proba: proba, probaSetare: probaSetare, minOrdin: minOrdin, contrazice: contrazice, sumaMaxima: sumaMaxima, fisa: fisa,
+  var API = { NEVAZUT: NEVAZUT, nevazutText: nevazutText, reperTest: reperTest, intoarceLumanari: intoarceLumanari, bareOraFisa: bareOraFisa, statistici: statistici, fundingDe: fundingDe, FUNDING_PRESUPUS: FUNDING_PRESUPUS, potrivireIngust: potrivireIngust, judecaUrmarire: judecaUrmarire, socotealaUrmarire: socotealaUrmarire, socotealaUrmarirePeReguli: socotealaUrmarirePeReguli, directiaLa: directiaLa, verdictIngust: verdictIngust, ingust: ingust, rezumatIngust: rezumatIngust, notaBloc: notaBloc, inchise: inchise, varstaIngust: varstaIngust, simuleaza: simuleaza, statistici: statistici, alegePlatou: alegePlatou, proba: proba, probaSetare: probaSetare, minOrdin: minOrdin, contrazice: contrazice, sumaMaxima: sumaMaxima, fisa: fisa,
     respinge: respinge, propune: propune, setarePropusa: setarePropusa, treceriPeZi: treceriPeZi };
+  // v100.356 (I-895): măsurătoarea lunară (colectorul pe VPS ⇒ KV ⇒ pagina) înlocuiește cifrele de mai sus - doar una întreagă și plauzibilă
+  API.puneNevazut = function (x) {
+    var bun = function (o) { return !!o && ["zi1", "zi3", "zi7", "pasMic"].every(function (k) { var v = Number(o[k]); return isFinite(v) && v >= 0 && v < 10; }); };
+    if (!x || !/^\d{2}\.\d{2}\.\d{4}$/.test(String(x.la)) || !bun(x.m15) || !bun(x.h1)) return false;
+    var c = function (o) { return Object.freeze({ zi1: Number(o.zi1), zi3: Number(o.zi3), zi7: Number(o.zi7), pasMic: Number(o.pasMic) }); };
+    NEVAZUT = Object.freeze({ la: String(x.la), monede: Number(x.monede) >= 20 ? Math.round(Number(x.monede)) : null, m15: c(x.m15), h1: c(x.h1) }); API.NEVAZUT = NEVAZUT; return true;
+  };
+  return API;
 })();
 if (typeof globalThis !== "undefined") globalThis.GridProba = GridProba;

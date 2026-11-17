@@ -2,6 +2,10 @@
 // Regulile: docs/cercetare/2026-11-17-i888-lumanarea-si-bilantul.md (secțiunea A), scrise ÎNAINTEA datelor. Aici doar logica.
 //   node scripts/cercetare-v100355-lumanarea.mjs --ce=aduce      (universul + lumânările de 1 minut, pe disc, se poate relua)
 //   node scripts/cercetare-v100355-lumanarea.mjs --ce=masoara    (măsurătoarea A, verdictele după reguli)
+//   v100.356: --deLa=AAAA-LL-ZZ --zile=30 (altă fereastră, cache-ul ei separat) · --ce=lunar --iesire=<fișier> (I-895: ultimele 30 de zile UTC
+//   încheiate, aceeași regulă de tragere, cifrele paginii scrise în fișier, cache-ul șters după reușită; colectorul îl pornește noaptea)
+//   v100.356 (I-890): --samanta=N (altă tragere de monede) · --ce=c2 (a doua încercare: a·R^b·pas^(−c), potrivită pe pare, judecată pe impare,
+//   pe fereastra NOUĂ: --deLa=2026-09-18 --zile=30 --samanta=20261118 - regulile în docs/cercetare/2026-11-17-v100356-calibrare-c2-reper.md)
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -9,11 +13,18 @@ import crypto from "node:crypto";
 import { incarcaLib } from "./lib/motor-pagina.mjs";
 
 const ARG = Object.fromEntries(process.argv.slice(2).map((a) => { const m = /^--([^=]+)=(.*)$/.exec(a); return m ? [m[1], m[2]] : [a.replace(/^--/, ""), true]; }));
-const CE = String(ARG.ce || ""), CACHE = ARG.cache || path.join(os.tmpdir(), "radar-cercetare-i888"); fs.mkdirSync(CACHE, { recursive: true });
+const CE = String(ARG.ce || "");
 const ZI = 86400000, MIN = 60000, FAPI = "https://fapi.binance.com";
 export const A = Object.freeze({ deLa: Date.UTC(2026, 9, 18), pana: Date.UTC(2026, 10, 17), samanta: 20261117, monede: 40, acoperire: 0.95,
   lat: [0.06, 0.12, 0.24], pas: [0.003, 0.006, 0.012], dir: ["long", "neutru", "short"], H: [1, 3, 7],
   instr: [["5m", 5 * MIN], ["15m", 15 * MIN], ["1h", 60 * MIN]], prag: 0.10, pragT: 3, pragC1: 0.05 });
+// v100.356 (I-895, I-890): fereastra - implicit cea a lui I-888; „lunar” = ultimele 30 de zile UTC încheiate; --deLa / --zile = alta (cache separat)
+const ziUtc = (x) => { const t = Date.parse(String(x) + "T00:00:00Z"); if (!Number.isFinite(t)) throw new Error("dată greșită: " + x); return t; };
+export const F = Object.freeze(CE === "lunar" ? { deLa: Math.floor(Date.now() / ZI) * ZI - 30 * ZI, pana: Math.floor(Date.now() / ZI) * ZI }
+  : ARG.deLa ? { deLa: ziUtc(ARG.deLa), pana: ziUtc(ARG.deLa) + (Number(ARG.zile) || 30) * ZI } : { deLa: A.deLa, pana: A.pana });
+const SAMANTA = Number(ARG.samanta) > 0 ? Math.floor(Number(ARG.samanta)) : A.samanta;   // v100.356 (I-890): altă tragere pe fereastra nouă
+const CACHE = ARG.cache || path.join(os.tmpdir(), CE === "lunar" ? "radar-nevazut-lunar" : F.deLa === A.deLa && F.pana === A.pana ? "radar-cercetare-i888" : "radar-cercetare-" + new Date(F.deLa).toISOString().slice(0, 10) + "-" + Math.round((F.pana - F.deLa) / ZI) + "z");
+fs.mkdirSync(CACHE, { recursive: true });
 const L = incarcaLib(["text-ro.js", "grid-calcul.js", "grid-clasament.js", "grid-proba.js"], "({ G: GridCalcul, GC: GridClasament, GP: GridProba })"), G = L.G, GC = L.GC, GP = L.GP;
 export function mulberry32(a) { return function () { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const asteapta = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -31,12 +42,12 @@ async function binance(cale) {
   return j;
 }
 async function minute(sym) {
-  let start = A.deLa; const toate = [];
-  for (let p = 0; p < 40 && start < A.pana; p++) {
-    const k = await binance(`/fapi/v1/klines?symbol=${sym}&interval=1m&limit=1500&startTime=${start}&endTime=${A.pana - 1}`);
+  let start = F.deLa; const toate = [];
+  for (let p = 0; p < 40 && start < F.pana; p++) {
+    const k = await binance(`/fapi/v1/klines?symbol=${sym}&interval=1m&limit=1500&startTime=${start}&endTime=${F.pana - 1}`);
     if (!Array.isArray(k)) throw new Error("Binance n-a dat lumânări pentru " + sym);
     if (!k.length) break;
-    for (const x of k) if (+x[0] >= A.deLa && +x[0] + MIN <= A.pana) toate.push([+x[0], +x[1], +x[2], +x[3], +x[4]]);
+    for (const x of k) if (+x[0] >= F.deLa && +x[0] + MIN <= F.pana) toate.push([+x[0], +x[1], +x[2], +x[3], +x[4]]);
     start = +k[k.length - 1][0] + MIN; await asteapta(450);
     if (k.length < 1500) break;
   }
@@ -55,10 +66,11 @@ async function aduce() {
     const top = GC.topDupaVolum(tk && tk.data && tk.data.tickers, 100); if (top.length < 80) throw new Error("lista Pionex a venit scurtă: " + top.length);
     const ei = await binance("/fapi/v1/exchangeInfo"), are = new Set(ei.symbols.filter((s) => s.status === "TRADING" && s.contractType === "PERPETUAL" && s.quoteAsset === "USDT").map((s) => s.symbol));
     const cu = top.map((m) => { const baza = String(m.simbol).replace(/_USDT_PERP$/, ""); const b = [baza + "USDT", "1000" + baza + "USDT", "1000000" + baza + "USDT", "1M" + baza + "USDT"].find((x) => are.has(x)) || null; return { pionex: m.simbol, binance: b }; }).filter((m) => m.binance);
-    scrie("univers.json", { la: Date.now(), deLa: A.deLa, pana: A.pana, top: top.length, cuBinance: cu.length, trase: trage(cu) });
+    scrie("univers.json", { la: Date.now(), deLa: F.deLa, pana: F.pana, samanta: SAMANTA, top: top.length, cuBinance: cu.length, trase: trage(cu, SAMANTA) });
   }
   const u = citeste("univers.json");
-  console.log("universul: " + u.top + " perpetue Pionex, " + u.cuBinance + " cu pereche pe Binance; trase " + u.trase.length + " (mulberry32(" + A.samanta + "))");
+  if (u.samanta && u.samanta !== SAMANTA) throw new Error("cache-ul are tragerea cu sămânța " + u.samanta + ", nu " + SAMANTA + " - alt --cache");
+  console.log("universul: " + u.top + " perpetue Pionex, " + u.cuBinance + " cu pereche pe Binance; trase " + u.trase.length + " (mulberry32(" + (u.samanta || A.samanta) + "))");
   let k = 0;
   for (const m of u.trase) { k++;
     if (!exista(m.binance + "-1m.json")) scrie(m.binance + "-1m.json", await minute(m.binance));
@@ -86,8 +98,8 @@ export function masoaraMoneda(b1, sim, opt = {}) {
   const inst = { "1m": b1 }; for (const [n, ms] of A.instr) inst[n] = aduna(b1, ms);
   const out = {};
   for (const H of A.H) { out[H] = [];
-    for (let w = 0; w * H < (A.pana - A.deLa) / ZI; w++) {
-      const t0 = A.deLa + w * H * ZI, t1 = t0 + H * ZI, f = {}; for (const n of Object.keys(inst)) f[n] = fel(inst[n], t0, t1);
+    for (let w = 0; w * H < (F.pana - F.deLa) / ZI; w++) {
+      const t0 = F.deLa + w * H * ZI, t1 = t0 + H * ZI, f = {}; for (const n of Object.keys(inst)) f[n] = fel(inst[n], t0, t1);
       if (f["1m"].length < H * 1440 * A.acoperire) { out[H].push({ w, t0, sarit: "minute lipsă (" + f["1m"].length + ")" }); continue; }
       const gr = griduri(f["1m"][0].o), rez = { w, t0, d: {}, pas: gr.map((g) => g.pas), lich: 0 };
       const r1 = gr.map((g) => GP.simuleaza(f["1m"], 0, f["1m"].length, g.st)); rez.lich += r1.filter((r) => r.lichidat).length;
@@ -119,7 +131,7 @@ function incarca() {
   for (const m of u.trase) { if (!exista(m.binance + "-1m.json")) throw new Error("lipsește " + m.binance + ": aducerea nu s-a încheiat");
     const raw = fs.readFileSync(path.join(CACHE, m.binance + "-1m.json")); amp.update(m.binance).update(raw);
     const b = JSON.parse(raw).map((x) => ({ t: x[0], o: x[1], h: x[2], l: x[3], c: x[4] }));
-    if (b.length < (A.pana - A.deLa) / MIN * A.acoperire) { sarite.push(m.binance + " (" + b.length + " minute)"); continue; }
+    if (b.length < (F.pana - F.deLa) / MIN * A.acoperire) { sarite.push(m.binance + " (" + b.length + " minute)"); continue; }
     date[m.binance] = b; }
   return { u, date, sarite, amprenta: amp.digest("hex").slice(0, 16) };
 }
@@ -139,6 +151,24 @@ function masoara() {
   console.log("1 minutul ca adevăr (H = 3): |Δ5m| / |Δ15m| = " + nr(Math.abs(c5) / Math.abs(c15), 2) + (Math.abs(c5) > 0.5 * Math.abs(c15) ? " ⇒ NU s-a așezat: cifrele sunt limita de jos" : " ⇒ s-a așezat"));
   console.log("lichidări pe 1 minut (în toate rulările): " + lich);
   scrie("rezultat-A.json", rap); fs.writeFileSync(path.join(CACHE, "per-moneda-A.json"), JSON.stringify(per));
+  return rap;
+}
+// v100.356 (I-895): cifrele paginii (GridProba.NEVAZUT) din măsurătoarea A pe fereastra lunară: zi1 / zi3 / zi7 = −Δ pe zi la H = 1 / 3 / 7,
+// pasMic = −Δ pe zi la H = 1 și pasul de 0,3% - exact cum s-au scos pe 17.11 din tabelul I-888
+export function cifrePagina(rap, laT) {
+  const r2 = (x) => Math.round(-x * 100) / 100, x = (n) => ({ zi1: r2(rap.H[1][n].s.m), zi3: r2(rap.H[3][n].s.m), zi7: r2(rap.H[7][n].s.m), pasMic: r2(rap.H[1][n].pePas[0.003].m) });
+  const d = new Date(laT), z2 = (v) => String(v).padStart(2, "0");
+  return { la: z2(d.getUTCDate()) + "." + z2(d.getUTCMonth() + 1) + "." + d.getUTCFullYear(), monede: rap.monede, amprenta: rap.amprenta, m15: x("15m"), h1: x("1h") };
+}
+async function lunar() {
+  // revizia (🟡3): dosarul lunar e unul singur - o rulare picată se reia din el a doua noapte; altă fereastră ⇒ golit întâi (nu rămân ~80 MB orfani)
+  if (exista("univers.json")) { const u0 = citeste("univers.json"); if (u0.deLa !== F.deLa || u0.pana !== F.pana) { fs.rmSync(CACHE, { recursive: true, force: true }); fs.mkdirSync(CACHE, { recursive: true }); } }
+  const t0 = Date.now(); await aduce(); const rap = masoara();
+  if (!(rap.monede >= 30)) throw new Error("prea puține monede cu minutele întregi: " + rap.monede + " (cel puțin 30)");
+  const o = Object.assign(cifrePagina(rap, F.pana), { deLa: F.deLa, pana: F.pana, minute: Math.round((Date.now() - t0) / 60000) });
+  if (ARG.iesire) { const tmp = String(ARG.iesire) + ".tmp"; fs.writeFileSync(tmp, JSON.stringify(o)); fs.renameSync(tmp, String(ARG.iesire)); }
+  console.log("NEVAZUT " + JSON.stringify(o));
+  if (!ARG.pastreaza) fs.rmSync(CACHE, { recursive: true, force: true });   // ~80 MB de minute; o rulare picată le păstrează (se reia de unde a rămas)
 }
 
 // ---------------- C1: potrivirea pe calibrare, judecata pe probă ----------------
@@ -146,8 +176,8 @@ export const C1 = Object.freeze({ b: Array.from({ length: 26 }, (_, i) => Math.r
 // rulările unei monede pentru instrumentul n: { H, w, pas, d1 (net 1 minut), f (lumânările n ale ferestrei), st }
 function rulari(b1, n, ms) {
   const bx = aduna(b1, ms), out = [];
-  for (const H of A.H) for (let w = 0; w * H < (A.pana - A.deLa) / ZI; w++) {
-    const t0 = A.deLa + w * H * ZI, t1 = t0 + H * ZI, f1 = fel(b1, t0, t1), fx = fel(bx, t0, t1); if (f1.length < H * 1440 * A.acoperire) continue;
+  for (const H of A.H) for (let w = 0; w * H < (F.pana - F.deLa) / ZI; w++) {
+    const t0 = F.deLa + w * H * ZI, t1 = t0 + H * ZI, f1 = fel(b1, t0, t1), fx = fel(bx, t0, t1); if (f1.length < H * 1440 * A.acoperire) continue;
     for (const g of griduri(f1[0].o)) out.push({ H, w, pas: g.pas, st: g.st, f: fx, net1: GP.simuleaza(f1, 0, f1.length, g.st).net });
   }
   return out;
@@ -186,7 +216,44 @@ function c1() {
   scrie("rezultat-C1.json", rap);
 }
 
+// ---------------- C2 (I-890): a·R^b·pas^(−c), aceeași potrivire liniară în a, grila (b, c) scrisă înainte ----------------
+export const C2 = Object.freeze({ b: [0.5, 1, 1.5, 2, 2.5, 3], c: [0.5, 1, 1.5, 2, 2.5, 3], eps: 0.05 });
+export function potriveste2(runs) {
+  const base = runs.map((r) => GP.simuleaza(r.f, 0, r.f.length, r.st).net), D = runs.map((r, i) => base[i] - r.net1);
+  let best = null;
+  for (const b of C2.b) for (const c of C2.c) {
+    const S = runs.map((r, i) => (GP.simuleaza(r.f, 0, r.f.length, r.st, { nevazut: { a: C2.eps, b, c } }).net - base[i]) / C2.eps);
+    let sxy = 0, sxx = 0; for (let i = 0; i < S.length; i++) { sxy += D[i] * S[i]; sxx += S[i] * S[i]; }
+    const a = sxx > 0 ? -sxy / sxx : 0; let sse = 0; for (let i = 0; i < S.length; i++) sse += (D[i] + a * S[i]) ** 2;
+    if (!best || sse < best.sse) best = { a, b, c, sse };
+  }
+  return best;
+}
+function c2() {
+  const { u, date, amprenta } = incarca(), cal = u.trase.filter((m, i) => i % 2 === 0 && date[m.binance]).map((m) => m.binance), prob = u.trase.filter((m, i) => i % 2 === 1 && date[m.binance]).map((m) => m.binance);
+  console.log("C2 · fereastra " + new Date(F.deLa).toISOString().slice(0, 10) + " … " + new Date(F.pana).toISOString().slice(0, 10) + " · sămânța " + (u.samanta || A.samanta) + " · amprenta " + amprenta + " · calibrare " + cal.length + " monede (pare), probă " + prob.length + " (impare)");
+  const par = {};
+  for (const [n, ms] of A.instr.filter(([x]) => x !== "5m")) {
+    const t0 = Date.now(), runs = []; for (const s of cal) runs.push(...rulari(date[s], n, ms));
+    par[n] = potriveste2(runs); console.log("  " + n + ": a = " + par[n].a.toPrecision(4) + ", b = " + par[n].b + ", c = " + par[n].c + " (" + runs.length + " rulări de calibrare, " + Math.round((Date.now() - t0) / 1000) + " s)");
+  }
+  const fara = {}, cu = {}; for (const s of prob) { fara[s] = masoaraMoneda(date[s], s); cu[s] = masoaraMoneda(date[s], s, { optSim: (n) => (par[n] ? { nevazut: { a: par[n].a, b: par[n].b, c: par[n].c } } : undefined) }); }
+  let trece = true; const rap = { amprenta, fereastra: [F.deLa, F.pana], samanta: u.samanta || A.samanta, par, H: {} };
+  for (const H of [1, 3]) { rap.H[H] = {};
+    for (const n of Object.keys(par)) {
+      const s0 = agrega(fara, H, n), s1 = agrega(cu, H, n), pp = A.pas.map((p) => agrega(cu, H, n, p).m);
+      const ok1 = Math.abs(s1.m) <= A.pragC1, ok2 = Math.abs(s1.m) <= 0.5 * Math.abs(s0.m), ok3 = pp.every((v) => !(Math.sign(v) !== Math.sign(s0.m) && Math.abs(v) > A.prag));
+      const ok = ok1 && ok2 && ok3; trece = trece && ok; rap.H[H][n] = { fara: s0, cu: s1, pePas: pp, ok1, ok2, ok3, ok };
+      console.log("  H = " + H + " · " + n.padEnd(3) + " pe PROBĂ: fără C2 " + nr(s0.m, 3) + " ⇒ cu C2 " + nr(s1.m, 3) + " pe zi (95%: " + nr(s1.jos, 3) + " … " + nr(s1.sus, 3) + ") · pe pas " + pp.map((v) => nr(v, 3)).join(" / ")
+        + " ⇒ " + (ok ? "TRECE" : "PICĂ") + " (|rămas| ≤ 0,05: " + (ok1 ? "da" : "NU") + "; scade ≥ 50%: " + (ok2 ? "da" : "NU") + "; nicio clasă de pas peste 0,10 în cealaltă parte: " + (ok3 ? "da" : "NU") + ")");
+    } }
+  rap.trece = trece; console.log("C2 " + (trece ? "TRECE ⇒ intră în motor (VERS_HOT 4, H0-ul fișei refăcut)" : "PICĂ ⇒ motorul rămâne; I-890 se închide"));
+  scrie("rezultat-C2.json", rap);
+}
+
 if (CE === "aduce") await aduce();
 else if (CE === "masoara") masoara();
 else if (CE === "c1") c1();
-else if (CE) { console.error("--ce=aduce | masoara | c1"); process.exit(2); }
+else if (CE === "c2") c2();
+else if (CE === "lunar") { try { await lunar(); } catch (e) { console.error("EȘEC lunar: " + (e && e.message || e)); process.exit(1); } }
+else if (CE) { console.error("--ce=aduce | masoara | c1 | c2 | lunar"); process.exit(2); }

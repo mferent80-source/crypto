@@ -109,8 +109,8 @@ await test("D9 tura colectorului pune hotărârea pe bot (la 30 de minute) și o
 await test("D10 ruta mcVerdict păstrează hot (doar chei din listă) și bilanțul hotărârilor", () => {
   const src = citeste("functions", "api", "istoric-bot.js");
   assert.ok(/const HOT=\["tine","inchide","tpAproape","tpMargine","tpFara","stopMargine","stopLarg","plan","reporneste"\]/.test(src));
-  assert.ok(/hot:x\.hot&&typeof x\.hot==="object"&&HOT\.includes\(x\.hot\.cheie\)/.test(src) && /JSON\.stringify\(\{la,boti,calibrare,calibrareScurt,hotarari\}\)/.test(src));
-  const col = citeste("scripts", "colector.mjs"); assert.ok(/hotarari: hotarari \}/.test(col) && /scrieHotJurnal\(jh\)/.test(col));   // v100.352: în fișierul lui (hot-jurnal.json + .bak)
+  assert.ok(/hot:x\.hot&&typeof x\.hot==="object"&&HOT\.includes\(x\.hot\.cheie\)/.test(src) && /JSON\.stringify\(\{la,boti,calibrare,calibrareScurt,hotarari(?:,nevazut)?\}\)/.test(src));
+  const col = citeste("scripts", "colector.mjs"); assert.ok(/hotarari: hotarari(?:, nevazut: citesteNevazut\(\) \/\* v100\.356 \(I-895\) \*\/)? \}/.test(col) && /scrieHotJurnal\(jh\)/.test(col));   // v100.352: în fișierul lui (hot-jurnal.json + .bak)
 });
 
 // măruntele rămase din v100.350

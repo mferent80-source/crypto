@@ -5336,6 +5336,7 @@ async function nuCryptoInvataPagina(){
   }catch(e){/* lista lipsește: rămâne lista scrisă de mână */}
 }
 if(typeof window!=="undefined")window.addEventListener("DOMContentLoaded",function(){setTimeout(nuCryptoInvataPagina,1500)});
+if(typeof window!=="undefined")window.addEventListener("DOMContentLoaded",function(){setTimeout(function(){try{tbMcDinKv()}catch(e){}},2500)});   /* v100.356 (I-895): partea nevăzută re-măsurată (KV), înainte de fișă */
 async function grAduMonede(){
   if(grStare.monede)return;
   try{
@@ -8244,7 +8245,7 @@ var tbMcKv={la:0,d:null,inLucru:null};
 function tbMcDinKv(){
   if(Date.now()-tbMcKv.la<2*60000)return Promise.resolve(tbMcKv.d);
   if(tbMcKv.inLucru)return tbMcKv.inLucru;
-  tbMcKv.inLucru=(async function(){try{var r=await getJSON("/api/istoric-bot?action=mcVerdict");tbMcKv.d=r&&r.mcVerdict&&r.mcVerdict.boti?r.mcVerdict:null}catch(e){tbMcKv.d=null}tbMcKv.la=Date.now();tbMcKv.inLucru=null;return tbMcKv.d})();
+  tbMcKv.inLucru=(async function(){try{var r=await getJSON("/api/istoric-bot?action=mcVerdict");try{if(r&&r.mcVerdict&&r.mcVerdict.nevazut&&typeof GridProba!=="undefined"&&GridProba.puneNevazut)GridProba.puneNevazut(r.mcVerdict.nevazut)}catch(e){}/* v100.356 (I-895) */tbMcKv.d=r&&r.mcVerdict&&r.mcVerdict.boti?r.mcVerdict:null}catch(e){tbMcKv.d=null}tbMcKv.la=Date.now();tbMcKv.inLucru=null;return tbMcKv.d})();
   return tbMcKv.inLucru}
 // revizia (8): cheia = setarea botului (grid, stop, TP, levier, pornire, activ) + planul lui - schimbate ⇒ se socotește din nou, nu peste 15 minute
 function tbMcCheie(b){try{var d=GridSim.setariDinBot(b),pl=tbPlan.botId===b.id&&tbPlan.plan&&!tbPlan.plan.proba?tbPlan.plan:null;return JSON.stringify([d.st,d.pornitLa,b.activ!==false,pl?{minus:pl.minus,plus:pl.plus}:null])}catch(e){return null}}

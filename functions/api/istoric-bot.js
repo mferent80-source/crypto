@@ -588,9 +588,14 @@ export async function onRequestPost({request,env}){
     const calibrareScurt=cs&&typeof cs==="object"&&Array.isArray(cs.ore)?{ore:cs.ore.filter(x=>x&&typeof x==="object"&&[1,4,24].includes(nr(x.ore))).slice(0,3).map(x=>({ore:nr(x.ore),n:nr(x.n),zile:nr(x.zile),pStopMed:nr(x.pStopMed),stopRata:nr(x.stopRata),stopDifJos:nr(x.stopDifJos),stopDifSus:nr(x.stopDifSus),verdictStop:vd(x.verdictStop),
       nSub5:nr(x.nSub5),sub5Rata:nr(x.sub5Rata),sub5Jos:nr(x.sub5Jos),sub5Sus:nr(x.sub5Sus),verdictP5:vd(x.verdictP5),tine:nr(x.tine),necitit:nr(x.necitit),expirat:nr(x.expirat),deschise:nr(x.deschise)}))}:null;
     /* v100.351: bilanțul hotărârilor („Ce fac cu botul ăsta?”) judecate pe barele reale - numere și textul colectorului */
-    const hh=corp&&corp.hotarari,hotarari=hh&&typeof hh==="object"?{j1:nr(hh.j1),j7:nr(hh.j7),alt:nr(hh.alt),bun:nr(hh.bun),tin:nr(hh.tin),tBun:nr(hh.tBun),astept:nr(hh.astept),nejud:nr(hh.nejud),medie:nr(hh.medie),jos:nr(hh.jos),sus:nr(hh.sus),text:String(hh.text||"").slice(0,700),
-      /* v100.355 (regula B): verdictul bilanțului - stare din listă, numere */ verdict:hh.verdict&&typeof hh.verdict==="object"&&["prea-putine","n-am-aflat","au-pierdut","au-batut"].includes(hh.verdict.stare)?{stare:hh.verdict.stare,n:nr(hh.verdict.n),privire:nr(hh.verdict.privire),t:nr(hh.verdict.t),final:hh.verdict.final===true}:null}:null;
-    await env.ISTORIC.put("mc-verdict",JSON.stringify({la,boti,calibrare,calibrareScurt,hotarari}));return json({ok:true})
+    const hh=corp&&corp.hotarari,hotarari=hh&&typeof hh==="object"?{j1:nr(hh.j1),j7:nr(hh.j7),alt:nr(hh.alt),bun:nr(hh.bun),tin:nr(hh.tin),tBun:nr(hh.tBun),astept:nr(hh.astept),nejud:nr(hh.nejud),medie:nr(hh.medie),jos:nr(hh.jos),sus:nr(hh.sus),text:String(hh.text||"").slice(0,1100)/* v100.356: + calibrarea (I-893) */,
+      /* v100.355 (regula B): verdictul bilanțului - stare din listă, numere */ verdict:hh.verdict&&typeof hh.verdict==="object"&&["prea-putine","n-am-aflat","au-pierdut","au-batut"].includes(hh.verdict.stare)?{stare:hh.verdict.stare,n:nr(hh.verdict.n),privire:nr(hh.verdict.privire),t:nr(hh.verdict.t),final:hh.verdict.final===true}:null,calMedie:nr(hh.calMedie),
+      /* v100.356 (I-893): verdictul calibrării - aceeași formă */ cal:hh.cal&&typeof hh.cal==="object"&&["prea-putine","n-am-aflat","au-pierdut","au-batut"].includes(hh.cal.stare)?{stare:hh.cal.stare,n:nr(hh.cal.n),privire:nr(hh.cal.privire),t:nr(hh.cal.t),final:hh.cal.final===true}:null}:null;
+    /* v100.356 (I-895): partea nevăzută re-măsurată lunar - doar întreagă și plauzibilă (0 ≤ cifră < 10, data zz.ll.aaaa) */
+    const nv=corp&&corp.nevazut,bunNv=(o)=>!!o&&typeof o==="object"&&["zi1","zi3","zi7","pasMic"].every((k)=>{const v=nr(o[k]);return v!==null&&v>=0&&v<10}),
+      unNv=(o)=>({zi1:nr(o.zi1),zi3:nr(o.zi3),zi7:nr(o.zi7),pasMic:nr(o.pasMic)}),
+      nevazut=nv&&typeof nv==="object"&&/^\d{2}\.\d{2}\.\d{4}$/.test(String(nv.la))&&bunNv(nv.m15)&&bunNv(nv.h1)?{la:String(nv.la),monede:nr(nv.monede),m15:unNv(nv.m15),h1:unNv(nv.h1)}:null;
+    await env.ISTORIC.put("mc-verdict",JSON.stringify({la,boti,calibrare,calibrareScurt,hotarari,nevazut}));return json({ok:true})
   }
   // v100.150 (I-583): lățimea pieței - validată strict (numere finite, simboluri = litere/cifre din orice alfabet + USDT, 1-30 de semne - Binance are
   // și TUSDT / 4USDT și perp-uri cu nume chinezești (币安人生USDT); cel mult 200 de monede, dir din listă);

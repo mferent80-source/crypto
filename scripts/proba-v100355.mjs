@@ -66,7 +66,7 @@ await test("B5 legăturile: colectorul socotește verdictul ÎNAINTE de tură ș
   assert.match(c, /anunta: \(m, bot, cheie\) => trimiteAlerta\(m, bot, cheie\), bilantPierdut \}\);/);
   assert.match(c, /const regB = actualizeazaBilant\(citesteHotBilant\(\), hotarari, GridSim\.VERS_HOT, acumH\); scrieHotBilant\(regB\); hotarari = raportHotarari\(jh, GridSim\.VERS_HOT, regB\);/);
   assert.match(c, /const HOT_BILANT_F = path\.join\(DATA, "hot-bilant\.json"\);/); assert.match(c, /scrieSigur\(HOT_BILANT_F, r\); scrieSigur\(HOT_BILANT_F \+ "\.bak", r\);/);
-  assert.match(citeste("scripts", "lib", "tura-monte-carlo-bot.mjs"), /d\.GridSim\.hotarare\(b15, set, \{[^}]*bilantPierdut: !!d\.bilantPierdut/);
+  assert.match(citeste("scripts", "lib", "tura-monte-carlo-bot.mjs"), /(?:d\.GridSim\.hotarare\(|calc\(d, "hotarare", )b15, set, \{[^}]*bilantPierdut: !!d\.bilantPierdut/);
   const e = lib("grid-sim-ecran.js"), i1 = e.indexOf("var bilP = "), i2 = e.indexOf('gsInWorker("hotarare"'); assert.ok(i1 > 0 && i1 < i2, "bilanțul înaintea hotărârii"); assert.match(e, /gsInWorker\("hotarare", d\.b15, st, \{ bilantPierdut: bilP,/);
   const ruta = citeste("functions", "api", "istoric-bot.js"); assert.match(ruta, /\["prea-putine","n-am-aflat","au-pierdut","au-batut"\]\.includes\(hh\.verdict\.stare\)/);
   assert.match(e, /Bilanțul are o regulă scrisă înainte de date \(17\.11\)/);
@@ -173,12 +173,12 @@ await test("🔑 A5 pe pagină: „Ce fac” spune înclinarea spre închidere �
   assert.match(lib("monte-simbol-ecran.js"), /GridProba\.nevazutText\("15m"\)\.replace\(\/\^\.\/, function \(c\) \{ return c\.toUpperCase\(\); \}\)/);
   assert.match(citeste("public", "app.js"), /escapeHtml\(GridProba\.nevazutText\(f\.proba&&f\.proba\.barePeZi===24\?"1h":"15m"\)\)\+'\. Deci un minus pe istoric nu e o dovadă, iar „media pe test peste zero” e o ștachetă mai înaltă decât pare\./);
 });
-await test("V versiunile v100.355 (index ×4, sw, versiune.js, package + lanț, BUILD_INFO) + colector v101.193; VERS_HOT rămâne 3 (motorul nu s-a schimbat ⇒ bilanțul nu repornește)", () => {
-  const h = citeste("public", "index.html"); assert.equal((h.match(/v100\.355/g) || []).length, 4); assert.match(h, /v100\.355 · PARTEA NEVĂZUTĂ A LUMÂNĂRII/);
-  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-355/); assert.match(citeste("functions", "_shared", "versiune.js"), /"v100\.355"/);
-  const p = JSON.parse(citeste("package.json")); assert.equal(p.version, "100.355.0"); assert.match(p.scripts.test, /npm run test:v100354 && npm run test:v100355/);
-  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.match(bi.badge, /^v100\.355/); assert.ok(bi.i888 && bi.rest354);
-  assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.193";/); assert.equal(GS.VERS_HOT, 3); assert.equal(TMC.VERS_HOT, 3);
+await test("V versiunile de la v100.355 încolo (index, sw, versiune.js, package + lanț, BUILD_INFO) + colector ≥ v101.193; VERS_HOT ≥ 3, același în motor și în bilanț", () => {
+  const nr = (t) => Number((String(t).match(/100[.-](\d{3})/) || [])[1]);   // v100.356: versiunea curentă o verifică proba ei
+  assert.ok(nr(citeste("functions", "_shared", "versiune.js")) >= 355 && nr(citeste("public", "sw.js")) >= 355 && nr(JSON.parse(citeste("BUILD_INFO.json")).badge) >= 355);
+  const p = JSON.parse(citeste("package.json")); assert.ok(nr(p.version) >= 355); assert.match(p.scripts.test, /npm run test:v100354 && npm run test:v100355/);
+  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.ok(bi.i888 && bi.rest354);
+  assert.ok(Number((citeste("scripts", "colector.mjs").match(/const VERSIUNE_COLECTOR = "v101\.(\d+)";/) || [])[1]) >= 193); assert.ok(GS.VERS_HOT >= 3); assert.equal(TMC.VERS_HOT, GS.VERS_HOT);
 });
 
 console.log(`\n${teste - picate}/${teste} trec`);
