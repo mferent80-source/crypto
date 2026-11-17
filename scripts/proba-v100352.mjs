@@ -34,7 +34,8 @@ await test("🔑 E1 (🔴 auditul) coada de la pornire trece de planul tău ⇒ 
   const g = lib("grid-sim.js"); assert.ok(/if \(ales\.cheie !== "inchide" && o\.plan/.test(g), "verificarea planului la ORICE ales, nu doar la „îl țin”");
 });
 await test("🔑 E2 (auditul) „îl închid și pornesc unul la fel” la un long cu stop pe preț și fără TP: stopul nou fără câmpul „sus” (null era citit ca stop la 0 ⇒ ieșit la prima bară)", () => {
-  const h = GS.hotarare(B, LONG, Object.assign({}, O, { plan: null })), r = h.actiuni.find((a) => a.cheie === "reporneste");
+  // v100.354: la 20× stopul la −15% stă dincolo de lichidare (~−8%) ⇒ rândul e scos acum (garda lichidării); scenariul de aici: același bot la 3×
+  const h = GS.hotarare(B, Object.assign({}, LONG, { levier: 3 }), Object.assign({}, O, { plan: null })), r = h.actiuni.find((a) => a.cheie === "reporneste");
   assert.ok(r && !r.eroare, r && r.eroare); assert.deepEqual(Object.keys(r.nou.stop), ["jos"]);
   assert.ok(r.oriz[1].pStop < 0.9, "stopul atins pe " + r.oriz[1].pStop); assert.ok(r.oriz[1].p5 < r.oriz[1].p50 - 0.5, "coada nu mai e o singură valoare");
   // garda în motor: un câmp null / 0 nu e stop
@@ -100,7 +101,8 @@ await test("🔑 E9 (auditul) tura MC: nota zilei = recomandarea AFIȘATĂ (hot.
 });
 await test("E10 (auditul) bilanțul hotărârilor: doar regula de acum (v), pe un bot note la ≥ 7 zile una de alta, sub 30 ⇒ „prea puține”; boții prea vechi pe nume", () => {
   const z = (t, id, v, y7) => ({ id, sim: "X", z: "z" + t, nota: { t, tUrm: t, v, ales: "tine" }, y1: null, y7 });
-  const D = 86400000, j = [z(0, "a", undefined, { val: { tine: 1, inchide: 0 } }), z(1 * D, "a", 2, { val: { tine: 1, inchide: 0 } }), z(3 * D, "a", 2, { val: { tine: -1, inchide: 0 } }), z(9 * D, "a", 2, { val: { tine: 2, inchide: 0 } }), z(2 * D, "b", 2, { eroare: "botul era pornit de prea mult: Pionex dă cam 31 de zile" })];
+  const V = GS.VERS_HOT;   // v100.354: regula de acum din motor (3), nu scrisă de mână
+  const D = 86400000, j = [z(0, "a", undefined, { val: { tine: 1, inchide: 0 } }), z(1 * D, "a", V, { val: { tine: 1, inchide: 0 } }), z(3 * D, "a", V, { val: { tine: -1, inchide: 0 } }), z(9 * D, "a", V, { val: { tine: 2, inchide: 0 } }), z(2 * D, "b", V, { eroare: "botul era pornit de prea mult: Pionex dă cam 31 de zile" })];
   const r = TMC.raportHotarari(j); assert.equal(r.altaRegula, 1); assert.equal(r.j7, 2); assert.equal(r.suprapuse, 1); assert.equal(r.vechi, 1);
   assert.ok(/sub 30 de hotărâri independente/.test(r.text) && /1 bot prea vechi/.test(r.text) && /regula de dinainte/.test(r.text), r.text);
 });
@@ -182,7 +184,7 @@ await test("E18 (auditul) Tabloul: rândul 🧭 cu ora de la care ține, schimba
 
 // ── revizia Opus a reparațiilor (17.11) ──────────────────────────────────────────────────────────────────────────────────────────────────────
 await test("🔑 RV8 (revizia, 🔴) bilanțul: ferestrele pe bot ȘI pe fel - nota zilnică „îl țin” nu mai aruncă nota anunțului „îl închid” din aceeași zi", () => {
-  const D = 86400000, j = []; for (let b = 0; b < 3; b++) for (let d = 0; d < 30; d++) { j.push({ id: "b" + b, z: "z" + d, nota: { t: d * D, v: 2, ales: "tine" }, y7: { val: { tine: 1, inchide: 0 } } }); if (d % 10 === 0) j.push({ id: "b" + b, z: "z" + d, nota: { t: d * D + 60000, v: 2, ales: "inchide" }, anunt: true, y7: { val: { tine: -2, inchide: 0 } } }); }
+  const D = 86400000, j = []; for (let b = 0; b < 3; b++) for (let d = 0; d < 30; d++) { j.push({ id: "b" + b, z: "z" + d, nota: { t: d * D, v: GS.VERS_HOT, ales: "tine" }, y7: { val: { tine: 1, inchide: 0 } } }); if (d % 10 === 0) j.push({ id: "b" + b, z: "z" + d, nota: { t: d * D + 60000, v: GS.VERS_HOT, ales: "inchide" }, anunt: true, y7: { val: { tine: -2, inchide: 0 } } }); }
   const r = TMC.raportHotarari(j); assert.equal(r.alt, 9, JSON.stringify(r).slice(0, 300)); assert.ok(r.tin > 0 && /când am zis altceva decât «îl țin» \(9\)/.test(r.text), r.text);
 });
 await test("🔑 RV9 (revizia) „îl închid” pe planul tău: anunțat la prima socotire, fără pauză, plafon pe zi sau histerezis; starea veche cu „plan” e citită ca „îl țin”", () => {

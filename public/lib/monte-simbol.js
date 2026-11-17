@@ -32,6 +32,8 @@ var MonteSimbol = (function () {
     if (!Array.isArray(b) || b.length < minZ * bz) return { eroare: "Prea puțin istoric ca să simulez: " + cate(zi, "zi", "zile") + "; îmi trebuie cel puțin " + minZ + "." };
     var n = o.n || 2000, bloc = (o.blocZile || o.bloc || 5) * bz, sp = o.stopPct > 0 ? o.stopPct : 0.1, tp = o.tintaPct > 0 ? o.tintaPct : 0.15, prag = o.prag > 0 ? o.prag : 0.1;
     var mu = tendinta(b), fara = o.cuTendinta !== true;
+    // v100.354 (auditul v100.351, 🔵): agitația de acum, ca la grid - doar când cel care cheamă o dă (o.agitatie, măsurată pe 15 minute); fără ea, ca înainte
+    var agP = o.agitatie && o.agitatie.r > 0 && Math.abs(o.agitatie.r - 1) > 0.02 ? Number(o.agitatie.r) : null;
     // v100.129: poziția lui - intrarea ca raport față de prețul de acum (> 1 = e pe minus: o atinge dacă urcă; < 1 = pe plus: o atinge dacă scade)
     var R = o.intrare > 0 ? o.intrare : null;
     // v100.130: alte stopuri pe ACELEAȘI drumuri (doar în trecerea de bază): cine vine întâi și cu cât ieși - la stop cel mult nivelul
@@ -45,7 +47,7 @@ var MonteSimbol = (function () {
       var sl = cuSL && SL ? SL.map(function (x) { return nou(x, tp); }) : null, tl = cuSL && TL ? TL.map(function (x) { return nou(sp, x); }) : null;
       var toate = (sl || []).concat(tl || []);
       for (var s = 0; s < n; s++) {
-        var d = drum(b, H, Math.min(bloc, H), 1, rnd, m), atins = null, atI = false;
+        var d = agP ? scaleazaDrum(drum(b, H, Math.min(bloc, H), 1, rnd, mu), 1, agP, m - mu, bz) : drum(b, H, Math.min(bloc, H), 1, rnd, m), atins = null, atI = false;
         toate.forEach(function (k) {
           var ies = null;
           for (var q = 0; q < d.length && ies === null; q++) { if (d[q].l <= 1 - k.sp) { ies = Math.min(1 - k.sp, d[q].o) - 1; k.st++; } else if (d[q].h >= 1 + k.tp) { ies = Math.max(1 + k.tp, d[q].o) - 1; k.ti++; } }
@@ -88,7 +90,7 @@ var MonteSimbol = (function () {
       if (fara && !o.faraCuTendinta) { var c = trece(Z, j, 0); r.cuTendinta = { p50: c.p50, pSus: c.pSus, pJos: c.pJos, pStop: c.pStop, pTinta: c.pTinta }; }
       return r;
     });
-    return { n: n, blocZile: bloc / bz, barePeZi: bz, zileIstoric: zi, stopPct: sp, tintaPct: tp, prag: prag, faraTendinta: fara, tendintaPeZi: Math.exp(mu * bz) - 1, orizonturi: orizonturi };
+    return { n: n, agitatie: agP, blocZile: bloc / bz, barePeZi: bz, zileIstoric: zi, stopPct: sp, tintaPct: tp, prag: prag, faraTendinta: fara, tendintaPeZi: Math.exp(mu * bz) - 1, orizonturi: orizonturi };
   }
   // histograma pentru grafic: k coloane între percentila 1% și 99% (cozile intră în prima / ultima coloană)
   function histograma(v, k) {
@@ -114,10 +116,10 @@ var MonteSimbol = (function () {
     return { r: Math.min(2.89, Math.max(0.36, (rv[0] + rv[1]) / 2 / med)), zile: Z, stingere: STINGERE };
   }
   // drumul tras fără tendință, cu randamentele × k pe ziua lui (k² = 1 + (r − 1)·STINGERE^(zi+1)), apoi tendința mm pe bară scoasă; pe loc (drumul e nou)
-  function scaleazaDrum(d, P0, r, mm) {
-    var cp = P0, cb = P0, dr = mm ? Math.exp(-mm) : 1, zi = -1, kv = 1;
+  function scaleazaDrum(d, P0, r, mm, bz) {
+    var cp = P0, cb = P0, dr = mm ? Math.exp(-mm) : 1, zi = -1, kv = 1, pz = bz > 0 ? bz : BZA;   // v100.354: bz = barele pe zi ale drumului (prețul pe zile: 1)
     for (var q = 0; q < d.length; q++) {
-      var x = d[q], z = (q / BZA) | 0; if (z !== zi) { zi = z; kv = Math.sqrt(Math.max(0.05, 1 + (r - 1) * Math.pow(STINGERE, z + 1))); }
+      var x = d[q], z = (q / pz) | 0; if (z !== zi) { zi = z; kv = Math.sqrt(Math.max(0.05, 1 + (r - 1) * Math.pow(STINGERE, z + 1))); }
       var lb = Math.log(cb), f = cp * dr, c0 = x.c;
       x.o = f * Math.exp(kv * (Math.log(x.o) - lb)); x.h = f * Math.exp(kv * (Math.log(x.h) - lb)); x.l = f * Math.exp(kv * (Math.log(x.l) - lb)); x.c = f * Math.exp(kv * (Math.log(c0) - lb));
       cb = c0; cp = x.c;

@@ -480,6 +480,7 @@ function mcsGridHtml(r) {
   // v100.272 (ideile auditului 29.10): istoricul de 15 minute mai scurt decât de obicei (o pagină picată / monedă nouă) se spune sus, nu doar în nota de jos
   var tIst = mcsIstoricScurt(r.istoric15, "simularea botului e pe atât");
   if (tIst) cap += '<p class="tbWarn mcsNota">' + mcsEsc(tIst + (r.istoric15.motiv === "pagina" ? " Apasă „Analizează” din nou peste un minut." : "")) + '</p>';
+  if (!g && (r.gridInLucru || r.gridCere)) return cap + '<p class="tbSub mcsNota">calculez drumurile botului (în fundal - pagina merge)…</p></section>';   /* v100.354 */
   if (!g || g.eroare) return cap + '<p class="tbWarn mcsNota">' + mcsEsc(g && g.eroare || "fără date") + '</p></section>';
   if (r.gsimCere || r.gsimInLucru) return cap + '<p class="tbSub mcsNota">calculez botul pe 1.000 de drumuri (în fundal, pagina merge)…</p></section>';   /* v100.351 */
   if (r.gsimEroare) return cap + '<p class="tbWarn mcsNota">' + mcsEsc("Nu am putut simula botul: " + r.gsimEroare + " - apasă „Refă” ca să reîncerc.") + '</p></section>';   /* v100.352 (auditul) */
@@ -499,7 +500,7 @@ function mcsGridHtml(r) {
     + (g.cuTendinta ? '<p class="tbSub">Cu tendința perioadei păstrată: mijlocul ' + mcsBani1(g.cuTendinta.p50) + ', pe plus ' + mcsPr(g.cuTendinta.pPlus) + (stopV ? ', stopul ' + mcsPr(g.cuTendinta.pStop) : '') + '.</p>' : '')
     + '<p class="t212Fac">👉 <b>' + (gv ? "Ce aș face eu:</b> " + mcsEsc(gv.faCe) : "Ce înseamnă:</b> " + mcsEsc("rezultatul obișnuit în " + mcsCate(g.zile, "zi", "zile") + " e " + mcsBani1(g.p50) + "; lichidare în " + mcsPr(g.pLichidare) + " din drumuri" + (stopV ? ", stopul atins în " + mcsPr(g.pStop) : "") + ".")) + '</p></div></div>'
     + mcsVarHtml(r) + mcsTpHtml(r)
-    + '<p class="tbSub mcsNota">' + mcsEsc(mcsCate(g.zileIstoric, "zi", "zile") + " pe 15 minute (" + (r.istoric15 && r.istoric15.motiv === "pagina" ? "o pagină n-a venit de la Pionex" : "atât dă Pionex") + "); drumurile = zile întregi reale, fără tendința perioadei. Variantele și țintele: câte 500 de drumuri (cardul de sus: " + (((r.gsim && !r.gsim.eroare && r.gsim.n) || 500).toLocaleString("ro-RO")) + "), deci mici diferențe față de card.") + '</p></section>';
+    + '<p class="tbSub mcsNota">' + mcsEsc(mcsCate(g.zileIstoric, "zi", "zile") + " pe 15 minute (" + (r.istoric15 && r.istoric15.motiv === "pagina" ? "o pagină n-a venit de la Pionex" : "atât dă Pionex") + "); drumurile = zile întregi reale, fără tendința perioadei. Variantele și țintele: pe aceleași " + MCS_N_TABEL.toLocaleString("ro-RO") + " de drumuri ca și cardul de sus (aceeași sămânță), deci rândul botului tău are cifrele cardului.") + '</p></section>';
 }
 // v100.129: „Compară variante” (la cerere: câteva secunde) ⇒ tabelul pe aceleași drumuri + „ce aș face eu”
 function mcsVarHtml(r, act, zile) {
@@ -578,7 +579,15 @@ var MCS_RECENTE = "cryptoRadarMcsRecenteV1";
 function mcsCitesteRecente() { try { var v = JSON.parse(localStorage.getItem(MCS_RECENTE) || "[]"); return mcsRecente(v, ""); } catch (e) { return []; } }
 function mcsSalveazaRecente() { try { localStorage.setItem(MCS_RECENTE, JSON.stringify(mcsStare.recente || [])); } catch (e) {} }
 // v100.351 (viteza): simularea botului cerută de mcsCalculeaza (r.gsimCere) ⇒ worker; la sosire, dacă rezultatul e tot cel de pe ecran, se pune și se redesenează
+// v100.354 (revizia 🟡4): la 1.000 de drumuri botul de pe pagina Monte Carlo și tabelele de sub el ar îngheța telefonul câteva secunde ⇒ worker
+function mcsCuWorker(o) { return !(o && o.sincron) && typeof gsInWorker === "function" && typeof Worker !== "undefined"; }
+function mcsGridPorneste() {
+  var r = mcsStare.rez, d = mcsStare.date; if (!r || !r.gridCere || !d || !d.b15) return;
+  var c = r.gridCere; r.gridCere = null; r.gridInLucru = true;
+  gsInWorker("mcGrid", d.b15, c.st, c.o).then(function (g) { r.grid = g && !g.eroare ? g : { eroare: String(g && g.eroare || "fără rezultat") }; r.gridInLucru = false; if (mcsStare.rez === r) mcsDeseneaza(); });
+}
 function mcsGsimPorneste() {
+  mcsGridPorneste();
   var r = mcsStare.rez, d = mcsStare.date; if (!r || !r.gsimCere || !d || !d.b15) return;
   var c = r.gsimCere; r.gsimCere = null; r.gsimInLucru = true;
   gsInWorker("simuleaza", d.b15, c.st, c.o).then(function (g) { r.gsim = g && !g.eroare ? g : null; r.gsimEroare = r.gsim ? null : String(g && g.eroare || "fără rezultat"); r.gsimInLucru = false; if (mcsStare.rez === r) mcsDeseneaza(); });   /* v100.352 (auditul): picată ⇒ spusă, nu cifrele vechi pe tăcute */
@@ -618,24 +627,27 @@ function mcsAlegeBot(v) {
   if (!d || d.tip !== "coin") return;
   mcsStare.rez = mcsCalculeaza(d, { stop: mcsNumar("mcsStop", null), tinta: mcsNumar("mcsTinta", null),   /* v100.352 (auditul): câmpuri de PROCENTE - „7.125” e 7,125%, nu prețul */ botIdx: mcsStare.botIdx, oriz: mcsStare.oriz[d.tip] }); mcsDeseneaza();
 }
+// v100.354 (auditul v100.351, 🔵): cardul botului (Simulatorul) are 1.000 de drumuri, tabelele de sub el aveau 500 ⇒ „botul tău” ieșea cu altă cifră
+// decât cardul (2,43 față de 2,55 pe același bot). Acum aceleași 1.000 (aceeași sămânță ⇒ aceleași drumuri, același mijloc); tabelele cer de 2 ori mai mult.
+var MCS_N_TABEL = 1000;
 function mcsCompara() {
   var r = mcsStare.rez, d = mcsStare.date;
   if (!r || !d || d.tip !== "coin" || !r.setari || r.varianteInLucru) return;
   r.varianteInLucru = true; mcsDeseneaza();
-  setTimeout(function () {
-    try { r.variante = mcsCalcVariante(d.b15, r.setari, r.pret, { n: 500, prima: r.grid && !r.grid.eroare ? r.grid : null }); r.varianteEroare = null; } catch (e) { r.variante = null; r.varianteEroare = "Variantele n-au mers: " + (e && e.message || e); }
-    r.varianteInLucru = false; if (mcsStare.rez === r) mcsDeseneaza();
-  }, 30);
+  var gata = function (v, e) { if (v && !v.eroare && !e) { r.variante = v; r.varianteEroare = null; } else { r.variante = null; r.varianteEroare = "Variantele n-au mers: " + (e && e.message || e || v && v.eroare || "fără rezultat"); } r.varianteInLucru = false; if (mcsStare.rez === r) mcsDeseneaza(); };
+  var oV = { n: MCS_N_TABEL, prima: r.grid && !r.grid.eroare ? r.grid : null, pret: r.pret };
+  if (mcsCuWorker()) { gsInWorker("variante", d.b15, r.setari, oV).then(function (v) { gata(v); }); return; }   /* v100.354: în worker */
+  setTimeout(function () { try { gata(mcsCalcVariante(d.b15, r.setari, r.pret, oV)); } catch (e) { gata(null, e); } }, 30);
 }
 // v100.132: „Compară ținte (TP)” - ca variantele, la cerere (câteva secunde)
 function mcsComparaTp() {
   var r = mcsStare.rez, d = mcsStare.date;
   if (!r || !d || d.tip !== "coin" || !r.setari || r.tinteBotInLucru) return;
   r.tinteBotInLucru = true; mcsDeseneaza();
-  setTimeout(function () {
-    try { r.tinteBot = mcsCalcTinteBot(d.b15, r.setari, r.pret, { n: 500, prima: r.grid && !r.grid.eroare ? r.grid : null }); r.tinteBotEroare = null; } catch (e) { r.tinteBot = null; r.tinteBotEroare = "Țintele n-au mers: " + (e && e.message || e); }
-    r.tinteBotInLucru = false; if (mcsStare.rez === r) mcsDeseneaza();
-  }, 30);
+  var gata = function (v, e) { if (v && !v.eroare && !e) { r.tinteBot = v; r.tinteBotEroare = null; } else { r.tinteBot = null; r.tinteBotEroare = "Țintele n-au mers: " + (e && e.message || e || v && v.eroare || "fără rezultat"); } r.tinteBotInLucru = false; if (mcsStare.rez === r) mcsDeseneaza(); };
+  var oT = { n: MCS_N_TABEL, prima: r.grid && !r.grid.eroare ? r.grid : null, pret: r.pret };
+  if (mcsCuWorker()) { gsInWorker("tinte", d.b15, r.setari, oT).then(function (v) { gata(v); }); return; }   /* v100.354: în worker */
+  setTimeout(function () { try { gata(mcsCalcTinteBot(d.b15, r.setari, r.pret, oT)); } catch (e) { gata(null, e); } }, 30);
 }
 // 🎲 din detaliul unei poziții T212 / Salt: prețul de acum, intrarea și stopul în aceeași monedă (ale poziției) ⇒ doar rapoartele contează
 function mcsPozitie(sim, pret, intrare, stop) {
@@ -674,6 +686,9 @@ function mcsNrRo(t, P) {
   return isFinite(x) ? x : null;
 }
 function mcsPretAcum() { var d = typeof mcsStare !== "undefined" ? mcsStare.date : null, b = d && d.b15; return b && b.length ? b[b.length - 1].c : mcsStare && mcsStare.rez && mcsStare.rez.pret > 0 ? mcsStare.rez.pret : null; }
+// v100.354 (auditul, 🔵): la SUMĂ, „1,000” cu suma veche 30 se citea 1 (zecimala era mai aproape de 30 decât 1.000). O investiție Pionex sub 10 USDT
+// nu există ⇒ forma „d,ddd” care ar da sub 10 se citește în mii; restul (prețuri, procente) neschimbat
+function mcsSumaRo(t, x) { var s = String(t == null ? "" : t).trim().replace(/[\s\u00a0]/g, ""); return /^[1-9]\d{0,2},\d{3}$/.test(s) && x > 0 && x < 10 ? Number(s.replace(",", "")) : x; }   /* revizia: „0,500” rămâne 0,5 */
 function mcsNumar(id, P) { var el = mcsEl(id); return el ? mcsNrRo(el.value, P) : null; }
 // coin: 15M (6 pagini de câte 500, ca fișa Grid) + 1D; nimic pe Pionex ⇒ null (încerc stock)
 // revizia (R4): „lipsa” doar când Pionex spune că simbolul nu există (MARKET_INVALID_SYMBOL, HTTP 200) sau n-are nicio lumânare; orice altă
@@ -787,6 +802,8 @@ function mcsCalculeaza(d, o) {
     var slC = mcsListaStopuri(atrC ? mcsStopuriAtr(atrC) : [0.05, 0.1, 0.15, 0.2], sp), tlC = mcsListaTinte(tp);   // v100.131: și la coinuri
     var orC = mcsOrizontAles("coin", o.oriz);
     var optC = d.b1.length >= 60 ? { orizonturi: orC, n: 1000, blocZile: 5, seed: 11, stopPct: sp, tintaPct: tp, prag: 0.1, stopuri: slC, tinte: tlC } : { barePeZi: 96, orizonturi: orC, n: 600, blocZile: 1, minZile: 14, seed: 11, stopPct: sp, tintaPct: tp, prag: 0.1, stopuri: slC, tinte: tlC };
+    // v100.354: agitația de acum și în prețul Monte Carlo (aceeași r, din barele de 15 minute, ca cardul botului); la acțiuni nu (barele zilnice n-o pot măsura)
+    try { optC.agitatie = MonteSimbol.agitatieAcum ? MonteSimbol.agitatieAcum(d.b15) : null; } catch (e) { optC.agitatie = null; }
     var pretMc = mcsLegaJumatati(MonteSimbol.pret(d.b1.length >= 60 ? d.b1 : d.b15, optC), d.b1.length >= 60 ? d.b1 : d.b15, optC);   /* v100.350: și pe jumătăți */
     if (pretMc && !pretMc.eroare) pretMc.atrPct = atrC;
     var bi = o.botIdx || 0, st = o.setari || mcsSetariBot(mcsBoti(), d.sim, bi) || mcsSetariProba(P);
@@ -796,7 +813,7 @@ function mcsCalculeaza(d, o) {
     var gsim = pv ? pv.gsim : null, gsimCere = null;
     // v100.351 (viteza): cu worker (pagina), simularea botului se cere în fundal (mcsGsimPorneste); fără el (probe, worker lipsă) pe loc, ca înainte
     if (!pv || !gsim) { var stG = Object.assign({}, st, { suma: st.suma || 50 }), oG = { n: 1000, seed: 12, orizonturi: [7], zile: 7 };   /* revizia (🟡3): simularea veche încă în lucru ⇒ se cere din nou pentru cea nouă */ if (!o.sincron && typeof gsInWorker === "function" && typeof Worker !== "undefined") gsimCere = { st: stG, o: oG }; else { try { gsim = typeof GridSim !== "undefined" && GridSim.simuleaza ? GridSim.simuleaza(d.b15, stG, oG) : null; } catch (e) { gsim = null; } } }   /* v100.350: verdictul botului ca în Simulator */
-    return { gsim: gsim, gsimCere: gsimCere, b15n: d.b15.length, sim: d.sim, tip: "coin", oriz: o.oriz, sursa: d.sursa, pret: P, pretMc: pretMc, setari: st, fundingInfo: d.fundingInfo || null, boti: mcsEticheteBoti(mcsBoti(), d.sim), botIdx: bi, grid: pv ? pv.grid : MonteSimbol.grid(d.b15, Object.assign({ pret: P }, st), { zile: 7, n: 500, seed: 12, peDrum: true }), ist: d.ist, istoric15: d.istoric15 || null,   /* v100.272: istoricul scurt, spus */
+    return { gsim: gsim, gsimCere: gsimCere, b15n: d.b15.length, sim: d.sim, tip: "coin", oriz: o.oriz, sursa: d.sursa, pret: P, pretMc: pretMc, setari: st, fundingInfo: d.fundingInfo || null, boti: mcsEticheteBoti(mcsBoti(), d.sim), botIdx: bi, gridCere: !(pv && pv.grid) && mcsCuWorker(o) ? { st: Object.assign({ pret: P }, st), o: { zile: 7, n: MCS_N_TABEL, seed: 12, peDrum: true } } : null, grid: pv && pv.grid ? pv.grid : mcsCuWorker(o) ? null : MonteSimbol.grid(d.b15, Object.assign({ pret: P }, st), { zile: 7, n: MCS_N_TABEL, seed: 12, peDrum: true }), ist: d.ist, istoric15: d.istoric15 || null,   /* v100.272: istoricul scurt, spus */
       nivelText: o.stop > 0 || o.tinta > 0 ? "stopul și ținta tale" : "−10% / +15% pentru un coin: schimbă-le" };
   }
   var b = d.b, bt = d.bToate && d.bToate.length ? d.bToate : b, Pp = bt[bt.length - 1].c, n = typeof ActiuniSemnale !== "undefined" ? ActiuniSemnale.niveluri(bt, Pp, {}   /* revizia: prețul de acum (bursa deschisă) și nivelurile Radarului pe toate barele; drumurile pe zilele închise */) : null, ok = n && n.nivel === "ok";
@@ -861,7 +878,7 @@ function mcsSetariDinCampuri(c, vechi, P) {
   vechi = vechi || {}; var num = function (t, ref) { return mcsNrRo(t, ref > 0 ? ref : P); };   /* v100.351: „95.000” după preț (mcsNrRo) */
   var la = function (t, v, fmt) { var s = String(t == null ? "" : t).trim(); return v != null && isFinite(v) && s !== "" && s === fmt(v) ? v : num(s, v); };   /* v100.351: referința = valoarea veche a câmpului (suma rămâne sumă) */
   var stopV = vechi.stop ? (vechi.stop.sus || vechi.stop.jos) : null;
-  var jos = la(c.jos, vechi.jos, mcsCampPret), sus = la(c.sus, vechi.sus, mcsCampPret), g = c.linii != null ? (mcsNrRo(c.linii, null) || 0) - 1 : mcsNrRo(c.grile, null),   /* „Linii” ca în Pionex ⇒ intervale = linii − 1; v100.352: fără prețul ca reper */ lv = mcsNrRo(c.levier, null), suma = la(c.suma, vechi.suma, function (v) { return mcsCampNr(v, 2); }), dir = mcsDir(c.dir);
+  var jos = la(c.jos, vechi.jos, mcsCampPret), sus = la(c.sus, vechi.sus, mcsCampPret), g = c.linii != null ? (mcsNrRo(c.linii, null) || 0) - 1 : mcsNrRo(c.grile, null),   /* „Linii” ca în Pionex ⇒ intervale = linii − 1; v100.352: fără prețul ca reper */ lv = mcsNrRo(c.levier, null), suma = mcsSumaRo(c.suma, la(c.suma, vechi.suma, function (v) { return mcsCampNr(v, 2); })), dir = mcsDir(c.dir);
   var sb = la(c.stop, stopV, mcsCampPret), tpb = dir === "neutru" ? null : la(c.tp, vechi.tp > 0 ? vechi.tp : vechi.tpIgnorat, mcsCampPret); if (vechi.tpIgnorat > 0 && tpb === vechi.tpIgnorat) tpb = null;   /* revizia: TP-ul ignorat rămâne ignorat (nu „setări de probă”) */
   if (!(jos > 0) || !(sus > 0)) return { eroare: "Jos și Sus: prețuri peste zero." };
   if (!(sus > jos)) return { eroare: "Sus trebuie să fie peste jos." };

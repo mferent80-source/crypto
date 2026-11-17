@@ -191,16 +191,16 @@ await test("🔑 O11 convențiile pe textul Oscilo (rânduri, fișă, „unde e�
 });
 await test("O12 colectorul și ruta: tura legată (o dată pe zi, 2 h după un eșec), barele de 1 h incremental în data/pionex-1h, ruta sugestii:oscilo cu validare; versiunile", () => {
   const c = citeste("scripts", "colector.mjs"), r = citeste("functions", "api", "istoric-bot.js");
-  assert.match(c, /const VERSIUNE_COLECTOR = "v101\.191";/); assert.match(c, /import \{ turaOscilo as turaOsciloModul \} from "\.\/lib\/tura-oscilo\.mjs";/);
+  assert.ok(Number((c.match(/const VERSIUNE_COLECTOR = "v101\.(\d+)";/) || [])[1]) >= 191, "colectorul de la v101.191 încolo");   /* v100.354: versiunea curentă o verifică proba ei */ assert.match(c, /import \{ turaOscilo as turaOsciloModul \} from "\.\/lib\/tura-oscilo\.mjs";/);
   assert.match(c, /function klines1hDisc\(s\) \{ return klinesDisc\("pionex-1h", lumanariMem1h, 3600000, 500, "60M", s, null\); \}/);
   assert.match(c, /if \(val\.medii\) turaOsciloColector\(\)\.catch/); assert.match(c, /osciloStare\.esecLa \|\| 0\) < 2 \* 3600000/);
   assert.match(r, /if\(action==="oscilo"\)\{let v=null;try\{v=JSON\.parse\(await env\.ISTORIC\.get\("sugestii:oscilo"\)/);
   assert.match(r, /corp\.lista\.length>30\|\|!corp\.urmarire/);
   assert.match(citeste("public", "lib", "probe-ecran.js"), /pas\("oscilo", function \(\) \{ return getJSON\("\/api\/istoric-bot\?action=oscilo"\)/);
-  const h = citeste("public", "index.html"); assert.equal((h.match(/v100\.353/g) || []).length, 4); assert.match(h, /v100\.353 · OSCILO ÎN PROBĂ/);
-  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-353/); assert.match(citeste("functions", "_shared", "versiune.js"), /"v100\.353"/);
-  const p = JSON.parse(citeste("package.json")); assert.equal(p.version, "100.353.0"); assert.match(p.scripts.test, /npm run test:v100353/);
-  assert.match(JSON.parse(citeste("BUILD_INFO.json")).badge, /^v100\.353/);
+  const nr = (t) => Number((String(t).match(/100[.-](\d{3})/) || [])[1]);   // v100.354: de la v100.353 încolo (versiunea curentă o verifică proba ei)
+  assert.ok(nr(citeste("functions", "_shared", "versiune.js")) >= 353 && nr(citeste("public", "sw.js")) >= 353 && nr(JSON.parse(citeste("BUILD_INFO.json")).badge) >= 353);
+  const p = JSON.parse(citeste("package.json")); assert.ok(nr(p.version) >= 353); assert.match(p.scripts.test, /npm run test:v100353/);
+  assert.ok(JSON.parse(citeste("BUILD_INFO.json")).oscilo353, "intrarea oscilo353 rămâne în BUILD_INFO");
   assert.deepEqual(M.REG.variante, { G1: { ore: 168, stop: 1.5 }, G2: { ore: 72, stop: 1.5 }, G3: { ore: 168, stop: 1.2 } }, "variantele fixate înainte nu se mișcă");
   assert.deepEqual([M.REG.W, M.REG.hMin, M.REG.hMax, M.REG.trav, M.REG.viitor, M.REG.tPrincipal, M.REG.tGrid], [14, 0.05, 0.1, 6, 7, 2, 2.5]); assert.deepEqual(M.REG.priviri, [28, 42]);
 });

@@ -46,7 +46,7 @@ await test("(3) tbMcRand: verdictul în text, „șanse… · socotit hh:mm · u
 });
 await test("(1a) lib/grid-sim-worker.js: rulează în afara paginii (fără window / document), cu modulele paginii, și dă ACELAȘI rezultat ca pe fir", () => {
   const W = citeste("public", "lib", "grid-sim-worker.js"), trimise = [];
-  assert.match(W, /importScripts\("\/lib\/text-ro\.js", "\/lib\/grid-calcul\.js", "\/lib\/grid-proba\.js", "\/lib\/monte-simbol\.js", "\/lib\/grid-sim\.js"\)/);
+  assert.match(W, /importScripts\("\/lib\/text-ro\.js", "\/lib\/grid-calcul\.js", "\/lib\/grid-proba\.js", "\/lib\/monte-simbol\.js", "\/lib\/grid-sim\.js"(, "\/lib\/monte-simbol-ecran\.js")?\)/);   // v100.354: + pagina Monte Carlo (rularea de mai jos, fără DOM, o încarcă și pe ea)
   const ctx = { console, Date, Math, Object, Array, String, Number, JSON, isFinite, Promise };
   ctx.self = ctx; ctx.postMessage = (m) => trimise.push(m);
   ctx.importScripts = (...f) => f.forEach((p) => vm.runInContext(citeste("public", p.replace(/^\//, "").replace(/\//g, path.sep)), ctx, { filename: p }));

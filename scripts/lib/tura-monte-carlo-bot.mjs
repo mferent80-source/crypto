@@ -121,7 +121,7 @@ export async function turaMonteCarloBot(d) {
       let hot = st.boti[String(b.id)] && st.boti[String(b.id)].hot || null;
       if (s.pornitLa && d.GridSim.hotarare && !(hot && acum - (nr(hot.ultima) || 0) < HOT_MS)) {
         try {
-          const h = d.GridSim.hotarare(b15, set, { pornitLa: s.pornitLa, pozitiePionex: s.pozitie, plan, n: d.nHot || HOT_N, seed: 12, orizonturi: [1, 7], p5Plan: p5PlanDin(rez, opt) }), p = pasHotarare(hot, h, acum, nume);
+          const h = d.GridSim.hotarare(b15, set, { pornitLa: s.pornitLa, pozitiePionex: s.pozitie, lich: s.lich, plan, n: d.nHot || HOT_N, seed: 12, orizonturi: [1, 7], p5Plan: p5PlanDin(rez, opt) }), p = pasHotarare(hot, h, acum, nume);
           hot = p.hot; let anuntat = false;
           if (p.anunt && await d.anunta(p.anunt, b.id, (p.dupaAnunt.plan && p.dupaAnunt.cheie === "inchide" ? "hotplan-" : "hot-") + p.dupaAnunt.cheie + "-" + b.id)   /* revizia: cu botul (rezumatul de dimineață îi numără pe toți) */) { hot = p.dupaAnunt; anuntat = true; out.anuntate++; }   /* v100.352: „îl închid” pe planul tău nu așteaptă dimineața */
           // v100.352 (auditul): nota ține ce s-a AFIȘAT (recomandarea confirmată, pe Tablou), nu candidatul încă neconfirmat
@@ -404,7 +404,7 @@ export function raportScurt(jurnal) {
 // 4 socotiri (un ciclu pe 3 chei ocolea histerezisul pe una), cel mult 4 anunțuri pe bot pe zi
 // v100.352 (revizia): planul se judecă și pe drumurile verdictului (mai multe) - aceeași regulă ca pe pagină (oricare trece de minus ⇒ „îl închid”)
 function p5PlanDin(rez, opt) { try { const k = (opt.orizonturi || []).indexOf(7), z = k >= 0 && rez && rez.orizonturi ? rez.orizonturi[k] : null; return z && isFinite(z.p5) ? z.p5 : null; } catch { return null; } }
-export const HOT_MS = 30 * 60000, PAUZA_HOT_MS = PAUZA_ETICHETA_MS, HOT_N = 800, MAX_ANUNT_HOT_ZI = 4, VERS_HOT = 2;
+export const HOT_MS = 30 * 60000, PAUZA_HOT_MS = PAUZA_ETICHETA_MS, HOT_N = 800, MAX_ANUNT_HOT_ZI = 4, VERS_HOT = 3;   /* v100.354: garda lichidării */
 export function pasHotarare(prev, h, acum, nume) {
   if (!h || h.eroare) { const er = String(h && h.eroare || "fără rezultat").slice(0, 200); return { hot: Object.assign({}, prev || {}, { eroare: er, ultima: acum }) }; }
   const ch = h.ales && h.ales.cheie || "tine", a = (h.actiuni || []).find((x) => x && x.cheie === ch) || {}, n = a.nume || ch, mot = String(h.ales && h.ales.motiv || "");
