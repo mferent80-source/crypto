@@ -801,6 +801,11 @@ function acZileHtml(zile) {
     + (cap ? '<p class="acMut acLinSub">' + escapeHtml(cap.charAt(0).toUpperCase() + cap.slice(1)) + ".</p>" : "")
     + '<details class="acZileTab"' + (deschis ? " open" : "") + '><summary>Fiecare zi</summary><table><thead><tr><th>Ziua</th><th>Boți</th><th>Net</th></tr></thead><tbody>' + rand + "</tbody></table></details>";
 }
+// v100.355 (I-889): perpetuele scoase din listele crypto după formă (acțiuni tokenizate noi, încă netrecute în lista scrisă de mână) - la vedere
+function acNuCryptoTxt() {
+  var l = typeof nuCryptoNoi !== "undefined" && Array.isArray(nuCryptoNoi) ? nuCryptoNoi : [];
+  return l.length ? " · scoase din listele crypto (par acțiuni: se termină în X, preț cu 2 zecimale): " + escapeHtml(l.slice(0, 6).join(", ") + (l.length > 6 ? " +" + (l.length - 6) : "")) : "";   /* revizia (🔵): din toată lista PERP, nu doar din top 100 */
+}
 function acasaDeseneaza() {
   if (!$("acasa") || typeof Acasa === "undefined") return;
   acasa.memo = { la: Date.now() };   /* v100.332 (🟡7): socotelile grele (pauza sezonului) o dată pe desenare; se golește la sfârșit (și singur, după o secundă) */
@@ -833,7 +838,7 @@ function acasaDeseneaza() {
   var elFr = $("acFranaCont");
   if (elFr) { var hFr = faraParola ? "" : acFranaContHtml(acFranaContText(), acMasuraLin()); elFr.hidden = !hFr; elFr.classList.toggle("acFranaActiva", /acFrTxt/.test(hFr)); if (elFr._h !== hFr) { elFr._h = hFr; elFr.innerHTML = hFr; } }
   acasaVerd($("acVremeCrypto"), "Crypto", v, (faraParola ? AC_BUTON_PAROLA : cl ? acBare(0, [[cl.candidati, "var(--good)", "liniștite"], [cl.evita, "var(--bad)", "în mișcare"]])
-    + '<div class="acLeg"><span><b class="good">' + cl.candidati + '</b> liniștite</span><span><b class="bad">' + cl.evita + '</b> în mișcare' + acIeri(sc, "inMiscare", 0, true) + '</span><span class="acMut">top 100 futures</span></div>' : "") + (faraParola ? "" : acSurseHtml(acSurseCrypto(d))));   /* v100.336 (I-862) */
+    + '<div class="acLeg"><span><b class="good">' + cl.candidati + '</b> liniștite</span><span><b class="bad">' + cl.evita + '</b> în mișcare' + acIeri(sc, "inMiscare", 0, true) + '</span><span class="acMut">top 100 futures' + acNuCryptoTxt() + '</span></div>' : "") + (faraParola ? "" : acSurseHtml(acSurseCrypto(d))));   /* v100.336 (I-862) */
   var vb = faraParola ? AC_FARA_PAROLA : faraServer && !ndxL && !qqq ? acFaraServerVerd(d) : acVremeBursa(d);
   var ndxV = !!(d.ndx && Acasa.ndxVechi && Acasa.ndxVechi(d.ndx, Date.now()));   /* v100.332 (🔴2): lățimea mai veche de 30 h nu stă sub verdict ca de azi */
   acasaVerd($("acVremeBursa"), "Nasdaq", vb, faraParola ? "" : (ndxL && !ndxV ? acBare(0, [[ndxL.e50, "var(--good)", "peste media de 50"], [ndxL.n - ndxL.e50, "var(--bad)", "sub"]])

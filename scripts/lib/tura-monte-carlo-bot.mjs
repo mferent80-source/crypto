@@ -121,7 +121,7 @@ export async function turaMonteCarloBot(d) {
       let hot = st.boti[String(b.id)] && st.boti[String(b.id)].hot || null;
       if (s.pornitLa && d.GridSim.hotarare && !(hot && acum - (nr(hot.ultima) || 0) < HOT_MS)) {
         try {
-          const h = d.GridSim.hotarare(b15, set, { pornitLa: s.pornitLa, pozitiePionex: s.pozitie, lich: s.lich, plan, n: d.nHot || HOT_N, seed: 12, orizonturi: [1, 7], p5Plan: p5PlanDin(rez, opt) }), p = pasHotarare(hot, h, acum, nume);
+          const h = d.GridSim.hotarare(b15, set, { pornitLa: s.pornitLa, pozitiePionex: s.pozitie, lich: s.lich, plan, bilantPierdut: !!d.bilantPierdut /* v100.355: regula B */, n: d.nHot || HOT_N, seed: 12, orizonturi: [1, 7], p5Plan: p5PlanDin(rez, opt) }), p = pasHotarare(hot, h, acum, nume);
           hot = p.hot; let anuntat = false;
           if (p.anunt && await d.anunta(p.anunt, b.id, (p.dupaAnunt.plan && p.dupaAnunt.cheie === "inchide" ? "hotplan-" : "hot-") + p.dupaAnunt.cheie + "-" + b.id)   /* revizia: cu botul (rezumatul de dimineață îi numără pe toți) */) { hot = p.dupaAnunt; anuntat = true; out.anuntate++; }   /* v100.352: „îl închid” pe planul tău nu așteaptă dimineața */
           // v100.352 (auditul): nota ține ce s-a AFIȘAT (recomandarea confirmată, pe Tablou), nu candidatul încă neconfirmat
@@ -220,6 +220,42 @@ const tCrit = (df) => (df >= 1 && df <= 20 ? T975[df - 1] : df <= 30 ? 2.086 - (
 // Auditul Monte Carlo (29.10): etalonul cinstit nu e banul, ci regula fixă „mereu pe plus” (pe datele lui ar fi nimerit 65 – 46, mai bine decât
 // Monte Carlo cu 59 – 52); diferența (Monte Carlo − „mereu pe plus”) se judecă tot pe ZILE. Și unde s-a judecat: boții lui trăiesc în mediană 0,5 h,
 // deci verdictele „pe 7 zile” s-au judecat la închidere - contorul o spune.
+// v100.355 (regula B, scrisă 17.11.2026 ÎNAINTEA oricărei hotărâri judecate pe VERS_HOT 3; revizuită de două ori, tot înainte de date - docs/cercetare/
+// 2026-11-17-i888-lumanarea-si-bilantul.md): verdictul bilanțului - de DOUĂ ori, la primele 30 și primele 60 de zile cu hotărâri „altceva” judecate (fiecare
+// privire pe exact zilele acelea, în ordinea timpului; zilele vin din REGISTRUL colectorului, nu din jurnalul tăiat), |t_H| ≥ 2,6 cu t-ul lui Hall (1992,
+// transformarea monotonă a îndreptării lui Johnson pentru asimetrie). Sub H0 (40.000 de serii pe formă, 7 forme): verdict fals 2,3–5,0%, „au pierdut” fals ≤ 4,2%.
+// t simplu cu 2,36 dădea 10–12% fals pe asimetrie; Johnson cu 2,5 își pierdea puterea pe forma „pierde des puțin, câștigă rar mult” (4% la −0,5 abateri).
+export const BILANT = Object.freeze({ priviri: [30, 60], prag: 2.6 });
+export function tHall(v) {
+  const n = v.length; if (n < 3) return NaN;
+  const m = v.reduce((s, x) => s + x, 0) / n; let q = 0, c3 = 0; for (const x of v) { const d = x - m; q += d * d; c3 += d * d * d; }
+  const vr = q / (n - 1); if (!(vr > 0)) return m > 0 ? Infinity : m < 0 ? -Infinity : 0;
+  const sd = Math.sqrt(vr), g = (c3 / n) / (sd * sd * sd), x = m / sd;
+  return Math.sqrt(n) * (x + g * x * x / 3 + g * g * x * x * x / 27 + g / (6 * n));
+}
+// zile: valorile pe zi (media diferențelor din ziua aceea), în ordinea timpului
+export function verdictBilant(zile) {
+  const v = (Array.isArray(zile) ? zile : []).filter((x) => Number.isFinite(x)), n = v.length, [p1, p2] = BILANT.priviri;
+  if (n < p1) return { stare: "prea-putine", n, privire: 0, tJ: null, final: false };
+  for (const [k, p] of [[1, p1], [2, p2]]) {
+    if (n < p) break;
+    const t = tHall(v.slice(0, p)), r2 = Math.round(t * 100) / 100;
+    if (t <= -BILANT.prag) return { stare: "au-pierdut", n, privire: k, t: r2, final: true };
+    if (t >= BILANT.prag) return { stare: "au-batut", n, privire: k, t: r2, final: true };
+    if (k === 2) return { stare: "n-am-aflat", n, privire: 2, t: r2, final: true };
+  }
+  return { stare: "n-am-aflat", n, privire: 1, t: Math.round(tHall(v.slice(0, p1)) * 100) / 100, final: false };
+}
+export function textVerdictBilant(vb) {
+  if (!vb) return "";
+  const [p1, p2] = BILANT.priviri;
+  if (vb.stare === "prea-putine") return vb.n ? " · verdictul (regula scrisă pe 17.11): la " + p1 + " de zile cu «altceva» judecate (acum " + vb.n + ")" : "";
+  const t1 = (x) => (x < 0 ? "−" : "") + Math.abs(Math.round(Number(x) * 10) / 10).toFixed(1).replace(".", ","), sub = "|t| sub " + String(BILANT.prag).replace(".", ",");   // o zecimală (regula LUI)
+  const la = " (la " + (vb.privire === 1 ? p1 : p2) + " de zile, t " + t1(vb.t) + ")";
+  if (vb.stare === "au-pierdut") return " · VERDICT" + la + ": sfaturile «altceva» au pierdut față de ținere ⇒ tabelul nu mai recomandă singur altceva decât «îl țin» (planul tău rămâne)";
+  if (vb.stare === "au-batut") return " · verdict" + la + ": sfaturile «altceva» au bătut ținerea";
+  return vb.final ? " · verdict (la " + p2 + " de zile): n-am aflat - " + sub + " (rămâne așa)" : " · la " + p1 + " de zile: n-am aflat (" + sub + "), mai judec o dată la " + p2;
+}
 function intervalZile(v) {
   const n = v.length; if (n < 2) return { medie: null, jos: null, sus: null };
   const medie = v.reduce((s, x) => s + x, 0) / n, sd = Math.sqrt(v.reduce((s, x) => s + (x - medie) ** 2, 0) / (n - 1)), m = tCrit(n - 1) * sd / Math.sqrt(n);
@@ -452,27 +488,47 @@ export function judecaHotarari(jurnal, bareDupaSimbol, GridSim, acum) {
 // la cel puțin 7 zile una de alta (ferestrele de 7 zile ale notelor zilnice aveau 6/7 din drum în comun ⇒ intervalul era de ~2,6 ori prea îngust);
 // (3) sub 30 de hotărâri independente ⇒ „prea puține”; (4) boții prea vechi (fără barele de la pornire) numărați pe nume
 // revizia (🔴): ferestrele se socotesc pe bot ȘI pe fel (altceva / îl țin) - altfel nota zilnică „îl țin” (mai devreme) arunca nota anunțului din aceeași zi
-export function raportHotarari(jurnal, vers = VERS_HOT) {
-  const alt = [], tin = [], zileAlt = new Map(), ultimaPeBot = new Map(); let j1 = 0, j7 = 0, astept = 0, nejud = 0, vechi = 0, altaRegula = 0, suprapuse = 0, altVazut = 0;
+// v100.355: reg = registrul regulii B (colectorul) ⇒ verdictul de acolo; fără el (probele, pagina), din jurnal. deschisDe = cea mai veche zi cu o notă care încă
+// așteaptă judecata (zilele de la ea încolo nu sunt închise); plan = închiderile cerute de planul LUI (revizia, 🟡: nu sunt sfatul tabelului, nu intră în bilanț)
+export function raportHotarari(jurnal, vers = VERS_HOT, reg = null) {
+  const alt = [], tin = [], zileAlt = new Map(), ultimaPeBot = new Map(); let j1 = 0, j7 = 0, astept = 0, nejud = 0, vechi = 0, altaRegula = 0, suprapuse = 0, altVazut = 0, deschisDe = null, planN = 0;
   const lista = (Array.isArray(jurnal) ? jurnal : []).filter((e) => e && e.nota).sort((a, b) => Number(a.nota.t) - Number(b.nota.t));
   for (const e of lista) {
     if (Number(e.nota.v) !== vers) { altaRegula++; continue; }
     if (e.y1 && e.y1.val) j1++;
-    const v = e.y7 && e.y7.val; if (!v) { if (e.y7 && e.y7.eroare && /pornit de prea mult/.test(e.y7.eroare)) vechi++; else if (e.expirat || (e.y7 && e.y7.eroare)) nejud++; else astept++; continue; }
-    if (e.nota.ales && e.nota.ales !== "tine") altVazut++;
-    const kb = e.id + "|" + (e.nota.ales === "tine" ? "t" : "a"), ult = ultimaPeBot.get(kb); if (ult !== undefined && Number(e.nota.t) - ult < 7 * ZI_MS) { suprapuse++; continue; }
+    const v = e.y7 && e.y7.val; if (!v) { if (e.y7 && e.y7.eroare && /pornit de prea mult/.test(e.y7.eroare)) vechi++; else if (e.expirat || (e.y7 && e.y7.eroare)) nejud++; else { astept++; if (!deschisDe || String(e.z) < deschisDe) deschisDe = String(e.z); } continue; }
+    const pl = !!(e.nota.plan && e.nota.ales && e.nota.ales !== "tine");   // revizia (🟡): închiderea cerută de planul LUI e judecată, dar nu e sfatul tabelului (fereastra ei, separată)
+    if (e.nota.ales && e.nota.ales !== "tine" && !pl) altVazut++;
+    const kb = e.id + "|" + (pl ? "p" : e.nota.ales === "tine" ? "t" : "a"), ult = ultimaPeBot.get(kb); if (ult !== undefined && Number(e.nota.t) - ult < 7 * ZI_MS) { suprapuse++; continue; }
     ultimaPeBot.set(kb, Number(e.nota.t));
-    j7++; const ch = e.nota.ales;
+    j7++; if (pl) { planN++; continue; } const ch = e.nota.ales;
     if (ch && ch !== "tine" && v[ch] != null && v.tine != null) { const d = v[ch] - v.tine; alt.push(d); const z = zileAlt.get(e.z) || []; z.push(d); zileAlt.set(e.z, z); }
     else if (ch === "tine" && v.tine != null && v.inchide != null) tin.push(v.tine - v.inchide);
   }
-  const bun = alt.filter((d) => d > 0).length, tBun = tin.filter((d) => d > 0).length, zm = [...zileAlt.values()].map((l) => l.reduce((s, x) => s + x, 0) / l.length);
+  const bun = alt.filter((d) => d > 0).length, tBun = tin.filter((d) => d > 0).length, zileAltL = [...zileAlt.entries()].sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0)).map(([z, l]) => [z, l.reduce((s, x) => s + x, 0) / l.length]), zm = zileAltL.map((x) => x[1]);
+  const verdict = reg ? verdictDinRegistru(reg, vers) : verdictBilant(zm);   // v100.355: regula B (zilele în ordinea timpului; din registru când e)
   const iv = intervalZile(zm), bani = (x) => (x > 0 ? "+" : x < 0 ? "−" : "") + Math.abs(Math.round(x * 10) / 10).toLocaleString("ro-RO", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
   let text;
   if (!j7) text = "hotărârile se judecă pe barele reale după 7 zile: încă niciuna" + (j1 ? " (după o zi: " + cate(j1, "judecată", "judecate") + ")" : "") + (astept ? " · " + cate(astept, "așteaptă", "așteaptă") : "");
   else text = "judecate pe barele reale după 7 zile: " + cate(j7, "hotărâre", "hotărâri")
     + (alt.length ? " · când am zis altceva decât «îl țin» (" + alt.length + "): a ieșit mai bine în " + bun + ", în medie " + bani(alt.reduce((s, x) => s + x, 0) / alt.length) + " USDT" + (iv.jos !== null ? " (pe zile între " + bani(iv.jos) + " și " + bani(iv.sus) + ")" : "") : altVazut ? " · când am zis altceva: " + cate(altVazut, "notă", "note") + ", toate pe ferestre suprapuse cu una judecată" : " · n-am zis încă altceva decât «îl țin»")
     + (tin.length ? " · când am zis «îl țin» (" + tin.length + "): ținerea a bătut închiderea în " + tBun : "") + (j7 < 30 ? " · prea puține ca să tragi concluzii (sub 30 de hotărâri independente)" : "") + (suprapuse ? " · " + cate(suprapuse, "notă", "note") + " pe ferestre suprapuse, lăsate deoparte" : "")
-    + (vechi ? " · " + cate(vechi, "bot prea vechi", "boți prea vechi") + " (Pionex dă ~31 de zile de bare, judecata le cere de la pornire)" : "") + (nejud ? " · " + cate(nejud, "nejudecată", "nejudecate") + " (bare lipsă sau găuri)" : "") + (altaRegula ? " · " + cate(altaRegula, "notă", "note") + " pe regula de dinainte, nenumărate" : "");
-  return { j1, j7, alt: alt.length, bun, tin: tin.length, tBun, astept, nejud, vechi, suprapuse, altaRegula, medie: iv.medie, jos: iv.jos, sus: iv.sus, text };
+    + (vechi ? " · " + cate(vechi, "bot prea vechi", "boți prea vechi") + " (Pionex dă ~31 de zile de bare, judecata le cere de la pornire)" : "") + (nejud ? " · " + cate(nejud, "nejudecată", "nejudecate") + " (bare lipsă sau găuri)" : "") + (altaRegula ? " · " + cate(altaRegula, "notă", "note") + " pe regula de dinainte, nenumărate" : "") + (planN ? " · " + cate(planN, "închidere cerută de planul tău", "închideri cerute de planul tău") + " (nu intră în verdict: e regula ta, nu sfatul tabelului)" : "") + (j7 ? textVerdictBilant(verdict) : "");
+  return { j1, j7, alt: alt.length, bun, tin: tin.length, tBun, astept, nejud, vechi, suprapuse, altaRegula, plan: planN, medie: iv.medie, jos: iv.jos, sus: iv.sus, verdict, zileAlt: zileAltL, deschisDe, text };
+}
+// v100.355 (revizia, 🔴): REGISTRUL regulii B, ținut de colector într-un fișier al lui - jurnalul hotărârilor se taie la 300 de intrări, deci „primele 30 de zile”
+// ar fi alunecat (mai multe priviri decât cele două) și un verdict dat ar fi căzut singur. Zilele „altceva” judecate se adaugă o singură dată, în ordinea timpului,
+// doar cele ÎNCHISE (nicio notă mai veche nu mai așteaptă judecata) - o zi intrată nu se mai schimbă; verdictul final se scrie o dată și rămâne. VERS_HOT nou ⇒ de la zero.
+export function actualizeazaBilant(reg, rap, vers = VERS_HOT, acum = Date.now()) {
+  const r = reg && reg.v === vers && Array.isArray(reg.zile) ? { v: vers, de: reg.de || acum, zile: reg.zile.slice(), verdict: reg.verdict || null } : { v: vers, de: acum, zile: [], verdict: null };
+  if (r.verdict && r.verdict.final) return r;
+  const ult = r.zile.length ? String(r.zile[r.zile.length - 1][0]) : "";
+  for (const [z, d] of rap && Array.isArray(rap.zileAlt) ? rap.zileAlt : []) { if (!(String(z) > ult) || !Number.isFinite(d)) continue; if (rap.deschisDe && String(z) >= rap.deschisDe) break; r.zile.push([String(z), d]); }
+  const vb = verdictBilant(r.zile.map((x) => x[1]));
+  if (vb.final) r.verdict = Object.assign({}, vb, { zile: r.zile.slice(0, vb.privire === 1 ? BILANT.priviri[0] : BILANT.priviri[1]).map((x) => x[0]), la: acum });
+  return r;
+}
+export function verdictDinRegistru(reg, vers = VERS_HOT) {
+  if (!reg || reg.v !== vers || !Array.isArray(reg.zile)) return verdictBilant([]);
+  return reg.verdict && reg.verdict.final ? reg.verdict : verdictBilant(reg.zile.map((x) => x[1]));
 }

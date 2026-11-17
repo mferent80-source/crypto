@@ -588,7 +588,8 @@ export async function onRequestPost({request,env}){
     const calibrareScurt=cs&&typeof cs==="object"&&Array.isArray(cs.ore)?{ore:cs.ore.filter(x=>x&&typeof x==="object"&&[1,4,24].includes(nr(x.ore))).slice(0,3).map(x=>({ore:nr(x.ore),n:nr(x.n),zile:nr(x.zile),pStopMed:nr(x.pStopMed),stopRata:nr(x.stopRata),stopDifJos:nr(x.stopDifJos),stopDifSus:nr(x.stopDifSus),verdictStop:vd(x.verdictStop),
       nSub5:nr(x.nSub5),sub5Rata:nr(x.sub5Rata),sub5Jos:nr(x.sub5Jos),sub5Sus:nr(x.sub5Sus),verdictP5:vd(x.verdictP5),tine:nr(x.tine),necitit:nr(x.necitit),expirat:nr(x.expirat),deschise:nr(x.deschise)}))}:null;
     /* v100.351: bilanțul hotărârilor („Ce fac cu botul ăsta?”) judecate pe barele reale - numere și textul colectorului */
-    const hh=corp&&corp.hotarari,hotarari=hh&&typeof hh==="object"?{j1:nr(hh.j1),j7:nr(hh.j7),alt:nr(hh.alt),bun:nr(hh.bun),tin:nr(hh.tin),tBun:nr(hh.tBun),astept:nr(hh.astept),nejud:nr(hh.nejud),medie:nr(hh.medie),jos:nr(hh.jos),sus:nr(hh.sus),text:String(hh.text||"").slice(0,500)}:null;
+    const hh=corp&&corp.hotarari,hotarari=hh&&typeof hh==="object"?{j1:nr(hh.j1),j7:nr(hh.j7),alt:nr(hh.alt),bun:nr(hh.bun),tin:nr(hh.tin),tBun:nr(hh.tBun),astept:nr(hh.astept),nejud:nr(hh.nejud),medie:nr(hh.medie),jos:nr(hh.jos),sus:nr(hh.sus),text:String(hh.text||"").slice(0,700),
+      /* v100.355 (regula B): verdictul bilanțului - stare din listă, numere */ verdict:hh.verdict&&typeof hh.verdict==="object"&&["prea-putine","n-am-aflat","au-pierdut","au-batut"].includes(hh.verdict.stare)?{stare:hh.verdict.stare,n:nr(hh.verdict.n),privire:nr(hh.verdict.privire),t:nr(hh.verdict.t),final:hh.verdict.final===true}:null}:null;
     await env.ISTORIC.put("mc-verdict",JSON.stringify({la,boti,calibrare,calibrareScurt,hotarari}));return json({ok:true})
   }
   // v100.150 (I-583): lățimea pieței - validată strict (numere finite, simboluri = litere/cifre din orice alfabet + USDT, 1-30 de semne - Binance are

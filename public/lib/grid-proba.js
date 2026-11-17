@@ -34,6 +34,10 @@ var GridProba = (function () {
     var N = st.grile, niv = st.tip === "aritmetic" ? G.niveluriArit(st.jos, st.sus, N) : G.niveluri(st.jos, st.sus, N), L = st.levier, com = C.COMISION, comG = C.COMISION_GRILA;
     // v100.350 (el: „de aici încolo din poziția Pionex”): st.scalaQ = mărimea pe grilă față de model (Pionex ține cu ~15% mai puțin pe PENDLE); fără ea, 1
     var sq = st.scalaQ > 0 && isFinite(st.scalaQ) ? Number(st.scalaQ) : 1;
+    // v100.355 (I-888, C1): opt.nevazut = { a, b } ⇒ dus-întorsurile pe care drumul pe 4 puncte nu le vede (prețul face mai multe în aceeași lumânare):
+    // k̂ = a·(R / pas)^b pe lumânare, R = H/L − 1, înmulțit cu partea lumânării care cade în grid; câștigul unuia = al grilei (pas − 2 comisioane maker),
+    // poziția nu se schimbă (un dus-întors o lasă cum era). Măsurat pe lumânări de 1 minut: docs/cercetare/2026-11-17-i888-lumanarea-si-bilantul.md
+    var nv = opt && opt.nevazut && opt.nevazut.a > 0 && isFinite(opt.nevazut.b) && st.jos > 0 && st.sus > st.jos ? opt.nevazut : null, nevazut = 0, dA = (st.sus - st.jos) / N, gG = Math.pow(st.sus / st.jos, 1 / N) - 1;
     // v100.135: funding-ul cu SEMN dupa pozitie (rata pozitiva: longul plateste pe Ql, shortul incaseaza pe Qs; rata negativa invers) - poate fi
     // negativ (incasat); traseul tine si MINIMUL / MAXIMUL rezultatului pe cele 4 puncte ale barei (pierderea maxima si planul in interiorul barei)
     // v100.269 (ideile auditului 29.10): opt.barePeZi (24 pe bare de 1 h) - funding-ul tot la 8 h (barePeZi / 3 bare), nu la 32 de bare
@@ -83,7 +87,7 @@ var GridProba = (function () {
     function lichidat(p) { return capital(p) <= C.MMR * (Ql + Qs) * p; }
     function rezultat(extra) {
       // v100.16: iesit = pe ce parte l-a inchis stopul/tinta ("jos"/"sus", null = n-a iesit), bare = dupa cate lumanari
-      var r = { net: 0, realizat: real, comisioane: fee - funding, iesiri: iesiri, lichidat: false, oprit: false, umpleri: umpleri, perechi: perechi, iesit: null, bare: null, funding: funding };
+      var r = { net: 0, realizat: real, comisioane: fee - funding, iesiri: iesiri, lichidat: false, oprit: false, umpleri: umpleri, perechi: perechi, iesit: null, bare: null, funding: funding, nevazut: nevazut };
       for (var e in extra) r[e] = extra[e];
       // v100.134: traseul se incheie la bara stopului / lichidarii cu rezultatul ei (la capatul normal, ultima bara e deja pusa in bucla)
       if (tr) { if (extra && (extra.lichidat || extra.oprit)) { tr.net.push(r.net); tr.perechi.push(perechi); tr.iesiri.push(iesiri); tr.min.push(Math.min(bMin, r.net)); tr.max.push(Math.max(bMax, r.net)); tr.fund.push(funding); tr.poz.push(Ql - Qs); tr.brut.push(Ql + Qs); } r.traseu = tr; }
@@ -156,6 +160,9 @@ var GridProba = (function () {
         inauntru = acum;
         if (lichidat(p)) return rezultat({ net: -1, lichidat: true, bare: i - start + 1 });
       }
+      if (nv && x.h > x.l) { var loN = Math.max(x.l, niv[0]), hiN = Math.min(x.h, niv[N]);   // v100.355 (I-888, C1): dus-întorsurile nevăzute ale lumânării
+        if (hiN > loN) { var pasB = st.tip === "aritmetic" ? dA / ((x.h + x.l) / 2) : gG, kB = nv.a * Math.pow((x.h / x.l - 1) / pasB, nv.b) * (hiN - loN) / (x.h - x.l), unB = L / N * sq;
+          real += kB * unB * pasB; fee += kB * unB * 2 * comG; nevazut += kB * unB * (pasB - 2 * comG); } }
       if (tr) { tr.net.push(netLa(pret)); tr.perechi.push(perechi); tr.iesiri.push(iesiri); tr.min.push(bMin); tr.max.push(bMax); tr.fund.push(funding); tr.poz.push(Ql - Qs); tr.brut.push(Ql + Qs);   /* v100.350: funding-ul cumulat, poziția netă și brută (pe unitatea de sumă) */ }   // v100.134: traseul, la inchiderea barei
     }
     var fee2 = (Ql + Qs) * pret * com;   // comisionul de inchidere la final
@@ -562,7 +569,15 @@ var GridProba = (function () {
     var la = r && r.la, ore = la > 0 || la === 0 ? Math.max(0, Math.round(((acum || Date.now()) - la) / 3600000)) : null;
     return { ore: ore, vechi: ore !== null && ore > 12, text: ore === null ? "" : ore > 12 ? "calculat acum " + ore + " h — vechi, colectorul îl reface la 6 h" : "calculat acum " + ore + " h" };
   }
-  return { bareOraFisa: bareOraFisa, statistici: statistici, fundingDe: fundingDe, FUNDING_PRESUPUS: FUNDING_PRESUPUS, potrivireIngust: potrivireIngust, judecaUrmarire: judecaUrmarire, socotealaUrmarire: socotealaUrmarire, socotealaUrmarirePeReguli: socotealaUrmarirePeReguli, directiaLa: directiaLa, verdictIngust: verdictIngust, ingust: ingust, rezumatIngust: rezumatIngust, notaBloc: notaBloc, inchise: inchise, varstaIngust: varstaIngust, simuleaza: simuleaza, statistici: statistici, alegePlatou: alegePlatou, proba: proba, probaSetare: probaSetare, minOrdin: minOrdin, contrazice: contrazice, sumaMaxima: sumaMaxima, fisa: fisa,
+  // v100.355 (I-888, măsurat 17.11.2026 pe lumânări de 1 minut: 40 de monede Pionex ∩ Binance, 30 de zile, 27 de griduri; docs/cercetare/2026-11-17-i888-lumanarea-si-bilantul.md):
+  // cât vede motorul MAI PUȚIN decât prețul adevărat, în % din sumă PE ZI, la botul ținut 1 / 3 / 7 zile și la pasul de 0,3% (1 zi). Reparația C1 a picat pe
+  // monedele de probă (corecta prea mult gridurile rare) ⇒ motorul rămâne, partea nevăzută doar se spune.
+  var NEVAZUT = Object.freeze({ la: "17.11.2026", m15: Object.freeze({ zi1: 0.46, zi3: 0.23, zi7: 0.11, pasMic: 0.79 }), h1: Object.freeze({ zi1: 0.98, zi3: 0.49, zi7: 0.26, pasMic: 1.46 }) });
+  function nevazutText(fel) {
+    var x = fel === "1h" ? NEVAZUT.h1 : NEVAZUT.m15, f = function (v) { return (Math.round(v * 10) / 10).toFixed(1).replace(".", ","); };
+    return "pe lumânări de " + (fel === "1h" ? "o oră" : "15 minute") + " motorul vede doar 4 puncte (deschidere, minim, maxim, închidere), nu dus-întorsurile dintre ele; măsurat pe lumânări de 1 minut (" + NEVAZUT.la + ", 40 de monede, 30 de zile), cifrele gridului ies cu ~" + f(x.zi3) + "–" + f(x.zi1) + "% din sumă pe zi SUB adevăr (~" + f(x.pasMic) + "% la pasul de 0,3%), deci sunt prudente";
+  }
+  return { NEVAZUT: NEVAZUT, nevazutText: nevazutText, bareOraFisa: bareOraFisa, statistici: statistici, fundingDe: fundingDe, FUNDING_PRESUPUS: FUNDING_PRESUPUS, potrivireIngust: potrivireIngust, judecaUrmarire: judecaUrmarire, socotealaUrmarire: socotealaUrmarire, socotealaUrmarirePeReguli: socotealaUrmarirePeReguli, directiaLa: directiaLa, verdictIngust: verdictIngust, ingust: ingust, rezumatIngust: rezumatIngust, notaBloc: notaBloc, inchise: inchise, varstaIngust: varstaIngust, simuleaza: simuleaza, statistici: statistici, alegePlatou: alegePlatou, proba: proba, probaSetare: probaSetare, minOrdin: minOrdin, contrazice: contrazice, sumaMaxima: sumaMaxima, fisa: fisa,
     respinge: respinge, propune: propune, setarePropusa: setarePropusa, treceriPeZi: treceriPeZi };
 })();
 if (typeof globalThis !== "undefined") globalThis.GridProba = GridProba;

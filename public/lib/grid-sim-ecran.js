@@ -120,6 +120,7 @@ function gsFrazaHtml(s) {
     (v.mediaTxt ? v.mediaTxt + ": media tuturor drumurilor; intervalul e tot pe zile. «Aș porni / Aș ține» cere ca și marginea lui de jos să fie peste 0 - un grid câștigă des puțin și pierde rar mult" : "media: —"),
     v.nota, "Trecutul reluat de " + gsCate(r.n, "dată", "ori") + ", nu o predicție: o criză mai rea decât orice a avut moneda nu apare în drumuri. Aceeași cifră la aceeași dată (sămânță fixă)."];
   if (r.agitatie) surse.splice(1, 0, "agitația de acum: ultimele 2 zile sunt de " + gsNr(r.agitatie, 2).replace(/,?0+$/, "") + " ori cât media lunii (în pătrate de mișcare)" + (r.agitatie > 1.05 ? ", deci drumurile sunt mai largi" : r.agitatie < 0.95 ? ", deci drumurile sunt mai strânse" : "") + "; diferența se stinge cu 10% pe zi spre agitația obișnuită (probat: unde agitația ține, eroarea mediei scade cu un sfert și „pe plus” fals dispare; unde nu ține, nu strică)");   /* v100.351 (ideea 1) */
+  if (typeof GridProba !== "undefined" && GridProba.nevazutText) surse.push(GridProba.nevazutText("15m") + ".");   /* v100.355 (I-888) */
   if (!r.acum) { gsSimUrmAdu(); surse.push("📒 " + (gsSimUrm.v && gsSimUrm.v.text ? gsSimUrm.v.text : "fiecare verdict de bot nou se notează și se judecă pe barele reale după 7 zile; bilanțul apare aici") + "."); }   /* v100.351 (ideea 3) */
   return '<section class="gsFraza"><div class="gsFrazaCap"><span class="gsEt ' + v.culoare + '">' + mcsEsc(v.eticheta) + '</span><span class="tbSub">' + mcsEsc(cine + " · " + (v.deAici ? "de aici încolo, " : "") + "pe " + gsCate(o.zile, "zi", "zile")) + '</span></div>'
     + '<p class="gsFrazaMare">' + mcsEsc(v.cum) + '</p>' + (v.mediaTxt ? '<p class="gsFrazaMedia">' + mcsEsc(v.mediaTxt) + '</p>' : '')
@@ -232,6 +233,8 @@ function gsHotHtml(s) {
     "„Îl închid și pornesc unul la fel” e același bot centrat pe prețul de acum, ca în colector (Tabloul și Discordul aleg din aceleași rânduri); setarea fișei Grid, când e, se arată dar nu se recomandă: e aleasă pe aceeași lună din care se trag drumurile.",
     "Regula, scrisă înainte de cifre: altceva decât „îl țin” doar dacă, pe " + gsCate(h.oriz[hH], "zi", "zile") + ", media e mai bună cu cel puțin " + gsNr(h.prag, 1) + " USDT (2% din sumă, minim 1), marginea de jos a diferenței e peste 0, cele mai proaste 5% nu sunt mai rele cu mai mult de " + gsNr(h.prag, 1) + " USDT și se ține și pe alte " + gsCate(h.n * 2, "drum", "drumuri") + " din aceeași lună (prinde norocul tragerii dintre ~8 încercări, nu norocul lunii). Excepție: planul tău - când cele mai proaste 5% ale acțiunii alese (de la pornire) trec de minusul lui, îl închid; rândul „stopul la planul tău” rămâne doar de comparat (la levier mare ieșea mai prost decât închiderea).",
     GS_HOT_H0,
+    "Bilanțul are o regulă scrisă înainte de date (17.11): se judecă de două ori, la 30 și la 60 de zile cu hotărâri „altceva” judecate pe barele reale; dacă sfaturile de felul ăsta au pierdut clar față de ținere (t-ul îndreptat pentru asimetrie, Hall, ≤ −2,6; probat sub H0: verdict fals cel mult ~5%), tabelul nu mai recomandă singur altceva decât „îl țin” - planul tău rămâne, iar închiderile cerute de el nu intră în bilanț. Cu 1–3 boți, 30 de astfel de zile pot însemna luni; și pentru că „îl închid” pierde des puțin și câștigă rar mult, 30–60 de zile rar pot dovedi o pierdere: verdictul cel mai probabil e „n-am aflat”.",
+    gsHotNevazut(s, h),
     "Recomandarea e a modelului (trecutul monedei reamestecat), nu o predicție: o mișcare mai rea decât orice a avut moneda nu apare. De aceea fiecare hotărâre se urmărește pe barele reale" + (bil && bil.text ? ": " + bil.text : " (bilanțul apare după primele hotărâri judecate).")];
   return '<section class="t212Panou gsSec gsHotBloc">' + cap
     + '<p class="gsHotFraza ' + cul + '"><b>' + mcsEsc(fraza) + '</b> ' + mcsEsc(gsMajuscula(ales.motiv || "")) + (ales.verificat ? " Se ține și pe alte " + mcsEsc(gsCate(h.n * 2, "drum", "drumuri")) + "." : "") + '</p>'
@@ -259,6 +262,13 @@ function gsFisaPentru(sim) {
 }
 // v100.354 (revizia 🔵7): lichidarea din Pionex e a botului AȘA cum e - cu levierul / gridul / direcția schimbate în câmpuri, doar estimarea
 function gsLichBot(st) { if (!gsStare.bot) return null; var d = GridSim.setariDinBot(gsStare.bot), b = d.st; return d.lich && b && st && b.dir === st.dir && b.levier === st.levier && Math.abs(b.jos - st.jos) <= 1e-9 * b.jos && Math.abs(b.sus - st.sus) <= 1e-9 * b.sus ? d.lich : null; }
+// v100.355 (I-888): partea nevăzută a lumânării în tabel - „îl țin” și setările care lasă botul pornit trec prin lumânări de 15 minute, „îl închid acum” nu
+// ⇒ tabelul înclină spre închidere; cât, în USDT la suma lui, pe orizontul tabelului (cifra măsurată pe zi × zilele)
+function gsHotNevazut(s, h) {
+  if (typeof GridProba === "undefined" || !GridProba.NEVAZUT) return "";
+  var N = GridProba.NEVAZUT.m15, z = h && h.oriz ? h.oriz[h.oriz.length - 1] : 7, suma = s && s.st && s.st.suma > 0 ? s.st.suma : null, pz = z >= 7 ? N.zi7 : z >= 3 ? N.zi3 : N.zi1;
+  return "Partea nevăzută: " + GridProba.nevazutText("15m") + ". În tabelul acesta, „îl țin” și setările care lasă botul pornit sunt socotite deci prea jos față de „îl închid acum” (care nu trece prin lumânări)" + (suma ? " - pe " + gsCate(z, "zi", "zile") + ", la suma ta, de ordinul a " + gsNr(suma * pz / 100 * z, 1) + " USDT" + (z >= 7 ? " (cifra pe 7 zile e măsurată pe doar 4 săptămâni, fără verdict)" : "") : "") + ": tabelul înclină puțin spre închidere. O reparație probată pe lumânări de 1 minut n-a trecut (corecta prea mult gridurile rare), așa că cifrele rămân cum le dă motorul.";
+}
 async function gsHotPorneste() {
   if (!gsMeu() || !gsStare.date || gsStare.hotInLucru) return;
   var st = gsStCuFunding(), d = gsStare.date, rez0 = gsStare.rez;
@@ -266,7 +276,10 @@ async function gsHotPorneste() {
   var fisa = gsFisaPentru(gsStare.sim);
   try {
     var k7 = GS_ORIZ.indexOf(7), z7 = rez0 && rez0.orizonturi ? rez0.orizonturi[k7] : null;
-    var h = await gsInWorker("hotarare", d.b15, st, { p5Plan: z7 && isFinite(z7.p5) ? z7.p5 : null, pornitLa: gsStare.pornitLa, pozitiePionex: gsPozPionex(), lich: gsLichBot(st), plan: gsPlanOk(gsStare.plan) ? gsStare.plan : null, fisa: fisa ? Object.assign({}, fisa, { suma: st.suma, fundingZi: st.fundingZi, fundingCost: st.fundingCost }) : null, n: GS_HOT.n, seed: 12, orizonturi: GS_HOT.orizonturi });
+    // v100.355 (regula B): bilanțul ÎNAINTE de hotărâre - verdictul „au pierdut” schimbă recomandarea (colectorul face la fel)
+    try { if (typeof tbMcDinKv === "function") { var kv0 = await tbMcDinKv(); if (kv0 && kv0.hotarari) gsStare.hotBilant = kv0.hotarari; } } catch (e) { /* bilanțul lipsește: pagina merge */ }   /* revizia (🔵): la fiecare hotărâre, nu doar prima dată */
+    var bilP = !!(gsStare.hotBilant && gsStare.hotBilant.verdict && gsStare.hotBilant.verdict.stare === "au-pierdut");
+    var h = await gsInWorker("hotarare", d.b15, st, { bilantPierdut: bilP, p5Plan: z7 && isFinite(z7.p5) ? z7.p5 : null, pornitLa: gsStare.pornitLa, pozitiePionex: gsPozPionex(), lich: gsLichBot(st), plan: gsPlanOk(gsStare.plan) ? gsStare.plan : null, fisa: fisa ? Object.assign({}, fisa, { suma: st.suma, fundingZi: st.fundingZi, fundingCost: st.fundingCost }) : null, n: GS_HOT.n, seed: 12, orizonturi: GS_HOT.orizonturi });
     if (gsStare.rez !== rez0) { gsStare.hotInLucru = false; if (gsStare.rez && gsMeu()) gsHotPorneste(); return; }   /* revizia (🔵11): altă simulare între timp ⇒ hotărârea ei, nu asta */
     if (h && h.eroare) gsStare.hotEroare = "Nu pot compara acțiunile: " + h.eroare; else gsStare.hot = h;
   } catch (e) { gsStare.hotEroare = "Nu pot compara acțiunile: " + (e && e.message || e); }

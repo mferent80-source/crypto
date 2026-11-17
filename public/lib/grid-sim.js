@@ -472,6 +472,9 @@ var GridSim = (function () {
       if (!ok) ales = { cheie: "tine", motiv: "„" + a2.nume + "” ieșea mai bun pe drumurile de aici, dar pe alte " + cate(n * 2, "drum", "drumuri") + " din aceeași lună nu s-a mai ținut: ales dintre mai multe, poate fi noroc", respins: a2.cheie };
       else ales.verificat = true;
     }
+    // v100.355 (regula B a bilanțului, scrisă 17.11 înainte de date): bilanțul hotărârilor judecate pe barele reale a zis că sfaturile «altceva» au PIERDUT față
+    // de ținere ⇒ tabelul nu mai recomandă singur altceva (rândurile și cifrele rămân); planul tău, mai jos, rămâne: e regula ta, nu sfatul tabelului
+    if (ales.cheie !== "tine" && o.bilantPierdut) { var aB = A.filter(function (x) { return x.cheie === ales.cheie; })[0]; ales = { cheie: "tine", motiv: "aș fi zis „" + (aB ? aB.nume : ales.cheie) + "”, dar bilanțul hotărârilor judecate pe barele reale arată că sfaturile de felul ăsta au pierdut față de ținere: îl țin", bilant: true, inLocDe: ales.cheie }; }
     // planul tău (alegerea LUI, 16.11): coada de la pornire a acțiunii alese trece de minusul planului ⇒ „îl închid”, oricât ar fi media - e regula TA, nu o
     // statistică. v100.352 (auditul, 🔴): înainte alegea „stopul la plan”, care pe 23 de cazuri din 23 ieșea mai prost decât închiderea și tot trecea de plan
     // (alunecarea × levierul); acum rândul lui rămâne în tabel doar ca variantă. Se verifică la ORICE ales, nu doar la „îl țin”.

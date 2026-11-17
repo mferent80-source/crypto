@@ -5320,10 +5320,26 @@ var GR_REIMPROSPATARE_MS=5*60*1000;
 function grSimbol(t){var s=String(t==null?"":t).trim().toUpperCase().replace(/[^A-Z0-9]/g,"").replace(/PERP$/,"").replace(/USDT$/,"");return s?s+"_USDT_PERP":null}
 function grNumar(t){var s=String(t==null?"":t).trim().replace(/\s/g,"").replace(",",".");if(!s)return null;var x=Number(s);return Number.isFinite(x)&&x>0?x:null}
 function grPanouVizibil(){return !!($("gridset")&&$("gridset").classList.contains("on"))}
+// v100.355 (I-889): lista simbolurilor PERP cerută O DATĂ pe încărcare (fișa Grid și regula de formă a acțiunilor o împart); o cerere picată se poate relua
+var grSimbPerpP=null;
+function grSimbPerp(){if(!grSimbPerpP)grSimbPerpP=getJSON("/api/market?type=pionex_symbols&market=PERP").then(function(d){var l=d&&d.data&&d.data.symbols;if(!Array.isArray(l)||!l.length)grSimbPerpP=null;return d}).catch(function(e){grSimbPerpP=null;throw e});return grSimbPerpP}   /* revizia (🟡): o listă goală (Pionex a refuzat) nu se ține minte */
+// v100.355 (I-889): perpetuele noi cu FORMĂ de acțiune tokenizată (se termină în X, preț cu 2 zecimale) scoase și din listele paginii (harta de pe Acasă, lărgimea
+// de rezervă), nu doar din clasamentul colectorului; GridCalcul.eCrypto le scoate de aici încolo. Ce s-a scos așa se spune pe Acasă (o monedă adevărată cu X ar
+// fi scoasă până e trecută în lista monedelor cu X - de aceea la vedere).
+var nuCryptoNoi=[];
+async function nuCryptoInvataPagina(){
+  try{
+    if(typeof GridCalcul==="undefined"||!GridCalcul.invataNuCrypto||!GridCalcul.nuCryptoDupaForma)return;
+    var d=await grSimbPerp(),a=d&&d.data&&Array.isArray(d.data.symbols)?d.data.symbols:[];
+    var noi=GridCalcul.invataNuCrypto(GridCalcul.nuCryptoDupaForma(a));
+    if(noi.length){nuCryptoNoi=nuCryptoNoi.concat(noi);if(typeof acasaDeseneaza==="function"&&typeof acasa!=="undefined"&&acasa.d&&acasa.d.tickers)acasaDeseneaza()}
+  }catch(e){/* lista lipsește: rămâne lista scrisă de mână */}
+}
+if(typeof window!=="undefined")window.addEventListener("DOMContentLoaded",function(){setTimeout(nuCryptoInvataPagina,1500)});
 async function grAduMonede(){
   if(grStare.monede)return;
   try{
-    var d=await getJSON("/api/market?type=pionex_symbols&market=PERP");
+    var d=await grSimbPerp();
     var a=d&&d.data&&Array.isArray(d.data.symbols)?d.data.symbols:[];
     var m={};a.forEach(function(x){if(x&&x.symbol&&x.status==="TRADING")m[x.symbol]=x});
     if(!Object.keys(m).length)return;
@@ -6528,7 +6544,7 @@ function renderGrid(){
     +grLinisteTine(f)
     +'<li>Când alertele Radarului anunță «gata liniștea», aș închide botul: după mișcare gridul iese cel mai rău.</li>'
     +(rg&&rg.r4h!=null&&rg.r24h!=null?'<li>Acum: mișcarea pe 4h e '+rg.r4h.toFixed(1).replace(".",",")+'× cea obișnuită, pe 24h '+rg.r24h.toFixed(1).replace(".",",")+'×; mișcare mare = pe 24 h peste 9 zile din 10 ale monedei (~1 zi din 10).</li>':"")   /* v100.269: definiția unică (GridCalcul.miscareMare), nu 1,5× */
-    +'</ul><p class="grNota">Nu e o promisiune: e un calcul și proba lui pe istoricul monedei. Simulatorul probei iese mai rău decât realitatea (cu cât piața e mai agitată, cu atât mai mult), deci un minus pe istoric nu e o dovadă. „Nu-l porni după mișcare” e o precauție, nedovedită pe date noi (laboratorul de mai jos o remăsoară).</p></div>';
+    +'</ul><p class="grNota">Nu e o promisiune: e un calcul și proba lui pe istoricul monedei. Simulatorul probei iese mai rău decât realitatea (cu cât piața e mai agitată, cu atât mai mult): '+escapeHtml(GridProba.nevazutText(f.proba&&f.proba.barePeZi===24?"1h":"15m"))+'. Deci un minus pe istoric nu e o dovadă, iar „media pe test peste zero” e o ștachetă mai înaltă decât pare. „Nu-l porni după mișcare” e o precauție, nedovedită pe date noi (laboratorul de mai jos o remăsoară).</p></div>';
   box.innerHTML=h;grPliazaPeTelefon(box);grVerdictScroll();   /* v100.92 (I-519) */
   grProbDeseneaza(f);   // v100.47
 }

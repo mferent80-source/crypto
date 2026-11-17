@@ -126,10 +126,10 @@ await test("R5 (revizia 🔵) stopul în procente al botului nou nu se judecă p
   const g1 = G.mcsCalcVariante(B, { jos: P * 0.95, sus: P * 1.05, grile: 10, levier: 2, dir: "long", suma: 50, stop: null, tp: null }, P, { n: 200 }), g2 = G.gsPeFir ? null : null; assert.ok(Array.isArray(g1) && g1.length > 3);
 });
 await test("V versiunile v100.354 (index ×4, sw, versiune.js, package + lanț, BUILD_INFO) + colector v101.192", () => {
-  const h = citeste("public", "index.html"); assert.equal((h.match(/v100\.354/g) || []).length, 4); assert.match(h, /v100\.354 · STOPUL ÎNAINTEA LICHIDĂRII/);
-  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-354/); assert.match(citeste("functions", "_shared", "versiune.js"), /"v100\.354"/);
-  const p = JSON.parse(citeste("package.json")); assert.equal(p.version, "100.354.0"); assert.match(p.scripts.test, /npm run test:v100354/);
-  assert.match(JSON.parse(citeste("BUILD_INFO.json")).badge, /^v100\.354/); assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.192";/);
+  const nr = (t) => Number((String(t).match(/100[.-](\d{3})/) || [])[1]);   // v100.355: de la v100.354 încolo (versiunea curentă o verifică proba ei)
+  assert.ok(nr(citeste("functions", "_shared", "versiune.js")) >= 354 && nr(citeste("public", "sw.js")) >= 354 && nr(JSON.parse(citeste("BUILD_INFO.json")).badge) >= 354);
+  const p = JSON.parse(citeste("package.json")); assert.ok(nr(p.version) >= 354); assert.match(p.scripts.test, /npm run test:v100354/);
+  assert.ok(JSON.parse(citeste("BUILD_INFO.json")).rest354, "intrarea rest354 rămâne"); assert.ok(Number((citeste("scripts", "colector.mjs").match(/const VERSIUNE_COLECTOR = "v101\.(\d+)";/) || [])[1]) >= 192);
 });
 
 console.log(`\n${teste - picate}/${teste} trec`);
