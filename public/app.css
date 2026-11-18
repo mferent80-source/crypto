@@ -3656,6 +3656,92 @@ html.pzDemo #tabloubot.tbFaraBot .tbGrilaNoua:is(:has(>.tbMain>[data-rand]),:has
 @media (max-width:600px){#gridset .grIntrari.grStrans>:not(#grFormStrans){display:none}#gridset .grIntrari.grStrans>#grFormStrans{display:flex;align-items:center;gap:8px 10px;width:100%;flex-wrap:wrap;font-weight:600}#gridset #grFormStrans .actionGhost{margin-left:auto;min-height:36px}}
 /* mărunte: țintele mici de pe telefon (Jurnal ›, Obiectiv ✎, Fiecare zi) la cel puțin 32 px */
 @media (max-width:760px),(pointer:coarse){.scCap .actionGhost{min-height:32px;padding:4px 10px}#dash .acZileTab>summary{min-height:32px;display:flex;align-items:center}}
+/* v100.358 (el, 18.11.2026: „Jurnal de trade la fel ca în celelalte pagini”): Jurnalul intră în paginile refăcute (RADACINI, tema zi / noapte, IBM Plex).
+   Fraza mare + „De unde știu” sus; rândurile pliate ca în Tablou (data-rand, JT_RANDURI); graficele noi (JurnalGrafice, clase jg*); O singură listă de trade-uri
+   (rândul .jtLR, fișa .jtFisa la clic). Culorile de noapte scrise ca în Tablou - tema de zi o face generatorul (scripts/face-tema-tablou.mjs). */
+#jurnaltrade{--tb-linie:#26333F;--tb-fond:#141C24;--tb-fond2:#1A242E;color:#E6EDF3}
+#jurnaltrade .sectionHead{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+#jurnaltrade .sectionHead .sugTemaBtn{margin-left:auto}
+#jurnaltrade .jtFrazaBox{padding:4px 2px 2px;margin-bottom:12px}
+#jurnaltrade .grFraza{font-size:20px;font-weight:600;line-height:1.3;color:#E6EDF3;margin:0 0 4px;text-wrap:balance}
+#jurnaltrade .grFrazaSub{font-size:13.5px;line-height:1.45;color:#9FB3C4;margin:0 0 4px}
+#jurnaltrade .grSurse{margin-top:6px;font-size:13.5px;color:#9FB3C4}
+#jurnaltrade .grSurse summary{cursor:pointer;color:#C9D6E2;min-height:28px;display:flex;align-items:center}
+#jurnaltrade .grSurse summary:focus-visible{outline:2px solid #5B8FC7;outline-offset:2px}
+#jurnaltrade .grSurse ul{margin:4px 0 0;padding-left:18px}
+#jurnaltrade .jtAvert{margin:6px 0 0;font-size:13.5px}
+#jurnaltrade .jtAvert .actionGhost{margin-left:6px}
+#jurnaltrade.tbZi .actionGhost{color:#0E1A2B;background:#FFFFFF;border:1px solid #C3CCD8}
+#jurnaltrade.tbZi input,#jurnaltrade.tbZi select,#jurnaltrade.tbZi textarea{color:#0E1A2B;background:#FFFFFF;border:1px solid #C3CCD8}
+/* rândurile pliate: aceeași formă ca în Tablou */
+html.pzDemo #jurnaltrade [data-rand="pliat"]:not([hidden]){display:grid!important;grid-template-columns:270px minmax(0,1fr);gap:2px 6px;align-items:baseline;cursor:pointer;padding:12px 4px!important;margin:0!important;border:0!important;border-top:1px solid var(--pzLi)!important;border-radius:0!important;background:none!important;min-height:0!important}
+html.pzDemo #jurnaltrade [data-rand="pliat"]>*{display:none!important}
+html.pzDemo #jurnaltrade [data-rand="pliat"]::before{content:"▸  " attr(data-titlu);font-size:13.5px;font-weight:600;color:var(--pzT0);white-space:nowrap;box-sizing:border-box}
+html.pzDemo #jurnaltrade [data-rand="pliat"]::after{content:attr(data-rezumat);font-size:13.5px;font-weight:400;color:var(--pzT1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+html.pzDemo #jurnaltrade [data-rand="pliat"]:hover::before{color:var(--pzInfo)}
+html.pzDemo #jurnaltrade [data-rand="pliat"]:focus-visible{outline:2px solid var(--pzInfo);outline-offset:2px}
+html.pzDemo #jurnaltrade [data-rand="deschis"]:not([hidden]){position:relative}
+html.pzDemo #jurnaltrade [data-rand="deschis"]:not([hidden])::before{content:"▾  strânge";display:block;height:24px;line-height:24px;font-size:12px;font-weight:400;color:var(--pzT2);cursor:pointer;text-align:right}
+html.pzDemo #jurnaltrade [data-rand="deschis"]:not([hidden]):hover::before{color:var(--pzInfo)}
+@media (max-width:640px){html.pzDemo #jurnaltrade [data-rand="pliat"]:not([hidden]){grid-template-columns:minmax(0,1fr)}html.pzDemo #jurnaltrade [data-rand="pliat"]::after{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}}
+/* KPI-urile: pe telefon două câte două, fără cifre tăiate */
+#jurnaltrade .jtKpi .tbKpiVal{font-family:var(--pzMono);overflow-wrap:anywhere}
+/* graficele noi - paleta lor (validate_palette.js din dataviz, 18.11): verde #38AD74 / roșu #C23E37 / chihlimbar #A88420 trec pe ambele teme
+   (noapte pe #141C24, zi pe #FFFFFF); roșu–verde ΔE 7,8 la deutan = banda 6–8, legală doar cu a doua codare: sus / jos, legendă, goluri, tabelele de sub grafice */
+#jurnaltrade .jtGrGrila{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start}
+@media (min-width:1024px){#jurnaltrade .jtGrGrila{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}#jurnaltrade .jtGrLat{grid-column:1 / -1}}
+#jurnaltrade .jtGr{min-width:0}
+#jurnaltrade .jtGr h5{margin:0 0 2px;font-size:13.5px;font-weight:600;color:#E6EDF3}
+#jurnaltrade .jtGr>.tbSub{margin:0 0 6px}
+#jurnaltrade .jtGr svg{display:block;width:100%;height:auto;max-width:100%}
+#jurnaltrade .jtTabMic{font-size:13px}
+#jurnaltrade .jtTabMic td:not(:first-child),#jurnaltrade .jtTabMic th:not(:first-child){text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+#jurnaltrade svg .jgPoz{fill:#38AD74}
+#jurnaltrade svg .jgNeg{fill:#C23E37}
+#jurnaltrade svg .jgNeutru{fill:#35485A}
+#jurnaltrade svg .jgAx{fill:#8799AA;font-size:11px;font-family:var(--pzMono)}
+#jurnaltrade svg .jgGrid{stroke:#26333F;stroke-width:1;fill:none}
+#jurnaltrade svg .jgZero{stroke:#35485A;stroke-width:1;fill:none}
+#jurnaltrade svg .jgLinie{stroke:#5B8FC7;stroke-width:2;fill:none;stroke-linejoin:round}
+#jurnaltrade svg .jgArie{fill:#C23E37;fill-opacity:.28;stroke:#C23E37;stroke-width:1}
+#jurnaltrade svg .jgPunct{fill:#E6EDF3;stroke:#141C24;stroke-width:2}
+#jurnaltrade svg .jgEt{fill:#C9D6E2;font-size:11px;font-family:var(--pzMono)}
+#jurnaltrade svg .jgC0{fill:#22303C}
+#jurnaltrade svg .jgC1{fill:#38AD74;fill-opacity:.45}#jurnaltrade svg .jgC2{fill:#38AD74}
+#jurnaltrade svg .jgC-1{fill:#C23E37;fill-opacity:.45}#jurnaltrade svg .jgC-2{fill:#C23E37}
+#jurnaltrade svg .jgGol{fill:none}
+#jurnaltrade svg .jgCgol{fill:none;stroke:#22303C;stroke-width:1}
+#jurnaltrade svg .jgGrile{fill:#38AD74}#jurnaltrade svg .jgPozitie{fill:#C23E37}#jurnaltrade svg .jgCosturi,#jurnaltrade svg .jgNeutru.jgCosturi,#jurnaltrade.tbZi svg .jgNeutru.jgCosturi{fill:#A88420}
+#jurnaltrade svg .jgBara{stroke:none}#jurnaltrade svg .jgIc{stroke:#C9D6E2;stroke-width:1.5;fill:none}#jurnaltrade svg .jgMarc{fill:#E6EDF3;stroke:#141C24;stroke-width:2}
+#jurnaltrade svg circle.jgLinie{fill:#141C24}#jurnaltrade svg line.jgAx,#jurnaltrade svg path.jgAx{stroke:#35485A;fill:none}#jurnaltrade svg .jgHit{cursor:default}
+/* rapoartele */
+#jurnaltrade .jtRapCap{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:0 0 8px}
+#jurnaltrade .jtRapCap .jtFiltru{margin:0}
+#jurnaltrade .jtRapSel select{font:inherit;color:#E6EDF3;background:#1A242E;border:1px solid #35485A;border-radius:4px;padding:6px 8px;min-height:36px}
+#jurnaltrade .jtRapH{margin:14px 0 4px;font-size:13.5px;font-weight:600}
+/* O singură listă */
+#jurnaltrade .jtListaCap{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:8px 0}
+#jurnaltrade .jtListaCap .jtFiltru{margin:0}
+#jurnaltrade .jtLRCap,#jurnaltrade .jtLR{display:grid;grid-template-columns:110px minmax(70px,1fr) minmax(120px,1.4fr) 70px 64px minmax(130px,auto);gap:4px 10px;align-items:baseline}
+#jurnaltrade .jtLRCap{font-size:12px;color:#8799AA;padding:6px 12px;border-bottom:1px solid #26333F}
+#jurnaltrade details.jtT{border-bottom:1px solid #26333F}
+#jurnaltrade details.jtT>summary.jtLR{list-style:none;cursor:pointer;padding:8px 12px;font-size:13.5px;min-height:24px}
+#jurnaltrade details.jtT>summary.jtLR::-webkit-details-marker{display:none}
+#jurnaltrade details.jtT>summary.jtLR:hover{background:#1A242E}
+#jurnaltrade details.jtT>summary.jtLR:focus-visible{outline:2px solid #5B8FC7;outline-offset:-2px}
+#jurnaltrade details.jtT[open]>summary.jtLR{background:#1A242E}
+#jurnaltrade .jtLRNum{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+#jurnaltrade .jtLRData,#jurnaltrade .jtLRBot,#jurnaltrade .jtLRTinut{color:#9FB3C4;font-variant-numeric:tabular-nums}
+#jurnaltrade .jtFisa{padding:4px 12px 12px;background:#1A242E}
+#jurnaltrade .jtFisa .tbSub{margin:4px 0}
+@media (max-width:700px){
+#jurnaltrade .jtLRCap{display:none}
+#jurnaltrade .jtLR{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"mon num" "bot bot" "data tin";gap:2px 8px}
+#jurnaltrade .jtLRMon{grid-area:mon}#jurnaltrade .jtLR .jtLRNum{grid-area:num}#jurnaltrade .jtLRBot{grid-area:bot;font-size:12px}#jurnaltrade .jtLRData{grid-area:data;font-size:12px}#jurnaltrade .jtLRTinut{grid-area:tin;font-size:12px;text-align:right}#jurnaltrade .jtLRBec{display:none}
+#jurnaltrade .jtListaCap .tbIntBtn{min-height:40px}
+}
+/* pe telefon tabelele încap: celulele se rup, nu ies din ecran (auditul: stTabel 432 px pe 412) */
+@media (max-width:600px){#jurnaltrade table{table-layout:auto}#jurnaltrade .grTabel th,#jurnaltrade .grTabel td,#jurnaltrade .stTabel th,#jurnaltrade .stTabel td{padding:5px 4px;white-space:normal;overflow-wrap:anywhere}#jurnaltrade .jtTabGr .jtSfat{min-width:120px}}
 /* v100.313 (08.11.2026, el: „sfaturile care chiar contează evidențiază-le în Radar”, macheta aprobată): „CONTEAZĂ ACUM” sub erou, pe toată lățimea.
    Jetoanele PAZNIC (--pzAur, --pzJos, --tb-*): colțuri ≤ 5 px, fără culori noi, fără umbre. Stă înaintea pândei (blocul v100.224 rămâne ultimul). */
 #tabloubot .tbCadru>#ctAcum{grid-column:1/-1}
@@ -4121,15 +4207,15 @@ html.pzDemo #tabloubot.tbFaraBot .tbGrilaNoua:is(:has(>.tbMain>[data-rand]),:has
 :is(#tabloubot,#t212,#dash,#rangefilter,#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade) .prFapte dd{font-size:13.5px}
 :is(#tabloubot,#t212,#dash,#rangefilter,#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade) .prCamp input,:is(#tabloubot,#t212,#dash,#rangefilter,#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade) .prCamp select{font-size:13.5px}
 :is(#tabloubot,#t212,#dash,#rangefilter,#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade) .prParCap b{font-size:15px}
+#jurnaltrade .jtTabMic{font-size:13.5px}
+#jurnaltrade svg .jgAx{font-size:12px}
+#jurnaltrade svg .jgEt{font-size:12px}
 :is(#tabloubot,#t212,#dash,#rangefilter,#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade) .ctNr small{font-size:12px}
 :is(#tabloubot,#t212,#dash,#rangefilter,#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade) .ctTxt>b{font-size:20px}
 :is(#tabloubot,#t212,#dash,#rangefilter,#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade) .ctTxt>span{font-size:12px}
 :is(#tabloubot,#t212,#dash,#rangefilter,#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade) .ctFac{font-size:15px}
 :is(#tabloubot,#t212,#dash,#rangefilter,#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade) .ctSus{font-size:12px}
 @media (max-width:600px){:is(#tabloubot,#t212,#dash,#rangefilter,#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade) .ctNr{font-size:30px}:is(#tabloubot,#t212,#dash,#rangefilter,#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade) .ctTxt>b{font-size:15px}}
-#jurnaltrade .jtTabMic{font-size:13.5px}
-#jurnaltrade svg .jgAx{font-size:12px}
-#jurnaltrade svg .jgEt{font-size:12px}
 @media (max-width:640px){html.pzDemo #tabloubot #pzVerdict .pzPret{font-size:30px}}
 /* tema zi: variabilele rădăcinii, apoi regulile cu culoare */
 :is(#tabloubot,#t212,#dash,#rangefilter,#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade).tbZi{--bg:#F2F4F7;--panel:#FFFFFF;--panel-2:#F5F7FA;--panel-3:#E9EDF3;--line:#E0E5EC;--line-soft:#F5F7FA;--text:#0E1A2B;--muted:#48586E;--accent:#2456E6;--accent-2:#2456E6;--good:#0B8A5F;--bad:#CC3A32;--warn:#8A5A00;--pzF0:#F2F4F7;--pzF1:#FFFFFF;--pzF2:#F5F7FA;--pzF3:#E9EDF3;--pzLi:#E0E5EC;--pzLi2:#C3CCD8;--pzT0:#0E1A2B;--pzT1:#48586E;--pzT2:#66768B;--pzSus:#0B8A5F;--pzJos:#CC3A32;--pzAur:#8A5A00;--pzInfo:#2456E6}
@@ -4785,92 +4871,6 @@ body :is(#tabloubot,#t212,#dash,#rangefilter,#sugestii,#probe,#gridset,#gridsim,
 :is(#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade).tbZi .sectionHead .sugTemaBtn:focus-visible{outline:2px solid #2456E6}
 #tabloubot.tbZi{--lrBar:#2456E6}
 /* ==== v100.316 TEMA TABLOULUI: sfârșit ==== */
-/* v100.358 (el, 18.11.2026: „Jurnal de trade la fel ca în celelalte pagini”): Jurnalul intră în paginile refăcute (RADACINI, tema zi / noapte, IBM Plex).
-   Fraza mare + „De unde știu” sus; rândurile pliate ca în Tablou (data-rand, JT_RANDURI); graficele noi (JurnalGrafice, clase jg*); O singură listă de trade-uri
-   (rândul .jtLR, fișa .jtFisa la clic). Culorile de noapte scrise ca în Tablou - tema de zi o face generatorul (scripts/face-tema-tablou.mjs). */
-#jurnaltrade{--tb-linie:#26333F;--tb-fond:#141C24;--tb-fond2:#1A242E;color:#E6EDF3}
-#jurnaltrade .sectionHead{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
-#jurnaltrade .sectionHead .sugTemaBtn{margin-left:auto}
-#jurnaltrade .jtFrazaBox{padding:4px 2px 2px;margin:0 0 12px}
-#jurnaltrade .grFraza{font-size:20px;font-weight:600;line-height:1.3;color:#E6EDF3;margin:0 0 4px;text-wrap:balance}
-#jurnaltrade .grFrazaSub{font-size:13.5px;line-height:1.45;color:#9FB3C4;margin:0 0 4px}
-#jurnaltrade .grSurse{margin-top:6px;font-size:13.5px;color:#9FB3C4}
-#jurnaltrade .grSurse summary{cursor:pointer;color:#C9D6E2;min-height:28px;display:flex;align-items:center}
-#jurnaltrade .grSurse summary:focus-visible{outline:2px solid #5B8FC7;outline-offset:2px}
-#jurnaltrade .grSurse ul{margin:4px 0 0;padding-left:18px}
-#jurnaltrade .jtAvert{margin:6px 0 0;font-size:13.5px}
-#jurnaltrade .jtAvert .actionGhost{margin-left:6px}
-#jurnaltrade.tbZi .actionGhost{color:#0E1A2B;background:#FFFFFF;border:1px solid #C3CCD8}
-#jurnaltrade.tbZi input,#jurnaltrade.tbZi select,#jurnaltrade.tbZi textarea{color:#0E1A2B;background:#FFFFFF;border:1px solid #C3CCD8}
-/* rândurile pliate: aceeași formă ca în Tablou */
-html.pzDemo #jurnaltrade [data-rand="pliat"]:not([hidden]){display:grid!important;grid-template-columns:270px minmax(0,1fr);gap:2px 6px;align-items:baseline;cursor:pointer;padding:12px 4px!important;margin:0!important;border:0!important;border-top:1px solid var(--pzLi)!important;border-radius:0!important;background:none!important;min-height:0!important}
-html.pzDemo #jurnaltrade [data-rand="pliat"]>*{display:none!important}
-html.pzDemo #jurnaltrade [data-rand="pliat"]::before{content:"▸  " attr(data-titlu);font-size:13.5px;font-weight:600;color:var(--pzT0);white-space:nowrap;box-sizing:border-box}
-html.pzDemo #jurnaltrade [data-rand="pliat"]::after{content:attr(data-rezumat);font-size:13.5px;font-weight:400;color:var(--pzT1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
-html.pzDemo #jurnaltrade [data-rand="pliat"]:hover::before{color:var(--pzInfo)}
-html.pzDemo #jurnaltrade [data-rand="pliat"]:focus-visible{outline:2px solid var(--pzInfo);outline-offset:2px}
-html.pzDemo #jurnaltrade [data-rand="deschis"]:not([hidden]){position:relative}
-html.pzDemo #jurnaltrade [data-rand="deschis"]:not([hidden])::before{content:"▾  strânge";display:block;height:24px;line-height:24px;font-size:12px;font-weight:400;color:var(--pzT2);cursor:pointer;text-align:right}
-html.pzDemo #jurnaltrade [data-rand="deschis"]:not([hidden]):hover::before{color:var(--pzInfo)}
-@media (max-width:640px){html.pzDemo #jurnaltrade [data-rand="pliat"]:not([hidden]){grid-template-columns:minmax(0,1fr)}html.pzDemo #jurnaltrade [data-rand="pliat"]::after{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}}
-/* KPI-urile: pe telefon două câte două, fără cifre tăiate */
-#jurnaltrade .jtKpi .tbKpiVal{font-family:var(--pzMono);overflow-wrap:anywhere}
-/* graficele noi - paleta lor (validate_palette.js din dataviz, 18.11): verde #38AD74 / roșu #C23E37 / chihlimbar #A88420 trec pe ambele teme
-   (noapte pe #141C24, zi pe #FFFFFF); roșu–verde ΔE 7,8 la deutan = banda 6–8, legală doar cu a doua codare: sus / jos, legendă, goluri, tabelele de sub grafice */
-#jurnaltrade .jtGrGrila{display:grid;grid-template-columns:minmax(0,1fr);gap:16px;align-items:start}
-@media (min-width:1024px){#jurnaltrade .jtGrGrila{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}#jurnaltrade .jtGrLat{grid-column:1 / -1}}
-#jurnaltrade .jtGr{min-width:0}
-#jurnaltrade .jtGr h5{margin:0 0 2px;font-size:13.5px;font-weight:600;color:#E6EDF3}
-#jurnaltrade .jtGr>.tbSub{margin:0 0 6px}
-#jurnaltrade .jtGr svg{display:block;width:100%;height:auto;max-width:100%}
-#jurnaltrade .jtTabMic{font-size:13px}
-#jurnaltrade .jtTabMic td:not(:first-child),#jurnaltrade .jtTabMic th:not(:first-child){text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
-#jurnaltrade svg .jgPoz{fill:#38AD74}
-#jurnaltrade svg .jgNeg{fill:#C23E37}
-#jurnaltrade svg .jgNeutru{fill:#35485A}
-#jurnaltrade svg .jgAx{fill:#8799AA;font-size:11px;font-family:var(--pzMono)}
-#jurnaltrade svg .jgGrid{stroke:#26333F;stroke-width:1;fill:none}
-#jurnaltrade svg .jgZero{stroke:#35485A;stroke-width:1;fill:none}
-#jurnaltrade svg .jgLinie{stroke:#5B8FC7;stroke-width:2;fill:none;stroke-linejoin:round}
-#jurnaltrade svg .jgArie{fill:#C23E37;fill-opacity:.28;stroke:#C23E37;stroke-width:1}
-#jurnaltrade svg .jgPunct{fill:#E6EDF3;stroke:#141C24;stroke-width:2}
-#jurnaltrade svg .jgEt{fill:#C9D6E2;font-size:11px;font-family:var(--pzMono)}
-#jurnaltrade svg .jgC0{fill:#22303C}
-#jurnaltrade svg .jgC1{fill:#38AD74;fill-opacity:.45}#jurnaltrade svg .jgC2{fill:#38AD74}
-#jurnaltrade svg .jgC-1{fill:#C23E37;fill-opacity:.45}#jurnaltrade svg .jgC-2{fill:#C23E37}
-#jurnaltrade svg .jgGol{fill:none}
-#jurnaltrade svg .jgCgol{fill:none;stroke:#22303C;stroke-width:1}
-#jurnaltrade svg .jgGrile{fill:#38AD74}#jurnaltrade svg .jgPozitie{fill:#C23E37}#jurnaltrade svg .jgCosturi,#jurnaltrade svg .jgNeutru.jgCosturi,#jurnaltrade.tbZi svg .jgNeutru.jgCosturi{fill:#A88420}
-#jurnaltrade svg .jgBara{stroke:none}#jurnaltrade svg .jgIc{stroke:#C9D6E2;stroke-width:1.5;fill:none}#jurnaltrade svg .jgMarc{fill:#E6EDF3;stroke:#141C24;stroke-width:2}
-#jurnaltrade svg circle.jgLinie{fill:#141C24}#jurnaltrade svg line.jgAx,#jurnaltrade svg path.jgAx{stroke:#35485A;fill:none}#jurnaltrade svg .jgHit{cursor:default}
-/* rapoartele */
-#jurnaltrade .jtRapCap{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:0 0 8px}
-#jurnaltrade .jtRapCap .jtFiltru{margin:0}
-#jurnaltrade .jtRapSel select{font:inherit;color:#E6EDF3;background:#1A242E;border:1px solid #35485A;border-radius:4px;padding:6px 8px;min-height:36px}
-#jurnaltrade .jtRapH{margin:14px 0 4px;font-size:13.5px;font-weight:600}
-/* O singură listă */
-#jurnaltrade .jtListaCap{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:8px 0}
-#jurnaltrade .jtListaCap .jtFiltru{margin:0}
-#jurnaltrade .jtLRCap,#jurnaltrade .jtLR{display:grid;grid-template-columns:110px minmax(70px,1fr) minmax(120px,1.4fr) 70px 64px minmax(130px,auto);gap:4px 10px;align-items:baseline}
-#jurnaltrade .jtLRCap{font-size:12px;color:#8799AA;padding:6px 12px;border-bottom:1px solid #26333F}
-#jurnaltrade details.jtT{border-bottom:1px solid #26333F}
-#jurnaltrade details.jtT>summary.jtLR{list-style:none;cursor:pointer;padding:8px 12px;font-size:13.5px;min-height:24px}
-#jurnaltrade details.jtT>summary.jtLR::-webkit-details-marker{display:none}
-#jurnaltrade details.jtT>summary.jtLR:hover{background:#1A242E}
-#jurnaltrade details.jtT>summary.jtLR:focus-visible{outline:2px solid #5B8FC7;outline-offset:-2px}
-#jurnaltrade details.jtT[open]>summary.jtLR{background:#1A242E}
-#jurnaltrade .jtLRNum{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
-#jurnaltrade .jtLRData,#jurnaltrade .jtLRBot,#jurnaltrade .jtLRTinut{color:#9FB3C4;font-variant-numeric:tabular-nums}
-#jurnaltrade .jtFisa{padding:4px 12px 12px;background:#1A242E}
-#jurnaltrade .jtFisa .tbSub{margin:4px 0}
-@media (max-width:700px){
-#jurnaltrade .jtLRCap{display:none}
-#jurnaltrade .jtLR{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"mon num" "bot bot" "data tin";gap:2px 8px}
-#jurnaltrade .jtLRMon{grid-area:mon}#jurnaltrade .jtLR .jtLRNum{grid-area:num}#jurnaltrade .jtLRBot{grid-area:bot;font-size:12px}#jurnaltrade .jtLRData{grid-area:data;font-size:12px}#jurnaltrade .jtLRTinut{grid-area:tin;font-size:12px;text-align:right}#jurnaltrade .jtLRBec{display:none}
-#jurnaltrade .jtListaCap .tbIntBtn{min-height:40px}
-}
-/* pe telefon tabelele încap: celulele se rup, nu ies din ecran (auditul: stTabel 432 px pe 412) */
-@media (max-width:600px){#jurnaltrade table{table-layout:auto}#jurnaltrade .grTabel th,#jurnaltrade .grTabel td,#jurnaltrade .stTabel th,#jurnaltrade .stTabel td{padding:5px 4px;white-space:normal;overflow-wrap:anywhere}#jurnaltrade .jtTabGr .jtSfat{min-width:120px}}
 /* Colțurile rămân de cel mult 5 px și ordinea singură pe rând începe cu „.pzDemo #tabloubot .tbCadru>” (regulile temei PAZNIC, proba v100.151). */
 /* v100.316 (el, 10.11.2026: îl deranjează culorile, ordinea, aglomerația, literele ⇒ „Aplică desenul nou în Radar”): DESENUL NOU al Tabloului botului.
    Un strat peste DOM-ul existent: nimic nu se mută și nimic nu se ascunde; se schimbă ordinea din grilă, cutiile și literele. Regulile vechi rămân mai sus.

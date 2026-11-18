@@ -21,7 +21,8 @@ await test("Jurnalul aduce „Săptămâna pieței” de acasă (action=raportPi
   assert.match(app, /jtStare\.raportPiata=/);
 });
 await test("Jurnalul o desenează sub raportul de duminică, cu titlul și rândurile ei (escapate), doar când există", () => {
-  const i = app.indexOf('var rap=$("jtRaport")'), j = app.indexOf('var rg=$("jtReguli")', i), bloc = app.slice(i, j);
+  // v100.358: raportul de duminică și „Săptămâna pieței” stau în rândul Rapoarte (jtRapoarteRender), înaintea regulilor
+  const i = app.indexOf('var rap=$("jtRaport")'), j = app.indexOf("function jtReguliRender(", i), bloc = app.slice(i, j);
   assert.ok(i > 0 && j > i);
   assert.match(bloc, /jtStare\.raportPiata/); assert.match(bloc, /escapeHtml\(TextRo\.cifreNoi\(x\)\)/);
   assert.match(bloc, /class="jtRaportPiata"/);

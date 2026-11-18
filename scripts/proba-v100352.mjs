@@ -178,7 +178,8 @@ await test("E14 (auditul) „95,000” cu virgulă se citește după preț ca �
 await test("E18 (auditul) Tabloul: rândul 🧭 cu ora de la care ține, schimbarea care așteaptă a doua socotire și ce înseamnă „îl țin” (rulat)", () => {
   const A = citeste("public", "app.js"), f = new Function("escapeHtml", `${A.match(/function tbHotHtml\(h\)\{[^\n]*\}/)[0]}; return tbHotHtml;`)((s) => String(s));
   const t = f({ cheie: "tine", nume: "îl țin așa", la: Date.UTC(2026, 10, 17, 8, 30), ultima: Date.now(), candidat: "inchide", candNume: "îl închid acum" });
-  assert.ok(/\(de la 10:30\)/.test(t) && /se poate schimba în «îl închid acum» \(aștept a doua socotire\)/.test(t) && /nu înseamnă că stopul e bine pus/.test(t), t);
+  // v100.358: proba scrisă pe 17.11; din altă zi rândul pune corect și data („de la 17.11, 10:30”)
+  assert.ok(/\(de la (17\.11, )?10:30\)/.test(t) && /se poate schimba în «îl închid acum» \(aștept a doua socotire\)/.test(t) && /nu înseamnă că stopul e bine pus/.test(t), t);
   assert.ok(/#gsPagina \.gsHot tr\.gsHotEr td\.gsStins\{white-space:normal\}/.test(citeste("public", "app.css")), "rândul de eroare se rupe pe telefon");
 });
 

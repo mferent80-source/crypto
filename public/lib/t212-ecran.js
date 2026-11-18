@@ -1917,9 +1917,9 @@ function jtRenderActiuni() {
       + '<textarea class="jtNota" data-id="' + escapeHtml(id) + '" rows="1" placeholder="De ce am cumpărat, ce aș face altfel…">' + escapeHtml(note[id] || "") + '</textarea></div>';
   }).join("") + '</details>';
   box.innerHTML = h;
-  if (typeof jtFrazaRender === "function") { try { jtFrazaRender(null); } catch (e) {} }   // v100.358 (revizia, G2): fraza de sus după istoricul abia venit
   if (typeof scDeseneaza === "function") scDeseneaza();   // v100.220: scorul sezonului T212, sus pe filă (fila se rescrie toată)
   if (typeof jtStatRender === "function") { if (jtFiltru === "actiuni") jtStatRender("actiuni"); else if (jtFiltru === "tot") jtStatRender("tot"); }   // v100.22
+  if (typeof jtFrazaRender === "function") { try { jtFrazaRender(null); } catch (e) {} }   // v100.358 (revizia, G2): fraza de sus după istoricul abia venit
 }
 // v87: "cat te-ar fi salvat stopul" - rejucat pe preturile reale (zilnice), din verdictele colectorului
 // v88: toate variantele de stop, rejucate pe trade-urile lui: fix (-8/-10/-15%) si care URCA dupa maxim (planul

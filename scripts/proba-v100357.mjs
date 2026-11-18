@@ -57,12 +57,12 @@ await test("S6 (I-896) comutatorul probaFara15 e doar al probelor vechi ale Mont
     if (fs.existsSync(path.join(RAD, ...f))) assert.ok(!/probaFara15/.test(citeste(...f)), f.join("/"));
   assert.equal((lib("grid-proba.js").match(/bare15: pr\.barePeZi !== C\.BARE_ZI_1H && !o\.probaFara15/g) || []).length, 2);
 });
-await test("V versiunile v100.357 (index ×4, sw, versiune.js, package + lanț, BUILD_INFO) + colector v101.195", () => {
-  const h = citeste("public", "index.html"); assert.equal((h.match(/v100\.357/g) || []).length, 4); assert.match(h, /v100\.357 · FIȘA FĂRĂ BARE DE O ORĂ/);
-  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-357/); assert.match(citeste("functions", "_shared", "versiune.js"), /"v100\.357"/);
-  const p = JSON.parse(citeste("package.json")); assert.equal(p.version, "100.357.0"); assert.match(p.scripts.test, /npm run test:v100356 && npm run test:v100357/);
-  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.match(bi.badge, /^v100\.357/); assert.ok(bi.f357 && bi.tot356);
-  assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.195";/);
+await test("V versiunile de la v100.357 încolo (index, sw, versiune.js, package + lanț, BUILD_INFO) + colector ≥ v101.195", () => {
+  const nr = (t) => Number((String(t).match(/100[.-](\d{3})/) || [])[1]);   // v100.358: versiunea curentă o verifică proba ei
+  assert.ok(nr(citeste("functions", "_shared", "versiune.js")) >= 357 && nr(citeste("public", "sw.js")) >= 357 && nr(JSON.parse(citeste("BUILD_INFO.json")).badge) >= 357);
+  const p = JSON.parse(citeste("package.json")); assert.ok(nr(p.version) >= 357); assert.match(p.scripts.test, /npm run test:v100356 && npm run test:v100357/);
+  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.ok(bi.f357 && bi.tot356);
+  assert.ok(Number((citeste("scripts", "colector.mjs").match(/const VERSIUNE_COLECTOR = "v101\.(\d+)";/) || [])[1]) >= 195);
 });
 
 console.log(`\n${teste - picate}/${teste} trec`);

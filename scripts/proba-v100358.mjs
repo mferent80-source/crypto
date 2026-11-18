@@ -76,6 +76,13 @@ await test("graficele primesc lățimea reală (o.lat) și se redesenează la ro
   for (const t of ["Curba pe zile", "Calendarul zilelor", "Câți boți pornești pe zi", "Pareto", "Pe lună: grile, poziție, costuri", "Lățimea intervalului", "Levierul"]) assert.ok(g.includes(t), t);
   assert.match(A, /window\.addEventListener\("resize",function\(\)\{clearTimeout\(jtLatGr\)/);
 });
+await test("V versiunile v100.358 (index ×4, sw, versiune.js, package + lanț, BUILD_INFO); colectorul neatins (v101.195)", () => {
+  assert.equal((H.match(/v100\.358/g) || []).length, 4); assert.match(H, /v100\.358 · JURNALUL DE TRADE/);
+  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-358/); assert.match(citeste("functions", "_shared", "versiune.js"), /"v100\.358"/);
+  const p = JSON.parse(citeste("package.json")); assert.equal(p.version, "100.358.0"); assert.match(p.scripts.test, /npm run test:v100357 && npm run test:v100358/);
+  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.match(bi.badge, /^v100\.358/); assert.ok(bi.jurnal358);
+  assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.195";/);
+});
 // ---- probe de COMPORTAMENT (revizia Opus a diff-ului, G7: înainte erau doar pe forma codului) ----
 import vm from "node:vm";
 const lib = (f) => citeste("public", "lib", f);

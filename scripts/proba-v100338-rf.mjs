@@ -15,7 +15,7 @@ const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8").replace(
 let teste = 0, picate = 0;
 async function test(nume, f) { teste++; await Promise.resolve().then(f).then(() => console.log(`  ok   ${nume}`)).catch((e) => { picate++; console.log(`  PICA ${nume}\n       ${String(e && e.stack || e).split("\n").slice(0, 3).join("\n       ")}`); }); }
 console.log("\nV100.338 · Range Filter ca Tabloul · proba\n");
-const PATRU = "#tabloubot,#t212,#dash,#rangefilter,#sugestii,#probe,#gridset,#gridsim,#montecarlo";   /* v100.350: și Simulatorul */
+const PATRU = "#tabloubot,#t212,#dash,#rangefilter,#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade";   /* v100.358: și Jurnalul */   /* v100.350: și Simulatorul */
 
 await test("A tema: rădăcina #rangefilter în generator, stratul la zi, variabilele de zi pe toate patru", async () => {
   const GEN = citeste("scripts", "face-tema-tablou.mjs"), CSS = citeste("public", "app.css");
