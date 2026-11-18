@@ -59,7 +59,7 @@ await test("I2 Acasă: funding-ul „din 30 de monede”, socoteala alertelor �
 await test("I2 fișa și jurnalul din app.js: „Aș începe cu greșeala „X”: … pe 572 de boți”, „N de boți” prin TextRo.cate, „pe 12 zile” fără „de” în plus", () => {
   const s = app();
   assert.doesNotMatch(s, /Ce aș face eu:<\/b> încep cu „/, "acțiunea jurnalului nu e la persoana I („încep cu”)");
-  assert.match(s, /Ce aș face eu:<\/b> Aș începe cu greșeala „'\+escapeHtml\(r\.greseli\[0\]\.titlu\)\+'”: a costat '\+U\(r\.greseli\[0\]\.cost\)\+' pe '\+TextRo\.cate\(r\.greseli\[0\]\.n,"bot","boți"\)/);
+  assert.match(s, /Ce aș face eu:<\/b> '\+\(rau\?'Aș începe cu „'\+escapeHtml\(rau\.titlu\)\+'”: boții cu ea au ieșit cu /);   // v100.358: greșeala doar când iese SIGUR mai rea decât boții fără ea (în aceeași zi)
   assert.doesNotMatch(s, /"pe "\+r\.zile\+" de zile — mai puține ferestre"/, "„pe 12 de zile”");
   assert.doesNotMatch(s, /rp2\.n\+' boți|'Pe '\+rp2\.n\+' boți|· "\+r\.n\+" boți, "/, "„N boți” fără TextRo.cate în jurnal");
 });
@@ -83,7 +83,7 @@ await test("M3 istoricul monedei: data celui mai rău bot păstrează anul când
 await test("M4 jurnalul crypto: „n-aș reporni pe aceeași monedă în primele 10 minute” rămâne (cifra pe rândul de sub acțiune, acțiunea ≤ 110)", () => {
   const s = app(), i = s.indexOf("Aș porni doar pe 🟢"), linie = s.slice(i, s.indexOf("\n", i));
   assert.ok(i > 0, "acțiunea jurnalului lipsește");
-  assert.match(linie, /^Aș porni doar pe 🟢 și n-aș reporni pe aceeași monedă în primele 10 minute\./, linie.slice(0, 160));
+  assert.match(linie, /^Aș porni doar pe 🟢: blocarea Radarului bate clar o blocare la întâmplare/, linie.slice(0, 160));   // v100.358: „n-aș reporni” scos - repornirea nu iese dovedit mai proastă (greșelile în aceeași zi), iar sfatul vine doar cu martorul trecut
   const fac = linie.match(/^([^<"]+)/)[1]; assert.ok(fac.length <= 110, fac.length + ": " + fac);
 });
 

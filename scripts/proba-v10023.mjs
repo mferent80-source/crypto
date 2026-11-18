@@ -31,7 +31,7 @@ await test("2 · „unde câștigi constant” doar pe grupe castigate la cel pu
   // XYZ: +500 si 4 x −50 (20% pe plus) nu e „constant”; ABC: 5 x +10 (100%) e
   const l = tr([500, -50, -50, -50, -50], () => ({ eticheta: "XYZ" })).concat(tr([10, 10, 10, 10, 10], (i) => ({ id: "a" + i, eticheta: "ABC" })));
   const b = ST.calc(l, { moneda: "lei" }).bine.find((x) => /constant/.test(x.text));
-  assert.ok(b && /ABC/.test(b.text) && !/XYZ/.test(b.text), JSON.stringify(b));
+  assert.ok(!b || (!/ABC/.test(b.text) && !/XYZ/.test(b.text)), JSON.stringify(b));   // v100.358: „constant” cere ≥ 10 trade-uri în ≥ 5 zile - nici ABC (5), nici XYZ (20% pe plus)
 });
 
 await test("3 · caderea care porneste de la inceput (primul trade pe minus): nu mai scrie „01.01.70”, spune „de la început”", () => {

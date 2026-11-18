@@ -66,7 +66,7 @@ ctx.window = ctx; vm.createContext(ctx); vm.runInContext(AS, ctx);
 const A = ctx.AsezarePaznic;
 await test("(5) Jurnal pe Acțiuni / Tot: „Rezultat total” citit în formatul paginii (ro-RO: mii cu punct); „—” e lipsă, nu zero; Sugestii: eroarea și lățimea veche în antet; aria-controls; regula moartă scoasă", () => {
   assert.equal(A.valBani("+0,00 lei"), 0); assert.equal(A.valBani("−1.234 lei"), -1234); assert.equal(A.valBani("−12,50 lei"), -12.5); assert.equal(A.valBani("+1.234,56 $"), 1234.56); assert.equal(A.valBani("—"), null);
-  assert.match(AS, /if \(f === "actiuni" \|\| f === "tot"\) \{ pagJurnalAltaFila\(f\); return; \}/);
+  assert.match(AS, /function pagJurnal\(\) \{ antet\("pzV-jt", null, null\); \}/);   // v100.358: Jurnalul își scrie singur fraza mare (#jtFrazaBox, pe fiecare filă) ⇒ antetul citit din pagină se ascunde
   assert.match(AS, /#sugPagina \.sugPanda p\.tbSub/); assert.match(AS, /lățimea e " \+ capSub/);
   assert.match(AS, /b\.setAttribute\("aria-controls", h\.id\)/);
   assert.match(CSS, /#grAlte\+p\{order:61\}/, "regula NU era moartă (revizia a treia, M4): prinde nota „✓ Rândul Pentru TradingView…”");
@@ -87,10 +87,10 @@ await test("(7) v100.156 (poza lui de pe telefon): fără contur sub literele gr
 });
 
 await test("(8) revizia a treia: Jurnal pe Acțiuni = „Câștigat REAL” (toată istoria, ca pe Crypto), pe Tot cu perioada aleasă; antetul urmează fila pe loc; pliatul fâșiei legat de strat; nota de sub „Alte setări” la locul ei; bara de sus nu fuge din ecran", () => {
-  assert.match(AS, /if \(fila === "actiuni"\) \{ cel = ref && ref\.querySelector\("\.jtKpi \.tbKpiCel"\)/);
-  assert.match(AS, /tx\("\.stGrup \[aria-pressed=\\"true\\"\]", ref\)/, "Tot: perioada aleasă");
+  // v100.358: antetul Jurnalului citit din pagină s-a scos (fraza #jtFrazaBox)
+  // v100.358: antetul Jurnalului citit din pagină s-a scos (fraza #jtFrazaBox)
   assert.match(AS, /closest\("#jurnaltrade \.jtFiltru"\)\) setTimeout\(function \(\) \{ try \{ pagJurnal\(\); \}/);
-  assert.match(AS, /"CRYPTO: " \+ \(v \? v\.textContent\.trim\(\) : "—"\)/);
+  // v100.358: antetul Jurnalului citit din pagină s-a scos (fraza #jtFrazaBox)
   assert.ok(CSS.includes("html.pzDemo body:not(.pzFasiaDeschisa):has(main>#cloud.on,main>#settings.on,main>#health.on) main :is(.heroStrip,.tabs){display:none}"), "fără strat fâșia rămâne la vedere");
   assert.ok(CSS.includes(".pzDemo #grFisa>#grAlte+p{order:61}") && CSS.includes(".topStatus>.topRight{justify-content:safe center}"));
 });

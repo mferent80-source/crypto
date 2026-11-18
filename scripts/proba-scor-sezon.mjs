@@ -443,7 +443,7 @@ await test("🟡 7/9/11/🔵b - html: valorile tastate rămân în formular; not
 
 await test("🟡 3/4/8/12/14 + 🔵c/e - legarea: Acasă citește arhiva KV (nu Pionex), ține minte trade-urile, formularul pe input, GET-ul în zbor nu suprascrie POST-ul; colectorul la 10 min; sw.js are lib-ul", () => {
   const APP = citeste("public", "app.js"), C = citeste("scripts", "colector.mjs"), SW = citeste("public", "sw.js");
-  const bloc = APP.slice(APP.indexOf("var SC_PIETE="), APP.indexOf("function jtRender(){"));
+  const bloc = APP.slice(APP.indexOf("var SC_PIETE="), APP.indexOf("var jtMemo=") > 0 ? APP.indexOf("var jtMemo=") : APP.indexOf("function jtRender(){"));   // v100.358: desenul nou al Jurnalului (jtReincearca ⇒ jtPorneste) stă după scor
   assert.ok(!/jtPorneste\(/.test(bloc), "scPorneste nu mai cheamă jtPorneste (cererea Pionex)");
   assert.ok(bloc.includes('/api/istoric-bot?action=botiInchisi'), "arhiva KV pe Acasă");
   assert.ok(bloc.includes('/api/t212?action=istoric'), "istoricul T212 reîmprospătat");
@@ -465,13 +465,13 @@ await test("v100.217: versiunea ≥ 217 peste tot, lib-ul în index.html, cardul
   assert.ok(IDX.includes('<script src="/lib/statistica-trade.js"></script><script src="/lib/scor-sezon.js"></script>'), "lib-ul după statistica-trade");
   // v100.330 (el, 12.11: „fa tot acum” - golurile): „Ce aș cumpăra azi” stă în .acTine (după scor în pagină); v100.331: și Trend 12 luni ⇒ după scor vine legătura
   assert.ok(/<\/div><div class="acScorBloc" id="acScor"><\/div>(<div class="acScorBloc" id="acScorT212"><\/div>)?<div class="acLegatura" id="acLegatura">/.test(IDX) && IDX.indexOf('id="acCumpar"') > IDX.indexOf('id="acScor"'), "cardul pe Acasă între verdicte și „ce aș cumpăra”");   // v100.220: + T212
-  assert.ok(IDX.includes('<div id="jtCrypto"><div id="jtScor"></div><div id="jtStatCrypto"></div>'), "cardul sus în Jurnal");
+  assert.ok(IDX.indexOf('<div id="jtScor"></div>') > IDX.indexOf('<div id="jtCrypto">') && IDX.indexOf('<div id="jtScor"></div>') < IDX.indexOf('<div id="jtStatCrypto"></div>'), "cardul sus în Jurnal");   // v100.358: sub cifrele mari, deasupra statisticii
   assert.ok(P.scripts["test:scorsezon"] && P.scripts.test.includes("npm run test:scorsezon"), "proba în lanț");
   const APP = citeste("public", "app.js"), AC = citeste("public", "lib", "acasa-ecran.js"), CSS = citeste("public", "app.css");
   for (const f of ["function scDeseneaza()", "async function scPorneste()", "function scorFormular(id)", "async function scorSalveaza(id)", "async function scorSezonNou(id)"]) assert.ok(APP.includes(f), f);
   assert.ok(/function jtRender\(\)\{\s*var box=[^\n]*\n\s*if\(typeof scDeseneaza==="function"\)scDeseneaza\(\);/.test(APP), "jtRender desenează scorul");
   assert.ok(AC.includes('pas("scor", function () { return typeof scPorneste === "function" ? scPorneste() : null; })'), "Acasă îl pornește");
-  assert.ok(CSS.includes(".pzDemo #acasa>#acScor{order:11}") && CSS.includes(".pzDemo #jtCrypto>#jtScor{order:10}"), "ordinea");
+  assert.ok(CSS.includes(".pzDemo #acasa>#acScor{order:11}") && CSS.includes(".pzDemo #jtCrypto>#jtScor{order:12}"), "ordinea");   // v100.358: sub cifrele mari (jtKpi 10), deasupra graficelor (14)
   assert.ok(CSS.indexOf(".scCard{") < CSS.lastIndexOf(".sugPandaTab thead{display:table-header-group}"), "CSS-ul înaintea regulii pândei (care rămâne ultima)");
 });
 

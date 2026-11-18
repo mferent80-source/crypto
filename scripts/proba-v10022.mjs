@@ -68,7 +68,7 @@ await test("distributia pe randament (rezultat / baza) si cele mai mari 5 pierde
 await test("ce ai facut bine / ce ai gresit: din cifre, fiecare cu suma lui; sub 10 trade-uri -> avertisment, nu concluzii", () => {
   const s = ST.calc(TR, { moneda: "lei" });
   assert.ok(s.bine.length >= 2 && s.gresit.length >= 2, JSON.stringify({ b: s.bine, g: s.gresit }));
-  assert.ok(s.bine.some((x) => /A/.test(x.text) && x.suma === 65), "cea mai buna eticheta");
+  assert.ok(!s.bine.some((x) => /constant/.test(x.text)), "v100.358: grupă sub 10 trade-uri sau sub 5 zile ⇒ nu se mai spune „constant” (auditul: top 3 din 211 pe 5 boți)");
   assert.ok(s.gresit.some((x) => /cea mai mare cădere/i.test(x.text) && x.suma === -40));
   const mic = ST.calc(TR.slice(0, 6), { moneda: "USDT" });
   assert.equal(mic.suficient, false);
@@ -152,7 +152,7 @@ await test("pagina: statistica sus pe fiecare fila (Crypto, Actiuni, Tot), scrip
   assert.match(app, /function jtStatOrdine\(/); assert.match(app, /function jtStatCsv\(/); assert.match(app, /new Blob\(/);
   // cifra veche de sus (realizatul Pionex, fara comisioane si funding) nu mai contrazice statistica neta de deasupra
   // v100.40: cifra de sus a jurnalului crypto e acum NETUL (ca statistica), cu brutul Pionex alaturi
-  assert.ok(app.includes('cel("Rezultat net",U(r.net)'), "eticheta noua"); assert.ok(app.includes("după comisioane și funding"), "explicatia");
+  assert.ok(app.includes('cel("Rezultat net",jtU(tot)'), "eticheta noua (v100.358: netul pe tot, futures + spot/copy)"); assert.ok(app.includes("după comisioane și funding"), "explicatia");
 });
 
 console.log(`\n${teste - picate}/${teste} trec`);

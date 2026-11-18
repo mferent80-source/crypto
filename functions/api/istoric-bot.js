@@ -127,6 +127,8 @@ async function istoricGet(request,env){
   // v100.190: „Trend 12 luni” — clasamentul robotului din premarket_scanner, pus de colector o dată pe zi (tura-trend.mjs)
   if(action==="trend12"){let v=null;try{v=JSON.parse(await env.ISTORIC.get("sugestii:trend12")||"null")}catch{v=null}return json({trend:v})}
   if(action==="gridJurnal"){let v=null;try{v=JSON.parse(await env.ISTORIC.get("grid:jurnal")||"null")}catch{v=null}return json(v&&typeof v==="object"?v:{jurnal:[],hartie:[],ignorati:[],sterse:[]})}   /* v100.349: jurnalul + hârtia gridului, aceleași pe telefon și PC */
+  /* v100.358 (Jurnal de trade, el: „notițele pe server”): notițele de la fiecare trade, aceleași pe telefon și pe PC - {id:{t:text,m:ms}}, text gol = ștearsă */
+  if(action==="jtNote"){let v=null;try{v=JSON.parse(await env.ISTORIC.get("jurnal:note")||"null")}catch{v=null}return json(v&&typeof v==="object"&&v.note&&typeof v.note==="object"?v:{la:null,note:{}})}
   if(action==="fise"){let v=[];try{v=JSON.parse(await env.ISTORIC.get("grid:fise")||"[]")}catch{v=[]}return json({fise:Array.isArray(v)?v:[]})}   /* v100.349: fișele gridului notate (colectorul le judecă pe 1 minut) */
   if(action==="fiseUrmarire"){let v=null;try{v=JSON.parse(await env.ISTORIC.get("grid:fiseUrmarire")||"null")}catch{v=null}return json({urmarire:v})}
   /* v100.351 (ideea 3): verdictele Simulatorului pentru un bot nou - notele (colectorul le judecă) și raportul */
@@ -465,6 +467,16 @@ export async function onRequestPost({request,env}){
   // v100.344 (16.11): proba gridului - doar numere și zile curățate; rezumatul cu verdictul scris de colector (regulile din scripts/lib/proba-grid.mjs)
   // v100.349 (auditul Grid, el: „fiecare fișă calculată se notează și se judecă după cât o ții, pe bare de 1 minut”): una pe monedă, zi (UTC) și fereastră
   // v100.349 (auditul Grid, el: „pe server”): aparatul trimite listele lui; serverul le unește cu ce are (după id, câștigă m mai mare; cele șterse nu revin)
+  /* v100.358 (Jurnal de trade, el: „notițele pe server”): aparatul trimite notițele lui {id:{t,m}}; serverul le unește cu ce are - pe fiecare id
+     câștigă cea scrisă mai târziu (m); textul gol rămâne ca „ștearsă” (cu m), ca o notiță ștearsă pe telefon să nu revină de pe PC. Doar text, ≤ 1000 de semne. */
+  if(action==="jtNote"){const c=corp&&corp.note;if(!c||typeof c!=="object"||Array.isArray(c))return json({error:"jtNote: note {id:{t,m}}"},400);
+    const curat={};for(const id of Object.keys(c).slice(0,6000)){const e=c[id];if(!/^[A-Za-z0-9_:.-]{1,60}$/.test(id)||!e||typeof e!=="object")continue;const m0=nr(e.m),m=m0>Date.now()+60000?Date.now():m0,t=typeof e.t==="string"?e.t.slice(0,1000):null;if(!(m>0)||t===null)continue;curat[id]={t,m}}   /* revizia: m din viitor ⇒ acum */
+    return peCheie("kv:jurnal:note",async()=>{let v=null;try{v=JSON.parse(await env.ISTORIC.get("jurnal:note")||"null")}catch{v=null}const note=v&&v.note&&typeof v.note==="object"?v.note:{};
+      let schimbat=false;for(const id of Object.keys(curat))if(!note[id]||(nr(note[id].m)||0)<curat[id].m||((nr(note[id].m)||0)===curat[id].m&&note[id].t!==curat[id].t)){note[id]=curat[id];schimbat=true}
+      if(!schimbat)return json({la:v&&v.la||null,note});   // nimic nou ⇒ fără scriere în KV
+      const chei=Object.keys(note);if(chei.length>6000)chei.sort((a,b)=>(nr(note[a].m)||0)-(nr(note[b].m)||0)).slice(0,chei.length-6000).forEach(k=>{delete note[k]});
+      const o={la:Date.now(),note};await env.ISTORIC.put("jurnal:note",JSON.stringify(o));return json(o)});
+  }
   if(action==="gridJurnal"){const c=corp||{},lista=(x,max)=>Array.isArray(x)?x.filter(e=>e&&typeof e==="object"&&!Array.isArray(e)&&typeof e.id==="string"&&e.id.length<=60&&JSON.stringify(e).length<=8000).slice(-max):null,sir=(x,max)=>Array.isArray(x)?x.filter(e=>typeof e==="string"&&e.length<=60).slice(-max):null;
     const J=lista(c.jurnal,600),Hh=lista(c.hartie,150),I=sir(c.ignorati,500),S=sir(c.sterse,2000);if(!J||!Hh||!I||!S)return json({error:"gridJurnal: listele (jurnal, hartie, ignorati, sterse)"},400);
     let v=null;try{v=JSON.parse(await env.ISTORIC.get("grid:jurnal")||"null")}catch{v=null}v=v&&typeof v==="object"?v:{jurnal:[],hartie:[],ignorati:[],sterse:[]};

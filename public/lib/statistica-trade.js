@@ -28,13 +28,36 @@ var StatisticaTrade = (function () {
   var LUNI = ["ian", "feb", "mar", "apr", "mai", "iun", "iul", "aug", "sep", "oct", "nov", "dec"];
   function numeLuna(k) { var m = /^(\d{4})-(\d{2})$/.exec(k); return m ? LUNI[+m[2] - 1] + " " + m[1].slice(2) : k; }
   function data(t) { try { return new Date(t).toLocaleDateString("ro-RO", { timeZone: TZ, day: "2-digit", month: "2-digit", year: "2-digit" }); } catch (e) { return new Date(t).toISOString().slice(0, 10); } }
+  // v100.358 (auditul statistic 18.11): dovezile se numără pe ZILE (ora României). Ziua ținută minte pe ORĂ (fusul se schimbă doar la oră fixă UTC).
+  var fmtZi = null, memoZi = {}, nMemoZi = 0;
+  try { fmtZi = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit" }); } catch (e) { fmtZi = null; }
+  function ziRo(t) {
+    t = nr(t); if (t === null) return null;
+    var h = Math.floor(t / 3600000), z = memoZi[h];
+    if (z) return z;
+    if (fmtZi) { var p = {}; fmtZi.formatToParts(new Date(h * 3600000)).forEach(function (x) { p[x.type] = x.value; }); z = p.year + "-" + p.month + "-" + p.day; } else z = new Date(h * 3600000 + 2 * 3600000).toISOString().slice(0, 10);
+    if (++nMemoZi > 200000) { memoZi = {}; nMemoZi = 0; }
+    return (memoZi[h] = z);
+  }
+  // blocul de reeșantionare din „Înainte / după”: 7 zile calendaristice consecutive. Înainte și după sunt perioade DIFERITE de piață, iar piața
+  // ține (regimuri de zile / săptămâni): sub H0 cu efect de zi persistent (AR 0,5; sarcinaA/sim-compara.mjs, 800 de istorii) săgețile false la
+  // 5% nominal erau 18–19% pe zile simple, 13% pe 2 zile, 10% pe 3 zile, 3–7% pe 7 zile. Cu puține săptămâni de o parte nu iese nicio săgeată.
+  var BLOC_COMPARA = 7;
+  function blocZi(z) { var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(z || ""); return m ? Math.floor(Date.UTC(+m[1], +m[2] - 1, +m[3]) / (BLOC_COMPARA * 86400000)) : z; }
+  // aleator DOAR mulberry32 cu sămânță fixă (aceeași cifră la fiecare deschidere)
+  function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; var t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  var MIN_ZILE_GRUPA = 5;
+  function tCrit(df) {   // cuantila 97,5% a lui Student (Cornish-Fisher; la 5 g.l. 2,571, la 30 2,042)
+    if (!(df >= 1)) return Infinity; var z = 1.959964, z3 = z * z * z, z5 = z3 * z * z, z7 = z5 * z * z;
+    return z + (z3 + z) / (4 * df) + (5 * z5 + 16 * z3 + 3 * z) / (96 * df * df) + (3 * z7 + 19 * z5 + 17 * z3 - 15 * z) / (384 * df * df * df);
+  }
 
-  // grupa: n, pe plus, total, medie (+ cel mai bun / cel mai prost)
+  // grupa: n, pe plus, total, medie (+ cel mai bun / cel mai prost); v100.358: + zile (zilele distincte de închidere, ora României)
   function grupa(l) {
     var t = suma(l, function (x) { return x.rezultat; }), p = l.filter(function (x) { return x.rezultat > 0; }).length;
-    var bun = null, prost = null;
-    l.forEach(function (x) { if (!bun || x.rezultat > bun.rezultat) bun = x; if (!prost || x.rezultat < prost.rezultat) prost = x; });
-    return { n: l.length, pePlus: p, rata: l.length ? p / l.length : null, total: t, medie: l.length ? t / l.length : null, bun: bun, prost: prost };
+    var bun = null, prost = null, zile = {};
+    l.forEach(function (x) { if (!bun || x.rezultat > bun.rezultat) bun = x; if (!prost || x.rezultat < prost.rezultat) prost = x; var z = ziRo(x.inchis); if (z) zile[z] = 1; });
+    return { n: l.length, pePlus: p, rata: l.length ? p / l.length : null, total: t, medie: l.length ? t / l.length : null, bun: bun, prost: prost, zile: Object.keys(zile).length };
   }
   function grupeaza(l, cheie) {
     var m = {};
@@ -117,13 +140,22 @@ var StatisticaTrade = (function () {
     var B = s.bine, G = s.gresit, mari = function (l) { return l.filter(function (g) { return g.n >= 5; }); };
     if (s.total > 0) B.push({ text: "Pe total ești pe plus: " + bani(s.total, M) + " din " + cate(s.n, "trade", "trade-uri") + (s.factorProfit !== null ? " — fiecare 1 " + M + " pierdut a adus " + s.factorProfit.toFixed(1).replace(".", ",") + " câștigat" : "") + ".", suma: s.total });
     else G.push({ text: "Pe total ești pe minus: " + bani(s.total, M) + " din " + cate(s.n, "trade", "trade-uri") + ".", suma: s.total });
-    if (s.rataCastig >= 0.5) B.push({ text: "Câștigi la " + pr(s.rataCastig) + " din trade-uri (" + s.pePlus + " din " + s.n + ").", suma: s.castigBrut });
+    // v100.358 (auditul 18.11): rata mare e „bine” doar dacă și banii o confirmă (factorul de profit ≥ 1); altfel e o capcană - câștigi des, dar puțin
+    if (s.rataCastig >= 0.5) {
+      if (s.factorProfit === null || s.factorProfit >= 1) B.push({ text: "Câștigi la " + pr(s.rataCastig) + " din trade-uri (" + s.pePlus + " din " + s.n + ").", suma: s.castigBrut });
+      else G.push({ text: "Câștigi des, dar puțin: " + pr(s.rataCastig) + " din trade-uri pe plus (" + s.pePlus + " din " + s.n + "), însă factorul de profit e " + s.factorProfit.toFixed(1).replace(".", ",") + " — câștigurile mici nu acoperă pierderile mari.", suma: s.total });
+    }
     if (s.raport !== null && s.raport < 1) G.push({ text: "Pierderea medie (" + bani(s.pierdereMedie, M) + ") e mai mare decât câștigul mediu (" + bani(s.castigMediu, M) + "): o pierdere mănâncă " + (1 / s.raport).toFixed(1).replace(".", ",") + " câștiguri. Stopul mai aproape sau ieșirea mai devreme de pe minus schimbă asta.", suma: s.pierdereBruta });
     else if (s.raport !== null) B.push({ text: "Câștigul mediu (" + bani(s.castigMediu, M) + ") e mai mare decât pierderea medie (" + bani(s.pierdereMedie, M) + ").", suma: s.castigBrut });
-    var et = mari(s.perEticheta), buni = et.filter(function (g) { return g.total > 0 && g.rata >= 0.5; }).slice(0, 3);
-    if (buni.length) B.push({ text: "Unde câștigi constant: " + buni.map(function (g) { return g.eticheta + " (" + bani(g.total, M) + " din " + g.n + ", " + pr(g.rata) + " pe plus)"; }).join(", ") + ".", suma: buni[0].total });
+    // v100.358 (auditul 18.11): „constant” cere cel puțin MIN (10) trade-uri ȘI 5 zile diferite (trade-urile aceleiași zile nu sunt dovezi
+    // separate); se spun n și zilele. Simetric: și unde PIERZI constant.
+    var constant = function (g) { return g.n >= MIN && g.zile >= MIN_ZILE_GRUPA; }, cuZile = function (g) { return cate(g.n, "trade", "trade-uri") + " în " + cate(g.zile, "zi", "zile"); };
+    var buni = s.perEticheta.filter(function (g) { return constant(g) && g.total > 0 && g.rata >= 0.5; }).slice(0, 3);
+    if (buni.length) B.push({ text: "Unde câștigi constant: " + buni.map(function (g) { return g.eticheta + " (" + bani(g.total, M) + " din " + cuZile(g) + ", " + pr(g.rata) + " pe plus)"; }).join(", ") + ".", suma: buni[0].total });
     var raiToate = s.perEticheta.filter(function (g) { return g.total < 0; }).slice(-3).reverse();
-    if (raiToate.length) G.push({ text: "Unde ai pierdut cel mai mult: " + raiToate.map(function (g) { return g.eticheta + " (" + bani(g.total, M) + " din " + g.n + ")"; }).join(", ") + ".", suma: raiToate.reduce(function (a, g) { return a + g.total; }, 0) });
+    if (raiToate.length) G.push({ text: "Unde ai pierdut cel mai mult: " + raiToate.map(function (g) { return g.eticheta + " (" + bani(g.total, M) + " din " + cuZile(g) + ")"; }).join(", ") + ".", suma: raiToate.reduce(function (a, g) { return a + g.total; }, 0) });
+    var raiConst = s.perEticheta.filter(function (g) { return constant(g) && g.total < 0 && g.rata < 0.5; }).slice(-3).reverse();
+    if (raiConst.length) G.push({ text: "Unde pierzi constant: " + raiConst.map(function (g) { return g.eticheta + " (" + bani(g.total, M) + " din " + cuZile(g) + ", " + pr(g.rata) + " pe plus)"; }).join(", ") + ".", suma: raiConst.reduce(function (a, g) { return a + g.total; }, 0) });
     if (s.top5Pierderi.pondere !== null && s.peMinus >= 10 && s.top5Pierderi.pondere >= Math.max(0.3, 2 * 5 / s.peMinus)) G.push({ text: "Cele mai mari 5 pierderi fac " + pr(s.top5Pierderi.pondere) + " din tot ce ai pierdut: " + s.top5Pierderi.lista.map(function (x) { return x.eticheta + " " + bani(x.rezultat, M); }).join(", ") + ". Câteva trade-uri lăsate să curgă strică tot restul.", suma: suma(s.top5Pierderi.lista, function (x) { return x.rezultat; }) });
     if (s.drawdown.max > 0) G.push({ text: "Cea mai mare cădere a contului: " + bani(-s.drawdown.max, M) + " (de la " + (s.drawdown.dinStart ? "început" : "vârful din " + data(s.drawdown.dela)) + " până la fundul din " + data(s.drawdown.panaLa) + ").", suma: -s.drawdown.max });
     var luni = s.perLuna, lPlus = luni.filter(function (g) { return g.total > 0; }).length;
@@ -132,9 +164,11 @@ var StatisticaTrade = (function () {
       if (celMaiBun.total > 0) B.push({ text: lPlus + " din " + luni.length + " luni pe plus; cea mai bună: " + celMaiBun.nume + " (" + bani(celMaiBun.total, M) + ").", suma: celMaiBun.total });
       if (celMaiProst.total < 0) G.push({ text: "Cea mai proastă lună: " + celMaiProst.nume + " (" + bani(celMaiProst.total, M) + " din " + cate(celMaiProst.n, "trade", "trade-uri") + ").", suma: celMaiProst.total });
     }
-    var d = mari(s.perDurata).slice().sort(function (a, b) { return b.total - a.total; });
-    if (d.length && d[0].total > 0) B.push({ text: "Trade-urile ținute " + d[0].et + " aduc cel mai mult: " + bani(d[0].total, M) + " din " + d[0].n + ".", suma: d[0].total });
-    if (d.length && d[d.length - 1].total < 0) G.push({ text: "Trade-urile ținute " + d[d.length - 1].et + " pierd: " + bani(d[d.length - 1].total, M) + " din " + d[d.length - 1].n + ".", suma: d[d.length - 1].total });
+    // v100.358 (auditul 18.11): duratele judecate PE TRADE (media), nu pe total - o grupă cu mulți trade-uri iese „cea mai rea” doar pentru că
+    // e mare (pe istoria lui „sub o oră pierd −2.507” era de fapt cea mai bună grupă pe trade); de la MIN trade-uri în grupă
+    var d = s.perDurata.filter(function (g) { return g.n >= MIN; }).sort(function (a, b) { return b.medie - a.medie; });
+    if (d.length && d[0].medie > 0) B.push({ text: "Trade-urile ținute " + d[0].et + " aduc cel mai mult pe trade: " + bani(d[0].medie, M) + " pe trade (" + cate(d[0].n, "trade", "trade-uri") + ", total " + bani(d[0].total, M) + ").", suma: d[0].total });
+    if (d.length && d[d.length - 1].medie < 0) G.push({ text: "Trade-urile ținute " + d[d.length - 1].et + " pierd cel mai mult pe trade: " + bani(d[d.length - 1].medie, M) + " pe trade (" + cate(d[d.length - 1].n, "trade", "trade-uri") + ", total " + bani(d[d.length - 1].total, M) + ").", suma: d[d.length - 1].total });
     if (s.comisioane !== null && s.castigBrut > 0 && s.comisioane / s.castigBrut >= 0.1) G.push({ text: "Comisioanele au luat " + pr(s.comisioane / s.castigBrut) + " din câștiguri (" + bani(-s.comisioane, M) + ").", suma: -s.comisioane });
     if (s.serii.pierderi >= 5) G.push({ text: "Cea mai lungă serie de pierderi: " + s.serii.pierderi + " la rând. După 3 la rând, o pauză te scapă de trade-urile de răzbunare.", suma: null });
   }
@@ -197,22 +231,68 @@ var StatisticaTrade = (function () {
     return { n: s.n, rata: s.n ? s.rataCastig : null, peTrade: s.n ? s.asteptare : null, pierdereMediePct: p.length ? p.reduce(function (a, v) { return a + v; }, 0) / p.length : null,
       ceaMaiMarePct: p.length ? Math.min.apply(null, p) : (s.n ? 0 : null), mari: mari, mariPondere: s.n ? mari / s.n : null, factor: s.factorProfit };
   }
+  // v100.358 (auditul 18.11): săgeata ▲▼ doar dacă IC95 al diferenței, prin bootstrap pe ZILE (zilele pornirii, ora României, reeșantionate
+  // cu înlocuire separat înainte și după, 1000 de repetări, mulberry32 cu sămânță fixă), exclude 0 - și doar cu cel puțin MIN zile de fiecare
+  // parte; altfel „nedovedit” (≈). Cifrele din tabel rămân cele adevărate; bootstrap-ul decide doar săgeata.
+  var B_COMPARA = 1000;
+  function peZileMasuri(l) {
+    var m = {}, chei = [], zile = {};
+    l.forEach(function (x) {
+      var zr = ziRo(x.pornit), z = blocZi(zr), d = m[z]; zile[zr] = 1;
+      if (!d) { d = m[z] = { n: 0, plus: 0, s: 0, sc: 0, sp: 0, sPct: 0, nPct: 0, minPct: Infinity, mari: 0 }; chei.push(z); }
+      d.n++; d.s += x.rezultat; if (x.rezultat > 0) { d.plus++; d.sc += x.rezultat; } else if (x.rezultat < 0) d.sp += x.rezultat;
+      if (x.baza > 0 && x.rezultat < 0) { var p = x.rezultat / x.baza; d.sPct += p; d.nPct++; if (p < d.minPct) d.minPct = p; if (p <= PIERDERE_MARE) d.mari++; }
+    });
+    var r = chei.map(function (z) { return m[z]; }); r.zile = Object.keys(zile).length;
+    return r;
+  }
+  function masuriAgr(Z, rnd) {
+    var n = 0, plus = 0, s = 0, sc = 0, sp = 0, sPct = 0, nPct = 0, minPct = Infinity, mari = 0, D = Z.length;
+    for (var j = 0; j < D; j++) { var d = Z[(rnd() * D) | 0]; n += d.n; plus += d.plus; s += d.s; sc += d.sc; sp += d.sp; sPct += d.sPct; nPct += d.nPct; if (d.minPct < minPct) minPct = d.minPct; mari += d.mari; }
+    return { rata: n ? plus / n : null, peTrade: n ? s / n : null, pierdereMediePct: nPct ? sPct / nPct : null, ceaMaiMarePct: nPct ? minPct : (n ? 0 : null), mariPondere: n ? mari / n : null, factor: sp < 0 ? sc / -sp : null };
+  }
   function compara(lista, de) {
     var l = (Array.isArray(lista) ? lista : []).filter(function (x) { return x && nr(x.rezultat) !== null && nr(x.pornit) !== null; });
-    var a = masuri(l.filter(function (x) { return x.pornit < de; })), b = masuri(l.filter(function (x) { return x.pornit >= de; })), destul = a.n >= MIN && b.n >= MIN;
+    var la = l.filter(function (x) { return x.pornit < de; }), lb = l.filter(function (x) { return x.pornit >= de; });
+    var a = masuri(la), b = masuri(lb), destul = a.n >= MIN && b.n >= MIN;
     var R = [["n", "Trade-uri", 0], ["rata", "Rata de câștig", 1], ["peTrade", "Pe trade, în medie", 1], ["pierdereMediePct", "Pierderea medie (din suma pusă)", 1],
       ["ceaMaiMarePct", "Cea mai mare pierdere (din suma pusă)", 1], ["mariPondere", "Pierderi mari (peste 10% din suma pusă)", -1], ["factor", "Factor de profit", 1]];
-    return { de: de, a: a, b: b, destul: destul, randuri: R.map(function (r) { var va = a[r[0]], vb = b[r[0]], v = null;
-      if (destul && r[2] && va !== null && vb !== null && isFinite(va) && isFinite(vb) && Math.abs(vb - va) > 1e-9) v = (vb - va) * r[2] > 0 ? "mai-bine" : "mai-rau";
-      return { cheie: r[0], et: r[1], a: va, b: vb, verdict: v }; }) };
+    var fix = function (v) { return v === null || v === undefined || !isFinite(v) ? null : v; };
+    var ZA = destul ? peZileMasuri(la.map(function (x) { return { pornit: nr(x.pornit), rezultat: nr(x.rezultat), baza: nr(x.baza) }; })) : [], ZB = destul ? peZileMasuri(lb.map(function (x) { return { pornit: nr(x.pornit), rezultat: nr(x.rezultat), baza: nr(x.baza) }; })) : [];
+    var zileDestul = destul && ZA.zile >= MIN && ZB.zile >= MIN, dif = {};
+    if (destul && zileDestul) {
+      var rnd = mulberry32(100358);
+      R.forEach(function (r) { if (r[2]) dif[r[0]] = []; });
+      for (var i = 0; i < B_COMPARA; i++) {
+        var ma = masuriAgr(ZA, rnd), mb = masuriAgr(ZB, rnd);
+        R.forEach(function (r) { if (!r[2]) return; var va = fix(ma[r[0]]), vb = fix(mb[r[0]]); if (va !== null && vb !== null) dif[r[0]].push(vb - va); });
+      }
+    }
+    // intervalul: diferența ± t(zile − 1) × abaterea standard a bootstrap-ului (nu percentilele: sub H0, cu cozi grele, percentilele dau 7–9%
+    // fals la 5% nominal; ± t × SD ~5%); gradele de libertate după partea cu mai puține blocuri de BLOC_COMPARA (7) zile.
+    // „Cea mai mare pierdere” rămâne în tabel, dar FĂRĂ săgeată: e un singur trade extrem - bootstrap-ul pe minim dădea 13% fals sub H0.
+    var t = tCrit(Math.min(ZA.length, ZB.length) - 1);
+    return { de: de, a: a, b: b, destul: destul, zileA: destul ? ZA.zile : null, zileB: destul ? ZB.zile : null, zileDestul: zileDestul, randuri: R.map(function (r) {
+      var va = a[r[0]], vb = b[r[0]], v = null, ic = null;
+      if (destul && r[2] && r[0] !== "ceaMaiMarePct" && va !== null && vb !== null && isFinite(va) && isFinite(vb)) {
+        v = "nedovedit";
+        var d = dif[r[0]];
+        if (d && d.length >= B_COMPARA / 2 && isFinite(t)) {
+          var m = 0, q = 0, i; for (i = 0; i < d.length; i++) m += d[i]; m /= d.length; for (i = 0; i < d.length; i++) q += (d[i] - m) * (d[i] - m);
+          var kMin = Math.min(ZA.length, ZB.length), sd = Math.sqrt(q / (d.length - 1)) * Math.sqrt(kMin / (kMin - 1)); ic = [vb - va - t * sd, vb - va + t * sd];   // × √(k/(k−1))
+          if (ic[0] > 0 || ic[1] < 0) v = (ic[0] > 0 ? 1 : -1) * r[2] > 0 ? "mai-bine" : "mai-rau";
+        }
+      }
+      return { cheie: r[0], et: r[1], a: va, b: vb, verdict: v, ic: ic }; }) };
   }
   function htmlCompara(c, M) {
     var f = function (k, v, parte) { if (v === null || v === undefined || !isFinite(v)) return "—"; if (k === "n") return String(v); if (k === "peTrade") return bani(v, M); if (k === "factor") return v.toFixed(1).replace(".", ","); if (k === "mariPondere") return pr(v) + " (" + c[parte].mari + ")"; return pr(v, k === "rata" ? 0 : 1).replace(/^-/, "−"); };
-    var rand = c.randuri.map(function (r) { return "<tr><td>" + esc(r.et) + "</td><td>" + esc(f(r.cheie, r.a, "a")) + "</td><td><b>" + esc(f(r.cheie, r.b, "b")) + '</b></td><td class="' + (r.verdict === "mai-bine" ? "good" : r.verdict === "mai-rau" ? "bad" : "") + '">' + (r.verdict === "mai-bine" ? '▲<span class="stVerdTxt"> mai bine</span>' : r.verdict === "mai-rau" ? '▼<span class="stVerdTxt"> mai rău</span>' : "") + "</td></tr>"; });
-    var bine = c.randuri.filter(function (r) { return r.verdict === "mai-bine"; }).length, rau = c.randuri.filter(function (r) { return r.verdict === "mai-rau"; }).length;
+    var rand = c.randuri.map(function (r) { return "<tr><td>" + esc(r.et) + "</td><td>" + esc(f(r.cheie, r.a, "a")) + "</td><td><b>" + esc(f(r.cheie, r.b, "b")) + '</b></td><td class="' + (r.verdict === "mai-bine" ? "good" : r.verdict === "mai-rau" ? "bad" : "") + '">' + (r.verdict === "mai-bine" ? '▲<span class="stVerdTxt"> mai bine</span>' : r.verdict === "mai-rau" ? '▼<span class="stVerdTxt"> mai rău</span>' : r.verdict === "nedovedit" ? '≈<span class="stVerdTxt"> nedovedit</span>' : "") + "</td></tr>"; });
+    var bine = c.randuri.filter(function (r) { return r.verdict === "mai-bine"; }).length, rau = c.randuri.filter(function (r) { return r.verdict === "mai-rau"; }).length, ned = c.randuri.filter(function (r) { return r.verdict === "nedovedit"; }).length;
     var nota = !c.b.n ? "Încă niciun bot pornit după regulile noi nu s-a închis. Comparația se umple singură; de la " + cate(MIN, "bot", "boți") + " îți spun dacă regulile ajută."
       : !c.destul ? "Doar " + cate(c.b.n, "bot", "boți") + " după regulile noi — prea puțini ca să tragem o concluzie (de la " + MIN + " de fiecare parte)."
-      : "Pe " + cate(c.b.n, "bot", "boți") + " după și " + c.a.n + " înainte: " + cate(bine, "măsură", "măsuri") + " arată mai bine" + ", " + rau + " mai rău. E un semn, nu o dovadă: piața nu e aceeași în cele două perioade.";
+      : "Pe " + cate(c.b.n, "bot", "boți") + " după și " + c.a.n + " înainte" + (c.zileA !== null && c.zileA !== undefined ? " (în " + cate(c.zileB, "zi", "zile") + " și " + cate(c.zileA, "zi", "zile") + ")" : "") + ": " + cate(bine, "măsură", "măsuri") + " mai bine" + ", " + rau + " mai rău, dovedit pe zile (IC95)" + (ned ? "; " + ned + " nedovedite (≈ — nici că ajută, nici că nu)" : "")
+        + (c.zileDestul === false ? "; prea puține zile (sub " + MIN + " de o parte) ca să dovedesc ceva" : "") + ". Piața nu e aceeași în cele două perioade.";
     return '<div class="stBloc stCompara"><div class="stBlocCap"><h4>Înainte / după regulile din ' + esc(REGULI_NOI.et) + '</h4><span class="stSub">' + esc(REGULI_NOI.ce) + " · după ora pornirii botului</span></div>"
       + tabel(["", "Înainte", "După", ""], rand) + '<p class="stSub">' + esc(nota) + "</p></div>";
   }
@@ -268,6 +348,8 @@ var StatisticaTrade = (function () {
     h += '<div class="stDoua"><div class="stBloc"><div class="stBlocCap"><h4>Cât ai ținut</h4></div>' + tabel(["Ținut", "Trade-uri", "Pe plus", "Rezultat", "Pe trade"], s.perDurata.map(function (g) { return randGrupa(g.et, g, M); })) + "</div>" + top5 + "</div>";
     h += blocPrimaOra;
     if (s.perDir.length || s.perLevier.length) h += '<div class="stDoua"><div class="stBloc"><div class="stBlocCap"><h4>Pe direcție și pe levier</h4></div>' + (s.perDir.length ? tabel(["Direcție", "Trade-uri", "Pe plus", "Rezultat", "Pe trade"], s.perDir.map(function (g) { return randGrupa(g.dir, g, M); })) : "") + (s.perLevier.length ? tabel(["Levier", "Trade-uri", "Pe plus", "Rezultat", "Pe trade"], s.perLevier.map(function (g) { return randGrupa(g.levier, g, M); })) : "") + (s.perLevier.length && s.faraLevier ? '<p class="stSub">Levierul: fără ' + s.faraLevier + " smart copy (levier necunoscut).</p>" : "") + "</div></div>";
+    // v100.358: o.faraToate - pagina are pe fila Crypto lista ei proprie (ordinea + CSV) ⇒ fără blocul „Toate trade-urile”; implicit rămâne (T212)
+    if (o.faraToate) return h + "</div>";
     var toate = s.curba.map(function (p, i) { return { i: i, t: p.t, eticheta: p.eticheta, rezultat: p.rezultat }; });
     toate.sort(ord === "pierderi" ? function (a, b) { return a.rezultat - b.rezultat; } : ord === "castiguri" ? function (a, b) { return b.rezultat - a.rezultat; } : function (a, b) { return b.t - a.t; });
     var MAX = 200, btn = function (k, et2) { return '<button type="button" class="stBtn" aria-pressed="' + (ord === k) + '"' + (o.actiuneOrdine ? ' data-action-click="' + o.actiuneOrdine + "(\'" + piata + "\',\'" + k + "\')\"" : "") + ">" + et2 + "</button>"; };

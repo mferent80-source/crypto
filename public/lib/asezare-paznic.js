@@ -523,26 +523,9 @@
   function valJurnal(t) { return nr(String(t == null ? "" : t).replace(/\s*USDT.*$/i, "").trim()); }
   // „Rezultat total” din statistica filei Acțiuni / Tot (lei sau $): semnul din clasa pusă de pagină, zero din cifre
   function valBani(t) { var x = String(t == null ? "" : t).replace(/[−–]/g, "-").replace(/[^\d,.\-+]/g, ""); if (!/\d/.test(x)) return null; if (x.indexOf(".") >= 0 && (x.indexOf(",") > 0 || /\.\d{3}(\.|$)/.test(x))) x = x.replace(/\./g, ""); return /^[+-]?0+([.,]0+)?$/.test(x) ? 0 : nr(x); }   /* „—” = lipsă, nu zero; „1.234,56” = mii cu punct */
-  // I1 (revizia a treia): pe Acțiuni antetul citește „Câștigat REAL” (toată istoria, ca pe Crypto), nu Statistica filtrată pe perioadă;
-  // pe Tot citește Statistica și spune PERIOADA aleasă (butonul apăsat) - altfel antetul ar contrazice cifra de dedesubt
-  function pagJurnalAltaFila(fila) {
-    var ref = fila === "actiuni" ? $("jtActiuni") : $("jtStatTot"), cel, v, et, sub, din;
-    if (fila === "actiuni") { cel = ref && ref.querySelector(".jtKpi .tbKpiCel"); v = cel && cel.querySelector(".tbKpiVal"); et = cel ? tx(".tbEt2", cel) : ""; sub = cel ? tx(".tbSub", cel) : ""; din = "jurnalul Trading 212 („Câștigat REAL”, toată istoria)"; }
-    else { cel = ref && ref.querySelector(".stTile"); v = cel && cel.querySelector(".stVal"); et = cel ? tx(".stEt", cel) : ""; var per = ref ? tx(".stGrup [aria-pressed=\"true\"]", ref) : ""; sub = (per ? per + " · " : "") + (cel ? tx(".stSub", cel) : ""); din = "Statistica · tot, în lei" + (per ? " (" + per + ")" : ""); }
-    if (!v) { antet("pzV-jt", ref, null); return; }
-    var n = valBani(v.textContent), ton = n === 0 ? "mut" : tonCls(v), CUM = fila === "actiuni" ? "ACȚIUNI" : "TOT";
-    antet("pzV-jt", ref, { verb: CUM + ": " + (n === 0 ? "PE ZERO" : ton === "sus" ? "PE PLUS" : ton === "jos" ? "PE MINUS" : v.textContent.trim()), ton: ton, titlu: (et || "Rezultat total") + ": " + v.textContent.trim(), fac: sub, din: din });
-  }
-
-  function pagJurnal() {
-    var fila = document.querySelector('#jurnaltrade .jtFiltru [aria-pressed="true"]'), f = fila ? fila.id.replace("jtF-", "") : "crypto";
-    if (f === "actiuni" || f === "tot") { pagJurnalAltaFila(f); return; }
-    var cel = document.querySelector("#jtRezumat .jtKpi .tbKpiCel"), cr = $("jtCrypto");
-    var ref = cr && cr.firstElementChild; if (ref && ref.id === "pzV-jt") ref = ref.nextElementSibling;
-    if (!cel || !cr) { antet("pzV-jt", ref, null); return; }
-    var v = cel.querySelector(".tbKpiVal"), n = valJurnal(v && v.textContent), ton = n === 0 ? "mut" : tonCls(v), fac = tx("#jtGreseli .tbFac") || tx("#jtReguliCard .tbFac") || tx(".jtCireasa .tbFac");
-    antet("pzV-jt", ref, { verb: n === 0 ? "CRYPTO: PE ZERO" : ton === "sus" ? "CRYPTO: PE PLUS" : ton === "jos" ? "CRYPTO: PE MINUS" : "CRYPTO: " + (v ? v.textContent.trim() : "—"), ton: ton, titlu: [tx("span", cel), v ? v.textContent.trim() : ""].filter(Boolean).join(": "), fac: fac.replace(/^👉\s*/, ""), din: "jurnalul boților închiși (rezultatul după comisioane și funding)" });
-  }
+  // v100.358 (Jurnalul de trade „ca paginile refăcute”, 18.11): Jurnalul își scrie singur fraza mare (#jtFrazaBox, din cifre, pe fiecare filă) ⇒
+  // antetul citit din pagină (CRYPTO / ACȚIUNI / TOT: PE PLUS / PE MINUS) se ascunde, ca să nu spună de două ori, uneori altă cifră
+  function pagJurnal() { antet("pzV-jt", null, null); }
   // sugestiile: „fapte, nu semnal” (scrie pagina) ⇒ verbul = cuvântul îngroșat al lățimii, FĂRĂ culoare de bine / rău
   function pagSugestii() {
     var p = document.querySelector("#sugPagina .sugPanda p.tbCitScurt") || document.querySelector("#sugPagina .sugPanda p.tbSub");

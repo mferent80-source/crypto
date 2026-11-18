@@ -19,6 +19,8 @@ var JurnalTrade = (function () {
   var P = function (v) { return TextRo.pct(v * 100, Math.abs(v * 100) >= 1 ? 1 : 2); };   /* v100.314: o zecimală de la 1% în sus */
   // audit 19.10: rezultatele cu O zecimală și virgulă („−0,5 USDT”, „0,5% din investiție”); pasul grilei (P) rămâne cu 2 - e un parametru
   var U = function (v) { var s = Math.abs(v).toFixed(1); return (Number(s) === 0 ? "" : v >= 0 ? "+" : "−") + s.replace(".", ",") + " USDT"; };
+  // v100.358 (poza demo-ului): prețul cu 6 cifre semnificative și virgulă, ca în restul paginii - nu toate zecimalele Pionex
+  var PR = function (v) { if (v === null || v === undefined || !isFinite(v)) return "—"; var x = Number(Number(v).toPrecision(6)); return String(x).replace(".", ","); };
   var P1 = function (v) { return Math.abs(v * 100).toFixed(1).replace(".", ",") + "%"; };   // mărimea: semnul îl spune deja suma de lângă
 
   function unul(x) {
@@ -89,7 +91,7 @@ var JurnalTrade = (function () {
       dataViitoare: "Aș pune mai puține grile (pasul din fișă), ca fiecare umplere să rămână clar peste comision." });
     var afara = t.pretInchidere !== null && t.jos !== null && t.sus !== null && (t.pretInchidere < t.jos || t.pretInchidere > t.sus);
     if (afara) g.push({ cod: "stop-atins", titlu: "A ieșit din grid" + (t.stopJos !== null && t.dir !== "short" && t.pretInchidere <= t.stopJos ? " și a atins stopul" : ""),
-      text: "Închis la " + t.pretInchidere + ", în afara intervalului " + t.jos + " – " + t.sus + ".",
+      text: "Închis la " + PR(t.pretInchidere) + ", în afara intervalului " + PR(t.jos) + " – " + PR(t.sus) + ".",
       dataViitoare: "Aș alege intervalul din fișă (lățimea obișnuită pe 2 zile a monedei), nu mai îngust; un interval strâmt iese la prima mișcare." });
     if (t.levier !== null && t.jos > 0 && t.sus > t.jos && t.grileN >= 2 && t.pretInit > 0) {
       var sig = G.levierSigur(t.jos, t.sus, t.pretInit, t.dir, Math.min(150, t.grileN - 1));   // v100.39: grileN = linii Pionex, levierSigur vrea intervale

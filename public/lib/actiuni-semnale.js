@@ -154,19 +154,45 @@ var ActiuniSemnale = (function () {
     }
     return g;
   }
+  // v100.358 (auditul jurnalului, 18.11): o grupă decisă de un singur trade - trade-ul cu același semn ca totalul grupei și cel mai mare în
+  // valoare absolută, când face peste jumătate din total (cel puțin 2 trade-uri în grupă) ⇒ { lei, simbol, parte }; altfel null.
+  // („1–4 săptămâni −10.196 lei”, din care −8.165 un singur trade: ASTS)
+  function unSingurTrade(lista) {
+    var l = Array.isArray(lista) ? lista : [], tot = 0, mare = null;
+    if (l.length < 2) return null;
+    l.forEach(function (t) { tot += t && isFinite(t.rezultat) ? t.rezultat : 0; });
+    if (!tot) return null;
+    l.forEach(function (t) { if (t && isFinite(t.rezultat) && t.rezultat * tot > 0 && (!mare || Math.abs(t.rezultat) > Math.abs(mare.rezultat))) mare = t; });
+    return mare && Math.abs(mare.rezultat) > 0.5 * Math.abs(tot) ? { lei: mare.rezultat, simbol: mare.simbol || String(mare.ticker || "").split("_")[0], parte: mare.rezultat / tot, fara: tot - mare.rezultat } : null;   // fara = grupa fără el
+  }
+  // v100.358: ora EXECUȚIEI în afara ședinței (T212.perechi pune afaraCumparare / afaraVanzare); trade-urile de dinaintea câmpului ⇒ socotite aici,
+  // din ora vânzării (inchis) și a primei cumpărări (pornit), dacă T212 + CalendarBursa sunt încărcate; altfel nu se numără (nestiut)
+  function afaraTrade(t, camp, ora) {
+    if (t[camp] === true || t[camp] === false) return t[camp];
+    var T = typeof T212 !== "undefined" ? T212 : globalThis.T212;
+    return T && T.afaraOrelor && t[camp] === undefined ? T.afaraOrelor(t[ora], t.ticker) : null;
+  }
   function rezumatJurnal(lista, ctx) {
     var l = Array.isArray(lista) ? lista : [], c = ctx || {}, gr = {}, ext = { n: 0, total: 0 }, r = { n: l.length, pePlus: 0, total: 0, totalOficial: 0, comisioane: 0 };
+    // v100.358: ext = PERMISIUNEA de pe ordin (cumpărare SAU vânzare), păstrat pentru cine îl citește; afara = ora execuției, separat pe cumpărare / vânzare
+    var afara = { cumparate: { n: 0, total: 0 }, vandute: { n: 0, total: 0 }, nestiut: 0 }, grT = {};
     l.forEach(function (t) {
       if (t.rezultat > 0) r.pePlus++;
       r.total += t.rezultat || 0; r.totalOficial += t.rezultatOficial !== null && t.rezultatOficial !== undefined ? t.rezultatOficial : t.rezultat || 0; r.comisioane += t.comisioane || 0;
       if (t.extCumparare || t.extVanzare) { ext.n++; ext.total += t.rezultat || 0; }
+      var ac = afaraTrade(t, "afaraCumparare", "pornit"), av = afaraTrade(t, "afaraVanzare", "inchis");
+      if (ac === true) { afara.cumparate.n++; afara.cumparate.total += t.rezultat || 0; }
+      if (av === true) { afara.vandute.n++; afara.vandute.total += t.rezultat || 0; }
+      if (ac === null || av === null) afara.nestiut++;
       var bare = c.barePe && c.barePe[t.ticker];
       var gl = greseli(t, { umpleri: c.umpleri, bare: bare }), cf = c.cf && c.cf[t.id];
       if (cf && Array.isArray(cf.greseli)) cf.greseli.forEach(function (k) { if (TEXT[k] && !gl.some(function (x) { return x.cod === k; })) gl.push({ cod: k, text: TEXT[k] }); });
-      gl.forEach(function (x) { var a = gr[x.cod] || (gr[x.cod] = { cod: x.cod, text: x.text, n: 0, cost: 0 }); a.n++; a.cost += t.rezultat || 0; });
+      gl.forEach(function (x) { var a = gr[x.cod] || (gr[x.cod] = { cod: x.cod, text: x.text, n: 0, cost: 0 }); a.n++; a.cost += t.rezultat || 0; (grT[x.cod] = grT[x.cod] || []).push(t); });
     });
-    r.greseli = Object.keys(gr).map(function (k) { return gr[k]; }).sort(function (a, b) { return a.cost - b.cost; });
+    // v100.358: „minus-20” e definită PRIN rezultat (pierderea însăși) ⇒ descriere, nu cost; „mare” = grupa decisă de un singur trade
+    r.greseli = Object.keys(gr).map(function (k) { gr[k].descriere = k === "minus-20"; gr[k].mare = unSingurTrade(grT[k]); return gr[k]; }).sort(function (a, b) { return a.cost - b.cost; });
     r.ext = ext;
+    r.afara = afara;
     return r;
   }
 
@@ -565,6 +591,45 @@ var ActiuniSemnale = (function () {
     praguri.forEach(function (p) { r.praguri[p].dif = r.praguri[p].total - r.real; });
     return r;
   }
+  // v100.358 (auditul jurnalului, 18.11): „cea mai bună variantă de stop” era aleasă după rezultat dintre 6 și dată ca sfat („ar fi adus +378 lei”),
+  // deși cei +378 veneau dintr-un singur trade de +7.606. Regula, fixată ÎNAINTE de cifre: sfatul „Aș pune stopul X” apare doar dacă varianta cea
+  // mai bună (1) rămâne pe plus fără cel mai mare câștig adus de stop pe un trade și (2) e cea mai bună ȘI pe plus în ≥ 80% din reeșantionări pe
+  // zile (bootstrap: zilele ședinței de cumpărare trase cu întoarcere - trade-urile aceleiași zile se mișcă împreună; R = 1.000, mulberry32 cu
+  // sămânță fixă ⇒ același răspuns la fiecare desen). variante = [{ camp: "stop" | "stopU", k }] (aceleași chei ca rezumatStop). Contribuția
+  // unui trade la o variantă = (cu stop: cost × pct, altfel rezultatul) − rezultatul ⇒ suma lor = dif din rezumatStop.
+  var PRAG_STOP_BOOT = 0.8;
+  function robustetStop(inchise, cf, variante, o) {
+    o = o || {};
+    var V = Array.isArray(variante) ? variante : [], R = o.R > 0 ? Math.round(o.R) : 1000, zile = [], zIdx = {}, n = 0;
+    var vs = V.map(function (v) { return { camp: v.camp, k: v.k, dif: 0, mare: null }; });
+    (Array.isArray(inchise) ? inchise : []).forEach(function (t) {
+      var c = cf && t && cf[t.id]; if (!c || c.nivel === "fara-date" || !(t.cost > 0)) return;
+      var d = V.map(function (v, j) {
+        var s = c[v.camp]; if (!s || !Object.keys(s).length) return 0;
+        var x = s[v.k], val = x && x.pct !== null && x.pct !== undefined ? t.cost * x.pct - t.rezultat : 0;
+        if (val > 0 && (!vs[j].mare || val > vs[j].mare.lei)) vs[j].mare = { lei: val, simbol: t.simbol || String(t.ticker || "").split("_")[0], id: t.id };
+        return val;
+      });
+      if (!d.some(function (x, j) { var s = c[V[j].camp]; return s && Object.keys(s).length; })) return;
+      n++;
+      var z = ziSedinta(t.pornit); if (zIdx[z] === undefined) { zIdx[z] = zile.length; zile.push(V.map(function () { return 0; })); }
+      d.forEach(function (x, j) { zile[zIdx[z]][j] += x; vs[j].dif += x; });
+    });
+    vs.forEach(function (v) { v.faraMare = v.dif - (v.mare ? v.mare.lei : 0); });
+    var best = -1; vs.forEach(function (v, j) { if (best < 0 || v.dif > vs[best].dif) best = j; });
+    var r = { n: n, zile: zile.length, R: R, variante: vs, best: best, pBest: null, prag: PRAG_STOP_BOOT, trece: false };
+    if (best < 0 || !(vs[best].dif > 0) || zile.length < 2) return r;
+    var rnd = mulberry32(o.samanta !== undefined ? o.samanta : samanta("stop-v100358")), Z = zile.length, castiga = 0, s = V.map(function () { return 0; });
+    for (var q = 0; q < R; q++) {
+      for (var j = 0; j < s.length; j++) s[j] = 0;
+      for (var i = 0; i < Z; i++) { var zi = zile[Math.floor(rnd() * Z)]; for (j = 0; j < s.length; j++) s[j] += zi[j]; }
+      var m = 0; for (j = 1; j < s.length; j++) if (s[j] > s[m]) m = j;
+      if (m === best && s[best] > 0) castiga++;
+    }
+    r.pBest = castiga / R;
+    r.trece = vs[best].faraMare > 0 && r.pBest >= PRAG_STOP_BOOT;
+    return r;
+  }
 
   // v100.52 (actiunile T212, pachetul 1): stopul care urca - din profilul actiunii („prof”) sau −15% („u15”, masurat pe trade-urile lui
   // la 25.09). Profilul il inlocuieste DOAR daca pe trade-urile lui iese cel putin la fel, pe cel putin 30 de trade-uri judecate.
@@ -823,17 +888,27 @@ var ActiuniSemnale = (function () {
       : nivel === "asteapta" ? "Aș aștepta până se rezolvă motivele de mai sus" + (o.motivPlan === false ? "." : ", mai ales planul.") : "Aș aștepta prețuri zilnice proaspete: fără ele nu judec.");
   }
   // „Cât te-ar fi salvat stopul”: fara = niciun stop n-ar fi ajutat; b = varianta cea mai buna {et, dif, taiate} -> {fac, nota}
-  function facStop(fara, b) {
+  // v100.358: rezultatele cu o zecimală și virgulă („+378,4 lei”), ca restul jurnalului
+  function L1(x) { return x === null || x === undefined || !isFinite(x) ? "—" : (x > 0 ? "+" : x < 0 ? "−" : "") + Math.abs(x).toLocaleString("ro-RO", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + " lei"; }
+  // v100.358 (auditul jurnalului): varianta cea mai bună NU e un sfat când diferența vine din câteva trade-uri (robustetStop: fără cel mai mare
+  // câștig adus de stop iese pe minus, sau nu e cea mai bună în ≥ 80% din reeșantionările pe zile). rob = robustetStop(...); fără rob ⇒ ca înainte
+  function notaNerobust(rob) {
+    var v = rob && rob.variante && rob.variante[rob.best], m = v && v.mare;
+    return "Nicio variantă de stop nu iese clar mai bună pe trade-urile tale: diferența vine din câteva trade-uri" + (m ? " (cel mai mare: " + L1(m.lei) + ", " + m.simbol + ")" : "") + ".";
+  }
+  function facStop(fara, b, rob) {
     if (fara) return { fac: "N-aș pune un stop strâns: aș pune frâna pe cumpărările în plus pe minus și pe pozițiile prea mari (NPA).",
       nota: "Pe trade-urile tale niciun stop, nici fix, nici care urcă, n-ar fi ajutat în total: tăia prea multe care își reveneau." };   // de unde au venit pierderile mari o spune actiunea
+    if (rob && !rob.trece) return { fac: "N-aș alege un stop după cifra asta: aș scrie un plan de ieșire la fiecare cumpărare.", nota: notaNerobust(rob) };
     var t = Math.round(Number(b && b.taiate) || 0);
     return { fac: "Aș folosi stopul „" + (b && b.et || "") + "” la fiecare cumpărare.",
-      nota: "Pe trade-urile tale ar fi ieșit " + L(b && b.dif) + " față de ce ai făcut; ar fi tăiat și " + cate(t, "trade", "trade-uri") + " care până la urmă " + (t === 1 ? "a ieșit" : "au ieșit") + " pe plus." };
+      nota: "Pe trade-urile tale ar fi ieșit " + L1(b && b.dif) + " față de ce ai făcut; ar fi tăiat și " + cate(t, "trade", "trade-uri") + " care până la urmă " + (t === 1 ? "a ieșit" : "au ieșit") + " pe plus." };
   }
-  // „Cât ai ținut”: sfatul din proba cu stop - judecat = sunt trade-uri rejucate; b = varianta cea mai buna -> {fac, nota}
-  function sfatStop(judecat, b) {
+  // „Cât ai ținut”: sfatul din proba cu stop - judecat = sunt trade-uri rejucate; b = varianta cea mai buna -> {fac, nota}; rob ca la facStop
+  function sfatStop(judecat, b, rob) {
     if (!judecat || !b) return { fac: "Aș avea un plan de ieșire scris la fiecare cumpărare.", nota: "" };
-    return b.dif > 0 ? { fac: "Aș pune stopul „" + b.et + "” la fiecare cumpărare.", nota: "Pe trade-urile tale ar fi adus " + L(b.dif) + "." }
+    if (b.dif > 0 && rob && !rob.trece) return { fac: "Aș avea un plan de ieșire scris la fiecare cumpărare.", nota: notaNerobust(rob) };
+    return b.dif > 0 ? { fac: "Aș pune stopul „" + b.et + "” la fiecare cumpărare.", nota: "Pe trade-urile tale ar fi adus " + L1(b.dif) + "." }
       : { fac: "N-aș cumpăra în plus pe minus și n-aș pune mult pe o singură acțiune: de acolo au venit pierderile mari (NPA).", nota: "" };
   }
   // „Dacă ascultai de poartă”: bine = doar pe 🟢 ar fi iesit mai bine; dif = cu cat (lei)
@@ -843,6 +918,6 @@ var ActiuniSemnale = (function () {
   }
   // „Regulile tale”: grupa cea mai scumpa
   function facReguli(grupa) { return "Aș evita deocamdată trade-urile " + grupa + "."; }
-  return { monedaTicker: monedaTicker, pretIn: pretIn, inParalel: inParalel, unitateBare: unitateBare, inchisaInainte: inchisaInainte, zileLipsa: zileLipsa, verificaBare: verificaBare, regimPoarta: regimPoarta, PLAFON: PLAFON, usd: usd,facPoarta: facPoarta, facStop: facStop, sfatStop: sfatStop, facPoartaIstoric: facPoartaIstoric, facReguli: facReguli, notaReguli: notaReguli, stopPoarta: stopPoarta, cheieSituatie: cheieSituatie, situatiiCaAsta: situatiiCaAsta, textSituatie: textSituatie, trailPozitie: trailPozitie, alegeTrail: alegeTrail, maxDupaCumparare: maxDupaCumparare, asteptareSubStop: asteptareSubStop, textAsteptare: textAsteptare, cuStopUrcator: cuStopUrcator, cumparariInJos: cumparariInJos, alertaFrana: alertaFrana, cuStop: cuStop, rezumatStop: rezumatStop, reguliPersonale: reguliPersonale, atr: atr, niveluri: niveluri, marime: marime, planulMeu: planulMeu, laCumparare: laCumparare, raportSaptamana: raportSaptamana, alertePlan: alertePlan, stare: stare, semafor: semafor, greseli: greseli, rezumatJurnal: rezumatJurnal, poarta: poarta, portofoliu: portofoliu, beta: beta, TEXT: TEXT };
+  return { monedaTicker: monedaTicker, pretIn: pretIn, inParalel: inParalel, unitateBare: unitateBare, inchisaInainte: inchisaInainte, zileLipsa: zileLipsa, verificaBare: verificaBare, regimPoarta: regimPoarta, PLAFON: PLAFON, usd: usd,facPoarta: facPoarta, facStop: facStop, sfatStop: sfatStop, robustetStop: robustetStop, unSingurTrade: unSingurTrade,facPoartaIstoric: facPoartaIstoric, facReguli: facReguli, notaReguli: notaReguli, stopPoarta: stopPoarta, cheieSituatie: cheieSituatie, situatiiCaAsta: situatiiCaAsta, textSituatie: textSituatie, trailPozitie: trailPozitie, alegeTrail: alegeTrail, maxDupaCumparare: maxDupaCumparare, asteptareSubStop: asteptareSubStop, textAsteptare: textAsteptare, cuStopUrcator: cuStopUrcator, cumparariInJos: cumparariInJos, alertaFrana: alertaFrana, cuStop: cuStop, rezumatStop: rezumatStop, reguliPersonale: reguliPersonale, atr: atr, niveluri: niveluri, marime: marime, planulMeu: planulMeu, laCumparare: laCumparare, raportSaptamana: raportSaptamana, alertePlan: alertePlan, stare: stare, semafor: semafor, greseli: greseli, rezumatJurnal: rezumatJurnal, poarta: poarta, portofoliu: portofoliu, beta: beta, TEXT: TEXT };
 })();
 if (typeof globalThis !== "undefined") globalThis.ActiuniSemnale = ActiuniSemnale;

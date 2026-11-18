@@ -63,18 +63,36 @@ var T212 = (function () {
   // ATENTIE: realisedProfitLoss al T212 NU scade comisioanele de conversie (verificat 25.09 pe 78 de perechi
   // simple: oficial = net vanzare - net cumparare + comisioane, la leu). Rezultatul REAL = oficial - comisioanele
   // cumpararii (partea vanduta) - comisionul vanzarii. Oficialul ramane ca rezultatOficial, FIFO ca verificare.
-  function perechi(u) {
-    var loturi = {}, inchise = [], fara = [];
+  // v100.358 (auditul jurnalului, 18.11): „în afara orelor” = ora EXECUȚIEI (umplerea) în afara ședinței regulate a bursei acțiunii (CalendarBursa:
+  // fusul bursei, weekend, sărbători, zilele scurte NYSE). `ext` (o.extendedHours) e doar PERMISIUNEA pusă pe ordin: pe contul lui, 1.109 din
+  // 1.520 de umpleri US „ext” s-au executat în orele bursei NY. true / false; null = fără calendar sau fără oră (nu se numără)
+  var FMT_BURSA = {};
+  function afaraOrelor(t, ticker, CB) {
+    CB = CB || (typeof CalendarBursa !== "undefined" ? CalendarBursa : globalThis.CalendarBursa);
+    if (!CB || !CB.bursaSimbol || !CB.BURSE || !(t > 0)) return null;
+    try {
+      var b = CB.bursaSimbol(ticker), B = CB.BURSE[b], o = {};
+      if (!B) return null;
+      (FMT_BURSA[B.tz] || (FMT_BURSA[B.tz] = new Intl.DateTimeFormat("en-GB", { timeZone: B.tz, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })))
+        .formatToParts(new Date(t)).forEach(function (x) { o[x.type] = x.value; });
+      var zi = o.year + "-" + o.month + "-" + o.day, min = Number(o.hour) * 60 + Number(o.minute), inc = CB.inchideMin ? CB.inchideMin(zi, b) : B.inchide;
+      return !(CB.eZiDeBursa(zi, b) && min >= B.deschide && min < inc);
+    } catch (e) { return null; }
+  }
+  // o.CalendarBursa: pentru colector (acolo calendarul nu e global); fără el, câmpurile afara* rămân null
+  function perechi(u, o) {
+    var loturi = {}, inchise = [], fara = [], CB = o && o.CalendarBursa;
     // v100.114 (revizia v100.113): în ordinea timpului, iar la aceeași secundă întâi cumpărarea (PLTR, 05.11.2025: vânzarea listată înaintea
     // cumpărării rămânea „fără cumpărare” și lăsa o poziție deschisă inventată) - ca RiscLuna.episoade
     (Array.isArray(u) ? u : []).slice().sort(function (a, b) { return (a.t - b.t) || (a.side === b.side ? 0 : a.side === "BUY" ? -1 : 1); }).forEach(function (x) {
       var L = loturi[x.ticker] || (loturi[x.ticker] = []);
-      if (x.side === "BUY") { L.push({ t: x.t, ramas: x.qty, qty: x.qty, costBuc: x.net / x.qty, feeBuc: x.fee / x.qty, pretBuc: x.pret, ext: x.ext, id: x.id }); return; }
-      var ramas = x.qty, cost = 0, luat = 0, pornit = null, pretCump = 0, extCump = false, feeCump = 0;
+      if (x.side === "BUY") { L.push({ t: x.t, ramas: x.qty, qty: x.qty, costBuc: x.net / x.qty, feeBuc: x.fee / x.qty, pretBuc: x.pret, ext: x.ext, afara: afaraOrelor(x.t, x.ticker, CB), id: x.id }); return; }
+      var ramas = x.qty, cost = 0, luat = 0, pornit = null, pretCump = 0, extCump = false, feeCump = 0, afCump = false, afNestiut = false;
       while (ramas > 1e-9 && L.length) {
         var lot = L[0], q = Math.min(ramas, lot.ramas);
         cost += q * lot.costBuc; feeCump += q * lot.feeBuc; pretCump += q * lot.pretBuc; luat += q; ramas -= q; lot.ramas -= q;
         if (pornit === null) pornit = lot.t; extCump = extCump || lot.ext;
+        if (lot.afara === true) afCump = true; else if (lot.afara !== false) afNestiut = true;   // un lot cumpărat afară ajunge (ca extCumparare)
         if (lot.ramas <= 1e-9) L.shift();
       }
       if (luat <= 1e-9) { fara.push(x); return; }
@@ -83,7 +101,9 @@ var T212 = (function () {
       var oficial = areOficial ? x.realizat * parte : null, rez = areOficial ? oficial - comisioane : fifo;
       inchise.push({ id: x.id, ticker: x.ticker, simbol: x.simbol, nume: x.nume, qty: luat, pornit: pornit, inchis: x.t, durataOre: (x.t - pornit) / 3600000,
         cost: cost, incasat: incasat, rezultat: rez, rezultatOficial: oficial, rezultatFifo: fifo, comisioane: comisioane, oficial: areOficial, pct: cost > 0 ? rez / cost : null,
-        pretCumparare: pretCump / luat, pretVanzare: x.pret, extCumparare: extCump, extVanzare: x.ext, partial: ramas > 1e-9 });
+        pretCumparare: pretCump / luat, pretVanzare: x.pret, extCumparare: extCump, extVanzare: x.ext, partial: ramas > 1e-9,
+        // v100.358: ora execuției față de ședința bursei (ext* rămân permisiunea de pe ordin, pentru cine le citește)
+        afaraCumparare: afCump ? true : afNestiut ? null : false, afaraVanzare: afaraOrelor(x.t, x.ticker, CB) });
       if (ramas > 1e-9) fara.push(Object.assign({}, x, { qty: ramas }));
     });
     var deschise = [];
@@ -182,6 +202,6 @@ var T212 = (function () {
     return out.join("\n") + "\n";
   }
 
-  return { raportAnual: raportAnual, csvPionex: csvPionex, csvDeclaratie: csvDeclaratie, umpleri: umpleri, perechi: perechi, candidati: candidati, simbol: simbol, dividende: dividende, dataRezultate: dataRezultate };
+  return { raportAnual: raportAnual, csvPionex: csvPionex, csvDeclaratie: csvDeclaratie, umpleri: umpleri, perechi: perechi, afaraOrelor: afaraOrelor, candidati: candidati, simbol: simbol, dividende: dividende, dataRezultate: dataRezultate };
 })();
 if (typeof globalThis !== "undefined") globalThis.T212 = T212;

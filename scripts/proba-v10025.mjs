@@ -175,7 +175,7 @@ function functia(src, nume) { let i = src.indexOf("function " + nume + "("); ass
 await test("pagina: botii inchisi = prima pagina Pionex (cei mai noi) + arhiva de acasa, fara dubluri; Jurnalul si Cont total le iau de acolo", async () => {
   assert.match(functia(app, "jtPorneste"), /jtAduBoti\(\)/); assert.doesNotMatch(functia(app, "jtPorneste"), /bot-orders\?status=finished&limit=100/);
   assert.match(t2, /jtAduBoti\(\)/);
-  const ctx = { jtArhiva: { la: null, boti: null, complet: false, sursa: null }, cereri: [] };
+  const ctx = { jtArhiva: { la: null, boti: null, complet: false, sursa: null }, jtStare: {}, cereri: [] };
   ctx.getJSON = async (u) => { ctx.cereri.push(u); if (u.startsWith("/api/bot-orders")) return { bots: [{ brut: bot(9) }, { brut: bot(8) }] }; if (u.startsWith("/api/istoric-bot?action=botiInchisi")) return { boti: [compactBot(bot(8)), compactBot(bot(7)), compactBot(bot(1))], la: 123, complet: true, n: 3 }; throw new Error(u); };
   vm.createContext(ctx); vm.runInContext(functia(app, "jtAduBoti") + ";this.jtAduBoti=jtAduBoti;", ctx);
   const l = await ctx.jtAduBoti();
@@ -189,6 +189,13 @@ await test("pagina: botii inchisi = prima pagina Pionex (cei mai noi) + arhiva d
   ctx.jtArhiva = { la: null, boti: null, complet: false, sursa: null };
   ctx.getJSON = async (u) => { if (u.startsWith("/api/bot-orders")) return { bots: [{ brut: bot(9) }] }; throw Object.assign(new Error("ISTORIC_DOAR_ACASA"), { status: 503 }); };
   assert.equal((await ctx.jtAduBoti()).length, 1); assert.equal(ctx.jtArhiva.sursa, "pagina");
+  // v100.358 (auditul, 🔴1): Pionex picat, arhiva vine ⇒ Jurnalul merge pe arhivă (înainte: null ⇒ pagina goală); fără amândouă ⇒ null
+  ctx.jtArhiva = { la: null, boti: null, complet: false, sursa: null };
+  ctx.getJSON = async (u) => { if (u.startsWith("/api/bot-orders")) throw Object.assign(new Error("429"), { status: 429 }); if (u.startsWith("/api/istoric-bot?action=botiInchisi")) return { boti: [compactBot(bot(8)), compactBot(bot(7))], la: 5, complet: true }; throw new Error(u); };
+  assert.equal((await ctx.jtAduBoti()).length, 2); assert.ok(ctx.jtStare.pionexEroare, "eroarea Pionex ținută pentru „De unde știu”");
+  ctx.jtArhiva = { la: null, boti: null, complet: false, sursa: null };
+  ctx.getJSON = async () => { throw new Error("jos"); };
+  assert.equal(await ctx.jtAduBoti(), null);
 });
 
 await test("nota statisticii spune de unde vin botii: toata istoria / colectorul inca strange / doar prima pagina; si cati spot grid / smart copy raman deoparte", () => {
@@ -202,7 +209,7 @@ await test("nota statisticii spune de unde vin botii: toata istoria / colectorul
 });
 
 await test("lista de boti din Jurnal: pe bucati (cate 30, „Arată încă”), nu 2200 de carduri odata", () => {
-  const r = functia(app, "jtRender");
+  const r = functia(app, "jtListaRender");   // v100.358: lista e acum un desen al ei (O singură listă)
   assert.match(r, /jtStare\.arata/); assert.match(r, /Arată încă/); assert.match(app, /function jtArataMai\(/);
 });
 

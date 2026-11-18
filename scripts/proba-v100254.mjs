@@ -168,7 +168,7 @@ await test("A3 spune episoade scurte, legătură nu cauză, titlul încape; dura
   assert.match(risc, /x\.k === "A3" \|\| x\.k === "O2"/);
   assert.match(risc, /legătură, nu cauză/);
   assert.match(risc, /K extrageri cu revenire din aceeași fereastră de 30 de zile/);
-  assert.match(app, /!\/\^ținuți \/\.test/);
+  assert.match(app, /return !x\.laInchidere/);   // v100.358: grupa de durată poartă laInchidere (JurnalDovezi.reguli), nu se mai recunoaște după text
   assert.match(app, /Durata se știe abia la închidere: n-aș da un sfat din ea/);
   assert.match(app, /un semn, nu o dovadă/);
   assert.doesNotMatch(citeste("public", "lib", "obiceiuri.js"), /−0,99 în loc de −21,45/);

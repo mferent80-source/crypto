@@ -40,10 +40,11 @@ await test("verdict doar cu macar 10 de fiecare parte; directia corecta pe fieca
   const c = ST.compara(inainte.concat(dupa), R);
   assert.equal(c.destul, true);
   const v = Object.fromEntries(c.randuri.map((r) => [r.cheie, r.verdict]));
-  assert.equal(v.rata, "mai-bine"); assert.equal(v.peTrade, "mai-bine"); assert.equal(v.ceaMaiMarePct, "mai-bine"); assert.equal(v.mariPondere, "mai-bine"); assert.equal(v.pierdereMediePct, "mai-bine");
+  // v100.358 (auditul: 67% din tăieturile la întâmplare dădeau aceleași săgeți): o zi de fiecare parte ⇒ nicio săgeată, doar „nedovedit”
+  assert.ok(c.randuri.every((r) => r.verdict === "nedovedit" || r.verdict === null), JSON.stringify(v));
   // si invers
   const c2 = ST.compara(dupa.map((x) => ({ ...x, pornit: x.pornit - 60 * H })).concat(inainte.map((x) => ({ ...x, id: "d" + x.id, pornit: x.pornit + 60 * H }))), R);
-  assert.equal(Object.fromEntries(c2.randuri.map((r) => [r.cheie, r.verdict])).mariPondere, "mai-rau");
+  assert.notEqual(Object.fromEntries(c2.randuri.map((r) => [r.cheie, r.verdict])).mariPondere, "mai-bine");
   // sub 10 de o parte: fara verdict
   const c3 = ST.compara(inainte.concat(dupa.slice(0, 9)), R);
   assert.equal(c3.destul, false); assert.ok(c3.randuri.every((r) => r.verdict === null));
@@ -54,7 +55,7 @@ await test("html: tabelul Înainte / După cu verdictul scris (nu doar culoare) 
   const s = ST.calc(inainte.concat(dupa), { moneda: "USDT" });
   const h = ST.html(s, { titlu: "Statistica · Pionex", piata: "crypto", comparatie: ST.compara(inainte.concat(dupa), R) });
   assert.match(h, /Înainte \/ după regulile din 30\.09/); assert.match(h, /<th>Înainte<\/th><th>După<\/th>/);
-  assert.ok(h.includes('▲<span class="stVerdTxt"> mai bine</span>'), "sageata + textul (pe telefon textul ramane pentru cititorul de ecran)"); assert.match(h, /Pierderi mari/);
+  assert.ok(h.includes('≈<span class="stVerdTxt"> nedovedit</span>'), "semnul + textul (pe telefon textul rămâne pentru cititorul de ecran); v100.358: o zi de fiecare parte ⇒ nedovedit"); assert.match(h, /Pierderi mari/);
   const css = fs.readFileSync(new URL("../public/app.css", import.meta.url), "utf8");
   assert.ok(css.includes(".stCompara .stTabel td:first-child{white-space:normal"), "pe telefon eticheta se rupe, coloana După ramane pe ecran");
   const bloc = h.slice(h.indexOf("stCompara"), h.indexOf("Curba banilor"));

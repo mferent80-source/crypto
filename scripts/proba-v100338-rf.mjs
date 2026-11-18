@@ -19,7 +19,7 @@ const PATRU = "#tabloubot,#t212,#dash,#rangefilter,#sugestii,#probe,#gridset,#gr
 
 await test("A tema: rădăcina #rangefilter în generator, stratul la zi, variabilele de zi pe toate patru", async () => {
   const GEN = citeste("scripts", "face-tema-tablou.mjs"), CSS = citeste("public", "app.css");
-  assert.match(GEN, /export const RADACINI = \["tabloubot", "t212", "dash", "rangefilter", "sugestii", "probe", "gridset", "gridsim", "montecarlo"\];/);
+  assert.match(GEN, /export const RADACINI = \["tabloubot", "t212", "dash", "rangefilter", "sugestii", "probe", "gridset", "gridsim", "montecarlo", "jurnaltrade"\];/);
   assert.ok(CSS.includes(":is(" + PATRU + ").tbZi{"), "variabilele de zi pe toate patru rădăcinile");
   const { spawnSync } = await import("node:child_process");
   const r = spawnSync(process.execPath, [path.join(RAD, "scripts", "face-tema-tablou.mjs"), "--check"], { encoding: "utf8" });
@@ -32,8 +32,8 @@ await test("A tema: rădăcina #rangefilter în generator, stratul la zi, variab
 await test("A un singur comutator: tbTemaAplica și tema-devreme pun tbZi și pe #rangefilter; butonul rfTemaBtn în antetul paginii", () => {
   const APP = citeste("public", "app.js"), DEV = citeste("public", "lib", "tema-devreme.js"), RF = citeste("public", "lib", "range-filter-ecran.js");
   const ap = APP.slice(APP.indexOf("function tbTemaAplica("), APP.indexOf("function tbTemaComuta("));
-  assert.match(ap, /\["tabloubot","t212","dash","rangefilter","sugestii","probe","gridset","gridsim","montecarlo"\]/); assert.match(ap, /"rfTemaBtn"/);
-  assert.match(DEV, /\["tabloubot", "t212", "dash", "rangefilter", "sugestii", "probe", "gridset", "gridsim", "montecarlo"\]/);
+  assert.match(ap, /\["tabloubot","t212","dash","rangefilter","sugestii","probe","gridset","gridsim","montecarlo","jurnaltrade"\]/); assert.match(ap, /"rfTemaBtn"/);
+  assert.match(DEV, /\["tabloubot", "t212", "dash", "rangefilter", "sugestii", "probe", "gridset", "gridsim", "montecarlo", "jurnaltrade"\]/);
   assert.match(RF, /<button class="acBtn" type="button" id="rfTemaBtn" aria-pressed="(true|false)" data-action-click="tbTemaComuta\(\)">/);
   assert.match(RF, /tbTemaAplica\(\)/, "după ce antetul se redesenează, butonul își ia textul temei");
 });

@@ -340,7 +340,7 @@ await test("6g jtPorneste: boții Pionex, arhiva, contrafactualul, raportul și 
     if (/contrafactual/.test(url)) return setTimeout(() => res({ contrafactual: { a: 1 } }), 1);
     if (/botiInchisi/.test(url)) return setTimeout(() => res({ boti: [{ strategyId: "2" }], la: "L", complet: true }), 1);
     rej(new Error("neașteptat " + url)); }); };
-  const box = { getJSON, $: () => null, jtStare: { boti: null, la: 0, inLucru: false, eroare: null }, jtArhiva: { la: null, boti: null, complet: false, sursa: null }, jtRender: () => { asteapta.render = true; }, grTextEroare: (e) => String(e && e.message), console };
+  const box = { getJSON, $: () => null, jtStare: { boti: null, la: 0, inLucru: false, eroare: null }, jtArhiva: { la: null, boti: null, complet: false, sursa: null }, jtRender: () => { asteapta.render = true; }, jtNoteSync: () => {}, grTextEroare: (e) => String(e && e.message), console };
   vm.createContext(box); vm.runInContext(["jtAduBoti", "jtPorneste"].map(fnApp).join("\n"), box);
   const p = box.jtPorneste(true);
   await new Promise((r) => setTimeout(r, 20));

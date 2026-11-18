@@ -7,6 +7,7 @@ const ISTORIC_BOT = {
   risc: 262144, carnet: 262144, latime: 262144, cont: 1048576, verdicteCalibrare: 262144, universSua: 1048576,
   sectoareTop: 262144, trend12: 262144, caderi: 131072, directie: 131072, disciplinaBanda: 524288, comportament: 524288,
   pareriJudecate: 786432,   /* v100.312 (I-843): până la 3.600 de judecăți × ~170 de semne */
+  jtNote: 524288,   /* v100.358: notițele Jurnalului de trade - la prima urcare pleacă toate cele din browser */
 };
 export const PLAFON_IMPLICIT = 65536;
 export const PLAFON_T212 = 262144;
