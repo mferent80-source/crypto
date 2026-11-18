@@ -191,7 +191,8 @@ await test("🟡 perechile incheiate: in Radar fiecare, pe Discord un rezumat pe
 await test("🟡 starea alertelor scrisa ATOMIC; ritmurile scumpe (laborator, clasament) tinute minte peste reporniri", () => {
   assert.doesNotMatch(colector, /fs\.writeFileSync\(STARE_FIS, JSON\.stringify\(stareAlerte\)\)/);
   assert.match(colector, /function scrieAtomic\(fis, obj\) \{ const tmp = fis \+ "\.tmp"; fs\.writeFileSync\(tmp, JSON\.stringify\(obj\)\); fs\.renameSync\(tmp, fis\); \}/);
-  assert.match(colector, /let laboratorLa = Math\.max\(Date\.now\(\) - LABORATOR_MS \+ 30 \* 60000, Number\(ritm\.laborator\) \|\| 0\)/);
+  // v100.362 (colector v101.199): ritmul laboratorului ținut minte la fel, dar tura e la oră fixă (05:00–09:00 RO, ≥ 30 min după pornire)
+  assert.match(colector, /let laboratorLa = Number\(ritm\.laborator\) \|\| 0/); assert.match(colector, /if \(acum - LAB_PORNIT < 30 \* 60000\) return false;/);
 });
 
 await test("🟡 Yahoo: la 401 crumb-ul se reface pe loc; simbolul inexistent (404) tinut minte, nu cerut la 2 minute", async () => {

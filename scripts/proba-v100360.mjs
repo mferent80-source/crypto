@@ -93,7 +93,7 @@ await test("P5 raportul vechi: peste 30 de minute ⇒ „colectorul n-a mai scri
   assert.match(t, /Niciun bot pornit acum; ultimul închis: /); assert.doesNotMatch(t, /colectorul n-a mai scris/);
 });
 await test("P6 tema și rândurile: comportament în generator, în tema devreme, în tbTemaAplica + butonul; rândurile pliate au cheie, titlu, cele două deschise implicit; tbRandComuta le dă paginii", () => {
-  assert.match(citeste("scripts", "face-tema-tablou.mjs"), /"jurnaltrade", "comportament", "tradezilei"\]/);
+  assert.match(citeste("scripts", "face-tema-tablou.mjs"), /"jurnaltrade", "comportament", "tradezilei", "carnet"\]/);
   assert.match(lib("tema-devreme.js"), /"comportament"/); const A = citeste("public", "app.js");
   assert.match(A, /"coTemaBtn"/); assert.match(A, /return coRandComuta\(id,deschis\)/);
   const E = lib("comportament-ecran.js");

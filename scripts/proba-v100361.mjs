@@ -120,22 +120,21 @@ await test("K2 Discord: prețul 1–10 USDT cu 3 zecimale, mediana mișcării, s
   const dim = liniiTradeZilei([{ simbol: "BTC", fel: "piata", d: aziLa(7, 0.01) }], TZ); assert.match(dim[dim.length - 1], /„azi ~”, gridul și stopul = din prognoza de la 00:00 UTC/);
 });
 await test("T tema și legăturile: RADACINI, tbTemaAplica + tzTemaBtn, tema devreme, tbRandComuta ⇒ tzRandComuta, generatorul la zi, scripturile în ordine, cache-ul, CSS-ul (și ziua butonului)", () => {
-  assert.match(citeste("scripts", "face-tema-tablou.mjs"), /"comportament", "tradezilei"\]/); const A = citeste("public", "app.js");
-  assert.match(A, /"comportament","tradezilei"\]\.forEach\(function\(id\)\{var p=document\.getElementById\(id\);if\(p\)p\.classList\.toggle\("tbZi",zi\)\}\)/); assert.match(A, /"coTemaBtn","tzTemaBtn"\]/);
-  assert.match(A, /return tzRandComuta\(id,deschis\)/); assert.match(citeste("public", "lib", "tema-devreme.js"), /"comportament", "tradezilei"\]/);
+  assert.match(citeste("scripts", "face-tema-tablou.mjs"), /"comportament", "tradezilei", "carnet"\]/); const A = citeste("public", "app.js");
+  assert.match(A, /"comportament","tradezilei","carnet"\]\.forEach\(function\(id\)\{var p=document\.getElementById\(id\);if\(p\)p\.classList\.toggle\("tbZi",zi\)\}\)/); assert.match(A, /"coTemaBtn","tzTemaBtn","cnTemaBtn"\]/);
+  assert.match(A, /return tzRandComuta\(id,deschis\)/); assert.match(citeste("public", "lib", "tema-devreme.js"), /"comportament", "tradezilei", "carnet"\]/);
   execFileSync(process.execPath, [path.join(RAD, "scripts", "face-tema-tablou.mjs"), "--check"], { stdio: "pipe" });
   const H = citeste("public", "index.html"); assert.match(H, /<script src="\/lib\/trade-zilei\.js"><\/script><script src="\/lib\/trade-zilei-dovezi\.js"><\/script>/); assert.ok(H.indexOf("/lib/trade-zilei-dovezi.js") < H.indexOf("/lib/trade-zilei-ecran.js"));
   assert.match(citeste("public", "sw.js"), /"\/lib\/trade-zilei\.js","\/lib\/trade-zilei-dovezi\.js"/);
   const C = citeste("public", "app.css"); for (const k of ["#tradezilei .tzBara{", "#tradezilei .tzPret{", "#tradezilei .tzTop{", "#tradezilei .tzGrGrila{", "#tradezilei.tbZi .acBtn{color:#0E1A2B}", 'html.pzDemo #tradezilei [data-rand="pliat"]']) assert.ok(C.includes(k), k);
   assert.ok(C.indexOf("#tradezilei .tzBara{") < C.indexOf("/* v100.313 (08.11.2026"), "înaintea blocului v100.313");
 });
-await test("V versiunile v100.361 (index ×4, sw, versiune.js, package + lanț, BUILD_INFO) + colector v101.198", () => {
-  const H = citeste("public", "index.html");
-  assert.equal((H.match(/v100\.361/g) || []).length, 4); assert.match(H, /v100\.361 · TRADE-UL ZILEI CINSTIT/); assert.doesNotMatch(H, /v100\.360/);
-  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-361/); assert.match(citeste("functions", "_shared", "versiune.js"), /"v100\.361"/);
-  const p = JSON.parse(citeste("package.json")); assert.equal(p.version, "100.361.0"); assert.match(p.scripts.test, /npm run test:v100360 && npm run test:v100361/); assert.equal(p.scripts["test:v100361"], "node scripts/proba-v100361.mjs");
-  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.match(bi.badge, /^v100\.361/); assert.ok(bi.tz361 && bi.comport360);
-  assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.198";/);
+await test("V versiunile de la v100.361 încolo (v100.362: versiunea curentă o verifică proba ei); colectorul ≥ v101.198", () => {
+  const nr = (t) => Number((String(t).match(/100[.-](\d{3})/) || [])[1]);
+  assert.ok(nr(citeste("functions", "_shared", "versiune.js")) >= 361 && nr(citeste("public", "sw.js")) >= 361 && nr(JSON.parse(citeste("BUILD_INFO.json")).badge) >= 361);
+  const p = JSON.parse(citeste("package.json")); assert.ok(nr(p.version) >= 361); assert.match(p.scripts.test, /npm run test:v100360 && npm run test:v100361/); assert.equal(p.scripts["test:v100361"], "node scripts/proba-v100361.mjs");
+  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.ok(bi.tz361 && bi.comport360);
+  assert.ok(Number((citeste("scripts", "colector.mjs").match(/const VERSIUNE_COLECTOR = "v101\.(\d+)";/) || [])[1]) >= 198);
 });
 console.log(`\n${teste - picate}/${teste} trec`);
 process.exit(picate ? 1 : 0);

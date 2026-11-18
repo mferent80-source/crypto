@@ -103,7 +103,7 @@ await test("(3c) ofertele: din planMonede (long + short, cu grile și stopul pro
   const v = (j, s, g) => ({ levier: 3, jos: j, sus: s, grile: g, stop: { jos: j * 0.99, sus: s * 1.01 }, proba: { n: 100, stop: 40, mediaUsdt: 0.5, independente: 9 }, laStop: -10, egalaCuTa: false });
   const pm = [{ simbol: "A_USDT_PERP", pret: 10, L: { ta: v(9.8, 10.2, 8), mea: v(9.5, 10.5, 12) }, S: { ta: v(9.8, 10.2, 8), mea: v(9.5, 10.5, 12) } }];
   const o = CN.oferte(pm, T0); assert.equal(o.length, 2); assert.equal(o[0].sursa, "laborator"); assert.equal(o[0].ta.grile, 8); assert.equal(o[0].ta.pStop, 0.4); assert.ok(["ta", "mea"].includes(o[0].cine));
-  const u = CN.uneste([{ simbol: "B", t: T0 - 200 * ZI, dir: "long", sursa: "laborator" }].concat(o), o, T0); assert.equal(u.length, 2);
+  const u = CN.uneste([{ simbol: "B", t: T0 - 200 * ZI, dir: "long", sursa: "laborator" }].concat(o), o, T0); assert.equal(u.length, 3);   /* v100.362 (el: „păstrez toate ofertele”): fără plafonul de 120 de zile */
 });
 await test("(3d) oferta fișei (KV ferestre) ⇒ forma carnetului: „stop” rămâne numărul probei, prețurile stopului vin din stopJos/stopSus; fără ele ⇒ nejudecabil", () => {
   const nou = { simbol: "ZAMA_USDT_PERP", t: T0, dir: "long", verdict: "porneste", rec: "larg", cine: "mea", egale: false,
@@ -179,7 +179,8 @@ await test("(R-M5/M6) raportul are p, monede, blocuri (fără ic gol); după cit
 await test("(R-UI) pagina: fără stare dublă, tabelul nu se întinde, „așteaptă” fără „de”, un singur rând când sunt prea puține judecate, o frază de citire sub tabel", () => {
   if (typeof globalThis.carnetHtml !== "function") vm.runInThisContext(citeste("public", "lib", "carnet-ecran.js"), { filename: "carnet-ecran.js" });
   const cz = cazuriSint(7, true), r = CN.raport({ cazuri: cz, oferte: [], acum: T0, reps: 200 }), h = globalThis.carnetHtml(r, T0 + 3600000);
-  assert.equal((h.match(/nedovedit|dovedit/g) || []).filter(Boolean).length <= 3, true);
+  // v100.362: câte o stare pe întrebare și pe parte (alegerea, „aș aștepta”, ÎNGUST față de LARG · istoric / înainte) - cel mult 5; „dovedit” între ghilimele (explicațiile) nu e o stare
+  assert.equal((h.replace(/<[^>]+>/g, " ").match(/(?<!„)\b(ne)?dovedit\b(?!”)/g) || []).length <= 5, true);
   assert.doesNotMatch(h, /\d+ de așteaptă/); assert.equal((h.match(/încă nu spune nimic/g) || []).length, 1);
   assert.match(h, /class="tbSub cnCiteste">Cel mai mult se abate: stopul promis/); assert.match(citeste("public", "app.css"), /\.cnTab\{[^}]*width:auto/);
   assert.equal((h.match(/<b class="(good|bad|neutral)">/g) || []).length, 0, "fără cipul dublat");
@@ -243,8 +244,9 @@ await test("(5a) carnetHtml: fără raport ⇒ se spune că se face noaptea; cu 
   assert.match(globalThis.carnetHtml(null, T0), /noaptea/);
   const cz = cazuriSint(7, true), of = cz.slice(0, 40).map((c, i) => Object.assign({ sursa: "fisa", verdict: i % 2 ? "porneste" : "asteapta", r: { ta: c.ta, mea: c.mea } }, c));
   const r = CN.raport({ cazuri: cz, oferte: of, acum: T0, reps: 200 }), h = globalThis.carnetHtml(r, T0 + 3600000);
-  assert.ok(h.includes(CN.textAlegere(r.rejoc.intrebari.alegere).replace(/„/g, "„")), "alegerea"); assert.match(h, /Pe istoric/); assert.match(h, /De acum înainte/);
-  assert.equal((h.match(/<tr class="cnCos">/g) || []).length, 3); assert.match(h, /dovedit/); assert.match(h, /Aș urma alegerea fișei/);
+  // v100.362: alegerea pe analiza nouă (media pe cazuri cu intervalul, față de „mereu LARG”), cu starea regulii fixate înainte; calibrarea pe ambele părți
+  assert.match(h, /Când am ales ÎNGUST sau LARG, varianta aleasă a ieșit cu [+−]?\d+,\d % față de cealaltă, pe 3 zile \(\d+ de cazuri, media pe cazuri, /, "alegerea"); assert.match(h, /Față de „mereu LARG”: /); assert.match(h, /Pe istoric/); assert.match(h, /De acum înainte/);
+  assert.equal((h.match(/<tr class="cnCos">/g) || []).length, 6); assert.match(h, /dovedit/); assert.match(h, /Aș urma alegerea fișei/);
   assert.match(globalThis.carnetHtml(r, T0 + 40 * 3600000), /vechi/); assert.doesNotMatch(h, /undefined|NaN/);
 });
 await test("(5b) pagina: secțiunea #carnet, butonul în Zilnic după „Grid: ce setez?”, scripturile după grid-plan și risc-luna, în cache-ul aplicației; navTo o pornește", () => {

@@ -135,6 +135,62 @@
     return cos.map(function (k) { return { cos: k.cos, n: k.n, promis: k.n ? k.sp / k.n : null, venit: k.n ? k.sv / k.n : null, putine: k.n < 30 }; });
   }
 
+  // ---------------- v100.362 (auditul 18.11; el: „repar și spun cinstit”) ----------------
+  // Reperul cinstit al alegerii e „aș alege MEREU LARG” (fișa alege LARG în 84–91% din cazuri ⇒ „aleasă − cealaltă” era de fapt LARG − ÎNGUST);
+  // media pe CAZURI (nu pe monede: 15 din 84 de monede aveau un singur caz) cu intervalul pe blocuri de 3 zile (cazurile din același bloc trec
+  // prin aceeași piață ⇒ eroarea pe blocuri, t pe G − 1 grade); niciun grup sub MIN_GRUP cazuri nu primește medie. Verdictul vechi (verdictMonede,
+  // regula fixată înainte de cifre) rămâne neatins - registrul îl citește.
+  var MIN_GRUP = 10;
+  var T95 = [null, 12.71, 4.30, 3.18, 2.78, 2.57, 2.45, 2.36, 2.31, 2.26, 2.23, 2.20, 2.18, 2.16, 2.14, 2.13, 2.12, 2.11, 2.10, 2.09, 2.09];
+  function tCrit(df) { return !(df >= 1) ? null : df <= 20 ? T95[df] : df <= 30 ? 2.05 : 1.98; }
+  // media pe cazuri cu intervalul de 95% pe blocuri de 3 zile (eroarea „cluster”): { n, medie, lo, hi, blocuri }
+  function statBloc(l, val, t0) {
+    var bl = {}, n = 0, s = 0;
+    l.forEach(function (x) { var v = val(x); if (v === null || v === undefined || !isFinite(v)) return; var k = Math.floor((x.t - t0) / (FEREASTRA * ZI)); var b = bl[k] || (bl[k] = { s: 0, n: 0 }); b.s += v; b.n++; s += v; n++; });
+    if (!n) return { n: 0, medie: null, lo: null, hi: null, blocuri: 0 };
+    var m = s / n, K = Object.keys(bl), G = K.length, ss = 0; K.forEach(function (k) { var b = bl[k]; ss += Math.pow(b.s - m * b.n, 2); });
+    var se = G > 1 ? Math.sqrt(ss * G / (G - 1)) / n : null, tc = tCrit(G - 1);
+    return { n: n, medie: m, lo: se === null ? null : m - tc * se, hi: se === null ? null : m + tc * se, blocuri: G };
+  }
+  function analiza(cazuri, o) {
+    var l = Array.isArray(cazuri) ? cazuri.filter(function (c) { return c && c.ta && c.mea && nr(c.ta.net) !== null && nr(c.mea.net) !== null && c.t > 0; }) : [];
+    if (!l.length) return { n: 0 };
+    var t0 = Infinity, tMax = -Infinity; l.forEach(function (c) { if (c.t < t0) t0 = c.t; if (c.t > tMax) tMax = c.t; });
+    var alt = function (c) { return c.cine === "mea" ? "ta" : "mea"; };
+    var per = l.filter(function (c) { return !c.egale && !c.asteapta && (c.cine === "ta" || c.cine === "mea"); }), ing = per.filter(function (c) { return c.cine === "ta"; });
+    // ÎNGUST − LARG unde fișa a ales ÎNGUST (singura decizie care se abate de la „mereu LARG”), cu verdictul pe aceeași regulă (monede + blocuri)
+    var pereche = []; ing.forEach(function (c) { pereche.push({ r: c.ta.net, ales: true, simbol: c.simbol, t: c.t }); pereche.push({ r: c.mea.net, ales: false, simbol: c.simbol, t: c.t }); });
+    var vIng = verdictMonede(pereche, function (x) { return x.ales; }, optiuni(o));
+    // pe blocuri: aleasă − mereu LARG (pentru graficul adunat) și pe monede: aleasă − cealaltă (cât de împrăștiat e)
+    var bl = {}; per.forEach(function (c) { var k = Math.floor((c.t - t0) / (FEREASTRA * ZI)); var b = bl[k] || (bl[k] = { t: t0 + k * FEREASTRA * ZI, s: 0, n: 0 }); b.s += c[c.cine].net - c.mea.net; b.n++; });
+    var mo = {}; per.forEach(function (c) { var b = mo[c.simbol] || (mo[c.simbol] = { s: 0, n: 0 }); b.s += c[c.cine].net - c[alt(c)].net; b.n++; });
+    var r4 = function (x) { return Math.round(x * 10000) / 10000; };
+    var ast = l.filter(function (c) { return c.asteapta && c[c.cine]; }), rest = l.filter(function (c) { return !c.asteapta && c[c.cine]; });
+    var stopDe = function (c) { var v = c[c.cine]; return typeof v.stop === "boolean" ? (v.stop ? 1 : 0) : null; };
+    var g = function (a, f) { return a.length >= MIN_GRUP ? statBloc(a, f, t0) : { n: a.length, medie: null, lo: null, hi: null, putine: true }; };
+    return {
+      n: l.length, perechi: per.length, alegeLarg: per.length - ing.length, alegeIngust: ing.length,
+      vsLarg: g(per, function (c) { return c[c.cine].net - c.mea.net; }),
+      aleasaVsCealalta: g(per, function (c) { return c[c.cine].net - c[alt(c)].net; }),
+      ingustVsLarg: Object.assign(g(ing, function (c) { return c.ta.net - c.mea.net; }), { stare: vIng.stare, motiv: vIng.motiv || null, p: vIng.p === undefined ? null : vIng.p, pBloc: vIng.pBloc === undefined ? null : vIng.pBloc }),
+      niveluri: { aleasa: g(per, function (c) { return c[c.cine].net; }), cealalta: g(per, function (c) { return c[alt(c)].net; }), larg: g(per, function (c) { return c.mea.net; }),
+        pePlus: per.length ? per.filter(function (c) { return c[c.cine].net > 0; }).length / per.length : null, lichidari: per.filter(function (c) { return c[c.cine].lichidat; }).length },
+      asteapta: { n: ast.length, rest: rest.length, net: g(ast, function (c) { return c[c.cine].net; }), netRest: g(rest, function (c) { return c[c.cine].net; }), stop: g(ast, stopDe), stopRest: g(rest, stopDe) },
+      calibrare: calibrare(l).map(function (k, i) { var lim = [[-1, 0.3], [0.3, 0.5], [0.5, 2]][i]; var dinCos = l.filter(function (c) { var p = nr(c[c.cine] && c[c.cine].pStop); return p !== null && typeof c[c.cine].stop === "boolean" && (i === 0 ? p < 0.3 : i === 1 ? p >= 0.3 && p <= 0.5 : p > 0.5); }); var s = dinCos.length >= MIN_GRUP ? statBloc(dinCos, stopDe, t0) : null; return Object.assign({}, k, { lo: s ? s.lo : null, hi: s ? s.hi : null, blocuri: s ? s.blocuri : 0 }); }),
+      blocuri: Object.keys(bl).map(function (k) { return { t: bl[k].t, dif: r4(bl[k].s / bl[k].n), n: bl[k].n }; }).sort(function (a, b) { return a.t - b.t; }),
+      peMonede: Object.keys(mo).map(function (k) { return { simbol: String(k).replace(/_USDT(_PERP)?$/, ""), dif: r4(mo[k].s / mo[k].n), n: mo[k].n }; }).sort(function (a, b) { return a.dif - b.dif; }),
+      zile: Math.round((tMax - t0) / ZI) + FEREASTRA
+    };
+  }
+  // „pornește / aștept / nu” pe grupe: niciun grup sub MIN_GRUP cazuri nu primește medie (era „pornește (1) −9,6%” = un singur trade)
+  function verdictFisa2(cz) {
+    var l = (Array.isArray(cz) ? cz : []).filter(function (c) { return c.verdict && c[c.cine] && nr(c[c.cine].net) !== null && c.t > 0; });
+    if (!l.length) return { n: 0 };
+    var t0 = Infinity; l.forEach(function (c) { if (c.t < t0) t0 = c.t; });
+    var g = function (f) { var a = l.filter(f); return a.length >= MIN_GRUP ? statBloc(a, function (c) { return c[c.cine].net; }, t0) : { n: a.length, medie: null, putine: true }; };
+    return { n: l.length, pornit: g(function (c) { return c.verdict === "porneste"; }), asteptat: g(function (c) { return c.verdict !== "porneste"; }) };
+  }
+
   // ---------------- ofertele înainte ----------------
   // pm = [{ simbol, L: {ta, mea}, S: {ta, mea} }] (laboratorul, variantele întregi) ⇒ ofertele de azi
   function oferte(pm, t) {
@@ -173,14 +229,15 @@
     return { ta: ta, mea: mea };   // revizia (I3): fără LARG judecabil ⇒ null (cazul devine „egale”), nu o copie a lui ÎNGUST
   }
   function cheie(o) { return o.simbol + "|" + o.t + "|" + o.dir + "|" + (o.sursa || ""); }
-  // unește ofertele (cea judecată rămâne judecată), păstrate 120 de zile
+  // unește ofertele (cea judecată rămâne judecată). v100.362 (el: „păstrez toate ofertele”): fără plafonul de 120 de zile - dovada se adună
+  // (puterea la +0,5% pe 3 zile: 35% la 120 de zile, 54% la 180); `acum` rămâne în semnătură pentru apelanți
   function uneste(vechi, noi, acum) {
     var h = {}, ord = [];
     (Array.isArray(vechi) ? vechi : []).concat(Array.isArray(noi) ? noi : []).forEach(function (o) {
       if (!o || !o.simbol || !(o.t > 0)) return; var k = cheie(o);
       if (!h[k]) { ord.push(k); h[k] = o; } else if (!h[k].r && o.r) h[k] = o;
     });
-    return ord.map(function (k) { return h[k]; }).filter(function (o) { return o.t >= (acum || Date.now()) - 120 * ZI; });
+    return ord.map(function (k) { return h[k]; });
   }
   // ofertele judecate ⇒ cazuri (aceeași formă ca la re-joc)
   function cazuriDinOferte(l) {
@@ -222,7 +279,9 @@
   function textVerdictFisa(f) {
     if (!f) return null;
     if (f.n < 30) return "„Pornește / aștept” se judecă doar înainte: " + cate(f.n, "ofertă judecată", "oferte judecate") + ", sub 30 - încă nu spune nimic.";
-    return "Ofertele cu „pornește” (" + f.pornit.n + ") au ieșit în medie " + P1(f.pornit.medie || 0) + " pe 3 zile, cele cu „aștept” sau „nu” (" + f.asteptat.n + ") " + P1(f.asteptat.medie || 0) + ".";
+    // v100.362 (auditul 18.11, 🔴): media DOAR pe grupurile cu cel puțin MIN_GRUP cazuri (era „pornește (1) −9,6%” = un singur trade; grupul gol scria „+0,0%”)
+    var gr = function (g, nume) { return g.n >= MIN_GRUP && nr(g.medie) !== null ? nume + " (" + g.n + ") au ieșit în medie " + P1(g.medie) : nume + ": " + cate(g.n, "ofertă", "oferte") + ", prea puține pentru o medie"; };
+    return gr(f.pornit, "Ofertele cu „pornește”") + " pe 3 zile; " + gr(f.asteptat, "cele cu „aștept” sau „nu”") + ".";
   }
   function randSubFisa(r) {
     var q = r && r.rejoc && r.rejoc.intrebari, a = q && q.alegere; if (!a) return null;
@@ -244,10 +303,12 @@
     return { la: x.acum || Date.now(), fereastraZile: FEREASTRA,
       rejoc: { n: cz.length, monede: Object.keys(mon).length, fara: x.fara || 0, ms: x.ms || null, pasZile: x.pasZile || 1, intrebari: { alegere: sumar(q.alegere), asteapta: sumar(q.asteapta) }, calibrare: calibrare(cz) },
       inainte: { oferte: toate.length, judecate: jud.length, nejudecabile: toate.filter(function (o) { return o.r && o.r.nejudecabil; }).length, asteapta: toate.filter(function (o) { return !o.r; }).length,
-        intrebari: { alegere: sumar(qi.alegere), asteapta: sumar(qi.asteapta) }, calibrare: calibrare(jud), fisa: verdictFisa(jud) } };
+        intrebari: { alegere: sumar(qi.alegere), asteapta: sumar(qi.asteapta) }, calibrare: calibrare(jud), fisa: verdictFisa2(jud),
+        deLa: toate.length ? toate.reduce(function (m, o) { return o.t < m ? o.t : m; }, Infinity) : null, v2: analiza(jud, x) },
+      v2: { forma: 2, rejoc: analiza(cz, x) } };
   }
 
   root.Carnet = { FEREASTRA_ZILE: FEREASTRA, dinFisa: dinFisa, simVarianta: simVarianta, fisaLa: fisaLa, oferteAzi: oferteAzi, rejoc: rejoc, intrebari: intrebari, calibrare: calibrare, oferte: oferte, judecaOferta: judecaOferta, uneste: uneste,
-    cazuriDinOferte: cazuriDinOferte, verdictFisa: verdictFisa, textAlegere: textAlegere, textAsteapta: textAsteapta, textCalibrare: textCalibrare, textVerdictFisa: textVerdictFisa,
+    cazuriDinOferte: cazuriDinOferte, verdictFisa: verdictFisa, verdictFisa2: verdictFisa2, analiza: analiza, statBloc: statBloc, MIN_GRUP: MIN_GRUP, textAlegere: textAlegere, textAsteapta: textAsteapta, textCalibrare: textCalibrare, textVerdictFisa: textVerdictFisa,
     randSubFisa: randSubFisa, concluzie: concluzie, raport: raport, stareText: stareText, verdictMonede: verdictMonede, pentruRegistru: pentruRegistru };
 })(typeof globalThis !== "undefined" ? globalThis : this);
