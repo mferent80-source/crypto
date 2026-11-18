@@ -119,11 +119,14 @@ var JurnalGrafice = (function () {
     if (!(mx > mn)) { mx = 1; mn = -1; }
     var x = function (q) { return X0 + (q - mn) / (mx - mn) * (X1 - X0); }, x0 = x(0), H = SUS + R.length * RH + 16;
     var c = linie(x0, SUS - 2, x0, SUS + R.length * RH, "jgGrid");
+    // v100.360: dacă o etichetă nu încape, toate trec pe forma scurtă (nu unele cu „(n boți, z zile)” și altele fără); cifrele rămân în tooltip
+    var lung = function (r) { return String(r.et) + " (" + (ok(r.n) ? cate(r.n, "bot", "boți") : "—") + (ok(r.zile) ? ", " + cate(r.zile, "zi", "zile") : "") + ")"; };
+    var scurt = R.some(function (r) { return lung(r).length * 6.9 > LBL - 4; });
     R.forEach(function (r, i) {
       var y = SUS + i * RH, val = vDe(r), cls = r.putine || val === null ? "jgNeutru" : val >= 0 ? "jgPoz" : "jgNeg";
       var et = String(r.et) + " (" + (ok(r.n) ? cate(r.n, "bot", "boți") : "—") + (ok(r.zile) ? ", " + cate(r.zile, "zi", "zile") : "") + ")";
       var t = o.titlu ? o.titlu(r) : String(r.et) + ": " + (val === null ? "—" : U(val) + " pe bot") + " · " + cate(r.n || 0, "bot", "boți") + (ok(r.zile) ? " în " + cate(r.zile, "zi", "zile") : "") + (ok(r.pePlus) ? " · " + PC(r.pePlus) + " pe plus" : "") + (r.ic && !r.putine ? " · IC95 pe zile " + N1(r.ic[0]) + "…" + N1(r.ic[1]) : "") + (r.putine ? " · puține date" : "");
-      c += txt(LBL, y + BH * 0.72, et.length * 6.4 > LBL - 4 ? String(r.et) : et, { anc: "end" });   // v100.358 (poza la 1440): eticheta lungă era tăiată la stânga
+      c += txt(LBL, y + BH * 0.72, scurt ? String(r.et) : et, { anc: "end" });   // v100.358 (poza la 1440): eticheta lungă era tăiată la stânga
       if (val !== null) c += rect(Math.min(x(val), x0), y, Math.max(1, Math.abs(x(val) - x0)), BH, "jgBara " + cls, t, ' rx="2"');
       else c += rect(X0, y, X1 - X0, BH, "jgHit", t, ' opacity="0"');
       if (r.ic && ok(r.ic[0]) && ok(r.ic[1]) && !r.putine) c += '<g class="jgIc"><title>' + esc(t) + "</title>" + linie(x(r.ic[0]), y + BH / 2, x(r.ic[1]), y + BH / 2, "jgAx jgIc") + linie(x(r.ic[0]), y + 4, x(r.ic[0]), y + BH - 4, "jgAx jgIc") + linie(x(r.ic[1]), y + 4, x(r.ic[1]), y + BH - 4, "jgAx jgIc") + "</g>";

@@ -262,16 +262,17 @@ function franaParti(f, cuBoti, fara) {
   if (dep.has("sapt")) l.push("7 zile " + U2(f.netSapt) + (fara ? "" : " (pragul −" + V(P.sapt) + ")"));
   return l;
 }
-function textDecizie(d) {
-  if (d.cod === "boti") return mare(ordinal(d.n)) + " bot pornit azi, " + (d.ok ? "în pragul tău de " + d.prag : "peste pragul tău de " + d.prag
-    + (d.dovezi && d.dovezi.peste.pe < d.dovezi.sub.pe ? ": zilele tale cu peste " + cate(d.dovezi.prag, "bot", "boți") + " au dat " + U2(d.dovezi.peste.pe) + "/zi, celelalte " + U2(d.dovezi.sub.pe) + "/zi" : "")) + ".";
+// v100.360 (auditul din 18.11): fără „zilele tale cu peste 7 boți au dat −54/zi, celelalte −9/zi” - netul PE ZI crește cu numărul boților
+// (pe bot: −2,7 față de −2,8); dovada pe bot e în comportament-dovezi.mjs. `nou` = mesajul pe două axe (ev.reguliAtinse)
+function textDecizie(d, nou) {
+  if (d.cod === "boti") return mare(ordinal(d.n)) + " bot pornit azi, " + (d.ok ? "în pragul tău de " + d.prag : "peste pragul tău de " + d.prag) + ".";
   if (d.cod === "frana") return d.ok ? "Pierderile erau sub pragurile frânei când l-ai pornit." : "Pornit cu frâna trasă: " + franaParti(d.frana, false).join(", ") + ".";
   if (d.cod === "banda") return d.ok ? "Ai închis la " + durOre(d.ore) + " după ieșirea prețului din grilă, înainte de pragul de " + d.dv.h + " h."
     : "Ai ținut " + durOre(d.ore) + " cu prețul în afara grilei: la tine, după " + d.dv.h + " h se mai întorc doar " + pc(d.dv.intoarse) + (d.r && d.ore >= d.r.h ? ", după " + d.r.h + " h " + pc(d.r.intoarse) : "") + ".";
   if (d.cod === "minute") {
     const g = num(d.grile), c = num(d.comisioane) || 0, dm = d.dovezi;
     return "Închis după " + Math.max(1, Math.round(d.minute)) + " min: comisioanele " + U2(c) + (g !== null && g > 0 ? " = " + ori(c, g) + " cât au prins grilele (" + U2(g) + ")" : ", grilele n-au prins nimic")
-      + (dm && dm.grile > 0 ? "; la tine, sub " + d.prag + " min comisioanele sunt " + ori(dm.comisioane, dm.grile) + " grilele" : "") + ".";
+      + (nou ? " (descriere, nu greșeală dovedită)" : dm && dm.grile > 0 ? "; la tine, sub " + d.prag + " min comisioanele sunt " + ori(dm.comisioane, dm.grile) + " grilele" : "") + ".";
   }
   return "Lichidat: botul n-a avut un stop înaintea lichidării.";
 }
@@ -286,19 +287,37 @@ function sfatEvaluare(ev) {
     : "Aș porni cu 7 zile sub −" + V(d.sapt.prag) + " doar dacă pragul mai e al meu; altfel l-aș schimba în Poartă.";
   return "Aș porni gridul doar când îl las să lucreze: în minute prinde puține grile, comisioanele se plătesc oricum.";
 }
+// v100.360 (el, 18.11: evaluarea pe DOUĂ AXE): cu ev.reguliAtinse (ComportamentDovezi.cuAxe) - (a) netul față de media celorlalți boți ai
+// lui din aceeași zi a pornirii, (b) regulile atinse, fiecare cu starea ei pe istorie. „Noroc” / „greșeala a costat” DOAR cu o regulă
+// DOVEDITĂ atinsă; altfel titlul descrie („pe plus” / „pe minus”). Fără reguliAtinse (evaluările vechi refăcute), mesajul de dinainte.
+const STARE_EV = { dovedita: "dovedită", nedovedita: "nedovedită", contrazisa: "contrazisă", putine: "prea puține date", descriere: "descriere" };
 export const evaluareBot = (ev) => {
   const t = ev.t || {}, net = Number(ev.net) || 0, dur = num(t.inchis) !== null && num(t.pornit) !== null && t.inchis > t.pornit ? durOre((t.inchis - t.pornit) / 3600000) : null;
-  const g = num(t.grile), p = num(t.pozitie), cf = (num(t.comisioane) || 0) + (num(t.funding) || 0);
+  const g = num(t.grile), p = num(t.pozitie), cf = (num(t.comisioane) || 0) + (num(t.funding) || 0), nou = Array.isArray(ev.reguliAtinse);
   const L = [(dur ? "Ținut " + dur : "Botul") + (g !== null && p !== null ? ": grilele " + U2(g) + ", poziția " + U2(p) + ", comisioane și funding " + U2(cf) : "") + " ⇒ net " + U2(net) + "."];
-  for (const d of ev.decizii) if (d.ok) L.push("✅ " + textDecizie(d));
-  for (const d of ev.decizii) if (!d.ok) L.push("❌ " + textDecizie(d));
+  for (const d of ev.decizii) if (d.ok) L.push("✅ " + textDecizie(d, nou));
+  for (const d of ev.decizii) if (!d.ok) L.push((nou && d.cod === "minute" ? "ℹ️ " : "❌ ") + textDecizie(d, nou));
+  if (nou) {
+    L.push(ev.fataDeZi === null || ev.fataDeZi === undefined ? "📊 Singurul bot pornit în ziua lui: n-am cu ce să-l compar în aceeași zi."
+      : "📊 Față de ziua ta: " + U2(ev.fataDeZi) + " (media celorlalți " + cate((num(ev.nZi) || 2) - 1, "bot pornit", "boți porniți") + " în aceeași zi: " + U2(ev.medieZi) + ").");
+    if (ev.reguliAtinse.length) L.push(...rupeBucati("⚖️ Reguli atinse, pe istoria ta: ", ev.reguliAtinse.map((a) => (a.nume || numeRegula(a.cod)) + " - " + (STARE_EV[a.stare] || a.stare)), 160));
+  }
   // v100.282 (ideea 3): luna asta pe regulile încălcate de bot (din data/evaluari.jsonl, cu el inclus) - de la 2 boți încolo, rupt între reguli
   const lun = ev.luna ? ORDINE_REGULI.filter((c) => ev.luna[c] && ev.luna[c].n >= 2 && ev.decizii.some((d) => d.cod === c && !d.ok)).map((c) => eticheta(c, ev.luna[c].n) + " (" + U2(ev.luna[c].net) + ")") : [];
   if (lun.length) L.push(...rupeBucati("📅 Luna asta: ", lun, 160));
-  if (ev.verdict === "ghinion") L.push("⚖️ Pe regulile tale n-ai greșit nimic: pierderea vine din piață, nu din decizii.");
-  if (ev.verdict === "noroc") L.push("⚖️ Câștigul a venit cu reguli încălcate: de data asta piața te-a ajutat, regula rămâne.");
-  L.push("👉 " + sfatEvaluare(ev));
-  return { nivel: ev.nivel, cheie: "evaluare", titlu: (String(t.moneda || "Botul") + dirTxt(t.dir) + ": " + VERDICT[ev.verdict] + " " + U2(net)).slice(0, 60), mesaj: L.join("\n") };
+  if (nou) {
+    if (ev.dovedite) L.push(net >= 0 ? "⚖️ Câștigul a venit cu o regulă dovedită încălcată: de data asta piața te-a ajutat, regula rămâne." : "⚖️ Regula încălcată e dovedită pe istoria ta: aici greșeala a costat.");
+    else if (ev.reguliAtinse.some((a) => a.stare !== "descriere")) L.push("⚖️ Regulile atinse nu sunt dovedite pe istoria ta: rezultatul nu spune dacă decizia a fost bună sau rea.");
+    else L.push("⚖️ N-ai trecut peste nicio regulă: ce ține de tine spune comparația cu ziua ta.");
+  } else {
+    if (ev.verdict === "ghinion") L.push("⚖️ Pe regulile tale n-ai greșit nimic: pierderea vine din piață, nu din decizii.");
+    if (ev.verdict === "noroc") L.push("⚖️ Câștigul a venit cu reguli încălcate: de data asta piața te-a ajutat, regula rămâne.");
+  }
+  const alta = nou ? ev.reguliAtinse.find((a) => a.cod === "dupaProasta" || a.cod === "treiLaRand") : null;
+  L.push("👉 " + (!nou ? sfatEvaluare(ev) : ev.sfat2 ? sfatEvaluare(Object.assign({}, ev, { sfat: ev.sfat2 }))
+    : alta ? "Aș ține regula ta (" + (alta.nume || alta.cod) + "): e disciplina ta, chiar nedovedită pe istorie." : "Aș porni la fel data viitoare: n-ai trecut peste nicio regulă a ta."));
+  const cap = !nou ? VERDICT[ev.verdict] : ev.dovedite ? VERDICT[net >= 0 ? "noroc" : "cost"] : net >= 0 ? "pe plus" : "pe minus";
+  return { nivel: ev.nivel, cheie: "evaluare", titlu: (String(t.moneda || "Botul") + dirTxt(t.dir) + ": " + cap + " " + U2(net)).slice(0, 60), mesaj: L.join("\n") };
 };
 // botul pornit cu frâna trasă (f = Obiceiuri.franaLaPornire): pe acesta nu-l închid în minute (comisioanele), doar nu mai pornesc altul
 export const pornitCuFrana = (nume, dir, f) => {

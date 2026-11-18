@@ -136,8 +136,11 @@ await test("FB.1 Comportament: raport vechi și NICIUN bot ⇒ „Niciun bot por
   vm.runInContext(lib("comportament-ecran.js"), ctx);
   const r = { forma: 1, la: ACUM - 3 * 3600000, evaluari: [], azi: null };
   const h = text(ctx.coHtml(r, { acum: ACUM, botiActivi: 0, ultimInchis: "XMR long 5× −2,1 USDT · joi 11:19" }));
-  assert.doesNotMatch(h, /colectorul pare oprit/); assert.match(h, /Niciun bot pornit acum/); assert.match(h, /ultimul închis: XMR long 5× −2,1 USDT/);
-  assert.match(text(ctx.coHtml(r, { acum: ACUM, botiActivi: 2 })), /colectorul pare oprit/);
+  // v100.360 (auditul Comportament): colectorul retrimite raportul cel puțin o dată la 15 min și fără boți (v101.166) ⇒ raport vechi = colector oprit, cu sau fără boți
+  assert.match(h, /colectorul n-a mai scris/); assert.doesNotMatch(h, /Niciun bot pornit acum/);
+  const p = text(ctx.coHtml(Object.assign({}, r, { la: ACUM - 5 * 60000 }), { acum: ACUM, botiActivi: 0, ultimInchis: "XMR long 5× −2,1 USDT · joi 11:19" }));
+  assert.doesNotMatch(p, /colectorul n-a mai scris/); assert.match(p, /Niciun bot pornit acum/); assert.match(p, /ultimul închis: XMR long 5× −2,1 USDT/);
+  assert.match(text(ctx.coHtml(r, { acum: ACUM, botiActivi: 2 })), /colectorul n-a mai scris/);
 });
 await test("FB.2 Tabloul fără bot: „Ce ai de făcut acum” nu mai rămâne „Aștept botul…”; cardul unic spune ultimul bot și duce la Grid", () => {
   const el = {}, ctx = vm.createContext({ console, Date, Math, JSON, Object, Array, Number, String, Intl, isFinite, TextRo: globalThis.TextRo, escapeHtml: esc, $: (id) => (el[id] = el[id] || { id, innerHTML: "", hidden: false, classList: { toggle() {} } }),

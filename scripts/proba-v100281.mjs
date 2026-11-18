@@ -149,7 +149,8 @@ await test("(A) mesajul: titlul cu moneda, direcția, verdictul și netul; faptu
   assert.equal(m.titlu, "SOL long: greșeala a costat −3,2 USDT"); assert.equal(m.nivel, "atentie");
   const r = m.mesaj.split("\n");
   assert.equal(r[0], "Ținut 7 h 30 min: grilele +1,2 USDT, poziția −3,9 USDT, comisioane și funding −0,5 USDT ⇒ net −3,2 USDT.");
-  assert.ok(r.includes("❌ Al 9-lea bot pornit azi, peste pragul tău de 7: zilele tale cu peste 7 boți au dat −54,2 USDT/zi, celelalte −9,1 USDT/zi."), m.mesaj);
+  // v100.360 (auditul din 18.11): fără „zilele tale cu peste 7 boți au dat −54,2/zi” - netul PE ZI crește doar cu numărul boților (pe bot la fel)
+  assert.ok(r.includes("❌ Al 9-lea bot pornit azi, peste pragul tău de 7."), m.mesaj);
   assert.ok(r.includes("❌ Pornit cu frâna trasă: 3 pierderi la rând (pauza la 3), 7 zile −682,0 USDT (pragul −60)."), m.mesaj);
   assert.ok(r.includes("❌ Ai ținut 7 h 30 min cu prețul în afara grilei: la tine, după 6 h se mai întorc doar 41%."), m.mesaj);
   assert.equal(r[r.length - 1], "👉 Aș număra boții înainte să pornesc: după al 7-lea, gata ziua.");
@@ -181,7 +182,7 @@ await test("(A) mesajele celorlalte cazuri trec garda: noroc, minute, lichidare,
   assert.match(MC.evaluareBot(cazuri[1]).mesaj, /✅ Primul bot pornit azi/);
   assert.match(MC.evaluareBot(cazuri[2]).mesaj, /❌ Închis după 6 min: comisioanele −0,6 USDT, grilele n-au prins nimic\./);
   assert.match(MC.evaluareBot(cazuri[3]).mesaj, /❌ Lichidat: botul n-a avut un stop înaintea lichidării\./);
-  assert.match(MC.evaluareBot(cazuri[3]).mesaj, /zilele tale cu peste 7 boți/);
+  assert.doesNotMatch(MC.evaluareBot(cazuri[3]).mesaj, /zilele tale cu peste 7 boți/);   // v100.360: justificarea pe zi scoasă
   assert.match(MC.evaluareBot(cazuri[4]).mesaj, /^Ținut 7 h 30 min ⇒ net \+0,0 USDT\./);
   for (const ev of cazuri) garda(MC.evaluareBot(ev), "raport");
 });

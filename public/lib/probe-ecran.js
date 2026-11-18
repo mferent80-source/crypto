@@ -63,8 +63,22 @@ function prProbe(d, acum) {
   R.push({ k: "osc", nume: "🔁 Oscilo · canal de ±5–10% pe 14 zile, primele 100 Pionex", de: oS ? prZi(oS) : "de la prima tură (după 00:30 UTC)", jud: nz ? sugCate(nz, "zi judecată", "zile judecate") + ", " + sugCate(po.nO || 0, "intrare Oscilo", "intrări Oscilo") : "nicio zi judecată încă: fiecare zi se judecă la 7 zile după ea",
     sta: nz ? "canalul a ținut 7 zile la Oscilo în " + sugPc(po.O) + ", la restul în " + sugPc(po.R) + "; gridul ca în probă: Oscilo " + oscG(g1.O) + ", restul " + oscG(g1.R) + (nz < 28 ? "; sub 28 de zile, prea puține observații" : "") : "pe istoric: canalul ține mai des (23% față de 14%, t 3,1), dar gridul pe canal a pierdut (−2,7% în 7 zile)",
     ultima: os && os.zi ? "ultima zi: " + prZi(os.zi) + (oscVeche(os, acum) ? " · LISTĂ VECHE" : "") : "aștept tura de după 00:30 UTC", drum: { svg: prDrumSvg(Math.min(nz, 42) / 42, [28 / 42], "Oscilo: " + Math.min(nz, 42) + " din cele 42 de zile judecate ale verdictului"), text: "fără dată fixă: prima privire la 28 de zile judecate, verdictul la 42 (cam 7 săptămâni de la start)" } });
+  // v100.360: „3 la rând” (la capăt, după Oscilo: probele vechi citesc rândurile după poziție) - regulile în docs/cercetare/2026-11-18-proba-trei-la-rand.md;
+  // până la orizont doar cifre (p nu se arată), verdictul înghețat o dată la a N-a zi care contează sau la limită
+  var tr = d.treiLaRand, tN = tr && tr.N || PR_TREI.N, tC = tr && tr.zileConteaza || 0, tV = tr && tr.verdict && tr.inghetat ? tr.inghetat : null;
+  R.push({ k: "trei", nume: "✋ 3 pierderi la rând = gata ziua · boții porniți după, în aceeași zi", de: prZi(tr && tr.start || PR_TREI.start),
+    jud: tr && tr.zileJudecate ? sugCate(tr.zileJudecate, "zi judecată", "zile judecate") + ", " + (tr.zileCuDeclansare || 0) + " cu declanșare, " + tC + " din " + tN + " care contează (cu boți și înainte, și după)" : "nicio zi judecată încă: o zi se judecă după ce s-au închis toți boții porniți în ea (cel târziu la 7 zile)",
+    sta: tV ? "VERDICT pe " + sugCate(tV.zileConteaza || 0, "zi", "zile") + " (până la " + prZi(tV.pana) + "): " + (tV.verdict === "tine" ? "ține: boții porniți după 3 pierderi la rând au ieșit mai prost decât dă mecanica" : "nedovedit pe zilele noi (nu înseamnă că regula e greșită)") + " · după − înainte " + prUsd(tV.statistica) + " USDT pe bot, mecanica singură " + prUsd(tV.mecanica) + ", p " + prP(tV.pH0)
+      : tC ? "după − înainte: " + prUsd(tr.statistica) + " USDT pe bot; doar mecanica ar da " + prUsd(tr.mecanica) + (tC < tN ? "; sub " + sugCate(tN, "zi", "zile") + " care contează, cifrele sunt zgomot" : "")
+      : "pe istoric: după − înainte −0,5 USDT pe bot, iar doar mecanica ar da +3,8 (p 0,01, dar 1 din cel puțin 6 teste); aici se vede pe zile noi",
+    ultima: tr && tr.la ? "ultima tură: " + prOra(tr.la) + (acum - tr.la > 30 * 3600000 ? " · VECHE" : "") + (tr.asteapta ? " · " + sugCate(tr.asteapta, "zi așteaptă", "zile așteaptă") + " închiderea boților" : "") : "aștept tura de după 00:30 UTC",
+    drum: { svg: prDrumSvg(Math.min(tC, tN) / tN, [], "3 la rând: " + Math.min(tC, tN) + " din cele " + sugCate(tN, "zi", "zile") + " care contează ale verdictului"), text: "fără dată fixă: verdictul la a " + tN + "-a zi care contează, cel târziu la " + prZi(tr && tr.limita || PR_TREI.limita) + "; " + PR_TREI.putere } });
   return R;
 }
+// v100.360: „3 la rând” - ce se știe dinainte (din documentul pre-înregistrării, secțiunea 9); cifrele rezultatelor cu o singură zecimală
+var PR_TREI = { N: 45, start: "2026-11-19", limita: "2027-11-18", putere: "puterea e mică: cam 2 șanse din 3 să prindă un efect cât cel văzut pe ritmul mediu de până acum (în cam 8–9 luni), cam 1 din 5 pe ritmul din ultimele 6 luni (atunci verdictul vine la limită)" };
+function prUsd(v) { return v == null || !isFinite(v) ? "—" : (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(1).replace(".", ","); }
+function prP(v) { return v == null || !isFinite(v) ? "—" : v.toFixed(2).replace(".", ","); }
 function prStadiuHtml(d, acum) {
   var R = prProbe(d, acum);
   return '<section class="tbBloc prStadiu" data-pr="stadiu"><div class="sugPandaCap"><h4>Unde e fiecare probă</h4><span class="tbSub">regulile s-au fixat înainte; până la privire doar cifre, fără verdict</span></div><div class="prRanduri">'
@@ -165,6 +179,7 @@ async function prPorneste(fortat) {
       pas("caderi", function () { return getJSON("/api/istoric-bot?action=caderi").then(function (r) { return r && r.caderi || null; }); }),
       pas("directie", function () { return getJSON("/api/istoric-bot?action=directie").then(function (r) { return r && r.directie || null; }); }),
       pas("oscilo", function () { return getJSON("/api/istoric-bot?action=oscilo").then(function (r) { return r && r.oscilo || null; }); }),   /* v100.353 */
+      pas("treiLaRand", function () { return getJSON("/api/istoric-bot?action=treiLaRand").then(function (r) { return r && r.treiLaRand || null; }); }),   /* v100.360 */
       pas("trend12", function () { return getJSON("/api/istoric-bot?action=trend12").then(function (r) { return r && r.trend || null; }); }),
       pas("probaA", function () { return getJSON("/api/istoric-bot?action=probaA").then(function (r) { return r && r.probaA || null; }); }),
       pas("pareri", function () { return getJSON("/api/istoric-bot?action=pareri"); })

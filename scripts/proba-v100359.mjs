@@ -46,7 +46,7 @@ await test("(1) raportul: o greșeală DOVEDITĂ (mai-rau) se numește, cu difer
 });
 await test("(1) colectorul v101.196: JurnalDovezi încărcat și greșelile pe toată istoria date raportului; pagina la fel (previzualizarea)", () => {
   assert.match(COL, /const JurnalDovezi = incarca\("jurnal-dovezi\.js", "JurnalDovezi"\);/); assert.match(COL, /grD = JurnalDovezi\.greseli\(trades\)/); assert.match(COL, /autopsie: Obiceiuri\.autopsie\(socotealaLoguri, acum\), greseli: grD \}\)/);
-  assert.match(COL, /const VERSIUNE_COLECTOR = "v101\.196";/);
+  assert.ok(Number((COL.match(/const VERSIUNE_COLECTOR = "v101\.(\d+)";/) || [])[1]) >= 196, "colectorul ≥ v101.196");   // v100.360: versiunea exactă o verifică proba ei
   assert.match(A, /Obiceiuri\.raportDuminica\(\{trades:C\.l,acum:Date\.now\(\),greseli:C\.greseli\}\)/);
 });
 await test("(2) O singură listă pe Acțiuni: rândul + fișa + notița, ordinea, „Cu notițe”, CSV, „Arată încă”; statistica fără „Toate trade-urile” (doar pe „Tot”)", () => {
@@ -80,11 +80,12 @@ await test("(3) contrafactualul cu versiune: ruta dă „v”; aceeași „v” 
 await test("(4) −15% al stopului care urcă: „plasă de siguranță, nedovedită”, nu „măsurat pe trade-urile tale”", () => {
   const AS = lib("actiuni-semnale.js"); assert.doesNotMatch(AS, /\(măsurat pe trade-urile tale\)/); assert.equal(AS.split("(plasă de siguranță, nedovedită pe trade-urile tale)").length - 1, 2);
 });
-await test("V versiunile v100.359 (index ×4, sw, versiune.js, package + lanț, BUILD_INFO) + colector v101.196", () => {
-  assert.equal((H.match(/v100\.359/g) || []).length, 4); assert.match(H, /v100\.359 · RAPORTUL CINSTIT/);
-  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-359/); assert.match(citeste("functions", "_shared", "versiune.js"), /"v100\.359"/);
-  const p = JSON.parse(citeste("package.json")); assert.equal(p.version, "100.359.0"); assert.match(p.scripts.test, /npm run test:v100358 && npm run test:v100359/);
-  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.match(bi.badge, /^v100\.359/); assert.ok(bi.raport359 && bi.jurnal358);
+await test("V versiunile de la v100.359 încolo (v100.360: versiunea curentă o verifică proba ei); colectorul ≥ v101.196", () => {
+  const nr = (t) => Number((String(t).match(/100[.-](\d{3})/) || [])[1]);
+  assert.ok(nr(citeste("functions", "_shared", "versiune.js")) >= 359 && nr(citeste("public", "sw.js")) >= 359 && nr(JSON.parse(citeste("BUILD_INFO.json")).badge) >= 359);
+  const p = JSON.parse(citeste("package.json")); assert.ok(nr(p.version) >= 359); assert.match(p.scripts.test, /npm run test:v100358 && npm run test:v100359/);
+  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.ok(bi.raport359 && bi.jurnal358);
+  assert.ok(Number((citeste("scripts", "colector.mjs").match(/const VERSIUNE_COLECTOR = "v101\.(\d+)";/) || [])[1]) >= 196);
 });
 console.log(`\n${teste - picate}/${teste} trec`);
 process.exit(picate ? 1 : 0);

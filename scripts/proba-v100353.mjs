@@ -178,14 +178,14 @@ await test("🔑 O9 pagina Probe: grupul „🔁 Oscilo (în probă)” cu rând
   const vechi = P.sugGrupuri({ oscilo: Object.assign({}, OSC, { la: ACUM - 40 * ORA }) }, ACUM, "probe").find((x) => x.k === "osc"); assert.match(vechi.sub, /^LISTĂ VECHE/);
 });
 await test("O10 „Unde e fiecare probă”: rândul Oscilo la capăt, cu judecate / cum stă / drumul până la 42 (privirea la 28)", () => {
-  const P = pagina(), R = JSON.parse(JSON.stringify(P.prProbe({ oscilo: OSC }, ACUM))), o = R[R.length - 1];
+  const P = pagina(), R = JSON.parse(JSON.stringify(P.prProbe({ oscilo: OSC }, ACUM))), o = R.find((x) => x.k === "osc");   // v100.360: după Oscilo vine „3 la rând”
   assert.equal(o.k, "osc"); assert.equal(o.jud, "30 de zile judecate, 96 de intrări Oscilo"); assert.match(o.sta, /^canalul a ținut 7 zile la Oscilo în 24%, la restul în 13%; gridul ca în probă: Oscilo −2,4%, restul −1,2%$/);
   assert.match(o.drum.svg, /aria-label="Oscilo: 30 din cele 42 de zile judecate ale verdictului"/); assert.match(o.drum.svg, /x1="66\.7"/);
-  const g = JSON.parse(JSON.stringify(P.prProbe({}, ACUM))).pop(); assert.match(g.jud, /nicio zi judecată/); assert.match(g.sta, /canalul ține mai des.*gridul pe canal a pierdut/);
+  const g = JSON.parse(JSON.stringify(P.prProbe({}, ACUM))).find((x) => x.k === "osc"); assert.match(g.jud, /nicio zi judecată/); assert.match(g.sta, /canalul ține mai des.*gridul pe canal a pierdut/);
 });
 await test("🔑 O11 convențiile pe textul Oscilo (rânduri, fișă, „unde e”): virgula zecimală, minusul tipografic, fără cifre cu punct zecimal, fără engleză", () => {
   const P = pagina(), d = { oscilo: OSC }, r = P.sugRanduri(d, ACUM, "probe").filter((x) => x.grup === "osc");
-  const tot = [P.sugGrupuri(d, ACUM, "probe").find((x) => x.k === "osc").sub, ...r.map((x) => x.sub + " " + x.avert.join(" ")), ...r.map((x) => { const f = P.sugFisa(x, d, ACUM); return [f.motiv, f.regula, f.dovada.join(" "), f.cele.map((c) => c.et + " " + c.v + " " + c.sub).join(" ")].join(" "); }), (({ drum, ...x }) => JSON.stringify(x) + " " + drum.text)(P.prProbe(d, ACUM).pop())].join(" ");
+  const tot = [P.sugGrupuri(d, ACUM, "probe").find((x) => x.k === "osc").sub, ...r.map((x) => x.sub + " " + x.avert.join(" ")), ...r.map((x) => { const f = P.sugFisa(x, d, ACUM); return [f.motiv, f.regula, f.dovada.join(" "), f.cele.map((c) => c.et + " " + c.v + " " + c.sub).join(" ")].join(" "); }), (({ drum, ...x }) => JSON.stringify(x) + " " + drum.text)(P.prProbe(d, ACUM).find((x) => x.k === "osc"))].join(" ");
   assert.doesNotMatch(vizibil(tot).replace(/\b\d{1,2}\.\d{2}(\.\d{4})?\b/g, "DATA"), /\d\.\d/, "punct zecimal (datele zz.ll.aaaa sunt scoase întâi)");
   assert.doesNotMatch(tot, /(^|[\s(])-\d/, "minus ASCII"); assert.doesNotMatch(tot, /\b(channel|grid bot|trades?|NaN|undefined|null)\b/i);
 });

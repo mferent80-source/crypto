@@ -6,6 +6,9 @@
 
 import { PROBA_DE, oglindaLunii, franaPeSaptamana, lunaPeReguli, reguliPeDateNoi, searaZilei, evalueaza, adaugaInLuna, lunaPentru, lunaInainte } from "./comportament.mjs";
 import { evaluareBot, pornitCuFrana, oglindaLunii as oglindaMesaj, sfatSeara, numeRegula, eticheta, numeLuna, ORDINE_REGULI, VERDICT } from "./mesaje-colector.mjs";
+// v100.360 (auditul din 18.11): regulile spuse cinstit, PE BOT, cu starea lor (dovedita / nedovedita / contrazisa / putine / descriere), evaluarea
+// pe două axe (față de ziua ta + regulile atinse) și cifrele graficelor noi - socotite în comportament-dovezi.mjs, ținute minte pe cheia arhivei
+import { reguliDovezi as dovReguli, axePeEvaluare, STARE_TXT } from "./comportament-dovezi.mjs";
 
 const ORA = 3600000, ZI = 86400000, MIN = 60000;
 export const FORMA = 1;
@@ -134,12 +137,14 @@ function compact(x) {
   return { titlu: (String(t.moneda || "Botul") + dirTxt(t.dir) + ": " + (VERDICT[x.verdict] || x.verdict) + " " + U1(net)).slice(0, 60), mesaj: L.join("\n") };
 }
 const memoRefacut = new Map();   // id ⇒ textul refăcut (cele vechi sunt câteva și nu se mai schimbă)
-function evaluariVm(inreg, toate, P, fl, D, dovezi, motive) {
+function evaluariVm(inreg, toate, P, fl, D, dovezi, motive, dv) {
   const l = inreg.filter((x) => x && nr(x.inchis) !== null).sort((a, b) => b.inchis - a.inchis).slice(0, MAX_EVALUARI);
   return l.map((x) => {
+    const ax = dv ? axePeEvaluare(x, dv, toate, P) : { fataDeZi: null, nZi: null, reguliAtinse: [], eticheta2: null };   // v100.360: cele două axe
     let txt = typeof x.mesaj === "string" && x.mesaj && typeof x.titlu === "string" ? { titlu: x.titlu, mesaj: x.mesaj } : null, refacut = false;
     if (!txt) { const k = [String(x.id), x.verdict, (Array.isArray(x.rele) ? x.rele.slice().sort() : []).join(","), (Array.isArray(x.bune) ? x.bune.slice().sort() : []).join(",")].join("|"); if (!memoRefacut.has(k)) memoRefacut.set(k, refa(x, toate, P, fl, D, dovezi, motive, inreg)); txt = memoRefacut.get(k); refacut = !!txt; if (!txt) txt = compact(x); }
-    return { id: String(x.id).replace(/[^A-Za-z0-9_-]/g, "").slice(0, 40), cand: ddmm(ziRo(x.inchis)) + " " + oraRo(x.inchis), titlu: txt.titlu, mesaj: txt.mesaj, verdict: x.verdict, net: r2(nr(x.net) || 0), refacut };
+    return { id: String(x.id).replace(/[^A-Za-z0-9_-]/g, "").slice(0, 40), cand: ddmm(ziRo(x.inchis)) + " " + oraRo(x.inchis), titlu: txt.titlu, mesaj: txt.mesaj, verdict: x.verdict, net: r2(nr(x.net) || 0), refacut,
+      fataDeZi: ax.fataDeZi, nZi: ax.nZi, reguliAtinse: ax.reguliAtinse, eticheta2: ax.eticheta2 };
   });
 }
 
@@ -207,8 +212,12 @@ export function raportPagina(o) {
   if (!lo.intreaga && (!oa || oa.n < MIN_LUNA)) { lo = { a: lo.b, b: lunaInainte(lo.b), intreaga: true }; oa = oglindaLunii(toate, P, lo.a, fl, motive); }
   const ob = oglindaLunii(toate, P, lo.b, fl, motive), na = numeLuna(lo.a), nb = numeLuna(lo.b), comparabile = !!(oa && ob && oa.n >= MIN_LUNA && ob.n >= MIN_LUNA);
   const fs7 = franaPeSaptamana(toate, P, acum, flP, D), porniti7 = fs7.zile.reduce((s, z) => s + z.porniti, 0), zp7 = fs7.zile.filter((z) => z.porniti > P.boti);
-  const zdp = zileDupaProaste(toate, acum, 31, D), ist = dupaProastaIstoric(toate, acum, D), cdr = continuatDupaRand(toate, P.rand);
+  const zdp = zileDupaProaste(toate, acum, 31, D), cdr =continuatDupaRand(toate, P.rand);
   const pc = (x, k) => (x && x.n ? Math.round(100 * x[k].n / x.n) : 0), lr = lunaPeReguli(inreg, acum);
+  // v100.360: dovezile regulilor pe bot (H0 în aceeași zi + martorul + familia), ținute minte pe cheia arhivei; picate ⇒ pagina merge fără ele
+  let dv = null; try { dv = dovReguli(toate, P, D, acum); } catch { dv = null; }
+  const dR = (c) => (dv ? dv.reguliDovezi.find((x) => x.cod === c) : null);
+  const peIst = (c) => (dv && dv.stari[c] ? " Regula ta; pe istoria ta, " + STARE_TXT[dv.stari[c]] + "." : "");
 
   // disciplina: ultimele 7 zile + luna oglinzii și cele două dinainte
   const lunile = [lo.a, lunaInainte(lo.a), lunaInainte(lunaInainte(lo.a))];
@@ -225,9 +234,8 @@ export function raportPagina(o) {
     if (!oa.lichidati.n) bine.push(ob.lichidati.n ? "Nicio lichidare în " + na + " (în " + nb + ": " + ob.lichidati.n + ")." : "Nicio lichidare, nici în " + na + ", nici în " + nb + ".");
     if (oa.frana.n / oa.n < ob.frana.n / ob.n) bine.push("Ai pornit mai rar cu frâna trasă: " + pc(oa, "frana") + "% din boți în " + na + ", față de " + pc(ob, "frana") + "% în " + nb + ".");
     if (oa.zilePeste.z / oa.zile < ob.zilePeste.z / ob.zile) bine.push("Mai puține zile cu prea mulți boți: " + oa.zilePeste.z + " din " + oa.zile + " în " + na + ", față de " + ob.zilePeste.z + " din " + ob.zile + ".");
-    const peM = (x) => (x.minute.n ? x.minute.net / x.minute.n : null);   // revizia: pe bot, nu suma (luni cu boți diferiți)
-    if (oa.minute.n && ob.minute.n && peM(ob) < 0 && peM(oa) > peM(ob)) bine.push("Închiderile în minute te-au costat mai puțin pe bot: " + U1(peM(oa)) + " în " + na + " (" + cate(oa.minute.n, "bot", "boți") + "), față de " + S1(peM(ob)) + " în " + nb + ".");
-    if (oa.lungi.n / oa.n < ob.lungi.n / ob.n) bine.push("Ai ținut mai rar boți peste " + ORE_LUNGI + " h: " + pc(oa, "lungi") + "% în " + na + ", față de " + pc(ob, "lungi") + "%.");
+    // v100.360: scoase „Închiderile în minute te-au costat mai puțin” și „Ai ținut mai rar boți peste 6 h” - durata se știe abia la închidere
+    // (descriere, nu regulă dovedită); pe istorie, sub 15 min netul pe bot e chiar mai bun decât al celorlalți (reguliDovezi.minute)
   }
   const cuBoti = fs7.zile.filter((z) => z.porniti > 0); let k = cuBoti.length; while (k > 0 && cuBoti[k - 1].porniti <= P.boti) k--;
   const sir = cuBoti.slice(k);
@@ -240,15 +248,14 @@ export function raportPagina(o) {
   if (fs7.nPeste) {
     const inch = fs7.nPeste - fs7.deschisi;
     rau.push("Pornești cu frâna trasă: " + (porniti7 === 1 ? "singurul bot" : fs7.nPeste === porniti7 ? "toți cei " + cate(porniti7, "bot", "boți") : fs7.nPeste + " din cei " + cate(porniti7, "bot", "boți"))
-      + " din ultimele 7 zile" + (inch > 0 ? (inch === 1 ? "; cel închis a dat " : "; cei închiși au dat ") + U1(fs7.netPeste) : "") + ".");
+      + " din ultimele 7 zile" + (inch > 0 ? (inch === 1 ? "; cel închis a dat " : "; cei închiși au dat ") + U1(fs7.netPeste) : "") + "." + peIst("frana"));
   }
-  if (zp7.length) rau.push("Ai trecut de pragul tău de " + cate(P.boti, "bot", "boți") + " pe zi în " + cate(zp7.length, "zi", "zile") + " din ultimele 7 (" + listaCate(zp7.map((z) => z.porniti), "bot", "boți") + ").");
-  if (zdp.urm.some((c) => c > DUPA_PROASTA)) rau.push((ist.n >= 3 && ist.dupa > ist.altfel ? "După o zi proastă pornești mai mulți boți, nu mai puțini: " : "După o zi proastă nu te oprești: ")
-    + (zdp.n === 1 ? "după ziua sub " + PROASTA_TXT + " din ultima lună, a doua zi ai pornit " + cate(zdp.urm[0], "bot", "boți") : "după cele " + cate(zdp.n, "zi", "zile") + " sub " + PROASTA_TXT + " din ultima lună, a doua zi ai pornit " + listaCate(zdp.urm, "bot", "boți")) + ".");
-  const lungPe = oa && oa.lungi.n ? oa.lungi.net / oa.lungi.n : null, restPe = oa && oa.n > oa.lungi.n ? (oa.net - oa.lungi.net) / (oa.n - oa.lungi.n) : null;
-  if (oa && oa.lungi.n >= 3 && restPe !== null && lungPe < 0 && lungPe < restPe) rau.push("Ții mai mult boții care merg prost: " + cate(oa.lungi.n, "bot ținut", "boți ținuți") + " peste " + ORE_LUNGI + " h în " + na + ", " + U1(lungPe) + " pe bot, față de " + S1(restPe) + " la ceilalți.");
-  const dm = dovezi.minute, ori = dm && dm.grile > 0 ? z1(Math.abs(dm.comisioane) / dm.grile) + "×" : null;
-  if (oa && oa.minute.n) rau.push("Închizi gridul în minute: " + cate(oa.minute.n, "bot", "boți") + " în " + na + " (" + U1(oa.minute.net) + ")" + (ori ? "; sub 15 minute, comisioanele sunt " + ori + " cât prind grilele" : "") + ".");
+  if (zp7.length) rau.push("Ai trecut de pragul tău de " + cate(P.boti, "bot", "boți") + " pe zi în " + cate(zp7.length, "zi", "zile") + " din ultimele 7 (" + listaCate(zp7.map((z) => z.porniti), "bot", "boți") + ")." + peIst("prag"));
+  // v100.360: fără „pornești mai mulți boți, nu mai puțini” - pe straturi (câți boți erau în ziua proastă) nu pornești mai mulți (grafice.proasta)
+  if (zdp.urm.some((c) => c > DUPA_PROASTA)) rau.push((zdp.n === 1 ? "După ziua sub " + PROASTA_TXT + " din ultima lună, a doua zi ai pornit " + cate(zdp.urm[0], "bot", "boți") : "După cele " + cate(zdp.n, "zi", "zile") + " sub " + PROASTA_TXT + " din ultima lună, a doua zi ai pornit " + listaCate(zdp.urm, "bot", "boți"))
+    + " (recomandarea: cel mult " + DUPA_PROASTA + ")." + peIst("dupaProasta"));
+  // v100.360: scoase „Ții mai mult boții care merg prost” (durata se știe abia la închidere: descriere, în reguliDovezi.ore6 și grafice.durata)
+  // și „Închizi gridul în minute … comisioanele sunt 3,4× grilele” (pe net, boții sub 15 min au dat mai bine decât ceilalți: reguliDovezi.minute)
   if (oa && oa.lichidati.n) rau.push("Ai avut " + cate(oa.lichidati.n, "lichidare", "lichidări") + " în " + na + " (" + U1(oa.lichidati.net) + "): stopul înaintea lichidării, de la pornire.");
 
   // sfatul săptămânii - un singur lucru, cel mai greu
@@ -257,8 +264,11 @@ export function raportPagina(o) {
     : trasa ? "Un singur lucru azi: frâna e trasă (" + cauza + "). N-aș mai porni boți azi; mâine, cu capul limpede."
     : zp7.length >= 2 ? "Un singur lucru săptămâna asta: numărul de boți. Ai trecut de pragul de " + P.boti + " în " + zp7.length + " din ultimele 7 zile; după " + ordinal(P.boti) + ", gata ziua."
     : fs7.nPeste ? "Un singur lucru săptămâna asta: pornirile cu frâna trasă (" + cate(fs7.nPeste, "bot", "boți") + "). Aș porni doar cu frâna liberă."
-    : oa && oa.minute.n >= 5 ? "Un singur lucru luna asta: lasă gridul să lucreze. " + mare(cate(oa.minute.n, "bot închis", "boți închiși")) + " în minute în " + na + "."
     : "Nimic urgent de îndreptat: în ultimele 7 zile ai pornit în regulile tale. Aș păstra ritmul.";
+  // v100.360 (auditul Comportament): regulile rămân disciplina LUI, dar sfatul nu mai pretinde că datele le susțin - pe istoria lui nicio regulă nu bate o
+  // blocare la întâmplare; ce e adevărat: fiecare bot pierde în medie X, deci mai puțini boți = mai puțină pierdere, oricare ar fi ei
+  const netMed = toate.length ? toate.reduce((x, t) => x + (nr(t.net) !== null ? nr(t.net) : nr(t.rezultat) || 0), 0) / toate.length : null;
+  const sfatTot = /^Nimic urgent/.test(sfat) || netMed === null ? sfat : sfat + " Regula ta, nu una dovedită: pe istoria ta fiecare bot " + (netMed < 0 ? "pierde" : "aduce") + " în medie " + U1(Math.abs(netMed)).replace(/^[+−]/, "") + ", deci mai puțini boți înseamnă " + (netMed < 0 ? "mai puțină pierdere" : "mai puțin câștig") + ", oricare ar fi ei.";
 
   // cardul Azi - frâna de acum, pe pragurile lui
   const aziVm = { activa: !!f.activa, eticheta: trasa ? "Frâna e trasă" : dep.has("boti") ? "Pragul zilei atins" : "Frâna e liberă",
@@ -275,24 +285,28 @@ export function raportPagina(o) {
       : dep.has("boti") ? "N-aș mai porni alți boți azi: pragul tău e " + P.boti + "." : null };
 
   // corecțiile: regulile lui (Poartă) și recomandările din analiza de pe 30.10
-  const dz = dovezi.zile, rb = Array.isArray(o.banda) ? (o.banda.find((x) => x && x.h === ORE_LUNGI && x.n >= 30) || o.banda.find((x) => x && x.n >= 30 && nr(x.intoarse) !== null && x.intoarse < 0.5)) : o.banda;
+  const rb =Array.isArray(o.banda) ? (o.banda.find((x) => x && x.h === ORE_LUNGI && x.n >= 30) || o.banda.find((x) => x && x.n >= 30 && nr(x.intoarse) !== null && x.intoarse < 0.5)) : o.banda;
+  // v100.360: fiecare corecție poartă dovada PE BOT a regulii (reguliDovezi) și starea ei; scoase justificările care nu țineau: netul PE ZI
+  // la „Cel mult N boți” (zilele pline au pur și simplu mai mulți boți), „pornești mai mulți boți după o zi proastă” (pe straturi, nu),
+  // „ai mai pornit N boți: −X” la „3 la rând” (= botul mediu), raportul comisioane / grile lipit de cifra lunii la „minute”
+  const txt = (c, alt) => { const x = dR(c); return x ? x.text : alt; }, fara = "Dovezile pe bot nu s-au putut socoti acum.";
+  const strat = dv ? dv.grafice.proasta.filter((s) => s.nDupa && s.nAltfel && s.dupa !== null && s.altfel !== null) : [];
   const corectii = [
-    { regula: "Frâna trasă = pauză, sau un prag nou în Poartă", recomandare: false, stare: trasa ? (zileSapt >= 2 ? "trasă de " + cate(zileSapt, "zi", "zile") : "trasă azi") : "liberă", ton: trasa ? "rau" : "bun",
+    { cod: "frana", stareDovezi: dv ? dv.stari.frana : null, regula: "Frâna trasă = pauză, sau un prag nou în Poartă", recomandare: false, stare: trasa ? (zileSapt >= 2 ? "trasă de " + cate(zileSapt, "zi", "zile") : "trasă azi") : "liberă", ton: trasa ? "rau" : "bun",
       dece: (dep.has("sapt") ? "Pe 7 zile ai " + U1(f.netSapt) + ", pragul tău e −" + pragTxt(P.sapt) + "." : dep.has("zi") ? "Azi ai " + U1(f.netZi) + ", pragul tău e −" + pragTxt(P.zi) + "."
         : dep.has("rand") ? mare(cate(f.rand, "pierdere", "pierderi")) + " la rând, pauza ta e la " + P.rand + "." : "Azi " + U1(f.netZi) + " din −" + pragTxt(P.zi) + ", pe 7 zile " + S1(f.netSapt) + " din −" + pragTxt(P.sapt) + ".")
-        + (o.istoria ? " Pe ultimele 120 de zile, boții porniți peste reguli au dat în medie " + U1(o.istoria.m) + " pe bot." : "") },
-    { regula: "Cel mult " + cate(P.boti, "bot", "boți") + " pe zi", recomandare: false, stare: zp7.length ? zp7.length + " din 7 zile" : "respectată", ton: zp7.length ? "rau" : "bun",
-      dece: dz ? "Pe toată istoria ta, zilele cu peste " + cate(dz.prag, "bot", "boți") + " au dat " + U1(dz.peste.pe) + " pe zi, celelalte " + S1(dz.sub.pe) + " (din " + cate(dz.peste.zile + dz.sub.zile, "zi", "zile") + ")." : "Pe istoria ta încă nu sunt destule zile ca să le compar." },
-    { regula: "După o zi sub " + PROASTA_TXT + ", a doua zi cel mult " + cate(DUPA_PROASTA, "bot", "boți"), recomandare: true, stare: zdp.n === 1 ? (zdp.respectate ? "respectată o dată" : "încălcată o dată") : zdp.n ? zdp.respectate + " din " + cate(zdp.n, "dată", "ori") : "nicio zi sub " + PROASTA_TXT, ton: zdp.n && zdp.respectate < zdp.n ? "rau" : "bun",
-      dece: ist.n >= 3 && ist.dupa !== null && ist.altfel !== null ? "După o zi proastă pornești de obicei " + (ist.dupa > ist.altfel ? "mai mulți boți" : ist.dupa < ist.altfel ? "mai puțini boți" : "la fel de mulți boți") + ": " + z1(ist.dupa) + " față de " + z1(ist.altfel) + " (pe toată istoria ta, " + cate(ist.n, "zi proastă", "zile proaste") + ")." : "Pe istoria ta sunt încă prea puține zile sub " + PROASTA_TXT + " ca să compar." },
-    { regula: cate(P.rand, "pierdere", "pierderi") + " la rând = gata ziua", recomandare: false, stare: "acum " + (f.rand || 0) + " din " + P.rand, ton: f.rand >= P.rand ? "rau" : f.rand ? "atentie" : "bun",
-      dece: cdr.zile ? "Pe toată istoria ta, în " + (cdr.zile === 1 ? "ziua" : "cele " + cate(cdr.zile, "zi", "zile")) + " în care ai continuat în aceeași zi după " + cate(P.rand, "pierdere", "pierderi") + " la rând, ai mai pornit " + cate(cdr.boti, "bot", "boți") + ": " + U1(cdr.net) + "."
-        : "Pe istoria ta, n-ai continuat niciodată în aceeași zi după " + cate(P.rand, "pierdere", "pierderi") + " la rând." },
-    { regula: "Ieși când prețul stă peste " + ORE_LUNGI + " h în afara grilei", recomandare: true, stare: lr.banda && lr.banda.n ? cate(lr.banda.n, "bot", "boți") + " luna asta" : "niciunul luna asta", ton: lr.banda && lr.banda.n ? "rau" : "bun",   /* revizia: ce spune regula - ținuți peste prag cu prețul în afara grilei (evaluările), nu toți boții de peste 6 h */
+        + " " + txt("frana", fara) },
+    { cod: "prag", stareDovezi: dv ? dv.stari.prag : null, regula: "Cel mult " + cate(P.boti, "bot", "boți") + " pe zi", recomandare: false, stare: zp7.length ? zp7.length + " din 7 zile" : "respectată", ton: zp7.length ? "rau" : "bun",
+      dece: txt("prag", fara) },
+    { cod: "dupaProasta", stareDovezi: dv ? dv.stari.dupaProasta : null, regula: "După o zi sub " + PROASTA_TXT + ", a doua zi cel mult " + cate(DUPA_PROASTA, "bot", "boți"), recomandare: true, stare: zdp.n === 1 ? (zdp.respectate ? "respectată o dată" : "încălcată o dată") : zdp.n ? zdp.respectate + " din " + cate(zdp.n, "dată", "ori") : "nicio zi sub " + PROASTA_TXT, ton: zdp.n && zdp.respectate < zdp.n ? "rau" : "bun",
+      dece: txt("dupaProasta", fara) + (strat.length ? " A doua zi, la același număr de boți în ziua proastă: " + strat.map((s) => "boți " + s.strat + ": " + z1(s.dupa) + " după o zi proastă, " + z1(s.altfel) + " după celelalte").join(" · ") + "." : "") },
+    { cod: "treiLaRand", stareDovezi: dv ? dv.stari.treiLaRand : null, regula: cate(P.rand, "pierdere", "pierderi") + " la rând = gata ziua", recomandare: false, stare: "acum " + (f.rand || 0) + " din " + P.rand, ton: f.rand >= P.rand ? "rau" : f.rand ? "atentie" : "bun",
+      dece: cdr.zile ? txt("treiLaRand", fara) : "Pe istoria ta, n-ai continuat niciodată în aceeași zi după " + cate(P.rand, "pierdere", "pierderi") + " la rând." },
+    { cod: "banda", stareDovezi: null, regula: "Ieși când prețul stă peste " + ORE_LUNGI + " h în afara grilei", recomandare: true, stare: lr.banda && lr.banda.n ? cate(lr.banda.n, "bot", "boți") + " luna asta" : "niciunul luna asta", ton: lr.banda && lr.banda.n ? "rau" : "bun",   /* revizia: ce spune regula - ținuți peste prag cu prețul în afara grilei (evaluările), nu toți boții de peste 6 h */
       dece: rb && nr(rb.h) > 0 && nr(rb.intoarse) !== null ? "Pe istoria ta, după " + rb.h + " h în afara grilei prețul se mai întoarce doar în " + Math.round(100 * rb.intoarse) + "% din cazuri."
-        : lungPe !== null && restPe !== null && oa.lungi.n >= 3 ? "În " + na + ", boții ținuți peste " + ORE_LUNGI + " h au dat " + U1(lungPe) + " pe bot, ceilalți " + S1(restPe) + "." : "" },
-    { regula: "Lasă gridul să lucreze, nu-l închide în minute", recomandare: true, stare: oa ? oa.minute.n + " în " + na : "—", ton: !oa ? "" : oa.minute.n ? "rau" : "bun",
-      dece: dm ? "Pe cei " + cate(dm.n, "bot închis", "boți închiși") + " sub 15 minute, grilele au prins " + U1(dm.grile) + ", iar comisioanele au luat " + z1(Math.abs(dm.comisioane)) + " USDT." : "" },
+        : txt("ore6", "") },
+    { cod: "minute", stareDovezi: dv ? dv.stari.minute : null, regula: "Lasă gridul să lucreze, nu-l închide în minute", recomandare: true, stare: oa ? oa.minute.n + " în " + na : "—", ton: "",   /* v100.360: descriere, nu greșeală (pe net, sub 15 min ies mai bine) ⇒ fără ton */
+      dece: txt("minute", "") },
   ];
 
   // seara de azi (aceeași socoteală ca mesajul de la 22)
@@ -304,7 +318,7 @@ export function raportPagina(o) {
 
   const pv = porniriVm(st, D, toate, acum, P, flP);
   // evaluările și verdictele lor
-  const evaluari = evaluariVm(inreg, toate, P, fl, D, dovezi, motive), verdicte = {};
+  const evaluari = evaluariVm(inreg, toate, P, fl, D, dovezi, motive, dv), verdicte = {};
   for (const v of ["bune", "ghinion", "noroc", "cost"]) { const l = evaluari.filter((e) => e.verdict === v); verdicte[v] = { n: l.length, net: r2(l.reduce((a, e) => a + e.net, 0)) }; }
 
   // regulile: luna asta, date noi, istoria
@@ -342,6 +356,10 @@ export function raportPagina(o) {
   }
 
   return { forma: FORMA, la: acum, versiune: o.versiune || null, praguri: { zi: P.zi, sapt: P.sapt, rand: P.rand, boti: P.boti },
-    sfat, disciplina, bine, rau, corectii, azi: aziVm, seara, porniri: pv.lista, porniriN: pv.n, evaluariLegat: legat, evaluari, nEvaluari: inreg.length, verdicte,
-    reguli, franaSapt, oglinda, oglindaNota: oglinda ? null : "Oglinda cere boți în " + na + " și în " + nb + ".", profit: profitVm(o.profit) };
+    sfat: sfatTot, disciplina, bine, rau, corectii, azi: aziVm, seara, porniri: pv.lista, porniriN: pv.n, evaluariLegat: legat, evaluari, nEvaluari: inreg.length, verdicte,
+    reguli, franaSapt, oglinda, oglindaNota: oglinda ? null : "Oglinda cere boți în " + na + " și în " + nb + ".", profit: profitVm(o.profit),
+    // v100.360: regulile pe bot cu starea lor, cifrele graficelor noi, boții activi și ultima închidere (pagina nu mai cheamă Pionex pentru ele)
+    reguliDovezi: dv ? dv.reguliDovezi : null, grafice: dv ? dv.grafice : null,
+    botiActivi: nr(o.botiActivi) !== null ? nr(o.botiActivi) : (Array.isArray(o.deschise) ? o.deschise.filter((b) => b && b.activ !== false).length : 0),
+    ultimInchis: nr(o.ultimInchis) !== null ? nr(o.ultimInchis) : toate.reduce((m, t) => Math.max(m, nr(t.inchis) || 0), 0) || null };
 }

@@ -129,14 +129,16 @@ await test("corecțiile: 6, în ordinea din demo; 3, 5, 6 sunt recomandări (nu 
   assert.equal(R.corectii[4].stare, "niciunul luna asta"); assert.equal(R.corectii[4].ton, "bun"); assert.match(R.corectii[4].dece, /după 6 h în afara grilei prețul se mai întoarce doar în 41% din cazuri/);
   const o3 = scenariu(); o3.inreg[0] = Object.assign({}, o3.inreg[0], { rele: ["frana", "banda"] }); o3.dovezi = { minute: { n: 1057, grile: 340.7, comisioane: -1165.1 } };
   const r3 = PC.raportPagina(o3); assert.equal(r3.corectii[4].stare, "1 bot luna asta"); assert.equal(r3.corectii[4].ton, "rau");
-  assert.equal(r3.corectii[5].dece, "Pe cei 1.057 de boți închiși sub 15 minute, grilele au prins +340,7 USDT, iar comisioanele au luat 1.165,1 USDT.");
-  assert.equal(R.corectii[5].stare, "2 în octombrie"); assert.equal(R.corectii[5].ton, "rau");
+  // v100.360 (auditul din 18.11): minutele = descriere pe NET (fără comisioane / grile lipite de cifra lunii), fără ton de greșeală
+  assert.match(r3.corectii[5].dece, /^Închiși sub 15 minute: [+−]\d+,\d pe bot net \(2 boți\); ceilalți [+−]\d+,\d\. Durata se știe abia la închidere/); assert.doesNotMatch(r3.corectii[5].dece, /comisioanele au luat|grilele au prins/);
+  assert.equal(R.corectii[5].stare, "2 în octombrie"); assert.equal(R.corectii[5].ton, "");
 });
 await test("ce faci bine / ce greșești: din oglindă (octombrie față de septembrie) și din ultimele 7 zile, cu o zecimală și punct la mii", () => {
   assert.ok(R.bine.some((t) => /^Închiderile în minute/.test(t)) === false, "septembrie n-a avut minute: nimic de comparat");
   assert.ok(R.bine.includes("Nicio lichidare în octombrie (în septembrie: 1)."), R.bine.join(" | "));
-  assert.ok(R.rau.some((t) => /^Pornești cu frâna trasă: 3 din cei 4 boți din ultimele 7 zile; cei închiși au dat \+8,6 USDT\.$/.test(t)), R.rau.join(" | "));
-  assert.ok(R.rau.some((t) => /^Închizi gridul în minute: 2 boți în octombrie \(\+1,0 USDT\)/.test(t)), R.rau.join(" | "));
+  // v100.360: regula încălcată poartă starea ei pe istorie; „Închizi gridul în minute” nu mai e greșeală (pe net, sub 15 min ies mai bine)
+  assert.ok(R.rau.some((t) => /^Pornești cu frâna trasă: 3 din cei 4 boți din ultimele 7 zile; cei închiși au dat \+8,6 USDT\. Regula ta; pe istoria ta, prea puține date\.$/.test(t)), R.rau.join(" | "));
+  assert.ok(!R.rau.some((t) => /minute/.test(t)), R.rau.join(" | "));
 });
 await test("porniți cu frâna trasă: TOȚI boții din ultimele 7 zile porniți cu pierderile peste frână (nu doar cei văzuți de colector), cei mai noi sus; textul văzut la pornire, dacă există", () => {
   assert.equal(R.porniriN, 3); assert.deepEqual(R.porniri.map((p) => p.titlu), ["ONDO short", "ONDO long", "SOL long"]);
@@ -196,7 +198,7 @@ await test("botul peste frână încă deschis: fără „net 0,0 pe cei închi�
   const f = OB.frana({ trades: l, deschise: D, acum: ACUM, praguri: P7 });
   const r = PC.raportPagina({ acum: ACUM, P: P7, f, toate: l, deschise: D, motive: new Map(), inreg: [], st: {}, fl: OB.franaLaPornire, dovezi: {}, istoria: null, profit: null, banda: null });
   assert.equal(r.franaSapt.sub, "1 bot pornit peste ea, încă deschis."); assert.equal(r.franaSapt.zile[6].net, "deschis");
-  assert.ok(r.rau.includes("Pornești cu frâna trasă: 1 din cei 2 boți din ultimele 7 zile."), r.rau.join(" | "));   // fără „cei închiși au dat” (e încă deschis)
+  assert.ok(r.rau.includes("Pornești cu frâna trasă: 1 din cei 2 boți din ultimele 7 zile. Regula ta; pe istoria ta, prea puține date."), r.rau.join(" | "));   // fără „cei închiși au dat” (e încă deschis); v100.360: + starea regulii
 });
 await test("„frâna trasă” pe pagină = pierderile (ca evaluarea, oglinda, disciplina); pragul zilei atins se spune separat, nu de două ori", () => {
   idN = 950;
@@ -251,13 +253,16 @@ await test("serverul: POST comportament ține raportul (cu „la” și forma 1)
 });
 
 // ---------------- pagina ----------------
+// v100.360: raportul NOU (reguliDovezi, eticheta2) are pagina lui, probată în proba-v100360.mjs; aici rămâne pagina pe forma VECHE a raportului
+// (ce e în KV până trece colectorul la v101.197) - trebuie să se deseneze ca înainte
+const RV = (() => { const r = JSON.parse(JSON.stringify(R)); delete r.reguliDovezi; delete r.grafice; (r.evaluari || []).forEach((e) => { delete e.eticheta2; delete e.fataDeZi; delete e.nZi; delete e.reguliAtinse; }); (r.corectii || []).forEach((c) => delete c.stareDovezi); return r; })();
 const cutie = { console, Intl, Date, Math, Number, String, Array, Object, JSON, isFinite, RegExp };
 vm.createContext(cutie);
 let paginaOk = true; try { vm.runInContext(citeste("public", "lib", "comportament-ecran.js"), cutie, { filename: "comportament-ecran.js" }); } catch (e) { paginaOk = false; console.log("  (comportament-ecran.js nu se încarcă: " + e.message + ")"); }
 await test("pagina: fără raport spune de ce; cu raport, toate secțiunile demo-ului, în ordine, cu textul scăpat de HTML", () => {
   assert.ok(paginaOk && typeof cutie.coHtml === "function", "lipsește coHtml");
   assert.match(cutie.coHtml(null, {}), /Colectorul de pe VPS n-a trimis încă/);   // v100.306: Radarul rulează pe VPS
-  const r = JSON.parse(JSON.stringify(R)); r.evaluari[0].titlu = "<b>ONDO</b> long";
+  const r = JSON.parse(JSON.stringify(RV)); r.evaluari[0].titlu = "<b>ONDO</b> long";
   const h = cutie.coHtml(r, { filtru: null, deschis: "776", acum: ACUM + 5 * MIN });
   const ordine = ["Evaluarea ta comportamentală", "Disciplina la pornire", "Ce faci bine", "Ce greșești", "Corecțiile", ">Azi<", "Seara de azi", "Porniți cu frâna trasă", "Evaluările boților închiși", "Regulile tale", "Frâna în ultimele 7 zile", "Oglinda lunii", "Profitul real"];
   let i = -1; for (const t of ordine) { const j = h.indexOf(t); assert.ok(j > i, "ordinea: " + t); i = j; }
@@ -268,22 +273,22 @@ await test("pagina: fără raport spune de ce; cu raport, toate secțiunile demo
   assert.ok(h.includes("Ținut 1 h 30 min"), "evaluarea deschisă își arată textul");
 });
 await test("pagina: căsuța unui verdict păstrează doar evaluările lui și o spune; a doua apăsare le arată pe toate", () => {
-  const h = cutie.coHtml(R, { filtru: "noroc", deschis: null, acum: ACUM });
+  const h = cutie.coHtml(RV, { filtru: "noroc", deschis: null, acum: ACUM });
   assert.match(h, /Arăt doar „Noroc”: 1 din 2\./); assert.doesNotMatch(h, /coComuta\('776'\)/);
   assert.match(h, /aria-pressed="true"[^>]*data-action-click="coFiltru\('noroc'\)"|data-action-click="coFiltru\('noroc'\)"[^>]*aria-pressed="true"/);
-  const t = cutie.coHtml(R, { filtru: null, deschis: null, acum: ACUM });
+  const t = cutie.coHtml(RV, { filtru: null, deschis: null, acum: ACUM });
   assert.match(t, /Toate cele 2, cele mai noi sus/); assert.doesNotMatch(t, /Ținut 1 h 30 min/);
   // la deschidere, cea mai nouă evaluare e desfăcută (ca în demo); raportul mai vechi de 30 de minute o spune
-  const d = cutie.coHtml(R, { acum: ACUM + 5 * MIN });
-  assert.ok(d.includes("Ținut 1 h 30 min")); assert.doesNotMatch(d, /colectorul pare oprit/);
-  assert.match(cutie.coHtml(R, { acum: ACUM + 31 * MIN }), /colectorul pare oprit/);
+  const d = cutie.coHtml(RV, { acum: ACUM + 5 * MIN });
+  assert.ok(d.includes("Ținut 1 h 30 min")); assert.doesNotMatch(d, /colectorul n-a mai scris/);   // v100.360: textul nou
+  assert.match(cutie.coHtml(RV, { acum: ACUM + 31 * MIN }), /colectorul n-a mai scris/);
 });
 await test("pagina: numerele din KV nu intră nescăpate; o singură evaluare se spune firesc; lista pornirilor spune câți din câți; canalul evaluărilor nelegat se spune", () => {
-  const r = JSON.parse(JSON.stringify(R)); r.verdicte.cost.n = "<i>x</i>"; assert.doesNotMatch(cutie.coHtml(r, { acum: ACUM }), /<i>x<\/i>/);
-  const r1 = JSON.parse(JSON.stringify(R)); r1.evaluari = r1.evaluari.slice(0, 1); r1.nEvaluari = 1; assert.match(cutie.coHtml(r1, { acum: ACUM }), /O singură evaluare\./);
-  const r2 = JSON.parse(JSON.stringify(R)); r2.porniriN = 75; assert.match(cutie.coHtml(r2, { acum: ACUM }), /cele mai noi 3 din 75/);
+  const r = JSON.parse(JSON.stringify(RV)); r.verdicte.cost.n = "<i>x</i>"; assert.doesNotMatch(cutie.coHtml(r, { acum: ACUM }), /<i>x<\/i>/);
+  const r1 = JSON.parse(JSON.stringify(RV)); r1.evaluari = r1.evaluari.slice(0, 1); r1.nEvaluari = 1; assert.match(cutie.coHtml(r1, { acum: ACUM }), /O singură evaluare\./);
+  const r2 = JSON.parse(JSON.stringify(RV)); r2.porniriN = 75; assert.match(cutie.coHtml(r2, { acum: ACUM }), /cele mai noi 3 din 75/);
   // poza lângă demo: 10 porniri lungeau rândul de sus (Azi și Seara goale lângă) ⇒ la vedere cele mai noi 3, restul pliat
-  const r4 = JSON.parse(JSON.stringify(R)); r4.porniri = Array.from({ length: 10 }, () => R.porniri[0]); r4.porniriN = 76;
+  const r4 = JSON.parse(JSON.stringify(RV)); r4.porniri = Array.from({ length: 10 }, () => R.porniri[0]); r4.porniriN = 76;
   const h4 = cutie.coHtml(r4, { acum: ACUM }), s4 = h4.slice(h4.indexOf('aria-labelledby="co-h-porn"'), h4.indexOf('aria-labelledby="co-h-ev"'));
   assert.match(s4, /<details class="coMai"><summary>Încă 7<\/summary>/); assert.equal((s4.split("<details")[0].match(/class="coPornit"/g) || []).length, 3);
   const o = scenariu(); o.evaluariLegat = false; const r3 = PC.raportPagina(o);

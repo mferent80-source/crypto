@@ -195,7 +195,9 @@ await test("graficele: lățimea reală (o.lat) în viewBox, textul 11 px, înă
   assert.match(JG.curbaZile(z), /viewBox="0 0 640 /, "fără o.lat ⇒ 640");
   // forma paginii: [{et, v, n, zile}] - bara divergentă, eticheta „et (n boți, z zile)”, valoarea cu o zecimală
   const b = JG.bare([{ et: "sub 5%", v: -4.83, n: 126, zile: 48 }, { et: "5–10%", v: 1.26, n: 270, zile: 95 }], { lat: 600 });
-  verificaSvg(b, "bare {et,v}", 600); assert.match(b, />sub 5% \(126 de boți, 48 de zile\)</); assert.match(b, />−4,8</); assert.match(b, />\+1,3</); assert.match(b, /jgBara jgNeg/); assert.match(b, /jgBara jgPoz/);
+  // v100.360: la 600 eticheta lungă (32 de litere × ~6,8 px) nu încape în 216 px ⇒ TOATE trec pe forma scurtă; la 900 încap toate cu „(n boți, z zile)”
+  verificaSvg(b, "bare {et,v}", 600); assert.match(b, />sub 5%</); assert.match(b, />5–10%</);
+  assert.match(JG.bare([{ et: "sub 5%", v: -4.83, n: 126, zile: 48 }, { et: "5–10%", v: 1.26, n: 270, zile: 95 }], { lat: 900 }), />sub 5% \(126 de boți, 48 de zile\)</); assert.match(b, />−4,8</); assert.match(b, />\+1,3</); assert.match(b, /jgBara jgNeg/); assert.match(b, /jgBara jgPoz/);
   assert.match(b, /viewBox="0 0 600 70"/, "24 px pe rând: 6 + 2 × 24 + 16");
   assert.doesNotMatch(JG.calendar(z), /(\d)\.(\d) USDT/, "cifrele cu virgulă");
 });
