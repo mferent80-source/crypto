@@ -177,23 +177,25 @@ await test("pagina: botii inchisi = prima pagina Pionex (cei mai noi) + arhiva d
   assert.match(t2, /jtAduBoti\(\)/);
   const ctx = { jtArhiva: { la: null, boti: null, complet: false, sursa: null }, jtStare: {}, cereri: [] };
   ctx.getJSON = async (u) => { ctx.cereri.push(u); if (u.startsWith("/api/bot-orders")) return { bots: [{ brut: bot(9) }, { brut: bot(8) }] }; if (u.startsWith("/api/istoric-bot?action=botiInchisi")) return { boti: [compactBot(bot(8)), compactBot(bot(7)), compactBot(bot(1))], la: 123, complet: true, n: 3 }; throw new Error(u); };
-  vm.createContext(ctx); vm.runInContext(functia(app, "jtAduBoti") + ";this.jtAduBoti=jtAduBoti;", ctx);
+  vm.createContext(ctx); vm.runInContext(app.match(/var ARH_BOTI=\{[^\n]*\n/)[0] + functia(app, "arhivaBotiAdu") + functia(app, "jtAduBoti") + ";this.jtAduBoti=jtAduBoti;", ctx);   // v100.359: arhiva comună cu Acasă
+  const golesteArh = () => vm.runInContext("ARH_BOTI={la:null,boti:null,complet:false,cand:0,zbor:null}", ctx);
   const l = await ctx.jtAduBoti();
   assert.deepEqual(l.map((x) => x.strategyId), ["s9", "s8", "s7", "s1"]);
   assert.equal(l[1].userId, "nu-trebuie-pastrat", "botul de pe prima pagina (proaspat) castiga fata de cel din arhiva");
   assert.equal(ctx.jtArhiva.sursa, "acasa"); assert.equal(ctx.jtArhiva.complet, true); assert.equal(ctx.jtArhiva.la, 123);
-  // a doua oara cere arhiva cu ?la= (daca nu s-a schimbat, nu mai vine lista)
+  // a doua oara cere arhiva cu ?la= (daca nu s-a schimbat, nu mai vine lista); v100.359: arhiva comună e ținută 60 s ⇒ o facem veche
+  vm.runInContext("ARH_BOTI.cand=0", ctx);
   ctx.getJSON = async (u) => { ctx.cereri.push(u); if (u.startsWith("/api/bot-orders")) return { bots: [{ brut: bot(9) }] }; if (u.includes("&la=123")) return { neschimbat: true, la: 123 }; throw new Error(u); };
   assert.equal((await ctx.jtAduBoti()).length, 4);
   // pe pagina publicata (fara KV): 503 -> doar prima pagina, sursa „pagina”
-  ctx.jtArhiva = { la: null, boti: null, complet: false, sursa: null };
+  ctx.jtArhiva = { la: null, boti: null, complet: false, sursa: null }; golesteArh();
   ctx.getJSON = async (u) => { if (u.startsWith("/api/bot-orders")) return { bots: [{ brut: bot(9) }] }; throw Object.assign(new Error("ISTORIC_DOAR_ACASA"), { status: 503 }); };
   assert.equal((await ctx.jtAduBoti()).length, 1); assert.equal(ctx.jtArhiva.sursa, "pagina");
   // v100.358 (auditul, 🔴1): Pionex picat, arhiva vine ⇒ Jurnalul merge pe arhivă (înainte: null ⇒ pagina goală); fără amândouă ⇒ null
-  ctx.jtArhiva = { la: null, boti: null, complet: false, sursa: null };
+  ctx.jtArhiva = { la: null, boti: null, complet: false, sursa: null }; golesteArh();
   ctx.getJSON = async (u) => { if (u.startsWith("/api/bot-orders")) throw Object.assign(new Error("429"), { status: 429 }); if (u.startsWith("/api/istoric-bot?action=botiInchisi")) return { boti: [compactBot(bot(8)), compactBot(bot(7))], la: 5, complet: true }; throw new Error(u); };
   assert.equal((await ctx.jtAduBoti()).length, 2); assert.ok(ctx.jtStare.pionexEroare, "eroarea Pionex ținută pentru „De unde știu”");
-  ctx.jtArhiva = { la: null, boti: null, complet: false, sursa: null };
+  ctx.jtArhiva = { la: null, boti: null, complet: false, sursa: null }; golesteArh();
   ctx.getJSON = async () => { throw new Error("jos"); };
   assert.equal(await ctx.jtAduBoti(), null);
 });

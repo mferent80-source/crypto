@@ -46,7 +46,7 @@ await test("🔴2 O singură listă, pe NET (nu brut); fișa la clic; ordinea, �
   assert.match(li, /var net=function\(t\)\{return t\.net!=null\?t\.net:t\.rezultat\}/); assert.match(li, /jtU\(n\)/); assert.doesNotMatch(li, /U\(t\.rezultat\)\+\(t\.pct/);
   assert.match(li, /<details class="jtT"/); assert.match(li, /jtListaOrdine\(/); assert.match(li, /jtStatCsv\(\\'crypto\\'\)/); assert.match(li, /jtArataMai\(\)/); assert.match(li, /class="jtNota"/);
   assert.match(A, /var JT_TZ="Europe\/Bucharest"/); assert.match(fn("jtData"), /timeZone:JT_TZ/);
-  assert.match(A, /faraToate:piata==="crypto"/, "„Toate trade-urile” nu se mai dublează pe Crypto");
+  assert.match(A, /faraToate:piata!=="tot"/, "„Toate trade-urile” nu se mai dublează pe Crypto (v100.359: nici pe Acțiuni)");
   assert.match(A, /function jtArataMai\(\)\{jtStare\.arata=\(jtStare\.arata\|\|30\)\+30;if\(jtStare\.boti\)jtListaRender\(jtCalc\(\)\)\}/);
 });
 await test("🟡 un net sus: tot (futures + spot/copy), cu împărțirea spusă; raportul necitit ≠ „încă n-a venit”", () => {
@@ -76,12 +76,12 @@ await test("graficele primesc lățimea reală (o.lat) și se redesenează la ro
   for (const t of ["Curba pe zile", "Calendarul zilelor", "Câți boți pornești pe zi", "Pareto", "Pe lună: grile, poziție, costuri", "Lățimea intervalului", "Levierul"]) assert.ok(g.includes(t), t);
   assert.match(A, /window\.addEventListener\("resize",function\(\)\{clearTimeout\(jtLatGr\)/);
 });
-await test("V versiunile v100.358 (index ×4, sw, versiune.js, package + lanț, BUILD_INFO); colectorul neatins (v101.195)", () => {
-  assert.equal((H.match(/v100\.358/g) || []).length, 4); assert.match(H, /v100\.358 · JURNALUL DE TRADE/);
-  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-358/); assert.match(citeste("functions", "_shared", "versiune.js"), /"v100\.358"/);
-  const p = JSON.parse(citeste("package.json")); assert.equal(p.version, "100.358.0"); assert.match(p.scripts.test, /npm run test:v100357 && npm run test:v100358/);
-  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.match(bi.badge, /^v100\.358/); assert.ok(bi.jurnal358);
-  assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.195";/);
+await test("V versiunile de la v100.358 încolo; colectorul ≥ v101.195", () => {
+  const nr = (t) => Number((String(t).match(/100[.-](\d{3})/) || [])[1]);   // v100.359: versiunea curentă o verifică proba ei
+  assert.ok(nr(citeste("functions", "_shared", "versiune.js")) >= 358 && nr(citeste("public", "sw.js")) >= 358 && nr(JSON.parse(citeste("BUILD_INFO.json")).badge) >= 358);
+  const p = JSON.parse(citeste("package.json")); assert.ok(nr(p.version) >= 358); assert.match(p.scripts.test, /npm run test:v100357 && npm run test:v100358/);
+  assert.ok(JSON.parse(citeste("BUILD_INFO.json")).jurnal358);
+  assert.ok(Number((citeste("scripts", "colector.mjs").match(/const VERSIUNE_COLECTOR = "v101\.(\d+)";/) || [])[1]) >= 195);
 });
 // ---- probe de COMPORTAMENT (revizia Opus a diff-ului, G7: înainte erau doar pe forma codului) ----
 import vm from "node:vm";

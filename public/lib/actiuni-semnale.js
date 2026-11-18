@@ -431,7 +431,7 @@ var ActiuniSemnale = (function () {
     // revizia 01.10 (I1): stopul din profil se aplica EXACT cum a fost probat (−P75 de la maxim), nu max(ATR, P75) - altfel pagina zicea
     // „−11,8% de la maxim” sus si „−3,3%” jos
     var dT = o.trailProfil > 0 ? ref * o.trailProfil : o.minTrail > 0 ? Math.max(d, ref * o.minTrail) : d, stopPoz = ref - dT;
-    var sursaTrail = o.trailProfil > 0 ? (o.sursaTrail || "profilul acțiunii") : o.minTrail > 0 ? (o.sursaTrail || "−" + Math.round(o.minTrail * 100) + "% de la maxim (măsurat pe trade-urile tale)") : null;
+    var sursaTrail = o.trailProfil > 0 ? (o.sursaTrail || "profilul acțiunii") : o.minTrail > 0 ? (o.sursaTrail || "−" + Math.round(o.minTrail * 100) + "% de la maxim (plasă de siguranță, nedovedită pe trade-urile tale)") : null;
     return { nivel: "ok", trend: dir, atr: A_, k: pr.k, d: d, riscPct: d / baza, proba: pr, intrare: intrare, intrareMotiv: motivI,
       stop: r2(baza - d), tinta: r2(baza + 2 * d), stopPozitie: stopPoz, trailPct: dT / ref * 100, trailMinim: dT > d, stopAtins: stopPoz >= pret, sursaTrail: sursaTrail,
       // v100.40 (audit 30.09): tinta pozitiei e FIXA, de la pretul mediu de cumparare (+2×risc) - socotita din pretul de ACUM „fugea”
@@ -631,6 +631,8 @@ var ActiuniSemnale = (function () {
     return r;
   }
 
+  // v100.359 (auditul Jurnalului, 18.11): −15% NU e dovedit pe trade-urile lui (robustetStop: „urcă −15%” e cea mai bună și pe plus doar în 44% din
+  // reeșantionări, −7.227 lei fără ASTS) ⇒ rămâne plasa de siguranță, dar textul nu mai spune „măsurat”.
   // v100.52 (actiunile T212, pachetul 1): stopul care urca - din profilul actiunii („prof”) sau −15% („u15”, masurat pe trade-urile lui
   // la 25.09). Profilul il inlocuieste DOAR daca pe trade-urile lui iese cel putin la fel, pe cel putin 30 de trade-uri judecate.
   // alegeTrail(inchise, cf): comparatia se face DOAR pe trade-urile unde „prof” a fost rejucat, aceleasi pentru ambele variante (poza 01.10:
@@ -667,7 +669,7 @@ var ActiuniSemnale = (function () {
   function trailPozitie(alegere, ps) {
     var m = alegere && alegere.motiv ? alegere.motiv : "";
     if (alegere && alegere.cheie === "prof" && ps && ps.dist > 0) return { minTrail: 0.15, trailProfil: ps.dist, sursaTrail: "−" + (ps.dist * 100).toFixed(1).replace(".", ",") + "% de la maxim — cât coboară acțiunea de la deschidere în ~1 din 4 săptămâni (fără zilele de rezultate, când coboară mai mult; " + ps.sursa + ")" + (m ? " · " + m : "") };
-    return { minTrail: 0.15, sursaTrail: "−15% de la maxim (măsurat pe trade-urile tale)" + (m ? " · " + m : "") };
+    return { minTrail: 0.15, sursaTrail: "−15% de la maxim (plasă de siguranță, nedovedită pe trade-urile tale)" + (m ? " · " + m : "") };
   }
 
   // ---------------- v87: regulile tale (din jurnalul de actiuni) ----------------

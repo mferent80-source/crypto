@@ -203,8 +203,13 @@ var Obiceiuri = (function () {
     // v100.40: totalul NET (dupa comisioane si funding) si cati au iesit pe plus NET; brutul Pionex in paranteza
     linii.push("Săptămâna: " + cate(r.n, "bot închis", "boți închiși") + ", net " + U(r.net) + " (înainte de comisioane și funding " + U(r.total) + "), " + r.pePlusNet + " pe plus (" + P(r.pePlusNet / r.n) + ").");
     linii.push("Din grile " + U(r.grile) + ", din poziție " + U(r.pozitie) + ", comisioane și funding " + U(r.comisioane + r.funding) + ".");
-    var g = r.greseli[0];
-    if (g) linii.push("Greșeala cea mai scumpă: „" + g.titlu + "” — " + cate(g.n, "bot", "boți") + ", " + U(g.cost) + ".");
+    // v100.359 (auditul Jurnalului): „Greșeala cea mai scumpă” aduna rezultatul boților cu ea (unele definite chiar prin rezultat, suprapuse) ⇒ acum
+    // „ce s-a întâmplat” e DESCRIPTIV, iar o greșeală se numește doar dacă iese SIGUR mai scumpă decât boții fără ea, pe toată istoria, în aceeași zi
+    // (o.greseli = JurnalDovezi.greseli(toți boții); fără el - apelanții vechi - nu se spune nicio greșeală)
+    if (r.greseli.length) linii.push("Ce s-a întâmplat (boții cu fiecare, net): " + r.greseli.slice(0, 3).map(function (x) { return "„" + x.titlu + "” " + cate(x.n, "bot", "boți") + " " + U(x.cost); }).join("; ") + ".");
+    var dov = o.greseli && Array.isArray(o.greseli.greseli) ? o.greseli.greseli.filter(function (x) { return x.verdict === "mai-rau"; }).sort(function (a, b) { return a.dif - b.dif; }) : [];
+    var g = dov[0] || null;
+    if (o.greseli) linii.push(g ? "Greșeala dovedită (pe toată istoria, față de boții fără ea din aceeași zi): „" + g.titlu + "” — " + U(g.dif) + " pe bot." : "Greșelile, pe toată istoria: niciuna nu iese sigur mai scumpă decât boții fără ea (în aceeași zi).");
     var s = o.socoteala || {}, sk = Object.keys(s).filter(function (k) { return s[k] && s[k].judecate > 0; });
     linii.push(sk.length ? "Semnalele: " + sk.map(function (k) { return (s[k].nume || k) + " " + s[k].corecte + "/" + s[k].judecate; }).join(", ") + " au avut dreptate." : "Semnalele: încă nimic judecat.");
     // v100.43 (I-466): cel mai util si cel mai inutil sfat, pe bani (doar cele cu cel putin 10 cazuri judecate)
@@ -219,9 +224,9 @@ var Obiceiuri = (function () {
       var corect = dov.length && dov.every(function (q) { return q.dupaCorectie === true; });
       linii.push(!dov.length ? "Laboratorul: nimic dovedit pe net încă." : (corect ? "Laboratorul a dovedit pe net, și după corecția pe toate testele: " : "Laboratorul, pe net, fără corecția pe toate testele: ") + dov.map(function (q) { return q.titlu; }).join("; ") + ".");
     }
-    // v100.72: regula = actiunea (la persoana I); greseala ei e deja pe randul „Greșeala cea mai scumpă” de mai sus
-    if (g && g.cost < 0) out.regula = "Regula săptămânii: " + g.dataViitoare;
-    else out.regula = "Regula săptămânii: Aș porni doar pe 🟢, cu planul de ieșire scris înainte.";
+    // v100.72: regula = actiunea (la persoana I); v100.359: doar din greșeala DOVEDITĂ de mai sus
+    if (g) out.regula = "Regula săptămânii: " + g.dataViitoare;
+    else out.regula = "Regula săptămânii: Aș ține planul de ieșire scris înainte de pornire; nimic nou nu iese dovedit.";   // v100.359: „doar pe 🟢” nu bate o blocare la întâmplare (p 0,23)
     linii.push(out.regula);
     // v100.78 (ideea 3): orice rând al raportului ≤ 160 (Discord le pune pe rânduri) - și laboratorul cu trei întrebări lungi dovedite
     for (var i = 0; i < linii.length; i++) linii[i] = rupe(linii[i], 160);

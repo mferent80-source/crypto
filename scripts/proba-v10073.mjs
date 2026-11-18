@@ -41,8 +41,8 @@ await test("I2 garda știe regula „de”/singularul (TextRo.cate): „62 boți
 
 await test("I2 obiceiurile: greșeala cea mai scumpă „1 bot” / „25 de boți”, frâna „20 de boți pe minus la rând” (producătorii reali, greșeala reală din jurnal)", () => {
   const g = REALE.map((t) => t.greseli && t.greseli[0]).find(Boolean); assert.ok(g, "nicio greșeală în fixtura reală");
-  const rand = (n) => OB.raportDuminica({ trades: Array.from({ length: n }, () => tr("CRV", -3, { inchis: T0 - ZI, greseli: [g] })), acum: T0 }).linii.find((l) => /^Greșeala cea mai scumpă/.test(l)) || "";
-  assert.match(rand(1), /” — 1 bot, /, rand(1)); assert.match(rand(25), /” — 25 de boți, /, rand(25));
+  const rand = (n) => OB.raportDuminica({ trades: Array.from({ length: n }, () => tr("CRV", -3, { inchis: T0 - ZI, greseli: [g] })), acum: T0 }).linii.find((l) => /^Ce s-a întâmplat/.test(l)) || "";   // v100.359: „Greșeala cea mai scumpă” ⇒ „Ce s-a întâmplat” (descriptiv)
+  assert.match(rand(1), /” 1 bot /, rand(1)); assert.match(rand(25), /” 25 de boți /, rand(25));
   const f = OB.frana({ trades: Array.from({ length: 20 }, (_, i) => tr("A" + i, -0.4, { inchis: T0 - (i + 1) * 60000 })), acum: T0 });
   assert.match(f.text, /20 de boți pe minus la rând/, f.text);
 });

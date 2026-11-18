@@ -91,7 +91,9 @@ async function istoricGet(request,env){
   if(action==="futuresProba"){let r=null;try{r=JSON.parse(await env.ISTORIC.get("futures-proba")||"null")}catch{r=null}return json({futuresProba:r})}
   // v100.166 (12.10, Weekly Review mutat in raport): „Săptămâna pieței” de duminica, salvata de colector ca Jurnalul s-o arate
   if(action==="raportPiata"){let r=null;try{r=JSON.parse(await env.ISTORIC.get("raport:piata")||"null")}catch{r=null}return json({raport:r})}
-  if(action==="contrafactual"){let m={};try{m=JSON.parse(await env.ISTORIC.get("contrafactual")||"{}")}catch{m={}}return json({contrafactual:m&&typeof m==="object"?m:{}})}
+  /* v100.359: „v” = amprenta FNV-1a a textului din KV; pagina o trimite înapoi ⇒ aceeași versiune = „neschimbat” (369 KB economisiți la fiecare reîmprospătare) */
+  if(action==="contrafactual"){const s=await env.ISTORIC.get("contrafactual")||"{}";let h=0x811c9dc5;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)>>>0}const v=s.length.toString(36)+"-"+h.toString(36);
+    if(u.searchParams.get("v")===v)return json({v,neschimbat:true});let m={};try{m=JSON.parse(s)}catch{m={}}return json({v,contrafactual:m&&typeof m==="object"?m:{}})}
   if(action==="semnale"){const bot=idBot(u.searchParams.get("bot"));if(!bot)return json({error:"Lipseste bot"},400);let v=null;try{v=JSON.parse(await env.ISTORIC.get("semnale:"+bot)||"null")}catch{v=null}return json({bot,semnale:v})}
   if(action==="plan"){const bot=idBot(u.searchParams.get("bot"));if(!bot)return json({error:"Lipseste bot"},400);let p=null;try{p=JSON.parse(await env.ISTORIC.get("plan:"+bot)||"null")}catch{p=null}return json({bot,plan:p})}
   if(action==="laborator"){let c=null;try{c=JSON.parse(await env.ISTORIC.get("laborator")||"null")}catch{c=null}return json({laborator:c})}

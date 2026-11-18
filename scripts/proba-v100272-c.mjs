@@ -341,7 +341,7 @@ await test("6g jtPorneste: boții Pionex, arhiva, contrafactualul, raportul și 
     if (/botiInchisi/.test(url)) return setTimeout(() => res({ boti: [{ strategyId: "2" }], la: "L", complet: true }), 1);
     rej(new Error("neașteptat " + url)); }); };
   const box = { getJSON, $: () => null, jtStare: { boti: null, la: 0, inLucru: false, eroare: null }, jtArhiva: { la: null, boti: null, complet: false, sursa: null }, jtRender: () => { asteapta.render = true; }, jtNoteSync: () => {}, grTextEroare: (e) => String(e && e.message), console };
-  vm.createContext(box); vm.runInContext(["jtAduBoti", "jtPorneste"].map(fnApp).join("\n"), box);
+  vm.createContext(box); vm.runInContext(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8").replace(/\r\n/g, "\n").match(/var ARH_BOTI=\{[^\n]*\n/)[0] + ["arhivaBotiAdu", "jtAduBoti", "jtPorneste"].map(fnApp).join("\n"), box);   // v100.359: arhiva comună
   const p = box.jtPorneste(true);
   await new Promise((r) => setTimeout(r, 20));
   assert.equal(pornite.length, 5, "toate cinci în zbor cât boții Pionex încă nu au venit: " + pornite.join(" | "));

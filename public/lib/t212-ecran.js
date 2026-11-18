@@ -1863,8 +1863,45 @@ function jtAplicaFiltru() {
   if (jtFiltru !== "crypto") jtRenderActiuni();
   if (typeof jtFrazaRender === "function") { try { jtFrazaRender(typeof jtStare !== "undefined" && jtStare.boti && typeof jtCalc === "function" ? jtCalc() : null); } catch (e) {} }   // v100.358: fraza de sus urmează fila
 }
+var jtT212V = { ordine: "noi", arata: 30, deschise: {}, lista: false };
+function jtT212Ordine(k) { jtT212V.ordine = k === "pierderi" || k === "castiguri" || k === "note" ? k : "noi"; jtT212V.arata = 30; jtT212ListaRender(); }
+function jtT212Mai() { jtT212V.arata += 30; jtT212ListaRender(); }
+// starea listei de pe ecran (fișele deschise, notița tastată și nesalvată) - înainte de orice rescriere
+function jtT212Salveaza() {
+  var li = $("jtListaT212"), pl = $("jtPl-actiuni"); if (pl) jtT212V.lista = !!pl.open; if (!li || !li.querySelectorAll) return;
+  var note = typeof jtNote === "function" ? jtNote() : {};
+  [].forEach.call(li.querySelectorAll("details.jtT"), function (d) { var id = d.getAttribute("data-id"); if (d.open) jtT212V.deschise[id] = 1; else delete jtT212V.deschise[id]; });
+  [].forEach.call(li.querySelectorAll("textarea.jtNota"), function (t) { var id = t.getAttribute("data-id"); if (id && t.value !== (note[id] || "") && typeof jtNotaSalveaza === "function") jtNotaSalveaza(id, t.value); });   // ce ai tastat nu se pierde
+}
+function jtT212ListaRender() { var li = $("jtListaT212"); if (!li) return; jtT212Salveaza(); li.innerHTML = jtT212ListaHtml(); }
+function jtT212ListaHtml() {
+  var j = typeof t212Jurnal === "function" ? t212Jurnal() : null; if (!j) return "";
+  var note = typeof jtNote === "function" ? jtNote() : {};
+  var l = j.p.inchise, cfm = t212.cf || {}, L = function (v) { return t212Lei(v, 1); }, P = t212Pct, ord = jtT212V.ordine, idOf = function (t) { return "t212-" + t.id; };
+  var data = function (t, an) { return new Date(t).toLocaleString("ro-RO", Object.assign({ day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Bucharest" }, an ? { year: "2-digit" } : {})); };
+  var lista = ord === "pierderi" ? l.slice().sort(function (a, b) { return a.rezultat - b.rezultat; }) : ord === "castiguri" ? l.slice().sort(function (a, b) { return b.rezultat - a.rezultat; }) : ord === "note" ? l.filter(function (t) { return note[idOf(t)]; }).sort(function (a, b) { return b.inchis - a.inchis; }) : l.slice().sort(function (a, b) { return b.inchis - a.inchis; });
+  var nNote = Object.keys(note).filter(function (k) { return k.indexOf("t212-") === 0; }).length;
+  var B = function (k, t) { return '<button type="button" class="tbIntBtn" aria-pressed="' + (ord === k) + '" data-action-click="jtT212Ordine(\'' + k + '\')">' + t + '</button>'; };
+  var h = '<div class="jtListaCap"><div class="tbInterval jtFiltru" role="group" aria-label="Ordinea listei">' + B("noi", "Cele mai noi") + B("pierderi", "Cele mai mari pierderi") + B("castiguri", "Cele mai mari câștiguri") + B("note", "Cu notițe (" + nNote + ")") + '</div><button type="button" class="actionGhost" data-action-click="jtStatCsv(\'actiuni\')">⬇ Descarcă raportul (CSV)</button></div>'
+    + '<div class="jtLRCap" aria-hidden="true"><span>Închis</span><span>Acțiunea</span><span>Cât</span><span>Ținut</span><span>Radarul</span><span class="jtLRNum">Real</span></div>';
+  h += lista.slice(0, jtT212V.arata).map(function (t) {
+    var id = idOf(t), cf = cfm[t.id], niv = cf && cf.nivel && cf.nivel !== "fara-date" ? cf.nivel : null, P0 = T212_POARTA[niv] || [niv, ""];
+    var gr = ActiuniSemnale.greseli(t, { umpleri: j.u }), cfg = cf && cf.greseli || [], dur = t.durataOre < 24 ? Math.max(1, Math.round(t.durataOre)) + " h" : t212Cate(Math.round(t.durataOre / 24), "zi", "zile");
+    cfg.forEach(function (k) { if (ActiuniSemnale.TEXT[k] && !gr.some(function (x) { return x.cod === k; })) gr.push({ cod: k, text: ActiuniSemnale.TEXT[k] }); });
+    var bec = niv ? '<span class="jtBec ' + escapeHtml(P0[1] || "") + '" title="' + escapeHtml(P0[0] || "") + '">' + (P0[1] === "good" ? "🟢" : P0[1] === "bad" ? "🔴" : "🟡") + '</span>' : '<span class="mutedInfo">—</span>';
+    return '<details class="jtT" data-id="' + escapeHtml(id) + '"' + (jtT212V.deschise[id] ? " open" : "") + '><summary class="jtLR"><span class="jtLRData">' + escapeHtml(data(t.inchis)) + '</span><b class="jtLRMon">' + escapeHtml(T212.simbol(t.ticker)) + (note[id] ? ' <span title="are notiță">📝</span>' : '') + '</b><span class="jtLRBot">' + escapeHtml(t212Bucati(t.qty, t.pretCumparare > 0 ? t.pretCumparare : t.pretVanzare) + " · " + t212Usd(t.pretCumparare) + " → " + t212Usd(t.pretVanzare)) + '</span><span class="jtLRTinut">' + escapeHtml(dur) + '</span><span class="jtLRBec">' + bec + '</span><span class="jtLRNum"><b class="' + t212Cls(t.rezultat) + '">' + L(t.rezultat) + '</b> <span class="tbSub">' + P(t.pct) + '</span></span></summary>'
+      + '<div class="jtFisa"><p class="tbSub">' + escapeHtml(data(t.pornit, true) + " → " + data(t.inchis, true) + " (" + dur + ")" + (t.afaraVanzare === true ? " · vândut în afara orelor bursei" : "")) + '</p>'
+      + '<p class="tbSub">T212 arată ' + L(t.rezultatOficial) + ' · comisioane ' + L(-(t.comisioane || 0)) + (t.partial ? ' · o parte din vânzare n-are cumpărarea în istoric' : '') + '</p>'
+      + (niv ? '<p class="jtCf">Radarul ar fi zis la cumpărare: <b class="' + escapeHtml(P0[1] || "") + '">' + escapeHtml(P0[0] || niv) + '</b>' + (cf.motive && cf.motive.length ? ' <span class="tbSub">— ' + escapeHtml(cf.motive.join("; ")) + '</span>' : '') + '</p>' : '')
+      + (gr.length ? '<ul class="jtGreseli">' + gr.map(function (x) { return '<li><b>' + escapeHtml(x.text) + '</b></li>'; }).join("") + '</ul>' : '')
+      + '<textarea class="jtNota" data-id="' + escapeHtml(id) + '" rows="2" placeholder="De ce am cumpărat, ce aș face altfel…">' + escapeHtml(note[id] || "") + '</textarea></div></details>';
+  }).join("");
+  if (!lista.length) h += '<p class="tbSub">' + (ord === "note" ? "Nicio notiță încă: deschide un trade și scrie de ce ai cumpărat." : "Niciun trade.") + '</p>';
+  if (lista.length > jtT212V.arata) h += '<button type="button" class="stBtn jtMai" data-action-click="jtT212Mai()">Arată încă ' + Math.min(30, lista.length - jtT212V.arata) + ' (ai văzut ' + jtT212V.arata + ' din ' + lista.length + ')</button>';
+  return h;
+}
 function jtRenderActiuni() {
-  var box = $("jtActiuni");
+  var box = $("jtActiuni"); jtT212Salveaza();   // v100.359: lista deschisă, fișele deschise și notița tastată rămân când fila se rescrie
   // v100.358: pe „Tot” fila Acțiuni e ascunsă, dar istoricul abia venit trebuie să ajungă în sinteza în lei și în fraza de sus
   if (box && box.hidden && jtFiltru === "tot") { if (typeof jtStatRender === "function") jtStatRender("tot"); if (typeof jtFrazaRender === "function") { try { jtFrazaRender(null); } catch (e) {} } return; }
   if (!box || box.hidden) return;
@@ -1905,17 +1942,9 @@ function jtRenderActiuni() {
   // cele mai mari pierderi
   var mari = l.slice().sort(function (a, b) { return a.rezultat - b.rezultat; }).slice(0, 5).filter(function (t) { return t.rezultat < 0; });
   if (mari.length) h += '<div class="tbBloc"><div class="tbBlocCap"><h4>Cele mai mari 5 pierderi</h4><span class="tbSub">' + L(mari.reduce(function (s, t) { return s + t.rezultat; }, 0)) + ' împreună</span></div><ul class="grLista">' + mari.map(function (t) { return '<li><b>' + escapeHtml(T212.simbol(t.ticker)) + '</b> <span class="bad">' + L(t.rezultat) + '</span> (' + P(t.pct) + ', ținut ' + t212Cate(Math.round(t.durataOre / 24), "zi", "zile") + ', ' + new Date(t.inchis).toLocaleDateString("ro-RO", { timeZone: "Europe/Bucharest" }) + ')</li>'; }).join("") + '</ul></div>';
-  // fiecare trade (cele mai noi 150)
-  var cfm = t212.cf || {}, note = typeof jtNote === "function" ? jtNote() : {}, data = function (t) { return new Date(t).toLocaleString("ro-RO", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Bucharest" }); };   /* v100.358: ora României */
-  h += '<details class="tbPl jtPl" id="jtPl-actiuni"><summary><b>Fiecare trade</b><span class="tbSub">cele mai noi ' + Math.min(150, l.length) + ' din ' + l.length + ' · o vânzare = un trade</span></summary>' + l.slice(0, 150).map(function (t) {
-    var gr = ActiuniSemnale.greseli(t, { umpleri: j.u }), cfg = cfm[t.id] && cfm[t.id].greseli || [], dur = t.durataOre < 24 ? Math.max(1, Math.round(t.durataOre)) + " h" : t212Cate(Math.round(t.durataOre / 24), "zi", "zile"), id = "t212-" + t.id;
-    cfg.forEach(function (k) { if (ActiuniSemnale.TEXT[k] && !gr.some(function (x) { return x.cod === k; })) gr.push({ cod: k, text: ActiuniSemnale.TEXT[k] }); });
-    return '<div class="jtTrade"><div class="jtCap"><b>' + escapeHtml(T212.simbol(t.ticker)) + '</b> <span class="tbSub">' + escapeHtml(t212Bucati(t.qty, t.pretCumparare > 0 ? t.pretCumparare : t.pretVanzare) + " · " + t212Usd(t.pretCumparare) + " → " + t212Usd(t.pretVanzare) + " · " + data(t.pornit) + " → " + data(t.inchis) + " (" + dur + ")" + (t.afaraVanzare === true ? " · vândut în afara orelor" : "")) + '</span><b class="jtRez ' + cls(t.rezultat) + '">' + L(t.rezultat) + ' <span class="tbSub">' + P(t.pct) + '</span></b></div>'
-      + '<div class="tbSub">T212 arată ' + L(t.rezultatOficial) + ' · comisioane ' + L(-(t.comisioane || 0)) + (t.partial ? ' · o parte din vânzare n-are cumpărarea în istoric' : '') + '</div>'
-      + (cfm[t.id] && cfm[t.id].nivel !== "fara-date" ? '<p class="jtCf">Radarul ar fi zis la cumpărare: <b class="' + (T212_POARTA[cfm[t.id].nivel] || ["", ""])[1] + '">' + escapeHtml((T212_POARTA[cfm[t.id].nivel] || [cfm[t.id].nivel])[0]) + '</b>' + (cfm[t.id].motive && cfm[t.id].motive.length ? ' <span class="tbSub">— ' + escapeHtml(cfm[t.id].motive.join("; ")) + '</span>' : '') + '</p>' : '')
-      + (gr.length ? '<ul class="jtGreseli">' + gr.map(function (x) { return '<li><b>' + escapeHtml(x.text) + '</b></li>'; }).join("") + '</ul>' : '')
-      + '<textarea class="jtNota" data-id="' + escapeHtml(id) + '" rows="1" placeholder="De ce am cumpărat, ce aș face altfel…">' + escapeHtml(note[id] || "") + '</textarea></div>';
-  }).join("") + '</details>';
+  // v100.359 (el, 18.11: „continuă” ⇒ ideea 2): O singură listă și pe Acțiuni, ca pe Crypto - un rând pe trade (închis, simbolul, cât, ținut, Radarul, rezultatul REAL),
+  // fișa și notița la clic; ordinea, „Cu notițe”, CSV-ul și „Arată încă” (înainte: 150 de cartele + tabelul „Toate trade-urile” din statistică, aceleași trade-uri de două ori)
+  h += '<details class="tbPl jtPl" id="jtPl-actiuni"' + (jtT212V.lista ? " open" : "") + '><summary><b>Fiecare trade</b><span class="tbSub" id="jtT212Sub">' + t212Cate(l.length, "trade", "trade-uri") + ' · rezultatul real · o vânzare = un trade</span></summary><div id="jtListaT212">' + jtT212ListaHtml() + '</div></details>';
   box.innerHTML = h;
   if (typeof scDeseneaza === "function") scDeseneaza();   // v100.220: scorul sezonului T212, sus pe filă (fila se rescrie toată)
   if (typeof jtStatRender === "function") { if (jtFiltru === "actiuni") jtStatRender("actiuni"); else if (jtFiltru === "tot") jtStatRender("tot"); }   // v100.22

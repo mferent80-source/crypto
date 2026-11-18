@@ -62,7 +62,7 @@ await test("raportDuminica: rezultatul saptamanii, greseala cea mai scumpa, o si
   const acum = Math.max(...TR.map((t) => t.inchis)) + ORA;
   const r = O.raportDuminica({ trades: TR, acum, socoteala: { miscare: { judecate: 4, corecte: 3, rata: 0.75 } }, laborator: null });
   assert.equal(r.n, 10); aprox(r.total, TR.reduce((s, t) => s + t.rezultat, 0), 1e-9);
-  assert.match(r.regula, /[Pp]oziția a mâncat grilele|trend/);
+  assert.match(r.regula, /^Regula săptămânii: Aș /); assert.ok(r.linii.some((l) => /^Ce s-a întâmplat \(boții cu fiecare, net\): /.test(l)), r.linii.join(" | "));   // v100.359: greșeala doar DOVEDITĂ dă regula (proba-v100359)
   assert.ok(r.linii.length >= 4 && r.linii.every((l) => !/NaN|undefined|null/.test(l)), r.linii.join(" | "));
   const gol = O.raportDuminica({ trades: TR, acum: acum + 30 * 24 * ORA });
   assert.equal(gol.n, 0); assert.match(gol.linii[0], /niciun bot/i);
