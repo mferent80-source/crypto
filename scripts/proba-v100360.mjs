@@ -93,7 +93,7 @@ await test("P5 raportul vechi: peste 30 de minute ⇒ „colectorul n-a mai scri
   assert.match(t, /Niciun bot pornit acum; ultimul închis: /); assert.doesNotMatch(t, /colectorul n-a mai scris/);
 });
 await test("P6 tema și rândurile: comportament în generator, în tema devreme, în tbTemaAplica + butonul; rândurile pliate au cheie, titlu, cele două deschise implicit; tbRandComuta le dă paginii", () => {
-  assert.match(citeste("scripts", "face-tema-tablou.mjs"), /"jurnaltrade", "comportament"\]/);
+  assert.match(citeste("scripts", "face-tema-tablou.mjs"), /"jurnaltrade", "comportament", "tradezilei"\]/);
   assert.match(lib("tema-devreme.js"), /"comportament"/); const A = citeste("public", "app.js");
   assert.match(A, /"coTemaBtn"/); assert.match(A, /return coRandComuta\(id,deschis\)/);
   const E = lib("comportament-ecran.js");
@@ -114,14 +114,13 @@ await test("P8 sfatul săptămânii nu pretinde dovadă: adaosul „Regula ta, n
   const P = citeste("scripts", "lib", "pagina-comportament.mjs");
   assert.match(P, /const sfatTot = \/\^Nimic urgent\/\.test\(sfat\)/); assert.match(P, /" Regula ta, nu una dovedită: pe istoria ta fiecare bot "/); assert.match(P, /sfat: sfatTot, disciplina/);
 });
-await test("V versiunile v100.360 (index ×4, sw, versiune.js, package + lanț, BUILD_INFO) + colector v101.197", () => {
-  const H = citeste("public", "index.html");
-  assert.equal((H.match(/v100\.360/g) || []).length, 4); assert.match(H, /v100\.360 · COMPORTAMENT CINSTIT/); assert.doesNotMatch(H, /v100\.359/);
-  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-360/); assert.match(citeste("functions", "_shared", "versiune.js"), /"v100\.360"/);
-  const p = JSON.parse(citeste("package.json")); assert.equal(p.version, "100.360.0"); assert.match(p.scripts.test, /npm run test:v100359 && npm run test:v100360/);
+await test("V versiunile de la v100.360 încolo (v100.361: versiunea curentă o verifică proba ei); colectorul ≥ v101.197", () => {
+  const nr = (t) => Number((String(t).match(/100[.-](\d{3})/) || [])[1]);
+  assert.ok(nr(citeste("functions", "_shared", "versiune.js")) >= 360 && nr(citeste("public", "sw.js")) >= 360 && nr(JSON.parse(citeste("BUILD_INFO.json")).badge) >= 360);
+  const p = JSON.parse(citeste("package.json")); assert.ok(nr(p.version) >= 360); assert.match(p.scripts.test, /npm run test:v100359 && npm run test:v100360/);
   assert.match(p.scripts["test:v100360"], /proba-v100360-comportament\.mjs && node scripts\/proba-v100360-trei\.mjs && node scripts\/proba-v100360\.mjs/);
-  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.match(bi.badge, /^v100\.360/); assert.ok(bi.comport360 && bi.raport359);
-  assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.197";/);
+  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.ok(bi.comport360 && bi.raport359);
+  assert.ok(Number((citeste("scripts", "colector.mjs").match(/const VERSIUNE_COLECTOR = "v101\.(\d+)";/) || [])[1]) >= 197);
 });
 console.log(`\n${teste - picate}/${teste} trec`);
 process.exit(picate ? 1 : 0);

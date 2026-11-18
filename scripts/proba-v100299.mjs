@@ -50,7 +50,8 @@ await test("1a. curba F(h): 24 de valori crescătoare, ultima 1; „format” = 
   assert.equal(d3.oraUtc, 3); assert.equal(d3.format, TZ.CURBA_F[2]); assert.ok(Math.abs(d3.ramane - (1 - TZ.CURBA_F[2])) < 1e-12);
   const d0 = TZ.azi(bare(r12, 0, 100), T0 + 12 * ZI + 10 * 60000);   // 00:10 UTC: nicio oră închisă
   assert.equal(d0.format, 0); assert.equal(d0.ramane, 1);
-  assert.ok(Math.abs(d3.ramaneAsteptat - d3.asteptat.med * d3.ramane) < 1e-12);
+  // v100.361 (auditul de cod, 🔴 1): „cât se mai adaugă” = mediana − ce s-a făcut deja (nu mișcarea întreagă × ce rămâne din curbă)
+  assert.ok(Math.abs(d3.adaos - Math.max(0, d3.asteptat.med - d3.panaAcum)) < 1e-12); assert.ok(d3.panaAcum + d3.adaos <= Math.max(d3.asteptat.med, d3.panaAcum) + 1e-12);
 });
 
 await test("1b. weekendul: sâmbătă / duminică UTC mișcarea așteptată ×0,85 (p25 / med / p75), în zilele lucrătoare ×1,06 (CALIB e pe toate zilele); gridul merge pe cifra înmulțită", () => {
@@ -68,9 +69,10 @@ await test("2. ecranul: rândul „format până acum”, nota de weekend doar s
   const joi = TZ.azi(bare(r12, 3, 100), T0 + 12 * ZI + 3 * ORA), sam = TZ.azi(bare(r12, 3, 100, T0 + 2 * ZI), T0 + 14 * ZI + 3 * ORA);
   const st = (d) => ({ monede: [{ simbol: "BTC", pionex: "BTC_USDT_PERP", fel: "piata", d }], simboluri: [1], la: Date.now(), zi: 0, inLucru: false, eroare: null });
   const hj = ctx.tzHtml(st(joi), Date.now()), hs = ctx.tzHtml(st(sam), Date.now());
-  assert.match(hj, /Din mișcarea zilei, până la ora asta/); assert.match(hj, /mai rămân/); assert.doesNotMatch(hj, /weekend/i);
-  assert.match(hs, /weekend/i); assert.match(hs, /×0,85 inclus/);
-  assert.match(hj, /15–18/); assert.match(hj, /prospectiv/i); assert.match(hj, /2027/);
+  // v100.361: „se mai adaugă” (nu „mai rămân … din preț”); ×0,85 spus față de ce; ora agitată 16–20 ora României (auditul statistic: „15–18” era decalat iarna)
+  assert.match(hj, /Din mișcarea zilei, până la ora asta/); assert.match(hj, /se mai adaugă ~\d+,\d %/); assert.doesNotMatch(hj, /mai rămân/); assert.doesNotMatch(hj, /weekend/i);
+  assert.match(hs, /weekend/i); assert.match(hs, /×0,85 față de media tuturor zilelor, inclus/);
+  assert.match(hj, /16–20 ora României/); assert.doesNotMatch(hj, /15–18/); assert.match(hj, /prospectiv/i); assert.match(hj, /2027/);
   assert.doesNotMatch(hj, /\d\.\d+ %/, "procentele cu virgulă");
 });
 

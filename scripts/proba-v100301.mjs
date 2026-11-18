@@ -115,7 +115,7 @@ await test("5. rândul din Tablou: stopul (filtru) la X % și NU TRECE sub 2× c
   assert.match(T, /if \(k && k\.result === false && k\.retryAfter != null\) \{[^\n]*tzStare\.eroare = "Pionex a refuzat/, "tz: refuzul citit din răspuns");
   // în vm: refuz la prima monedă ⇒ o singură cerere de lumânări, mesajul la vedere
   const c3 = { console, Intl, Date, Math, Number, String, Object, Array, isFinite, JSON, Promise, setTimeout, document: { getElementById: () => null } }; let n = 0;
-  c3.getJSON = async (u) => { if (/clasament/.test(u)) return { clasament: { monede: [{ simbol: "AAA_USDT_PERP", volum: 2 }] } }; if (/bot-orders/.test(u)) return { bots: [] }; n++; return { result: false, error: "rate", retryAfter: 9 }; };
+  c3.getJSON = async (u) => { if (/probaA/.test(u)) return { probaA: null };   /* v100.361: stadiul probei A, o cerere a paginii, nu de lumânări */ if (/clasament/.test(u)) return { clasament: { monede: [{ simbol: "AAA_USDT_PERP", volum: 2 }] } }; if (/bot-orders/.test(u)) return { bots: [] }; n++; return { result: false, error: "rate", retryAfter: 9 }; };
   vm.createContext(c3); for (const f of ["text-ro.js", "grid-calcul.js", "trade-zilei.js", "trade-zilei-ecran.js"]) vm.runInContext(citeste("public", "lib", f), c3);
   await vm.runInContext("tzPorneste(true)", c3);
   assert.equal(n, 1); assert.match(c3.tzStare.eroare, /refuzat/);

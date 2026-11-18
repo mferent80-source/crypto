@@ -263,8 +263,10 @@ export function liniiReguliNoi(noi, istoria) {
 export function searaZilei(inreg, acum) {
   const z = ziRo(acum), l = (Array.isArray(inreg) ? inreg : []).filter((x) => x && nr(x.inchis) !== null && x.inchis <= acum && ziRo(x.inchis) === z);
   if (!l.length) return null;
-  const are = (x) => Array.isArray(x.rele) && x.rele.length > 0, sum = (a) => r2(a.reduce((s, x) => s + (nr(x.net) || 0), 0)), rele = l.filter(are), bune = l.filter((x) => !are(x)), pe = {};
-  for (const x of rele) for (const c of x.rele) { const o = pe[c] || (pe[c] = { n: 0, net: 0 }); o.n++; o.net = r2(o.net + (nr(x.net) || 0)); }
+  // v100.361 (auditul Comportament): închiderea în minute e DESCRIERE, nu regulă încălcată (pe istoria lui, închiși sub 15 min: −1,9 pe bot față de −3,5) ⇒ seara nu-l mai numără „cu reguli încălcate”
+  const RL = (x) => (Array.isArray(x.rele) ? x.rele : []).filter((c) => c !== "minute");
+  const are = (x) => RL(x).length > 0, sum = (a) => r2(a.reduce((s, x) => s + (nr(x.net) || 0), 0)), rele = l.filter(are), bune = l.filter((x) => !are(x)), pe = {};
+  for (const x of rele) for (const c of RL(x)) { const o = pe[c] || (pe[c] = { n: 0, net: 0 }); o.n++; o.net = r2(o.net + (nr(x.net) || 0)); }
   const top = ORDINE_REGULI.filter((c) => pe[c]).sort((a, b) => pe[b].n - pe[a].n || pe[a].net - pe[b].net)[0] || null;
   return { zi: z, n: l.length, bune: { n: bune.length, net: sum(bune) }, rele: { n: rele.length, net: sum(rele) }, top, pe };
 }

@@ -55,7 +55,8 @@ function adevarBanda(ore) {
         const i0 = (z - m.t0) / ORA, i = i0 + h, d = TZ.azi(b.slice(Math.max(0, i - 600), i), z + h * ORA + 300000), g = d && !d.eroare ? TZ.grid(d) : null; if (!g) continue;
         let mx = -Infinity, mn = Infinity; for (let q = i; q <= i0 + 23; q++) { mx = Math.max(mx, b[q].h); mn = Math.min(mn, b[q].l); }
         n++; if (mx <= g.sus && mn >= g.jos) cup++;
-        if (spus === null) { const f = ctx.tzCartela({ simbol: m.s, pionex: m.s, fel: "piata", d }).match(/cuprinde [^<·]*?în (\d+) % din zile/); spus = f ? Number(f[1]) / 100 : NaN; }
+        // v100.361: cartela spune „cam în șapte zile din zece” (rotund, nu o cifră pe oră - auditul statistic) ⇒ 70 %
+        if (spus === null) { const f = ctx.tzCartela({ simbol: m.s, pionex: m.s, fel: "piata", d }).match(/cuprinde [^<·]*?(?:în (\d+) % din zile|cam în șapte zile din zece)/); spus = f ? (f[1] ? Number(f[1]) / 100 : 0.7) : NaN; }
       }
     }
     rez.push({ h, n, masurat: cup / n, spus });
@@ -87,9 +88,10 @@ await test("2a. monedele paginii: boții (simbolul lor), BTC/ETH/SOL, top 20 dup
 await test("2b. cartela: gridul / stopul / butonul „Grid: ce setez?”; rezumatul zilei; tzLaGrid în lista albă și cheamă gridClasamentAlege", () => {
   const h = ctx.tzHtml({ monede: [{ simbol: "DOGE", pionex: "DOGE_USDT", fel: "bot", d: D }, { simbol: "BTC", pionex: "BTC_USDT_PERP", fel: "piata", d: D }], simboluri: [1, 2], la: Date.now(), zi: 0, inLucru: false, eroare: null }, Date.now());
   assert.match(h, /Grid azi, din mișcare/); assert.match(h, /Stop, nu mai aproape de/); assert.match(h, /data-action-click="tzLaGrid\('DOGE_USDT'\)"/); assert.match(h, /botul tău/); assert.match(h, /tzCardBot/);
-  assert.match(h, /Azi: 2 monede din 2 se mișcă probabil mai mult ca ieri|Azi: \d+ monede? din 2/); assert.match(h, /mișcarea așteptată, în medie \d+,\d %/);
+  // v100.361: rezumatul e în fraza de sus, pe mediană (o monedă agitată trăgea media în sus)
+  assert.match(h, /Pe piață, din 2 monede: \d+ se mișcă probabil mai mult ca ieri/); assert.match(h, /mișcarea așteptată, la mijloc \(mediana\), \d+,\d %/);
   // v100.306 (I-825): garda fixa fraza („zece grile … cuprinde ziua în trei din patru cazuri”), falsă - acum garda e pe adevărul ei (adevarBanda)
-  assert.doesNotMatch(h, /\d\.\d+ %/); assert.match(h, /cinci grile pe parte · cuprinde restul zilei UTC în \d+ % din zile/, "numerele mici din textul fix, în litere (garda v100.75)");
+  assert.doesNotMatch(h, /\d\.\d+ %/); assert.match(h, /cinci grile pe parte · cuprinde restul zilei UTC cam în șapte zile din zece/, "numerele mici din textul fix, în litere (garda v100.75)");
   adevarBanda([0, 7, 12, 18]);
   assert.match(citeste("public", "app.js"), /var ACTIUNI_PERMISE=new Set\("[^"]*\btzLaGrid\b/, "tzLaGrid lipsește din lista albă");
   let ales = null; ctx.navTo = () => {}; ctx.gridClasamentAlege = (s) => { ales = s; };
@@ -137,8 +139,9 @@ await test("5. versiunile v100.298 peste tot, feature-ul în BUILD_INFO, CSS-ul 
   assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-(29[89]|[3-9]\d\d)"/); assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.(29[89]|[3-9]\d\d)"/);
   const B = JSON.parse(citeste("BUILD_INFO.json")); assert.match(B.version, V); assert.match(B.badge, V); assert.ok("tradeZileiDimineata298" in B.features);
   const pk = JSON.parse(citeste("package.json")); assert.match(pk.version, /^100\.(29[89]|[3-9]\d\d)\.0$/); assert.equal(pk.scripts["test:v100298"], "node scripts/proba-v100298.mjs"); assert.match(pk.scripts.test, /npm run test:v100297 && npm run test:v100298/);
-  const CSS = citeste("public", "app.css"); assert.match(CSS, /#tradezilei \.tzGrid\{/); assert.match(CSS, /#tradezilei \.tzEticheta\{/); assert.match(CSS, /#tradezilei \.tzRezumat\{/);
-  assert.ok(CSS.indexOf("#tradezilei .tzRezumat{") < CSS.indexOf("/* v100.258: pânda")); assert.equal(panda.pandaInainteaCozii(CSS), "");
+  // v100.361: gridul e rândul tzGridR al cartelei compacte, rezumatul e în fraza de sus (tzFrazaBox)
+  const CSS = citeste("public", "app.css"); assert.match(CSS, /#tradezilei \.tzGridR\{/); assert.match(CSS, /#tradezilei \.tzEticheta\{/); assert.match(CSS, /#tradezilei \.tzFrazaBox \.grFraza\{/);
+  assert.ok(CSS.indexOf("#tradezilei .tzGridR{") < CSS.indexOf("/* v100.258: pânda")); assert.equal(panda.pandaInainteaCozii(CSS), "");
 });
 
 console.log(`\n${teste - picate} / ${teste} teste trecute${picate ? " — PICATE: " + picate : ""}\n`);

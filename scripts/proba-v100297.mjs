@@ -102,7 +102,7 @@ await test("3. ecranul în vm: cartela cu cifrele, trade-ul cinstit, stările, l
   const d = TZ.azi(bare(r, 3, 100), T0 + 12 * ZI + 3 * ORA);
   const h = ctx.tzHtml({ monede: [{ simbol: "BTC", d }, { simbol: "XYZ", eroare: "nu am putut citi lumânările (x)" }], la: Date.now(), inLucru: false, eroare: null }, Date.now());
   assert.match(h, /Azi se mișcă mai mult ca ieri/); assert.match(h, /Cât se mișcă azi, de obicei/); assert.match(h, /Maximul de ieri/); assert.match(h, /Minimul de ieri/);
-  assert.match(h, /Niciun trade cu avantaj dovedit/); assert.match(h, /nu am putut citi lumânările/);
+  assert.match(h, /niciun trade cu avantaj dovedit/i); assert.match(h, /au pierdut după cost pe 2 ani/, "v100.361: motivul spus o dată, în fraza de sus"); assert.match(h, /nu am putut citi lumânările/);
   assert.match(h, /De ce nu-ți propun un trade/); assert.match(h, /NEDOVEDIT/);
   assert.doesNotMatch(h, /\d\.\d+ %/, "procentele cu virgulă, nu cu punct");
   assert.match(h, /3 ore închise, 21 de ore rămase/, "numerele cu „de” de la 20 și singular la 1 (TextRo.cate)");
@@ -134,7 +134,7 @@ await test("4. legarea în aplicație: meniu, secțiune, „mai multe”, navTo,
 });
 
 await test("4b. revizia 03.11: prețul sub 1 USDT fără punct de mii în zecimale; monedele boților cu simbolul lor Pionex; fără „atins” la 00:xx fără bare; range zero ⇒ eroare cinstită", () => {
-  assert.equal(ctx.tzPret(0.1234), "0,1234"); assert.equal(ctx.tzPret(0.00001234), "0,0000123");   /* v100.306 (I-825): sub 0,01, trei cifre semnificative */ assert.equal(ctx.tzPret(77081.9), "77.081,90"); assert.equal(ctx.tzPret(2.5), "2,50");
+  assert.equal(ctx.tzPret(0.1234), "0,1234"); assert.equal(ctx.tzPret(0.00001234), "0,0000123");   /* v100.306 (I-825): sub 0,01, trei cifre semnificative */ assert.equal(ctx.tzPret(77081.9), "77.081,90"); assert.equal(ctx.tzPret(2.5), "2,500");   /* v100.361: 1–10 USDT cu 3 zecimale */ assert.equal(ctx.tzPret(25), "25,00");
   ctx.tbStare = { boti: [{ activ: true, baza: "DOGE", quote: "USDT", simbolPionex: "DOGE_USDT" }, { activ: true, baza: "BTC.PERP" }, { activ: false, baza: "XRP.PERP" }] };
   ctx.TabloBot = { simboluri: (b, q, r) => r ? { pionex: r, moneda: r.split("_")[0] } : { pionex: String(b).replace(/\.PERP$/, "") + "_" + (q || "USDT") + (/\.PERP$/.test(b) ? "_PERP" : ""), moneda: String(b).replace(/\.PERP$/, "") } };
   const l = ctx.tzSimboluri(ctx.tbStare.boti, null); assert.equal(JSON.stringify(l.map((x) => x.simbol)), JSON.stringify(["DOGE", "BTC", "ETH", "SOL"])); assert.equal(l[0].pionex, "DOGE_USDT");   /* v100.298: boții primii, lista vine ca argument */

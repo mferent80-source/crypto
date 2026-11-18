@@ -126,7 +126,7 @@ await test("🔑 Salt: „$25,17” / „$1.234,56” / „$0,0123” se citesc 
     const h = ctx.tzCartela({ simbol: "ETH", pionex: "ETH_USDT_PERP", fel: "piata", d });
     assert.match(h, /nu vede ziua de azi/); assert.match(h, /până acum 1,5 % față de 2,0 % ieri/);
     const d0 = TZ.azi(bare(r12, 0, 100, 0.015), T0 + 12 * ZIx + 300000);
-    assert.match(ctx.tzCartela({ simbol: "ETH", pionex: "ETH_USDT_PERP", fel: "piata", d: d0 }), /calibrat: din 100 de zile ca azi, \d+ au ieșit așa/, "la 00:xx UTC (nicio bară de azi) rămâne calibrarea");
+    assert.match(ctx.tzCartela({ simbol: "ETH", pionex: "ETH_USDT_PERP", fel: "piata", d: d0 }), /din ieri și alaltăieri: din zilele după un ieri ca ăsta, \d+ din 100 au ieșit așa/, "la 00:xx UTC (nicio bară de azi) rămâne calibrarea (v100.361: „N din 100”)");
   });
   // pozele de pe VPS, 06.11 00:20: BTC „7 %” mare, deși la prețul de acum ziua e deja 7,1 % față de 6,8 % ieri ⇒ cifra mare spune ce este.
   // v100.306 a pus eticheta „prognoza de la 00:00 UTC” pe cifra mare; v100.307 (I-841) o înlocuiește cu P3 condiționat de ziua făcută (măsurat
@@ -137,8 +137,9 @@ await test("🔑 Salt: „$25,17” / „$1.234,56” / „$0,0123” se citesc 
     const ton = d.p3 >= 0.7 ? " tzBun" : d.p3 <= 0.3 ? " tzMut" : "";
     assert.ok(h.includes('Azi se mișcă mai mult ca ieri</span><b class="tzCifra' + ton + '">' + Math.round(d.p3 * 100) + " %</b>"), "cifra mare = P3 condiționat");
     assert.ok(h.includes('Prognoza de la 00:00 UTC</span><b class="tzCifra tzMut">' + Math.round(d.p3Model * 100) + " %</b>"), "prognoza modelului pe rândul ei");
-    const r = ctx.tzRezumat([{ simbol: "BTC", fel: "piata", d }]);
-    assert.match(r, />Azi: /); assert.match(r, /\(cu ziua de până acum\)/); assert.doesNotMatch(r, /prognoza de la 00:00 UTC; ziua e în curs/);
+    // v100.361: rezumatul e în fraza de sus și numără cu cifra mare (P3 cu ziua de până acum)
+    const r = ctx.tzHtml({ monede: [{ simbol: "BTC", fel: "piata", d }], simboluri: [1], la: Date.now(), zi: 0, inLucru: false, eroare: null, deschise: {} }, Date.now());
+    assert.match(r, new RegExp("Pe piață, din 1 monedă: " + (d.p3 >= 0.6 ? 1 : 0) + " se mișcă probabil mai mult ca ieri")); assert.doesNotMatch(r, /prognoza de la 00:00 UTC; ziua e în curs/);
     const d0 = TZ.azi(bare(r12, 0, 100, 0.015), T0 + 12 * ZIx + 300000);
     assert.doesNotMatch(ctx.tzCartela({ simbol: "BTC", pionex: "BTC_USDT_PERP", fel: "piata", d: d0 }), /prognoza de la 00:00 UTC/i, "la 00:xx UTC e chiar prognoza zilei - fără etichetă");
   });

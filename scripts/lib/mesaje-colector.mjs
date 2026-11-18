@@ -356,7 +356,7 @@ const SFAT_SEARA = {
   boti: (prag) => "Aș număra boții mâine înainte să pornesc: după " + ordinal(prag) + ", gata ziua.",
   frana: () => "Aș porni mâine doar cu frâna liberă; dacă pragul pe 7 zile nu mai e al meu, îl schimb în Poartă.",
   banda: () => "Aș hotărî mâine la timp: când prețul iese din grilă, îl închid sau îi mut banda.",
-  minute: () => "Aș porni mâine gridul doar când îl las să lucreze, nu ca să-l închid în minute.",
+  minute: () => "Aș lăsa închiderile în minute: pe istoria ta n-au dat mai prost decât ceilalți boți.",   // v100.361: nu e greșeală dovedită (−1,9 față de −3,5 pe bot)
   lichidare: () => "Aș pune mâine stopul înaintea lichidării, chiar de la pornire.",
 };
 export const sfatSeara = (top, prag) => (SFAT_SEARA[top] ? SFAT_SEARA[top](prag) : null);   // v100.286: același sfat și în pagina Comportament

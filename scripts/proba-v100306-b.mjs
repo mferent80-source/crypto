@@ -48,7 +48,7 @@ await test("1a. P3: până acum (6 %) ≥ ieri (2 %) ⇒ P3 = 1, „deja”, mi�
   assert.equal(d.dejaMaiMult, true); assert.equal(d.p3, 1); assert.ok(d.p3Model > 0 && d.p3Model < 1, "P3-ul modelului rămâne alături: " + d.p3Model);
   for (const q of ["p25", "med", "p75"]) { assert.ok(d.asteptat[q] >= d.panaAcum - 1e-12, q); assert.ok(Math.abs(d.asteptat[q] - Math.max(d.asteptatModel[q], d.panaAcum)) < 1e-12, q); }
   assert.ok(d.asteptatModel.med < d.panaAcum, "construcția: modelul aștepta mai puțin decât s-a făcut deja");
-  assert.ok(Math.abs(d.ramaneAsteptat - d.asteptat.med * d.ramane) < 1e-12);
+  assert.ok(Math.abs(d.adaos - Math.max(0, d.asteptat.med - d.panaAcum)) < 1e-12);   // v100.361: „cât se mai adaugă” = mediana − ce s-a făcut
   const h = ctx.tzCartela({ simbol: "DOGE", pionex: "DOGE_USDT_PERP", fel: "piata", d });
   assert.match(h, /Azi se mișcă mai mult ca ieri<\/span><b class="tzCifra[^"]*">100 %<\/b><span class="tzMut tzMic">deja mai mult ca ieri: 6,0 % până acum, față de 2,0 % ieri/);
   assert.doesNotMatch(h, /calibrat: din 100 de zile ca azi/, "cu ziua deja făcută, calibrarea modelului nu mai e răspunsul");
@@ -58,7 +58,7 @@ await test("1b. P3: până acum sub ieri ⇒ P3 condiționat de ziua făcută (v
   const d = TZ.azi(bare(r12, 5, 100, 0.01), T0 + 12 * ZI + 5 * ORA + 300000);
   assert.equal(d.dejaMaiMult, false); assert.equal(d.p3, d.p3CuZiua); assert.ok(d.p3Model > 0 && d.p3Model < 1 && d.p3 !== d.p3Model);
   for (const q of ["p25", "med", "p75"]) assert.ok(Math.abs(d.asteptat[q] - Math.max(d.asteptatModel[q], d.panaAcum)) < 1e-12, q);
-  assert.match(ctx.tzCartela({ simbol: "DOGE", pionex: "DOGE_USDT_PERP", fel: "piata", d }), /nu vede ziua de azi: din 100 de zile după un ieri ca ăsta, \d+ au ieșit așa/);   // v100.307 (I-841): prognoza modelului (ieri și alaltăieri) rămâne pe rândul ei
+  assert.match(ctx.tzCartela({ simbol: "DOGE", pionex: "DOGE_USDT_PERP", fel: "piata", d }), /nu vede ziua de azi: din zilele după un ieri ca ăsta, \d+ din 100 au ieșit așa/);   // v100.307 (I-841): prognoza modelului (ieri și alaltăieri) rămâne pe rândul ei
   // tura-proba-a.mjs: TradeZilei.azi(bare, începutul zilei) - nicio bară de azi ⇒ nimic din ziua de azi, P3 = modelul
   const d0 = TZ.azi(bare(r12, 0, 100), T0 + 12 * ZI);
   assert.equal(d0.bareAzi, 0); assert.equal(d0.dejaMaiMult, false); assert.equal(d0.p3, d0.p3Model); assert.equal(d0.panaAcum, 0);
@@ -70,6 +70,7 @@ const FX = JSON.parse(citeste("scripts", "proba-date", "tz-bare-1h.json"));
 function frecventaDinFraza(html) {
   const m = html.match(/cuprinde [^<·]*?în (\d+(?:,\d)?) %/); if (m) return Number(m[1].replace(",", ".")) / 100;
   if (/cuprinde [^<·]*trei din patru/.test(html)) return 0.75;   // fraza veche
+  if (/cuprinde [^<·]*cam în șapte zile din zece/.test(html)) return 0.7;   // v100.361: rotund (auditul statistic: cifra pe oră promitea o precizie care nu există)
   return NaN;
 }
 const masurat = Array.from({ length: 24 }, () => ({ n: 0, in: 0 })), spus = Array(24).fill(null);
@@ -107,7 +108,7 @@ await test("2a. banda pe adevăr: pe fiecare oră UTC, cât de des stă restul z
 await test("2b. pasul = lățimea / 10 ⇒ „cinci grile pe parte” (nu „zece”); stopul niciodată în interiorul benzii; textul spune „restul zilei”", () => {
   assert.equal(pasuri, 0, "pasul ≠ lățimea / 10 în " + pasuri + " rânduri"); assert.equal(stopInauntru, 0, "stopul în interiorul benzii în " + stopInauntru + " din " + randuri + " rânduri");
   const d = TZ.azi(bare(r12, 7, 100), T0 + 12 * ZI + 7 * ORA + 300000), h = ctx.tzCartela({ simbol: "DOGE", pionex: "DOGE_USDT_PERP", fel: "piata", d });
-  assert.match(h, /pas ~\d+,\d\d % la cinci grile pe parte/); assert.doesNotMatch(h, /zece grile/); assert.match(h, /cuprinde restul zilei UTC în \d+ % din zile/);
+  assert.match(h, /pas ~\d+,\d\d % la cinci grile pe parte/); assert.doesNotMatch(h, /zece grile/); assert.match(h, /cuprinde restul zilei UTC cam în șapte zile din zece/);
   assert.doesNotMatch(h, /\d\.\d+ %/);
   const g = TZ.grid(d); assert.ok(g.jos < d.pret && g.sus > d.pret && Math.abs(g.sus - d.pret - (d.pret - g.jos)) < 1e-9, "banda e centrată pe prețul de acum");
 });

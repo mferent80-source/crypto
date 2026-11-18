@@ -80,6 +80,7 @@ var TradeZilei = (function () {
   var BLOC_P3Z = [[1, 4], [5, 8], [9, 12], [13, 16], [17, 20], [21, 23]];
   var COEF_P3Z = [[-0.0036, 0.6241, 0.3867], [-0.0117, 0.6093, 0.5285], [-0.0322, 0.5589, 0.612], [-0.0594, 0.4893, 0.7181], [-0.1475, 0.5003, 0.8007], [-0.0244, 0.5085, 0.9607]];   // pe bloc: a, b (logit P3 model), c (logit P3c)
   var LIM_P3Z = 0.005;
+  var ORA_G = 15;   // v100.361: de la 15 UTC banda „cât se mișcă azi” vine din ziua făcută (vezi azi())
   // „din 100 de zile ca azi la ora asta, N au ieșit așa”: frecvența MĂSURATĂ pe zilele NEVĂZUTE (de la 25.08), pe (blocul de ore, zecimea de
   // P3 nou); null = celula are sub 200 de zile-monedă ⇒ se spune zecimea pe toate orele (IESIT_P3Z_TOATE) și textul o spune
   var IESIT_P3Z = [
@@ -190,12 +191,23 @@ var TradeZilei = (function () {
     var oreZi = azi.nb ? Math.min(23, Math.floor((azi.bare[azi.bare.length - 1].t % ZI) / ORA) + 1) : 0;
     var p3Ziua = null, p3Cond = null;
     if (azi.nb > 0 && !deja) { p3Ziua = supravietuireG(oreZi, panaAcum > 0 ? r1 / panaAcum : Infinity); p3Cond = combinaP3Z(oreZi, p3, p3Ziua); if (!isFinite(p3Cond)) { p3Ziua = null; p3Cond = null; } }
+    // v100.361 (auditul statistic 18.11, 🔴 2): banda „de obicei” = max(model, până acum) prinde ~50 % din zile până la 14 UTC (control
+    // 01.11.2025–09.05.2026, 190 de zile, 21 de perechi Binance; codul paginii rulat pe fiecare oră), dar de la 15 UTC e prea SUS: 37–50 % din
+    // zile ies sub ea, în bandă 42–48 % (control) și 33–44 % (zile noi 01–17.11, 17 zile), seara 34 %. Banda din ziua făcută (întinderea de
+    // până acum × cuantilele lui G de la CUANT_G) de la 15 UTC: în bandă 42–56 %, sub ea 17–27 % (control); 37–50 % în bandă pe zilele noi.
+    // ÎNCERCĂRILE (toate pe control, spuse aici): (1) G de la ora 1 - prea sus la prânz (doar 13–15 % sub ea); (2) G de la 20 UTC - la 15–19
+    // rămânea banda veche, dezechilibrată; (3) ALEASĂ: G de la ORA_G = 15 UTC (în bandă și echilibrul sub / peste), zilele noi o susțin.
+    // Gridul rămâne pe banda veche (asteptatGrid), pe care a fost măsurat BANDA_K - neschimbat, verificat 0 diferențe pe 76.546 de stări.
+    var bandaG = azi.nb > 0 && !deja && panaAcum > 0 && oreZi >= ORA_G;
+    var asteptatZi = bandaG ? (function () { var q = CUANT_G[Math.min(23, oreZi) - 1]; return { p25: panaAcum * q[6], med: panaAcum * q[11], p75: panaAcum * q[16] }; })() : asteptat;
     return {
       ziAzi: ziAzi, pret: c, pdh: ieri.hi, pdl: ieri.lo, pdc: ieri.cl, r1: r1, r2: r2, media10: media10, comp: comp, p3: deja ? 1 : p3Cond !== null ? p3Cond : p3, p3Model: p3, dejaMaiMult: deja, maiMultCaIeri: cls.maiMult,
       p3Ziua: p3Ziua, p3CuZiua: p3Cond, cuZiua: p3Cond !== null, oreZi: oreZi, iesitCuZiua: p3Cond !== null ? iesitP3Z(oreZi, p3Cond) : null, iesitToateOrele: p3Cond !== null && iesitPeToateOrele(oreZi, p3Cond),
-      asteptat: asteptat, asteptatModel: model, panaAcum: panaAcum, bareAzi: azi.nb, bareRamase: k, sigma: sig, trend: trend,
-      p1Sus: p1(ieri.hi, true), p1Jos: p1(ieri.lo, false), ziIncompleta: inchise.length < 20,
-      oraUtc: oraUtc, ziSapt: ziSapt, weekend: weekend, factorZi: factorZi, format: format, ramane: ramane, ramaneAsteptat: asteptat.med * ramane
+      asteptat: asteptatZi, asteptatGrid: asteptat, asteptatModel: model, bandaDinZi: bandaG, panaAcum: panaAcum, bareAzi: azi.nb, bareRamase: k, sigma: sig, trend: trend,
+      p1Sus: p1(ieri.hi, true), p1Jos: p1(ieri.lo, false), ziIncompleta: inchise.length < 20, aziHi: azi.nb ? azi.hi : null, aziLo: azi.nb ? azi.lo : null,
+      // v100.361 (🔴 1, auditul de cod): „mai rămân ≈ x % din preț” era mișcarea întreagă × ce rămâne din curbă, fără să scadă ce s-a făcut
+      // (EVAA: 21,9 % făcut + 9,3 % „rămas” > 27,6 % așteptat). Acum: cât se mai adaugă de obicei la întinderea de până acum = mediana − până acum.
+      oraUtc: oraUtc, ziSapt: ziSapt, weekend: weekend, factorZi: factorZi, format: format, ramane: ramane, adaos: Math.max(0, asteptatZi.med - panaAcum)
     };
   }
 
@@ -215,8 +227,9 @@ var TradeZilei = (function () {
   var BANDA_ACOPERIRE = [0.755, 0.754, 0.75, 0.752, 0.739, 0.75, 0.735, 0.731, 0.739, 0.728, 0.729, 0.715, 0.716, 0.731, 0.725, 0.747, 0.763, 0.778, 0.767, 0.786, 0.777, 0.792, 0.774, 0.773];
   function grid(d) {
     if (!d || d.eroare || !d.asteptat) return null;
-    var h = Math.min(23, Math.max(0, Math.floor(Number(d.oraUtc) || 0))), med = d.asteptat.med, jum = BANDA_K[h] * med, lat = 2 * jum;
-    return { jumatate: jum, latime: lat, pas: lat / 10, grilePeParte: 5, stop: Math.max(med, jum), stopLaMargine: jum >= med, acoperire: BANDA_ACOPERIRE[h], oraUtc: h,
+    // v100.361: banda gridului rămâne pe scara pe care a fost măsurat BANDA_K (asteptatGrid = max(model, până acum)); stopul, pe „cât se mișcă azi”
+    var h = Math.min(23, Math.max(0, Math.floor(Number(d.oraUtc) || 0))), med = (d.asteptatGrid || d.asteptat).med, jum = BANDA_K[h] * med, lat = 2 * jum, mz = d.asteptat.med;
+    return { jumatate: jum, latime: lat, pas: lat / 10, grilePeParte: 5, stop: Math.max(mz, jum), stopLaMargine: jum >= mz, acoperire: BANDA_ACOPERIRE[h], oraUtc: h,
       jos: d.pret * (1 - jum), sus: d.pret * (1 + jum) };
   }
 
@@ -235,7 +248,7 @@ var TradeZilei = (function () {
   }
 
   return { azi: azi, zile: zile, trade: trade, grid: grid, clasa: clasa, CALIB: CALIB, PROBA: PROBA, COEF_P3: COEF_P3, COEF_P1: COEF_P1, sigm: sigm, CURBA_F: CURBA_F, FACTOR_WEEKEND: FACTOR_WEEKEND, FACTOR_LUCRATOARE: FACTOR_LUCRATOARE,
-    BANDA_K: BANDA_K, BANDA_ACOPERIRE: BANDA_ACOPERIRE,
+    BANDA_K: BANDA_K, BANDA_ACOPERIRE: BANDA_ACOPERIRE, ORA_G: ORA_G,
     NIV_G: NIV_G, CUANT_G: CUANT_G, BLOC_P3Z: BLOC_P3Z, COEF_P3Z: COEF_P3Z, IESIT_P3Z: IESIT_P3Z, IESIT_P3Z_TOATE: IESIT_P3Z_TOATE, supravietuireG: supravietuireG, combinaP3Z: combinaP3Z, iesitP3Z: iesitP3Z };
 })();
 if (typeof module !== "undefined" && module.exports) module.exports = TradeZilei;

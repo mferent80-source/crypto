@@ -60,14 +60,14 @@ await test("notițele: {id:{t,m}} în jtNote2, mutate o dată din jtNote (m=1, p
 await test("așezarea: tema zi / noapte (RADACINI, tbTemaAplica, tema devreme, buton), fraza + „De unde știu”, rândurile pliate, antetul vechi ascuns", async () => {
   const { RADACINI } = await import(pathToFileURL(path.join(RAD, "scripts", "face-tema-tablou.mjs")).href);
   assert.ok(RADACINI.includes("jurnaltrade"));
-  assert.match(A, /"montecarlo","jurnaltrade","comportament"\]\.forEach\(function\(id\)\{var p=document\.getElementById\(id\);if\(p\)p\.classList\.toggle\("tbZi",zi\)\}\)/); assert.match(A, /"mcTemaBtn","jtTemaBtn","coTemaBtn"\]/);
-  assert.match(citeste("public", "lib", "tema-devreme.js"), /"montecarlo", "jurnaltrade", "comportament"\]/);
+  assert.match(A, /"montecarlo","jurnaltrade","comportament","tradezilei"\]\.forEach\(function\(id\)\{var p=document\.getElementById\(id\);if\(p\)p\.classList\.toggle\("tbZi",zi\)\}\)/); assert.match(A, /"mcTemaBtn","jtTemaBtn","coTemaBtn","tzTemaBtn"\]/);
+  assert.match(citeste("public", "lib", "tema-devreme.js"), /"montecarlo", "jurnaltrade", "comportament", "tradezilei"\]/);
   assert.match(H, /id="jtTemaBtn"/); assert.match(H, /id="jtFrazaBox"/); assert.match(H, /<script src="\/lib\/scor-sezon\.js"><\/script><script src="\/lib\/jurnal-dovezi\.js"><\/script><script src="\/lib\/jurnal-grafice\.js"><\/script>/);
   assert.match(citeste("public", "sw.js"), /"\/lib\/jurnal-dovezi\.js","\/lib\/jurnal-grafice\.js"/);
   for (const id of ["jtScor", "jtGraficeCard", "jtStatCrypto", "jtCireasaCard", "jtRapoarteCard", "jtReguliCard", "jtGreseliCard"]) { assert.match(A, new RegExp(id + ':"'), "JT_RANDURI " + id); assert.equal(H.split('id="' + id + '"').length, 2, "un singur " + id); }
   assert.match(A, /if\(typeof JT_RANDURI!=="undefined"&&Object\.prototype\.hasOwnProperty\.call\(JT_RANDURI,id\)\)return jtRandComuta\(id,deschis\);/);
   assert.match(CSS, /html\.pzDemo #jurnaltrade \[data-rand="pliat"\]>\*\{display:none!important\}/);
-  assert.match(CSS, /html:has\(:is\(#tabloubot,#t212,#dash,#rangefilter,#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade,#comportament\)\.on\.tbZi\) body\{background:#F2F4F7!important\}/);
+  assert.match(CSS, /html:has\(:is\(#tabloubot,#t212,#dash,#rangefilter,#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade,#comportament,#tradezilei\)\.on\.tbZi\) body\{background:#F2F4F7!important\}/);
   assert.match(citeste("public", "lib", "asezare-paznic.js"), /function pagJurnal\(\) \{ antet\("pzV-jt", null, null\); \}/);
   for (const a of ["jtListaOrdine", "jtRaportAlege", "jtRaportFel", "jtReincearca"]) assert.match(A, new RegExp(" " + a + " "), "lista albă: " + a);
 });

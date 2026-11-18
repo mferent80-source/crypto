@@ -122,8 +122,8 @@ await test("3. 🔑 zilele NEVĂZUTE din fixture: Brier P3 nou < modelul de dimi
     assert.ok(Math.abs(r.iesit - TZ.iesitP3Z(r.h, r.p3)) < 1e-12);
     const h = ctx.tzCartela({ simbol: r.s, pionex: r.s + "_USDT_PERP", fel: "piata", d: r.d });
     // celula (bloc, zecime) goală ⇒ cifra vine din toate orele și textul o spune (revizia 🔵)
-    const fraza = r.d.iesitToateOrele ? "din 100 de zile cu P3 ca azi (pe toate orele; la ora asta sunt prea puține), " : "din 100 de zile ca azi la ora asta, ";
-    assert.ok(h.includes("din ziua de până acum și din ieri: " + fraza + Math.round(r.iesit * 100) + " au ieșit așa"), r.s + " " + r.z + " " + r.h);
+    const fraza = r.d.iesitToateOrele ? "din zilele cu cifra ca azi (pe toate orele; la ora asta sunt prea puține), " : "din zilele ca azi la ora asta, ";   // v100.361: nu „din 100 de zile” (celulele vin din ≤ 72 de zile reale)
+    assert.ok(h.includes("din ziua de până acum și din ieri: " + fraza + Math.round(r.iesit * 100) + " din 100 au ieșit așa"), r.s + " " + r.z + " " + r.h);
   }
 });
 
@@ -188,36 +188,36 @@ await test("5b. 🔑 regulile pre-înregistrate A / B din trade() citesc P3-ul d
 await test("6a. 🔑 cartela cu ziua în curs: cifra mare = P3 nou pe ton normal, „din ziua de până acum și din ieri…”; prognoza de la 00:00 UTC rămâne ca rând (nimic pierdut)", () => {
   const h = ctx.tzCartela({ simbol: "BTC", pionex: "BTC_USDT_PERP", fel: "piata", d: BTC });
   const p = Math.round(BTC.p3 * 100), m = Math.round(BTC.p3Model * 100), n = Math.round(BTC.iesitCuZiua * 100);
-  assert.match(h, new RegExp('Azi se mișcă mai mult ca ieri</span><b class="tzCifra tzBun">' + p + ' %</b><span class="tzMut tzMic">din ziua de până acum și din ieri: din 100 de zile ca azi la ora asta, ' + n + " au ieșit așa · până acum 7,1 % față de 6,8 % ieri</span>"));
-  assert.match(h, new RegExp('Prognoza de la 00:00 UTC</span><b class="tzCifra tzMut">' + m + ' %</b><span class="tzMut tzMic">din ieri și alaltăieri, nu vede ziua de azi: din 100 de zile după un ieri ca ăsta, \\d+ au ieșit așa</span>'));
+  assert.match(h, new RegExp('Azi se mișcă mai mult ca ieri</span><b class="tzCifra tzBun">' + p + ' %</b><span class="tzMut tzMic">din ziua de până acum și din ieri: din zilele ca azi la ora asta, ' + n + " din 100 au ieșit așa \\(numărate pe 72 de zile nevăzute\\) · până acum 7,1 % față de 6,8 % ieri</span>"));
+  assert.match(h, new RegExp('Prognoza de la 00:00 UTC</span><b class="tzCifra tzMut">' + m + ' %</b><span class="tzMut tzMic">din ieri și alaltăieri, nu vede ziua de azi: din zilele după un ieri ca ăsta, \\d+ din 100 au ieșit așa</span>'));
   assert.doesNotMatch(h, /Azi se mișcă mai mult ca ieri <small/, "eticheta veche de pe cifra mare a plecat pe rândul ei");
-  // revizia 🟡 2: „de obicei”, gridul și stopul vin din clasa modelului de dimineață ⇒ spus, ca să nu contrazică cifra mare
-  assert.match(h, /Cât se mișcă azi, de obicei <small class="tzMut">· din prognoza de la 00:00 UTC<\/small><\/span>/);
-  assert.match(h, /cuprinde restul zilei UTC în \d+ % din zile \(măsurat pe zile nevăzute, 75 de monede\) · lățimea din prognoza de la 00:00 UTC<\/span>/);
+  // v100.361: la 22:05 UTC banda „de obicei” vine din ziua făcută (de la 15:00 UTC) - spus; gridul rămâne din prognoză + ce s-a mișcat - spus
+  assert.match(h, /Cât se mișcă azi, de obicei<\/span><b class="tzCifra">[^<]*<\/b><span class="tzMut tzMic">între [^<]*· din ziua făcută \(de la 15:00 UTC\)/);
+  assert.match(h, /cuprinde restul zilei UTC cam în șapte zile din zece \(măsurat; [^)]*\) · lățimea din prognoza de la 00:00 UTC și ce s-a mișcat deja<\/span>/);
   const h0 = ctx.tzCartela({ simbol: "BTC", pionex: "BTC_USDT_PERP", fel: "piata", d: TZ.azi(bare(zileCu(0.02, 0.05, 0.068), 0, 100, 100), T0 + 12 * ZI + 300000) });
-  assert.match(h0, /calibrat: din 100 de zile ca azi, \d+ au ieșit așa/); assert.doesNotMatch(h0, /Prognoza de la 00:00 UTC/);
+  assert.match(h0, /din ieri și alaltăieri: din zilele după un ieri ca ăsta, \d+ din 100 au ieșit așa/); assert.doesNotMatch(h0, /Prognoza de la 00:00 UTC/);
   const st = { monede: [{ simbol: "BTC", pionex: "BTC_USDT_PERP", fel: "piata", d: BTC }], simboluri: [1], la: Date.now(), zi: 0, inLucru: false, eroare: null };
-  assert.match(ctx.tzHtml(st, Date.now()), /cu ziua în curs ține cont și de cât s-a mișcat deja ziua, verificat pe 72 de zile nevăzute, 77 de monede Pionex - BTC și ETH nu sunt printre ele/, "introducerea spune ce e cifra mare de peste zi");
+  assert.match(ctx.tzHtml(st, Date.now()), /Cu ziua în curs, cifra mare ține cont și de cât s-a mișcat deja ziua \(verificat pe 72 de zile nevăzute, 77 de monede Pionex; ține și pe BTC \/ ETH, care n-au fost în învățare\)/, "introducerea spune ce e cifra mare de peste zi");
   const h0g = ctx.tzCartela({ simbol: "BTC", pionex: "BTC_USDT_PERP", fel: "piata", d: TZ.azi(bare(zileCu(0.02, 0.05, 0.068), 0, 100, 100), T0 + 12 * ZI + 300000) });
   assert.doesNotMatch(h0g, /din prognoza de la 00:00 UTC/, "la 00:xx UTC totul e prognoza - fără etichetă");
   // celula goală: fraza „pe toate orele”
   const gol = Object.assign({}, BTC, { iesitToateOrele: true });
-  assert.match(ctx.tzCartela({ simbol: "BTC", pionex: "BTC_USDT_PERP", fel: "piata", d: gol }), /din 100 de zile cu P3 ca azi \(pe toate orele; la ora asta sunt prea puține\), \d+ au ieșit așa/);
+  assert.match(ctx.tzCartela({ simbol: "BTC", pionex: "BTC_USDT_PERP", fel: "piata", d: gol }), /din zilele cu cifra ca azi \(pe toate orele; la ora asta sunt prea puține\), \d+ din 100 au ieșit așa/);
 });
 
 await test("6b. rezumatul de sus și Discord numără cu P3 nou și spun ce e; rândurile ≤ 160", () => {
   const linistit = TZ.azi(bare(zileCu(0.04, 0.025, 0.02), 20, 100.25, 99.75), T0 + 12 * ZI + 20 * ORA + 300000);   // modelul ~70 %, P3 nou < 10 %
   // fiecare singur, ca numărătoarea să despartă P3 nou de model (împreună ar ieși „1 din 2” în ambele feluri)
-  assert.match(ctx.tzRezumat([{ simbol: "BTC", fel: "piata", d: BTC }]), /Azi: 1 monedă din 1 se mișcă probabil mai mult ca ieri, 0 stau probabil mai liniștite/);
-  assert.match(ctx.tzRezumat([{ simbol: "DOGE", fel: "piata", d: linistit }]), /Azi: 0 monede din 1 se mișcă probabil mai mult ca ieri, 1 stă probabil mai liniștită/);
-  const r = ctx.tzRezumat([{ simbol: "BTC", fel: "piata", d: BTC }, { simbol: "DOGE", fel: "piata", d: linistit }]);
-  assert.match(r, /\(cu ziua de până acum\)/); assert.doesNotMatch(r, /prognoza de la 00:00 UTC; ziua e în curs/);
+  // v100.361: rezumatul e în fraza de sus (tzFrazaHtml), pe P3 nou, cu singularul la 1
+  const rez = (m) => ctx.tzHtml({ monede: m, simboluri: [1], la: Date.now(), zi: 0, inLucru: false, eroare: null, deschise: {} }, Date.now());
+  assert.match(rez([{ simbol: "BTC", fel: "piata", d: BTC }]), /Pe piață, din 1 monedă: 1 se mișcă probabil mai mult ca ieri, 0 stau probabil mai liniștite/);
+  assert.match(rez([{ simbol: "DOGE", fel: "piata", d: linistit }]), /Pe piață, din 1 monedă: 0 se mișcă probabil mai mult ca ieri, 1 stă probabil mai liniștită/);
   const l = liniiTradeZilei([{ simbol: "BTC", fel: "piata", d: BTC }, { simbol: "DOGE", fel: "bot", d: linistit }], TZ);
   assert.ok(l.every((x) => x.length <= 160), l.map((x) => x.length).join(","));
   assert.match(l[0], /^🎯 Azi: 1 din 2 se mișcă probabil mai mult ca ieri \(cu ziua de până acum\) · /);
   assert.match(liniiTradeZilei([{ simbol: "BTC", fel: "piata", d: BTC }], TZ)[0], /^🎯 Azi: 1 din 1 se mișcă/); assert.match(liniiTradeZilei([{ simbol: "DOGE", fel: "bot", d: linistit }], TZ)[0], /^🎯 Azi: 0 din 1 se mișcă/);
   assert.match(l[1], new RegExp("^BTC 100,00 · >ieri " + Math.round(BTC.p3 * 100) + " % · ")); assert.match(l[2], new RegExp("^🤖 DOGE 100,00 · >ieri " + Math.round(linistit.p3 * 100) + " % · "));
-  assert.equal(l[l.length - 1], "„>ieri” = din ziua de până acum și din ieri; „azi ~”, gridul și stopul = din prognoza de la 00:00 UTC și ce s-a mișcat deja.");
+  assert.equal(l[l.length - 1], "„>ieri” și „azi ~” = din ziua de până acum (de la 15:00 UTC); gridul = din prognoza de la 00:00 UTC și ce s-a mișcat deja.");   // v100.361: la 20–22 UTC banda vine din ziua făcută
   const d0 = TZ.azi(bare(zileCu(0.02, 0.05, 0.068), 0, 100, 100), T0 + 12 * ZI + 300000), l0 = liniiTradeZilei([{ simbol: "BTC", fel: "piata", d: d0 }], TZ);
   assert.doesNotMatch(l0[0], /cu ziua de până acum/, "la 00:xx UTC e chiar prognoza"); assert.doesNotMatch(l0.join("\n"), /din prognoza de la 00:00 UTC/);
 });

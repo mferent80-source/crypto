@@ -13,7 +13,7 @@ function ziRo(t) {
 }
 const pct = (v, z = 0) => (v == null || !isFinite(v) ? "—" : (v * 100).toFixed(z).replace(".", ",") + " %");
 // v100.306 (I-825, auditul final 🔴 4): sub 0,01 prețul ține 3 cifre semnificative (PEPE 0,00000530), ca tzPret / rfPret; 6 zecimale fixe dădeau „0,000005”
-function pret(p) { if (!(p > 0)) return "—"; const z = p < 0.01 ? Math.min(12, 2 - Math.floor(Math.log10(p))) : p < 1 ? 4 : 2, s = p.toFixed(z).split("."); return s[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "," + s[1]; }
+function pret(p) { if (!(p > 0)) return "—"; const z = p < 0.01 ? Math.min(12, 2 - Math.floor(Math.log10(p))) : p < 1 ? 4 : p < 10 ? 3 : 2,   /* v100.361: 1–10 USDT cu 3 zecimale */ s = p.toFixed(z).split("."); return s[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "," + s[1]; }
 // monedele: boții activi (simbolul lor Pionex) + BTC / ETH / SOL, fără dubluri, cel mult MAX_MONEDE
 export function monedeTradeZilei(boti, TabloBot) {
   const l = [];
@@ -32,11 +32,11 @@ export function liniiTradeZilei(monede, TradeZilei) {
   const ok = monede.filter((m) => m.d && !m.d.eroare), rau = monede.filter((m) => !m.d || m.d.eroare), cuZiua = ok.some((m) => m.d.cuZiua);
   const linii = [];
   if (ok.length) {
-    const mult = ok.filter((m) => m.d.p3 >= 0.6).length, medie = ok.reduce((s, m) => s + m.d.asteptat.med, 0) / ok.length;
+    const mult = ok.filter((m) => m.d.p3 >= 0.6).length, sv = ok.map((m) => m.d.asteptat.med).sort((a, b) => a - b), medie = sv.length % 2 ? sv[(sv.length - 1) / 2] : (sv[sv.length / 2 - 1] + sv[sv.length / 2]) / 2;   // v100.361: mediana (o monedă agitată trăgea media în sus)
     // v101.163: cât din mișcarea zilei s-a format de obicei până la ora asta (curba orelor, proba din 03.11) + weekendul (factorul e inclus în cifre)
     // v100.307 (I-841): după 9:00 ora României ziua UTC e în curs ⇒ P3 (d.p3, același ca pe pagină) e condiționat de ziua făcută; capul o spune
     const d0 = ok[0].d;
-    linii.push(`🎯 Azi: ${mult} din ${ok.length} se mișcă probabil mai mult ca ieri${cuZiua ? " (cu ziua de până acum)" : ""} · mișcarea așteptată, în medie ${pct(medie, 1)}` + (d0.format != null ? ` · format până acum ~${pct(d0.format)}` : "") + (d0.weekend ? " · weekend ×" + String(TradeZilei.FACTOR_WEEKEND).replace(".", ",") : ""));
+    linii.push(`🎯 Azi: ${mult} din ${ok.length} se mișcă probabil mai mult ca ieri${cuZiua ? " (cu ziua de până acum)" : ""} · mișcarea așteptată (mediana) ${pct(medie, 1)}` + (d0.format != null ? ` · format până acum ~${pct(d0.format)}` : "") + (d0.weekend ? " · weekend ×" + String(TradeZilei.FACTOR_WEEKEND).replace(".", ",") : ""));
   }
   ok.forEach((m) => {
     const d = m.d, g = TradeZilei.grid(d);
@@ -51,7 +51,8 @@ export function liniiTradeZilei(monede, TradeZilei) {
   const t = ok.length ? TradeZilei.trade(ok[0].d) : null;
   linii.push(t && t.fel !== "niciunul" && t.fel !== "eroare" ? ("Trade dovedit: " + t.text).slice(0, LAT) : "Niciun trade cu avantaj dovedit (proba din 03.11): gridul / stopul de mai sus sunt din MIȘCARE, nu din bani. Ziua = UTC.");
   // revizia I-841 (🟡 2): „>ieri” e condiționat de ziua făcută, dar „azi ~”, gridul și stopul vin din clasa modelului de dimineață - spus
-  if (cuZiua) linii.push("„>ieri” = din ziua de până acum și din ieri; „azi ~”, gridul și stopul = din prognoza de la 00:00 UTC și ce s-a mișcat deja.");
+  const dinZi = ok.some((m) => m.d.bandaDinZi);
+  if (cuZiua) linii.push(dinZi ? "„>ieri” și „azi ~” = din ziua de până acum (de la 15:00 UTC); gridul = din prognoza de la 00:00 UTC și ce s-a mișcat deja." : "„>ieri” = din ziua de până acum și din ieri; „azi ~”, gridul și stopul = din prognoza de la 00:00 UTC și ce s-a mișcat deja.");
   return linii;
 }
 export async function turaTradeZilei(d) {

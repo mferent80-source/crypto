@@ -143,10 +143,10 @@ await test("🔑 B10 Pe durate: verdictul pe fiecare orizont, Câștigă colorat
   assert.match(citeste("public", "app.css"), /@media \(max-width:1099px\)\{#gsPagina \.gsDurate thead\{display:none\}/); assert.match(citeste("public", "lib", "grid-sim-ecran.js"), /classList\.contains\("gsRand"\)/);
 });
 await test("🔑 B11 temă zi / noapte ca paginile refăcute: #gridsim în RADACINI, tema devreme, tbTemaAplica + butonul din antet; listele temei scrise de mână au și #gridsim", () => {
-  assert.match(citeste("scripts", "face-tema-tablou.mjs"), /"gridset", "gridsim", "montecarlo", "jurnaltrade", "comportament"\]/); assert.match(citeste("public", "lib", "tema-devreme.js"), /"gridset", "gridsim", "montecarlo", "jurnaltrade", "comportament"\]/);
-  const a = citeste("public", "app.js"); assert.match(a, /"probe","gridset","gridsim","montecarlo","jurnaltrade","comportament"\]\.forEach/); assert.match(a, /"grTemaBtn","gsTemaBtn","mcTemaBtn","jtTemaBtn","coTemaBtn"\]/);
+  assert.match(citeste("scripts", "face-tema-tablou.mjs"), /"gridset", "gridsim", "montecarlo", "jurnaltrade", "comportament", "tradezilei"\]/); assert.match(citeste("public", "lib", "tema-devreme.js"), /"gridset", "gridsim", "montecarlo", "jurnaltrade", "comportament", "tradezilei"\]/);
+  const a = citeste("public", "app.js"); assert.match(a, /"probe","gridset","gridsim","montecarlo","jurnaltrade","comportament","tradezilei"\]\.forEach/); assert.match(a, /"grTemaBtn","gsTemaBtn","mcTemaBtn","jtTemaBtn","coTemaBtn","tzTemaBtn"\]/);
   assert.match(citeste("public", "index.html"), /id="gridsim"><div class="sectionHead"><h3>🎰 Simulator grid<\/h3>[\s\S]{0,200}id="gsTemaBtn"/);
-  const css = citeste("public", "app.css"); assert.equal((css.match(/:is\([^)]*#gridset[^)]*\)/g) || []).filter((x) => !x.includes("#gridsim")).length, 0); assert.match(css, /:is\(#gridsim,#montecarlo,#jurnaltrade,#comportament\)\.tbZi input/); assert.doesNotMatch(css, /\.pzDemo #gsPagina:has/);
+  const css = citeste("public", "app.css"); assert.equal((css.match(/:is\([^)]*#gridset[^)]*\)/g) || []).filter((x) => !x.includes("#gridsim")).length, 0); assert.match(css, /:is\(#gridsim,#montecarlo,#jurnaltrade,#comportament,#tradezilei\)\.tbZi input/); assert.doesNotMatch(css, /\.pzDemo #gsPagina:has/);
 });
 await test("🔑 B12 „Compară” reia câștigătorul pe 2.000 de drumuri NOI (sămânța 13), ca Monte Carlo; comparaLa duce verificarea pe orizontul citit", () => {
   const E = citeste("public", "lib", "grid-sim-ecran.js"); assert.match(E, /function gsVerificaPeDrumuriNoi\(/); assert.match(E, /n: MCS_VERIF\.n, seed: MCS_VERIF\.seed/);
