@@ -146,7 +146,7 @@ await test("istoric: o INTRARE in reteta = ziua in care intra (nu fiecare zi in 
   assert.equal(r.instr, 1, "sub 68 de bare nu se numara"); assert.deepEqual(r.ore, [7, 30]);
   assert.ok(r.trend.s.n >= 1 && r.trend.s.n <= 3, "intrari in trend: " + r.trend.s.n); assert.equal(r.trend.s.pe, 100); assert.ok(r.trend.s.med > 2, "mediana " + r.trend.s.med);
   assert.ok(r.baza.s.n > 150, "orice zi: " + r.baza.s.n); assert.equal(S.istoricRetete([b], "a").ore[0], 5, "la actiuni o saptamana = 5 zile de bursa");
-  const t = S.textIstoric(r, "trend"); assert.match(t.text, /^după o săptămână 100% pe plus \(mediana \+\d+,\d%\), după o lună /); assert.equal(t.putine, true); assert.ok(t.mai > 0);
+  const t = S.textIstoric(r, "trend"); assert.match(t.text, /^față de aceeași zi: după o săptămână [+−]\d+,\d pp.*, după o lună [+−]\d+,\d pp.* · 100% pe plus \(mediana \+\d+,\d%\)$/); assert.equal(t.fataDeZi, true);   /* v100.363: reperul = aceeași zi */ assert.equal(t.putine, true); assert.ok(t.mai > 0);
   assert.equal(S.textIstoric(r, "revenire"), null, "fara intrari = null, nu 0%"); assert.equal(S.textIstoric(null, "trend"), null);
 });
 await test("urmarite: primul scan doar tine minte; apoi intrare si iesire din reteta pe Discord; ce nu urmareste nu primeste nimic", async () => {
@@ -157,7 +157,7 @@ await test("urmarite: primul scan doar tine minte; apoi intrare si iesire din re
   assert.equal(trimise.length, 0); assert.deepEqual(st.urm.aNVDA, ["trend"]); assert.equal(st.urm.aAMD, undefined);
   await anuntaUrmarite(d, st, "a", [x("NVDA", { sparge: true, rsi: 75 }), x("AMD", { sparge: true })], ["aNVDA"]);
   assert.deepEqual(trimise.map((m) => m.titlu), ["🔔 NVDA a intrat în 🚀 Spargere", "🔕 NVDA a ieșit din 📈 Trend confirmat"]);
-  assert.match(trimise[0].mesaj, /^La închiderea zilei: \$10 \(\+1,0%\) · 7 zile \+2,0% · RSI 75/);   /* v100.196: rețeta e judecată pe închidere */ assert.equal(trimise[0].cheie, "reteta-aNVDA-spargere");
+  assert.match(trimise[0].mesaj, /^La închiderea zilei: \$10,00 \(\+1,0%\) · 7 zile \+2,0% · RSI 75/);   /* v100.363: prețul formatat */   /* v100.196: rețeta e judecată pe închidere */ assert.equal(trimise[0].cheie, "reteta-aNVDA-spargere");
   await anuntaUrmarite(d, st, "a", [x("NVDA", { sparge: true, rsi: 75 })], []);
   assert.equal(st.urm.aNVDA, undefined, "cand nu-l mai urmareste, starea se sterge (la reluare nu vine o alerta veche)");
 });
@@ -171,7 +171,7 @@ await test("ruta: lista de urmarite (curatata, max 60) si istoricul retetelor se
   assert.equal((await post({ istoric: { fel: "c", la: T0, instr: 90, ore: [7, 30], trend: { s: { n: 40, pe: 58, med: 1.2, rau: 1 }, l: { n: 38, pe: 61, med: 4 } }, baza: { s: { n: 9000, pe: 52, med: 0.3 }, l: { n: 8000, pe: 53, med: 1 } } } })).status, 200);
   const cere = async (q) => JSON.parse(await (await m.onRequestGet({ request: new Request("https://exemplu.test/api/istoric-bot?action=scan" + q, { headers: h }), env })).text());
   assert.deepEqual(Object.keys(await cere("&doar=urmarite")), ["urmarite"]);
-  const g = await cere(""); assert.deepEqual(g.istoric.c.trend.s, { n: 40, pe: 58, med: 1.2 }); assert.deepEqual(g.istoric.c.revenire.s, { n: 0, pe: null, med: null }); assert.equal(g.istoric.a, null); assert.equal(g.urmarite.length, 60);
+  const g = await cere(""); assert.deepEqual(g.istoric.c.trend.s, { n: 40, pe: 58, med: 1.2, zile: null, ex: null, exLo: null, exHi: null, exPe: null }); assert.deepEqual(g.istoric.c.revenire.s, { n: 0, pe: null, med: null, zile: null, ex: null, exLo: null, exHi: null, exPe: null });   /* v100.363: zilele și excesul trec prin rută */ assert.equal(g.istoric.a, null); assert.equal(g.urmarite.length, 60);
 });
 
 // ---- v96.1: fara cheia Twelve Data, /api/stocks ia preturile de la Yahoo (analiza actiunilor) ----

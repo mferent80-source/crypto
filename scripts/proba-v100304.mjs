@@ -262,7 +262,7 @@ await test("5. I-810: linia de dimineață - boții cu RF 1h întors CONTRA în 
   assert.match(C, /from "\.\/lib\/rf-dimineata\.mjs"/);
   assert.match(C, /out\.liniiExtra\.push\("📏 Range Filter 1h, " \+/);
   assert.match(C, /moneda: \(y\) => TabloBot\.simboluri\(y\.baza, y\.quote, y\.simbolPionex\)\.moneda/, "colectorul grupează pe monedă");
-  assert.match(C, /const VERSIUNE_COLECTOR = "v101\.(16[4-9]|1[7-9]\d)"/);
+  assert.match(C, /const VERSIUNE_COLECTOR = "v101\.(16[4-9]|1[7-9]\d|[2-9]\d\d)"/);
 });
 
 await test("6. versiunile v100.304, lumanari.js înaintea ecranelor și în shell-ul SW, proba în lanțul npm test", () => {

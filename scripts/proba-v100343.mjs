@@ -54,7 +54,7 @@ await test("(I-887) tura de clasament a colectorului citește lista simbolurilor
   const L2 = incarcaLib(["text-ro.js", "grid-calcul.js", "grid-clasament.js"], "({ G: GridCalcul, GC: GridClasament })"), j2 = [];
   const r2 = await turaClasament(Object.assign({}, d, { GridCalcul: L2.G, GridClasament: L2.GC, simboluriPerp: undefined, jurnal: (...a) => j2.push(a.join(" ")) })); assert.deepEqual(r2.monede.map((m) => m.simbol), ["BTC_USDT_PERP", "NOUX_USDT_PERP", "ETH_USDT_PERP"]);
   const r3 = await turaClasament(Object.assign({}, d, { GridCalcul: L2.G, GridClasament: L2.GC, simboluriPerp: async () => { throw new Error("Pionex a refuzat"); }, jurnal: (...a) => j2.push(a.join(" ")) })); assert.equal(r3.monede.length, 3); assert.ok(j2.some((x) => /lista simbolurilor/.test(x) && /Pionex a refuzat/.test(x)));
-  assert.match(COL, /const VERSIUNE_COLECTOR = "v101\.1(8[1-9]|9\d)";/);   /* v100.344: de la v101.181 în sus */ assert.match(COL, /simboluriPerp: simboluriPerpLista,/, "colectorul dă turei lista simbolurilor");
+  assert.match(COL, /const VERSIUNE_COLECTOR = "v101\.(1(?:8[1-9]|9\d)|[2-9]\d\d)";/);   /* v100.344: de la v101.181 în sus */ assert.match(COL, /simboluriPerp: simboluriPerpLista,/, "colectorul dă turei lista simbolurilor");
 });
 
 // ---------------- I-885: banda contului se reîmprospătează ----------------
@@ -256,7 +256,7 @@ await test("(I-883) reperM: pe fiecare perioadă, „adevărat” e chiar media 
 });
 await test("(I-883 / I-886) pagina și jurnalul după revizie: explicația din Scan spune doar ce ține (tăietura după volum: măsurată, nedovedit că ar conta) și NIMIC despre „gridul pierde”; jurnalul are verdictul formal, reperul motorului și îndreptările, și la E2", () => {
   const Scan = incarcaLib(["scan.js"], "Scan"), r = Scan.RETETE.find((x) => x.k === "grid"), J = citeste("docs", "cercetare", "2026-11-13-tablou-acuratete.md");
-  assert.match(r.e, /Tăietura după volum: măsurată pe 400 de zile de lumânări, nedovedit că ar conta; rămâne o măsură de prudență, nu un câștig măsurat\.$/); assert.doesNotMatch(r.e, /Tăietura după volum nu e măsurată/);
+  assert.match(r.e, /Tăietura după volum: măsurată pe 400 de zile de lumânări, nedovedit că ar conta; rămâne o măsură de prudență, nu un câștig măsurat\. Măsurat din nou \(18\.11\.2026\): candidații se mișcă clar mai puțin decât monedele în mișcare/);   /* v100.363: + măsurătoarea nouă */ assert.doesNotMatch(r.e, /Tăietura după volum nu e măsurată/);
   assert.doesNotMatch(r.e, /pe minus|pierde|stopul casei|3 zile|7 zile/i, "despre G2-M nu se scrie nimic pe pagină"); assert.match(r.e, /dintre primele 60 după volum/); assert.match(r.e, /Că ordinea după scor ar conta e nedovedit/);
   const iReg = J.indexOf("## G2 — pe date nevăzute"), iRez = J.indexOf("### G2 — rezultatul"), iInd = J.indexOf("### G2 — îndreptări după revizia independentă"); assert.ok(iReg > 0 && iRez > iReg && iInd > iRez, "ordinea în jurnal: reguli, rezultat, îndreptări");
   const Rez = J.slice(iRez, iInd), Ind = J.slice(iInd);

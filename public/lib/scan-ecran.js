@@ -69,6 +69,7 @@ function scanRanduri() {
     o.funding = fel === "c" && !!SCUMP[x.s];
     o.rez = fel === "a" ? REZ[x.s] || null : null; o.rezZile = o.rez ? Math.round((Date.parse(o.rez + "T12:00:00Z") - azi) / 86400000) : null;
     o.scor = Scan.scor(x, o.rel); o.sem = Scan.semafor(x);
+    var chA = nr0(x.chAzi) !== null ? nr0(x.chAzi) : nr0(x.ch); o.pompa = chA !== null && chA >= 25;   /* v100.363: urcare bruscă de peste 25 % într-o zi */
     return o;
   };
   return cr.map(function (x) { return fa(x, "c"); }).concat(ac.map(function (x) { return fa(x, "a"); }));
@@ -129,7 +130,10 @@ function scanDeseneaza() {
   if (!$("scNou") || typeof Scan === "undefined") return;
   var d = scanSt.d, sc = d.scan || {}, R = scanRanduri();
   var la = Math.max(sc.crypto && sc.crypto.la || 0, sc.actiuni && sc.actiuni.la || 0);
-  if ($("scCand")) $("scCand").textContent = la ? "scanat la " + new Date(la).toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" }) + (sc.actiuni && sc.actiuni.la ? " · acțiunile la " + new Date(sc.actiuni.la).toLocaleString("ro-RO", { weekday: "short", hour: "2-digit", minute: "2-digit" }) : "") : (scanSt.inLucru ? "aduc scanul…" : "");
+  // v100.363 (auditul de cod 🔴4): ziua și vechimea pe fiecare piață; scanul crypto mai vechi de 2 ore se spune; reîmprospătarea căzută nu mai tace
+  var crLa = sc.crypto && sc.crypto.la || 0, acLa = sc.actiuni && sc.actiuni.la || 0;
+  if ($("scCand")) $("scCand").textContent = la ? (crLa ? "crypto scanat " + scCand(crLa) : "") + (acLa ? (crLa ? " · " : "") + "acțiunile " + scCand(acLa) : "") + (crLa && Date.now() - crLa > 2 * 3600000 ? " · ⚠ scanul crypto e vechi: colectorul n-a mai scris" : "") + (d.scanErr && R.length ? " · reîmprospătarea n-a mers: " + d.scanErr : "") : (scanSt.inLucru ? "aduc scanul…" : "");
+  if ($("scFraza")) $("scFraza").innerHTML = scFrazaHtml(R);
   var v = scanContext();
   // retetele, cu cate raspund la filtrele de acum
   var baza = scFiltrat(R, true);
@@ -139,6 +143,7 @@ function scanDeseneaza() {
   }).join("");
   var r = Scan.RETETE.find(function (x) { return x.k === scanSt.r; }) || Scan.RETETE[0], av = "";
   if (r.k === "grid" && v && v.nivel === "miscare") av += '<span class="scAv">⚠ Crypto e în mișcare acum: gridul pierde în regimul ăsta. Lista e de urmărit, nu de pornit.</span>';
+  if (r.k === "grid" && typeof acFranaContText === "function" && acFranaContText()) av += '<span class="scAv">⛔ Frâna contului e trasă azi: lista e de urmărit, nu de pornit.</span>';   /* v100.363 */
   if (r.k === "grid" && scanSt.fel === "a") av += '<span class="scAv">Gridul e doar pentru monede: Trading 212 n-are boți.</span>';
   if (r.k === "spargere" && scanSt.fel !== "c") av += '<span class="scAv">La acțiuni, verifică data rezultatelor financiare: o spargere chiar înainte de rezultate e un pariu, nu un semnal.</span>';
   $("scExplic").innerHTML = '<span>' + r.e + '</span>' + av + scIstoricHtml(r.k);
@@ -149,7 +154,7 @@ function scanDeseneaza() {
     return '<button class="scFila" type="button" data-scf="' + x[0] + '" aria-pressed="' + (vechi === x[0]) + '">' + x[1] + ' <span class="scMut">' + n + '</span></button>';
   }).join("");
   // lista
-  var cap = '<div class="scCapL"><span></span><span>Simbol</span><span>Preț</span><span>Azi</span><span>7 zile</span><span>Față de piață</span><span>Trend</span><span>RSI</span><span>Mișcare</span><span>La max. 20z</span><span>Scor</span></div>';
+  var cap = '<div class="scCapL"><span></span><span>Simbol</span><span>Preț</span><span>Azi</span><span>7 zile</span><span>Față de piață</span><span>Trend</span><span>RSI</span><span>Mișcare</span><span>La max. 20z</span><span title="cât de curat e trendul; pe istoric NU prezice randamentul, prezice mișcarea">Scor</span><span title="mișcarea obișnuită pe zi (ATR, media a 14 zile)">Mișcă/zi</span><span>30 de zile</span></div>';
   var l = scSortat(scFiltrat(R, false)), html;
   if (!R.length) html = '<div class="scGol">' + (d.scanErr ? "Nu pot citi scanul: " + escapeHtml(d.scanErr) : scanSt.inLucru ? "Aduc scanul…" : "Scanul îl face colectorul de pe VPS o dată pe oră; primul apare la câteva minute după pornire.") + '</div>';
   else if (scanSt.fel === "toate" && !scanSt.q.trim()) {
@@ -165,6 +170,9 @@ function scanDeseneaza() {
       + (l.length > arat.length ? '<div class="scMai"><button class="scBtn" type="button" id="scToate">Arată toate ' + l.length + '</button></div>' : "");
   }
   $("scLista").innerHTML = cap + html;
+  if ($("scIstorie")) $("scIstorie").innerHTML = scIstorieHtml();
+  if ($("scUrmarite")) $("scUrmarite").innerHTML = scUrmariteHtml(R);
+  scRandAplica(); if (typeof tbTemaAplica === "function") tbTemaAplica();
 }
 // v96.2: "cat a mers reteta in trecut" - calculat de colector pe barele zilnice, o data pe zi
 function scIstoricHtml(k) {
@@ -200,31 +208,35 @@ function scMarcaje(x) {
   if (x.port) m += '<span class="scMk" title="e în portofoliul tău Trading 212">💼</span>';
   if (x.rezZile != null && x.rezZile >= 0 && x.rezZile <= 7) m += '<span class="scMk" title="rezultate financiare peste ' + scCate(x.rezZile, "zi", "zile") + '">🧾</span>';
   if (x.funding) m += '<span class="scMk" title="funding scump: cei pe long plătesc mult">💸</span>';
+  if (x.pompa) m += '<span class="scMk scPompa" title="pompă: ' + scPct(x.chAzi != null ? x.chAzi : x.ch) + ' azi - scorul mare vine din urcarea bruscă, nu dintr-un trend curat">🎈</span>';   /* v100.363 */
   if (scUrmarit(x.fel + x.s)) m += '<span class="scMk" title="îl urmărești: primești pe Discord când intră într-o rețetă sau iese din ea">🔔</span>';
   return m;
 }
 function scRand(x) {
   var id = x.fel + x.s, tr = '<span class="scTr" title="peste (verde) / sub (roșu) media de 20 · 50 · 200 de zile"><i class="' + (x.e20 ? "s" : "j") + '"></i><i class="' + (x.e50 ? "s" : "j") + '"></i><i class="' + (x.e200 == null ? "" : x.e200 ? "s" : "j") + '"></i></span>';
   return '<div class="scRand" role="button" tabindex="0" data-scid="' + escapeHtml(id) + '" aria-expanded="' + (scanSt.deschis === id) + '">'
-    + '<span><i class="scSem ' + x.sem + '" title="' + { v: "verde: trend curat", g: "galben: amestecat", r: "roșu: scade" }[x.sem] + '"></i></span>'
+    + '<span><i class="scSem ' + x.sem + '" title="' + { v: "verde: trend curat (nu „cumpără”: pe istoric nu prezice randamentul)", g: "galben: amestecat", r: "roșu: scade" }[x.sem] + '"></i></span>'
     + '<span class="scSim"><b>' + escapeHtml(x.s) + '</b><span class="scTp ' + x.fel + '">' + (x.fel === "c" ? "CRYPTO" : "ACȚIUNE") + '</span>' + scMarcaje(x) + '</span>'
     /* v100.196 (auditul sever, 🟡9): rețetele sunt pe bare închise; coloanele preț / azi arată prețul de acum când ședința e în curs (pAzi, chAzi) */
-    + '<span>' + (x.fel === "a" ? "$" : "") + scPret(x.pAzi != null ? x.pAzi : x.p) + '</span>'
-    + '<span class="' + scCls(x.chAzi != null ? x.chAzi : x.ch) + '">' + scPct(x.chAzi != null ? x.chAzi : x.ch) + '</span>'
-    + '<span class="' + scCls(x.ch7) + '">' + scPct(x.ch7) + '</span>'
-    + '<span class="' + scCls(x.rel) + '" title="față de ' + (x.fel === "c" ? "BTC" : "Nasdaq (QQQ)") + ' pe 7 zile, în puncte procentuale">' + scPct(x.rel).replace("%", " pp") + '</span>'   /* v100.175 (M14): puncte, nu % */
-    + '<span>' + tr + '</span>'
-    + '<span class="' + (x.rsi > 70 ? "warn" : x.rsi < 30 ? "bad" : "") + '">' + scNf(x.rsi, 0) + '</span>'
-    + '<span class="scMis ' + ((x.mare === true || (x.mare === undefined && x.mis >= 2)) ? "warn" : "") + '">'   /* v100.272: culoarea pe mișcarea mare comună (Scan.mare); fără ea, ca înainte */ + (x.mis == null ? "—" : scNf(x.mis, 1) + "×") + '</span>'
-    + '<span class="' + (x.sparge ? "good" : "") + '">' + (x.sparge ? "sparge" : scPct(x.dMax20)) + '</span>'
-    + '<span class="scScor">' + x.scor + '</span></div>'
+    + '<span data-et="preț">' + (x.fel === "a" ? "$" : "") + scPret(x.pAzi != null ? x.pAzi : x.p) + '</span>'
+    + '<span data-et="azi" class="' + scCls(x.chAzi != null ? x.chAzi : x.ch) + '">' + scPct(x.chAzi != null ? x.chAzi : x.ch) + '</span>'
+    + '<span data-et="7 zile" class="' + scCls(x.ch7) + '">' + scPct(x.ch7) + '</span>'
+    + '<span data-et="față de piață" class="' + scCls(x.rel) + '" title="față de ' + (x.fel === "c" ? "BTC" : "Nasdaq (QQQ)") + ' pe 7 zile, în puncte procentuale">' + scPct(x.rel).replace("%", " pp") + '</span>'   /* v100.175 (M14): puncte, nu % */
+    + '<span data-et="trend">' + tr + '</span>'
+    + '<span data-et="RSI" class="' + (x.rsi > 70 ? "warn" : x.rsi < 30 ? "bad" : "") + '">' + scNf(x.rsi, 0) + '</span>'
+    + '<span data-et="mișcare azi" class="scMis ' + ((x.mare === true || (x.mare === undefined && x.mis >= 2)) ? "warn" : "") + '">'   /* v100.272: culoarea pe mișcarea mare comună (Scan.mare); fără ea, ca înainte */ + (x.mis == null ? "—" : scNf(x.mis, 1) + "×") + '</span>'
+    + '<span data-et="la max. 20 z" class="' + (x.sparge ? "good" : "") + '">' + (x.sparge ? "sparge" : scPct(x.dMax20)) + '</span>'
+    + '<span data-et="scor" class="scScor' + (x.pompa ? " scMut" : "") + '">' + x.scor + '</span>'
+    + '<span data-et="mișcă/zi" class="scMut">' + (x.atrPct == null ? "—" : scNf(x.atrPct, 1) + "%") + '</span>'
+    + '<span class="scSparkC">' + (typeof ScDovezi !== "undefined" ? ScDovezi.spark(x.spark) : "") + '</span></div>'
     + (scanSt.deschis === id ? scDetaliu(x) : "");
 }
 
 // ---- randul deschis: cine e, starea acum, graficul pe perioade, tabelul starilor, retete, de ce, planul ----
 function scDetaliu(x) {
   var id = x.fel + x.s, serie = scanSt.serii[id], d = scanSt.d, nume = d.scan && d.scan.nume && d.scan.nume[id] || "", sec = x.fel === "a" && typeof Acasa !== "undefined" && Acasa.SECTOR ? Acasa.SECTOR[x.s] : null;
-  if (serie === undefined) { scanSt.serii[id] = null; scAduSerie(x); }
+  if (serie === undefined || (serie === false && scanSt.deschisAcum === id)) { scanSt.serii[id] = null; scAduSerie(x); }   /* v100.363: după o eroare, redeschiderea reîncearcă */
+  scanSt.deschisAcum = null;
   var inR = Scan.retete(x).map(function (k) { var r = Scan.RETETE.find(function (q) { return q.k === k; }); return "<span>" + r.t + "</span>"; }).join("") || '<span class="scMut">în nicio rețetă azi</span>';
   var de = [];
   de.push(x.e20 && x.e50 && x.e200 !== false ? "trend în sus: peste mediile de 20, 50" + (x.e200 == null ? "" : " și 200") + " de zile" : !x.e20 && !x.e50 ? "trend în jos: sub mediile de 20 și 50 de zile" : "trend amestecat: " + (x.e20 ? "peste" : "sub") + " media de 20, " + (x.e50 ? "peste" : "sub") + " cea de 50 de zile");
@@ -251,13 +263,14 @@ function scDetaliu(x) {
   }
   if (x.fel === "c") {
     var fu = scanSt.funding[x.s];
-    if (fu === undefined) { scanSt.funding[x.s] = null; scAduFunding(x.s); }
+    if (fu === undefined || (fu === false && scanSt.reincearcaFunding === x.s)) { scanSt.funding[x.s] = null; scAduFunding(x.s); }
+    scanSt.reincearcaFunding = null;
     var anC = typeof acAziNu === "function" ? acAziNu() : null;   /* v100.306 (I-824): regula comună „azi nu”; setările rămân la vedere sub ea */
     plan += '<h5 class="scH5b">Pentru un bot grid</h5>'
       + (anC && anC.nu ? '<p class="scNota">' + acAziNuHtml(anC) + '</p>' : '')
       + ((x.stare === "candidat" && !x.miscare ? '<div class="scLin"><span>Grile (în Pionex) · pas</span><b>' + scNf(x.grile + 1, 0) + ' · ' + scNf(x.pas * 100, 2) + '%</b></div><div class="scLin"><span>Treceri prin grile / zi</span><b>~' + scNf(x.traversari, 1) + '</b></div><div class="scLin"><span>Lățimea zonei</span><b>' + scNf(x.latime * 100, 1) + '%</b></div>'
         : '<p class="scNota">Acum e în mișcare: nu e bună de grid.</p>'))
-      + '<div class="scLin"><span>Funding (la 4 ore)</span><b class="' + (fu && fu.scump ? "warn" : "") + '">' + (fu ? scNf(fu.ult * 100, 4) + "% · " + (fu.scump ? "scump, long plătește mult" : fu.ult < 0 ? "negativ, short plătește" : "ca de obicei") : "aduc…") + '</b></div>';
+      + '<div class="scLin"><span>Funding' + (fu && fu.ore ? " (la " + scCate(fu.ore, "oră", "ore") + ")" : "") + '</span><b class="' + (fu && fu.scump ? "warn" : "") + '">' + (fu ? scNf(fu.ult * 100, 3) + "% · " + (fu.scump ? "scump, long plătește mult" : fu.ult < 0 ? "negativ, short plătește" : "ca de obicei") : fu === false ? "nu l-am putut citi" : "aduc…") + '</b></div>';
   } else if (x.rez) plan += '<div class="scLin scH5b"><span>Rezultate financiare</span><b class="' + (x.rezZile <= 7 ? "warn" : "") + '">' + new Date(x.rez + "T12:00:00Z").toLocaleDateString("ro-RO", { day: "numeric", month: "short" }) + (x.rezZile >= 0 ? ' (peste ' + scCate(x.rezZile, "zi", "zile") + ')' : '') + '</b></div>';
   var mele = x.bot ? '<p class="scNota">🤖 Ai bot pornit pe ea: deschide Tabloul botului pentru starea lui.</p>' : x.port ? '<p class="scNota">💼 O ai în portofoliu: semaforul ei e pe pagina Trading 212.</p>' : "";
   var tab = serie ? '<table class="scStari"><thead><tr><th>Perioada</th><th>Schimbare</th><th>Minim – maxim</th><th>Stare</th></tr></thead><tbody>'
@@ -327,7 +340,8 @@ async function scAduFunding(s) {
     var r = await getJSON("/api/market?type=pionex_funding&symbol=" + encodeURIComponent(s + "_USDT_PERP")), l = (r && r.data && r.data.rates || []).map(function (q) { return Number(q.fundingRate); }).filter(isFinite);
     if (!l.length) { scanSt.funding[s] = false; return; }
     var srt = l.slice().sort(function (a, b) { return a - b; }), med = srt[Math.floor(srt.length / 2)];
-    scanSt.funding[s] = { ult: l[0], med: med, scump: l[0] > 0.0001 && l[0] > med * 2 };
+    var tz = (r && r.data && r.data.rates || []).map(function (q) { return Number(q.fundingTime || q.time || q.timestamp); }).filter(isFinite), ore = tz.length > 1 ? Math.round(Math.abs(tz[0] - tz[1]) / 3600000) : null;
+    scanSt.funding[s] = { ult: l[0], med: med, scump: l[0] > 0.0001 && l[0] > med * 2, ore: ore > 0 && ore <= 24 ? ore : null };   /* v100.363 (auditul 🔴8): intervalul din răspuns, nu „la 4 ore” fix */
   } catch (e) { scanSt.funding[s] = false; }
   if (scanSt.deschis && scanSt.deschis === "c" + s) scanDeseneaza();
 }
@@ -362,7 +376,7 @@ document.addEventListener("click", function (e) {
   else if (t.dataset.scgrid) { scanGrid(t.dataset.scgrid); return; }
   else if (t.id === "scToate") scanSt.tot = true;
   else if (t.id === "scRescan") { scanPorneste(true); return; }
-  else scanSt.deschis = scanSt.deschis === t.dataset.scid ? null : t.dataset.scid;
+  else { scanSt.deschis = scanSt.deschis === t.dataset.scid ? null : t.dataset.scid; if (scanSt.deschis) { scanSt.deschisAcum = scanSt.deschis; scanSt.reincearcaFunding = scanSt.deschis.slice(1); } }
   scanDeseneaza();
 });
 document.addEventListener("keydown", function (e) { var t = e.target; if (t && t.classList && t.classList.contains("scRand") && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); t.click(); } });
@@ -384,3 +398,63 @@ document.addEventListener("pointermove", function (e) {
   $("scGrafEti").innerHTML = '<b>' + g.pr + scPret(q[1]) + '</b> <span class="' + scCls(q[1] / first - 1) + '">' + scPct((q[1] / first - 1) * 100) + '</span> <span class="scMut">' + scCandPer(q[0], g.p) + '</span>';
 });
 document.addEventListener("pointerleave", function (e) { if (e.target && e.target.id === "scGrafSvg") scanDeseneaza(); }, true);
+
+// ---- v100.363 (el, 18.11.2026: „Scanner ca Jurnalul”; hotărârile LUI: scorul spus cinstit, rețetele față de aceeași zi + poza zilnică, aspectul ca paginile
+// refăcute, toate 4 grafice) ----
+function nr0(v) { var x = Number(v); return v === null || v === undefined || v === "" || !isFinite(x) ? null : x; }
+function scCand(t) { var m = Math.max(0, Math.round((Date.now() - t) / 60000)), d = new Date(t), azi = new Date().toDateString() === d.toDateString(); return (azi ? "azi " : d.toLocaleDateString("ro-RO", { weekday: "short", day: "numeric", month: "short" }) + " ") + "la " + d.toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" }) + " (acum " + (m < 60 ? scCate(m, "minut", "minute") : scCate(Math.round(m / 60), "oră", "ore")) + ")"; }
+// fraza zilei: frâna, candidații de grid (primul după scorul de grid), ce spune scorul și ce nu
+function scFrazaHtml(R) {
+  if (!R || !R.length) return "";
+  var g = Scan.RETETE.find(function (q) { return q.k === "grid"; }), cand = R.filter(function (x) { return g.f(x); }).sort(function (a, b) { return (b.gs || 0) - (a.gs || 0); });
+  var frana = typeof acFranaContText === "function" ? acFranaContText() : "";
+  var fr = frana ? "Frâna contului e trasă azi: ce vezi aici e de urmărit, nu de pornit." : cand.length ? scCate(cand.length, "candidat de grid", "candidați de grid") + " acum; primul după scorul de grid: " + cand[0].s + "." : "Niciun candidat de grid acum: crypto e în mișcare sau nimic nu trece de regula „fără mișcare mare”.";
+  var sub = "Scannerul arată ce e în trend și ce se mișcă - nu ce va urca: pe istoric, scorul nu prezice randamentul pe 7 zile (pe toate monedele, cu cele scoase de pe bursă), dar prezice clar mișcarea. Nicio rețetă de cumpărare n-a bătut piața pe istoric. Pentru un grid, „mișcă mult” e mai degrabă un risc.";
+  var surse = ["Scanul îl face colectorul de pe VPS: crypto o dată pe oră, acțiunile din oră în oră cât bursa e deschisă. Rețetele se judecă pe zile închise; prețul și „Azi” sunt de acum.",
+    "Scorul (0–100) = cât de curat e trendul. Măsurat pe 18.11.2026, pe 935 de zile de Binance cu tot cu monedele scoase: zecimile de sus nu ies mai bune la 7 zile; plaja pe 3 zile urcă clar cu scorul (dovedit). Pe monedele de azi, zecimile de sus par mai bune - pentru că cele prăbușite nu mai sunt în listă.",
+    "„Cât a mers rețeta”: față de ACEEAȘI zi (nu față de „orice zi”), cu intervalul pe zile; pe monedele de azi (care au rezistat, deci arată mai bine) și, în graficul de jos, pe toate monedele, cu cele scoase.",
+    "Candidați de grid = monede care nu sunt într-o mișcare mare (regula dovedită: nu se pornește grid după o mișcare mare), dintre primele 60 după volum. Se mișcă clar mai puțin decât cele în mișcare; față de rest, doar puțin (nedovedit).",
+    "Din 19.11.2026 colectorul ține o poză zilnică a scannerului (universul de atunci, cu monedele care vor ieși din listă): într-un an se poate spune cinstit ce a urmat după fiecare rețetă."];
+  return '<p class="grFraza">' + escapeHtml(fr) + '</p><p class="grFrazaSub">' + escapeHtml(sub) + (frana ? " " + escapeHtml(frana) : "") + '</p><details class="grSurse"' + (scanSt.surse ? " open" : "") + '><summary>De unde știu</summary><ul>' + surse.map(function (x) { return "<li>" + escapeHtml(x) + "</li>"; }).join("") + "</ul></details>";
+}
+function scLat() { var e = $("scNou"); return Math.max(300, Math.floor((e && e.clientWidth) || 900) - 40); }
+// istoricul: fiecare rețetă pe fiecare piață (textul colectorului) + graficele măsurate (ScDovezi)
+function scIstorieHtml() {
+  var ist = scanSt.d.scan && scanSt.d.scan.istoric || {}, h = "", N = { trend: "📈 Trend confirmat", revenire: "🔁 Revenire", spargere: "🚀 Spargere", miscare: "⚡ Mișcare neobișnuită" };
+  [["c", "Crypto"], ["a", "Acțiuni"]].forEach(function (m) {
+    var o = ist[m[0]]; if (!o) return;
+    h += '<div class="scIstPiata"><h4>' + m[1] + '</h4><ul class="scIstLista">' + Object.keys(N).map(function (k) { var t = Scan.textIstoric(o, k); return "<li><b>" + N[k] + "</b> · " + (t ? escapeHtml(scCate(t.n, "intrare", "intrări") + (t.zile ? " în " + scCate(t.zile, "zi", "zile") : "") + ": " + t.text) + (t.semnif == null ? "" : ' <span class="' + (t.semnif === 1 ? "good" : t.semnif === -1 ? "bad" : "scMut") + '">(' + (t.semnif === 1 ? "peste " : t.semnif === -1 ? "sub " : "nu se deosebește de ") + (t.fataDeZi ? "ziua ei" : "o zi oarecare: istoricul vechi, fără ziua ei") + ")</span>") + (t.putine ? ' <span class="warn">· puține cazuri</span>' : "") : '<span class="scMut">nicio intrare în istoricul adus</span>') + "</li>"; }).join("") + "</ul></div>";
+  });
+  if (!h) h = '<p class="scMut">Cât a mers rețeta în trecut apare după prima tură de noapte a colectorului.</p>';
+  if (typeof ScDovezi === "undefined") return h;
+  var D = ScDovezi.D, lat = scLat(), lj = typeof window !== "undefined" && window.innerWidth >= 1024 ? Math.floor((lat - 16) / 2) : lat;
+  h += '<div class="scGrGrila"><div class="scGr"><h5>Scorul: ce urmează la 7 zile</h5><p class="scMut scMic">randamentul față de aceeași zi, pe zecimi de scor (1 = cel mai mic) · bara = toate monedele, cu cele scoase (' + D.universuri.B.zile + ' de zile) · cercul = monedele de azi · plat = scorul nu spune ce va urca</p>' + ScDovezi.decile(D.scor7.B, D.scor7.P, { lat: lj, eticheta: "Randamentul pe 7 zile, pe zecimi de scor" }) + "</div>"
+    + '<div class="scGr"><h5>Scorul: cât se mișcă în 3 zile</h5><p class="scMut scMic">plaja pe 3 zile față de mediana zilei, pe zecimi de scor · urcă clar: scorul mare = mișcare mare (dovedit)</p>' + ScDovezi.decile(D.scorR3.B, D.scorR3.P, { lat: lj, eticheta: "Plaja pe 3 zile, pe zecimi de scor", neutru: true }) + "</div></div>";
+  h += '<div class="scGrGrila"><div class="scGr"><h5>Rețetele față de aceeași zi</h5><p class="scMut scMic">randamentul în exces, în puncte · bara cu mustăți = toate monedele, cu cele scoase · cercul = monedele de azi (care au rezistat)</p>' + ScDovezi.retete({ lat: lj }) + "</div>"
+    + '<div class="scGr"><h5>Candidații de grid: cât se mișcă</h5><p class="scMut scMic">plaja pe 3 zile a candidaților minus a celorlalte, în puncte · sub zero = mai calmi</p>' + ScDovezi.grid({ lat: lj }) + '<p class="scMut scMic">Față de monedele în mișcare: clar mai calmi. Față de rest: doar puțin, iar testul pe ranguri nu trece.</p></div></div>';
+  return h + '<p class="scMut scMic">Măsurat pe ' + escapeHtml(D.la) + ' (codul paginii, pe zile închise, fără privit în viitor). Ce s-a întâmplat pe istoric, nu o promisiune.</p>';
+}
+// urmăritele: lista lui, cu scoaterea la un clic, și cum vin alertele
+function scUrmariteHtml(R) {
+  var u = scanSt.d.scan && scanSt.d.scan.urmarite || [];
+  if (!u.length) return '<p class="scMut">Nu urmărești nimic. Deschide un rând și apasă „🔔 Anunță-mă”.</p>';
+  return '<div class="scUrmLista">' + u.map(function (id) { var x = (R || []).find(function (q) { return q.fel + q.s === id; }); return '<button class="scBtn" type="button" data-scurm="' + escapeHtml(id) + '" title="nu mai anunța">🔕 ' + escapeHtml(id.slice(1)) + ' <span class="scMut">' + (id.charAt(0) === "c" ? "crypto" : "acțiune") + (x ? " · " + scPct(x.chAzi != null ? x.chAzi : x.ch) : "") + "</span></button>"; }).join("") + "</div>"
+    + '<p class="scMut scMic">Primești pe Discord când intră într-o rețetă sau iese din ea (verificat la fiecare scan). Cel mult o alertă de intrare și una de ieșire pe 12 ore pentru aceeași rețetă: „Candidați de grid” se schimbă din oră în oră. Cel mult 60 de simboluri.</p>';
+}
+// rândurile pliate - aceeași formă ca paginile refăcute (data-rand + data-titlu + data-rezumat), starea în „scRanduri”
+var SC_RAND_KEY = "scRanduri", SC_RANDURI = { scSVreme: "Vremea pieței", scSIst: "Cât a mers rețeta în trecut", scSUrm: "🔔 Urmărite", scSCum: "Cum se citește" }, SC_RAND_DESCHIS = { scSVreme: 1 };
+function scRandStare() { try { var o = JSON.parse(localStorage.getItem(SC_RAND_KEY) || "{}"); return o && typeof o === "object" ? o : {}; } catch (e) { return {}; } }
+function scRandAplica() {
+  var st = scRandStare(), pune = function (e, k, v) { if (e.getAttribute(k) !== v) e.setAttribute(k, v); };
+  Object.keys(SC_RANDURI).forEach(function (id) {
+    var e = document.getElementById(id); if (!e) return; var deschis = st[id] === true || (st[id] !== false && !!SC_RAND_DESCHIS[id]);
+    pune(e, "data-rand", deschis ? "deschis" : "pliat"); pune(e, "data-titlu", SC_RANDURI[id]); pune(e, "aria-expanded", String(deschis));
+    if (deschis) { if (e.hasAttribute("tabindex")) e.removeAttribute("tabindex"); if (e.getAttribute("role") === "button") e.removeAttribute("role"); return; }
+    pune(e, "tabindex", "0"); pune(e, "role", "button"); pune(e, "data-rezumat", typeof tbRandRezumat === "function" ? tbRandRezumat(e, SC_RANDURI[id]) : "");
+  });
+}
+function scRandComuta(id, deschis) {
+  if (!Object.prototype.hasOwnProperty.call(SC_RANDURI, id)) return; var st = scRandStare(), acum = st[id] === true || (st[id] !== false && !!SC_RAND_DESCHIS[id]);
+  if (deschis == null) deschis = !acum; st[id] = !!deschis; try { localStorage.setItem(SC_RAND_KEY, JSON.stringify(st)); } catch (e) {} scRandAplica();
+}
+document.addEventListener("toggle", function (e) { if (e.target && e.target.matches && e.target.matches("#scFraza details.grSurse")) scanSt.surse = !!e.target.open; }, true);

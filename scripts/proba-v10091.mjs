@@ -90,7 +90,7 @@ await test("(4) colectorul: rândul „🧭 Busola, pe 4h: …”, cu „(rezuma
   const c = citeste("scripts", "colector.mjs"), d = c.slice(c.indexOf("async function dateDimineata()"), c.indexOf("async function turaDimineata()"));
   assert.equal((d.match(/cereBotiPorniti\(\)/g) || []).length, 1, "bot-orders se cere o singură dată");   /* v101.166 (I-838): prin cache-ul de 30 s */
   assert.ok(d.includes('"🧭 Busola, pe 4h: "') && d.includes("rezumat de acum") && /Busola\.liniaBoti\(l, acum, 142 - /.test(d), "prefixul cu emoji, vârsta și lungimea rezervată");
-  assert.ok(/const VERSIUNE_COLECTOR = "v101\.(6\d|[7-9]\d|1\d\d)";/.test(c), "versiunea colectorului");   /* v101.62 (I-526): versiunea merge înainte */
+  assert.ok(/const VERSIUNE_COLECTOR = "v101\.(6\d|[7-9]\d|1\d\d|[2-9]\d\d)";/.test(c), "versiunea colectorului");   /* v101.62 (I-526): versiunea merge înainte */
 });
 await test("(4) garda: rândurile Busolei de dimineață cu prefixul nou (și cel cu vârsta) trec regula de raport (≤ 160)", () => {
   const s = situatii().filter((x) => /^busola\.linia/.test(x.sursa)); assert.ok(s.length >= 4, "situații: " + s.length);

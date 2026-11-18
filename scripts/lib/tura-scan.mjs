@@ -112,17 +112,22 @@ export async function scanNume(d, cr, ac, vechi) {
 
 // v100.66 (pachetul 3): textul alertei de reteta, intr-o functie - garda textelor il genereaza; intrat = true (🔔) / false (🔕)
 // v100.196 (🟡9): rețeta e judecată pe închidere ⇒ mesajul spune „închiderea”, iar prețul de acum vine separat când ședința e în curs
+// v100.363 (auditul de cod 🔴6): prețul formatat (era „$235.5500030517578”) - zecimale după mărime, virgulă, punct la mii
+export function pretDiscord(p) { const v = Number(p); if (!(v > 0)) return "—"; const z = v >= 1000 ? 0 : v >= 10 ? 2 : v >= 1 ? 3 : v >= 0.01 ? 4 : Math.min(10, 2 - Math.floor(Math.log10(v))); const s = v.toFixed(z).split("."); return s[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".") + (s[1] ? "," + s[1] : ""); }
 export function mesajReteta(x, numeReteta, fel, intrat, id, k) {
-  const pret = (fel === "a" ? "$" : "") + x.p, ch = (v) => (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(1).replace(".", ",") + "%";
-  const acum = x.pAzi != null ? " · acum " + (fel === "a" ? "$" : "") + x.pAzi + (x.chAzi != null ? " (" + ch(x.chAzi) + ")" : "") : "";
+  const pret = (fel === "a" ? "$" : "") + pretDiscord(x.p), ch = (v) => (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(1).replace(".", ",") + "%";
+  const acum = x.pAzi != null ? " · acum " + (fel === "a" ? "$" : "") + pretDiscord(x.pAzi) + (x.chAzi != null ? " (" + ch(x.chAzi) + ")" : "") : "";
   return intrat
     ? { nivel: "info", titlu: "🔔 " + x.s + " a intrat în " + numeReteta, mesaj: "La închiderea zilei: " + pret + " (" + ch(x.ch) + ") · 7 zile " + ch(x.ch7) + " · RSI " + Math.round(x.rsi) + acum + "; pe Scan, rândul " + x.s + " arată graficul și planul.", cheie: "reteta-" + id + "-" + k }
     : { nivel: "info", titlu: "🔕 " + x.s + " a ieșit din " + numeReteta, mesaj: "La închiderea zilei: " + pret + " (" + ch(x.ch) + ") · 7 zile " + ch(x.ch7) + acum + ".", cheie: "reteta-iesit-" + id + "-" + k };
 }
 
 // alerta pentru simbolurile urmarite: intrare / iesire din reteta fata de scanul trecut (primul scan doar tine minte)
-export async function anuntaUrmarite(d, st, fel, randuri, urmarite) {
-  st.urm = st.urm || {};
+// v100.363 (auditul de cod 🔴5): răcire - același simbol și aceeași rețetă, cel mult o alertă (intrare sau ieșire) la RACIRE_MS
+export const RACIRE_MS = 12 * ORA;
+export async function anuntaUrmarite(d, st, fel, randuri, urmarite, acumMs) {
+  st.urm = st.urm || {}; st.urmLa = st.urmLa || {}; const t = acumMs || Date.now();
+  const poate = (id, k, sens) => { const c = id + "|" + k + "|" + sens; if (t - (st.urmLa[c] || 0) < RACIRE_MS) return false; st.urmLa[c] = t; return true; };   // pe sens: o intrare și o ieșire pe 12 h
   const pe = new Set((urmarite || []).filter((id) => id[0] === fel)), R = d.Scan.RETETE;
   for (const x of randuri || []) {
     const id = fel + x.s; if (!pe.has(id)) { delete st.urm[id]; continue; }
@@ -131,10 +136,12 @@ export async function anuntaUrmarite(d, st, fel, randuri, urmarite) {
     if (!vechi) continue;
     const nume = (k) => (R.find((r) => r.k === k) || {}).t || k;
     for (const k of acum.filter((k) => !vechi.includes(k))) {
+      if (!poate(id, k, "in")) continue;
       const m = mesajReteta(x, nume(k), fel, true, id, k);
       if (d.trimiteAlerta) await d.trimiteAlerta(m, null, m.cheie);
     }
     for (const k of vechi.filter((k) => !acum.includes(k))) {
+      if (!poate(id, k, "out")) continue;
       const m = mesajReteta(x, nume(k), fel, false, id, k);
       if (d.trimiteAlerta) await d.trimiteAlerta(m, null, m.cheie);
     }
@@ -155,8 +162,17 @@ export async function turaScan(d, st, acum) {
   // urmaritele lui: dupa fiecare scan, intrare / iesire din retete
   if (cr || ac) {
     const v = await incearca(d, "urmarite", () => d.cere("/api/istoric-bot?action=scan&doar=urmarite")), urm = v && Array.isArray(v.urmarite) ? v.urmarite : [];
-    if (cr) await incearca(d, "urmarite crypto", () => anuntaUrmarite(d, st, "c", cr, urm));
-    if (ac) await incearca(d, "urmarite actiuni", () => anuntaUrmarite(d, st, "a", ac, urm));
+    if (cr) await incearca(d, "urmarite crypto", () => anuntaUrmarite(d, st, "c", cr, urm, acum));
+    if (ac) await incearca(d, "urmarite actiuni", () => anuntaUrmarite(d, st, "a", ac, urm, acum));
+  }
+  // v100.363 (el: „poza zilnică”): o dată pe zi UTC, pe fiecare piață, ce arăta scannerul (universul de ATUNCI, cu monedele care vor ieși din listă)
+  const ziU = new Date(acum).toISOString().slice(0, 10);
+  if (d.scriePoza) for (const [fel, l] of [["c", cr], ["a", ac]]) {
+    if (!l || !l.length || st["poza" + fel] === ziU) continue;
+    const ref = fel === "c" ? (l.find((x) => x.s === "BTC") || {}).ch7 : null;
+    const randuri = l.map((x) => { const q = { ...x, fel }; return { s: x.s, p: x.p, ch: x.ch, ch7: x.ch7, sc: d.Scan.scor(q, d.Scan.fata(q, ref)), sem: d.Scan.semafor(q), ret: d.Scan.retete(q), mare: x.mare, rang: x.rang, gs: x.gs, stare: x.stare, miscare: x.miscare, atr: x.atrPct, vol: x.vol }; });
+    const ok = await incearca(d, "poza " + fel, async () => { await d.scriePoza({ zi: ziU, fel, la: acum, randuri }); return true; });
+    if (ok) st["poza" + fel] = ziU;
   }
   // cat a mers fiecare reteta in trecut: o data pe zi pe fiecare piata (cateva secunde de calcul)
   for (const [fel, l] of [["c", cr], ["a", ac]]) {

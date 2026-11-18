@@ -71,7 +71,7 @@ await test("bilanț: textul — prea puține sub 10 de fiecare fel; altfel proce
 });
 await test("colectorul: notează după paza fiecărui bot, judecă la fiecare tură, bilanțul intră în raportul de duminică; v101.108", () => {
   const COL = citeste("scripts", "colector.mjs");
-  assert.match(COL, /const VERSIUNE_COLECTOR = "v101\.1(0[89]|[1-9]\d)";/, "v101.108 sau mai nou");
+  assert.match(COL, /const VERSIUNE_COLECTOR = "v101\.(1(?:0[89]|[1-9]\d)|[2-9]\d\d)";/, "v101.108 sau mai nou");
   /* v101.109: notarea și raportul s-au lărgit la toate alertele de direcție (bilantNoteaza / bilantAlerte) - le probează proba-v100188 */
   assert.match(COL, /bilantNoteaza\(meta\(\)\.pandaContra/);
   assert.match(COL, /pandaJudeca\(meta\(\)\.pandaContra \|\| \(meta\(\)\.pandaContra = \[\]\), boti, acum\)/);

@@ -104,7 +104,7 @@ await test("5. versiunile v100.305 / colector v101.165, proba în lanțul npm te
   const BI = JSON.parse(citeste("BUILD_INFO.json")); assert.match(BI.version, /^v100\.(30[5-9]|3[1-9]\d)$/); assert.ok(BI.features.busolaAudit305);
   assert.ok(Number(JSON.parse(citeste("package.json")).version.split(".")[1]) >= 305);
   assert.match(citeste("package.json"), /npm run test:v100304 && npm run test:v100305/);
-  assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.(16[5-9]|1[7-9]\d)"/);
+  assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.(16[5-9]|1[7-9]\d|[2-9]\d\d)"/);
 });
 
 console.log(`\n${teste - picate}/${teste} ok`);

@@ -77,7 +77,7 @@ await test("C colectorul: laboratorul în fereastra 05:00–09:00 RO (≥ 20 h; 
   assert.match(c, /const LAB_DE_LA = 5, LAB_PANA = 9, LAB_PORNIT = Date\.now\(\);/); assert.match(c, /function laboratorDatorat\(acum\) \{ if \(acum - LAB_PORNIT < 30 \* 60000\) return false;/);
   assert.match(c, /return d >= 30 \* 3600000 \|\| \(d >= 20 \* 3600000 && h >= LAB_DE_LA && h < LAB_PANA\);/); assert.match(c, /!laboratorDatorat\(Date\.now\(\)\)\) return;/);
   const a = c.indexOf("if (r.carnet && !(r.monede >= 10))"), b = c.indexOf("const toate = Carnet.uneste(carnetOf, r.carnet.oferteNoi"); assert.ok(a > 0 && b > a, "tura parțială oprită ÎNAINTE de scriere");
-  assert.match(c, /function laboratorAmana\(\) \{ laboratorLa = Date\.now\(\) - 19 \* 3600000; \}/); assert.match(c, /const VERSIUNE_COLECTOR = "v101\.199";/);
+  assert.match(c, /function laboratorAmana\(\) \{ laboratorLa = Date\.now\(\) - 19 \* 3600000; \}/); assert.match(c, /const VERSIUNE_COLECTOR = "v101\.(199|2\d\d)";/);   // v100.363: colectorul a mers mai departe
 });
 const A = () => CN.analiza(cazuri(23, { efIng: -0.007 }));
 await test("G graficele: calibrarea (puncte cu mustăți, plin / gol), blocurile (o bară pe bloc + banda), barele cu interval, pe monede (doar cu ≥ 5), puterea cu „azi”; nimic NaN", () => {
@@ -108,9 +108,9 @@ await test("P pagina: capul cu tema, fraza cinstită („nu bate «mereu LARG»�
   assert.match(globalThis.carnetHtml(null), /Carnetul se face noaptea/); assert.match(globalThis.carnetHtml(r, r.la + 40 * 3600000), /vechi \(de acum 40 de ore\)/);
 });
 await test("T tema și legăturile: RADACINI, tbTemaAplica + cnTemaBtn, tema devreme, tbRandComuta ⇒ cnRandComuta, generatorul, index (capul în pagină, scriptul graficelor), cache-ul, CSS-ul", () => {
-  assert.match(citeste("scripts", "face-tema-tablou.mjs"), /"tradezilei", "carnet"\]/); const A2 = citeste("public", "app.js");
-  assert.match(A2, /"tradezilei","carnet"\]\.forEach\(function\(id\)\{var p=document\.getElementById\(id\);if\(p\)p\.classList\.toggle\("tbZi",zi\)\}\)/); assert.match(A2, /"tzTemaBtn","cnTemaBtn"\]/);
-  assert.match(A2, /return cnRandComuta\(id,deschis\)/); assert.match(A2, /var ACTIUNI_PERMISE=new Set\("[^"]*\bcarnetPorneste\b/, "butonul „Reîmprospătează” din capul paginii (lista albă a dispecerului)"); assert.match(citeste("public", "lib", "tema-devreme.js"), /"tradezilei", "carnet"\]/);
+  assert.match(citeste("scripts", "face-tema-tablou.mjs"), /"tradezilei", "carnet", "scan"\]/); const A2 = citeste("public", "app.js");
+  assert.match(A2, /"tradezilei","carnet","scan"\]\.forEach\(function\(id\)\{var p=document\.getElementById\(id\);if\(p\)p\.classList\.toggle\("tbZi",zi\)\}\)/); assert.match(A2, /"tzTemaBtn","cnTemaBtn","scTemaBtn"\]/);
+  assert.match(A2, /return cnRandComuta\(id,deschis\)/); assert.match(A2, /var ACTIUNI_PERMISE=new Set\("[^"]*\bcarnetPorneste\b/, "butonul „Reîmprospătează” din capul paginii (lista albă a dispecerului)"); assert.match(citeste("public", "lib", "tema-devreme.js"), /"tradezilei", "carnet", "scan"\]/);
   execFileSync(process.execPath, [path.join(RAD, "scripts", "face-tema-tablou.mjs"), "--check"], { stdio: "pipe" });
   const H = citeste("public", "index.html"); assert.match(H, /<section class="panel" id="carnet">\n<div class="cnPag" id="cnPagina">/); assert.doesNotMatch(H, /<h3>Carnetul fișei<\/h3>/);
   assert.match(H, /<script src="\/lib\/carnet\.js"><\/script><script src="\/lib\/carnet-grafice\.js"><\/script>/); assert.ok(H.indexOf("/lib/carnet-grafice.js") < H.indexOf("/lib/carnet-ecran.js"));
@@ -118,12 +118,11 @@ await test("T tema și legăturile: RADACINI, tbTemaAplica + cnTemaBtn, tema dev
   const C = citeste("public", "app.css"); for (const k of ["#carnet .cnTab{min-width:0", "#carnet .cnCifre{", "#carnet .cnDoua{", 'html.pzDemo #carnet [data-rand="pliat"]', "#carnet.tbZi .acBtn{color:#0E1A2B}"]) assert.ok(C.includes(k), k);
   assert.ok(C.indexOf("#carnet .cnCifre{") < C.indexOf("/* v100.313 (08.11.2026"), "înaintea blocului v100.313");
 });
-await test("V versiunile v100.362 (index ×4, sw, versiune.js, package + lanț, BUILD_INFO)", () => {
-  const H = citeste("public", "index.html");
-  assert.equal((H.match(/v100\.362/g) || []).length, 4); assert.match(H, /v100\.362 · CARNETUL CINSTIT/); assert.doesNotMatch(H, /v100\.361/);
-  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-362/); assert.match(citeste("functions", "_shared", "versiune.js"), /"v100\.362"/);
-  const p = JSON.parse(citeste("package.json")); assert.equal(p.version, "100.362.0"); assert.match(p.scripts.test, /npm run test:v100361 && npm run test:v100362/); assert.equal(p.scripts["test:v100362"], "node scripts/proba-v100362.mjs");
-  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.match(bi.badge, /^v100\.362/); assert.ok(bi.cf362 && bi.tz361);
+await test("V versiunile de la v100.362 încolo (v100.363: versiunea curentă o verifică proba ei)", () => {
+  const nr = (t) => Number((String(t).match(/100[.-](\d{3})/) || [])[1]);
+  assert.ok(nr(citeste("functions", "_shared", "versiune.js")) >= 362 && nr(citeste("public", "sw.js")) >= 362 && nr(JSON.parse(citeste("BUILD_INFO.json")).badge) >= 362);
+  const p = JSON.parse(citeste("package.json")); assert.ok(nr(p.version) >= 362); assert.match(p.scripts.test, /npm run test:v100361 && npm run test:v100362/); assert.equal(p.scripts["test:v100362"], "node scripts/proba-v100362.mjs");
+  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.ok(bi.cf362 && bi.tz361);
 });
 console.log(`\n${teste - picate}/${teste} trec`);
 process.exit(picate ? 1 : 0);

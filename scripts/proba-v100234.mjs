@@ -165,7 +165,7 @@ await test("versiunea de la v100.234 în sus", () => {
   assert.equal(info.version, "v100." + minor);
   assert.match(info.badge, new RegExp("^v100\\." + minor + " · "));
   assert.equal(info.engineContract, "54.1");
-  assert.match(col, /VERSIUNE_COLECTOR = "v101\.(13[2-9]|1[4-9]\d)"/);
+  assert.match(col, /VERSIUNE_COLECTOR = "v101\.(13[2-9]|1[4-9]\d|[2-9]\d\d)"/);
 });
 
 console.log(picate ? `\n${picate} PICA din ${teste}\n` : `\ntoate ${teste} ok\n`);

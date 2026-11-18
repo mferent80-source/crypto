@@ -313,7 +313,7 @@ var Acasa = (function () {
     var ingh = l.slice().sort(function (a, b) { return b.rate - a.rate; }).slice(0, 3).map(function (x) { return { s: x.s, rate: x.rate }; });
     var pct = function (v) { var n = Number(v) * 100; return (n < 0 ? "−" : "") + Math.abs(n).toFixed(3).replace(".", ",") + "%"; };
     var ton = raport !== null && raport >= 3 && med > 0.0001 ? "atentie" : raport !== null && raport >= 3 && med < 0 ? "atentie" : "neutru";
-    var coda = ton !== "atentie" ? "." : med < 0 ? ". Mulți s-au înghesuit pe short: coborârile țin mai greu și urcările vin mai brusc." : ". Mulți s-au înghesuit pe long: urcările țin mai greu și căderile vin mai brusc.";
+    var coda = ton !== "atentie" ? "." : med < 0 ? ". Mulți s-au înghesuit pe short (că de aici coborârile ar ține mai greu e o regulă de piață, nemăsurată pe datele tale)." : ". Mulți s-au înghesuit pe long (că de aici urcările ar ține mai greu e o regulă de piață, nemăsurată pe datele tale).";   /* v100.363 (auditul Scannerului): ca la frică / lăcomie, fără efect nemăsurat spus ca fapt */
     var text = lng + " din " + cate(l.length, "monedă", "monede") + ": plătesc long · funding median " + pct(med) + (raport !== null ? " (" + (raport >= 2 ? Math.round(raport) + "× față de obicei" : raport <= 0.5 ? "sub obicei" : "ca de obicei") + ")" : "") + coda;
     return { n: l.length, long: lng, mediana: med, uzual: uz, raport: raport, inghesuiti: ingh, ton: ton, text: text };
   }
@@ -633,7 +633,7 @@ var Acasa = (function () {
       return "N-aș porni nimic nou: raportul pe tot contul e vechi de " + cate(ore, "oră", "ore") + ".";
     }
     var rap = o.raport, tot = rap && rap.valoare ? nr(rap.valoare.total) : null, va = rap && rap.risc ? nr(rap.risc.var95) : null;
-    if (o.raportStare === "ok" && tot > 0 && va > 0.04 * tot) return "Aș reduce expunerea până sub 4% pe zi: o zi proastă îți ia ~" + pctCont(va / tot) + " din cont.";
+    if (o.raportStare === "ok" && tot > 0 && va > 0.04 * tot) return "Aș reduce expunerea până sub 4% pe zi (prag ales, de prudență): o zi proastă îți ia ~" + pctCont(va / tot) + " din cont.";   /* v100.363: pragul e ales, ca 25 / 50 % */
     var ev = o.eveniment ? String(o.eveniment).replace(/[.!?]+$/g, "").trim() : "";
     if (ev) {
       var prefix = "N-aș porni boți noi și n-aș cumpăra chiar înainte de ";

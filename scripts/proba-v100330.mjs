@@ -31,7 +31,7 @@ function ctxEcran() {
   return c;
 }
 const RAP = (var95) => ({ cont: { la: Date.now() - 3600000, valoare: { total: 10000 }, risc: { var95 } } });
-const VAR57 = "Aș reduce expunerea până sub 4% pe zi: o zi proastă îți ia ~5,7% din cont.";
+const VAR57 = "Aș reduce expunerea până sub 4% pe zi (prag ales, de prudență): o zi proastă îți ia ~5,7% din cont.";   // v100.363: pragul spus cinstit
 const monede = (ev) => Array.from({ length: 100 }, (_, i) => ({ simbol: i === 0 ? "BTC_USDT_PERP" : "M" + i + "_USDT_PERP", stare: i > 0 && i <= ev ? "evita" : "candidat", dir: i < 64 ? "short" : "neutru", regim: { miscare: false } }));
 const k1h = (n) => Array.from({ length: n }, (_, i) => ({ time: T0 + i * 3600000, open: 100 + Math.sin(i / 7), high: 100.1 + Math.sin(i / 7), low: 99.9 + Math.sin(i / 7), close: 100 + Math.sin(i / 7) }));
 /* v100.336: bursa se termină IERI (altfel „De unde știu” o vede, pe drept, veche și verdictul nu mai invită) */

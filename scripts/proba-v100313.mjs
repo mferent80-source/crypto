@@ -223,7 +223,7 @@ await test("colector: tura probabilităților pune atr1h (CurbaStop.atr14 pe bar
   assert.match(tp, /if \(rez && d\.CurbaStop\) \{ try \{ const a = d\.CurbaStop\.atr14\(bare\); if \(a > 0\) rez\.atr1h = a;/);
   assert.match(co, /const CurbaStop = incarca\("curba-stop\.js", "CurbaStop"\);/);
   assert.match(co, /GridCalcul, Probabilitati, Dovada, TabloExtra, CurbaStop,/);
-  assert.match(co, /const VERSIUNE_COLECTOR = "v101\.(?:17[1-9]|1[89]\d)";/);   /* v100.314: cel puțin v101.171 */
+  assert.match(co, /const VERSIUNE_COLECTOR = "v101\.(?:17[1-9]|1[89]\d|[2-9]\d\d)";/);   /* v100.314: cel puțin v101.171 */
   assert.match(co, /\.then\(\(\) => turaProbeColector\(\)\)\.catch\(\(e\) => jurnal\("probe", e\.message\)\);/, "lanțul vechi neatins");
   assert.match(co, /catch \(e\) \{ jurnal\("caiet ESEC", SR\.motivEroare\(e\)\); \}\n  await turaCurbaStopColector\(\);/, "curba în tura probelor, după direcție");
 });

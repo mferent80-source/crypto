@@ -116,7 +116,7 @@ await test("5b Acasă: monedele de evitat sortate după mișcarea pe 24 h (nu du
 });
 await test("5c Scan: culoarea de atenție pe mișcarea mare comună (x.mare); fără ea, ca înainte (≥ 2×)", () => {
   const src = citeste("public", "lib", "scan-ecran.js");
-  assert.match(src, /'<span class="scMis ' \+ \(\(x\.mare === true \|\| \(x\.mare === undefined && x\.mis >= 2\)\) \? "warn" : ""\)/, "culoarea e încă la ≥ 2×");
+  assert.match(src, /'<span (?:data-et="[^"]*" )?class="scMis ' \+ \(\(x\.mare === true \|\| \(x\.mare === undefined && x\.mis >= 2\)\) \? "warn" : ""\)/, "culoarea e încă la ≥ 2×");
 });
 await test("5d Scan: textul nu promite „~1 zi din 10” (pe crypto s-a aprins 13% din zile)", () => {
   const src = citeste("public", "lib", "scan.js");

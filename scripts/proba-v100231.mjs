@@ -58,7 +58,7 @@ await test("verbul care invită citește raportul, VaR și evenimentul doar cân
   assert.match(AC.franaVerb(lin(), { raportStare: "vechi", raportOre: 14 }).faCe, /vechi de 14 ore/);
   assert.match(AC.franaVerb(lin(), { raportStare: "vechi", raportOre: 21 }).faCe, /vechi de 21 de ore/);
   const z = AC.franaVerb(lin(), { raportStare: "ok", raport: rap5 });
-  assert.match(z.faCe, /^Aș reduce expunerea până sub 4% pe zi: o zi proastă îți ia ~5,0% din cont\.$/);
+  assert.match(z.faCe, /^Aș reduce expunerea până sub 4% pe zi \(prag ales, de prudență\): o zi proastă îți ia ~5,0% din cont\.$/);
   assert.match(AC.franaVerb(lin(), { raportStare: "ok", raport: { valoare: { total: 100000 }, risc: { var95: 1000 } }, eveniment: "CPI m/m." }).faCe, /chiar înainte de CPI m\/m\.$/);
   assert.equal(AC.franaVerb(lin(), { raportStare: "necunoscut" }).faCe, lin().faCe);
   assert.equal(AC.franaVerb(lin(), {}).faCe, lin().faCe);
@@ -103,7 +103,7 @@ await test("Scan nu mai tipărește planul de dimineață și lei la 1% pe un nu
   assert.match(scan, /Scan\.plan\(x, null\)/);
   assert.match(scan, /acAziNu\(\)/);   /* v100.306 (I-824): regula comună „azi nu” (pauza e una din voci) */
   assert.match(scan, /Pentru un bot grid/);
-  assert.match(scan, /Funding \(la 4 ore\)/);
+  assert.match(scan, /<span>Funding' \+ \(fu && fu\.ore \? " \(la " \+ scCate\(fu\.ore/); assert.doesNotMatch(scan, /Funding \(la 4 ore\)/);   // v100.363: intervalul din răspuns (PEPE e la 8 h)
 });
 
 await test("gura de pauză e aceeași pe Acasă, Sugestii, Scan și Tablou; ciFac pune abaterea T212 înainte de criză", () => {
@@ -144,7 +144,7 @@ await test("versiunea de la v100.231 în sus și colectorul v101.132", () => {
   assert.equal(info.version, "v100." + minor);
   assert.equal(info.engineContract, "54.1");
   assert.match(col, /if \(S\.eLimitaDeRitm\(e\)\) return;/);
-  assert.match(col, /VERSIUNE_COLECTOR = "v101\.(13[2-9]|1[4-9]\d)"/);
+  assert.ok(Number((col.match(/VERSIUNE_COLECTOR = "v101\.(\d+)"/) || [])[1]) >= 132)   /* v100.363: și v101.200 */;
   assert.match(citeste("public", "lib", "grid-sim.js"), /"Aș porni: câștigă în "/);
 });
 

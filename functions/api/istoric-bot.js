@@ -282,7 +282,8 @@ export async function onRequestPost({request,env}){
   }
   if(action==="scan"){
     // v96: un rand = rezumatul zilnic (Scan.rezumat) + pentru monede campurile din clasament; restul se arunca
-    const NR=["p","ch","ch7","ch30","rsi","mis","dMax20","dMin20","atrPct","vol","rang","gs","grile","pas","traversari","latime"],BO=["e20","e50","sparge","miscare","inafara"];
+    // v100.363 (auditul Scannerului, 🔴1): pAzi / chAzi (prețul și „azi” de ACUM) și mare (mișcarea mare comună) se aruncau - pagina arăta închiderea de ieri
+    const NR=["p","ch","ch7","ch30","rsi","mis","dMax20","dMin20","atrPct","vol","rang","gs","grile","pas","traversari","latime","pAzi","chAzi"],BO=["e20","e50","sparge","miscare","inafara","mare"];
     const rand=x=>{if(!x||typeof x!=="object")return null;const s=String(x.s||"").toUpperCase().replace(/[^A-Z0-9.-]/g,"").slice(0,16);if(!s||!(nr(x.p)>0))return null;
       const o={s};NR.forEach(k=>{const v=nr(x[k]);if(v!==null)o[k]=v});BO.forEach(k=>{if(x[k]!==undefined)o[k]=!!x[k]});o.e200=x.e200===null||x.e200===undefined?null:!!x.e200;
       if(typeof x.tk==="string")o.tk=x.tk.replace(/[^A-Za-z0-9._]/g,"").slice(0,24);
@@ -308,7 +309,7 @@ export async function onRequestPost({request,env}){
     // v96.2: cat a mers fiecare reteta in trecut (colectorul, o data pe zi pe piata)
     const ist=corp&&corp.istoric;
     if(ist&&(ist.fel==="c"||ist.fel==="a")){
-      const sum=o=>({n:nr(o&&o.n)||0,pe:nr(o&&o.pe),med:nr(o&&o.med)}),o={la:nr(ist.la)||Date.now(),instr:nr(ist.instr)||0,ore:(Array.isArray(ist.ore)?ist.ore:[]).slice(0,2).map(nr)};
+      const sum=o=>({n:nr(o&&o.n)||0,pe:nr(o&&o.pe),med:nr(o&&o.med),zile:nr(o&&o.zile),ex:nr(o&&o.ex),exLo:nr(o&&o.exLo),exHi:nr(o&&o.exHi),exPe:nr(o&&o.exPe)}),   /* v100.363: zilele (cazurile independente) și excesul față de aceeași zi se păstrează */o={la:nr(ist.la)||Date.now(),instr:nr(ist.instr)||0,ore:(Array.isArray(ist.ore)?ist.ore:[]).slice(0,2).map(nr)};
       ["baza","trend","revenire","spargere","miscare"].forEach(k=>{const x=ist[k];o[k]={s:sum(x&&x.s),l:sum(x&&x.l)}});
       await env.ISTORIC.put("scan:ist:"+ist.fel,JSON.stringify(o));
       return json({ok:true});
