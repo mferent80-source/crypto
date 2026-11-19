@@ -96,8 +96,14 @@ async function yahoo(simbol, interval, rng, prepost) {
   const res = j && j.chart && Array.isArray(j.chart.result) ? j.chart.result[0] : null;
   if (!r.ok || !res || !Array.isArray(res.timestamp)) return null;
   const q = (res.indicators && res.indicators.quote && res.indicators.quote[0]) || {}, out = [];
+  // v100.365 (auditul Salt, B1): după închidere, Yahoo dă bara zilei la Xetra / Paris / Londra cu close: null până a doua zi ⇒ ruta arunca rândul și
+  // „Acum / Ieri” era de ALALTĂIERI la ~290 de instrumente. Doar la ULTIMA bară și doar dacă prețul pieței e din aceeași zi: închiderea = regularMarketPrice.
+  const mt = res.meta || {}, pm = Number(mt.regularMarketPrice), tm = Number(mt.regularMarketTime), n = res.timestamp.length;
   res.timestamp.forEach((t, i) => {
-    const o = q.open && q.open[i], h = q.high && q.high[i], l = q.low && q.low[i], c = q.close && q.close[i];
+    let o = q.open && q.open[i], h = q.high && q.high[i], l = q.low && q.low[i], c = q.close && q.close[i];
+    if (i === n - 1 && !(typeof c === "number" && c > 0) && pm > 0 && tm >= t && new Date(tm * 1000).toISOString().slice(0, 10) === new Date(t * 1000).toISOString().slice(0, 10)) {
+      c = pm; if (!(typeof o === "number" && o > 0)) o = pm; h = Math.max(typeof h === "number" && h > 0 ? h : pm, pm, o); l = Math.min(typeof l === "number" && l > 0 ? l : pm, pm, o);
+    }
     if ([o, h, l, c].every((x) => typeof x === "number" && x > 0)) out.push({ time: t * 1000, open: o, high: h, low: l, close: c, volume: typeof (q.volume && q.volume[i]) === "number" ? q.volume[i] : null });
   });
   return out.length ? out : null;
@@ -172,6 +178,11 @@ function taieOrdine(l, max) {
   return l.slice().sort((a, b) => a.length - b.length || (a < b ? -1 : a > b ? 1 : 0)).slice(-max);
 }
 async function citesteKv(env, k, implicit) { try { const v = JSON.parse((await env.ISTORIC.get(k)) || "null"); return v === null ? implicit : v; } catch { return implicit; } }
+// v100.365 (auditul Salt, B5): lista Salt scrisă de mână - o eroare de citire NU e „listă goală” (un „Adaugă” scria [p] peste toată lista,
+// iar colectorul ștergea stările alertelor); cheia lipsă rămâne listă goală
+const NECITITA = Symbol("necitita");
+async function citesteSaltPoz(env) { let brut; try { brut = await env.ISTORIC.get("t212:salt-pozitii"); } catch { return NECITITA; } if (brut === null || brut === undefined) return []; try { const v = JSON.parse(brut); return Array.isArray(v) ? v : NECITITA; } catch { return NECITITA; } }
+const saltNecitita = () => json({ error: "pozițiile Salt nu s-au putut citi acum (baza de date) - nu scriu nimic peste ele; încearcă peste un minut" }, 503);
 const faraKv = () => json({ error: "ISTORIC_DOAR_ACASA", detail: "Istoricul complet Trading 212 se strânge doar pe serverul de acasă (PORNESTE-CRYPTO-RADAR.bat), de colector." }, 503);
 
 // v93/v94: rezumatul Nasdaq 100 (Home: largimea, cine se misca, cele 7 mari) - din tura de idei si din tura din timpul bursei
@@ -265,7 +276,7 @@ export async function onRequestPost({ request, env }) {
     const l = (Array.isArray(corp && corp.pozitii) ? corp.pozitii : []).map(pozSalt).filter(Boolean).slice(0, 60);
     return peCheie("kv:t212:salt-pozitii", async () => {
       if (Array.isArray(corp && corp.inainte)) {
-        const acum = await citesteKv(env, "t212:salt-pozitii", []), lista = Array.isArray(acum) ? acum : [];
+        const acum = await citesteSaltPoz(env); if (acum === NECITITA) return saltNecitita(); const lista = acum;
         // ambele părți curățate la fel (pozSalt): o poziție scrisă de o formă mai veche (fără un câmp) nu dă 409 la nesfârșit
         if (JSON.stringify(lista.map(pozSalt).filter(Boolean)) !== JSON.stringify(corp.inainte.map(pozSalt).filter(Boolean))) return json({ error: "lista Salt s-a schimbat între timp", pozitii: lista }, 409);
       }
@@ -275,7 +286,7 @@ export async function onRequestPost({ request, env }) {
   // v101.87 (el 07.10, „DA LA TOT”): pagina Salt trimite O operație (pune / scoate) aplicată pe lista PROASPĂTĂ din KV - nu toată
   // lista din memoria ei, care ar fi șters o poziție adăugată între timp de pe pagina alerts (prin colector)
   if (act === "saltPoz") return peCheie("kv:t212:salt-pozitii", async () => {   // v100.259 (punctul 7): pe rând, cu lista întreagă a colectorului
-    const l = await citesteKv(env, "t212:salt-pozitii", []), lista = Array.isArray(l) ? l : [];
+    const l = await citesteSaltPoz(env); if (l === NECITITA) return saltNecitita(); const lista = l;
     let noua;
     if (corp && corp.pune) { const p = pozSalt(corp.pune); if (!p) return json({ error: "poziția nu e bună (ISIN, simbol, cantitate și preț pozitive)" }, 400); noua = lista.some((x) => x && x.isin === p.isin) ? lista.map((x) => (x && x.isin === p.isin ? p : x)) : lista.concat([p]); }
     else if (corp && typeof corp.scoate === "string" && /^[A-Z]{2}[A-Z0-9]{9}\d$/.test(corp.scoate)) noua = lista.filter((x) => x && x.isin !== corp.scoate);
@@ -410,8 +421,9 @@ export async function onRequestGet({ request, env }) {
     }
     if (a === "salt") {
       if (!env.ISTORIC?.get) return faraKv();
-      const [raport, pozitii] = await Promise.all([citesteKv(env, "t212:salt", null), citesteKv(env, "t212:salt-pozitii", [])]);
-      return json({ raport, pozitii: Array.isArray(pozitii) ? pozitii : [] });
+      const [raport, pozitii] = await Promise.all([citesteKv(env, "t212:salt", null), citesteSaltPoz(env)]);
+      if (pozitii === NECITITA) return json({ error: "pozițiile Salt nu s-au putut citi acum (baza de date) - încearcă peste un minut", raport }, 503);
+      return json({ raport, pozitii });
     }
     if (a === "sugestii") {
       if (!env.ISTORIC?.get) return faraKv();

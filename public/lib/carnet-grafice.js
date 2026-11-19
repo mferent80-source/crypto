@@ -38,10 +38,10 @@ var CnGrafice = (function () {
     if (s && s.lo != null) c += '<rect class="jgBanda" x="' + X0 + '" y="' + f(y(s.hi)) + '" width="' + f(X1 - X0) + '" height="' + f(Math.max(1, y(s.lo) - y(s.hi))) + '"><title>' + esc("media pe toate perechile: " + P1(s.medie) + " (interval " + P1(s.lo) + " … " + P1(s.hi) + ")") + "</title></rect>" + linie(X0, y(s.medie), X1, y(s.medie), "jgLinie");
     B.forEach(function (b, i) {
       var x = X0 + i * bw + 2, top = Math.min(y(b.dif), y(0)), h = Math.max(1, Math.abs(y(b.dif) - y(0))), d = new Date(b.t);
-      c += '<rect class="jgBara ' + (b.dif >= 0 ? "jgPoz" : "jgNeg") + '" x="' + f(x) + '" y="' + f(top) + '" width="' + f(Math.max(2, bw - 4)) + '" height="' + f(h) + '" rx="2"><title>' + esc("blocul din " + String(d.getUTCDate()).padStart(2, "0") + "." + String(d.getUTCMonth() + 1).padStart(2, "0") + ": " + P1(b.dif) + " (" + b.n + " de perechi)") + "</title></rect>";
+      c += '<rect class="jgBara ' + (b.dif >= 0 ? "jgPoz" : "jgNeg") + '" x="' + f(x) + '" y="' + f(top) + '" width="' + f(Math.max(2, bw - 4)) + '" height="' + f(h) + '" rx="2"><title>' + esc("blocul din " + String(d.getUTCDate()).padStart(2, "0") + "." + String(d.getUTCMonth() + 1).padStart(2, "0") + ": " + P1(b.dif) + " (" + b.n + " " + ((o && o.unit) || "de perechi") + ")") + "</title></rect>";
       if (i % Math.max(1, Math.ceil(B.length * 44 / (X1 - X0))) === 0)   /* cel puțin 44 px între date (telefonul) */ c += txt(x + bw / 2 - 2, H - 6, String(d.getUTCDate()).padStart(2, "0") + "." + String(d.getUTCMonth() + 1).padStart(2, "0"), { anc: "middle" });
     });
-    return svg(W, H, "Varianta aleasă față de mereu LARG, pe blocuri de 3 zile", c);
+    return svg(W, H, (o && o.eticheta) || "Varianta aleasă față de mereu LARG, pe blocuri de 3 zile", c);   /* v100.365: Salt își pune eticheta */
   }
   // bare orizontale cu interval: rânduri [{et, medie, lo, hi, n, ton}] - pentru nivelurile variantelor și „aș aștepta” ⇒ stopul
   function bare(R, o) {

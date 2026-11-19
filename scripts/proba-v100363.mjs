@@ -92,10 +92,10 @@ await test("P pagina: capul cu vechimea pe piețe și tema, fraza + De unde ști
   assert.doesNotMatch(css, /grid-template-areas:"s n p z" "s i t k"/); assert.match(css, /#scan \.scRand>span\[data-et\]::before\{content:attr\(data-et\)/);
 });
 await test("T tema și legăturile: RADACINI cu scan, tbTemaAplica + scTemaBtn, tema devreme, tbRandComuta ⇒ scRandComuta, generatorul la zi", () => {
-  assert.match(citeste("scripts", "face-tema-tablou.mjs"), /export const RADACINI = \[[^\]]*"carnet", "scan"\]/);
-  const A = citeste("public", "app.js"); assert.match(A, /"tradezilei","carnet","scan"\]\.forEach/); assert.match(A, /"tzTemaBtn","cnTemaBtn","scTemaBtn"\]/); assert.match(A, /return scRandComuta\(id,deschis\);/);
-  assert.match(citeste("public", "lib", "tema-devreme.js"), /"tradezilei", "carnet", "scan"\]/);
-  assert.match(citeste("public", "app.css"), /#tradezilei,#carnet,#scan\)/);
+  assert.match(citeste("scripts", "face-tema-tablou.mjs"), /export const RADACINI = \[[^\]]*"carnet", "scan"(, "[a-z]+")*\]/);
+  const A = citeste("public", "app.js"); assert.match(A, /"tradezilei","carnet","scan","salt"\]\.forEach/); assert.match(A, /"tzTemaBtn","cnTemaBtn","scTemaBtn","slTemaBtn"\]/); assert.match(A, /return scRandComuta\(id,deschis\);/);
+  assert.match(citeste("public", "lib", "tema-devreme.js"), /"tradezilei", "carnet", "scan", "salt"\]/);
+  assert.match(citeste("public", "app.css"), /#tradezilei,#carnet,#scan,#salt\)/);
 });
 await test("V versiunile de la v100.363 încolo (v100.364: versiunea curentă o verifică proba ei)", () => {
   const nr = (t) => Number((String(t).match(/100[.-](\d{3})/) || [])[1]);

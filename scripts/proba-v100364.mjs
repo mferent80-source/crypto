@@ -62,15 +62,14 @@ await test("T stopul promis: coșurile scrise cu spațiu înainte de % (sub 30 %
 });
 
 await test("C colectorul v101.201 (tura de laborator închide ofertele pe monede scoase)", () => {
-  assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.201";/);
+  assert.ok(Number((citeste("scripts", "colector.mjs").match(/const VERSIUNE_COLECTOR = "v101\.(\d+)";/) || [])[1]) >= 201, "colector de la v101.201 încolo");
 });
 
-await test("V versiunile v100.364 (index ×4, sw, versiune.js, package + lanț, BUILD_INFO)", () => {
-  const H = citeste("public", "index.html");
-  assert.equal((H.match(/v100\.364/g) || []).length, 4); assert.match(H, /v100\.364 · SCANNERUL CINSTIT/); assert.doesNotMatch(H, /v100\.363/);
-  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-364/); assert.match(citeste("functions", "_shared", "versiune.js"), /"v100\.364"/);
-  const p = JSON.parse(citeste("package.json")); assert.equal(p.version, "100.364.0"); assert.match(p.scripts.test, /npm run test:v100363 && npm run test:v100364/); assert.equal(p.scripts["test:v100364"], "node scripts/proba-v100364.mjs");
-  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.match(bi.badge, /^v100\.364/); assert.ok(bi.mi364 && bi.sc363);
+await test("V versiunile de la v100.364 încolo (v100.365: versiunea curentă o verifică proba ei)", () => {
+  const nr = (t) => Number((String(t).match(/100[.-](\d{3})/) || [])[1]);
+  assert.ok(nr(citeste("functions", "_shared", "versiune.js")) >= 364 && nr(citeste("public", "sw.js")) >= 364);
+  const p = JSON.parse(citeste("package.json")); assert.ok(nr(p.version) >= 364); assert.match(p.scripts.test, /npm run test:v100363 && npm run test:v100364/); assert.equal(p.scripts["test:v100364"], "node scripts/proba-v100364.mjs");
+  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.ok(nr(bi.badge) >= 364); assert.ok(bi.mi364 && bi.sc363);
 });
 console.log(`\n${teste - picate}/${teste} trec`);
 process.exit(picate ? 1 : 0);

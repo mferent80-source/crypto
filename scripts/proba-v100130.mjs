@@ -203,7 +203,7 @@ await test("(3b) rândul Salt cu stopul DEPĂȘIT arată șansa; detaliul o spun
   const a = { p: { pret: 936.6, pretMediu: 1349.6 }, niv: { stopPozitie: 1109.1, tintaPozitie: 1436.5 }, cons: { nivel: "iesi", titlu: "x" }, st: { trend: { dir: "jos" } }, revine: { p: 0.13, pCapat: 0.07, zile: 60 } };
   const h = G.saltPozRandHtml({ a, p: poz, m: "EUR", pret: 936.6, fx: 1, rez: -400, pct: -0.3, cost: 1411, val: 979, pond: 1 }, { deschis: {}, incarcate: true });
   assert.match(h, /DEPĂȘIT<\/span><button type="button" class="mcsRevBtn t212Mic saltRevMic" data-action-click="mcsPozitie\('RHM\.DE',936\.6,1349\.6,1109\.1\)" title="Monte Carlo pe poziție">🎲 revine la intrare: 13% în 60 de zile de bursă( · scade încă 10%: \d+%)?<\/button>/);   /* v100.350: și cât de des scade încă 10% */   /* v100.132: buton */
-  assert.match(h, /Șansa să revină la prețul tău de intrare \(1\.349,60 EUR\) măcar o dată în 60 de zile de bursă: <b>13%<\/b>; la capăt peste intrare: 7%/);
+  assert.match(h, /Șansa să revină la prețul tău de intrare \(1\.349,60 EUR\) măcar o dată în 60 de zile de bursă: <b>13%<\/b>; la capăt peste intrare: 7 %/);
   assert.match(functie(SE, "saltAnalizeazaUna"), /saltSansaRevenire\(b, a\)/);
 });
 
@@ -218,7 +218,7 @@ await test("(5b) lista: coloanele Stop / Țintă; în curs ⇒ „…”, fără
     nivListe: { AAA: { pret: 10, stop: 9.2, tinta: 11.6, riscPct: 0.08, trend: "jos" }, CCC: { eroare: "prea puține zile" } } };
   const h = G.saltIdeiHtml(d);
   assert.match(h, /<th>Stop<\/th><th>Țintă<\/th>/);
-  assert.match(h, /9,20<span class="t212Mic">−8,0% de acum<\/span>/); assert.match(h, /11,60/); assert.match(h, /trend în jos: doar dacă se întoarce/);
+  assert.match(h, /9,20<span class="t212Mic">−8,0 % de acum \(10,00\)<\/span>/); assert.match(h, /11,60/); assert.match(h, /trend în jos: doar dacă se întoarce/);
   assert.match(h, /BBB[\s\S]*?<td class="tbSub l-stop">…<\/td>/); assert.match(h, /CCC[\s\S]*?<td class="tbSub l-stop">—<\/td>/);
   assert.match(h, /<td class="bad l-stop">9,20/); assert.match(h, /<td class="good l-tinta">11,60/);   // etichetele de pe telefon (cartonașe)
 });
@@ -259,7 +259,7 @@ await test("(5f) saltPorneste încarcă pozițiile (comentariul lipit la mijlocu
 });
 await test("(5e) revizia R8: lângă stop, procentul e față de prețul de ACUM (ultima bară), scris „de acum”", () => {
   const d = { raport: { liste: { revers: [{ simbol: "AAA", pret: 10, cadere: 0.2 }] }, dovada: {} }, fila: "revers", nivListe: { AAA: { pret: 10, stop: 9.2, tinta: 11.6, riscPct: 0.05, trend: "sus" } } };
-  assert.match(G.saltIdeiHtml(d), /9,20<span class="t212Mic">−8,0% de acum<\/span>/);
+  assert.match(G.saltIdeiHtml(d), /9,20<span class="t212Mic">−8,0 % de acum \(10,00\)<\/span>/);
 });
 
 await test("(E) versiunea de la v100.130 în sus (colectorul neatins)", () => {

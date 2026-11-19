@@ -108,9 +108,9 @@ await test("P pagina: capul cu tema, fraza cinstită („nu bate «mereu LARG»�
   assert.match(globalThis.carnetHtml(null), /Carnetul se face noaptea/); assert.match(globalThis.carnetHtml(r, r.la + 40 * 3600000), /vechi \(de acum 40 de ore\)/);
 });
 await test("T tema și legăturile: RADACINI, tbTemaAplica + cnTemaBtn, tema devreme, tbRandComuta ⇒ cnRandComuta, generatorul, index (capul în pagină, scriptul graficelor), cache-ul, CSS-ul", () => {
-  assert.match(citeste("scripts", "face-tema-tablou.mjs"), /"tradezilei", "carnet", "scan"\]/); const A2 = citeste("public", "app.js");
-  assert.match(A2, /"tradezilei","carnet","scan"\]\.forEach\(function\(id\)\{var p=document\.getElementById\(id\);if\(p\)p\.classList\.toggle\("tbZi",zi\)\}\)/); assert.match(A2, /"tzTemaBtn","cnTemaBtn","scTemaBtn"\]/);
-  assert.match(A2, /return cnRandComuta\(id,deschis\)/); assert.match(A2, /var ACTIUNI_PERMISE=new Set\("[^"]*\bcarnetPorneste\b/, "butonul „Reîmprospătează” din capul paginii (lista albă a dispecerului)"); assert.match(citeste("public", "lib", "tema-devreme.js"), /"tradezilei", "carnet", "scan"\]/);
+  assert.match(citeste("scripts", "face-tema-tablou.mjs"), /"tradezilei", "carnet", "scan", "salt"\]/); const A2 = citeste("public", "app.js");
+  assert.match(A2, /"tradezilei","carnet","scan","salt"\]\.forEach\(function\(id\)\{var p=document\.getElementById\(id\);if\(p\)p\.classList\.toggle\("tbZi",zi\)\}\)/); assert.match(A2, /"tzTemaBtn","cnTemaBtn","scTemaBtn","slTemaBtn"\]/);
+  assert.match(A2, /return cnRandComuta\(id,deschis\)/); assert.match(A2, /var ACTIUNI_PERMISE=new Set\("[^"]*\bcarnetPorneste\b/, "butonul „Reîmprospătează” din capul paginii (lista albă a dispecerului)"); assert.match(citeste("public", "lib", "tema-devreme.js"), /"tradezilei", "carnet", "scan", "salt"\]/);
   execFileSync(process.execPath, [path.join(RAD, "scripts", "face-tema-tablou.mjs"), "--check"], { stdio: "pipe" });
   const H = citeste("public", "index.html"); assert.match(H, /<section class="panel" id="carnet">\n<div class="cnPag" id="cnPagina">/); assert.doesNotMatch(H, /<h3>Carnetul fișei<\/h3>/);
   assert.match(H, /<script src="\/lib\/carnet\.js"><\/script><script src="\/lib\/carnet-grafice\.js"><\/script>/); assert.ok(H.indexOf("/lib/carnet-grafice.js") < H.indexOf("/lib/carnet-ecran.js"));

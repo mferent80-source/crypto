@@ -50,7 +50,7 @@ await test("(1) cifrele de sus în EUR: ce ai la Salt (≈ lei), pe deschise (EU
   assert.ok(h.includes(ro1(rez) + " EUR"), "pe deschise " + rez);
   assert.ok(h.includes(Math.round(tot * 5.3471).toLocaleString("ro-RO") + " lei"), "≈ lei");
   const soc = -0.1 * 1.13 * valR - 0.1 * 1 * valN; assert.ok(h.includes(ro1(soc) + " EUR"), "piața −10%: " + soc);
-  assert.match(h, /RHM · 54%|RHM · 53%/);
+  assert.match(h, /RHM · 54 %|RHM · 53 %/);
 });
 await test("(2) „Ce ai de făcut acum”: pozițiile pe IEȘI întâi, cu banii în EUR și „Vezi”, apoi plafonul de 20%", () => {
   const h = globalThis.saltHtml(d0(), T0), t = h.slice(h.indexOf('class="t212Todo"'), h.indexOf("</section>", h.indexOf('class="t212Todo"')));
@@ -92,12 +92,12 @@ await test("(6) „Vreau să cumpăr…”: trece ⇒ intrare / stop / țintă; 
   assert.match(globalThis.saltVreauHtml({ x: U[0], r: { trece: false, motive: ["x"] }, ai: true }), /o ai deja/);
   assert.match(globalThis.saltVreauHtml({ eroare: "nu găsesc „ZZZ” în lista Salt" }), /ZZZ/);
 });
-await test("(7) tura Salt: Idei.judecaActiune pe fiecare instrument (cu Probabilitati / ProfilMoneda), cele care trec, după scor, cel mult 50; fără Idei ⇒ []", async () => {
+await test("(7) tura Salt: Idei.judecaActiune pe fiecare instrument (cu Probabilitati / ProfilMoneda), cele care trec, cel mult 50 (v100.365: după ținta în 5 zile, nu după scor); fără Idei ⇒ []", async () => {
   const ZI = 86400000, B0 = Date.UTC(2025, 0, 6);
   const bare = () => Array.from({ length: 300 }, (_, i) => { const c = 100 + i * 0.1 + Math.sin(i / 5); return { t: B0 + i * ZI, o: c, h: c * 1.01, l: c * 0.99, c, v: 1000 }; });
   const univ = [{ isin: "A1", simbol: "AAA", nume: "Alfa", tip: "actiune", bursa: "NMS", moneda: "USD" }, { isin: "B1", simbol: "BBB", nume: "Beta", tip: "actiune", bursa: "NMS", moneda: "USD" }, { isin: "C1", simbol: "CCC", nume: "Gama", tip: "ETF", bursa: "GER", moneda: "EUR" }];
   const vazut = [];
-  const Idei = { judecaActiune: (b, pret, o) => { vazut.push(o); return o.simbol === "AAA" ? { trece: true, scor: 0.05, pret, intrare: pret, stop: pret * 0.9, tinta: pret * 1.2, riscPct: 0.1, motive: ["m"] } : o.simbol === "CCC" ? { trece: true, scor: 0.09, pret, intrare: pret, stop: 1, tinta: 2, riscPct: 0.1, motive: [] } : { trece: false, motive: ["nu"] }; } };
+  const Idei = { judecaActiune: (b, pret, o) => { vazut.push(o); return o.simbol === "AAA" ? { trece: true, scor: 0.05, pret, intrare: pret, stop: pret * 0.9, tinta: pret * 1.2, riscPct: 0.1, motive: ["m"] } : o.simbol === "CCC" ? { trece: true, scor: 0.09, pret, intrare: pret, stop: 1, tinta: 2, riscPct: 0.1, motive: [], prob: { tinta5: 0.2 } } : { trece: false, motive: ["nu"] }; } };
   const r = await TSalt.turaSalt({ Salt: globalThis.Salt, SA: globalThis.SugestiiActiuni || { puncte: () => [], azi: () => null, dovada: () => ({}), textDovada: () => "", areSalt: () => true }, Idei, Probabilitati: { p: 1 }, ProfilMoneda: { m: 1 },
     univers: univ, cereBare: async () => bare(), acum: B0 + 300 * ZI, jurnal: () => {}, pauza: async () => {} });
   assert.deepEqual(r.idei.map((x) => x.simbol), ["CCC", "AAA"]); assert.equal(r.idei[0].moneda, "EUR"); assert.equal(r.idei[1].isin, "A1");
