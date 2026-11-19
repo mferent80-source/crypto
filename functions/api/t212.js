@@ -227,7 +227,13 @@ export async function onRequestPost({ request, env }) {
     const uR = corp && corp.urmarireReveniri, urm2 = uR && typeof uR === "object" ? { n: nr(uR.n), pePlus: nr(uR.pePlus), medie: nr(uR.medie), text: txt(uR.text, 300) } : null;
     const zi = /^\d{4}-\d{2}-\d{2}$/.test(String(corp && corp.zi)) ? corp.zi : new Date().toISOString().slice(0, 10);
     const u = corp && corp.urmarire, urm = u && typeof u === "object" ? { n: nr(u.n), pePlus: nr(u.pePlus), medie: nr(u.medie), text: txt(u.text, 300) } : null;
-    await env.ISTORIC.put("t212:idei", JSON.stringify({ la: nr(corp && corp.la) || Date.now(), zi, judecate: nr(corp && corp.judecate), trecute: nr(corp && corp.trecute), actiuni: act2, restul: rest2, reveniri: rev2, nReveniri: nr(corp && corp.nReveniri), dovadaReveniri: dov2, urmarireReveniri: urm2, urmarire: urm }));
+    // v100.366 (el 19.11: „Ideile T212 cinstite”): urmărirea față de Nasdaq-100 din aceeași zi - cifre, seria pe zile (≤ 150), concentrarea (≤ 8), text fără HTML
+    const z0 = corp && corp.urmarireZi, curat = (v, m) => txt(v, m).replace(/[<>]/g, ""), dz = (v) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
+    const urmZi = z0 && typeof z0 === "object" && !Array.isArray(z0) ? { h: nr(z0.h), zile: nr(z0.zile), judecate: nr(z0.judecate), medie: nr(z0.medie), lo: nr(z0.lo), hi: nr(z0.hi), blocuri: nr(z0.blocuri), pePlus: nr(z0.pePlus),
+      ideiMedie: nr(z0.ideiMedie), univMedie: nr(z0.univMedie), verdict: ["un-episod", "peste", "sub", "n-am-aflat", "fara-date"].includes(z0.verdict) ? z0.verdict : null, deLa: dz(z0.deLa), panaLa: dz(z0.panaLa),
+      serie: (Array.isArray(z0.serie) ? z0.serie : []).slice(-150).map((x) => ({ t: nr(x && x.t), dif: nr(x && x.dif), n: nr(x && x.n) })).filter((x) => x.t > 0 && x.dif !== null),
+      top: (Array.isArray(z0.top) ? z0.top : []).slice(0, 8).map((x) => ({ s: curat(x && x.s, 16).replace(/[^A-Za-z0-9.-]/g, ""), n: nr(x && x.n) })).filter((x) => x.s), text: curat(z0.text, 400) } : null;
+    await env.ISTORIC.put("t212:idei", JSON.stringify({ la: nr(corp && corp.la) || Date.now(), zi, judecate: nr(corp && corp.judecate), trecute: nr(corp && corp.trecute), actiuni: act2, restul: rest2, reveniri: rev2, nReveniri: nr(corp && corp.nReveniri), dovadaReveniri: dov2, urmarireReveniri: urm2, urmarire: urm, urmarireZi: urmZi }));
     await salveazaNdx(env, corp, zi);
     const ist = await citesteKv(env, "t212:idei-istoric", []), l = Array.isArray(ist) ? ist : [];
     act2.forEach((x) => { if (!l.some((y) => y.zi === zi && y.ticker === x.ticker)) l.push({ zi, ticker: x.ticker, simbol: x.simbol, pret: x.pret }); });

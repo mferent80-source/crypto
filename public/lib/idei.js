@@ -122,6 +122,49 @@ var Idei = (function () {
     var l = [].concat(id.actiuni || [], id.restul || []).filter(tine).slice(0, 45);
     return { actiuni: l.slice(0, 5), restul: l.slice(5), trecute: l.length };
   }
-  return { judecaActiune: judecaActiune, alegeActiuni: alegeActiuni, ideiBoti: ideiBoti, ideiBotiInfo: ideiBotiInfo, PRAG_VOL_BOT: PRAG_VOL_BOT, cuIstoric: cuIstoric, reveniriBoti: reveniriBoti, shortBoti: shortBoti, urmarire: urmarire, ideiInca: ideiInca };
+  // v100.366 (el 19.11: „Ideile T212 cinstite”): urmărirea pe viu față de reperul din ACEEAȘI zi de bursă, pe un orizont fix. Socoteala veche (urmarire)
+  // lua randamentul până azi, aceeași acțiune în fiecare zi și fără reper - pe 25.09–19.11 dădea „−22,7 %” fără să spună cât a scăzut piața.
+  // ist = [{zi, ticker, simbol?, pret}]; bareDe(ticker) ⇒ bare închise [{t, c}]; univ = tickerele reperului (Nasdaq-100); o.h = zile de bursă (20).
+  // Intrarea = ultima închidere ÎNAINTE de ziua ideii (ideea se face dimineața). Zilele = barele de intrare (ideile din weekend repetă vinerea:
+  // aceeași acțiune pe aceeași bară se numără o dată). Fiecare zi = media ideilor ei − media reperului de la aceeași bară.
+  function ziUtc(t) { return new Date(t).toISOString().slice(0, 10); }
+  function urmarireZi(ist, bareDe, univ, o) {
+    o = o || {}; var h = o.h > 0 ? o.h : 20, BL = 28 * ZI, cache = {}, peZi = {}, nume = {}, vazut = {}, judecate = 0, deLa = null, panaLa = null;
+    var b = function (t) { if (!(t in cache)) { var v = null; try { v = bareDe(t); } catch (e) { v = null; } cache[t] = Array.isArray(v) ? v.filter(function (x) { return x && x.c > 0 && x.t > 0; }) : []; } return cache[t]; };
+    var inainte = function (l, zi) { var k = -1; for (var i = 0; i < l.length; i++) { if (ziUtc(l[i].t) < zi) k = i; else break; } return k; };
+    var pana = function (l, zi) { var k = -1; for (var i = 0; i < l.length; i++) { if (ziUtc(l[i].t) <= zi) k = i; else break; } return k; };
+    (Array.isArray(ist) ? ist : []).forEach(function (x) {
+      if (!x || !x.ticker || !/^\d{4}-\d{2}-\d{2}$/.test(x.zi)) return; var l = b(x.ticker), i = inainte(l, x.zi); if (i < 0 || i + h >= l.length) return;
+      var cheie = ziUtc(l[i].t), id = x.ticker + "|" + cheie; if (vazut[id]) return; vazut[id] = 1;
+      (peZi[cheie] = peZi[cheie] || []).push(l[i + h].c / l[i].c - 1); judecate++; var s = x.simbol || String(x.ticker).split("_")[0]; nume[s] = (nume[s] || 0) + 1;
+      if (!deLa || x.zi < deLa) deLa = x.zi; if (!panaLa || x.zi > panaLa) panaLa = x.zi;
+    });
+    var zile = [];
+    Object.keys(peZi).sort().forEach(function (zi) {
+      var u = []; (Array.isArray(univ) ? univ : []).forEach(function (t) { var l = b(t), i = pana(l, zi); if (i >= 0 && ziUtc(l[i].t) === zi && i + h < l.length) u.push(l[i + h].c / l[i].c - 1); });
+      if (u.length < 30) return; var mi = 0, mu = 0; peZi[zi].forEach(function (v) { mi += v; }); u.forEach(function (v) { mu += v; }); mi /= peZi[zi].length; mu /= u.length;
+      zile.push({ t: Date.parse(zi + "T00:00:00Z"), zi: zi, dif: mi - mu, idei: mi, univ: mu, n: peZi[zi].length });
+    });
+    var top = Object.keys(nume).map(function (s) { return { s: s, n: nume[s] }; }).sort(function (a, c) { return c.n - a.n || (a.s < c.s ? -1 : 1); }).slice(0, 8);
+    var r = { h: h, zile: zile.length, judecate: judecate, medie: null, lo: null, hi: null, blocuri: 0, verdict: "fara-date", pePlus: null, ideiMedie: null, univMedie: null,
+      deLa: zile.length ? deLa : null, panaLa: zile.length ? panaLa : null, serie: zile.map(function (z) { return { t: z.t, dif: z.dif, n: z.n }; }), top: top };
+    if (!zile.length) { r.text = textUrmarireZi(r); return r; }
+    var bl = {}, s = 0, si = 0, su = 0, pe = 0; zile.forEach(function (z) { var k = Math.floor(z.t / BL); (bl[k] = bl[k] || { s: 0, n: 0 }); bl[k].s += z.dif; bl[k].n++; s += z.dif; si += z.idei; su += z.univ; if (z.dif > 0) pe++; });
+    var n = zile.length, m = s / n, K = Object.keys(bl), G = K.length, ss = 0; K.forEach(function (k) { ss += Math.pow(bl[k].s - m * bl[k].n, 2); });
+    var T95 = [null, 12.71, 4.30, 3.18, 2.78, 2.57, 2.45, 2.36, 2.31, 2.26, 2.23, 2.20, 2.18, 2.16, 2.14, 2.13, 2.12, 2.11, 2.10, 2.09, 2.09], tc = G - 1 <= 20 ? T95[G - 1] : 1.98;
+    var se = G > 1 ? Math.sqrt(ss * G / (G - 1)) / n : null;
+    r.medie = m; r.ideiMedie = si / n; r.univMedie = su / n; r.pePlus = pe / n; r.blocuri = G; r.lo = se !== null ? m - tc * se : null; r.hi = se !== null ? m + tc * se : null;
+    r.verdict = G < 4 ? "un-episod" : r.lo > 0 ? "peste" : r.hi < 0 ? "sub" : "n-am-aflat";
+    r.text = textUrmarireZi(r); return r;
+  }
+  function pct1(v) { return (v > 0.00049 ? "+" : v < -0.00049 ? "−" : "") + Math.abs(v * 100).toFixed(1).replace(".", ",") + " %"; }
+  function textUrmarireZi(u) {
+    if (!u || !u.zile) return "Ideile se urmăresc față de Nasdaq-100 din aceeași zi, la " + ((u && u.h) || 20) + " de zile de bursă: prima judecată după ce trec cele " + ((u && u.h) || 20) + " de zile.";
+    var d = u.deLa.slice(8, 10) + "." + u.deLa.slice(5, 7);
+    return "Pe viu, din " + d + ", la " + u.h + " de zile de bursă: ideile " + pct1(u.ideiMedie) + ", Nasdaq-100 " + pct1(u.univMedie) + " în aceleași zile ⇒ " + pct1(u.medie) + " față de piață"
+      + (u.lo != null ? " (" + pct1(u.lo) + " … " + pct1(u.hi) + ")" : "") + "; în " + Math.round(u.pePlus * u.zile) + " din " + cate(u.zile, "zi de bursă", "zile de bursă") + " ideile au bătut piața. "
+      + (u.verdict === "un-episod" ? "Am abia " + cate(u.blocuri, "bloc", "blocuri") + " de 4 săptămâni: un singur episod, nu e dovedit, dar " + (u.medie < 0 ? "pierderea e reală." : "nici câștigul nu e sigur.") : u.verdict === "sub" ? "Mai slab decât piața, dovedit pe viu." : u.verdict === "peste" ? "Mai bine decât piața, dovedit pe viu." : "N-am aflat încă.");
+  }
+  return { judecaActiune: judecaActiune, alegeActiuni: alegeActiuni, ideiBoti: ideiBoti, ideiBotiInfo: ideiBotiInfo, PRAG_VOL_BOT: PRAG_VOL_BOT, cuIstoric: cuIstoric, reveniriBoti: reveniriBoti, shortBoti: shortBoti, urmarire: urmarire, ideiInca: ideiInca, urmarireZi: urmarireZi, textUrmarireZi: textUrmarireZi };
 })();
 if (typeof globalThis !== "undefined") globalThis.Idei = Idei;

@@ -4151,6 +4151,37 @@ html.pzDemo #salt [data-rand="deschis"]:not([hidden])::before{content:"▾  str�
 #salt .saltIdei td.i-ist{white-space:normal;min-width:330px;max-width:460px;text-align:left}
 #salt .saltIdei td.i-ist .t212Mic{white-space:normal}
 /* v100.365: sfârșit */
+/* v100.366 (el, 19.11.2026: „Ideile T212 cinstite”): avertismentul și graficul ideilor pe viu (clasele jg*, ca la Carnet / Salt). */
+#t212 svg{display:block;width:100%;height:auto;max-width:100%}
+#t212 svg .jgPoz{fill:#38AD74}
+#t212 svg .jgNeg{fill:#C23E37}
+#t212 svg .jgNeutru{fill:#35485A}
+#t212 svg .jgAtent{fill:#A88420}
+#t212 svg .jgBara{stroke:none}
+#t212 svg .jgAx{fill:#8799AA;font-size:11px;font-family:var(--pzMono)}
+#t212 svg line.jgAx{stroke:#35485A}
+#t212 svg .jgGrid{stroke:#26333F;stroke-width:1;fill:none}
+#t212 svg .jgIc{stroke:#9FB3C4;stroke-width:1.2;fill:none}
+#t212 svg .jgEt{fill:#C9D6E2;font-size:11px}
+#t212 svg .jgLinie{stroke:#5B8FC7;stroke-width:2;fill:none}
+#t212 svg .jgLinie2{stroke:#E9B949;stroke-width:2;fill:none}
+#t212 svg .jgAzi{stroke:#E6EDF3;stroke-width:1.5}
+#t212 svg .jgBanda{fill:#2E4A66;opacity:.45}
+#t212 svg .jgPunct{fill:#5B8FC7;stroke:#141C24;stroke-width:2}
+#t212 svg .jgNou{fill:#141C24;stroke:#E9B949;stroke-width:2}
+#t212 svg .jgPozC{fill:#38AD74}
+#t212 svg .jgNegC{fill:#C23E37}
+#t212.tbZi svg .jgPunct{fill:#2456E6;stroke:#FFFFFF}
+#t212.tbZi svg .jgNou{fill:#FFFFFF;stroke:#A88420}
+#t212.tbZi svg .jgLinie{stroke:#2456E6}
+#t212.tbZi svg .jgLinie2{stroke:#A88420}
+#t212.tbZi svg .jgAzi{stroke:#0E1A2B}
+#t212.tbZi svg .jgBanda{fill:#C5D6EA;opacity:.7}
+#t212.tbZi svg .jgIc{stroke:#66768B}
+#t212 .t212IdeiAvert{display:block;margin:8px 14px 10px;padding:8px 12px;border:1px solid currentColor;border-radius:4px}
+#t212 .t212IdeiAvert p{margin:3px 0}
+#t212 .t212IdeiGr{margin-top:6px}
+/* v100.366: sfârșit */
 /* v100.313 (08.11.2026, el: „sfaturile care chiar contează evidențiază-le în Radar”, macheta aprobată): „CONTEAZĂ ACUM” sub erou, pe toată lățimea.
    Jetoanele PAZNIC (--pzAur, --pzJos, --tb-*): colțuri ≤ 5 px, fără culori noi, fără umbre. Stă înaintea pândei (blocul v100.224 rămâne ultimul). */
 #tabloubot .tbCadru>#ctAcum{grid-column:1/-1}
@@ -4687,6 +4718,8 @@ html.pzDemo #salt [data-rand="deschis"]:not([hidden])::before{content:"▾  str�
 #salt svg .jgAx{font-size:12px}
 #salt svg .jgEt{font-size:12px}
 @media (max-width:640px){#salt .cnMare{font-size:20px}}
+#t212 svg .jgAx{font-size:12px}
+#t212 svg .jgEt{font-size:12px}
 :is(#tabloubot,#t212,#dash,#rangefilter,#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade,#comportament,#tradezilei,#carnet,#scan,#salt) .ctNr small{font-size:12px}
 :is(#tabloubot,#t212,#dash,#rangefilter,#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade,#comportament,#tradezilei,#carnet,#scan,#salt) .ctTxt>b{font-size:20px}
 :is(#tabloubot,#t212,#dash,#rangefilter,#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade,#comportament,#tradezilei,#carnet,#scan,#salt) .ctTxt>span{font-size:12px}
@@ -5518,6 +5551,17 @@ body :is(#tabloubot,#t212,#dash,#rangefilter,#sugestii,#probe,#gridset,#gridsim,
 #salt.tbZi svg .jgNou{fill:#FFFFFF;stroke:#E0A526}
 #salt.tbZi .cnKPlin{background:#2456E6}
 #salt.tbZi .cnKGol{border:2px solid #E0A526}
+#t212.tbZi svg .jgNeutru{fill:#C3CCD8}
+#t212.tbZi svg .jgAx{fill:#66768B}
+#t212.tbZi svg line.jgAx{stroke:#C3CCD8}
+#t212.tbZi svg .jgGrid{stroke:#E0E5EC}
+#t212.tbZi svg .jgIc{stroke:#48586E}
+#t212.tbZi svg .jgEt{fill:#2B3A4B}
+#t212.tbZi svg .jgLinie{stroke:#2456E6}
+#t212.tbZi svg .jgLinie2{stroke:#E0A526}
+#t212.tbZi svg .jgAzi{stroke:#0E1A2B}
+#t212.tbZi svg .jgPunct{fill:#2456E6;stroke:#FFFFFF}
+#t212.tbZi svg .jgNou{fill:#FFFFFF;stroke:#E0A526}
 :is(#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade,#comportament,#tradezilei,#carnet,#scan,#salt).tbZi .sectionHead .sugTemaBtn{background:#F5F7FA;border:1px solid #E0E5EC;color:#0E1A2B}
 :is(#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade,#comportament,#tradezilei,#carnet,#scan,#salt).tbZi .sectionHead .sugTemaBtn:hover{border-color:#C3CCD8}
 :is(#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade,#comportament,#tradezilei,#carnet,#scan,#salt).tbZi .sectionHead .sugTemaBtn:focus-visible{outline:2px solid #2456E6}

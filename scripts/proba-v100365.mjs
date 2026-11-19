@@ -139,7 +139,7 @@ await test("C tura: poza zilnică scrisă o dată, urmărirea din toate pozele �
 });
 await test("C colectorul: turaSaltZi dă turei pozele pe disc (data/salt-poze.jsonl); colector v101.202", () => {
   const c = citeste("scripts", "colector.mjs"), f = c.slice(c.indexOf("async function turaSaltZi()"), c.indexOf("async function turaSaltZi()") + 3000);
-  assert.match(f, /salt-poze\.jsonl/); assert.match(f, /const poze = \{ citeste:/); assert.match(f, /pauza: \(ms\) => new Promise\(\(rs\) => setTimeout\(rs, ms\)\), poze,/); assert.match(c, /const VERSIUNE_COLECTOR = "v101\.202";/);
+  assert.match(f, /salt-poze\.jsonl/); assert.match(f, /const poze = \{ citeste:/); assert.match(f, /pauza: \(ms\) => new Promise\(\(rs\) => setTimeout\(rs, ms\)\), poze,/); assert.ok(Number((c.match(/const VERSIUNE_COLECTOR = "v101\.(\d+)";/) || [])[1]) >= 202, "colector de la v101.202 încolo");
 });
 // ---------------- (P) pagina ----------------
 for (const f of ["salt-dovezi.js", "salt-grafice.js", "carnet-grafice.js", "salt-ecran.js"]) vm.runInThisContext(citeste("public", "lib", f), { filename: f });
@@ -194,12 +194,11 @@ await test("P dovezile măsurate: SaltDovezi (19.11.2026) - 5 coșuri promis / v
   assert.equal(D.h0.faraDrift.length, 300); assert.equal(D.h0.real, 41); assert.ok(Math.abs(D.h0.faraDrift.reduce((a, b) => a + b, 0) / 300 - 56.7) < 0.05);
   assert.equal(D.idei.medie, 0.004); assert.deepEqual(D.putere.map((x) => x[0]), [0.005, 0.01, 0.02]);
 });
-await test("V versiunile v100.365 (index ×4, sw, versiune.js, package + lanț, BUILD_INFO)", () => {
-  const H = citeste("public", "index.html");
-  assert.equal((H.match(/v100\.365/g) || []).length, 4); assert.match(H, /v100\.365 · SALT CINSTIT/); assert.doesNotMatch(H, /v100\.364/);
-  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-365/); assert.match(citeste("functions", "_shared", "versiune.js"), /"v100\.365"/);
-  const p = JSON.parse(citeste("package.json")); assert.equal(p.version, "100.365.0"); assert.match(p.scripts.test, /npm run test:v100364 && npm run test:v100365/); assert.equal(p.scripts["test:v100365"], "node scripts/proba-v100365.mjs");
-  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.match(bi.badge, /^v100\.365/); assert.ok(bi.sl365 && bi.mi364);
+await test("V versiunile de la v100.365 încolo (v100.366: versiunea curentă o verifică proba ei)", () => {
+  const nr = (t) => Number((String(t).match(/100[.-](\d{3})/) || [])[1]);
+  assert.ok(nr(citeste("functions", "_shared", "versiune.js")) >= 365 && nr(citeste("public", "sw.js")) >= 365);
+  const p = JSON.parse(citeste("package.json")); assert.ok(nr(p.version) >= 365); assert.match(p.scripts.test, /npm run test:v100364 && npm run test:v100365/); assert.equal(p.scripts["test:v100365"], "node scripts/proba-v100365.mjs");
+  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.ok(nr(bi.badge) >= 365); assert.ok(bi.sl365 && bi.mi364);
 });
 console.log(`\n${teste - picate}/${teste} trec`);
 process.exit(picate ? 1 : 0);
