@@ -894,7 +894,7 @@ var TabloExtra = (function () {
   // v100.368 (el, 19.11: Alerte „Spun cinstit + registru”): rândul din Tablou spune ce știe registrul pe viu (cazuri noi cu recomandare, judecate față de piață),
   // nu „prețul a scăzut în X din N” (bilantAlerte rămâne, dar nu se mai arată: nu știa sensul botului și n-avea martor)
   function textRegistruAlerte(rg) {
-    var cate = function (n, u, m) { return n === 1 ? "1 " + u : n + (n >= 20 ? " de " : " ") + m; };
+    var cate = TextRo.cate;   /* „de” de la 20 și singularul la 1 - ajutorul comun (proba 75) */
     var cap = "Au avut dreptate alertele? Pe 26 de zile măsurate, niciun fel nu s-a dovedit. ";
     if (!rg || !(rg.total > 0)) return cap + "Registrul pe viu notează fiecare caz nou de la prima tură a colectorului; verdictul pe un fel după 60 de zile sau 30 de cazuri.";
     var F = Array.isArray(rg.feluri) ? rg.feluri : [], jud = F.reduce(function (a, f) { return a + (f.judecate || 0); }, 0);
