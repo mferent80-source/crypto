@@ -77,7 +77,7 @@ await test("(2c) calibrarea: 3 coșuri după stopul promis, promis mediu vs veni
   for (let i = 0; i < 40; i++) l.push({ simbol: "A", t: i, cine: "ta", egale: false, asteapta: false, ta: { net: 0, stop: i < 8, pStop: 0.2 }, mea: { net: 0, stop: false, pStop: 0.2 } });
   for (let i = 0; i < 10; i++) l.push({ simbol: "B", t: i, cine: "mea", egale: false, asteapta: false, ta: { net: 0, stop: false, pStop: 0.1 }, mea: { net: 0, stop: true, pStop: 0.6 } });
   const c = CN.calibrare(l);
-  assert.deepEqual(c.map((x) => x.cos), ["sub 30%", "30–50%", "peste 50%"]);
+  assert.deepEqual(c.map((x) => x.cos), ["sub 30 %", "30–50 %", "peste 50 %"]);
   assert.equal(c[0].n, 40); assert.ok(Math.abs(c[0].promis - 0.2) < 1e-9); assert.ok(Math.abs(c[0].venit - 0.2) < 1e-9); assert.equal(c[0].putine, false);
   assert.equal(c[1].n, 0); assert.equal(c[2].n, 10); assert.equal(c[2].venit, 1); assert.equal(c[2].putine, true);
 });

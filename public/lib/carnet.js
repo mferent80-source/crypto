@@ -126,7 +126,7 @@
   }
   // stopul promis (varianta aleasă) pe 3 coșuri: promis mediu vs cât a venit
   function calibrare(cazuri) {
-    var cos = [{ cos: "sub 30%", de: -1, pana: 0.3 }, { cos: "30–50%", de: 0.3, pana: 0.5 }, { cos: "peste 50%", de: 0.5, pana: 2 }].map(function (c) { return { cos: c.cos, de: c.de, pana: c.pana, n: 0, sp: 0, sv: 0 }; });
+    var cos = [{ cos: "sub 30 %", de: -1, pana: 0.3 }, { cos: "30–50 %", de: 0.3, pana: 0.5 }, { cos: "peste 50 %", de: 0.5, pana: 2 }]   /* v100.364: „30 %” ca restul paginii */.map(function (c) { return { cos: c.cos, de: c.de, pana: c.pana, n: 0, sp: 0, sv: 0 }; });
     (Array.isArray(cazuri) ? cazuri : []).forEach(function (c) {
       var v = c && c[c.cine], p = nr(v && v.pStop); if (p === null || typeof v.stop !== "boolean") return;
       var k = cos.filter(function (x) { return p >= x.de && (p < x.pana || (x.pana === 0.5 && p === 0.5)) && !(x.de === 0.3 && p < 0.3); })[0] || cos[p < 0.3 ? 0 : p <= 0.5 ? 1 : 2];

@@ -9,6 +9,7 @@
 // nu sunt in top; intrebarile laboratorului raman doar pe top.
 // v101.11: pagini (implicit 6 = ~31 zile) si zile (proba gridului dupa plan, implicit 30) - colectorul cere 12 / 60 (doua luni).
 // v101.55 (ideea 2): numărătorile din jurnal - „1 bot”, „25 de boți” (TextRo.cate; rezerva știe aceeași regulă)
+import { eSimbolInvalid, ZILE_PANA_LA_LISTA } from "./lista-neagra.mjs";   /* v101.201 (Radar v100.364): ofertele pe monede scoase */
 function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
 export async function turaLaborator(d) {
   const top = d.top || 20, H = d.H || 2, pagini = d.pagini > 0 ? Math.floor(d.pagini) : 6, zile = d.zile > 0 ? Math.floor(d.zile) : 30, pauzaMs = d.pauzaMs == null ? 1600 : d.pauzaMs, t0 = Date.now();
@@ -79,7 +80,13 @@ export async function turaLaborator(d) {
   }
   // v101.80: ofertele scadente pe monede din afara listei (fișa lui pe alte monede)
   if (carnet) for (const s of [...new Set(deJ.filter((o) => o && !o.r && !carnet.vazute.has(o.simbol) && acumC - o.t >= 3 * 86400000).map((o) => o.simbol))]) {
-    try { judecaPe(s, await aduce15(s)); } catch (e) { d.jurnal("carnet: ofertă", s, e.message); }
+    try { judecaPe(s, await aduce15(s)); } catch (e) {
+      /* v101.201 (Radar v100.364): moneda scoasă de pe bursă („ORDER_USDT_PERP symbol error” în fiecare noapte) - oferta nu se mai poate judeca niciodată.
+         Doar eroarea de simbol invalid și doar după 3 zile de scadență + ZILE_PANA_LA_LISTA (ca lista neagră); orice altă eroare (Pionex lent) o lasă de judecat. */
+      const inchise = eSimbolInvalid(e.message) ? deJ.filter((o) => o && !o.r && o.simbol === s && acumC - o.t >= (3 + ZILE_PANA_LA_LISTA) * 86400000) : [];
+      for (const o of inchise) o.r = { nejudecabil: true, motiv: "simbol scos de pe bursă" };
+      d.jurnal("carnet: ofertă", s, e.message + (inchise.length ? " ⇒ " + cate(inchise.length, "ofertă nejudecabilă", "oferte nejudecabile") + " (simbol scos)" : ""));
+    }
     if (pauzaMs) await d.pauza(pauzaMs);
   }
   const intrebari = d.GridLaborator.intrebari(rows, H);

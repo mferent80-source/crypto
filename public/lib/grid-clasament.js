@@ -64,7 +64,7 @@ var GridClasament = (function () {
   // tickere Pionex -> top n PERP dupa volumul in USDT (amount); volum lipsa = afara, nu 0
   function topDupaVolum(tickers, n) {
     return (Array.isArray(tickers) ? tickers : [])
-      .filter(function (x) { return x && /_USDT_PERP$/.test(String(x.symbol)) && G.eCrypto(x.symbol); })   // v100.39: fara actiuni/marfuri tokenizate
+      .filter(function (x) { return x && /^[A-Za-z0-9]+_USDT_PERP$/.test(String(x.symbol)) && G.eCrypto(x.symbol); })   // v100.39: fara actiuni/marfuri tokenizate · v100.364: fara nume pe care ruta le goleste (币安人生_USDT_PERP ⇒ „_USDT_PERP”, „scan  symbol error” in fiecare ora)
       .map(function (x) { var v = x.amount == null || x.amount === "" ? NaN : Number(x.amount); return { simbol: String(x.symbol), volum: v }; })
       .filter(function (x) { return isFinite(x.volum) && x.volum > 0; })
       .sort(function (a, b) { return b.volum - a.volum; }).slice(0, n || 100);

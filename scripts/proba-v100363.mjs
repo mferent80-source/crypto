@@ -64,7 +64,7 @@ await test("C colectorul: prețul în Discord după mărime; răcirea alertelor 
   await pas(["grid"], 3); await pas([], 4); await pas(["grid"], 5); assert.equal(trimise.length, 2, "du-te-vino în 12 h ⇒ tăcere");
   await pas([], 14); assert.equal(trimise.length, 3, "după 12 h ieșirea se anunță din nou");
   const C = citeste("scripts", "colector.mjs"), TS = citeste("scripts", "lib", "tura-scan.mjs");
-  assert.match(C, /const VERSIUNE_COLECTOR = "v101\.200";/); assert.match(C, /scriePoza: \(o\) => fs\.appendFileSync\(path\.join\(DATA, "scan-poze\.jsonl"\)/);
+  assert.ok(Number((C.match(/const VERSIUNE_COLECTOR = "v101\.(\d+)";/) || [])[1]) >= 200, "colector de la v101.200 încolo"); assert.match(C, /scriePoza: \(o\) => fs\.appendFileSync\(path\.join\(DATA, "scan-poze\.jsonl"\)/);
   assert.match(TS, /if \(d\.scriePoza\) for \(const \[fel, l\] of \[\["c", cr\], \["a", ac\]\]\)/); assert.match(TS, /st\["poza" \+ fel\] === ziU\) continue;/); assert.match(TS, /if \(ok\) st\["poza" \+ fel\] = ziU;/);
 });
 await test("R ruta: scanul păstrează prețul și mișcarea de azi (pAzi, chAzi, mare) și excesul din istoric (zile, ex, exLo, exHi, exPe)", () => {
@@ -97,12 +97,11 @@ await test("T tema și legăturile: RADACINI cu scan, tbTemaAplica + scTemaBtn, 
   assert.match(citeste("public", "lib", "tema-devreme.js"), /"tradezilei", "carnet", "scan"\]/);
   assert.match(citeste("public", "app.css"), /#tradezilei,#carnet,#scan\)/);
 });
-await test("V versiunile v100.363 (index ×4, sw, versiune.js, package + lanț, BUILD_INFO)", () => {
-  const H = citeste("public", "index.html");
-  assert.equal((H.match(/v100\.363/g) || []).length, 4); assert.match(H, /v100\.363 · SCANNERUL CINSTIT/); assert.doesNotMatch(H, /v100\.362/);
-  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-363/); assert.match(citeste("functions", "_shared", "versiune.js"), /"v100\.363"/);
-  const p = JSON.parse(citeste("package.json")); assert.equal(p.version, "100.363.0"); assert.match(p.scripts.test, /npm run test:v100362 && npm run test:v100363/); assert.equal(p.scripts["test:v100363"], "node scripts/proba-v100363.mjs");
-  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.match(bi.badge, /^v100\.363/); assert.ok(bi.sc363 && bi.cf362);
+await test("V versiunile de la v100.363 încolo (v100.364: versiunea curentă o verifică proba ei)", () => {
+  const nr = (t) => Number((String(t).match(/100[.-](\d{3})/) || [])[1]);
+  assert.ok(nr(citeste("functions", "_shared", "versiune.js")) >= 363 && nr(citeste("public", "sw.js")) >= 363);
+  const p = JSON.parse(citeste("package.json")); assert.ok(nr(p.version) >= 363); assert.match(p.scripts.test, /npm run test:v100362 && npm run test:v100363/); assert.equal(p.scripts["test:v100363"], "node scripts/proba-v100363.mjs");
+  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.ok(nr(bi.badge) >= 363); assert.ok(bi.sc363 && bi.cf362);
 });
 console.log(`\n${teste - picate}/${teste} trec`);
 process.exit(picate ? 1 : 0);
