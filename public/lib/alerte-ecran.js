@@ -147,7 +147,7 @@ function alSurse() {
     "„Au avut dreptate?” e măsurat pe " + (D ? D.zile : 26) + " de zile de jurnal (13.10–19.11, cu o gaură 19→30.10): după fiecare alertă cu o recomandare, ce a făcut prețul față de un martor din aceeași fereastră (aceeași monedă și direcție a botului în ±7 zile; aceeași acțiune în alte zile; piața: QQQ / STOXX, cipurile: SMH). Cazurile repetate se numără o dată.",
     "Testul: p-ul de permutare cu zilele grupate (cipurile cad împreună). Intervalele pe puține zile „găsesc ceva” în 15–41 % din seturile fără niciun efect, de aceea un interval care nu atinge zero NU e singur o dovadă.",
     "„Ieși” pe acțiuni: 15 cazuri în doar 6 zile, toate din aceeași cădere a cipurilor - față de sector avantajul e mic (p 8–22 %).",
-    "„Intrarea sugerată” promitea în medie +" + (D ? String(D.promis).replace(".", ",") : "2,4") + " % pe trade (din istoric); pe viu au venit −2,9 % în 5 ședințe, cu 1,7 puncte sub piață (38 de cazuri, p 8,8 %). Mesajul spune de acum cifra de pe viu.",
+    "„Intrarea sugerată” promitea în medie +" + (D ? TextRo.num(D.promis, 1) : "2,4") + " % pe trade (din istoric); pe viu au venit −2,9 % în 5 ședințe, cu 1,7 puncte sub piață (38 de cazuri, p 8,8 %). Mesajul spune de acum cifra de pe viu.",
     "„Gridul e prea larg pentru levier”: pe boții tăi, cei 16 avertizați au ieșit în medie +3,0 %, niciunul pe minus - avertismentul e spus „nedovedit”.",
     "Registrul (de acum): fiecare caz nou cu o recomandare e judecat după 1 / 5 / 10 ședințe (acțiuni, față de QQQ, în sensul alertei) sau după 1 / 24 / 72 h (boți, față de BTC, în direcția botului). Verdictul pe un fel abia după 60 de zile sau 30 de cazuri (pragul scris înainte).",
     "Cât ar dura să se vadă ceva: intrarea 5 puncte ~1 lună; BTC în mișcare 3 puncte ~2 luni; „Ieși” 5 puncte 3–5 luni; o alertă de boți de 1 punct - ani."];
@@ -176,7 +176,7 @@ function alDovadaHtml() {
   var ser = function (d, k) { return d.map(function (x) { return x[k]; }); };
   h += '<div class="cnGrGrila"><div class="cnGr"><h5>Drumul după „Ieși” (acțiuni)</h5><p class="cnMut cnMic">' + escapeHtml(D.iesi[0] ? "15 cazuri în 6 zile, aceeași cădere a cipurilor · pe ședințe după alertă" : "") + "</p>"
     + A.linii([{ et: "acțiunea", cls: "jgLinie", v: ser(D.iesi, 1) }, { et: "QQQ / STOXX", cls: "jgLinie2", v: ser(D.iesi, 2) }, { et: "cipurile (SMH)", cls: "jgIc", v: ser(D.iesi, 3) }], { lat: lat, eticheta: "Drumul prețului după Ieși" }) + "</div>";
-  h += '<div class="cnGr"><h5>Drumul după intrarea sugerată</h5><p class="cnMut cnMic">' + escapeHtml("38 de cazuri · linia punctată = ce promitea în medie mesajul (+" + String(D.promis).replace(".", ",") + " % pe trade)") + "</p>"
+  h += '<div class="cnGr"><h5>Drumul după intrarea sugerată</h5><p class="cnMut cnMic">' + escapeHtml("38 de cazuri · linia punctată = ce promitea în medie mesajul (+" + TextRo.num(D.promis, 1) + " % pe trade)") + "</p>"
     + A.linii([{ et: "acțiunea", cls: "jgLinie", v: ser(D.intrare, 1) }, { et: "QQQ / STOXX", cls: "jgLinie2", v: ser(D.intrare, 2) }], { lat: lat, promis: D.promis, eticheta: "Drumul prețului după intrarea sugerată" }) + "</div></div>";
   // registrul pe viu
   if (rg && rg.feluri && rg.feluri.length) {
