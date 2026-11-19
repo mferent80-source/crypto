@@ -68,7 +68,7 @@ await test("(4) gridVsPlan pe botul care rulează: −27 la marginea de jos (64%
 });
 await test("(5) mesajul de Discord: titlul ≤ 60, două rânduri (faptul · 👉 ce aș face), cu cifrele și ieșirea", () => {
   const m = MC.gridPreaLarg("TAKE", Object.assign(TE.gridVsPlan(BOT, 6.5), { plan: 6.5 }));
-  assert.equal(m.cheie, "grid-larg"); assert.equal(m.nivel, "atentie"); assert.ok(m.titlu.length <= 60, m.titlu); assert.equal(m.titlu, "TAKE: gridul e prea larg pentru levier");
+  assert.equal(m.cheie, "grid-larg"); assert.equal(m.nivel, "atentie"); assert.ok(m.titlu.length <= 60, m.titlu); assert.equal(m.titlu, "TAKE: gridul e prea larg pentru levier (nedovedit)");   /* v100.367: pe boții lui, cei 16 avertizați au ieșit mai bine */
   assert.match(m.mesaj, /≈ \d+,\d USDT/, "o singură zecimală"); assert.match(m.mesaj, /pragul de pierdere −6,5[;.]/);   /* v100.102 */
   const r = m.mesaj.split("\n"); assert.equal(r.length, 2); assert.match(r[0], /La marginea de jos pierzi ≈ \d+,?\d* USDT \(\d+% din bani\), pragul de pierdere −6,5/); assert.match(r[0], /din 49 de grile n-ar lucra/);
   assert.match(r[1], /^👉 Aș închide aproape de zero și aș porni ÎNGUST sau LARG din fișă/);

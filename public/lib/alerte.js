@@ -364,7 +364,7 @@ var Alerte = (function () {
       out["p-margine"] = langa
         ? { nivel: "atentie", titlu: nume + ": prețul e la " + vg(Math.min(dj, ds) * 100) + "% de marginea de " + (dj <= ds ? "jos (" + pret(jos) + ")" : "sus (" + pret(sus) + ")"),
           // v100.70 (revizia pachetului 3, I8): „plină” doar pe partea pe care pierde botul - long/neutru jos (scădere), short/neutru sus (creștere)
-          mesaj: msg("Ieșit din grid, botul nu mai face perechi" + (dj <= ds ? (dirMg !== "short" ? " și poziția rămâne plină pe scădere" : "") : (dirMg !== "long" ? " și poziția rămâne plină pe creștere" : "")) + ".", "N-aș pune bani în plus cât stă lângă margine.") }
+          mesaj: msg("Încă în grid, dar aproape de margine: dacă trece de ea, botul nu mai face perechi" + (dj <= ds ? (dirMg !== "short" ? " și poziția rămâne plină pe scădere" : "") : (dirMg !== "long" ? " și poziția rămâne plină pe creștere" : "")) + ".", "N-aș pune bani în plus cât stă lângă margine.") }
         : { nivel: "ok", titlu: "", mesaj: "" };
     }
 

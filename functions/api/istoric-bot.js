@@ -142,6 +142,7 @@ async function istoricGet(request,env){
   // v100.311: „🎯 Direcția pe 7 zile (în probă)” — primele 10 monede Pionex cu direcția M1 / M2 și probabilitatea + urmărirea la 7 zile (tura-directie.mjs)
   if(action==="directie"){let v=null;try{v=JSON.parse(await env.ISTORIC.get("sugestii:directie")||"null")}catch{v=null}return json({directie:v})}
   if(action==="oscilo"){let v=null;try{v=JSON.parse(await env.ISTORIC.get("sugestii:oscilo")||"null")}catch{v=null}return json({oscilo:v})}   /* v100.353: Oscilo (în probă) */
+  if(action==="alerteRegistru"){let v=null;try{v=JSON.parse(await env.ISTORIC.get("alerte:registru")||"null")}catch{v=null}return json({registru:v})}   /* v100.367: registrul alertelor (rezumatul colectorului) */
   if(action==="treiLaRand"){let v=null;try{v=JSON.parse(await env.ISTORIC.get("proba:treiLaRand")||"null")}catch{v=null}return json({treiLaRand:v})}   /* v100.360: proba „3 pierderi la rând = gata ziua” */
   // v100.312 (I-843): caietul de păreri judecate - lista (o scrie pagina) + judecățile (le scrie colectorul, tura-pareri.mjs), pe chei separate
   if(action==="pareri"){let l,j;try{l=JSON.parse(await env.ISTORIC.get("pareri:lista")||"[]");j=JSON.parse(await env.ISTORIC.get("pareri:judecate")||"{}")}catch{return json({error:"caietul nu s-a putut citi acum"},503)}if(!Array.isArray(l)||!j||typeof j!=="object"||Array.isArray(j))return json({error:"caietul nu s-a putut citi acum"},503);return json({pareri:l,judecate:j})}   /* revizia: la o eroare de citire 503, nu gol - colectorul ar fi șters judecățile */
@@ -785,12 +786,20 @@ export async function onRequestPost({request,env}){
     await env.ISTORIC.put("laborator",JSON.stringify({la,H:nr(corp.H),monede:nr(corp.monede),ferestre:nr(corp.ferestre),intrebari:curate,planMonede,blocuri:bl,sursaLista:corp.sursaLista==="propuse"?"propuse":"volum"}),{expirationTtl:3*24*3600});
     return json({ok:true,intrebari:curate.length});
   }
+  // v100.367 (el 19.11: dreptatea „spun cinstit + registru”): rezumatul registrului alertelor, curățat (≤ 40 de feluri, cifre, verdictul din listă)
+  if(action==="alerteRegistru"){
+    const r=corp&&corp.rezumat;if(!r||typeof r!=="object"||Array.isArray(r)||!(nr(r.la)>0))return json({error:"alerteRegistru: rezumatul cu „la”"},400);
+    const V=["se-aduna","peste","sub","n-am-aflat"],fel=(v)=>String(v||"").replace(/[^a-z0-9-]/gi,"").slice(0,32);
+    const o={la:nr(r.la),deLa:nr(r.deLa),total:nr(r.total),prag:{zile:nr(r.prag&&r.prag.zile),cazuri:nr(r.prag&&r.prag.cazuri)},feluri:(Array.isArray(r.feluri)?r.feluri:[]).slice(0,40).map((f)=>({fel:fel(f&&f.fel),piata:f&&f.piata==="crypto"?"crypto":"actiuni",h:nr(f&&f.h),n:nr(f&&f.n),judecate:nr(f&&f.judecate),zile:nr(f&&f.zile),medie:nr(f&&f.medie),lo:nr(f&&f.lo),hi:nr(f&&f.hi),pePlus:nr(f&&f.pePlus),verdict:V.includes(f&&f.verdict)?f.verdict:"se-aduna"})).filter((f)=>f.fel)};
+    await env.ISTORIC.put("alerte:registru",JSON.stringify(o));return json({ok:true,feluri:o.feluri.length});
+  }
   if(action==="alerte"){
     const a=corp&&corp.alerta;
     const t=nr(a&&a.t),titlu=a&&typeof a.titlu==="string"?a.titlu.slice(0,200):"";
     if(t===null||!titlu)return json({error:"Lipseste t sau titlu"},400);
     const NIVEL=["info","atentie","critic"];
-    const intrare={t,nivel:NIVEL.includes(a.nivel)?a.nivel:"info",titlu,mesaj:typeof a.mesaj==="string"?a.mesaj.slice(0,600):"",bot:idBot(a.bot)||null,cheie:typeof a.cheie==="string"?a.cheie.replace(/[^A-Za-z0-9_-]/g,"").slice(0,32):null,pret:nr(a.pret),simbol:simbolKv(a.simbol)||null};   // v100.149 (I-581): prețul și simbolul botului la alertă
+    const msj=typeof a.mesaj==="string"?a.mesaj:"";   /* v100.367 (auditul 19.11, 🔴2): ca pe Discord (2.000), cu „…” când e tăiat; cheia până la 64; doarRadar / repetare; primit = sosirea */
+    const intrare={t,nivel:NIVEL.includes(a.nivel)?a.nivel:"info",titlu,mesaj:msj.length>2000?msj.slice(0,1999)+"…":msj,bot:idBot(a.bot)||null,cheie:typeof a.cheie==="string"?a.cheie.replace(/[^A-Za-z0-9_-]/g,"").slice(0,64):null,pret:nr(a.pret),simbol:simbolKv(a.simbol)||null,doarRadar:a.doarRadar===true,repetare:a.repetare===true,primit:Date.now()};   // v100.149 (I-581): prețul și simbolul botului la alertă
     // v100.259 (auditul 23.10): păstrarea pe TIMP (7 zile), nu „ultimele 100” (~7,5 ore: turaDupa24h nu găsea nimic peste 24 h, iar alertele
     // critice de noapte erau împinse afară de grile). Grilele („grila”, doar în Radar) stau în cheia lor, cu plafonul lor (ALERTE_GRILA_MAX)
     const grila=intrare.cheie==="grila",cheieKv=grila?"alerte-grila":"alerte",plafon=grila?ALERTE_GRILA_MAX:ALERTE_MAX;

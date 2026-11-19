@@ -201,9 +201,10 @@ await test("I-836.4 Alerte: cel mult 50 de rânduri, pe zile, restul la un clic;
   vm.runInContext(lib("alerte-ecran.js"), ctx);
   const l = Array.from({ length: 1413 }, (_, i) => ({ t: ACUM - i * 600000, nivel: i % 7 === 0 ? "atentie" : "info", cheie: "grila-" + i, titlu: "alerta " + i }));
   ctx.alSt.l = l; ctx.alDeseneaza();
-  let h = el.alCentru.innerHTML; const n = (h.match(/class="alRand /g) || []).length;
-  assert.ok(n > 0 && n <= 50, "rânduri: " + n); assert.match(h, /id="alImp" checked/); assert.match(h, /data-altot="1"/); assert.match(h, /class="alZi"/);
-  assert.ok(!/class="alRand info/.test(h), "pe telefon, implicit doar importante");
+  let h = el.alCentru.innerHTML; const n = (h.replace(/<details class="alInfo">[\s\S]*?<\/details>/g, "").match(/class="alRand /g) || []).length;   /* v100.367: la vedere ≤ 50 de cazuri importante; informările dintre ele pliate („N informări”) */
+  assert.match(h, /<details class="alInfo"><summary>\d+ informări/);
+  assert.ok(n > 0 && n <= 50, "rânduri: " + n); assert.doesNotMatch(h, /id="alImp" checked/);   /* v100.367 (🟡10): nici pe telefon nu mai e pornit implicit */ assert.match(h, /data-altot="1"/); assert.match(h, /class="alZi"/);
+  assert.ok(/class="alRand info/.test(h), "v100.367 (🟡10): și pe telefon informările se văd implicit (rezumatul de noapte trimite la ele)");
   ctx.alSt.imp = false; ctx.alSt.toate = true; ctx.alDeseneaza(); h = el.alCentru.innerHTML;
   assert.equal((h.match(/class="alRand /g) || []).length, 1413, "la un clic: toate (nimic șters)");
   assert.match(CSS, /#alerts \.alPunct\{[^}]*background:var\(--muted\)/); assert.match(CSS, /#alerts \.alRand\.critic \.alPunct\{background:var\(--bad\)\}/);

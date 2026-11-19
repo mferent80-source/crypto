@@ -52,7 +52,7 @@ await test("U textUrmarireZi: spune de când, orizontul, ideile față de reper,
 await test("C colectorul: urmarireZi pe barele aduse pentru idei, reperul Nasdaq-100, trimisă cu ideile; colector v101.203", () => {
   const c = citeste("scripts", "colector.mjs"), f = c.slice(c.indexOf("async function turaIdeiZi()"), c.indexOf("async function turaIdeiZi()") + 9000);
   assert.match(f, /let urmZi = null; try \{ const urmZi0 = Idei\.urmarireZi\(id && Array\.isArray\(id\.istoric\) \? id\.istoric : \[\], \(tk\) => bareIdei\.get\(tk\), NDX\.map\(\(x\) => x \+ "_US_EQ"\), \{ h: 20 \}\)/);
-  assert.match(f, /urmarire: urm, urmarireZi: urmZi,/); assert.match(c, /const VERSIUNE_COLECTOR = "v101\.203";/);
+  assert.match(f, /urmarire: urm, urmarireZi: urmZi,/); assert.ok(Number((c.match(/const VERSIUNE_COLECTOR = "v101\.(\d+)";/) || [])[1]) >= 203, "colector de la v101.203 încolo");
 });
 function kvFals() { const m = new Map(); return { m, get: async (k) => (m.has(k) ? m.get(k) : null), put: async (k, v) => { m.set(k, v); } }; }
 const TOKEN = "t".repeat(40);
@@ -90,12 +90,11 @@ await test("P desenat (pagina T212 în vm): fără tură nouă ⇒ cifrele măsu
   assert.equal(ctx.t212IdeiIstoric({ pePlusProba: 0.899, nProba: 139, motive: ["a", "b", "pe istoricul ei, intrările în starea asta: 90% pe plus, +6,1% în medie (139 de zile)"] }), "pe istoricul ei, în trendul de acum: 90 % pe plus în 20 de zile (~7 cazuri independente, cifră optimistă)");
   assert.doesNotMatch(ctx.t212IdeiIstoric({ motive: ["a", "b", "pe istoricul ei, intrările în starea asta: 90% pe plus, +6,1% în medie (139 de zile)"] }), /în medie/);
 });
-await test("V versiunile v100.366 (index ×4, sw, versiune.js, package + lanț, BUILD_INFO)", () => {
-  const H = citeste("public", "index.html");
-  assert.equal((H.match(/v100\.366/g) || []).length, 4); assert.match(H, /v100\.366 · IDEILE T212 CINSTITE/); assert.doesNotMatch(H, /v100\.365/);
-  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-366/); assert.match(citeste("functions", "_shared", "versiune.js"), /"v100\.366"/);
-  const p = JSON.parse(citeste("package.json")); assert.equal(p.version, "100.366.0"); assert.match(p.scripts.test, /npm run test:v100365 && npm run test:v100366/); assert.equal(p.scripts["test:v100366"], "node scripts/proba-v100366.mjs");
-  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.match(bi.badge, /^v100\.366/); assert.ok(bi.ti366 && bi.sl365);
+await test("V versiunile de la v100.366 încolo (v100.367: versiunea curentă o verifică proba ei)", () => {
+  const nr = (t) => Number((String(t).match(/100[.-](\d{3})/) || [])[1]);
+  assert.ok(nr(citeste("functions", "_shared", "versiune.js")) >= 366 && nr(citeste("public", "sw.js")) >= 366);
+  const p = JSON.parse(citeste("package.json")); assert.ok(nr(p.version) >= 366); assert.match(p.scripts.test, /npm run test:v100365 && npm run test:v100366/); assert.equal(p.scripts["test:v100366"], "node scripts/proba-v100366.mjs");
+  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.ok(nr(bi.badge) >= 366); assert.ok(bi.ti366 && bi.sl365);
 });
 console.log(`\n${teste - picate}/${teste} trec`);
 process.exit(picate ? 1 : 0);

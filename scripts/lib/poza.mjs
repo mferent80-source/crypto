@@ -251,6 +251,9 @@ export function planTuraPoza({ acum, cheiPaznic, botiActivi }) {
 export function urcaPoza({ amprenta, ultima, ultimaLa, acum }) {
   return amprenta !== ultima || !(acum - (Number(ultimaLa) || 0) < POZA_BATAIE_MS);
 }
+// v100.367 (auditul alertelor, 19.11.2026): după „intrarea sugerată”, pe viu - 38 de cazuri judecate, la 5 ședințe −2,9 %, cu 1,7 puncte sub piață (p 8,8 %)
+const INTRARE_MASURAT = { la: "19.11.2026", n: 38, r5: -0.029, exces: -0.017 };
+function pctSemn(v) { return (v > 0 ? "+" : v < 0 ? "−" : "") + pctTxt(v); }
 function pctTxt(v, z = 1) { return (Math.abs(v) * 100).toFixed(z).replace(".", ",") + "%"; }
 function miiTxt(v) { v = nr(v) || 0; return Math.abs(v) >= 1e6 ? (v / 1e6).toFixed(1).replace(".", ",") + " mil." : Math.abs(v) >= 1e3 ? Math.round(v / 1e3) + " k" : String(Math.round(v)); }
 // alertele pe simbolurile paginii (I-463): miscarea zilei peste 2x ATR-ul propriu (media |Δ zi| pe 14 zile) si o cumparare
@@ -264,8 +267,10 @@ export function alerteSimboluri(simboluri, anterioare, acum) {
       const ult = c.slice(-15); let suma = 0, n = 0;
       for (let k = 1; k < ult.length; k++) if (ult[k - 1] > 0 && ult[k] > 0) { suma += Math.abs(ult[k] / ult[k - 1] - 1); n++; }
       const atr = n ? suma / n : null, d = s.pret / s.prev - 1;
-      if (atr && Math.abs(d) > 2 * atr) out.push({ cheie: "sim-miscare-" + s.s + "-" + zi(s.s), nivel: "atentie",
-        titlu: s.s + ": " + (d > 0 ? "+" : "−") + pctTxt(d) + " azi, de " + (Math.abs(d) / atr).toFixed(1).replace(".", ",") + "× mișcarea lui obișnuită",
+      // v100.367 (auditul 19.11, 🔴6): la deschiderea sesiunii noi prețul și închiderea de dinainte sunt încă ale celei vechi ⇒ „dupa” = aceeași mișcare
+      // (aceeași închidere de dinainte); colectorul nu o mai anunță a doua oară. Titlul spune „în ultima ședință”, nu „azi”.
+      if (atr && Math.abs(d) > 2 * atr) out.push({ cheie: "sim-miscare-" + s.s + "-" + zi(s.s), dupa: "sim-miscare-" + s.s + "-p" + Math.round(s.prev * 1e4), nivel: "atentie",
+        titlu: s.s + ": " + (d > 0 ? "+" : "−") + pctTxt(d) + " în ultima ședință, " + (Math.abs(d) / atr).toFixed(1).replace(".", ",") + "× mișcarea obișnuită",
         // v100.68 (sfaturile concise, pachetul 3): faptul + „👉 ” actiunea; pragul ramane spus ca ipoteza
         mesaj: "Peste 2× ATR-ul lui (" + pctTxt(atr) + " pe zi, media pe 14 zile); pragul e o ipoteză, nu un semnal dovedit.\n👉 M-aș uita la știrile lui înainte să fac ceva: o mișcare mare nu cere singură o decizie." });
     }
@@ -374,7 +379,8 @@ export function alerteSLTP(poza, acum) {
     out.push({ cheie: "sltp-intrare-" + s.s + "-" + zi(s.s), nivel: "info", titlu: s.s + ": a ajuns la intrarea sugerată (" + m + pr(g.intrare.pret) + ")",
       // v100.68 (pachetul 3): randul 1 = pretul, stopul, tinta si istoricul; randul 2 = cat as cumpara (reper, nu semnal)
       mesaj: "Prețul e " + m + pr(pret) + " · stop " + m + pr(g.stop) + " · țintă " + m + pr(g.tinta)
-        + (nr(q.medie) !== null ? " · pe istoric " + (q.medie >= 0 ? "+" : "−") + pctTxt(q.medie) + " pe trade (" + Math.round((q.pePlus || 0) * 100) + "% pe plus, " + cate(q.n, "intrare", "intrări") + ")" : "") + ".\n👉 "
+        // v100.367 (el 19.11: „spun cifra de pe viu”): „pe istoric +X % pe trade” promitea, iar pe viu a venit invers ⇒ cifra măsurată (INTRARE_MASURAT)
+        + " · pe viu după intrare: " + pctSemn(INTRARE_MASURAT.r5) + " în 5 ședințe, " + pctTxt(INTRARE_MASURAT.exces) + " sub piață (" + INTRARE_MASURAT.n + " de cazuri, nedovedit).\n👉 "
         // v101.3 (el, 28.09): si cat cumpar, cand colectorul a calculat marimea (doar in $, cu contul T212 citit)
         // v100.70 (revizia pachetului 3, I7): marimea e conditionala („dacă intru”), nu o recomandare de cumparare; „decizia e a ta” revine
         + (g.marime && g.marime.plin ? "Ai deja 20% din cont în ea: n-aș adăuga nimic; e un reper din istoricul ei, decizia e a ta."   /* v101.116 (revizia, 🔴2) */

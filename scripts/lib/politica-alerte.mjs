@@ -97,3 +97,19 @@ export function episodTrail(ep, dd, pragPct) {
 // ---------------- etichetele care oscilează ----------------
 // banda pentru „Crypto: liniște ⇄ mișcare” și pauza dintre două schimbări (Alerte.schimbareVreme o primește ca al 4-lea argument)
 export function bandaVreme() { return { intrare: PRAG_MISCARE_INTRARE, iesire: PRAG_MISCARE_IESIRE, pauzaMs: PAUZA_ETICHETA_MS }; }
+
+// ---------------- repetările (v100.367; el, 19.11.2026: zgomotul „și pe Discord”) ----------------
+// Auditul: 257 de alerte pe zi, 87 % repetau ceva din ultimele 24 h, Consilierul „Ieși ⇄ Atenție” de 165 de ori sub 24 h. Aceeași cheie + bot sub 24 h
+// fără escaladare (nivel mai mare decât cel deja trimis) ⇒ doar în Radar. Mereu pe Discord: lichidarea, stopul atins, frâna, evenimentele mari,
+// opritorul și alertele fără cheie (nu știu ce sunt). st = { "cheie|bot": { t, rang } } = ultima trimisă pe Discord.
+export const REPETARE_MS = 24 * 3600000;
+const RANG = { info: 0, atentie: 1, critic: 2 };
+export function mereuPeDiscord(cheie, m) { const k = String(cheie || ""); return !k || /^(lich|stop|sltp-sl|frana|eveniment-mare|opritor)/.test(k) || /lichid/i.test(String(m && m.titlu || "")); }
+export function repetare(st, m, cheie, bot, acum) {
+  if (!m || mereuPeDiscord(cheie, m)) return false;
+  const k = String(cheie) + "|" + (bot || ""), r = RANG[m.nivel] != null ? RANG[m.nivel] : 0, v = st[k], viu = v && acum - v.t < REPETARE_MS;
+  if (viu && r <= v.rang) return true;
+  st[k] = { t: viu ? v.t : acum, rang: viu ? Math.max(r, v.rang) : r };
+  return false;
+}
+export function curataRepetari(st, acum) { for (const k of Object.keys(st || {})) if (!(st[k] && acum - st[k].t < REPETARE_MS)) delete st[k]; return st; }

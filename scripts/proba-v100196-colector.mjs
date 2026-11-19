@@ -256,7 +256,7 @@ await test("C6 / 🔵3: coada (KV și Discord) - în ordine, se oprește la prim
 });
 await test("C6 colector: alerta ratată în KV intră în coada de pe disc și se reîncearcă; cozile au gardă de reintrare; turele grele stau 60 s după un 429", () => {
   const c = citeste("scripts", "colector.mjs");
-  assert.match(c, /if \(!inKv && ok\) \{ coadaKv\.push\(\{ t: alertaKv\.t, m: alertaKv \}\); salveazaCoadaKv\(\); \}/);
+  assert.match(c, /if \(!inKv\) \{ coadaKv\.push\(\{ t: alertaKv\.t, m: alertaKv \}\); salveazaCoadaKv\(\); \}/);   /* v100.367 (🔴5): orice ar face Discordul */
   assert.match(c, /golesteCoadaKv\(\)\.catch\(\(e\) => jurnal\("coada kv", e\.message\)\);/);
   // v100.267 (auditul 29.10): garda de reintrare întoarce golirea în curs (promisiunea), ca trimiteAlerta s-o aștepte
   assert.match(c, /if \(golireDiscord\) return golireDiscordP;\n\s*if \(CANAL !== "discord" \|\| !coadaDiscord\.length\) return;/);

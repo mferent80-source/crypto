@@ -1,6 +1,7 @@
 {
-  "version": "v100.366",
-  "badge": "v100.366 · IDEILE T212 CINSTITE",
+  "version": "v100.367",
+  "badge": "v100.367 · ALERTELE CINSTITE",
+  "al367": "19.11.2026 (el: „continua” ⇒ Alerte „ca Jurnalul”; hotărârile LUI: zgomotul și pe Discord, dreptatea spusă cinstit + registru, mesajele cu cifra de pe viu, toate 4 graficele; bugurile 🔴1–7 reparate; colector v101.204)",
   "ti366": "19.11.2026 (el: „Ideile T212 cinstite” ⇒ „Spun cinstit + avertisment”): ideile de pe viu 25.09–19.11 la 20 de zile −21,7 % față de Nasdaq-100 −2,8 % în aceleași zile (0 din 20 de zile peste, un singur episod) ⇒ avertisment + grafic pe pagina T212, urmărirea zilnică față de aceeași zi (Idei.urmarireZi), rândul ideii fără „+Z % în medie”; colector v101.203",
   "sl365": "19.11.2026 (el: „MAI DEPARTE?” ⇒ Salt „ca Jurnalul”; hotărârile LUI după auditul cu 2 revizori: ideile spuse cinstit + urmărite zilnic, listele față de aceeași zi, aspectul ca paginile refăcute, toate 4 graficele; B1 ruta Yahoo close null, B5 lista Salt necitită ⇒ 503; colector v101.202)",
   "mi364": "19.11.2026 (el: „continua” după verificarea de dimineață): universul crypto fără simbolurile pe care ruta le golește (币安人生 ⇒ „_USDT_PERP”, „scan  symbol error” orar); ofertele carnetului pe monede scoase ⇒ nejudecabile după 6 zile; „30 %” cu spațiu; colector v101.201",

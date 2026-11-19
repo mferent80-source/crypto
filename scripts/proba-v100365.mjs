@@ -182,8 +182,8 @@ await test("P cu poziții: pozițiile întâi; poziția fără dată ⇒ roșu �
 });
 await test("P legăturile: rândurile SL_RANDURI în comutatorul comun, tema (RADACINI / app.js / tema devreme / butonul), scripturile noi în index + SW; asezare-paznic citește aceleași id-uri", () => {
   const ap = citeste("public", "app.js"), ix = citeste("public", "index.html");
-  assert.match(ap, /return slRandComuta\(id,deschis\);/); assert.match(ap, /"scan","salt"\]\.forEach/); assert.match(ap, /"scTemaBtn","slTemaBtn"\]/);
-  assert.match(citeste("public", "lib", "tema-devreme.js"), /"scan", "salt"\]/); assert.match(citeste("scripts", "face-tema-tablou.mjs"), /"scan", "salt"\]/);
+  assert.match(ap, /return slRandComuta\(id,deschis\);/); assert.match(ap, /"scan","salt"(,"[a-z]+")*\]\.forEach/); assert.match(ap, /"scTemaBtn","slTemaBtn"(,"[A-Za-z]+")*\]/);
+  assert.match(citeste("public", "lib", "tema-devreme.js"), /"scan", "salt"(, "[a-z]+")*\]/); assert.match(citeste("scripts", "face-tema-tablou.mjs"), /"scan", "salt"(, "[a-z]+")*\]/);
   assert.match(ix, /id="slTemaBtn"/); assert.match(ix, /<script src="\/lib\/salt-dovezi\.js"><\/script><script src="\/lib\/salt-grafice\.js"><\/script>/);
   assert.match(citeste("public", "sw.js"), /"\/lib\/salt-dovezi\.js","\/lib\/salt-grafice\.js"/);
   const az = citeste("public", "lib", "asezare-paznic.js"); assert.match(az, /#saltPozBox tr\.t212Rand/); assert.match(az, /#saltSus \.t212TodoRand/);

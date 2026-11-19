@@ -63,10 +63,11 @@ export const faraPlan = (nume, pp) => ({ nivel: "atentie", cheie: "fara-plan", t
 
 // v101.70 (05.10, el: „să nu se mai întâmple situația de azi”, TAKE): botul nou cu gridul prea larg pentru levier - o dată, la primul tur;
 // x = TabloExtra.gridVsPlan(b, planMinus) (+ plan). Azi alerta „gridul e mai larg decât planul” a venit după 3 ore, doar după planul scris.
-export const gridPreaLarg = (nume, x) => ({ nivel: "atentie", cheie: "grid-larg", titlu: nume + ": gridul e prea larg pentru levier",
+export const gridPreaLarg = (nume, x) => ({ nivel: "atentie", cheie: "grid-larg", titlu: nume + ": gridul e prea larg pentru levier (nedovedit)",   /* v100.367 (el 19.11: „spun cifra de pe viu”): pe boții lui, cei 16 avertizați au ieșit mai bine (+3,0 %, 0 pe minus) - explicația pe pagina Alerte */
   mesaj: msg("La marginea de " + x.parte + " pierzi ≈ " + V1(x.laMargine) + " USDT (" + Math.round((x.procent || 0) * 100) + "% din bani), pragul de pierdere −" + V1(x.plan)
     + (x.moarte != null && x.intervale ? "; cu stopul la prag, " + x.moarte + " din " + cate(x.intervale, "grilă", "grile") + " n-ar lucra." : "."),
-    "Aș închide aproape de zero și aș porni ÎNGUST sau LARG din fișă" + (x.stopPlan ? "; dacă-l ții, stopul la " + String(Number(x.stopPlan.toPrecision(4))).replace(".", ",") : "") + ".") });
+    "Aș închide aproape de zero și aș porni ÎNGUST sau LARG din fișă" + (x.stopPlan ? "; dacă-l ții, stopul la " + String(Number(x.stopPlan.toPrecision(4))).replace(".", ",") : "") + ".")
+ });
 
 // v101.74 (I-547): becul 1z al unei poziții T212 a trecut în jos (aceeași regulă ca semaforul paginii) - o dată pe schimbare
 const P1 = (f) => (f > 0 ? "+" : f < 0 ? "−" : "") + Math.abs(100 * f).toFixed(1).replace(".", ",") + "%";

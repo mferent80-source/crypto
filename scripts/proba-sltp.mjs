@@ -96,7 +96,7 @@ await test("alerteSLTP: fara plan -> SL / TP sugerat atins (critic / info); CU p
 await test("alerteSLTP: simbol urmarit la intrarea sugerata -> info cu SL, TP si istoricul; departe / trend in jos / fara-date -> nimic", () => {
   const l = alerteSLTP(pozaA(), ACUM_A), i = l.find((x) => x.cheie === "sltp-intrare-INTC-" + ZI_A);
   assert.ok(i); assert.equal(i.nivel, "info"); assert.match(i.titlu, /INTC: a ajuns la intrarea sugerată \(\$111,99\)/);
-  assert.match(i.mesaj, /stop \$94,68/); assert.match(i.mesaj, /țintă \$146,61/); assert.match(i.mesaj, /\+7,0% pe trade/);   /* v100.68: vocabularul „stop / țintă” */
+  assert.match(i.mesaj, /stop \$94,68/); assert.match(i.mesaj, /țintă \$146,61/); assert.match(i.mesaj, /pe viu după intrare: −2,9% în 5 ședințe/); assert.doesNotMatch(i.mesaj, /\+7,0% pe trade/);   /* v100.367: promisiunea din istoric ⇒ cifra de pe viu */   /* v100.68: vocabularul „stop / țintă” */
   assert.ok(!l.some((x) => /WDC|RHM|NOUX/.test(x.cheie)));
   assert.deepEqual(alerteSLTP({ t212: [], simboluri: [] }, ACUM_A), []); assert.deepEqual(alerteSLTP(null, ACUM_A), []);
 });
