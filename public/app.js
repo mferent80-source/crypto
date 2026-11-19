@@ -7439,7 +7439,8 @@ async function tbAduExtra(){
     try{var ist=await getJSON("/api/istoric-bot?action=citeste&ore=24&bot="+encodeURIComponent(b.id));
       tbStare.istoricServer={bot:b.id,intrari:Array.isArray(ist.intrari)?ist.intrari:[],config:ist.config||null,adusLa:Date.now()};e.istoricEroare=null;   /* v100.194: când a sosit ora colectorului (alarma falsă „oprit”) */
       // v79.1: alertele colectorului stau in KV (fara ntfy) si se vad aici
-      try{var al=await getJSON("/api/istoric-bot?action=alerte");tbStare.alerteServer=al&&Array.isArray(al.alerte)?al.alerte:[]}catch(x2){tbStare.alerteServer=null}}
+      try{var al=await getJSON("/api/istoric-bot?action=alerte");tbStare.alerteServer=al&&Array.isArray(al.alerte)?al.alerte:[]}catch(x2){tbStare.alerteServer=null}
+      try{var arg=await getJSON("/api/istoric-bot?action=alerteRegistru");tbStare.alerteRegistru=arg&&arg.registru||null}catch(x3){tbStare.alerteRegistru=null}}   /* v100.368: registrul alertelor */
     catch(x){e.istoricEroare=x.status===503?"doar-acasa":textEroare(x)}
     try{var f=await getJSON("/api/pionex-account?action=futures");e.futures=f&&f.usdt?f.usdt:null;e.futuresEroare=null}
     catch(x){e.futures=null;e.futuresEroare=textEroare(x)}
@@ -7581,7 +7582,7 @@ function renderTabloAlerte(){
     '<div class="tbLinie"><span>Canalul de alerte</span><b>'+escapeHtml(canal)+'</b></div>';
   if(lista===null)h+='<p class="tbSub">Nu pot citi alertele de pe server.</p>';
   else if(!lista.length)h+='<p class="tbSub">Nicio alertă încă. Aici apar: lichidare aproape, Pionex în stare anormală, preț ieșit din grid, piața pe 4h împotriva botului, mișcare mare.</p>';
-  else{var bil=TabloExtra.bilantAlerte(tbStare.alerteServer);if(bil.length)h+='<p class="tbSub">Ce a urmat: '+bil.map(function(x){return escapeHtml(x.text)}).join(" · ")+'</p>';   /* v100.149 (I-581) */
+  else{h+='<p class="tbSub">'+escapeHtml(TabloExtra.textRegistruAlerte(tbStare.alerteRegistru))+' Detaliile: Alerte › „Au avut dreptate?”.</p>';   /* v100.368: registrul pe viu în locul bilanțului „a scăzut în X din N” (v100.149, I-581) */
     h+='<div class="tbAlerteLista">'+lista.map(function(a){var n=NIV[a.nivel]||NIV.info,du=TabloExtra.dupaAlerta(a);return '<div class="tbAlerta"><span class="tbSub">'+escapeHtml(new Date(a.t).toLocaleString("ro-RO",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}))+'</span><b class="'+n[1]+'">'+n[0]+' '+escapeHtml(a.titlu)+'</b>'+(TabloExtra.alertaRezolvata(a,tbStare.alerteServer)?' <span class="tbSub">· ✓ rezolvată</span>':'')+(du?' <span class="tbSub">· '+escapeHtml(du)+'</span>':'')+(a.mesaj?'<p class="tbSub">'+escapeHtml(a.mesaj)+'</p>':'')+'</div>'}).join("")+'</div>'+dinN(12,tbStare.alerteServer.length)}
   el.innerHTML=h;
   tbRenderTodo();

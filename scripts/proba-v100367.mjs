@@ -164,10 +164,10 @@ await test("E pagina: fraza cinstită + De unde știu, 3 cifre, dovada cu 4 graf
 });
 await test("V versiunile v100.367 (index ×4, sw, versiune.js, package + lanț, BUILD_INFO) și colectorul v101.204", () => {
   const H = citeste("public", "index.html");
-  assert.equal((H.match(/v100\.367/g) || []).length, 4); assert.match(H, /v100\.367 · ALERTELE CINSTITE/); assert.doesNotMatch(H, /v100\.366/);
-  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-367/); assert.match(citeste("functions", "_shared", "versiune.js"), /"v100\.367"/);
-  const p = JSON.parse(citeste("package.json")); assert.equal(p.version, "100.367.0"); assert.match(p.scripts.test, /npm run test:v100366 && npm run test:v100367/); assert.equal(p.scripts["test:v100367"], "node scripts/proba-v100367.mjs");
-  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.match(bi.badge, /^v100\.367/); assert.ok(bi.al367 && bi.ti366); assert.match(col, /const VERSIUNE_COLECTOR = "v101\.204";/);
+  const vh = (H.match(/v100\.(\d{3})/) || [])[1]; assert.ok(+vh >= 367, "versiunea de la v100.367 încolo: " + vh); assert.doesNotMatch(H, /v100\.366/);   /* v100.368: „de la încolo” */
+  assert.ok(+(citeste("public", "sw.js").match(/crypto-radar-v100-(\d{3})/) || [])[1] >= 367); assert.ok(+(citeste("functions", "_shared", "versiune.js").match(/"v100\.(\d{3})"/) || [])[1] >= 367);
+  const p = JSON.parse(citeste("package.json")); assert.ok(+p.version.split(".")[1] >= 367); assert.match(p.scripts.test, /npm run test:v100366 && npm run test:v100367/); assert.equal(p.scripts["test:v100367"], "node scripts/proba-v100367.mjs");
+  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.ok(+(bi.badge.match(/^v100\.(\d{3})/) || [])[1] >= 367); assert.ok(bi.al367 && bi.ti366); assert.match(col, /const VERSIUNE_COLECTOR = "v101\.204";/);
 });
 console.log(`\n${teste - picate}/${teste} trec`);
 process.exit(picate ? 1 : 0);

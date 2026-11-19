@@ -130,7 +130,7 @@ await test("(I-581) alertele cu „ce a urmat”: prețul la alertă + prețul d
   assert.match(COL, /pret: pretBot\(bot\), simbol: simbolBot\(bot\)/, "alerta pleacă în KV cu prețul și simbolul botului (revizia: și boții opriți se judecă)"); assert.match(COL, /action=alerteDupa"/, "judecata după 24 h");
   assert.match(API, /action==="alerteDupa"/); assert.match(API, /pret:nr\(a\.pret\),simbol:simbolKv\(a\.simbol\)/, "KV ține prețul și simbolul alertei");
   assert.match(API, /env\.ISTORIC\.put\("alerte-dupa"/, "revizia: „ce a urmat” în cheia ei, nu peste lista alertelor (fără scrieri pierdute)");
-  assert.match(functie(APP, "renderTabloAlerte"), /TabloExtra\.dupaAlerta\(a\)/); assert.match(functie(APP, "renderTabloAlerte"), /TabloExtra\.bilantAlerte\(/);
+  assert.match(functie(APP, "renderTabloAlerte"), /TabloExtra\.dupaAlerta\(a\)/); assert.match(functie(APP, "renderTabloAlerte"), /TabloExtra\.textRegistruAlerte\(/);   /* v100.368: bilanțul „a scăzut în X din N” nu se mai arată - registrul în locul lui */
 });
 await test("(I-579) Monte Carlo pe regim: ferestrele din jurnalul de stări al Busolei, starturile drumurilor doar din ele, poarta de validare", () => {
   const ctx = new Function(`${citeste("public", "lib", "text-ro.js")}; ${citeste("public", "lib", "grid-calcul.js")}; ${citeste("public", "lib", "grid-proba.js")}; ${citeste("public", "lib", "monte-simbol.js")}; ${citeste("public", "lib", "grid-sim.js")}; return { GridSim, GridCalcul };`)();
