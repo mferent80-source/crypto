@@ -13,7 +13,9 @@
   var semn = function (v, z) { return v == null ? "—" : (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(z == null ? 1 : z).replace(".", ","); };
   // v100.258 (auditul 23.10, 🔴): sub 1 cu cifre semnificative, ca graficul (GraficBot.fmtP) - toFixed(5) scria PEPE „0.00000”
   var fP = function (v) { return typeof TextRo !== "undefined" && TextRo.pret ? TextRo.pret(v) : v == null ? "—" : v >= 100 ? v.toFixed(2) : v >= 1 || v <= 0 ? v.toFixed(4) : v.toFixed(Math.min(10, Math.max(4, 3 - Math.floor(Math.log10(v))))); };
-  var ingust = function () { return innerWidth <= 550; };
+  /* v100.373 (viteza): lățimea se citește O DATĂ pe tură - după ce tura scrie în pagină, fiecare `innerWidth` cerea o așezare întreagă (0,5 s din 40 s) */
+  var latTura = null, latime = function () { return latTura !== null ? latTura : innerWidth; };
+  var ingust = function () { return latime() <= 550; };
   var st = function () { try { return typeof tbStare !== "undefined" ? tbStare : null; } catch (e) { return null; } };
   var bot = function () { var s = st(); return s && s.routeOk !== false && s.bot || null; };
   var boti = function () { var s = st(); return ((s && s.boti) || []).filter(function (b) { return b && b.activ !== false; }); };
@@ -199,7 +201,7 @@
       var coada = f === "putine" ? "prea puține zile" : f === "fara" ? "fără scor încă" : fo.pct ? fo.pct + ", nedovedit" : "nedovedită";
       return '<span class="pzVoce pzVoce-nedov"' + tit + '>○ ' + esc(v.n + sens + " · " + coada) + '</span>';
     }
-    return '<span class="pzVoce pzVoce-' + v.ton + '"' + tit + '>' + (SIMB[v.ton] || "–") + " " + esc(v.n + (f === "masurata" && fo.pct ? " · " + fo.pct : "")) + '</span>';
+    return '<span class="pzVoce pzVoce-' + v.ton + '"' + tit + '>' + (v.sageata || SIMB[v.ton] || "–") + " " + esc(v.n + (f === "masurata" && fo.pct ? " · " + fo.pct : "")) + '</span>';
   }
   // v100.336 (I-862): „De unde știu” sub verdictul Tabloului - ora citirii botului din Pionex, fișa monedei, clasamentul (vremea pieței)
   function surseTablou() {
@@ -220,7 +222,12 @@
   }
   function voci() {
     var V = [];
-    document.querySelectorAll("#tbGrafic .gbSem").forEach(function (g) {
+    // v100.373 (auditul 20.11): tonul vine din DATE (tbSemaforTf), nu din culoarea becului - codurile de culoare căutate erau ale temei de noapte, iar
+    // pe tema de zi (cea implicită) toate cipurile ieșeau „–”; cipul poartă și săgeata becului, ca pe grafic
+    var semD = null; try { semD = typeof tbSemaforTf === "function" && D.bot ? tbSemaforTf(D.bot) : null; } catch (e) { semD = null; }
+    var TON_D = { bine: "da", rau: "nu", atentie: "atentie" }, SG_D = { urca: "↑", coboara: "↓", lateral: "↔" };
+    if (semD && semD.length) semD.forEach(function (x) { V.push({ n: x.et, ton: x.dir ? (TON_D[x.ton] || "neutru") : "neutru", tit: x.et + ": " + (x.text || ""), sageata: x.dir ? SG_D[x.dir] || null : null }); });
+    else document.querySelectorAll("#tbGrafic .gbSem").forEach(function (g) {
       var t = (g.querySelector("title") || {}).textContent || "", cs = g.querySelectorAll("circle"), c = cs.length ? cs[cs.length - 1].getAttribute("fill") || "" : "";
       var ton = /#26A96C/i.test(c) ? "da" : /#E0524A/i.test(c) ? "nu" : /#E9B949/i.test(c) ? "atentie" : "neutru";
       V.push({ n: (t.split(":")[0] || "").trim(), ton: ton, tit: t });
@@ -233,6 +240,10 @@
       var t = (x.textContent || "").trim(), cap = t.slice(0, 40);   // rândul începe cu iconița (🎰/✓) - căutăm în cap, nu cu ^ (revizia, minor)
       if (/Monte Carlo/.test(cap)) V.push({ n: "Monte Carlo", ton: /contra botului/i.test(t) ? "nu" : /cu botul/i.test(t) ? "da" : "neutru", tit: t.split("\n")[0].slice(0, 200), forma: formaVoce("Monte Carlo", scC && scC.textContent, scT && scT.textContent) });
       else if (/^\W*Busola/.test(cap)) V.push({ n: "Busola", ton: /invers/i.test(t) ? "nu" : /ca botul/i.test(t) ? "da" : "neutru", tit: t.split("\n")[0].slice(0, 200), forma: formaVoce("Busola") });
+      // v100.373: vocea Monte Carlo lipsea tocmai când vocile se contrazic („Graficul pe 4h spune: … · Monte Carlo la limită”): se caută în toată fraza vocilor
+      else if (/Monte Carlo/.test(t.split("\n")[0]) && !V.some(function (q) { return q.n === "Monte Carlo"; })) { var sgM = (/Monte Carlo([^·]*)/.exec(t.split("\n")[0]) || [])[1] || ""; V.push({ n: "Monte Carlo", ton: /aș opri|contra/i.test(sgM) ? "nu" : /aș ține|cu botul/i.test(sgM) ? "da" : "neutru", tit: t.split("\n")[0].slice(0, 200), forma: formaVoce("Monte Carlo", scC && scC.textContent, scT && scT.textContent) }); }
+      /* tonul Busolei stă pe rândul „Direcția, după Busola”, nu pe „Busola, pe 4h” */
+      if (/^\W*Direcția, după Busola/.test(cap)) { var vB = V.filter(function (q) { return q.n === "Busola"; })[0]; if (vB) vB.ton = /invers|contra botului/i.test(t) ? "nu" : /ca botul|cu botul/i.test(t) ? "da" : vB.ton; }
     });
     return V;
   }
@@ -251,10 +262,10 @@
     var niv = sem.querySelector(".tbConsEt, .tbSemNivel"), tit = sem.querySelector(".tbConsSt h3, .tbSemCap b"), fac = sem.querySelector(".tbConsFac p:not(.tbEt2):not(.tbSub), .tbFac");
     var tonV = niv ? (niv.classList.contains("critic") || /IE[ȘS]I/i.test(niv.textContent) ? "jos" : niv.classList.contains("atentie") ? "aur" : /[ȚT]INE|bine/i.test(niv.textContent + niv.className) ? "sus" : "mut") : "mut";
     var verb = niv ? niv.textContent.replace(/[^\p{L}\s]/gu, "").trim().toUpperCase() : "", txtTit = tit ? tit.textContent : "", txtFac = fac ? fac.textContent.replace(/^👉\s*/, "") : "";
-    var cheie = "pzVerdictUlt", salvat = null, nota = "", schimbat = ultimBotV !== b.id; ultimBotV = b.id;
+    var cheie = "pzVerdictUlt", salvat = null, nota = "", dinSalvat = false, schimbat = ultimBotV !== b.id; ultimBotV = b.id;
     try { salvat = JSON.parse(localStorage.getItem(cheie) || "null"); } catch (e) {}
     if (!verb || /SOCOTESC|FĂRĂ BOT/.test(verb)) {
-      if (verdictValid(salvat, b.id, Date.now())) { verb = salvat.verb; tonV = salvat.ton; txtTit = salvat.tit; txtFac = salvat.fac; var d = new Date(salvat.la); nota = '<p class="pzDin">ultimul verdict, de la ' + d.toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" }) + ' · Consilierul îl reverifică acum</p>'; }
+      if (verdictValid(salvat, b.id, Date.now())) { dinSalvat = true; verb = salvat.verb; tonV = salvat.ton; txtTit = salvat.tit; txtFac = salvat.fac; var d = new Date(salvat.la); nota = '<p class="pzDin">ultimul verdict, de la ' + d.toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" }) + ' · Consilierul îl reverifică acum</p>'; }
     } else if (!schimbat && (!salvat || salvat.botId !== b.id || salvat.verb !== verb || salvat.tit !== txtTit)) {   // la schimbarea botului se așteaptă o tură: DOM-ul Consilierului poate fi încă al botului vechi
       try { localStorage.setItem(cheie, JSON.stringify({ botId: b.id, verb: verb, ton: tonV, tit: txtTit, fac: txtFac, la: Date.now() })); } catch (e) {}
     }
@@ -266,9 +277,23 @@
       var rnd = [].slice.call(gL.children).filter(function (x) { return !x.classList.contains("pzDin"); }).map(function (x) { return x.textContent.trim(); }).filter(Boolean);
       motivG = '<div class="pzMotiv"><b>' + esc((rnd[0] || "").replace(/^⚠️?\s*/, "⚠ ")) + '</b>' + rnd.slice(1).map(function (x) { return '<p>' + esc(x) + '</p>'; }).join("") + '<p class="pzDin">din: fișa de trade (levierul) · Pionex (gridul botului)</p></div>';
     }
+    // v100.373 (hotărârea lui din 20.11): capul = MARGINEA CONTRA BOTULUI, cu șansele pe 1 h / 4 h / 24 h, banii la margine și la stop și dovada de pe
+    // boții lui; Consilierul coboară sub ea, ca informație (siguranța - lichidarea, stopul, planul - rămâne titlul). Fără cifrele marginii: ca înainte.
+    /* cât Consilierul socotește, capul e verdictul SALVAT (pastila, titlul și acțiunea lui) - marginea nu-l acoperă (revizia: „IEȘI” rămânea fără motiv) */
+    var cap = null; try { cap = !dinSalvat && typeof tbCapMargine === "function" && typeof CapMargine !== "undefined" ? tbCapMargine(b) : null; } catch (e) { cap = null; }
+    var corpV = '<div class="pzVerbTxt"><b>' + esc(txtTit) + '</b>' + (txtFac ? '<p>' + esc(txtFac) + '</p>' : "") + nota + '<p class="pzDin">din: Consilierul · motivele întregi în cartela lui, mai jos</p>';
+    if (cap) {
+      var snC = CapMargine.textSanse(cap), bnC = CapMargine.textBani(cap), stC = CapMargine.textStop(cap);
+      corpV = '<div class="pzVerbTxt pzMarg"><b>' + esc(cap.titlu) + '</b>' + (cap.fapt ? '<p class="pzMargFapt">' + esc(cap.fapt) + '</p>' : "")
+        + (snC ? '<p class="pzMargSanse">' + esc(snC) + '</p>' : "") + (bnC ? '<p class="pzMargBani">' + esc(bnC) + '</p>' : "") + (stC ? '<p class="pzMargSanse">' + esc(stC) + '</p>' : "")
+        + (cap.faCe ? '<p class="pzMargFac">' + esc(cap.faCe.replace(/^👉\s*/, "")) + '</p>' : "") + nota
+        + (cap.cons ? '<p class="pzMargCons">Consilierul: <b>' + esc(cap.cons.titlu) + '</b> · ' + (cap.cons.dovedit ? "dovedit pe boții tăi" : "informație, nedovedit pe boții tăi") + ' · motivele în cartela lui, mai jos</p>' : "")
+        + (cap.dovada ? '<p class="pzDin pzMargDov">' + esc(cap.dovada) + '</p>' : "")
+        + '<p class="pzDin">din: gridul botului (Pionex) · istoria monedei · boții tăi închiși · Consilierul</p>';
+    }
     var V = voci(), SIM = { da: "✓", nu: "✗", atentie: "!", neutru: "–" };
     var h = '<div class="pzVerbRand"><span class="pzVerb pzVerb-' + tonV + '">' + esc(verb || "—") + '</span>'
-      + '<div class="pzVerbTxt"><b>' + esc(txtTit) + '</b>' + (txtFac ? '<p>' + esc(txtFac) + '</p>' : "") + nota + '<p class="pzDin">din: Consilierul · motivele întregi în cartela lui, mai jos</p>' + surseTablou() + '</div>'   /* v100.336 (I-862) */
+      + corpV + surseTablou() + '</div>'   /* v100.336 (I-862) */
       + '<b id="pzPret" class="pzPret"></b></div>' + motivG
       + (V.length ? '<div class="pzVoci">' + V.map(vocePzHtml).join("") + '</div>' : "");   /* v100.336 (I-866): vocea își poartă scorul */
     if (!el) { el = document.createElement("section"); el.id = "pzVerdict"; var ref = gL || $("tbKpi"); if (!ref) return; ref.parentNode.insertBefore(el, ref); }
@@ -321,6 +346,8 @@
 
   // ---------- I-593: „Ce spune piața acum” pliat (rândurile cu BUTOANE rămân întregi: faptele la vedere) ----------
   var deschise = {};
+  /* v100.373 (auditul 20.11): „Deschide tot” deschide și rândurile tăiate cu „…” din „Ce spune piața acum” (trei aveau „!”) */
+  window.pzFoldToate = function (deschis) { var cit = $("tbCitire"); if (!cit) return; [].forEach.call(cit.querySelectorAll(".pzFoldOk"), function (x) { x.classList.toggle("pzFold", !deschis); deschise[(x.textContent || "").slice(0, 14)] = !!deschis; }); };
   function pliaza() {
     var cit = $("tbCitire"); if (!cit) return;
     [].forEach.call(cit.children, function (x, i) {
@@ -387,7 +414,7 @@
   // ---------- I-599: coloana boților pe ecran lat (de la 2 boți) ----------
   function coloana() {
     var tab = $("tabloubot"); if (!tab) return;
-    var el = $("pzBotiCol"), lat = innerWidth >= 1280 && D.boti.length >= 2;
+    var el = $("pzBotiCol"), lat = latime() >= 1280 && D.boti.length >= 2;
     if (!lat) { if (el) el.hidden = true; tab.classList.remove("pzCuColoana"); return; }
     if (!el) { el = document.createElement("aside"); el.id = "pzBotiCol"; tab.insertBefore(el, tab.firstChild); }
     el.hidden = false; tab.classList.add("pzCuColoana");
@@ -412,9 +439,11 @@
     if (document.hidden) return;   // audit 19.10: cu fila ascunsă nu rescriem pagina la 1,5 s (ca Tabloul); la revenire, o tură imediat
     if (window.__pzPauza) return;
     try { citeste(); } catch (e) { return; }
+    latTura = innerWidth;
     [fasie, verdict, drum, acum, pliaza, ordine, function () { cadran("acFg", 0, 100, /între (\d+) și (\d+)/); cadran("acVix", 10, 40, /între ([\d,]+) și ([\d,]+)/); },
       function () { ["tbKpiGrid", "tbKpiTotalSub", "tbKpiPretSub", "tbKpiLichSub"].forEach(kv); }, ultimii, avert, build, coloana, pagT212, pagSalt, pagAlerte, pagMonteCarlo, pagCarnet, pagJurnal, pagSugestii, pagMarket, pagAccount, pagCloud, pagSettings, pagHealth, pliazaFasia]
       .forEach(function (f) { try { f(); } catch (e) { if (window.console) console.warn("asezare-paznic", f.name, e); } });
+    latTura = null;
   }
 
   // ======================================================================================================================================

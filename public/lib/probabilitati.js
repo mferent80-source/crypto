@@ -182,7 +182,8 @@ var Probabilitati = (function () {
     var jos = rel(o.jos), sus = rel(o.sus), lich = rel(o.lichidare), tinta = rel(o.tinta), stop = rel(o.stop);
     var F = function (H, r) { return r === null || r === 0 ? null : frecventa(b, H, atinge(r), "da", stare, op); };
     var out = { la: nr(o.acum) || Date.now(), pret: p, stare: stare, bare: b.length, niveluri: { jos: nr(o.jos), sus: nr(o.sus), lichidare: nr(o.lichidare), tinta: nr(o.tinta), stop: nr(o.stop) },
-      iese: { jos24: jos !== null && jos < 0 ? F(24, jos) : null, sus24: sus !== null && sus > 0 ? F(24, sus) : null, jos72: jos !== null && jos < 0 ? F(72, jos) : null, sus72: sus !== null && sus > 0 ? F(72, sus) : null },
+      iese: { jos1: jos !== null && jos < 0 ? F(1, jos) : null, sus1: sus !== null && sus > 0 ? F(1, sus) : null, jos4: jos !== null && jos < 0 ? F(4, jos) : null, sus4: sus !== null && sus > 0 ? F(4, sus) : null,   /* v100.373: orizonturile lui (mediana vieții unui bot e 21 de minute) */
+        jos24: jos !== null && jos < 0 ? F(24, jos) : null, sus24: sus !== null && sus > 0 ? F(24, sus) : null, jos72: jos !== null && jos < 0 ? F(72, jos) : null, sus72: sus !== null && sus > 0 ? F(72, sus) : null },
       lichidare7: null, cursa: null, liniste: null };
     var lung = dir === "long", scurt = dir === "short";
     if ((lung && lich !== null && lich < 0) || (scurt && lich !== null && lich > 0)) out.lichidare7 = F(168, lich);
@@ -198,7 +199,10 @@ var Probabilitati = (function () {
   }
   // ---- jurnalul si calibrarea: fiecare cifra aratata se noteaza (colectorul, la 4 h pe bot) si se judeca dupa orizontul ei ----
   // Calibrarea e out-of-sample prin constructie: se judeca doar ce s-a notat INAINTE sa se stie rezultatul.
-  var TIPURI = { "iese-jos-24": ["iese", "jos24"], "iese-sus-24": ["iese", "sus24"], "iese-jos-72": ["iese", "jos72"], "iese-sus-72": ["iese", "sus72"], "lichidare-7": ["lichidare7"], "cursa-tinta": ["cursa", "tinta"], "liniste-24": ["liniste", "z1"], "liniste-48": ["liniste", "z2"] };
+  /* v100.373: tipurile de 4 h intră în jurnal; cele de 1 h NU - judecata pornește la prima oră întreagă de după notare, iar la orizontul de o oră
+     decalajul e cât orizontul (promis 8,4%, judecat 15,2% pe simulare): calibrarea lor ar ieși strâmbă. Cifra de 1 h e probată pe date nevăzute
+     (scripts/cercetare-v100373-marginea.mjs) și rămâne cu „necalibrat” în card. */
+  var TIPURI = { "iese-jos-4": ["iese", "jos4"], "iese-sus-4": ["iese", "sus4"], "iese-jos-24": ["iese", "jos24"], "iese-sus-24": ["iese", "sus24"], "iese-jos-72": ["iese", "jos72"], "iese-sus-72": ["iese", "sus72"], "lichidare-7": ["lichidare7"], "cursa-tinta": ["cursa", "tinta"], "liniste-24": ["liniste", "z1"], "liniste-48": ["liniste", "z2"] };
   function ia(rez, cale) { var x = rez; for (var i = 0; i < cale.length && x; i++) x = x[cale[i]]; return x && nr(x.p) !== null ? x : null; }
   function intrari(rez, c) {
     if (!rez || !c) return [];
@@ -299,9 +303,14 @@ var Probabilitati = (function () {
     // v100.196 (auditul sever 14.10, 🔴4): `scurt` = cifra pentru eticheta de pe grafic - niciodată „0%” gol: sub 0,5% se spune „sub X%”, X = limita
     // de sus a intervalului (pe walk-forward, „0 %” la lichidare se întâmpla de fapt în 2,3 %); `p` și `ic` rămân cum erau
     var scurt = function (y) { var r = Math.round(y.p * 100); return r === 0 && y.ic && isFinite(y.ic[1]) ? "sub " + Math.max(1, Math.ceil(y.ic[1] * 100)) + "%" : r + "%"; };
-    var out = [], nv = rez.niveluri || {}, add = function (cod, titlu, x, tip) { if (x && x.nIndep >= 3) { var y = fr(x, tip, cal); out.push({ cod: cod, titlu: titlu, p: y.p, ic: y.ic, scurt: scurt(y), avertizare: y.avertizare, text: y.text, explicit: y.explicit }); } };   // sub 3 independente: nu spune nimic
+    var out = [], nv = rez.niveluri || {}, add = function (cod, titlu, x, tip) { if (x && x.nIndep >= 3) { var y = fr(x, tip, cal); out.push({ cod: cod, titlu: titlu, p: y.p, ic: y.ic, scurt: scurt(y), avertizare: y.avertizare, text: y.text, explicit: y.explicit, lung: /^iese-(jos|sus)-72$/.test(cod) }); } };   // sub 3 independente: nu spune nimic
     add("cursa", o && o.titluCursa ? String(o.titluCursa) : "Ținta planului (" + fp(nv.tinta) + ") înaintea stopului (" + fp(nv.stop) + "), în 7 zile", rez.cursa && rez.cursa.tinta, "cursa-tinta");
+    /* v100.373: orizonturile lui (un bot trăiește în mediană 21 de minute) - 1 h și 4 h înaintea celor de 24 h; cele de 3 și 7 zile poartă `lung` */
+    add("iese-jos-1", "Atinge marginea de jos (" + fp(nv.jos) + ") în 1 h", rez.iese && rez.iese.jos1, "iese-jos-1");
+    add("iese-jos-4", "Atinge marginea de jos (" + fp(nv.jos) + ") în 4 h", rez.iese && rez.iese.jos4, "iese-jos-4");
     add("iese-jos-24", "Atinge marginea de jos (" + fp(nv.jos) + ") în 24 h", rez.iese && rez.iese.jos24, "iese-jos-24");
+    add("iese-sus-1", "Atinge marginea de sus (" + fp(nv.sus) + ") în 1 h", rez.iese && rez.iese.sus1, "iese-sus-1");
+    add("iese-sus-4", "Atinge marginea de sus (" + fp(nv.sus) + ") în 4 h", rez.iese && rez.iese.sus4, "iese-sus-4");
     add("iese-sus-24", "Atinge marginea de sus (" + fp(nv.sus) + ") în 24 h", rez.iese && rez.iese.sus24, "iese-sus-24");
     add("iese-jos-72", "Atinge marginea de jos în 3 zile", rez.iese && rez.iese.jos72, "iese-jos-72");
     add("iese-sus-72", "Atinge marginea de sus în 3 zile", rez.iese && rez.iese.sus72, "iese-sus-72");

@@ -698,7 +698,8 @@ var GridSim = (function () {
     // v100.313: reluarea arată botul OPRIT ⇒ drumurile stau pe loc și „stopul atins 100%” ar minți (cifra măsurată e pe rândul stopului din grafic)
     var opritMeu = !!(meu && rez.acum.oprit);
     if (o7.pStop >= 0.005 && !opritMeu) parti.push("stopul atins " + pr(o7.pStop)); if (o7.pLich >= 0.005 && !opritMeu) parti.push("lichidare " + pr(o7.pLich)); if (o7.pTp >= 0.005 && !opritMeu) parti.push("TP atins " + pr(o7.pTp));
-    var faCe = String(v.faCe || "").split(/[.:]/)[0].trim(); if (faCe) parti.push("«" + faCe + "»");
+    // v100.373 (auditul 20.11): „aruncarea de ban” își păstrează motivul (pagina o tăia la primul „:” și rămânea lângă „CÂȘTIGĂ în 64%” fără explicație)
+    var fc0 = String(v.faCe || ""), mDar = /^([^:]+): (?:câștigă|pierde) în .*?, dar ([^;]+);/.exec(fc0), faCe = mDar ? mDar[1].trim() + ": " + mDar[2].trim() : fc0.split(/[.:]/)[0].trim(); if (faCe) parti.push("«" + faCe + "»");
     if (!opritMeu && o7 && o7.funding != null && o7.funding !== "" && isFinite(Number(o7.funding))) {
       var fv = Number(o7.funding), fa = Math.abs(fv), fban = fa < 0.05 ? "sub 0,1 USDT" : "≈ " + nrRo(fa, 1) + " USDT";
       parti.push("din care funding " + (fv < 0 ? "încasat " : "plătit ") + fban + (st && st.fundingCost ? ", presupus" : ""));

@@ -98,7 +98,8 @@ var ArRanduri = (function () {
   function recipiente(rad) {
     var out = [], cuMarcaj = [], toate = rad.querySelectorAll("*"), m = rad.querySelectorAll("." + CLS), i;
     for (i = 0; i < m.length; i++) if (m[i].parentElement) cuMarcaj.push(m[i].parentElement);
-    for (i = 0; i < toate.length; i++) if (toate[i].children.length >= 3 || cuMarcaj.indexOf(toate[i]) >= 0) out.push(toate[i]);
+    /* v100.373 (viteza, măsurată 20.11: 2,8 s din 40 s stând pe loc): nodurile din SVG (graficul se redesenează la fiecare preț) nu sunt grile CSS */
+    for (i = 0; i < toate.length; i++) if (!toate[i].ownerSVGElement && toate[i].tagName !== "svg" && (toate[i].children.length >= 3 || cuMarcaj.indexOf(toate[i]) >= 0)) out.push(toate[i]);
     return out;
   }
   // o trecere întreagă pe pagina deschisă (grila mare înaintea celor din cardurile ei)
@@ -113,10 +114,10 @@ var ArRanduri = (function () {
     var out = [], vazut = typeof Set === "function" ? new Set() : null;
     if (!pan) return out;
     function pune(e) { if (!e || e.nodeType !== 1 || !pan.contains(e)) return; if (vazut ? vazut.has(e) : out.indexOf(e) >= 0) return; if (vazut) vazut.add(e); out.push(e); }
-    function cuSub(e) { pune(e); if (!e || e.nodeType !== 1 || !e.querySelectorAll) return; var t = recipiente(e); for (var i = 0; i < t.length; i++) pune(t[i]); }
+    function cuSub(e) { if (e && (e.ownerSVGElement || e.tagName === "svg")) return; pune(e); if (!e || e.nodeType !== 1 || !e.querySelectorAll) return; var t = recipiente(e); for (var i = 0; i < t.length; i++) pune(t[i]); }
     for (var i = 0; i < (lista || []).length; i++) {
       var r = lista[i], t = r.target, j, el = false;
-      if (!t || t.nodeType !== 1 || !pan.contains(t)) continue;
+      if (!t || t.nodeType !== 1 || !pan.contains(t) || t.ownerSVGElement || t.tagName === "svg") continue;
       if (r.type === "childList") {
         for (j = 0; j < r.addedNodes.length; j++) if (r.addedNodes[j].nodeType === 1) { el = true; cuSub(r.addedNodes[j]); }
         for (j = 0; j < r.removedNodes.length; j++) if (r.removedNodes[j].nodeType === 1) el = true;

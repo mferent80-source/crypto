@@ -764,7 +764,7 @@ export async function onRequestPost({request,env}){
     const pc=corp&&corp.peCod&&typeof corp.peCod==="object"?corp.peCod:null;if(!pc)return json({error:"lipseste peCod"},400);
     const STARI=["necunoscut","ajuta","nesigur","tace"],out={};
     Object.keys(pc).slice(0,40).forEach(k=>{const x=pc[k],c=String(k).replace(/[^a-z0-9-]/g,"").slice(0,24);if(!c||!x||typeof x!=="object")return;
-      out[c]={n:nr(x.n),judecate:nr(x.judecate),corecte:nr(x.corecte),bani:nr(x.bani),baniN:nr(x.baniN),ic:Array.isArray(x.ic)?x.ic.slice(0,2).map(nr):null,stare:STARI.includes(x.stare)?x.stare:"necunoscut",nume:typeof x.nume==="string"?x.nume.slice(0,60):c}});
+      out[c]={n:nr(x.n),judecate:nr(x.judecate),corecte:nr(x.corecte),bani:nr(x.bani),baniN:nr(x.baniN),zile:nr(x.zile),rataZile:nr(x.rataZile),reper:nr(x.reper),p:nr(x.p),baniPeste:nr(x.baniPeste),fel:x.fel==="tine"?"tine":x.fel==="iesi"?"iesi":null,ic:Array.isArray(x.ic)?x.ic.slice(0,2).map(nr):null,stare:STARI.includes(x.stare)?x.stare:"necunoscut",nume:typeof x.nume==="string"?x.nume.slice(0,60):c}});
     await env.ISTORIC.put("socoteala",JSON.stringify({la:nr(corp.la)||Date.now(),boti:nr(corp.boti),peCod:out}));
     return json({ok:true,coduri:Object.keys(out).length});
   }

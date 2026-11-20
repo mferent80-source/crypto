@@ -52,7 +52,8 @@ await test("I-466 socotealaToti: pe TOTI botii, cu marja de incredere; <10 judec
   assert.equal(typeof SB.socotealaToti, "function");
   /* v100.272: socoteala e pe ZILE (unitatea independentă) - intrările câte una pe zi; în aceeași milisecundă ar fi o singură zi („încă nu știm”) */
   const mk = (cod, nivel, k, n, bani) => Array.from({ length: n }, (_, i) => ({ t: T0 + i * 86400000, cod, nivel, total: 0, totalDupa: i < k ? -bani : bani, dreptate: i < k }));
-  const s = SB.socotealaToti([mk("muta", "atentie", 12, 32, 1), mk("btc", "atentie", 3, 5, 1), mk("costuri", "atentie", 28, 32, 1), mk("lichidare", "iesi", 5, 40, 1)]);
+  /* v100.373: fiecare intrare e de la ALT bot (pe același bot un sfat se numără o singură dată - auditul din 20.11) */
+  const s = SB.socotealaToti([].concat(mk("muta", "atentie", 12, 32, 1), mk("btc", "atentie", 3, 5, 1), mk("costuri", "atentie", 28, 32, 1), mk("lichidare", "iesi", 5, 40, 1)).map((e) => [e]));
   assert.equal(s.btc.stare, "necunoscut"); assert.match(SB.textIncredere(s.btc), /încă nu știm \(5 judecate\)/);
   assert.equal(s.muta.stare, "tace", "12 din 32 si bani pe minus"); assert.equal(s.muta.judecate, 32);
   assert.equal(s.costuri.stare, "ajuta"); assert.ok(s.costuri.ic[0] > 0.5);

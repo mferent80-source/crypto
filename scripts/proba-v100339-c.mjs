@@ -121,11 +121,12 @@ await test("(C4) „comision vs grid”: taxa de intrare (plătită o dată) nu 
   const m = (x, o) => TB.masoara({ bot: botBrut("short", 71, Object.assign({ acum: ACUM, pornitLa: ACUM - 20 * MIN, x }, o)), klinePerp: lum5(100, 0.3), istoric: [], acum: ACUM, pretPerpViu: 71 });
   const tanar = m({ gridProfit: "0.07", totalFee: "-0.0616" });   // taxa de intrare ≈ 76 × 3 × 6/11 × 0,05% = 0,062
   assert.equal(tanar.comision.stare, "bine"); assert.ok(tanar.comision.valoare < 5, String(tanar.comision.valoare)); assert.match(tanar.comision.eticheta, /^fără taxa de intrare \(≈ 0,06 USDT\)$/);
-  assert.equal(m({ gridProfit: "0.07", totalFee: "-0.12" }).comision.stare, "rau", "0,058 din 0,07 = 82%");
+  /* v100.373: `gridProfit` e după comisionul perechilor ⇒ raportul e la brutul refăcut (grile + comision): 0,058 din 0,128 = 45% (bine), 0,138 din 0,208 = 66% (rău) */
+  assert.equal(m({ gridProfit: "0.07", totalFee: "-0.12" }).comision.stare, "bine", "0,058 din 0,128 = 45%"); assert.equal(m({ gridProfit: "0.07", totalFee: "-0.20" }).comision.stare, "rau", "0,138 din 0,208 = 66%");
   assert.equal(m({ gridProfit: "0", totalFee: "-0.06" }).comision.stare, "nu-se-poate", "doar taxa de intrare, nicio grilă: nu e nimic de judecat");
   assert.equal(m({ gridProfit: "0", totalFee: "-0.30" }).comision.stare, "rau", "taxe care curg fără profit brut rămân rău");
   // revizia independentă (🔴): neutrul nu deschide poziție la pornire ⇒ nicio taxă de intrare de scăzut (ca TabloExtra.taxaIntrare); la fel botul fără direcție
-  for (const tr of ["neutral", ""]) { const n = m({ gridProfit: "0.07", totalFee: "-0.0616", trend: tr }).comision; assert.equal(n.stare, "rau", "trend „" + tr + "”: " + JSON.stringify(n)); assert.ok(Math.abs(n.valoare - 88) < 0.1, String(n.valoare)); assert.ok(!n.eticheta, String(n.eticheta)); }
+  for (const tr of ["neutral", ""]) { const n = m({ gridProfit: "0.07", totalFee: "-0.0616", trend: tr }).comision; assert.equal(n.stare, "bine", "trend „" + tr + "”: " + JSON.stringify(n)); assert.ok(Math.abs(n.valoare - 100 * 0.0616 / 0.1316) < 0.1, String(n.valoare)); /* v100.373: 0,0616 din 0,1316 = 46,8% (întreg comisionul, nimic scăzut) */ assert.ok(!n.eticheta, String(n.eticheta)); }
   // oglinda la long: partea de grid de PESTE prețul de pornire (5 / 11 din interval)
   const lg = TB.masoara({ bot: botBrut("long", 71, { acum: ACUM, pornitLa: ACUM - 20 * MIN, x: { gridProfit: "0.07", totalFee: "-0.0518" } }), klinePerp: lum5(100, 0.3), istoric: [], acum: ACUM, pretPerpViu: 71 }).comision;
   assert.equal(lg.stare, "bine", JSON.stringify(lg)); assert.match(lg.eticheta, /^fără taxa de intrare \(≈ 0,05 USDT\)$/);

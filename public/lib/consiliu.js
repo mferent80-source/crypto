@@ -56,13 +56,18 @@ var Consiliu = (function () {
   var FIX = { opreste: 1, lichidare: 1, plan: 1, stop: 1, pericol: 1 };
   // banii masurati ai sfatului (socoteala pe botii lui) PE CAZ - `bani` din socoteala e o SUMA (un sfat care suna des ar castiga din
   // volum) - si doar de la 10 cazuri judecate CU bani; altfel null (ordinea fixa)
-  function baniMasurati(soc, cod) { var x = soc && soc[SOC[cod] || cod]; return x && x.judecate >= 10 && nr(x.baniN) >= 10 && nr(x.bani) !== null ? nr(x.bani) / nr(x.baniN) : null; }
+  /* v100.373 (auditul 20.11, 🔴1): doar sfatul DOVEDIT (stare „ajuta”: peste rata de bază, pe zile, după corecție) urcă după bani; un „nesigur” cu
+     3,5 USDT pe caz față de 2,2 muta acțiunea din capul paginii de la o tură la alta */
+  function baniMasurati(soc, cod) { var x = soc && soc[SOC[cod] || cod]; return x && x.stare === "ajuta" && x.judecate >= 10 && nr(x.baniN) >= 10 && nr(x.bani) !== null ? nr(x.bani) / nr(x.baniN) : null; }
   function cip(soc, cod) {
     var k = SOC[cod]; if (!k || !soc) return null;
     var x = soc[k];
-    if (!x || x.stare === "necunoscut" || !(x.judecate >= 10)) return { t: "încă nu știm", cls: "", titlu: (x && x.nume ? x.nume + ": " : "") + SemnaleBot.textIncredere(x || null) };
+    if (!x || x.stare === "necunoscut" || !(x.judecate >= 10)) return { t: "încă nu știm", cls: "", titlu: (x && x.nume ? x.nume + ": " : "") + SemnaleBot.textIncredere(x || null, k) };
     // v100.106: cine, ce și pe ce bani - „„Mută gridul” 11 din 19 · ~+24 USDT” nu spunea că e socoteala sfatului pe boții lui
-    return { t: "pe boții tăi, " + (x.nume || k) + " a avut dreptate " + x.corecte + " din " + x.judecate + (x.baniN ? " · " + (x.bani >= 0 ? "~+" : "~−") + Math.abs(x.bani).toFixed(0) + " USDT dacă-l urmai" : ""), cls: x.stare, titlu: SemnaleBot.textIncredere(x) };
+    // v100.373 (auditul 20.11, 🔴2): cipul spune dovada în cuvinte - rata față de cea de obicei, pe zile; banii (cu reperul lor) rămân în explicație
+    var pz = function (v) { return TextRo.pct(v * 100, 1); }, peZile = nr(x.zile) !== null && nr(x.reper) !== null && nr(x.rataZile) !== null;
+    return { t: "pe boții tăi, " + (x.nume || k) + ": " + (peZile ? pz(x.rataZile) + " față de " + pz(x.reper) + " de obicei, pe " + cate(x.zile, "zi", "zile") : "a avut dreptate " + x.corecte + " din " + x.judecate)
+      + " · " + (x.stare === "ajuta" ? "dovedit" : "nedovedit"), cls: x.stare, titlu: SemnaleBot.textIncredere(x, k) };
   }
 
   // v100.54 (actiunile T212, pachetul 3): sortarea comuna - acelasi nivel: intai siguranta (fix), apoi cele masurate dupa banii pe caz,
@@ -210,7 +215,7 @@ var Consiliu = (function () {
     var inc = null;
     if (sm.nivel !== nivel && sm.nivel !== "asteapta") {
       var ss = soc && soc[SOC[sm.cod] || sm.cod];
-      inc = "Fără motivele de aici, semaforul ar fi zis " + (ETICHETA[sm.nivel] || sm.nivel) + (ss ? "; pe boții tăi, " + (ss.nume || sm.cod) + (/^încă/.test(SemnaleBot.textIncredere(ss)) ? ": " : " ") + SemnaleBot.textIncredere(ss) : "") + ".";   /* v100.106 */
+      inc = "Fără motivele de aici, semaforul ar fi zis " + (ETICHETA[sm.nivel] || sm.nivel) + (ss ? "; pe boții tăi, " + (ss.nume || sm.cod) + (/^încă/.test(SemnaleBot.textIncredere(ss, SOC[sm.cod] || sm.cod)) ? ": " : " ") + SemnaleBot.textIncredere(ss, SOC[sm.cod] || sm.cod) : "") + ".";   /* v100.106 */
     }
 
     // restul, pliat: tot ce n-a intrat in motive - nimic nu se pierde
@@ -304,7 +309,10 @@ var Consiliu = (function () {
   // revizia 01.10 (I2): colectorul (Discord, pagina alerts) nu vede directia pe mai multe intervale si merge la cateva minute - cand
   // verdictul lui difera de al Tabloului, Tabloul o spune pe fata (o singura voce, iar unde nu se poate, diferenta e la vedere)
   function altaVoce(kv, c) {
-    var a = kv && kv.acum; if (!a || !a.nivel || !c || !c.nivel || a.nivel === c.nivel || c.nivel === "asteapta") return null;
+    var a = kv && kv.acum; if (!a || !a.nivel || !c || !c.nivel || c.nivel === "asteapta") return null;
+    // v100.373 (auditul 20.11): aceeași treaptă, dar alt motiv de sus = altă acțiune (20.11: „n-aș mări levierul” acolo, „aș închide lângă zero” aici)
+    var sus = function (v) { var m = (Array.isArray(v.motive) ? v.motive : []).filter(function (q) { return q && q.cod && q.c !== "v"; })[0]; return m ? m.cod : null; };
+    if (a.nivel === c.nivel) { var sa = sus(a), sc = sus(c); if (!sa || !sc || sa === sc) return null; return "Pe Discord și pe pagina alerts motivul de sus e altul: " + (a.titlu || sa) + (a.faCe ? " · 👉 " + String(a.faCe).replace(/[.\s]+$/, "") : "") + "; colectorul se reface la câteva minute și poate fi cu o tură în urmă."; }
     return "Pe Discord și pe pagina alerts: " + (a.eticheta || ETICHETA[a.nivel] || a.nivel) + "; colectorul se reface la câteva minute și poate fi cu o tură în urmă, iar verdictul de aici e cel de acum.";
   }
   // v100.50 (I-472): jurnalul deciziilor - fiecare „am făcut / n-am făcut” se judeca la 24 h pe totalul botului (istoricul ist:<bot>,
@@ -509,6 +517,6 @@ var Consiliu = (function () {
     return { nivel: c.nivel, motive: (Array.isArray(c.motive) ? c.motive : []).map(function (m) { return String(m && m.titlu || ""); }).slice(0, 6),
       ceAsFace: "👉 Ce aș face eu: " + String(c.faCe || "") + (c.bani ? " 💰 " + c.bani : "") };
   }
-  return { LEGENDA: LEGENDA, LEGENDA_ACTIUNI: LEGENDA_ACTIUNI, LEGENDA_COMUNA: LEG_COMUNA, autopsieActiuni: autopsieActiuni, activPozitie: activPozitie, judecaDecizieActiune: judecaDecizieActiune, noteazaActiune: noteazaActiune, judecaActiune: judecaActiune, socotealaActiuni: socotealaActiuni, ordoneaza: ordoneaza, alcatuiesteActiune: alcatuiesteActiune, pentruPozaActiune: pentruPozaActiune, cheieDecizie: cheieDecizie, altaVoce: altaVoce, judecaDecizii: judecaDecizii, socotealaDecizii: socotealaDecizii, pentruPoza: pentruPoza, schimbare: schimbare, deCe: deCe, deCeAfisat: deCeAfisat, alcatuieste: alcatuieste };
+  return { FIX: FIX, LEGENDA: LEGENDA, LEGENDA_ACTIUNI: LEGENDA_ACTIUNI, LEGENDA_COMUNA: LEG_COMUNA, autopsieActiuni: autopsieActiuni, activPozitie: activPozitie, judecaDecizieActiune: judecaDecizieActiune, noteazaActiune: noteazaActiune, judecaActiune: judecaActiune, socotealaActiuni: socotealaActiuni, ordoneaza: ordoneaza, alcatuiesteActiune: alcatuiesteActiune, pentruPozaActiune: pentruPozaActiune, cheieDecizie: cheieDecizie, altaVoce: altaVoce, judecaDecizii: judecaDecizii, socotealaDecizii: socotealaDecizii, pentruPoza: pentruPoza, schimbare: schimbare, deCe: deCe, deCeAfisat: deCeAfisat, alcatuieste: alcatuieste };
 })();
 if (typeof globalThis !== "undefined") globalThis.Consiliu = Consiliu;

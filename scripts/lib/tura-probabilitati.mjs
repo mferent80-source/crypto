@@ -7,11 +7,19 @@ import { aduOre } from "./tura-profil.mjs";
 function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
 const ORA = 3600000, PASTRARE = 90 * 24 * ORA, NOTARE = 4 * ORA;
 const nr = (v) => { const x = Number(v); return v === null || v === undefined || v === "" || !Number.isFinite(x) ? null : x; };
+// v101.207 (Radar v100.373): șansele marginii pe 1 h / 4 h stau în capul Tabloului - se refac o dată pe oră SAU, cel mult o dată la 10 minute pe bot,
+// când prețul s-a apropiat ori s-a depărtat de o margine cu peste o cincime din distanța de la socoteală (cel puțin 0,1%; același prag îi spune
+// paginii că cifrele sunt depășite: CapMargine.PRAG_VECHI). deCand = ms de la ultima socoteală, p0 = prețul de atunci, pA = prețul de acum.
+export function seReface(deCand, p0, pA, jos, sus) {
+  if (!(deCand < ORA)) return true;
+  if (deCand < 10 * 60000 || !(nr(p0) > 0) || !(nr(pA) > 0)) return false;
+  return [nr(jos), nr(sus)].some((m) => m > 0 && Math.abs(Math.abs(pA / m - 1) - Math.abs(p0 / m - 1)) > Math.max(0.001, Math.abs(p0 / m - 1) * 0.2));
+}
 export async function turaProbabilitati(d) {
   const st = d.stare; st.la = st.la || {}; st.notat = st.notat || {}; st.jurnal = Array.isArray(st.jurnal) ? st.jurnal : [];
   let facute = 0, schimbat = false;
   for (const b of d.boti || []) {
-    if (!b || !b.id || d.acum - (st.la[b.id] || 0) < ORA) continue;
+    if (!b || !b.id || !seReface(d.acum - (st.la[b.id] || 0), st.pret && st.pret[b.id], b.pretCurent, b.gridJos, b.gridSus)) continue;
     try {
       const simbol = d.simbolDe(b); if (!simbol) continue;
       if (facute++) await d.pauza(1600);
@@ -39,7 +47,7 @@ export async function turaProbabilitati(d) {
         } catch (e) { d.jurnal("arbori ESEC", b.id, e.message); }
       }
       await d.trimite("/api/istoric-bot?action=prob", { bot: b.id, rez: rez || { la: d.acum, gol: bare.length < 37 * 24 ? "moneda are doar " + cate(Math.floor(bare.length / 24), "zi", "zile") + " de bare de 1 h; cifrele apar de la 37 de zile" : "lipsește prețul botului sau starea pieței" } });
-      st.la[b.id] = d.acum; schimbat = true;
+      st.la[b.id] = d.acum; st.pret = st.pret || {}; st.pret[b.id] = nr(b.pretCurent); schimbat = true;
       if (rez && d.acum - (st.notat[b.id] || 0) >= NOTARE) { st.jurnal.push(...d.Probabilitati.intrari(rez, { t: d.acum, bot: b.id, simbol })); st.notat[b.id] = d.acum; }
     } catch (e) { d.jurnal("probabilitati ESEC", b.id, e.message); }
   }

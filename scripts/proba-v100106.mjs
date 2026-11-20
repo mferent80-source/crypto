@@ -61,12 +61,13 @@ await test("(B3) banii: „dacă prețul coboară la marginea de jos (0.06147): 
 });
 await test("(B4) încrederea: spune ce ar fi zis semaforul fără motive, „corect în k din n” și de ce nu sună pe Discord - fără „tăcut” / „hazardul”", () => {
   const c = consTake();
-  assert.match(c.incredere, /^Fără motivele de aici, semaforul ar fi zis 🟢 Ține; pe boții tăi, „Ține-l” a avut dreptate 21 din 39 \(54%\), ~−132,1 USDT dacă-l urmai de fiecare dată · nu-l trimit pe Discord: nu se descurcă mai bine decât întâmplarea\.$/, c.incredere);
+  assert.match(c.incredere, /^Fără motivele de aici, semaforul ar fi zis 🟢 Ține; pe boții tăi, „Ține-l” a avut dreptate 21 din 39 \(54%\), ~−132,1 USDT ținându-l de fiecare dată · nu-l trimit pe Discord: nu se descurcă mai bine decât întâmplarea\.$/, c.incredere);
   assert.doesNotMatch(S.textIncredere(SOC.tine), /tăcut|hazard/);
 });
 await test("(B5) cipul motivului: „pe boții tăi, „Mută gridul” a avut dreptate 11 din 19 · ~+24 USDT dacă-l urmai”", () => {
   const m = consTake().motive.find((x) => x.cod === "margine");
-  assert.equal(m.cip.t, "pe boții tăi, „Mută gridul” a avut dreptate 11 din 19 · ~+24 USDT dacă-l urmai");
+  /* v100.373 (auditul 20.11): cipul spune dovada în cuvinte; banii (cu reperul lor) au rămas în explicația de la atingere */
+  assert.equal(m.cip.t, "pe boții tăi, „Mută gridul”: a avut dreptate 11 din 19 · dovedit"); assert.match(m.cip.titlu, /dacă închideai botul la semnal/);
 });
 await test("(B6) motivul trendului: „Trendul: …; mediile EMA arată long, tare.” (nu „o singură măsură” / „structura pe medii”)", () => {
   const sf = [{ cod: "directie", ton: "bine", titlu: "Piața e cu botul", rezumat: "Piața merge cu botul (4 ore urcă, 1 zi e laterală)", text: "x" }, { cod: "trend", ton: "bine", titlu: "Trendul e cu botul (long, tare)", text: "" }];

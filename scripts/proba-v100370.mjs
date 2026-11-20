@@ -121,7 +121,7 @@ await test("V versiunile v100.370 (index ×4, sw, versiune.js, package + lanț, 
   assert.ok(+(citeste("public", "sw.js").match(/crypto-radar-v100-(\d{3})/) || [])[1] >= 370); assert.ok(+(citeste("functions", "_shared", "versiune.js").match(/"v100\.(\d{3})"/) || [])[1] >= 370);
   const p = JSON.parse(citeste("package.json")); assert.ok(+p.version.split(".")[1] >= 370); assert.match(p.scripts.test, /npm run test:v100369 && npm run test:v100370/); assert.equal(p.scripts["test:v100370"], "node scripts/proba-v100370.mjs");
   const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.ok(+(bi.badge.match(/^v100\.(\d{3})/) || [])[1] >= 370); assert.ok(bi.ci370 && bi.ci369);
-  assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.206";/); assert.equal(TC.FORMA_RAPORT, 370);
+  assert.ok(+(/const VERSIUNE_COLECTOR = "v101\.(\d+)";/.exec(citeste("scripts", "colector.mjs")) || [])[1] >= 206, "colectorul de la v101.206 încolo"); assert.equal(TC.FORMA_RAPORT, 370);
 });
 
 console.log(`\n${teste - picate}/${teste} ${picate ? "PICĂ" : "trec"}`);

@@ -172,14 +172,14 @@ await test("4a unitatea e ZIUA: 40 de intrări corecte în 3 zile nu fac „meri
   /* la minute diferite, în aceeași zi (40 de semnale de la boți diferiți) - o unitate mai mică decât ziua le-ar număra pe toate */
   const log = []; for (let i = 0; i < 40; i++) log.push(intr("muta", "atentie", i % 3, true, { t: T0 + (i % 3) * ZI + 3 * ORA + i * 60000 }));
   for (let z = 0; z < 3; z++) log.push(intr("btc", "atentie", z, false));
-  const s = SB.socotealaToti([log]);
+  const s = SB.socotealaToti(log.map((e) => [e]) /* v100.373: fiecare intrare e de la ALT bot - pe același bot un sfat se numără o dată */);
   assert.equal(s.muta.zile, 3); assert.equal(s.muta.stare, "necunoscut", "40 din 40, dar în 3 zile: " + s.muta.stare);
   assert.match(SB.textIncredere(s.muta), /încă nu știm \(40 de judecate\)/); assert.match(SB.textIncredere(s.muta), /pe 3 zile; judec de la 10 zile/);
 });
 await test("4b reperul e RATA DE BAZĂ: „Ține-l” corect în 2/3 din cazuri, când totalul nu scade oricum în 2/3 din zile, nu „merită ascultat”", () => {
   const log = [];
   for (let z = 0; z < 30; z++) { [true, true, false].forEach((d) => log.push(intr("tine", "tine", z, d))); [true, false, false].forEach((d) => log.push(intr("btc", "atentie", z, d))); }
-  const s = SB.socotealaToti([log]);
+  const s = SB.socotealaToti(log.map((e) => [e]) /* v100.373: fiecare intrare e de la ALT bot - pe același bot un sfat se numără o dată */);
   assert.equal(s.tine.judecate, 90); assert.equal(s.tine.zile, 30);
   assert.ok(Math.abs(s.tine.reper - 2 / 3) < 1e-9, "reperul „Ține-l” = cât de des NU scade totalul după celelalte semnale: " + s.tine.reper);
   assert.ok(Math.abs(s.btc.reper - 1 / 3) < 1e-9, "reperul „BTC” = cât de des scade: " + s.btc.reper);
@@ -189,7 +189,7 @@ await test("4b reperul e RATA DE BAZĂ: „Ține-l” corect în 2/3 din cazuri,
 await test("4c un semnal cu adevărat bun pe destule zile iese „ajuta” (testul nu e mut)", () => {
   const log = [];
   for (let z = 0; z < 20; z++) { log.push(intr("muta", "atentie", z, z !== 7)); [true, true, false].forEach((d) => log.push(intr("tine", "tine", z, d))); }
-  const s = SB.socotealaToti([log]);
+  const s = SB.socotealaToti(log.map((e) => [e]) /* v100.373: fiecare intrare e de la ALT bot - pe același bot un sfat se numără o dată */);
   assert.equal(s.muta.stare, "ajuta", JSON.stringify({ rz: s.muta.rataZile, reper: s.muta.reper, p: s.muta.p }));
   assert.equal(s.muta.zile, 20); assert.ok(s.muta.p < 0.01);
 });
@@ -203,7 +203,7 @@ await test("4d mărimea sub H0 (fără efect, zile cu piața comună, 8 sfaturi)
       const pz = 0.2 + 0.5 * rnd();   /* ziua pieței: cât de des scad toți boții azi */
       for (const [cod, nivel] of CODURI) { if (rnd() < 0.5) continue; const m = 1 + Math.floor(rnd() * 3); for (let j = 0; j < m; j++) { const scade = rnd() < pz; log.push(intr(cod, nivel, z, nivel === "tine" ? !scade : scade)); } }
     }
-    const s = SB.socotealaToti([log]);
+    const s = SB.socotealaToti(log.map((e) => [e]) /* v100.373: fiecare intrare e de la ALT bot - pe același bot un sfat se numără o dată */);
     if (Object.values(s).some((x) => x.stare === "ajuta")) fals++;
   }
   console.log("       (fals „merită ascultat” la vreun sfat: " + (100 * fals / R).toFixed(1) + "% din " + R + " de rulări)");
@@ -215,14 +215,14 @@ await test("4f varianța e cea dintre ZILE: 5 boți care spun același lucru în
     for (let j = 0; j < 5; j++) log.push(intr("trend", "atentie", z, z < 8, { t: T0 + z * ZI + 3 * ORA + j * 60000 }));   /* toată ziua dreaptă sau toată greșită */
     log.push(intr("btc", "atentie", z, true)); log.push(intr("btc", "atentie", z, false));                                  /* reperul zilei: 50% */
   }
-  const s = SB.socotealaToti([log]);
+  const s = SB.socotealaToti(log.map((e) => [e]) /* v100.373: fiecare intrare e de la ALT bot - pe același bot un sfat se numără o dată */);
   assert.ok(Math.abs(s.trend.reper - 0.5) < 1e-9); assert.ok(Math.abs(s.trend.rataZile - 8 / 12) < 1e-9);
   assert.notEqual(s.trend.stare, "ajuta", "66,7% pe 12 zile față de 50% nu se vede (p = " + s.trend.p + ")");
   assert.ok(s.trend.p > 0.05, "p = " + s.trend.p);
 });
 await test("4e textul: zilele și rata de bază, cu o zecimală; fără „dovedit”; forma veche (fără zile, din KV) se citește ca înainte", () => {
   const log = []; for (let z = 0; z < 12; z++) { log.push(intr("muta", "atentie", z, z % 3 !== 0)); log.push(intr("tine", "tine", z, z % 2 === 0)); }
-  const s = SB.socotealaToti([log]), t = SB.textIncredere(s.muta);
+  const s = SB.socotealaToti(log.map((e) => [e]) /* v100.373: fiecare intrare e de la ALT bot - pe același bot un sfat se numără o dată */), t = SB.textIncredere(s.muta);
   assert.match(t, /^a avut dreptate 8 din 12 \(67%\)/, t); assert.match(t, /pe 12 zile/); assert.match(t, /\d+,\d% de obicei/); assert.doesNotMatch(t, /dovedit/);
   const vechi = { nume: "„Ține-l”", corecte: 21, judecate: 39, bani: -132.1, baniN: 39, stare: "tace" };
   assert.match(SB.textIncredere(vechi), /^a avut dreptate 21 din 39 \(54%\), ~−132,1 USDT dacă-l urmai de fiecare dată · nu-l trimit pe Discord/);
@@ -292,7 +292,7 @@ await test("6b grileVsCosturi: taxa de intrare (poziția de la pornire × comisi
   const z = TE.grileVsCosturi(BOT_C, T0 + 2 * ZI);
   assert.ok(Math.abs(z.taxaIntrare - (-100 * 5 * 0.5 * G.C.COMISION)) < 1e-12, "taxa: " + z.taxaIntrare);
   assert.ok(Math.abs(z.comisionZi - (-0.5 + 0.125) / 2) < 1e-12, "comisionul pe zi: " + z.comisionZi);
-  assert.ok(Math.abs(z.netZi - (0.6 + z.comisionZi + -0.05)) < 1e-12);
+  assert.ok(Math.abs(z.netZi - (0.6 + -0.05)) < 1e-12 /* v100.373: comisionul perechilor e deja în grile (gridProfit e după el) */);
   const sh = TE.grileVsCosturi(Object.assign({}, BOT_C, { directie: "short", brut: { buOrderData: { initPrice: "95", gridProfit24h: "0.6" } } }), T0 + 2 * ZI);
   assert.ok(Math.abs(sh.taxaIntrare - (-100 * 5 * 0.25 * G.C.COMISION)) < 1e-12, "short: pozitia de la pornire = nivelurile de sub preț");
   assert.equal(TE.grileVsCosturi(Object.assign({}, BOT_C, { directie: "neutral" }), T0 + 2 * ZI).taxaIntrare, 0, "neutrul nu cumpără la pornire");
@@ -304,7 +304,7 @@ await test("6b grileVsCosturi: taxa de intrare (poziția de la pornire × comisi
 await test("6c eticheta: sfatul „Costurile” și rândul din Tablou spun că taxa de intrare e separată (o dată, estimată)", () => {
   const co = TE.grileVsCosturi(Object.assign({}, BOT_C, { brut: { buOrderData: { initPrice: "100", gridProfit24h: "0.01", trx24h: "1" } } }), T0 + 2 * ZI);
   const s = SF.sfaturi({ bot: BOT_C, costuri: co }).find((x) => x.cod === "costuri");
-  assert.ok(s, "lipsește sfatul de costuri"); assert.match(s.text, /comisioanele iau 0,2 pe zi \(fără taxa de intrare, ≈ 0,1 o dată\)/, s.text);
+  assert.ok(s, "lipsește sfatul de costuri"); /* v100.373: comisionul perechilor e deja în grile (gridProfit e după el) ⇒ sfatul spune grilele și funding-ul; taxa de intrare rămâne pe rândul ei din Tablou */ assert.match(s.text, /^Grilele aduc 0,01 USDT în 24 h, după comisionul perechilor și funding-ul ia 0,05 pe zi\.$/, s.text); assert.match(s.faCe, /încasează funding-ul/);
   const ex = fnApp("tbDeseneazaExtra");
   assert.match(ex, /linie\("Taxa de intrare \(o dată\)"/); assert.match(ex, /tbCosturiZi\(z,b\)/); assert.match(fnApp("tbCosturiZi"), /", fără taxa de intrare"/); assert.match(fnApp("tbCosturiZi"), /"medie de la pornire"/);   /* v100.339: nota comisionului pe zi e în tbCosturiZi */
 });

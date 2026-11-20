@@ -19,7 +19,7 @@ async function test(nume, f) { teste++; await Promise.resolve().then(f).then(() 
 console.log("\nV100.139 · Monte Carlo în „Ce spune piața acum”, la 15 minute · proba\n");
 function bare15(zile, seed, pas) { const g = M.generator(seed), b = []; let c = 1; for (let i = 0; i < zile * 96; i++) { const o = c; c = c * Math.exp((g() - 0.5) * (pas || 0.008)); b.push({ t: Date.now() - (zile * 96 - i) * 9e5, o, h: Math.max(o, c) * 1.001, l: Math.min(o, c) * 0.999, c, v: 1 }); } return b; }
 const B = bare15(20, 3), P0 = B[B.length - 1].c, ST = { jos: P0 * 0.9, sus: P0 * 1.1, grile: 10, levier: 2, dir: "long", suma: 50, stop: { jos: P0 * 0.85 }, tp: null, tip: "geometric" };
-const RE_RAND = /(CÂȘTIGĂ|PIERDE) în \d+% din drumuri · (CÂȘTIGĂ|PIERDE) în \d+%/, RE_FACE = / · «(Aș ține|Aș opri|L-aș opri|Stopul e în zgomot|O aruncare de ban( de aici încolo)?|Nu se potrivește cu planul tău|Reluarea arată botul (OPRIT|LICHIDAT) pe drumul real)»/;
+const RE_RAND = /(CÂȘTIGĂ|PIERDE) în \d+% din drumuri · (CÂȘTIGĂ|PIERDE) în \d+%/, RE_FACE = / · «(Aș ține|Aș opri|L-aș opri|Stopul e în zgomot|O aruncare de ban( de aici încolo)?(: [^»]+)?|Nu se potrivește cu planul tău|Reluarea arată botul (OPRIT|LICHIDAT) pe drumul real)»/;
 
 await test("(a) GridSim.verdictScurt: 7 zile + «ce aș face» + pe o zi, într-un rând; la botul care rulează „de aici încolo”; eroarea ca text", () => {
   const pornitLa = B[B.length - 288].t, rez = GS.simuleaza(B, ST, { plan: null, pornitLa, stPrefix: ST, n: 60, seed: 12, orizonturi: [1, 7], zile: 14 });

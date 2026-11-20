@@ -306,16 +306,19 @@ await test("basis-ul care SARE peste dublul medianei e raportat rau", () => {
 await test("comisionul se raporteaza la profitul brut din grid", () => {
   const m = T.masoara(INTRARI);
   // Audit 24.09: comisionul vine deja in PROCENTE (unitatea afisata), nu fractie.
-  assert.ok(Math.abs(m.comision.valoare - 100 * 0.45 / 2.30) < 1e-6, `comision: ${m.comision.valoare}`);
+  /* v100.373: `gridProfit` de la Pionex e DUPĂ comisionul perechilor (probat pe botul viu, 20.11) ⇒ brutul = grile + comision: 0,45 din 2,75 */
+  assert.ok(Math.abs(m.comision.valoare - 100 * 0.45 / (2.30 + 0.45)) < 1e-6, `comision: ${m.comision.valoare}`);
   assert.equal(m.comision.unitate, "%");
   assert.equal(m.comision.prag, 50);
   assert.equal(m.comision.stare, "bine");
 });
 
 await test("comisionul care mananca peste jumatate din grid e rau", () => {
-  const bot = { ...BOT, buOrderData: { ...BOT.buOrderData, totalFee: "-1.50" } };
+  /* v100.373: peste jumătate din BRUT (grile + comision): 2,50 din 4,80 = 52% e rău; 1,50 din 3,80 = 39% nu */
+  const bot = { ...BOT, buOrderData: { ...BOT.buOrderData, totalFee: "-2.50" } };
   const m = T.masoara({ ...INTRARI, bot });
   assert.equal(m.comision.stare, "rau");
+  assert.equal(T.masoara({ ...INTRARI, bot: { ...BOT, buOrderData: { ...BOT.buOrderData, totalFee: "-1.50" } } }).comision.stare, "bine");
 });
 
 // --- Task 8 al revizei finale: comision nemasurabil exact cand e cel mai rau -

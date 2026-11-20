@@ -325,7 +325,8 @@ var TabloBot = (function () {
     if (brut !== null && taxe !== null) {
       var taxeG = Math.max(0, Math.abs(taxe) - txIn);
       if (brut > 0) {
-        var r = 100 * taxeG / brut;
+        /* v100.373: `gridProfit` e după comisionul perechilor ⇒ comisionul se raportează la brutul refăcut (grile + comision), nu la net */
+        var r = 100 * taxeG / (brut + taxeG);
         m.comision = { valoare: r, prag: 50, stare: r > 50 ? "rau" : "bine", eticheta: etC };
       } else if (taxeG > 0) {
         // Taxe care curg fara profit brut (zero sau negativ) e cazul cel mai
@@ -385,8 +386,10 @@ var TabloBot = (function () {
     if (!ritmDinIstoric) {
       var trx = nr(x.trx24h);
       if (trx !== null && trx >= 0) {
-        m.ritmPerechi = { valoare: trx / 24, baza: null, prag: 0.40, stare: "nu-se-poate",
-          sursa: "pionex-24h", eticheta: "din Pionex 24h", total24h: trx };
+        // v100.373 (auditul 20.11): botul de 5 h cu 49 de perechi face 8,9 pe oră, nu 2,0 - se împarte la vârsta lui (cel mult 24 h, cel puțin un sfert de oră)
+        var oreR = m.varstaBotMin !== null && m.varstaBotMin !== undefined && m.varstaBotMin > 0 ? Math.min(24, Math.max(0.25, m.varstaBotMin / 60)) : 24;   /* fără vârstă (sau cu una imposibilă): cele 24 h ale lui Pionex */
+        m.ritmPerechi = { valoare: trx / oreR, baza: null, prag: 0.40, stare: "nu-se-poate",
+          sursa: "pionex-24h", eticheta: oreR < 24 ? "din Pionex, de la pornire (" + String(Math.round(oreR * 10) / 10).replace(".", ",") + " h)" : "din Pionex 24h", total24h: trx };
       }
     }
     return cuUnitati(m);

@@ -22,7 +22,7 @@ console.log("\nV100.50 · O singura voce: ordinea dupa bani, de ce s-a schimbat,
 
 const comp = (cod, nivel, motiv) => ({ cod, nivel, motiv, faCe: "fa ceva pentru " + cod });
 const sm = (componente, nivel) => ({ nivel: nivel || "atentie", cod: componente[0].cod, motiv: componente[0].motiv, faCe: componente[0].faCe, componente });
-const soc = (o) => Object.fromEntries(Object.entries(o).map(([k, [jud, bani]]) => [k, { n: jud, judecate: jud, corecte: Math.round(jud / 2), bani, baniN: jud, stare: "nesigur", nume: k }]));
+const soc = (o) => Object.fromEntries(Object.entries(o).map(([k, [jud, bani]]) => [k, { n: jud, judecate: jud, corecte: Math.round(jud / 2), bani, baniN: jud, stare: "ajuta", nume: k }]));   /* v100.373: după bani urcă doar sfatul DOVEDIT („ajuta”); ordinea după bani a unui „nesigur” muta verdictul de sus după zgomot (auditul din 20.11) */
 
 await test("I-479: doua motive „atentie” - costuri (15 judecate, −20 USDT) si trend (12 judecate, +50) -> trend intai (dupa banii masurati)", () => {
   const c = CS.alcatuieste({ sm: sm([comp("costuri", "atentie", "costurile pe zi depășesc grilele"), comp("trend", "atentie", "trendul e împotriva botului")]), socoteala: soc({ costuri: [15, -20], trend: [12, 50] }) });
@@ -181,10 +181,10 @@ await test("I4: ordinea e TOTALA - aceleasi trei motive in orice ordine de intra
   assert.equal(ord[0].split("|")[0], "muta,costuri,trend");
 });
 await test("I4: banii pe CAZ (media, nu suma) si doar de la 10 cazuri cu bani; „pericol” e siguranta (FIX)", () => {
-  const S = { costuri: { judecate: 100, corecte: 50, bani: 100, baniN: 100, stare: "nesigur" }, trend: { judecate: 10, corecte: 5, bani: 30, baniN: 10, stare: "nesigur" } };
+  const S = { costuri: { judecate: 100, corecte: 50, bani: 100, baniN: 100, stare: "ajuta" }, trend: { judecate: 10, corecte: 5, bani: 30, baniN: 10, stare: "ajuta" } };   /* v100.373: „ajuta” - vezi `soc` */
   let c = CS.alcatuieste({ sm: sm([comp("costuri", "atentie", "costurile"), comp("trend", "atentie", "trendul")]), socoteala: S });
   assert.deepEqual(c.motive.map((m) => m.cod), ["trend", "costuri"], "media: trend +3/caz bate costuri +1/caz (suma ar fi pus costurile intai)");
-  c = CS.alcatuieste({ sm: sm([comp("costuri", "atentie", "costurile"), comp("trend", "atentie", "trendul")]), socoteala: { costuri: S.costuri, trend: { judecate: 15, corecte: 8, bani: 300, baniN: 5 } } });
+  c = CS.alcatuieste({ sm: sm([comp("costuri", "atentie", "costurile"), comp("trend", "atentie", "trendul")]), socoteala: { costuri: S.costuri, trend: { judecate: 15, corecte: 8, bani: 300, baniN: 5, stare: "ajuta" } } });
   assert.deepEqual(c.motive.map((m) => m.cod), ["costuri", "trend"], "trend are doar 5 cazuri cu bani: nemasurat");
   c = CS.alcatuieste({ sm: sm([comp("trend", "atentie", "trendul")]), sfaturi: [{ cod: "pericol", ton: "atentie", titlu: "Prețul e afară din grid", text: "", faCe: "aștept" }], socoteala: { trend: { judecate: 50, corecte: 40, bani: 5000, baniN: 50 } } });
   assert.deepEqual(c.motive.map((m) => m.cod), ["pericol", "trend"]);

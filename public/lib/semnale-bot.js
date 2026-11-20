@@ -308,7 +308,7 @@ var SemnaleBot = (function () {
     // v100.61: un rand (faptele, cu „·”); intervalul propus si setarile de copiat raman in detalii
     gr0.act = [g ? cate(g.grile, "grilă", "grile") + " la " + P(g.pas) + " pas" : "Geometria gridului necitită",
       c.umpleri24h !== null && c.umpleri24h !== undefined ? cate(c.umpleri24h, "pereche", "perechi") + " în 24 h" + (c.grile24h !== null && c.grile24h !== undefined ? " (" + U(c.grile24h) + ")" : "") : null,
-      sp && f ? "propus: " + cate(sp.grile + 1, "grilă", "grile") + " la " + P(sp.pas) + " pas" : f ? null : "propunerea vine cu fișa"].filter(Boolean).join(" · ") + ".";
+      sp && f && !fisaOpreste(f) ? "propus: " + cate(sp.grile + 1, "grilă", "grile") + " la " + P(sp.pas) + " pas" : f ? (fisaOpreste(f) ? "fișa de azi: nu porni unul nou" : null) : "propunerea vine cu fișa"].filter(Boolean).join(" · ") + ".";
     if (rg && (nr(rg.r4h) !== null || nr(rg.r24h) !== null)) {
       var sf0 = sensFata(b, rg), r40 = nr(rg.r4h), r240 = nr(rg.r24h), li = nr(b.distantaLichidarePct);
       // v100.272 (ideile auditului 29.10): cifra mare e cea pe 24 h (definiția comună GridCalcul.miscareMare, ca eticheta de lângă ea), cea pe 4 h în rând
@@ -487,7 +487,7 @@ var SemnaleBot = (function () {
     var ip = x.iaProfit, ipT = ip && nr(ip.total) !== null ? ": totalul " + U(ip.total) + (nr(ip.proc) !== null ? " (" + P(ip.proc) + ")" : "") : "";
     if (ip) c.push({ nivel: "atentie", cod: "ia-profit", motiv: "moment bun de încasat" + ipT, faCe: "Aș închide botul pe plus și aș reporni doar când fișa zice iar 🟢.", deCe: ip.deCe || "" });
     if (x.muta) c.push({ nivel: "atentie", cod: "muta", motiv: x.muta.motiv, parte: x.muta.parte || null, faCe: x.muta.asteapta ? "N-aș muta gridul acum: " + x.muta.motivNu + "; aștept să se liniștească." : "Aș muta gridul: închid botul" + (nr(b.profitTotal) !== null && Math.abs(nr(b.profitTotal)) >= 0.05 ? " (închis acum: " + TextRo.usdt(nr(b.profitTotal), 1) + ")" : "") + " și pornesc cu setările din cartela Gridul."   /* v100.339 (auditul din 13.11): închiderea fixează totalul de acum - se spune */, deCe: x.muta.deCe || "", sursa: x.muta.sursa || null });
-    if (x.costuri && x.costuri.netZi !== null && x.costuri.netZi !== undefined && x.costuri.netZi < 0) c.push({ nivel: "atentie", cod: "costuri", motiv: "costurile pe zi depășesc grilele: " + TextRo.usdt(x.costuri.netZi, TextRo.zecMici(x.costuri.netZi)) + " net/zi", faCe: "Aș lua levier mai mic sau grile mai rare la următorul bot." });
+    if (x.costuri && x.costuri.netZi !== null && x.costuri.netZi !== undefined && x.costuri.netZi < 0) c.push({ nivel: "atentie", cod: "costuri", motiv: (x.costuri.comisionInGrile ? "funding-ul pe zi depășește grilele: " : "costurile pe zi depășesc grilele: ") + TextRo.usdt(x.costuri.netZi, TextRo.zecMici(x.costuri.netZi)) + " net/zi", faCe: x.costuri.comisionInGrile ? "Aș lua levier mai mic sau direcția care încasează funding-ul, la următorul bot." : "Aș lua levier mai mic sau grile mai rare la următorul bot." });   /* v100.373: cu comisionul perechilor deja în grile, minusul pe zi vine din funding */
     var rB = x.btc ? nr(x.btc.r) : null;
     if (x.btc) c.push({ nivel: "atentie", cod: "btc", motiv: "BTC în mișcare" + (rB !== null ? " (" + X(rB) + " obișnuitul pe 24 h)" : "") + ", moneda încă nu",   /* v100.272: cifra pe 24 h */ faCe: "N-aș adăuga bani până nu se vede încotro trage BTC.", deCe: "Altcoinii urmează des BTC." });
     var ag = x.aglomerare, nS = ag ? nr(ag.semne) : null;
@@ -642,8 +642,12 @@ var SemnaleBot = (function () {
     btc: "„BTC în mișcare”", aglomerare: "„Mulțimea înghesuită”" };
   function socotealaToti(loguri) {
     var toate = [];
-    (Array.isArray(loguri) ? loguri : []).forEach(function (l) { if (Array.isArray(l)) toate = toate.concat(l); });
-    var r = socoteala(toate), z = peZile(toate);
+    // v100.373 (auditul 20.11, 🔴2): pe un bot, un sfat se numără O DATĂ (prima apariție) - un semafor care sare trend → mută → trend nota fiecare
+    // întoarcere și toate se judecau pe același rezultat final (2,6 judecăți pe bot; o pierdere de 20 USDT „salvată” de trei ori)
+    (Array.isArray(loguri) ? loguri : []).forEach(function (l) { if (!Array.isArray(l)) return; var vazut = {}; l.forEach(function (e) { if (!e || !e.cod || vazut[e.cod]) return; vazut[e.cod] = true; toate.push(e); }); });
+    var r = socoteala(toate), z = peZile(toate), felul = {}, rep = { tine: { s: 0, n: 0 }, iesi: { s: 0, n: 0 } };
+    // banii au reper: cât aducea „ies la orice sfat” (sau „țin la orice sfat”) pe intrare, pe aceleași jurnale
+    toate.forEach(function (e) { var k = stai(e) ? "tine" : "iesi", a = nr(e.total), d = nr(e.totalDupa); if (!felul[e.cod]) felul[e.cod] = k; if ((e.dreptate === true || e.dreptate === false) && a !== null && d !== null) { rep[k].s += k === "tine" ? d - a : a - d; rep[k].n++; } });
     // v100.272: Benjamini–Hochberg pe sfaturile cu destule zile - „se vede” doar cele care trec după corecție
     var elig = Object.keys(z).filter(function (k) { return z[k].zile >= ZILE_MIN && r[k]; }).sort(function (a, c) { return z[a].p - z[c].p; }), m = elig.length, kmax = -1;
     elig.forEach(function (k, i) { if (z[k].p <= Q_BH * (i + 1) / m) kmax = i; });
@@ -651,7 +655,8 @@ var SemnaleBot = (function () {
     Object.keys(r).forEach(function (k) {
       var x = r[k], zk = z[k] || { zile: 0, rataZile: null, reper: null, p: null, icZile: [0, 1] };
       x.zile = zk.zile; x.rataZile = zk.rataZile; x.reper = zk.reper; x.p = zk.p === null ? null : Math.round(zk.p * 10000) / 10000;
-      x.ic = zk.icZile; x.nume = NUME_SFAT[k] || k;
+      x.ic = zk.icZile; x.nume = NUME_SFAT[k] || k; x.fel = felul[k] || "iesi";
+      var rk = rep[x.fel]; x.baniPeste = x.baniN && rk.n ? x.bani - x.baniN * rk.s / rk.n : null;
       x.stare = x.zile < ZILE_MIN ? "necunoscut" : seVede[k] ? "ajuta" : (x.judecate >= 30 && x.bani <= 0 && !NU_TACE[k]) ? "tace" : "nesigur";
     });
     return r;
@@ -659,13 +664,17 @@ var SemnaleBot = (function () {
   function tacute(soc) { var o = {}; Object.keys(soc || {}).forEach(function (k) { if (soc[k] && soc[k].stare === "tace") o[k] = true; }); return o; }
   // v100.272 (ideile auditului 29.10): cu zilele și rata de bază (socoteala nouă are x.zile / x.rataZile / x.reper); forma veche (fără ele, din KV
   // până la tura nouă a colectorului) se scrie ca înainte
-  function textIncredere(x) {
+  /* v100.373: `cod` = cheia sfatului, pentru forma veche din KV (fără `fel`): „ține” / „podea” / „cu-botul” se judecă ținând botul, restul ieșind la semnal */
+  var STAI_COD = { tine: 1, podea: 1, "cu-botul": 1 };
+  function textIncredere(x, cod) {
     if (!x) return "încă nu știm (niciun caz)";
     var nou = nr(x.zile) !== null && nr(x.reper) !== null, pz = function (v) { return TextRo.pct(v * 100, 1); };
     if (x.stare === "necunoscut") return "încă nu știm (" + cate(x.judecate, "judecat", "judecate") + ")" + (nou ? ", pe " + cate(x.zile, "zi", "zile") + "; judec de la " + cate(ZILE_MIN, "zi", "zile") : "");
     var s = "a avut dreptate " + x.corecte + " din " + x.judecate + " (" + Math.round(100 * x.corecte / x.judecate) + "%)";
     if (nou) s += "; pe " + cate(x.zile, "zi", "zile") + ", " + pz(x.rataZile) + " față de " + pz(x.reper) + " de obicei";
-    if (x.baniN) s += ", " + (x.bani >= 0 ? "~+" : "~−") + Math.abs(x.bani).toFixed(1).replace(".", ",") + " USDT dacă-l urmai de fiecare dată";
+    // v100.373: banii spun ce s-a măsurat de fapt (orice „atenție” e judecat ca „închideam botul la semnal”) și au reperul lor
+    var bz = function (v) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(1).replace(".", ","); }, tin = x.fel ? x.fel === "tine" : cod ? !!STAI_COD[cod] : null;
+    if (x.baniN) s += ", ~" + bz(x.bani) + " USDT " + (tin === null ? "dacă-l urmai de fiecare dată" : tin ? "ținându-l de fiecare dată" : "dacă închideai botul la semnal") + (nr(x.baniPeste) !== null && tin !== null ? " (" + bz(x.baniPeste) + " peste „" + (tin ? "țin" : "ies") + " la orice sfat”)" : "");
     if (x.stare === "tace") s += nou ? " · nu-l trimit pe Discord: nu se vede peste rata de bază și urmat n-ar fi salvat bani" : " · nu-l trimit pe Discord: nu se descurcă mai bine decât întâmplarea";   /* v100.106: era „tăcut pe Discord (nu bate hazardul)” */
     return s;
   }

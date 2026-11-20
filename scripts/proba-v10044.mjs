@@ -34,7 +34,7 @@ await test("CRV real: 3 motive dupa banii in joc - stopul (rosu), marginea de jo
   const c = CS.alcatuieste(intrare());
   assert.deepEqual(c.motive.map((m) => m.c), ["r", "g", "v"]);
   assert.match(c.motive[0].titlu, /Stopul e peste plan/); assert.match(c.motive[0].text, /10/);
-  assert.match(c.motive[1].titlu, /marginea de jos/i);   /* fixtura de pe 30.09 are titlul în forma veche */ assert.match(c.motive[1].cip.t, /^pe boții tăi, „Mută gridul” a avut dreptate 7 din 10/);   /* v100.106 */   /* v100.62: titlul vine gata din sfaturi.js */
+  assert.match(c.motive[1].titlu, /marginea de jos/i);   /* fixtura de pe 30.09 are titlul în forma veche */ assert.match(c.motive[1].cip.t, /^pe boții tăi, „Mută gridul”: a avut dreptate 7 din 10 · nedovedit$/);   /* v100.106 */   /* v100.62: titlul vine gata din sfaturi.js */
   assert.match(c.motive[2].titlu, /Piața e liniștită și laterală/); assert.match(c.motive[2].text + " " + (c.motive[2].extra || ""), /Trendul: /);   /* revizia 2b: cu liniștea, direcția e pe rândul de dedesubt */
   assert.match(c.motive[2].text + " " + (c.motive[2].extra || ""), /mediile EMA arată long, tare/, "fisa nu mai e un trend separat, e structura");   /* revizia 2b: lângă direcție, pe rândul de dedesubt */
   assert.equal(c.motive[0].cip.t, "încă nu știm", "„Planul tău”: 9 judecate, sub 10");

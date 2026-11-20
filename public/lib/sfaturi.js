@@ -200,10 +200,10 @@ var Sfaturi = (function () {
         // revizia Opus (I3, 02.10): comisioanele pe zi vin negative, funding-ul negativ cand il platesti si pozitiv cand il incasezi -
         // sumele fara semn, verbul dupa sens (inainte: „comisioanele iau −0,12”, iar funding-ul incasat se citea ca un cost)
         // v100.272 (ideile auditului 29.10): comisionul pe zi e fără taxa de intrare (plătită o dată, la pornire) - se spune, cu cât a fost
-        text: "Grilele aduc " + (co.grile24h != null ? TextRo.num(co.grile24h, TextRo.zecMici(co.grile24h)) : "—") + " USDT în 24 h; comisioanele iau " + (co.comisionZi != null ? TextRo.num(Math.abs(co.comisionZi), TextRo.zecMici(co.comisionZi)) : "—") +
-          (nr(co.taxaIntrare) ? " pe zi (fără taxa de intrare, ≈ " + TextRo.num(Math.abs(nr(co.taxaIntrare)), TextRo.zecMici(nr(co.taxaIntrare))) + " o dată)" : "") +
-          (fTxt = co.fundingZi == null ? " și funding-ul —" : TextRo.num(Math.abs(co.fundingZi), 2) === "0,00" ? "" : co.fundingZi < 0 ? " și funding-ul ia " + TextRo.num(-co.fundingZi, TextRo.zecMici(co.fundingZi)) : " și funding-ul aduce " + TextRo.num(co.fundingZi, TextRo.zecMici(co.fundingZi))) + (fTxt || !nr(co.taxaIntrare) ? " pe zi." : "."),
-        faCe: co.fundingMananca ? "Aș lua levier mai mic sau direcția care încasează funding-ul, la următorul bot." : "Aș rări grilele (pas mai mare) ca să rămână mai mult după comision." });
+        text: "Grilele aduc " + (co.grile24h != null ? TextRo.num(co.grile24h, TextRo.zecMici(co.grile24h)) : "—") + " USDT în 24 h" + (co.comisionInGrile ? ", după comisionul perechilor" : "; comisioanele iau " + (co.comisionZi != null ? TextRo.num(Math.abs(co.comisionZi), TextRo.zecMici(co.comisionZi)) : "—") +
+          (nr(co.taxaIntrare) ? " pe zi (fără taxa de intrare, ≈ " + TextRo.num(Math.abs(nr(co.taxaIntrare)), TextRo.zecMici(nr(co.taxaIntrare))) + " o dată)" : "")) +   /* v100.373: comisionul perechilor e deja în grile */
+          (fTxt = co.fundingZi == null ? " și funding-ul —" : TextRo.num(Math.abs(co.fundingZi), 2) === "0,00" ? "" : co.fundingZi < 0 ? " și funding-ul ia " + TextRo.num(-co.fundingZi, TextRo.zecMici(co.fundingZi)) : " și funding-ul aduce " + TextRo.num(co.fundingZi, TextRo.zecMici(co.fundingZi))) + (fTxt ? " pe zi." : co.comisionInGrile ? "." : !nr(co.taxaIntrare) ? " pe zi." : "."),
+        faCe: co.fundingMananca || co.comisionInGrile ? "Aș lua levier mai mic sau direcția care încasează funding-ul, la următorul bot." : "Aș rări grilele (pas mai mare) ca să rămână mai mult după comision." });
     }
 
     // E) Setarea botului fata de fisa de azi.

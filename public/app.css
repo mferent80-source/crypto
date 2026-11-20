@@ -4276,6 +4276,18 @@ html.pzDemo #alerts [data-rand="deschis"]:not([hidden])::before{content:"▾  st
 #alerts .cnBloc .card{margin-top:6px}
 #alerts #alSCentru>#pzV-alerts{order:-1}   /* caseta „CRITICE” sus în rândul alertelor (era copilul paginii, cu order 10) */
 /* v100.367: sfârșit */
+/* v100.373 (el 20.11: „putem să optimizăm pagina botului, la verdicte”): capul = marginea contra botului; rândul de cost; pliul de 3 și 7 zile */
+html.pzDemo #tabloubot #pzVerdict .pzMarg>p.pzMargSanse,html.pzDemo #tabloubot #pzVerdict .pzMarg>p.pzMargBani{font-variant-numeric:tabular-nums;color:var(--pzT0)}
+html.pzDemo #tabloubot #pzVerdict .pzMarg>p.pzMargBani{font-weight:600}
+html.pzDemo #tabloubot #pzVerdict .pzMarg>p.pzMargFac{margin-top:6px}
+html.pzDemo #tabloubot #pzVerdict .pzMarg>p.pzMargCons{margin-top:6px;font-size:12.5px;color:var(--pzT2)}
+html.pzDemo #tabloubot #pzVerdict .pzMarg>p.pzMargCons b{font-size:12.5px;font-weight:600;color:var(--pzT1)}
+html.pzDemo #tabloubot #pzVerdict .pzMarg>p.pzMargDov{margin-top:6px}
+#tabloubot .tbKpiCost{display:block;margin-top:4px}#tabloubot .tbKpiCost[hidden]{display:none}
+#tabloubot .tbKpiCost .pzKv small{font-size:11px;color:var(--pzT2)}
+#tabloubot .tbKpiCost .pzKv b.good{color:var(--pzSus)}#tabloubot .tbKpiCost .pzKv b.tbWarn{color:var(--pzAur)}
+#tabloubot .tbKpiCostSub{margin:3px 0 0;font-size:11.5px}
+#tabloubot .tbProbLung>p.tbSub{margin:0 0 8px}
 /* v100.369 (el 20.11: „Contul întreg ca Jurnalul”): stilurile paginilor refăcute, copiate de sub #salt (scratchpad css-contintreg.py) */
 #contintreg .cnPag{box-sizing:border-box;display:flex;flex-direction:column;gap:16px;font-size:13.5px;line-height:1.45}
 #contintreg .cnPag p{margin:0}
@@ -4937,6 +4949,10 @@ html.pzDemo #contintreg [data-rand="deschis"]:not([hidden])::before{content:"▾
 @media (max-width:640px){#alerts .cnMare{font-size:20px}}
 #alerts .alRep>summary{font-size:12px}
 #alerts .alRepRand{font-size:12px}
+html.pzDemo #tabloubot #pzVerdict .pzMarg>p.pzMargCons{font-size:12px}
+html.pzDemo #tabloubot #pzVerdict .pzMarg>p.pzMargCons b{font-size:12px}
+#tabloubot .tbKpiCost .pzKv small{font-size:12px}
+#tabloubot .tbKpiCostSub{font-size:12px}
 #contintreg .cnMare{font-size:30px}
 #contintreg .cnTab{font-size:13.5px}
 #contintreg svg .jgAx{font-size:12px}
