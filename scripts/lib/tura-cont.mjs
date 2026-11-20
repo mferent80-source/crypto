@@ -12,7 +12,7 @@ async function incearca(d, ce, fn) { try { return await fn(); } catch (e) { d.ju
 const bareDinRanduri = (G, randuri) => G.bareBursa(randuri || [], Date.now()).map((b) => ({ t: b.t, c: b.c, h: b.h, l: b.l }));   // v100.178: + h / l (MAE / MFE)
 // prețurile zilnice prin cache-ul de pe disc (d.bareZi) când există, altfel direct
 const zilnic = (d, cale) => (d.bareZi ? d.bareZi(cale) : d.cere(cale));
-export const FORMA_RAPORT = 369.2;   // v100.369: forma raportului (bani, riscAcum, carte, grafice); alta ⇒ raportul se reface la prima tură (.1: istoria lungă pe ≥ 90 % din expunere)
+export const FORMA_RAPORT = 370;   // v100.369: forma raportului (bani, riscAcum, carte, grafice); alta ⇒ raportul se reface la prima tură (.1: istoria lungă pe ≥ 90 % din expunere)
 const CORECTII_INDUSTRIE = { QCOM: ["Technology", "Semiconductors"] };
 // începutul unei zile (AAAA-LL-ZZ) în ora României, în ms (ora de vară / iarnă din Intl)
 export function inceputZiRo(z) {
@@ -38,7 +38,9 @@ export async function campuriZiFrana(d, acum, raport) {
   const o = {};
   const tot = raport && raport.valoare ? Number(raport.valoare.total) : NaN;
   const va = raport && raport.risc ? Number(raport.risc.var95) : NaN;
-  if (Number.isFinite(tot) || Number.isFinite(va)) o.raport = { valoare: Number.isFinite(tot) ? { total: tot } : null, risc: Number.isFinite(va) ? { var95: va } : null };
+  // v100.370 (ideea 2): lângă pragul vechi (var95) se ține și cel „de acum” (var95a), ca proba pe zilele reale să le judece pe amândouă
+  const va2 = raport && raport.riscAcum && raport.riscAcum.acum ? Number(raport.riscAcum.acum.var95) : NaN;
+  if (Number.isFinite(tot) || Number.isFinite(va)) o.raport = { valoare: Number.isFinite(tot) ? { total: tot } : null, risc: Number.isFinite(va) ? (Number.isFinite(va2) ? { var95: va, var95a: Math.round(va2) } : { var95: va }) : null };
   if (!d || !d.cere || !d.Acasa || !d.ScorSezon || !d.StatisticaTrade || !d.JurnalTrade) return o;
   let pauza, eveniment;
   const ar = await incearca(d, "boți zi", () => d.cere("/api/istoric-bot?action=botiInchisi"));
@@ -159,7 +161,9 @@ async function faRaport(d, st, acum) {
     if (bl && bl.length && x.tip === "bot" && x.pret > 0 && Math.abs(bl[bl.length - 1].c / x.pret - 1) > 0.25) { d.jurnal("cont: " + s + " la Yahoo nu se potrivește cu prețul botului - folosesc β × BTC"); bl = null; }
     bareLungi[x.cheie] = bl;
   }
-  const stres = C.stres(e, { factori, bareLungi, betas, leiPe });
+  // v100.370 (ideea 1): crizele cu tot cu mișcarea leului din fereastra lor (cursul pe 10 ani al monedelor din cont)
+  const fxCrize = {}; for (const m of new Set(e.map((x) => (x.moneda === "GBX" ? "GBP" : x.moneda === "USDT" ? "USD" : x.moneda)).concat(["USD"]))) fxCrize[m] = await lung(m + "RON=X");
+  const stres = C.stres(e, { factori, bareLungi, betas, leiPe, fx: fxCrize });
   // 6b. v100.369 (el 20.11, „cifra de acum + proba”): riscul pe agitația de acum (EWMA) și proba pe zilele reale, pe istoria lungă a pozițiilor
   // de acum; aceleași zile dau și scăderea cărții de acum și pariurile independente pe ferestre. Istoria începe în ziua de la care există
   // pozițiile care fac ≥ 90 % din expunere (C.istoriaLunga): pe viu, un bot mic pe o monedă listată de un an tăia proba de la ~900 la 106
@@ -310,7 +314,7 @@ async function faRaport(d, st, acum) {
       scoase: ist.scoase, pnl: ist.zile.map((x) => [x.z, rot(x.pnl)]) },
     // v100.369 (🔴4): TOATE perechile (cel mult 66 la 12 poziții), nu primele 15 - numărătoarea „câte sunt același risc” era tăiată
     corelatii: perechi.map((p) => ({ a: p.a, b: p.b, rho: rot(p.rho, 2), n: p.n, acelasiRisc: p.acelasiRisc, seAcopera: p.seAcopera })), corelatiiN: perechi.length, diversificare: div ? { raport: rot(div.raport, 2), pariuri: rot(div.pariuri, 1), pozitii: div.pozitii } : null,
-    stres: stres.map((s) => ({ cod: s.cod, nume: s.nume, de: s.de, pana: s.pana, btc: rot(s.btc, 4), qqq: rot(s.qqq, 4), lei: rot(s.pnl), lipsa: s.lipsa, pozitii: s.pozitii.slice(0, 6).map((p) => ({ nume: p.nume, r: rot(p.r, 4), lei: rot(p.lei), cum: p.cum, lichidat: p.lichidat })) })),
+    stres: stres.map((s) => ({ cod: s.cod, nume: s.nume, de: s.de, pana: s.pana, btc: rot(s.btc, 4), qqq: rot(s.qqq, 4), lei: rot(s.pnl), leu: rot(s.leu, 4), lipsa: s.lipsa, pozitii: s.pozitii.slice(0, 6).map((p) => ({ nume: p.nume, r: rot(p.r, 4), lei: rot(p.lei), cum: p.cum, lichidat: p.lichidat })) })),
     reconciliere: { t212: recT212, arhiva: recArhiva, urmarire: recUrm },
     executie, factori: factoriR, atribuire: atribuireR, maeMfe: mae, vol, garzi: garziR,
     randament, bani: rotBani(bani, rot),

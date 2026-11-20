@@ -103,7 +103,7 @@ await test("B3 netul boților (nu brutul), fără procentul boților și fără 
   const src = citeste("scripts", "lib", "tura-cont.mjs");
   assert.match(src, /baniB = C\.baniBoti\(d\.JurnalTrade\.din\(await d\.botiInchisi\(\)\), leiZi, acum - 365 \* 86400000\)/); assert.doesNotMatch(src, /C\.seriaBoti\(/); assert.doesNotMatch(src, /C\.combina\(/); assert.doesNotMatch(src, /investit: t\.pus \|\| t\.investit, rezultat: t\.rezultat/);
   assert.match(src, /corelatii: perechi\.map\(/); assert.doesNotMatch(src, /perechi\.slice\(0, 15\)/); assert.match(src, /corelatiiN: perechi\.length/);
-  assert.match(src, /if \(!Array\.isArray\(saltL\)\) lipsuri\.push\("Salt"\);/); assert.match(src, /const formaVeche = st\.forma !== FORMA_RAPORT && st\.la > 0;/); assert.equal(TC.FORMA_RAPORT, 369.2);
+  assert.match(src, /if \(!Array\.isArray\(saltL\)\) lipsuri\.push\("Salt"\);/); assert.match(src, /const formaVeche = st\.forma !== FORMA_RAPORT && st\.la > 0;/); assert.ok(TC.FORMA_RAPORT >= 369.2);
   assert.match(citeste("scripts", "colector.mjs"), /salt: async \(\) => \(ultimeleSalt && Array\.isArray\(ultimeleSalt\.randuri\) \? ultimeleSalt\.randuri : null\)/);
   assert.match(src, /CORECTII_INDUSTRIE = \{ QCOM: \["Technology", "Semiconductors"\] \}/);
 });
@@ -248,11 +248,11 @@ await test("D legarea: capul ca paginile refăcute (titlul, Reîncarcă, tema), 
   const { spawnSync } = await import("node:child_process"); const r = spawnSync(process.execPath, [path.join(RAD, "scripts", "face-tema-tablou.mjs"), "--check"], { encoding: "utf8" }); assert.equal(r.status, 0, r.stdout + r.stderr);
 });
 await test("E versiunile v100.369 (index ×4, sw, versiune.js, package + lanț, BUILD_INFO) și colectorul v101.205", () => {
-  const Hh = citeste("public", "index.html"); assert.equal((Hh.match(/v100\.369/g) || []).length, 4); assert.match(Hh, /v100\.369 · CONTUL ÎNTREG CINSTIT/); assert.doesNotMatch(Hh, /v100\.368/);
-  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-369/); assert.match(citeste("functions", "_shared", "versiune.js"), /"v100\.369"/);
-  const p = JSON.parse(citeste("package.json")); assert.equal(p.version, "100.369.0"); assert.match(p.scripts.test, /npm run test:v100368 && npm run test:v100369/); assert.equal(p.scripts["test:v100369"], "node scripts/proba-v100369.mjs");
-  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.match(bi.badge, /^v100\.369/); assert.ok(bi.ci369 && bi.tb368);
-  assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.205";/);
+  const Hh = citeste("public", "index.html"); const vh = (Hh.match(/v100\.(\d{3})/) || [])[1]; assert.ok(+vh >= 369, "versiunea de la v100.369 încolo: " + vh); assert.doesNotMatch(Hh, /v100\.368/);   /* v100.370: „de la încolo” */
+  assert.ok(+(citeste("public", "sw.js").match(/crypto-radar-v100-(\d{3})/) || [])[1] >= 369); assert.ok(+(citeste("functions", "_shared", "versiune.js").match(/"v100\.(\d{3})"/) || [])[1] >= 369);
+  const p = JSON.parse(citeste("package.json")); assert.ok(+p.version.split(".")[1] >= 369); assert.match(p.scripts.test, /npm run test:v100368 && npm run test:v100369/); assert.equal(p.scripts["test:v100369"], "node scripts/proba-v100369.mjs");
+  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.ok(+(bi.badge.match(/^v100\.(\d{3})/) || [])[1] >= 369); assert.ok(bi.ci369 && bi.tb368);
+  assert.ok(+(citeste("scripts", "colector.mjs").match(/const VERSIUNE_COLECTOR = "v101\.(\d{3})";/) || [])[1] >= 205);
 });
 
 console.log(`\n${teste - picate}/${teste} ${picate ? "PICĂ" : "trec"}`);

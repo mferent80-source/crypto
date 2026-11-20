@@ -92,7 +92,9 @@ var ContIntreg = (function () {
   function pnlIstoric(e, serii, fx, o) {
     o = o || {};
     var zile = (o.zile || []).slice(), folosite = [], scoase = [];
-    if (!zile.length) { var set = {}; Object.keys(serii || {}).forEach(function (k) { Object.keys(serii[k] || {}).forEach(function (z) { set[z] = 1; }); }); zile = Object.keys(set).sort().slice(-(o.n || 250)); }
+    // v100.370 (ideea 4): n = zile de BURSĂ. Cu un bot în cont seriile au și weekenduri, iar „ultimele 250 de zile” erau de calendar (~179 de bursă,
+    // cam 8 luni): se iau ultimele n zile lucrătoare și toate zilele de calendar de la prima dintre ele încoace
+    if (!zile.length) { var set = {}; Object.keys(serii || {}).forEach(function (k) { Object.keys(serii[k] || {}).forEach(function (z) { set[z] = 1; }); }); var toate = Object.keys(set).sort(), lucr = toate.filter(function (z) { var w = new Date(z + "T12:00:00Z").getUTCDay(); return w !== 0 && w !== 6; }).slice(-(o.n || 250)); zile = lucr.length ? toate.filter(function (z) { return z >= lucr[0]; }) : toate.slice(-(o.n || 250)); }
     e.forEach(function (x) {
       if (!x || x.notionalLei === null || !isFinite(x.notionalLei)) { if (x) scoase.push({ nume: x.nume, motiv: x.lipsa || "fără expunere" }); return; }
       var s = serii && serii[x.cheie], acop = s ? zile.filter(function (z) { return s[z] !== undefined; }).length : 0;
@@ -185,6 +187,13 @@ var ContIntreg = (function () {
     if (!a || !b || b.t <= a.t || zi(a.t) < zi(Date.parse(de) - 5 * ZI)) return null;
     return b.c / a.c - 1;
   }
+  // v100.370: mișcarea cursului pe fereastra crizei; aceeași bară la ambele capete (fereastră de o zi) = 0, nu lipsă
+  function leuFereastra(bare, de, pana) {
+    var l = (bare || []).filter(function (x) { return x && nr(x.c) > 0; }).sort(function (x, y) { return x.t - y.t; }), a = null, b = null;
+    for (var i = 0; i < l.length; i++) { var z = zi(l[i].t); if (z <= de) a = l[i]; if (z <= pana) b = l[i]; }
+    if (!a || !b || zi(a.t) < zi(Date.parse(de) - 5 * ZI)) return null;
+    return b.t <= a.t ? 0 : b.c / a.c - 1;
+  }
   // beta față de un factor, pe zilele comune (cel puțin 60)
   function beta(s, f, n) {
     var z = Object.keys(s || {}).filter(function (k) { return f && f[k] !== undefined; }).sort().slice(-(n || 180)); if (z.length < 60) return null;
@@ -219,7 +228,7 @@ var ContIntreg = (function () {
     return { pnl: pnl, lichidat: false };
   }
   // un scenariu pe expunerile de acum; f = { BTC: r, QQQ: r, SPY: r, USD: r leu/USD } din fereastra crizei; proprii = { cheie: r }
-  function scenariu(e, f, proprii, betas, leiPe) {
+  function scenariu(e, f, proprii, betas, leiPe, rf) {
     var tot = 0, rand = [], lipsa = [];
     e.forEach(function (x) {
       if (!x || x.notionalLei === null) return;
@@ -232,8 +241,11 @@ var ContIntreg = (function () {
         if (typeof fv === "object") ex = { r: r, min: b >= 0 ? b * fv.min : b * fv.max, max: b >= 0 ? b * fv.max : b * fv.min };
       }
       var lei;
-      if (x.tip === "bot") { var pb = pnlBot(x, r, ex); if (!pb) { lipsa.push(x.nume); return; } lei = inLei(pb.pnl, "USD", leiPe); rand.push({ nume: x.nume, r: r, lei: lei, cum: cum, lichidat: pb.lichidat }); }
-      else { lei = x.notionalLei * r; rand.push({ nume: x.nume, r: r, lei: lei, cum: cum, lichidat: false }); }
+      // v100.370 (ideea 1): mișcarea leului din fereastra crizei (rf = { USD: r, EUR: r, GBP: r }); fără ea (rf lipsă) rămâne socoteala veche.
+      // Acțiunea: (1 + r)(1 + leu) − 1 pe expunere; botul: leul mișcă valoarea lui (marja), nu expunerea cu levier - iar lichidat, n-a mai rămas ce mișca
+      var mon = x.moneda === "USDT" ? "USD" : x.moneda === "GBX" ? "GBP" : x.moneda, k = rf && rf[mon] !== null && rf[mon] !== undefined ? rf[mon] : 0;
+      if (x.tip === "bot") { var pb = pnlBot(x, r, ex); if (!pb) { lipsa.push(x.nume); return; } lei = inLei(pb.pnl, "USD", leiPe); if (lei !== null && !pb.lichidat && k) lei += (x.valoareLei || 0) * k; rand.push({ nume: x.nume, r: r, lei: lei, cum: cum, lichidat: pb.lichidat }); }
+      else { lei = x.notionalLei * ((1 + r) * (1 + k) - 1); rand.push({ nume: x.nume, r: r, lei: lei, cum: cum, lichidat: false }); }
       if (lei !== null) tot += lei;
     });
     rand.sort(function (a, b) { return a.lei - b.lei; });
@@ -245,8 +257,9 @@ var ContIntreg = (function () {
       var f = {}; ["BTC", "QQQ", "SPY"].forEach(function (k) { f[k] = o.factori && o.factori[k] ? extremFereastra(o.factori[k], c.de, c.pana) : null; });
       if (f.BTC === null && f.QQQ === null) return;
       var proprii = {}; e.forEach(function (x) { if (x && o.bareLungi && o.bareLungi[x.cheie]) proprii[x.cheie] = extremFereastra(o.bareLungi[x.cheie], c.de, c.pana); });
-      var s = scenariu(e, f, proprii, o.betas || {}, o.leiPe);
-      out.push({ cod: c.cod, nume: c.nume, de: c.de, pana: c.pana, btc: f.BTC && f.BTC.r, qqq: f.QQQ && f.QQQ.r, btcMin: f.BTC && f.BTC.min, pnl: s.pnl, pozitii: s.rand, lipsa: s.lipsa });
+      var rf = null; if (o.fx) { rf = {}; Object.keys(o.fx).forEach(function (m) { rf[m] = o.fx[m] ? leuFereastra(o.fx[m], c.de, c.pana) : null; }); }
+      var s = scenariu(e, f, proprii, o.betas || {}, o.leiPe, rf);
+      out.push({ cod: c.cod, nume: c.nume, de: c.de, pana: c.pana, btc: f.BTC && f.BTC.r, qqq: f.QQQ && f.QQQ.r, btcMin: f.BTC && f.BTC.min, pnl: s.pnl, pozitii: s.rand, lipsa: s.lipsa, leu: rf ? (rf.USD !== undefined ? rf.USD : null) : undefined });
     });
     out.sort(function (a, b) { return a.pnl - b.pnl; });
     return out;
@@ -602,6 +615,28 @@ var ContIntreg = (function () {
     }
     return out;
   }
+  // v100.370 (ideea 2): proba riscului pe zilele REALE ale contului (cont:zile): pragul salvat în ziua t față de schimbarea valorii până la
+  // citirea următoare. Regula, scrisă ÎNAINTE de date: verdictul (Kupiec) abia de la 250 de zile de bursă judecate - sub 60 de zile nici o rată
+  // reală de două ori mai mare nu s-ar vedea; până atunci doar numărătoarea. Rândul scris la prima citire a zilei z (noaptea) ține închiderea
+  // de ieri, deci perechea rând(z) → rând(z+1) e ziua de bursă z: weekendurile nu se numără. Schimbarea include depunerile și retragerile.
+  function binomPeste(n, k, p) { if (k <= 0) return 1; var s = 0, c = 1; for (var i = 0; i < k; i++) { if (i) c = c * (n - i + 1) / i; s += c * Math.pow(p, i) * Math.pow(1 - p, n - i); } return Math.max(0, 1 - s); }
+  function probaReala(zile, o) {
+    o = o || {}; var minim = o.minim || 250, l = (zile || []).filter(function (x) { return x && /^\d{4}-\d{2}-\d{2}$/.test(String(x.z)) && nr(x.valoare) > 0; }).slice().sort(function (a, b) { return a.z < b.z ? -1 : a.z > b.z ? 1 : 0; });
+    var s = { n: 0, x: 0, na: 0, xa: 0, sarite: 0, mutari: 0, de: null, pana: null, depasiri: [] };
+    for (var i = 0; i + 1 < l.length; i++) {
+      var a = l[i], b = l[i + 1], w = new Date(a.z + "T12:00:00Z").getUTCDay(), v = a.raport && a.raport.risc ? nr(a.raport.risc.var95) : null, va = a.raport && a.raport.risc ? nr(a.raport.risc.var95a) : null;
+      if (w === 0 || w === 6) continue;
+      // o sursă care se golește sau apare din zero (Salt vândut, bani mutați) e o mutare, nu o zi de piață: nu se judecă
+      var mutat = ["pionex", "t212", "salt"].some(function (q) { var p0 = nr(a[q]), p1 = nr(b[q]); return p0 !== null && p1 !== null && ((p0 > 0 && p1 === 0) || (p0 === 0 && p1 > 0)); });
+      if (a.complet === false || b.complet === false || mutat || !(v > 0) || (Date.parse(b.z) - Date.parse(a.z)) / ZI > 4) { s.sarite++; if (mutat) s.mutari++; continue; }
+      var d = b.valoare - a.valoare; s.n++; if (!s.de) s.de = a.z; s.pana = a.z;
+      if (d < -v) { s.x++; s.depasiri.push({ z: a.z, lei: d, prag: v }); }
+      if (va > 0) { s.na++; if (d < -va) s.xa++; }
+    }
+    var k = 0; while (k <= s.n && binomPeste(s.n, k, 0.05) > 0.05) k++;
+    s.minim = minim; s.asteptat = s.n * 0.05; s.pragRespingere = k; s.destule = s.n >= minim; s.test = s.destule ? kupiec(s.n, s.x, 0.05) : null; s.testAcum = s.na >= minim ? kupiec(s.na, s.xa, 0.05) : null;
+    return s;
+  }
   // istoria lungă (10 ani, ținută în cache o săptămână) completată cu seria scurtă, proaspătă în fiecare zi: zilele din seria scurtă bat
   // pe cele vechi - altfel „agitația de acum” s-ar opri la ultima zi din cache (pe viu: 16.11 într-un raport din 20.11)
   function uneSerii(lung, scurt) { var o = {}; Object.keys(lung || {}).forEach(function (z) { o[z] = lung[z]; }); Object.keys(scurt || {}).forEach(function (z) { o[z] = scurt[z]; }); return o; }
@@ -623,7 +658,7 @@ var ContIntreg = (function () {
     return { expunere: expunere, acum: serie[serie.length - 1][1], max: cea, z5: rau(5), z20: rau(20), serie: serie.filter(function (x, i) { return i % (o.rar || 1) === 0 || i === serie.length - 1; }) };
   }
 
-  return { ZI: ZI, CRIZE: CRIZE, executie: executie, kupiec: kupiec, riscAcum: riscAcum, baniBoti: baniBoti, reperLei: reperLei, interval: interval, pariuriFerestre: pariuriFerestre, scadereCarte: scadereCarte, istoriaLunga: istoriaLunga, uneSerii: uneSerii, m32: m32, setMonede: setMonede, extremFereastra: extremFereastra, monedaTicker: monedaTicker, inLei: inLei, dinBot: dinBot, dinT212: dinT212, dinSalt: dinSalt, valoare: valoare,
+  return { ZI: ZI, CRIZE: CRIZE, executie: executie, kupiec: kupiec, riscAcum: riscAcum, baniBoti: baniBoti, reperLei: reperLei, interval: interval, pariuriFerestre: pariuriFerestre, scadereCarte: scadereCarte, istoriaLunga: istoriaLunga, uneSerii: uneSerii, probaReala: probaReala, binomPeste: binomPeste, m32: m32, setMonede: setMonede, extremFereastra: extremFereastra, monedaTicker: monedaTicker, inLei: inLei, dinBot: dinBot, dinT212: dinT212, dinSalt: dinSalt, valoare: valoare,
     randamente: randamente, pnlIstoric: pnlIstoric, varEs: varEs, ziuaCeaMaiRea: cuDatele, corel: corel, corelatii: corelatii, diversificare: diversificare,
     randFereastra: randFereastra, beta: beta, pnlBot: pnlBot, scenariu: scenariu, stres: stres,
     reconciliereT212: reconciliereT212, reconciliereArhiva: reconciliereArhiva, reconciliereUrmarire: reconciliereUrmarire,
