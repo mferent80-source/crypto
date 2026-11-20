@@ -124,16 +124,20 @@
     if (m) return "Breadth 8MA " + z1(+m[1] * 100) + "%: piață selectivă. Istoric: randamente pe 60 de zile peste medie (+" + m[3] + " pp), dar cu căderi mai mari.";
     return diacritice(s).replace(/\bracire\b/g, "răcire").replace(/\bpiata\b/g, "piața").replace(/\bselectiva\b/g, "selectivă").replace(/^Mixt\b/, "mixt")
       .replace(/\(idx ([\d.]+), min ([\d.]+)\)/, (_, a, b) => "· media " + z1(+a).replace(/,0$/, "") + ", minimul " + z1(+b).replace(/,0$/, ""))
-      .replace(/^max (\d+) dist\.days, (\d+)\/(\d+) sub MM50$/, "până la $1 zile de distribuție · $2 din $3 indici sub MM50")
-      .replace(/^(\d+)▲\/(\d+)▼ \(net ([+−-]?\d+)\), (\w+)$/, "$1 maxime ▲ / $2 minime ▼ · net $3 · $4")
+      .replace(/^max (\d+) dist\.days, (\d+)\/(\d+) sub MM50(, follow-through recent)?$/, (_, a, b, c, f) => "până la " + cate(+a, "zi", "zile") + " de distribuție · " + b + " din " + c + " indici sub MM50" + (f ? " · Follow-Through Day recent" : ""))   /* v100.371: și cu „follow-through recent” la capăt */
+      .replace(/ ⚠️ STALE (\d+)z - vot neutralizat$/, (_, n) => " · date vechi de " + cate(+n, "zi", "zile") + ", vot neutralizat").replace(/ \(date vechi de (\d+)z\)$/, (_, n) => " · date vechi de " + cate(+n, "zi", "zile"))
+      .replace(/^istoric BULLISH \(([+−-]?[\d.]+)%\/60z\)$/, "istoric bullish ($1% la 60 de zile)").replace(/^raman in urma\b/, "rămân în urmă")
+      /* v100.371: și forma cu paranteză la capăt („9▲/23▼ (net -14), slab (NL domina)” trecea brut, cu minusul ASCII și în engleză pe jumătate) */
+      .replace(/^(\d+)▲\/(\d+)▼ \(net ([+−-]?\d+)\), (.+)$/, (_, a, b, c, d) => a + " maxime ▲ / " + b + " minime ▼ · net " + c + " · " + d.replace(/^sanatos\b/, "sănătos").replace(/\(NL domina\)/, "(minimele domină)").replace(/\(NH domina\)/, "(maximele domină)"))
       .replace(/^Market Breadth \(Overall\)/, "Market Breadth Overall").replace(/^momentum MM50 \(([\d.]+)%\)$/, (_, a) => "momentum peste MM50 (" + z1(+a).replace(/,0$/, "") + "%)")
-      .replace(/(\d)\.(\d)/g, "$1,$2");   // v100.306 (I-837): restul cifrelor robotului („trend MM200 (49.0%)”, „VIX 16.6”) cu virgula
+      .replace(/(\d)\.(\d)/g, "$1,$2")   // v100.306 (I-837): restul cifrelor robotului („trend MM200 (49.0%)”, „VIX 16.6”) cu virgula
+      .replace(/(^|[\s(:=·/[])-(?=\d)/g, "$1−");   /* v100.371: minusul ASCII ca semn în textele robotului ⇒ „−” (aceeași regulă ca proba de telefon; „60-80%” rămâne) */
   }
   function numeSc(s) {
     const m = /^(.*?) \(([^)]*)\)$/.exec(String(s || ""));
     const ce = m ? m[1] : String(s || ""), sub = m ? m[2] : "";
     const C = { "Market timing": "Market Timing · Distribution Days", "New Highs - New Lows": "New Highs − New Lows" };
-    return { ce: ce === "Market timing" && /distribution/i.test(sub) ? C["Market timing"] : C[ce] || ce, sub: /distribution/i.test(sub) ? "" : sub.replace(/\bsurse valide\b/, "surse valide") };
+    return { ce: ce === "Market timing" && /distribution/i.test(sub) ? C["Market timing"] : C[ce] || ce, sub: /distribution/i.test(sub) ? "" : sub.replace(/\bsurse valide\b/, "surse valide").replace(/^VIX\/credit\/breadth pret$/, "VIX, credit, breadth pe preț") };   /* v100.371 */
   }
   function extins(j, acum) {
     const n = normalizeaza(j, acum);
@@ -183,7 +187,7 @@
       + (s5.ma8 !== null && s5.ma200 !== null ? '<div class="acLin"><span>Breadth 8MA față de 200MA</span><b>' + pc1(s5.ma8) + " / " + pc1(s5.ma200) + "</b></div>" : "")
       + '<div class="acLin"><span>Bearish Signal (8MA sub 200MA)</span><b class="' + (s5.bearish ? "bad" : "good") + '">' + (s5.bearish ? "activ" : "inactiv") + "</b></div>"
       + (u.ratio !== null ? bara("Uptrend Ratio · în trend sus", u.ratio, "") + '<div class="acLin"><span>Uptrend Ratio · media pe 10 zile ' + pc1(u.ma10) + '</span><b class="' + (u.trend === "urcă" ? "good" : u.trend === "scade" ? "bad" : "") + '">' + esc(u.trend || "—") + "</b></div>" : "")
-      + (x.nhnl && x.nhnl.maxime !== null && x.nhnl.minime !== null ? '<div class="acLin"><span>New Highs − New Lows · 52 de săptămâni</span><b>' + x.nhnl.maxime + " ▲ / " + x.nhnl.minime + " ▼ · net " + (x.nhnl.maxime - x.nhnl.minime > 0 ? "+" : "") + (x.nhnl.maxime - x.nhnl.minime) + "</b></div>" : "");
+      + (x.nhnl && x.nhnl.maxime !== null && x.nhnl.minime !== null ? '<div class="acLin"><span>New Highs − New Lows · 52 de săptămâni</span><b>' + x.nhnl.maxime + " ▲ / " + x.nhnl.minime + " ▼ · net " + (x.nhnl.maxime - x.nhnl.minime > 0 ? "+" : x.nhnl.maxime - x.nhnl.minime < 0 ? "−" : "") + Math.abs(x.nhnl.maxime - x.nhnl.minime) + "</b></div>" : "");
     if (u.sectoare.length) h += '<h5 class="mbH">Uptrend Ratio pe sectoare</h5><div class="mbSect">' + u.sectoare.map((s) => "<span>" + esc(s.nume) + ' <b class="' + (s.sus ? "" : "bad") + '">' + pc1(s.ratio) + " " + (s.sus ? "↑" : "↓") + "</b></span>").join("") + "</div>";
     h += x.steaguri.map((f) => '<p class="acEt">ⓘ ' + esc(f) + "</p>").join("")
       + '<p class="acEt">Context, nu semnal de intrare. Surse: TraderMonty Market Breadth Analysis + Uptrend Dashboard, prin robotul market-breadth (GitHub, după închiderea bursei).</p>';

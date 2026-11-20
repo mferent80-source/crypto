@@ -117,10 +117,10 @@ await test("4 riscul pe n zile de BURSĂ și când e un bot în cont: seriile cu
 
 // ---------------- versiunile ----------------
 await test("V versiunile v100.370 (index ×4, sw, versiune.js, package + lanț, BUILD_INFO), colectorul v101.206, forma raportului 370", () => {
-  const H = citeste("public", "index.html"); assert.equal((H.match(/v100\.370/g) || []).length, 4); assert.match(H, /v100\.370 · IDEILE CONTULUI ÎNTREG/); assert.doesNotMatch(H, /v100\.369/);
-  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-370/); assert.match(citeste("functions", "_shared", "versiune.js"), /"v100\.370"/);
-  const p = JSON.parse(citeste("package.json")); assert.equal(p.version, "100.370.0"); assert.match(p.scripts.test, /npm run test:v100369 && npm run test:v100370/); assert.equal(p.scripts["test:v100370"], "node scripts/proba-v100370.mjs");
-  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.match(bi.badge, /^v100\.370/); assert.ok(bi.ci370 && bi.ci369);
+  const H = citeste("public", "index.html"); const vh = (H.match(/v100\.(\d{3})/) || [])[1]; assert.ok(+vh >= 370, "versiunea de la v100.370 încolo: " + vh); assert.doesNotMatch(H, /v100\.369/);   /* v100.371: „de la încolo” */
+  assert.ok(+(citeste("public", "sw.js").match(/crypto-radar-v100-(\d{3})/) || [])[1] >= 370); assert.ok(+(citeste("functions", "_shared", "versiune.js").match(/"v100\.(\d{3})"/) || [])[1] >= 370);
+  const p = JSON.parse(citeste("package.json")); assert.ok(+p.version.split(".")[1] >= 370); assert.match(p.scripts.test, /npm run test:v100369 && npm run test:v100370/); assert.equal(p.scripts["test:v100370"], "node scripts/proba-v100370.mjs");
+  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.ok(+(bi.badge.match(/^v100\.(\d{3})/) || [])[1] >= 370); assert.ok(bi.ci370 && bi.ci369);
   assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.206";/); assert.equal(TC.FORMA_RAPORT, 370);
 });
 
