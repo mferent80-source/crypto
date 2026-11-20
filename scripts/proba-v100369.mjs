@@ -81,6 +81,12 @@ await test("A8 istoria lungă: începe de la pozițiile care fac ≥ 90 % din ex
   const src = citeste("scripts", "lib", "tura-cont.mjs"); assert.match(src, /const IL = C\.istoriaLunga\(folosite, seriiL, 0\.9\)/); assert.match(src, /C\.pnlIstoric\(IL\.lungi, seriiL, fxL/);
 });
 
+await test("A9 istoria lungă e completată cu zilele proaspete: seria scurtă bate zilele vechi din cache și aduce ultimele zile (agitația de ACUM, nu de săptămâna trecută)", () => {
+  const u = C.uneSerii({ "2026-11-13": 0.01, "2026-11-16": 0.02 }, { "2026-11-16": 0.021, "2026-11-17": -0.03, "2026-11-19": 0.04 });
+  assert.deepEqual(Object.keys(u).sort(), ["2026-11-13", "2026-11-16", "2026-11-17", "2026-11-19"]); assert.equal(u["2026-11-16"], 0.021); assert.equal(u["2026-11-13"], 0.01); assert.deepEqual(Object.keys(C.uneSerii(null, null)), []);
+  const src = citeste("scripts", "lib", "tura-cont.mjs"); assert.match(src, /C\.uneSerii\(C\.randamente\(bareLungi\[x\.cheie\]\), serii\[x\.cheie\]\)/); assert.match(src, /C\.uneSerii\(C\.randamente\(b\), fxSerii\[m\]\)/);
+});
+
 // ---------------- B. colectorul ----------------
 const TC = await import(pathToFileURL(path.join(RAD, "scripts", "lib", "tura-cont.mjs")).href);
 await test("B1 ziua valorii: rândul se scrie o dată pe zi (frâna ține de ziua citirii) și duce ora citirii; pagina îl etichetează cu ziua pe care o ÎNCHIDE (00:11 pe 20.11 ⇒ 19.11; 08:00 ⇒ 20.11; fără oră ⇒ ziua lui)", () => {
@@ -97,7 +103,7 @@ await test("B3 netul boților (nu brutul), fără procentul boților și fără 
   const src = citeste("scripts", "lib", "tura-cont.mjs");
   assert.match(src, /baniB = C\.baniBoti\(d\.JurnalTrade\.din\(await d\.botiInchisi\(\)\), leiZi, acum - 365 \* 86400000\)/); assert.doesNotMatch(src, /C\.seriaBoti\(/); assert.doesNotMatch(src, /C\.combina\(/); assert.doesNotMatch(src, /investit: t\.pus \|\| t\.investit, rezultat: t\.rezultat/);
   assert.match(src, /corelatii: perechi\.map\(/); assert.doesNotMatch(src, /perechi\.slice\(0, 15\)/); assert.match(src, /corelatiiN: perechi\.length/);
-  assert.match(src, /if \(!Array\.isArray\(saltL\)\) lipsuri\.push\("Salt"\);/); assert.match(src, /const formaVeche = st\.forma !== FORMA_RAPORT && st\.la > 0;/); assert.equal(TC.FORMA_RAPORT, 369.1);
+  assert.match(src, /if \(!Array\.isArray\(saltL\)\) lipsuri\.push\("Salt"\);/); assert.match(src, /const formaVeche = st\.forma !== FORMA_RAPORT && st\.la > 0;/); assert.equal(TC.FORMA_RAPORT, 369.2);
   assert.match(citeste("scripts", "colector.mjs"), /salt: async \(\) => \(ultimeleSalt && Array\.isArray\(ultimeleSalt\.randuri\) \? ultimeleSalt\.randuri : null\)/);
   assert.match(src, /CORECTII_INDUSTRIE = \{ QCOM: \["Technology", "Semiconductors"\] \}/);
 });

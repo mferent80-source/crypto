@@ -12,7 +12,7 @@ async function incearca(d, ce, fn) { try { return await fn(); } catch (e) { d.ju
 const bareDinRanduri = (G, randuri) => G.bareBursa(randuri || [], Date.now()).map((b) => ({ t: b.t, c: b.c, h: b.h, l: b.l }));   // v100.178: + h / l (MAE / MFE)
 // prețurile zilnice prin cache-ul de pe disc (d.bareZi) când există, altfel direct
 const zilnic = (d, cale) => (d.bareZi ? d.bareZi(cale) : d.cere(cale));
-export const FORMA_RAPORT = 369.1;   // v100.369: forma raportului (bani, riscAcum, carte, grafice); alta ⇒ raportul se reface la prima tură (.1: istoria lungă pe ≥ 90 % din expunere)
+export const FORMA_RAPORT = 369.2;   // v100.369: forma raportului (bani, riscAcum, carte, grafice); alta ⇒ raportul se reface la prima tură (.1: istoria lungă pe ≥ 90 % din expunere)
 const CORECTII_INDUSTRIE = { QCOM: ["Technology", "Semiconductors"] };
 // începutul unei zile (AAAA-LL-ZZ) în ora României, în ms (ora de vară / iarnă din Intl)
 export function inceputZiRo(z) {
@@ -167,8 +167,8 @@ async function faRaport(d, st, acum) {
   let riscA = null, carte = null, pariuriF = null;
   try {
     const fxL = {};
-    for (const m of new Set(folosite.map((x) => (x.moneda === "GBX" ? "GBP" : x.moneda === "USDT" ? "USD" : x.moneda)))) { const b = await lung(m + "RON=X"); fxL[m] = b && b.length ? C.randamente(b) : fxSerii[m] || {}; }
-    const seriiL = {}; for (const x of folosite) seriiL[x.cheie] = bareLungi[x.cheie] && bareLungi[x.cheie].length ? C.randamente(bareLungi[x.cheie]) : serii[x.cheie];
+    for (const m of new Set(folosite.map((x) => (x.moneda === "GBX" ? "GBP" : x.moneda === "USDT" ? "USD" : x.moneda)))) { const b = await lung(m + "RON=X"); fxL[m] = b && b.length ? C.uneSerii(C.randamente(b), fxSerii[m]) : fxSerii[m] || {}; }
+    const seriiL = {}; for (const x of folosite) seriiL[x.cheie] = bareLungi[x.cheie] && bareLungi[x.cheie].length ? C.uneSerii(C.randamente(bareLungi[x.cheie]), serii[x.cheie]) : serii[x.cheie];   /* lung (cache de o săptămână) + zilele proaspete */
     const IL = C.istoriaLunga(folosite, seriiL, 0.9), st0 = IL.de, zs = {};
     IL.lungi.forEach((x) => Object.keys(seriiL[x.cheie] || {}).forEach((z) => { if (z >= st0) zs[z] = 1; }));
     const istL = C.pnlIstoric(IL.lungi, seriiL, fxL, { zile: Object.keys(zs).sort() }), folL = IL.lungi.filter((x) => istL.folosite.includes(x.cheie));

@@ -602,6 +602,9 @@ var ContIntreg = (function () {
     }
     return out;
   }
+  // istoria lungă (10 ani, ținută în cache o săptămână) completată cu seria scurtă, proaspătă în fiecare zi: zilele din seria scurtă bat
+  // pe cele vechi - altfel „agitația de acum” s-ar opri la ultima zi din cache (pe viu: 16.11 într-un raport din 20.11)
+  function uneSerii(lung, scurt) { var o = {}; Object.keys(lung || {}).forEach(function (z) { o[z] = lung[z]; }); Object.keys(scurt || {}).forEach(function (z) { o[z] = scurt[z]; }); return o; }
   // istoria lungă a cărții începe în ziua de la care există pozițiile care fac cel puțin `prag` din expunere (cele mai vechi întâi);
   // pozițiile mai tinere ies din probă și se spun (scurte: ziua de început, ponderea) - una mică și nouă nu taie istoria celorlalte
   function istoriaLunga(poz, serii, prag) {
@@ -620,7 +623,7 @@ var ContIntreg = (function () {
     return { expunere: expunere, acum: serie[serie.length - 1][1], max: cea, z5: rau(5), z20: rau(20), serie: serie.filter(function (x, i) { return i % (o.rar || 1) === 0 || i === serie.length - 1; }) };
   }
 
-  return { ZI: ZI, CRIZE: CRIZE, executie: executie, kupiec: kupiec, riscAcum: riscAcum, baniBoti: baniBoti, reperLei: reperLei, interval: interval, pariuriFerestre: pariuriFerestre, scadereCarte: scadereCarte, istoriaLunga: istoriaLunga, m32: m32, setMonede: setMonede, extremFereastra: extremFereastra, monedaTicker: monedaTicker, inLei: inLei, dinBot: dinBot, dinT212: dinT212, dinSalt: dinSalt, valoare: valoare,
+  return { ZI: ZI, CRIZE: CRIZE, executie: executie, kupiec: kupiec, riscAcum: riscAcum, baniBoti: baniBoti, reperLei: reperLei, interval: interval, pariuriFerestre: pariuriFerestre, scadereCarte: scadereCarte, istoriaLunga: istoriaLunga, uneSerii: uneSerii, m32: m32, setMonede: setMonede, extremFereastra: extremFereastra, monedaTicker: monedaTicker, inLei: inLei, dinBot: dinBot, dinT212: dinT212, dinSalt: dinSalt, valoare: valoare,
     randamente: randamente, pnlIstoric: pnlIstoric, varEs: varEs, ziuaCeaMaiRea: cuDatele, corel: corel, corelatii: corelatii, diversificare: diversificare,
     randFereastra: randFereastra, beta: beta, pnlBot: pnlBot, scenariu: scenariu, stres: stres,
     reconciliereT212: reconciliereT212, reconciliereArhiva: reconciliereArhiva, reconciliereUrmarire: reconciliereUrmarire,
