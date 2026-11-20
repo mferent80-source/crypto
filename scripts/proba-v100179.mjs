@@ -89,7 +89,7 @@ await test("pagina: „Gărzile tale”, „Lecția săptămânii” (cu verific
     [{ sapt: "2026-10-11", lectie: { de: Date.parse("2026-10-04T00:00:00Z"), top: [{ ce: "A", cost: 500, motive: [{ text: "a ieșit la −25 %" }] }], regula: { text: "Ies la stopul meu", cost: 500 } }, verificare: { text: "Nu cumpăr când Poarta zice nu", respectata: true } }]);
   assert.match(h, /1 gardă e încălcată acum/); assert.match(h, /✗ <b>Un sector cel mult 40 % din acțiuni<\/b> · Tehnologie: 83 %/);
   assert.match(h, /Regula de data trecută \(„Nu cumpăr când Poarta zice nu”\): respectată ✓/); assert.match(h, /👉 <b>Regula săptămânii:<\/b> Ies la stopul meu/);
-  assert.match(h, /după 12 h afară din bandă, doar 25% s-au mai întors în 24 h/); assert.match(h, /peste 24 h −52,0% \(9\)/);
+  assert.match(h, /după 12 ore afară din bandă, doar 25 % (\(interval[^)]*\) )?s-au mai întors în 24 h/); assert.match(h, /peste 24 h −52,0 % \(9\)/);   /* v100.369: „12 ore”, „25 %” */
   assert.match(ctxE.ciDisciplinaHtml({}, null, null), /Vine duminică seara/);
 });
 await test("T212: teza în planul poziției (de ce, invalidarea, orizontul), salvată cu planul; orizontul trecut se spune", () => {

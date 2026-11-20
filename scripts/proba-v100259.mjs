@@ -77,7 +77,7 @@ await test("tura verdictelor: măsura pe bani ținută pe disc (barele de 15 min
   assert.match(src("scripts", "colector.mjs"), /turaVerdicteModul\(\{[^\n]*GridLaborator, GridProba, lumanari15M, netCache/);
 });
 await test("Contul întreg: măsura pe bani a porții gridului e pe zile, nu pe „zile de bursă”", () => {
-  assert.match(src("public", "lib", "cont-ecran.js"), /r\.masura === "linistit" \|\| r\.masura === "net" \? \(r\.h === 1 \? " zi" : " zile"\) : " zile de bursă"/);
+  assert.match(src("public", "lib", "cont-ecran.js"), /r\.masura === "linistit" \|\| r\.masura === "net" \? ciCate\(r\.h, "zi", "zile"\) : ciCate\(r\.h, "zi", "zile"\) \+ " de bursă"/);   /* v100.369: „de” de la 20 */
 });
 await test("pagina laboratorului spune că „dovedit” e pe bani (net, pe zile, ferestre care nu se suprapun)", () => {
   assert.match(src("public", "app.js"), /diferența de bani \(netul\) pe zile, pe ferestre care nu se suprapun, cu p sub 0,05 și același semn pe zilele de alegere și pe cele nevăzute/);

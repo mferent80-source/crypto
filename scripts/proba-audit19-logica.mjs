@@ -196,7 +196,7 @@ await test("(5) pagina Contul întreg: textul spune netul și că e măsurat pe 
   const rap = (mm) => ({ la: Date.now(), valoare: { total: 30000, complet: true, lipsa: [] }, risc: {}, reconciliere: {}, randament: {}, maeMfe: mm });
   const bun = { n: 40, castig: 15, pierd: 25, maeCastig: -0.04, maePierd: -0.22, pierdDupaPlus5: 6, lasatPeMasa: 0.08, stopSugerat: -0.07, stopCandidat: -0.07, taiatePierderi: 14, castigTaiat: 3, economie: 0.12, salvat: 1.7, costat: 0.5, economieNeta: 1.2, salvatBani: 1700, costatBani: 500, netBani: 1200, inEsantion: true };
   const h = fnE(rap(bun), { acum: Date.now() });
-  assert.match(h, /Un stop la −7,0% de la cumpărare ar fi păstrat 80 % din câștigători și ar fi tăiat mai devreme 14 pierderi/);
+  assert.match(h, /Un stop la −7,0 % de la cumpărare ar fi păstrat 80 % din câștigători și ar fi tăiat mai devreme 14 pierderi/);
   assert.match(h, /3 câștigători/); assert.match(h, /net \+1\.200 lei/); assert.match(h, /pe aceleași trade-uri/);
   const rau = Object.assign({}, bun, { stopSugerat: null, economieNeta: -0.3, salvatBani: 200, costatBani: 500, netBani: -300 });
   const h2 = fnE(rap(rau), { acum: Date.now() });
@@ -232,8 +232,8 @@ await test("(6) pagina: „regula de până acum (n cazuri, interval …)”, in
   const fnD = new Function("TextRo", citeste("public", "lib", "cont-ecran.js") + "; return ciDisciplinaHtml;")(globalThis.TextRo);
   const x = { h: 6, n: 45, boti: 50, intoarse: 0.25, intoarseLo: 0.14, intoarseHi: 0.38, miscareImpotriva: -0.03, netMedian: -0.04 };
   const h = fnD({}, { tabel: [x], regula: x, grupe: [] }, []);
-  assert.match(h, /[Rr]egula de până acum \(45 de cazuri, interval 95%: 14–38%\)/);
-  assert.match(h, /25% \(14–38%\)/);
+  assert.match(h, /doar 25 % \(interval 95 %: 14–38 %\) s-au mai întors în 24 h, iar prețul a mers încă 3,0 % împotriva botului \(mediana; 45 de cazuri\)\. Regula de până acum:/);   /* v100.369: intervalul o singură dată (era repetat în paranteza regulii); semnul: negativ în date = împotrivă */
+  assert.match(h, /25 % \(14–38 %\)/); assert.match(h, /Intervalul cuprinde pragul de 30 %, deci regula nu e încă dovedită/);
   assert.ok(!/în medie/.test(h), "„în medie” pe o mediană");
   assert.ok(!/Regula ta:/.test(h));
 });

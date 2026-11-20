@@ -33,7 +33,11 @@ await test("acțiunile: moneda după bursă (pence la Londra ÷ 100, euro la Xet
 });
 await test("valoarea contului: o parte necitită ⇒ „complet: false” și numele ei, nu o sumă mai mică dată drept întreagă", () => {
   const v = C.valoare({ boti: [{ activ: true, id: "1", baza: "X", pretCurent: 1, pozitie: 1, investit: 100, profitTotal: 5 }], pionexLiber: 10, t212Cash: { total: 5000 }, salt: null, leiPe: LEI });
-  aproape(v.pionex, 115 * 4.4); assert.equal(v.t212, 5000); assert.equal(v.salt, null); assert.equal(v.complet, true);
+  aproape(v.pionex, 115 * 4.4); assert.equal(v.t212, 5000); assert.equal(v.salt, null);
+  /* v100.369 (🔴3): Salt necitit (null) = lipsă spusă; lista goală citită = 0, complet; fără soldul liber, partea Pionex e necunoscută (null), nu suma boților */
+  assert.equal(v.complet, false); assert.deepEqual(Array.from(v.lipsa), ["Salt"]);
+  const v2 = C.valoare({ boti: [{ activ: true, id: "1", baza: "X", pretCurent: 1, pozitie: 1, investit: 100, profitTotal: 5 }], pionexLiber: 10, t212Cash: { total: 5000 }, salt: [], leiPe: LEI }); assert.equal(v2.complet, true); assert.equal(v2.salt, 0);
+  const v3 = C.valoare({ boti: [{ activ: true, id: "1", baza: "X", pretCurent: 1, pozitie: 1, investit: 100, profitTotal: 5 }], pionexLiber: null, t212Cash: { total: 5000 }, salt: [], leiPe: LEI }); assert.equal(v3.pionex, null); assert.deepEqual(Array.from(v3.lipsa), ["soldul liber Pionex"]);
   const w = C.valoare({ boti: null, t212Cash: null, salt: [], leiPe: LEI }); assert.equal(w.complet, false); assert.deepEqual(Array.from(w.lipsa), ["Pionex", "Trading 212"]);
 });
 
@@ -168,16 +172,20 @@ const RAP = { la: Date.parse("2026-10-13T10:00:00Z"), valoare: { pionex: 150, t2
 const ctxE = { TextRo: globalThis.TextRo }; vm.createContext(ctxE); vm.runInContext(citeste("public", "lib", "cont-ecran.js"), ctxE);
 await test("pagina: răspunsul în cuvinte (valoarea, ziua proastă, criza), „Ce aș face eu”, cifrele, histograma, crizele, reconcilierea, execuția, randamentul", () => {
   const h = ctxE.ciHtml(RAP, { acum: RAP.la + 3600000 });
-  assert.match(h, /Contul tău: 28\.150 lei\. Într-o zi proastă \(1 din 20\) pozițiile de acum pierd cel puțin ~1\.190 lei/);
+  assert.match(h, /Contul tău: 28\.150 lei\. Într-o zi proastă \(1 din 20\) pozițiile de acum pierd ~1\.190 lei \(4,2 % din cont\)/);   /* v100.369: fraza nouă */
   assert.match(h, /Cea mai rea criză din trecut, pe ce ai acum: Covid, martie 2020, −9\.694 lei/);
   // v100.258: din v100.254 abaterea de reconciliere T212 trece înaintea corelației (fixtura are CMG_CA); fără ea, corelația ca înainte
   assert.match(h, /👉 <b>Ce aș face eu:<\/b> Aș verifica în T212 CMG_CA: jurnalul Radarului nu se potrivește cu contul\./); assert.match(h, /<svg class="ciHisto"/);
   const curat = JSON.parse(JSON.stringify(RAP)); curat.reconciliere.t212 = { ok: true, abateri: [], verificate: 10 };
-  assert.match(ctxE.ciHtml(curat, { acum: RAP.la + 3600000 }), /👉 <b>Ce aș face eu:<\/b> WDC și STX se mișcă aproape la fel/);
+  /* v100.369 (🟡5): riscul pe zi peste 4 % (1.190 din 28.150) vine ÎNAINTEA perechii; cu riscul sub 4 %, perechea */
+  assert.match(ctxE.ciHtml(curat, { acum: RAP.la + 3600000 }), /👉 <b>Ce aș face eu:<\/b> O zi proastă îți ia acum ~4,2 % din cont \(1\.190 lei\): aș reduce expunerea până sub 4 % pe zi/);
+  const mic = JSON.parse(JSON.stringify(curat)); mic.risc.var95 = 900; assert.match(ctxE.ciHtml(mic, { acum: RAP.la + 3600000 }), /👉 <b>Ce aș face eu:<\/b> WDC și STX se mișcă aproape la fel/);
   assert.match(h, /✗ <b>Trading 212: 1 abatere<\/b>/); assert.match(h, /CMG_CA: cont 0, jurnal 9,38/);
   assert.match(h, /Cât te costă execuția/); assert.match(h, /Ordine la piață date cu bursa închisă/);
-  assert.match(h, /banii puși la lucru au făcut −12,0% ponderat în timp; BTC a făcut −8,0%, S&amp;P \+16,0%/);
-  assert.match(h, /1 simbol fără prețuri \(delistat\) e ținut la ultimul preț de tranzacție/);
+  /* v100.369 (🔴1, 🔴2): fără „banii puși la lucru … ponderat în timp” pe tot contul (boții n-au capital cinstit pe zi); raportul vechi o spune */
+  assert.doesNotMatch(h, /banii puși la lucru au făcut/); assert.match(h, /Raportul e făcut de colectorul de dinainte de v100\.369/);
+  const cuBani = JSON.parse(JSON.stringify(RAP)); cuBani.bani = { an: { de: "2025-10-13", pana: "2026-10-13" }, tot: -100, t212: { pnl: 50, twr: -0.1, n: 300 }, boti: null, deschiseT212: null };
+  assert.match(ctxE.ciHtml(cuBani, { acum: RAP.la + 3600000 }), /1 simbol fără prețuri primite e ținut la ultimul preț de tranzacție/);   /* v100.369 (🟡13): „fără prețuri primite”, nu „delistat” */
   assert.ok(!/vechi de/.test(h), "proaspăt: fără avertisment");
   assert.match(ctxE.ciHtml(RAP, { acum: RAP.la + 20 * 3600000 }), /Raportul e vechi de 20 de ore/);
   assert.match(ctxE.ciHtml(null, {}), /Încă nu există: pornește colectorul/);
@@ -200,7 +208,7 @@ await test("serverul: raportul (cu „la”) și valoarea zilei (o intrare pe zi
 await test("legarea paginii: meniul din stânga, sertarul „More” de pe telefon, secțiunea, scripturile, cache-ul aplicației, navTo", () => {
   const html = citeste("public", "index.html"), sw = citeste("public", "sw.js"), app = citeste("public", "app.js");
   assert.match(html, /data-nav="contintreg"><span class="sideIcon">Σ<\/span>Contul întreg<\/button>/); assert.match(html, /moreNav\('contintreg',true\)"><b>Σ<\/b>Contul întreg<\/button>/);
-  assert.match(html, /<section class="panel" id="contintreg">/); assert.match(html, /<div class="card full" id="ciPagina">/);
+  assert.match(html, /<section class="panel" id="contintreg">/); assert.match(html, /<div id="ciPagina">/);   /* v100.369: capul ca paginile refăcute */
   assert.match(html, /<script src="\/lib\/cont-intreg\.js"><\/script>(<script src="\/lib\/[a-z-]+\.js"><\/script>)*<script src="\/lib\/cont-ecran\.js"><\/script>/); assert.match(sw, /"\/lib\/cont-intreg\.js",("\/lib\/[a-z-]+\.js",)*"\/lib\/cont-ecran\.js"/);
   assert.match(app, /else if\(id==="contintreg"\)\{if\(typeof ciPorneste==="function"\)ciPorneste\(false\)\}/);
 });

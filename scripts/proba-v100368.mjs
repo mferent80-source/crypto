@@ -39,10 +39,10 @@ await test("A Tabloul aduce registrul (action=alerteRegistru) și nu mai arată 
 });
 await test("V versiunile v100.368 (index ×4, sw, versiune.js, package + lanț, BUILD_INFO)", () => {
   const H = citeste("public", "index.html");
-  assert.equal((H.match(/v100\.368/g) || []).length, 4); assert.match(H, /v100\.368 · REGISTRUL ÎN TABLOU/); assert.doesNotMatch(H, /v100\.367/);
-  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-368/); assert.match(citeste("functions", "_shared", "versiune.js"), /"v100\.368"/);
-  const p = JSON.parse(citeste("package.json")); assert.equal(p.version, "100.368.0"); assert.match(p.scripts.test, /npm run test:v100367 && npm run test:v100368/); assert.equal(p.scripts["test:v100368"], "node scripts/proba-v100368.mjs");
-  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.match(bi.badge, /^v100\.368/); assert.ok(bi.tb368 && bi.al367);
+  const vh = (H.match(/v100\.(\d{3})/) || [])[1]; assert.ok(+vh >= 368, "versiunea de la v100.368 încolo: " + vh); assert.doesNotMatch(H, /v100\.367/);   /* v100.369: „de la încolo” */
+  assert.ok(+(citeste("public", "sw.js").match(/crypto-radar-v100-(\d{3})/) || [])[1] >= 368); assert.ok(+(citeste("functions", "_shared", "versiune.js").match(/"v100\.(\d{3})"/) || [])[1] >= 368);
+  const p = JSON.parse(citeste("package.json")); assert.ok(+p.version.split(".")[1] >= 368); assert.match(p.scripts.test, /npm run test:v100367 && npm run test:v100368/); assert.equal(p.scripts["test:v100368"], "node scripts/proba-v100368.mjs");
+  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.ok(+(bi.badge.match(/^v100\.(\d{3})/) || [])[1] >= 368); assert.ok(bi.tb368 && bi.al367);
 });
 console.log(`\n${teste - picate}/${teste} trec`);
 process.exit(picate ? 1 : 0);

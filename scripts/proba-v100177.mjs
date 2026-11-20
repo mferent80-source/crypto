@@ -139,9 +139,9 @@ await test("pagina: „Au avut dreptate verdictele?” — gol ⇒ cum se umple;
   const h = c3.ciVerdicteHtml({ n: 120, evaluate: 60, calibrare: [{ sursa: "idei", nume: "Ideile zilei (acțiuni)", h: 5, masura: "pesteQqq", intrebare: "ideile față de Nasdaq (QQQ) pe aceleași zile", niveluri: [{ nivel: "cumpar", n: 60, medie: 0.004, mediana: 0.002, pePlus: 0.55 }], test: { stare: "testat", dif: 0.004, p: 0.31 } },
     { sursa: "poarta-t212", nume: "Poarta Trading 212", h: 20, masura: "randament", intrebare: "„cumpără” față de „așteaptă / nu”", niveluri: [{ nivel: "cumpara", n: 5, medie: 0.01, pePlus: 0.6 }], test: { stare: "putine", nFav: 5, nRest: 2 } }],
     registru: [{ sursa: "Riscul tău · boți", afirmatie: "Levier peste 3×", p: 0.0001, ramane: true }, { sursa: "Riscul tău · boți", afirmatie: "Stop pus", p: 0.03, ramane: false, stareVeche: "dovedit-bun" }] });
-  assert.match(h, /120 de verdicte ținute minte, dintre care 60 au fost judecate/); assert.match(h, /Ideile zilei \(acțiuni\) · după 5 zile de bursă/); assert.match(h, /p = 0,310/);
+  assert.match(h, /120 de verdicte ținute minte, dintre care 60 au fost judecate/); assert.match(h, /Ideile zilei \(acțiuni\) · după 5 zile de bursă/); assert.match(h, /din întâmplare ar ieși așa în ~31,0 % din cazuri/);   /* v100.369: p-ul în cuvinte, cu o zecimală */
   assert.match(h, /puține cazuri încă \(5 \/ 2/); assert.match(h, /Registrul are 2 teste deschise, din /);   /* v100.196 (🟡2): spune familiile, nu „tot Radarul” */ assert.match(h, /rămân 1 lucru dovedit/);
-  assert.match(h, /Stop pus · p = 0,0300 · pagina lui zicea „dovedit”, după corecție NU mai e/);
+  assert.match(h, /Stop pus · din întâmplare ~3,0 % · pagina lui zicea „dovedit”, după corecție NU mai e/);
 });
 await test("legarea: verdicte.js încărcat înainte de cont-ecran.js și în cache; colectorul încarcă Verdicte și rulează tura", () => {
   assert.match(citeste("public", "index.html"), /<script src="\/lib\/cont-intreg\.js"><\/script><script src="\/lib\/verdicte\.js"><\/script>(<script src="\/lib\/[a-z-]+\.js"><\/script>)*<script src="\/lib\/cont-ecran\.js"><\/script>/);

@@ -69,10 +69,13 @@ var ContIntreg = (function () {
   // valoarea contului în lei, pe bucăți; o bucată necitită rămâne null și totalul spune „≥” (nu o sumă mai mică prezentată ca întreagă)
   function valoare(o) {
     var leiPe = o.leiPe || null, p = null, partiLipsa = [];
-    if (Array.isArray(o.boti)) { p = 0; o.boti.forEach(function (b) { var e = dinBot(b, leiPe); if (e && e.valoareLei !== null) p += e.valoareLei; else if (e) partiLipsa.push(e.nume); }); var lb = nr(o.pionexLiber) !== null ? inLei(nr(o.pionexLiber), "USD", leiPe) : null; if (lb !== null) p += lb; else partiLipsa.push("soldul liber Pionex"); }
+    // v100.369 (auditul 20.11, 🔴3): fără soldul liber, partea Pionex e NECUNOSCUTĂ (null ⇒ „—”), nu suma boților (29.10 ieșea „Pionex 0 lei”)
+    if (Array.isArray(o.boti)) { p = 0; o.boti.forEach(function (b) { var e = dinBot(b, leiPe); if (e && e.valoareLei !== null) p += e.valoareLei; else if (e) partiLipsa.push(e.nume); }); var lb = nr(o.pionexLiber) !== null ? inLei(nr(o.pionexLiber), "USD", leiPe) : null; if (lb !== null) p += lb; else { p = null; partiLipsa.push("soldul liber Pionex"); } }
     else partiLipsa.push("Pionex");
     var t = o.t212Cash && nr(o.t212Cash.total) !== null ? nr(o.t212Cash.total) : null; if (t === null) partiLipsa.push("Trading 212");
+    // v100.369 (🔴3): Salt necitit (null) e lipsă spusă, nu „Salt 0 lei, complet”; o listă goală citită rămâne 0
     var s = null; if (Array.isArray(o.salt)) { s = 0; o.salt.forEach(function (r) { var e = dinSalt(r, leiPe); if (e && e.valoareLei !== null) s += e.valoareLei; else if (r) partiLipsa.push(String(r.simbol) + " (Salt)"); }); }
+    else partiLipsa.push("Salt");
     var tot = [p, t, s].reduce(function (a, x) { return x === null ? a : a + x; }, 0);
     return { pionex: p, t212: t, salt: s, total: tot, complet: !partiLipsa.length, lipsa: partiLipsa };
   }
@@ -161,7 +164,10 @@ var ContIntreg = (function () {
     { cod: "luna", nume: "Prăbușirea Terra/Luna, mai 2022", de: "2022-05-05", pana: "2022-05-12" },
     { cod: "ftx", nume: "Falimentul FTX, noiembrie 2022", de: "2022-11-07", pana: "2022-11-09" },
     { cod: "yen24", nume: "Ieșirea din yen, august 2024", de: "2024-08-01", pana: "2024-08-05" },
-    { cod: "oct25", nume: "Lichidările din 10 octombrie 2025", de: "2025-10-09", pana: "2025-10-10" }
+    { cod: "oct25", nume: "Lichidările din 10 octombrie 2025", de: "2025-10-09", pana: "2025-10-10" },
+    // v100.369 (el 20.11, „crizele pentru cartea de acum”): cele două ferestre întregi care lovesc o carte de cipuri, de la vârf la fund
+    { cod: "covidTot", nume: "Covid întreg, februarie–martie 2020 (de la vârf la fund)", de: "2020-02-19", pana: "2020-03-23" },
+    { cod: "tarife25", nume: "Tarifele, februarie–aprilie 2025 (de la vârf la fund)", de: "2025-02-19", pana: "2025-04-08" }
   ];
   // randamentul unei serii de bare [{t, c}] între închiderea din `de` (ultima bară ≤ de) și cea din `pana`
   // randamentul la închidere + cel mai jos / cel mai sus punct din fereastră (din l / h când barele le au, altfel din închideri)
@@ -495,7 +501,117 @@ var ContIntreg = (function () {
       subPlan: Object.assign(rez(plan, function (y) { return y.r; }), { bani: plan.reduce(function (a, y) { return a + y.bani; }, 0), cele: plan.sort(function (a, b) { return a.r - b.r; }).slice(0, 5) }) };
   }
 
-  return { ZI: ZI, CRIZE: CRIZE, executie: executie, setMonede: setMonede, extremFereastra: extremFereastra, monedaTicker: monedaTicker, inLei: inLei, dinBot: dinBot, dinT212: dinT212, dinSalt: dinSalt, valoare: valoare,
+  // ---------------- 8. v100.369 (el 20.11: „Contul întreg ca Jurnalul”, după auditul cu 2 revizori) ----------------
+  // Hotărârile LUI: câștigul în lei net, pe bucăți (boții FĂRĂ procent: capitalul lor nu se poate socoti cinstit pe zi), riscul pe agitația
+  // de acum cu proba pe zilele reale, intervalele spuse. Aleatorul e mulberry32 cu sămânță fixă: aceleași date ⇒ aceleași cifre.
+  function m32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; var t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  // indicii unui eșantion pe blocuri (volatilitatea vine în grămezi): blocuri de L zile consecutive, circular
+  function blocIdx(n, L, rnd) { var o = []; while (o.length < n) { var s = Math.floor(rnd() * n); for (var k = 0; k < L && o.length < n; k++) o.push((s + k) % n); } return o; }
+  function cuantNesortat(a, p) { return cuantila(a.slice().sort(function (x, y) { return x - y; }), p); }
+  function erfc(x) { var t = 1 / (1 + 0.3275911 * x), y = t * (0.254829592 + t * (-0.284496736 + t * (1.421413741 + t * (-1.453152027 + t * 1.061405429)))); return y * Math.exp(-x * x); }
+  // Kupiec: rata depășirilor e cea promisă (1 − nivel)? LR ~ χ² cu un grad ⇒ p
+  function kupiec(n, x, p) {
+    if (!(n > 0)) return null;
+    var r = x / n, ll0 = (n - x) * Math.log(1 - p) + x * Math.log(p), ll1 = x > 0 && x < n ? (n - x) * Math.log(1 - r) + x * Math.log(r) : 0, lr = Math.max(0, -2 * (ll0 - ll1));
+    return { n: n, x: x, rata: r, lr: lr, p: erfc(Math.sqrt(lr / 2)) };
+  }
+  // riscul pe agitația de ACUM (simulare istorică filtrată: zilele trecute re-scalate cu volatilitatea EWMA λ 0,94) + proba pe zilele reale:
+  // fiecare zi judecată DOAR cu zilele de dinainte, atât pentru cifra veche (250 de zile egale) cât și pentru cea de acum.
+  // zile = [{z, pnl}] (zilele de bursă ale pozițiilor de acum, cât de lung se poate)
+  function riscAcum(zile, o) {
+    o = o || {}; var W = o.fereastra || 250, lam = o.lambda || 0.94, P = (zile || []).filter(function (x) { return x && isFinite(x.pnl); });
+    if (P.length < W + 40) return null;
+    var v = P.map(function (x) { return x.pnl; }), s0 = abatere(v.slice(0, 60)), s2 = [s0 * s0];
+    for (var i = 1; i < v.length; i++) s2.push(lam * s2[i - 1] + (1 - lam) * v[i - 1] * v[i - 1]);
+    var sig = s2.map(function (x) { return Math.sqrt(x); });   /* sig[i] = prognoza pentru ziua i, din zilele până la i − 1 */
+    var hs95 = [], hs99 = [], f95 = [], f99 = [], serie = [], ani = {};
+    for (var j = W; j < v.length; j++) {
+      var fer = v.slice(j - W, j), std = fer.map(function (x, k) { return sig[j - W + k] > 0 ? x / sig[j - W + k] : 0; });
+      var a95 = varEs(fer, 0.95).var, a99 = varEs(fer, 0.99).var, b95 = varEs(std, 0.95).var * sig[j], b99 = varEs(std, 0.99).var * sig[j];
+      hs95.push(v[j] < -a95); hs99.push(v[j] < -a99); f95.push(v[j] < -b95); f99.push(v[j] < -b99);
+      serie.push([P[j].z, v[j], a95, b95]);
+      var an = P[j].z.slice(0, 4), y = ani[an] || (ani[an] = { n: 0, vechi: 0, acum: 0 }); y.n++; if (v[j] < -a95) y.vechi++; if (v[j] < -b95) y.acum++;
+    }
+    var cnt = function (a) { return a.filter(Boolean).length; };
+    var sNow = Math.sqrt(lam * s2[s2.length - 1] + (1 - lam) * v[v.length - 1] * v[v.length - 1]);
+    var stdUlt = v.slice(-W).map(function (x, k) { var s = sig[v.length - W + k]; return s > 0 ? x / s : 0; });
+    var u95 = varEs(stdUlt, 0.95), u99 = varEs(stdUlt, 0.99);
+    // intervalul (90 %) pe cifrele de acum: bootstrap pe blocuri de 5 zile ale zilelor re-scalate
+    var rnd = m32(o.samanta || 20261120), B = o.B || 2000, bs = { v95: [], e95: [], v99: [], e99: [] };
+    for (var b = 0; b < B; b++) { var idx = blocIdx(stdUlt.length, 5, rnd), sm = idx.map(function (k) { return stdUlt[k]; }), c95 = varEs(sm, 0.95), c99 = varEs(sm, 0.99); bs.v95.push(c95.var * sNow); bs.e95.push(c95.es * sNow); bs.v99.push(c99.var * sNow); bs.e99.push(c99.es * sNow); }
+    var ic = function (a) { return [cuantNesortat(a, 0.05), cuantNesortat(a, 0.95)]; };
+    var vechi = varEs(v.slice(-W), 0.95), vechi99 = varEs(v.slice(-W), 0.99);
+    return { n: v.length, de: P[0].z, pana: P[P.length - 1].z, fereastra: W, lambda: lam,
+      sigma: sNow, sigmaFer: abatere(v.slice(-W)), sigma20: abatere(v.slice(-20)),
+      acum: { var95: u95.var * sNow, es95: u95.es * sNow, var99: u99.var * sNow, es99: u99.es * sNow, ic: { var95: ic(bs.v95), es95: ic(bs.e95), var99: ic(bs.v99), es99: ic(bs.e99) } },
+      vechi: { var95: vechi.var, es95: vechi.es, var99: vechi99.var, es99: vechi99.es },
+      proba: { zile: hs95.length, de: serie.length ? serie[0][0] : null, vechi95: kupiec(hs95.length, cnt(hs95), 0.05), vechi99: kupiec(hs99.length, cnt(hs99), 0.01), acum95: kupiec(f95.length, cnt(f95), 0.05), acum99: kupiec(f99.length, cnt(f99), 0.01), ani: ani },
+      serie: serie.slice(-(o.ultime || 500)) };
+  }
+  // banii boților închiși, în LEI la cursul zilei închiderii, pe bucăți (grila, direcția, comisioanele, funding-ul), cumulat pe zile, și
+  // „e un proces sau ghinion?”: net / pus pe fiecare zi de închidere (boții aceleiași zile = o unitate), semne întoarse pe zile ⇒ p
+  function cursPe(c) { var k = c ? Object.keys(c).sort() : []; return function (z) { if (!k.length) return null; var lo = 0, hi = k.length - 1, g = -1; while (lo <= hi) { var mid = (lo + hi) >> 1; if (k[mid] <= z) { g = mid; lo = mid + 1; } else hi = mid - 1; } return c[k[g >= 0 ? g : 0]]; }; }
+  function baniBoti(tr, leiZi, de, o) {
+    o = o || {}; var curs = cursPe(leiZi && leiZi.USD), s = { n: 0, grila: 0, directie: 0, comisioane: 0, funding: 0, net: 0, netUsdt: 0 }, pe = {};
+    (tr || []).forEach(function (t) {
+      if (!t || !(nr(t.inchis) >= (de || 0)) || nr(t.rezultat) === null) return;
+      var z = zi(t.inchis), l = curs(z); if (!(l > 0)) return;
+      var g = nr(t.grile) || 0, cm = nr(t.comisioane) || 0, f = nr(t.funding) || 0, r = nr(t.rezultat), net = r + cm + f, pus = nr(t.pus || t.investit);
+      s.n++; s.grila += g * l; s.directie += (r - g) * l; s.comisioane += cm * l; s.funding += f * l; s.net += net * l; s.netUsdt += net;
+      var y = pe[z] || (pe[z] = { g: 0, d: 0, c: 0, f: 0, n: 0, net: 0, pus: 0 }); y.g += g * l; y.d += (r - g) * l; y.c += cm * l; y.f += f * l; y.n++;
+      if (pus > 0) { y.net += net; y.pus += pus; }
+    });
+    var zileS = Object.keys(pe).sort(), a = [0, 0, 0, 0], cum = zileS.map(function (z) { var y = pe[z]; a[0] += y.g; a[1] += y.d; a[2] += y.c; a[3] += y.f; return [z, a[0], a[1], a[2], a[3]]; });
+    var r = zileS.filter(function (z) { return pe[z].pus > 0; }).map(function (z) { return pe[z].net / pe[z].pus; }), proces = null;
+    if (r.length >= 20) {
+      var m = medie(r), rnd = m32(o.samanta || 55), peste = 0, Bs = o.B || 10000;
+      for (var i = 0; i < Bs; i++) { var x = 0; for (var k = 0; k < r.length; k++) x += rnd() < 0.5 ? r[k] : -r[k]; if (Math.abs(x / r.length) >= Math.abs(m)) peste++; }
+      var bt = []; for (var j = 0; j < 4000; j++) { var idx = blocIdx(r.length, 5, rnd), sm = 0; idx.forEach(function (q) { sm += r[q]; }); bt.push(sm / r.length); }
+      proces = { zile: r.length, medie: m, lo: cuantNesortat(bt, 0.05), hi: cuantNesortat(bt, 0.95), p: (peste + 1) / (Bs + 1), pePlus: r.filter(function (x) { return x > 0; }).length / r.length };
+    }
+    s.cumulat = cum; s.proces = proces; s.zile = zileS.length;
+    return s;
+  }
+  // reperul (S&P, BTC) în LEI: randamentul lui în dolari compus cu mișcarea leului față de dolar, pe zilele reperului
+  function reperLei(rep, fxUsd) { var o = {}; Object.keys(rep || {}).forEach(function (z) { o[z] = (1 + rep[z]) * (1 + (fxUsd && fxUsd[z] !== undefined ? fxUsd[z] : 0)) - 1; }); return o; }
+  // Sharpe cu interval (bootstrap pe blocuri de 10 zile) și diferența față de reper cu p (H0: diferența medie e zero, seria centrată)
+  function interval(s, rep, o) {
+    o = o || {}; var l = (s || []).filter(function (x) { return x && isFinite(x.r); }), an = o.anual || 365; if (l.length < 40) return null;
+    var r = l.map(function (x) { return x.r; }), sh = function (v) { var m = medie(v), sd = abatere(v); return sd > 0 ? m / sd * Math.sqrt(an) : 0; };
+    var rnd = m32(o.samanta || 777), B = o.B || 2000, bs = [];
+    for (var b = 0; b < B; b++) { var idx = blocIdx(r.length, 10, rnd); bs.push(sh(idx.map(function (k) { return r[k]; }))); }
+    var out = { n: r.length, sharpe: sh(r), sharpeLo: cuantNesortat(bs, 0.05), sharpeHi: cuantNesortat(bs, 0.95) };
+    if (rep) {
+      var z = l.filter(function (x) { return rep[x.z] !== undefined; });
+      if (z.length >= 40) {
+        var d = z.map(function (x) { return x.r - rep[x.z]; }), m = medie(d), c = d.map(function (x) { return x - m; }), peste = 0, B2 = o.B2 || 2000;
+        for (var i = 0; i < B2; i++) { var ix = blocIdx(c.length, 10, rnd), sm = 0; ix.forEach(function (k) { sm += c[k]; }); if (Math.abs(sm / c.length) >= Math.abs(m)) peste++; }
+        var cu = 1, cr = 1; z.forEach(function (x) { cu *= 1 + x.r; cr *= 1 + rep[x.z]; });
+        out.fata = { n: z.length, de: z[0].z, pana: z[z.length - 1].z, tu: cu - 1, reper: cr - 1, p: (peste + 1) / (B2 + 1) };
+      }
+    }
+    return out;
+  }
+  // „câte pariuri independente” pe ferestre mobile (60 și 250 de zile de bursă, din 5 în 5 zile): stabil sau doar regimul de acum?
+  function pariuriFerestre(folosite, serii, zile, o) {
+    o = o || {}; var P = zile || [], pas = o.pas || 5, out = [], de = o.de || "";
+    for (var i = 250; i <= P.length; i += pas) {
+      if (P[i - 1].z < de) continue;
+      var a = diversificare(folosite, serii, P.slice(i - 60, i)), b = diversificare(folosite, serii, P.slice(i - 250, i));
+      if (a && b) out.push([P[i - 1].z, a.pariuri, b.pariuri]);
+    }
+    return out;
+  }
+  // scăderea de la vârf a cărții de ACUM, pe istoria ei (aceleași poziții ținute tot timpul): valoarea relativă înlănțuită zi cu zi
+  function scadereCarte(zile, expunere, o) {
+    o = o || {}; var P = (zile || []).filter(function (x) { return x && isFinite(x.pnl); }); if (P.length < 60 || !(expunere > 0)) return null;
+    var v = 1, varf = 1, zVarf = P[0].z, serie = [], cea = { dd: 0, de: null, pana: null }, val = [1];
+    P.forEach(function (x) { v *= Math.max(0, 1 + x.pnl / expunere); val.push(v); if (v > varf) { varf = v; zVarf = x.z; } var dd = v / varf - 1; serie.push([x.z, dd]); if (dd < cea.dd) cea = { dd: dd, de: zVarf, pana: x.z }; });
+    var rau = function (k) { var b = null; for (var i = k; i < val.length; i++) { var r = val[i] / val[i - k] - 1; if (!b || r < b.r) b = { r: r, de: i - k > 0 ? P[i - k - 1].z : P[0].z, pana: P[i - 1].z }; } return b; };
+    return { expunere: expunere, acum: serie[serie.length - 1][1], max: cea, z5: rau(5), z20: rau(20), serie: serie.filter(function (x, i) { return i % (o.rar || 1) === 0 || i === serie.length - 1; }) };
+  }
+
+  return { ZI: ZI, CRIZE: CRIZE, executie: executie, kupiec: kupiec, riscAcum: riscAcum, baniBoti: baniBoti, reperLei: reperLei, interval: interval, pariuriFerestre: pariuriFerestre, scadereCarte: scadereCarte, m32: m32, setMonede: setMonede, extremFereastra: extremFereastra, monedaTicker: monedaTicker, inLei: inLei, dinBot: dinBot, dinT212: dinT212, dinSalt: dinSalt, valoare: valoare,
     randamente: randamente, pnlIstoric: pnlIstoric, varEs: varEs, ziuaCeaMaiRea: cuDatele, corel: corel, corelatii: corelatii, diversificare: diversificare,
     randFereastra: randFereastra, beta: beta, pnlBot: pnlBot, scenariu: scenariu, stres: stres,
     reconciliereT212: reconciliereT212, reconciliereArhiva: reconciliereArhiva, reconciliereUrmarire: reconciliereUrmarire,

@@ -159,15 +159,15 @@ await test("E pagina: fraza cinstită + De unde știu, 3 cifre, dovada cu 4 graf
   assert.match(c2.alDovadaHtml(), /„Ieși” \(Consilier\)<\/td><td>3<\/td><td>1<\/td><td>\+2,0 %<\/td><td>se adună/);
   const ix = citeste("public", "index.html"); for (const id of ["alSus", "alSCentru", "alCentru", "alEpisoade", "alSDovada", "alDovada", "alSVechi", "alertSrRule", "alertList", "alTemaBtn"]) assert.match(ix, new RegExp('id="' + id + '"'), id);
   assert.match(ix, /<script defer="" src="\/lib\/alerte-registru\.js"><\/script><script defer="" src="\/lib\/alerte-dovezi\.js"><\/script><script defer="" src="\/lib\/alerte-grafice\.js"><\/script><script defer="" src="\/lib\/alerte-ecran\.js"><\/script>/);
-  const ap = citeste("public", "app.js"); assert.match(ap, /return alRandComuta\(id,deschis\);/); assert.match(ap, /"salt","alerts"\]\.forEach/); assert.match(ap, /"slTemaBtn","alTemaBtn"\]/);
-  assert.match(citeste("scripts", "face-tema-tablou.mjs"), /"salt", "alerts"\]/); assert.match(citeste("public", "sw.js"), /"\/lib\/alerte-grafice\.js"/);
+  const ap = citeste("public", "app.js"); assert.match(ap, /return alRandComuta\(id,deschis\);/); assert.match(ap, /"salt","alerts","contintreg"\]\.forEach/); assert.match(ap, /"slTemaBtn","alTemaBtn","ciTemaBtn"\]/);
+  assert.match(citeste("scripts", "face-tema-tablou.mjs"), /"salt", "alerts", "contintreg"\]/); assert.match(citeste("public", "sw.js"), /"\/lib\/alerte-grafice\.js"/);
 });
 await test("V versiunile v100.367 (index ×4, sw, versiune.js, package + lanț, BUILD_INFO) și colectorul v101.204", () => {
   const H = citeste("public", "index.html");
   const vh = (H.match(/v100\.(\d{3})/) || [])[1]; assert.ok(+vh >= 367, "versiunea de la v100.367 încolo: " + vh); assert.doesNotMatch(H, /v100\.366/);   /* v100.368: „de la încolo” */
   assert.ok(+(citeste("public", "sw.js").match(/crypto-radar-v100-(\d{3})/) || [])[1] >= 367); assert.ok(+(citeste("functions", "_shared", "versiune.js").match(/"v100\.(\d{3})"/) || [])[1] >= 367);
   const p = JSON.parse(citeste("package.json")); assert.ok(+p.version.split(".")[1] >= 367); assert.match(p.scripts.test, /npm run test:v100366 && npm run test:v100367/); assert.equal(p.scripts["test:v100367"], "node scripts/proba-v100367.mjs");
-  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.ok(+(bi.badge.match(/^v100\.(\d{3})/) || [])[1] >= 367); assert.ok(bi.al367 && bi.ti366); assert.match(col, /const VERSIUNE_COLECTOR = "v101\.204";/);
+  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.ok(+(bi.badge.match(/^v100\.(\d{3})/) || [])[1] >= 367); assert.ok(bi.al367 && bi.ti366); const vc = (col.match(/const VERSIUNE_COLECTOR = "v101\.(\d{3})";/) || [])[1]; assert.ok(+vc >= 204, "colectorul de la v101.204 încolo: " + vc);   /* v100.369: „de la încolo” */
 });
 console.log(`\n${teste - picate}/${teste} trec`);
 process.exit(picate ? 1 : 0);

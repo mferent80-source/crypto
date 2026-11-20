@@ -27,6 +27,13 @@ var Factori = (function () {
   };
   var ETF_FACTORI = ["SPY", "IWM", "MTUM", "SMH"].concat(Object.keys(SECTOARE).map(function (k) { return SECTOARE[k].etf; }));
   function sectorNume(s) { return SECTOARE[s] ? SECTOARE[s].n : s ? String(s) : "necunoscut"; }
+  // v100.369 (auditul 20.11, 🟡7): industriile în română (sursa universSua le dă în engleză); ce nu e în hartă rămâne cum vine
+  var INDUSTRII = { "Semiconductors": "Semiconductori", "Electronic Components": "Componente electronice", "EDP Services": "Servicii IT și centre de date",
+    "Radio And Television Broadcasting And Communications Equipment": "Echipamente de comunicații", "Industrial Machinery/Components": "Utilaje industriale",
+    "Computer Manufacturing": "Calculatoare", "Computer peripheral equipment": "Periferice", "Computer Software: Prepackaged Software": "Programe",
+    "Computer Software: Programming Data Processing": "Programe și prelucrarea datelor", "Biotechnology: Pharmaceutical Preparations": "Farmaceutice",
+    "Major Banks": "Bănci mari", "Oil & Gas Production": "Petrol și gaze", "Electric Utilities: Central": "Electricitate", "Auto Manufacturing": "Automobile" };
+  function industrieNume(s) { return INDUSTRII[s] || (s ? String(s) : "necunoscută"); }
 
   // ---------------- 1. factorii ----------------
   // regresia liniară cu interceptare (ecuațiile normale, eliminare Gauss); X = [[x1, x2, ...], ...]
@@ -70,8 +77,8 @@ var Factori = (function () {
       (sec[s] = sec[s] || { lei: 0, pozitii: [] }).lei += x.notionalLei; sec[s].pozitii.push(x.nume);
       if (d) { (ind[d] = ind[d] || { lei: 0, pozitii: [] }).lei += x.notionalLei; ind[d].pozitii.push(x.nume); }
     });
-    var lista = function (m) { return Object.keys(m).map(function (k) { return { nume: k, ro: sectorNume(k), lei: m[k].lei, pondere: tot > 0 ? m[k].lei / tot : null, pozitii: m[k].pozitii, pestePrag: tot > 0 && m[k].lei / tot > prag }; }).sort(function (a, b) { return b.lei - a.lei; }); };
-    return { actiuniLei: tot, factori: fac, acoperire: tot > 0 ? acoperit / tot : null, sectoare: lista(sec), industrii: lista(ind), prag: prag };
+    var lista = function (m, numeRo) { return Object.keys(m).map(function (k) { return { nume: k, ro: (numeRo || sectorNume)(k), lei: m[k].lei, pondere: tot > 0 ? m[k].lei / tot : null, pozitii: m[k].pozitii, pestePrag: tot > 0 && m[k].lei / tot > prag }; }).sort(function (a, b) { return b.lei - a.lei; }); };
+    return { actiuniLei: tot, factori: fac, acoperire: tot > 0 ? acoperit / tot : null, sectoare: lista(sec), industrii: lista(ind, industrieNume), prag: prag };
   }
 
   // ---------------- 2. atribuirea ----------------
@@ -217,7 +224,7 @@ var Factori = (function () {
     return { luni: rez.length, medie: rez.length ? medie(rez) : null, luniPlus: rez.filter(function (x) { return x > 0; }).length, n: rez.length };
   }
 
-  return { SECTOARE: SECTOARE, ETF_FACTORI: ETF_FACTORI, sectorNume: sectorNume, regresie: regresie, factoriActiune: factoriActiune, expunere: expunere,
+  return { SECTOARE: SECTOARE, ETF_FACTORI: ETF_FACTORI, sectorNume: sectorNume, industrieNume: industrieNume, regresie: regresie, factoriActiune: factoriActiune, expunere: expunere,
     atribuire: atribuire, descompunereBoti: descompunereBoti, maeMfe: maeMfe, tintaVol: tintaVol, marimeVol: marimeVol, sigmaZi: sigmaZi,
     miscareAsteptata: miscareAsteptata, gridFataDeOptiuni: gridFataDeOptiuni, stareLa: stareLa, topSector: topSector, topSectoare: topSectoare, istoricRegula: istoricRegula, cate: cate };
 })();

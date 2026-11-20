@@ -24,16 +24,18 @@ const ZILE = [
 
 await test("fără zile ⇒ spune de unde vin și când apar; o singură zi ⇒ cifra, fără grafic, „graficul apare de la a doua zi”", () => {
   assert.equal(typeof ctx.ciZileHtml, "function");
-  assert.match(ctx.ciZileHtml(null), /Valoarea contului pe zile/); assert.match(ctx.ciZileHtml([]), /colectorul o scrie o dată pe zi/);
+  assert.match(ctx.ciZileHtml(null), /Încă nu am nicio zi/); assert.match(ctx.ciZileHtml([]), /colectorul o scrie o dată pe zi/);   /* v100.369: titlul e al blocului */
   const h1 = ctx.ciZileHtml([ZILE[0]]);
   assert.match(h1, /38\.492 lei/); assert.ok(!/<svg/.test(h1)); assert.match(h1, /graficul apare de la a doua zi/);
 });
-await test("trei zile: cifra de azi, schimbarea față de ziua dinainte cu săgeată și semn (−1.378 lei, −3,5%), ziua dinainte parțială spusă", () => {
-  const h = ctx.ciZileHtml(ZILE);
+const ZILE2 = ZILE.map((x) => Object.assign({}, x, { complet: true }));   /* v100.369: schimbarea se socotește doar între două zile complete */
+await test("trei zile: cifra de azi, schimbarea față de ziua dinainte cu săgeată și semn (−1.378 lei, −3,5 %); lângă o zi parțială „—”, nu o cifră pe un total trunchiat", () => {
+  assert.match(ctx.ciZileHtml(ZILE), /față de 14\.10\.2026: <span class="t212Mic">— \(o zi e parțială\)<\/span>/);
+  const h = ctx.ciZileHtml(ZILE2);
   assert.match(h, /37\.607 lei/);
-  assert.match(h, /▼ −1\.378 lei \(−3,5%\)/, "săgeată + semn + o zecimală");
+  assert.match(h, /▼ −1\.378 lei \(−3,5 %\)/, "săgeată + semn + o zecimală");
   assert.match(h, /class="ciZileSch bad"/, "culoarea vine cu săgeată, nu singură");
-  assert.match(h, /ziua dinainte era parțială/);
+  assert.match(h, /la închiderea din 15\.10\.2026/);   /* v100.369: ziua = închiderea ei */
   assert.match(h, /include și depunerile și retragerile/, "schimbarea nu e doar profit — spus cinstit");
 });
 await test("graficul: o linie, câte un punct pe zi cu detaliile la trecerea mouse-ului (Pionex / Trading 212 / Salt), punctul zilei parțiale gol", () => {
@@ -49,18 +51,19 @@ await test("tabelul: cea mai nouă zi sus, totalul, schimbarea, sursele; „par�
   assert.ok(tb.indexOf("15.10.2026") < tb.indexOf("14.10.2026") && tb.indexOf("14.10.2026") < tb.indexOf("13.10.2026"));
   assert.match(tb, /<td data-et="Pionex">146 lei<\/td>/); assert.match(tb, /<td data-et="Trading 212">27\.117 lei<\/td>/); assert.match(tb, /<td data-et="Salt">10\.345 lei<\/td>/);
   assert.match(tb, /14\.10\.2026<span class="t212Mic"> · parțial<\/span>/);
-  assert.match(tb, /▲ \+493 lei \(\+1,3%\)/, "13→14: +493 lei");
+  assert.match(ctx.ciZileHtml(ZILE2), /▲ \+493 lei \(\+1,3 %\)/, "13→14: +493 lei");
   assert.equal((tb.match(/<tr>/g) || []).length, 4, "capul + 3 zile");
 });
 await test("datele stricate nu strică pagina: zile fără valoare sau cu z greșit ies; ordinea vine din z, nu din listă", () => {
   const h = ctx.ciZileHtml([ZILE[2], { z: "nu", valoare: 5 }, { z: "2026-10-12", valoare: null }, ZILE[0]]);
   assert.ok(!/NaN|undefined/.test(h)); assert.equal((h.match(/class="ciZilePct/g) || []).length, 2);
 });
-await test("pagina: ciPorneste aduce `contZile` și pune secțiunea sus, înaintea raportului; CSS-ul ei înaintea pândei", () => {
+await test("pagina: ciPorneste aduce `contZile`; secțiunea vine după răspuns (v100.369); CSS-ul ei înaintea pândei", () => {
   const ce = citeste("public", "lib", "cont-ecran.js"), css = citeste("public", "app.css");
-  assert.match(ce, /getJSON\("\/api\/istoric-bot\?action=contZile"\)/);
+  assert.match(ce, /ciAdu\("contZile", "\/api\/istoric-bot\?action=contZile"/);   /* v100.369: fiecare rută cu eroarea ei */
   // v100.258: din v100.233 ambele drumuri (din memorie, după aducere) desenează prin ciDeseneaza, care pune zilele primele
-  assert.equal((ce.match(/ciZileHtml\(ciStare\.zile\) \+ /g) || []).length, 1, "zilele într-un singur desen");
+  const hp = ctx.ciHtml({ la: Date.now(), valoare: { total: 1000, complet: true, lipsa: [] } }, { zile: ZILE, acum: Date.now() });
+  assert.equal((hp.match(/id="ciSZile"/g) || []).length, 1, "zilele într-un singur desen"); assert.ok(hp.indexOf('id="ciFraza"') < hp.indexOf('id="ciSZile"'), "v100.369 (🔵1): răspunsul ÎNAINTEA zilelor");
   const porn = ce.slice(ce.indexOf("async function ciPorneste("), ce.indexOf("\n}", ce.indexOf("async function ciPorneste(")));
   assert.equal((porn.match(/ciDeseneaza\(\);/g) || []).length, 2, "și din memorie, și după aducere");
   const iZ = css.indexOf(".ciZileGraf{"), iPanda = css.lastIndexOf("@media (max-width:640px){.sugPandaTab thead"); assert.ok(iZ > 0 && iPanda > iZ, "pânda rămâne ultima");

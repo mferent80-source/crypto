@@ -105,11 +105,11 @@ await test("pagina: „Pe ce pariezi de fapt” (industria peste 40 %), „Piaț
     maeMfe: { n: 40, castig: 15, pierd: 25, maeCastig: -0.04, maePierd: -0.22, pierdDupaPlus5: 6, lasatPeMasa: 0.08, stopSugerat: -0.07, taiatePierderi: 14, economie: 0.12 },
     vol: { volAnual: 0.32, factor: 0.47, contrib: [{ nume: "APLD", pondere: 0.31 }] } };
   const h = ctxE.ciHtml(rap, { acum: rap.la });
-  assert.match(h, /Acțiunile tale stau 60% într-o singură industrie \(Semiconductors: MU, WDC, STX\), peste pragul de 40 %/);
-  assert.match(h, /alegerile tale \(alfa\) au adus −29,0%: un ETF pe S&amp;P cu aceeași expunere ar fi ieșit mai bine/);
-  assert.match(h, /grila a adus \+300 USDT \(\+1\.320 lei\), direcția prețului −2\.500 USDT/); assert.match(h, /pierderea vine din direcție/);   /* v100.306 (I-837): punctul miilor */
-  assert.match(h, /Un stop la −7,0% de la cumpărare ar fi păstrat 80 % din câștigători și ar fi tăiat mai devreme 14 pierderi/);
-  assert.match(h, /Contul tău se mișcă cu ~32% pe an/); assert.match(h, /ar trebui ținută la ~47% din ce e/);
+  assert.match(h, /Acțiunile tale stau 60 % într-o singură industrie \((Semiconductors|Semiconductori): MU, WDC, STX\), peste pragul de 40 %/);   /* v100.369: „60 %”; numele în română vine din Factori.expunere (ro) */
+  assert.match(h, /alegerile tale \(alfa\) au adus −29,0 %/);   /* v100.369: „ETF-ul ar fi ieșit mai bine” doar când alfa trece de eroarea lui (|t| ≥ 2) */
+  assert.match(h, /grila a adus \+300 USDT, direcția prețului −2\.500 USDT/);   /* v100.369: la raportul vechi, în USDT (leii la cursul de azi erau o aproximare nespusă); cu raportul nou, banii în lei la „Cât ai câștigat” */   /* v100.306 (I-837): punctul miilor */
+  assert.match(h, /Un stop la −7,0 % de la cumpărare ar fi păstrat 80 % din câștigători și ar fi tăiat mai devreme 14 pierderi/);
+  assert.match(h, /Contul tău se mișcă cu ~32 % pe an/); assert.match(h, /ar trebui ținută la ~47 % din ce e/); assert.match(h, /Ținta de manual la un cont de tranzacționare e 15 %, garda ta e 30 %/);
 });
 // Poarta T212: mărimea cu risc egal + concentrarea
 const T = citeste("public", "lib", "t212-ecran.js"), fnT = (n) => { const i = T.indexOf("function " + n + "("); let a = 0, j = T.indexOf("{", i); for (; j < T.length; j++) { if (T[j] === "{") a++; else if (T[j] === "}") { a--; if (!a) break; } } return T.slice(i, j + 1); };

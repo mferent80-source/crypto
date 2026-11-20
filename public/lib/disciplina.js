@@ -99,7 +99,7 @@ var Disciplina = (function () {
     var add = function (cod, ok, titlu, detaliu, sursa) { out.push({ cod: cod, ok: ok, titlu: titlu, detaliu: detaliu || "", sursa: sursa || "" }); };
     if (o.factori && o.factori.sectoare) {
       var s = o.factori.sectoare.filter(function (x) { return x.pestePrag || x.pondere > p.sector; })[0], ind = (o.factori.industrii || []).filter(function (x) { return x.pondere > p.sector; })[0];
-      add("sector", !s && !ind, "Un sector / o industrie cel mult " + Math.round(p.sector * 100) + " % din acțiuni", s ? s.ro + ": " + Math.round(s.pondere * 100) + " % (" + s.pozitii.join(", ") + ")" : ind ? ind.nume + ": " + Math.round(ind.pondere * 100) + " %" : "", "concentrarea");
+      add("sector", !s && !ind, "Un sector / o industrie cel mult " + Math.round(p.sector * 100) + " % din acțiuni", s ? s.ro + ": " + Math.round(s.pondere * 100) + " % (" + s.pozitii.join(", ") + ")" : ind ? (ind.ro || ind.nume) + ": " + Math.round(ind.pondere * 100) + " %" : "", "concentrarea");   /* v100.369 (🟡7): industria în română */
     }
     if (o.vol) {
       var c0 = (o.vol.contrib || [])[0];
