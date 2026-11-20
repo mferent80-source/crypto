@@ -18,7 +18,11 @@
     "PRUDENTA / DEFENSIV": ["atentie", "prudență / defensiv"],
     "RISK-OFF": ["rau", "risk-off (păstrează capitalul)"],
   };
-  const ZONE = { Strong: "puternic", Healthy: "sănătos", Neutral: "neutru", Weakening: "slăbire", Critical: "critic" };
+  const ZONE = { Strong: "puternic", Healthy: "sănătos", Neutral: "neutru", Weakening: "slăbire", Critical: "critic",
+    "Strong Bull": "bull puternic", Bull: "bull", Cautious: "prudent", Bear: "bear" };   /* v100.372: și zonele Uptrend Ratio (uptrend-analyzer/scorer.py) - „cautious” apărea netradus și fără culoare */
+  /* culoarea zonei: zonele Uptrend Ratio iau culoarea treptei echivalente din Breadth (aceleași benzi de scor); un nume necunoscut rămâne fără culoare */
+  const ZONA_CSS = { Strong: "Strong", Healthy: "Healthy", Neutral: "Neutral", Weakening: "Weakening", Critical: "Critical", "Strong Bull": "Strong", Bull: "Healthy", Cautious: "Weakening", Bear: "Critical" };
+  const clsZona = (z) => ZONA_CSS[String(z || "")] || "";
   const SECTOARE = { XLE: "Energie", XLK: "Tehnologie", XLV: "Sănătate", XLF: "Financiar", XLI: "Industrie", XLY: "Consum ciclic", XLP: "Consum de bază", XLU: "Utilități", XLB: "Materiale", XLRE: "Imobiliare", XLC: "Comunicații" };
   const SCORURI = [["sp", "S&P 500"], ["uptrend", "Participare în trend"], ["ndx", "Nasdaq 100"], ["r2k", "Russell 2000"]];
 
@@ -29,7 +33,8 @@
   const diacritice = (s) => String(s || "")
     .replace(/\bridica\b/g, "ridică").replace(/\bProtejeaza\b/g, "Protejează").replace(/\bcastigurile\b/g, "câștigurile")
     .replace(/\bpozitii\b/g, "poziții").replace(/\bstranse\b/g, "strânse").replace(/\bfara\b/g, "fără").replace(/\basteapta\b/g, "așteaptă")
-    .replace(/\bstabilizare\b/g, "stabilizare").replace(/\bExpunere\b/g, "Expunere");
+    .replace(/\bstabilizare\b/g, "stabilizare").replace(/\bExpunere\b/g, "Expunere")
+    .replace(/\bPoti tine\b/g, "Poți ține").replace(/\bfavorizeaza\b/g, "favorizează").replace(/\bforta relativa\b/g, "forță relativă").replace(/\bAdauga\b/g, "Adaugă").replace(/\bin lideri\b/g, "în lideri");   /* v100.372: îndemnurile RISK-ON și CONSTRUCTIV */
 
   function cate(n, sg, pl) {
     if (global.TextRo && global.TextRo.cate) return global.TextRo.cate(n, sg, pl);
@@ -101,7 +106,7 @@
 
   function htmlBloc(n) {
     if (!n) return '<div class="tbBloc luBloc"><div class="tbBlocCap"><b>Lățimea pieței US</b></div><p class="tbSub">Datele nu s-au putut citi acum (robotul de pe GitHub sau rețeaua). Se reîncearcă singur; dacă rămâne așa o zi întreagă, robotul „Pages” din premarket_scanner nu mai rulează.</p></div>';
-    const cartele = n.scoruri.map((s) => '<div class="luCartela"><div class="tbSub">' + esc(s.nume) + '</div><div class="luScor">' + z1(s.scor) + '</div><div class="luZona luZ' + esc(s.zonaCod) + '">' + esc(s.zona) + '</div><div class="tbSub">expunere ' + esc(s.expunere) + "</div></div>").join("");
+    const cartele = n.scoruri.map((s) => '<div class="luCartela"><div class="tbSub">' + esc(s.nume) + '</div><div class="luScor">' + z1(s.scor) + '</div><div class="luZona luZ' + clsZona(s.zonaCod) + '">' + esc(s.zona) + '</div><div class="tbSub">expunere ' + esc(s.expunere) + "</div></div>").join("");
     return '<div class="tbBloc luBloc' + (n.vechi ? " vechi" : "") + '"><div class="tbBlocCap"><b>Lățimea pieței US</b> <span class="tbSub">· calculată de robotul de pe GitHub după închiderea bursei · date de ' + esc(n.ziua) + (n.vechi ? " · VECHI" : "") + "</span></div>" +
       '<p class="luVerdict luS' + esc(n.stare) + '"><b>' + esc(n.stanta) + "</b>" + (n.actiune ? " — " + esc(n.actiune) : "") + "</p>" +
       '<div class="luCartele">' + cartele + "</div>" + grafic(n) +
@@ -120,15 +125,23 @@
   // textele robotului vin fără diacritice și cu punct zecimal ⇒ româna paginii (doar formulările cunoscute; restul trece prin diacritice)
   function roMb(s) {
     s = String(s || "");
-    let m = /^8MA ([\d.]+) < ([\d.]+) \(piata selectiva\)\. Istoric: randamente forward PESTE medie \(\+?(\d+)pp\/60z\) dar drawdown mai mare\.?$/.exec(s);
+    let m = ST_SELECTIV.exec(s);
     if (m) return "Breadth 8MA " + z1(+m[1] * 100) + "%: piață selectivă. Istoric: randamente pe 60 de zile peste medie (+" + m[3] + " pp), dar cu căderi mai mari.";
-    return diacritice(s).replace(/\bracire\b/g, "răcire").replace(/\bpiata\b/g, "piața").replace(/\bselectiva\b/g, "selectivă").replace(/^Mixt\b/, "mixt")
+    /* v100.372: celelalte steaguri din sursa robotului (treceau brute, cu semnul lor lângă „ⓘ”) */
+    const n1 = (a) => z1(+a).replace(/,0$/, "");
+    if ((m = ST_INGUST.exec(s))) return "Piața largă (≈2.800 de acțiuni) la " + n1(m[1]) + ", mult sub large-cap (" + n1(m[2]) + "): raliu îngust, cu risc și volatilitate ridicate (nu înseamnă randament slab, vezi backtestul).";
+    if ((m = ST_WASHOUT.exec(s))) return "Contrarian: Breadth 8MA " + z1(+m[1] * 100) + "% (sub 40%) = washout. Istoric bullish: +" + z1(+m[2]) + "% la 60 de zile (" + m[3] + "% din cazuri pe plus). Urmărește minimul (trough) pentru reintrare.";
+    if ((m = ST_MICI_URMA.exec(s))) return "Small-caps " + n1(m[1]) + " rămân în urmă → apetit de risc în scădere";
+    if ((m = ST_MICI_CONDUC.exec(s))) return "Small-caps " + n1(m[1]) + " conduc → risk-on sănătos";
+    return diacritice(s).replace(/\bracire\b/g, "răcire").replace(/\bpiata\b/g, "piața").replace(/\bselectiva\b/g, "selectivă").replace(/^Mixt\b/, "mixt").replace(/^INGUST\b/, "îngust")
       .replace(/\(idx ([\d.]+), min ([\d.]+)\)/, (_, a, b) => "· media " + z1(+a).replace(/,0$/, "") + ", minimul " + z1(+b).replace(/,0$/, ""))
       .replace(/^max (\d+) dist\.days, (\d+)\/(\d+) sub MM50(, follow-through recent)?$/, (_, a, b, c, f) => "până la " + cate(+a, "zi", "zile") + " de distribuție · " + b + " din " + c + " indici sub MM50" + (f ? " · Follow-Through Day recent" : ""))   /* v100.371: și cu „follow-through recent” la capăt */
       .replace(/ ⚠️ STALE (\d+)z - vot neutralizat$/, (_, n) => " · date vechi de " + cate(+n, "zi", "zile") + ", vot neutralizat").replace(/ \(date vechi de (\d+)z\)$/, (_, n) => " · date vechi de " + cate(+n, "zi", "zile"))
       .replace(/^istoric BULLISH \(([+−-]?[\d.]+)%\/60z\)$/, "istoric bullish ($1% la 60 de zile)").replace(/^raman in urma\b/, "rămân în urmă")
       /* v100.371: și forma cu paranteză la capăt („9▲/23▼ (net -14), slab (NL domina)” trecea brut, cu minusul ASCII și în engleză pe jumătate) */
       .replace(/^(\d+)▲\/(\d+)▼ \(net ([+−-]?\d+)\), (.+)$/, (_, a, b, c, d) => a + " maxime ▲ / " + b + " minime ▼ · net " + c + " · " + d.replace(/^sanatos\b/, "sănătos").replace(/\(NL domina\)/, "(minimele domină)").replace(/\(NH domina\)/, "(maximele domină)"))
+      /* v100.372: pragurile din intermarket.py (peste 1 = backwardation, sub 0,9 = contango); „?” = robotul n-a avut cifra */
+      .replace(/\(VIX term ([\d.]+)\)$/, (_, a) => "(VIX term " + a.replace(".", ",") + (+a > 1 ? " · backwardation, stres acut" : +a < 0.9 ? " · contango, calm" : " · neutru") + ")").replace(/\((VIX(?: term)?) \?\)$/, "($1 necunoscut)")
       .replace(/^Market Breadth \(Overall\)/, "Market Breadth Overall").replace(/^momentum MM50 \(([\d.]+)%\)$/, (_, a) => "momentum peste MM50 (" + z1(+a).replace(/,0$/, "") + "%)")
       .replace(/(\d)\.(\d)/g, "$1,$2")   // v100.306 (I-837): restul cifrelor robotului („trend MM200 (49.0%)”, „VIX 16.6”) cu virgula
       .replace(/(^|[\s(:=·/[])-(?=\d)/g, "$1−");   /* v100.371: minusul ASCII ca semn în textele robotului ⇒ „−” (aceeași regulă ca proba de telefon; „60-80%” rămâne) */
@@ -137,7 +150,55 @@
     const m = /^(.*?) \(([^)]*)\)$/.exec(String(s || ""));
     const ce = m ? m[1] : String(s || ""), sub = m ? m[2] : "";
     const C = { "Market timing": "Market Timing · Distribution Days", "New Highs - New Lows": "New Highs − New Lows" };
-    return { ce: ce === "Market timing" && /distribution/i.test(sub) ? C["Market timing"] : C[ce] || ce, sub: /distribution/i.test(sub) ? "" : sub.replace(/\bsurse valide\b/, "surse valide").replace(/^VIX\/credit\/breadth pret$/, "VIX, credit, breadth pe preț") };   /* v100.371 */
+    return { ce: ce === "Market timing" && /distribution/i.test(sub) ? C["Market timing"] : C[ce] || ce, sub: /distribution/i.test(sub) ? "" : sub.replace(/\bsurse valide\b/, "surse valide").replace(/^VIX\/credit\/breadth pret$/, "VIX, credit, breadth pe preț").replace(/^8MA<0\.40$/, "8MA sub 0,40") };   /* v100.371, v100.372 */
+  }
+  /* v100.372 (el, 20.11: „fa ideea”): formele CUNOSCUTE ale textelor scrise de robot, brute, cum vin în latest.json (breadth_dashboard.py,
+     confirmation.py, intermarket.py, sector_ideas.py). Fiecare are traducerea ei în roMb / numeSc / extins, probată în proba-v100372.
+     Un text care nu se potrivește cu niciuna ar trece pe pagină netradus ⇒ formeNecunoscute() îl dă pazei paginilor (VPS, zilnic), care strigă.
+     La o formă nouă a robotului: întâi traducerea, apoi forma aici. Zonele și „cel mai slab” sunt NUME ale surselor (rămân în engleză, cerut de el). */
+  const ST_SEMN = /^(?:ⓘ|⚠️?|✓)\s*/;
+  const ST_INGUST = /^Piata larga \(2800\) ([\d.]+) << large-cap ([\d.]+) → raliu INGUST: RISC\/volatilitate ridicata \(nu implica randament slab - vezi backtest\)$/;
+  const ST_WASHOUT = /^CONTRARIAN: 8MA ([\d.]+) < 0\.40 = washout\. Istoric BULLISH: \+([\d.]+)%\/60z \((\d+)% pozitiv\)\. Urmareste trough pt re-intrare\.$/;
+  const ST_SELECTIV = /^8MA ([\d.]+) < ([\d.]+) \(piata selectiva\)\. Istoric: randamente forward PESTE medie \(\+?(\d+)pp\/60z\) dar drawdown mai mare\.?$/;
+  const ST_MICI_URMA = /^Small-caps ([\d.]+) raman in urma → apetit de risc in scadere$/, ST_MICI_CONDUC = /^Small-caps ([\d.]+) conduc → risk-on sanatos$/;
+  const F_STEAG = [ST_INGUST, ST_WASHOUT, ST_SELECTIV, ST_MICI_URMA, ST_MICI_CONDUC];
+  const F_ACTIUNE = ["Poti tine pozitii pline; favorizeaza lideri cu forta relativa.", "Adauga selectiv in lideri; stopuri normale.", "Selectiv, pozitii noi mai mici, stopuri stranse. Nu supra-dimensiona.",
+    "Redu expunerea, ridica cash, doar setup-uri A+. Protejeaza castigurile.", "Prezervare capital; fara pozitii noi speculative; asteapta stabilizare.", "Breadth indisponibil; verdict suspendat."];
+  const F_INCREDERE = [/^SCAZUTA - semnale in conflict \(\d+ pozitive \/ \d+ negative\)$/, /^RIDICATA - dimensiunile sunt aliniate$/, /^MEDIE - acoperire partiala sau consens insuficient$/, /^INSUFICIENTA$/];
+  const F_ZONA = { sp: /^(?:Strong|Healthy|Neutral|Weakening|Critical)$/, ndx: /^(?:Strong|Healthy|Neutral|Weakening|Critical)$/, r2k: /^(?:Strong|Healthy|Neutral|Weakening|Critical)$/, uptrend: /^(?:Strong Bull|Bull|Neutral|Cautious|Bear)$/ };
+  const F_EXTRA = [/^$/, /^momentum\(8\/200MA\) [\d.]+$/, /^\d+ warning-uri$/, /^fara warning-uri$/, /^>MM200 [\d.]+% \| >MM50 [\d.]+%$/];
+  /* rândurile de scor: [numele dimensiunii, textul ei] - textul unei dimensiuni nu trece drept cunoscut la alta */
+  const F_SCOR = [
+    [/^Breadth participare \([1-4]\/4 surse valide\)$/, /^(?:Risk-ON larg|INGUST \(risc ridicat\)|Risk-OFF|Constructiv, selectiv|Mixt \/ racire|Date indisponibile) \(idx [\d.]+, min [\d.]+\)(?: ⚠️? ?STALE \d+z - vot neutralizat| \(date vechi de \d+z\))?$/],
+    [/^Market timing \(distribution days\)$/, /^max \d+ dist\.days, \d+\/\d+ sub MM50(?:, follow-through recent)?$/],
+    [/^Confirmare risc \(VIX\/credit\/breadth pret\)$/, /^(?:RISK-ON confirmat|RISK-OFF confirmat|Mixt \/ neconcludent) \(VIX (?:[\d.]+|\?)\)$/],
+    [/^New Highs - New Lows$/, /^\d+▲\/\d+▼ \(net [+-]\d+\), (?:sanatos \(NH domina\)|slab \(NL domina\)|mixt)$/],
+    [/^Intermarket \/ macro$/, /^(?:Macro RISK-ON|Macro RISK-OFF|Macro neutru\/mixt) \(VIX term (?:[\d.]+|\?)\)$/],
+    [/^Washout contrarian \(8MA<0\.40\)$/, /^istoric BULLISH \(\+[\d.]+%\/60z\)$/],
+    [/^Small-caps$/, /^(?:raman in urma \(risk-off incipient\)|conduc \(risk-on\))$/],
+  ];
+  /* textele robotului din j (latest.json) care NU au formă cunoscută: [{ unde, text }]; date stricate sau lipsă ⇒ [] (pagina are rândul ei pentru asta) */
+  function formeNecunoscute(j) {
+    const out = [], e = j && typeof j === "object" && j.full && j.full.engine;
+    if (!e || typeof e !== "object") return out;
+    const m = e.master || {}, d = e.data || {}, tx = (v) => String(v == null ? "" : v);
+    const pune = (unde, t) => out.push({ unde: unde, text: t.slice(0, 200) });
+    const st = tx(m.stance).trim().toUpperCase();
+    if (st && !STANTE[st] && st !== "NEVERIFICAT") pune("poziția", tx(m.stance));
+    if (tx(m.action) && F_ACTIUNE.indexOf(tx(m.action)) < 0) pune("îndemnul", tx(m.action));
+    if (tx(m.confidence) && !F_INCREDERE.some((f) => f.test(tx(m.confidence)))) pune("încrederea", tx(m.confidence));
+    SCORURI.forEach(([k]) => { if (d[k] && typeof d[k] === "object" && !F_EXTRA.some((f) => f.test(tx(d[k].extra)))) pune("sursa " + NUME_SURSA[k], tx(d[k].extra)); });
+    SCORURI.forEach(([k]) => { if (d[k] && typeof d[k] === "object" && !F_ZONA[k].test(tx(d[k].zone))) pune("zona " + NUME_SURSA[k], tx(d[k].zone) || "(lipsă)"); });
+    (Array.isArray(m.scorecard) ? m.scorecard : []).filter(Array.isArray).forEach((x) => {
+      const nume = tx(x[0]), text = tx(x[2]), ale = F_SCOR.filter((f) => f[0].test(nume));
+      if (!ale.length) pune("scorecard · rând nou", nume + ": " + text);
+      else if (!ale.some((f) => f[1].test(text))) pune("scorecard · " + nume, text);
+    });
+    (e.analysis && Array.isArray(e.analysis.flags) ? e.analysis.flags : []).filter(Array.isArray).forEach((f) => {
+      const brut = tx(f[1]), t = brut.replace(ST_SEMN, "");
+      if (t && !F_STEAG.some((r) => r.test(t))) pune("steag", brut);
+    });
+    return out;
   }
   function extins(j, acum) {
     const n = normalizeaza(j, acum);
@@ -148,15 +209,15 @@
       subMaxim: nr(r.pct_from_high), pesteMinim: nr(r.off_low), vcp: r.vcp === true, zileRap: nr(r.days_to_earnings),
       rapAproape: r.earnings_warn === true || (nr(r.days_to_earnings) !== null && r.days_to_earnings <= 7 && r.days_to_earnings >= 0) });
     return Object.assign(n, {
-      masterScor: nr(m.score), incredere: String(m.confidence || "").split(" - ")[0].toLowerCase(), plafon: nr(m.net_ceiling),
+      masterScor: nr(m.score), incredere: (function (c) { return { scazuta: "scăzută", ridicata: "ridicată", insuficienta: "insuficientă" }[c] || c; })(String(m.confidence || "").split(" - ")[0].toLowerCase()),   /* v100.372: cu diacritice */ plafon: nr(m.net_ceiling),
       surse: SCORURI.filter(([k]) => d[k]).map(([k]) => ({ cheie: k, nume: NUME_SURSA[k], scor: nr(d[k].score), zona: ZONA_EN[d[k].zone] || String(d[k].zone || "—"), zonaCod: d[k].zone || "",
-        expunere: String(d[k].exposure || "—").replace(/^[^(]*\(([^)]*)\)\s*$/, "$1"), slab: roMb(String(d[k].weakest || "")), extra: String(d[k].extra || "").replace(/>MM/g, "peste MM").replace(/(\d)\.(\d)/g, "$1,$2").replace(/ \| /g, " · ").replace(/^momentum\(8\/200MA\) (\d+)/, "momentum 8/200 = $1").replace(/\b(\d+) warning-uri\b/, "$1 avertismente") })),
+        expunere: String(d[k].exposure || "—").replace(/^[^(]*\(([^)]*)\)\s*$/, "$1"), slab: roMb(String(d[k].weakest || "")), extra: String(d[k].extra || "").replace(/>MM/g, "peste MM").replace(/(\d)\.(\d)/g, "$1,$2").replace(/ \| /g, " · ").replace(/^momentum\(8\/200MA\) (\d+)/, "momentum 8/200 = $1").replace(/\b(\d+) warning-uri\b/, (_, n) => cate(+n, "avertisment", "avertismente")).replace(/^fara warning-uri$/, "fără avertismente") })),   /* v100.372 */
       scorecard: (Array.isArray(m.scorecard) ? m.scorecard : []).filter(Array.isArray).map((x) => { const ns = numeSc(x[0]); return { ce: ns.ce, v: nr(x[1]), text: (ns.sub ? ns.sub + " · " : "") + roMb(String(x[2] || "")) }; }),
       sp500: { peste200: nr(sp.above200), peste50: nr(sp.above50), ma8: nr(sp.ma8), ma200: nr(sp.ma200), bearish: sp.bearish === true, data: String(sp.date || "") },
       uptrend: { ratio: nr(up.ratio), ma10: nr(up.ma10), trend: up.trend === "up" ? "urcă" : up.trend === "down" ? "scade" : "", n: nr(up.count), total: nr(up.total),
         sectoare: (src.uptrend && Array.isArray(src.uptrend.sectors) ? src.uptrend.sectors : []).filter(Boolean).map((s) => ({ nume: scurt(s.name), ratio: nr(s.ratio), sus: s.trend === "up" })).filter((s) => s.ratio !== null) },
       nhnl: ide.nh_nl ? { maxime: nr(ide.nh_nl.new_highs), minime: nr(ide.nh_nl.new_lows), net: nr(ide.nh_nl.net) } : null,
-      steaguri: (e.analysis && Array.isArray(e.analysis.flags) ? e.analysis.flags : []).filter(Array.isArray).map((f) => roMb(String((f && f[1]) || "").replace(/^ⓘ\s*/, ""))).filter(Boolean),
+      steaguri: (e.analysis && Array.isArray(e.analysis.flags) ? e.analysis.flags : []).filter(Array.isArray).map((f) => { const b = String((f && f[1]) || ""), t = b.replace(ST_SEMN, ""); return roMb(F_STEAG.some((r) => r.test(t)) ? t : b.replace(/^ⓘ\s*/, "")); }).filter(Boolean),   /* v100.372: steagul cunoscut fără semnul robotului (pagina pune „ⓘ”); cel necunoscut rămâne cum a venit */
       ideiZi: String(ide.asOf || ""), acoperire: String(ide.coverage || ""),
       lideri: (Array.isArray(ide.sectors) ? ide.sectors : []).filter((s) => s && s.rising && Array.isArray(s.ideas) && s.ideas.length).map((s) => ({ sector: scurt(s.sector), etf: String(s.etf || ""), rs3: nr(s.rs_3m), idei: s.ideas.filter(Boolean).map(idee) })),
       earlyX: (Array.isArray(ide.early_buy) ? ide.early_buy : []).filter(Boolean).map(idee), contrarianX: (Array.isArray(ide.contrarian) ? ide.contrarian : []).filter(Boolean).map(idee),
@@ -166,7 +227,7 @@
   const pc1 = (f) => (nr(f) === null ? "—" : z1(f * 100) + "%");
   const sg1 = (v) => (nr(v) === null ? "—" : (v > 0 ? "+" : "") + z1(v) + "%");
   // v100.306: zona e NUMELE robotului (Strong / Healthy / Neutral…, cerut explicit „cu nume” pe 14.10) ⇒ data-conv-nume: garda convențiilor o sare
-  const chipZona = (z) => '<span class="mbZona mbZ' + esc(z) + '" data-conv-nume>' + esc(z) + "</span>";
+  const chipZona = (z) => '<span class="mbZona mbZ' + clsZona(z) + '" data-conv-nume>' + esc(z) + "</span>";   /* v100.372: clasa din ZONA_CSS („Cautious” = galben, „Bear” = roșu; „Strong Bull” nu mai rupe clasa în două) */
   const bara = (et, f, cul) => '<div class="acLb mbLb"><span>' + et + '</span><i><b class="' + (cul || "") + '" style="width:' + (nr(f) === null ? 0 : Math.max(0, Math.min(100, f * 100))).toFixed(1) + '%"></b></i><em>' + pc1(f) + "</em></div>";
   const semnS = (v) => (v === null ? "—" : (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v));
   function htmlCard(x) {
@@ -220,5 +281,5 @@
     return h;
   }
 
-  global.LatimeUS = { SURSA, VECHE_DUPA_ZILE, normalizeaza, textCitire, htmlBloc, extins, htmlCard, htmlSugestii };
+  global.LatimeUS = { SURSA, VECHE_DUPA_ZILE, normalizeaza, textCitire, htmlBloc, extins, htmlCard, htmlSugestii, formeNecunoscute };
 })(typeof window !== "undefined" ? window : globalThis);

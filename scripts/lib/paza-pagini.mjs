@@ -36,7 +36,9 @@ export function mesaj(gasite, motiv) {
   if (!l.length) return null;
   const n = l.reduce((s, g) => s + g.abateri.length, 0);
   return { nivel: "atentie", titlu: "Radar: " + (n === 1 ? "o abatere" : n + (n % 100 >= 20 || n % 100 === 0 ? " de" : "") + " abateri") + " pe pagini (" + (motiv || "verificare") + ")",
-    mesaj: l.map((g) => (PAGINI[g.pagina] || g.pagina) + " · " + g.latime + " px: " + g.abateri.map((a) => a.text).join("; ")).join("\n").slice(0, 1900) + "\nSe repetă la a doua deschidere (după un minut)." };
+    /* v100.372: rândurile fără lățime (textele robotului de lățime, termenul rondului) nu mai scriu „· 0 px” și nu țin de „a doua deschidere” */
+    mesaj: l.map((g) => (PAGINI[g.pagina] || g.pagina) + (g.latime ? " · " + g.latime + " px" : "") + ": " + g.abateri.map((a) => a.text).join("; ")).join("\n").slice(0, 1900)
+      + (l.every((g) => g.latime) ? "\nSe repetă la a doua deschidere (după un minut)." : l.some((g) => g.latime) ? "\nAbaterile de pagină se repetă la a doua deschidere (după un minut)." : "") };
 }
 // scriptul rulat în pagină: ce vede browserul, după ce pagina s-a liniștit
 export const CITIRE = `(() => { const p = document.querySelector(".panel.on"); const vis = (e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0; };

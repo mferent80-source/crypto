@@ -13,6 +13,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { judeca, repetate, mesaj, CITIRE, LATIMI_IMPLICIT, TERMEN_MIN, REDESCHIDE_MIN } from "../lib/paza-pagini.mjs";
 import { mesajDiscord, esteWebhookDiscord } from "../lib/canal-discord.mjs";
+import { citesteRobot } from "../lib/paza-robot-latime.mjs";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const arg = (n, d) => { const a = process.argv.find((x) => x.startsWith("--" + n + "=")); return a ? a.slice(n.length + 3) : d; };
@@ -73,6 +74,11 @@ for (const pagina of PAGINI) for (const latime of LATIMI) {
   if (r.length) gasite.push({ pagina, latime, abateri: r });
 }
 if (peste) { gasite.push({ pagina: "paza", latime: 0, abateri: [{ cheie: "termen", text: "rondul n-a terminat în " + Math.round(TERMEN_MS / 60000) + " minute; paginile rămase n-au fost verificate" }] }); scrie("termen depășit"); }
+// v100.372: textele robotului de lățime (aceeași sursă ca Piața azi) - o formă necunoscută trece pe pagină netradusă ⇒ abatere; robotul căzut doar în jurnal
+const rb = await citesteRobot({ rad: RAD });
+if (rb.eroare) scrie("robotul de lățime: nu l-am putut citi (" + rb.eroare + ")");
+else if (rb.abateri.length) { scrie("ABATERE robotul de lățime: " + rb.abateri.map((x) => x.text).join(" | ")); gasite.push({ pagina: "dash", latime: 0, abateri: rb.abateri }); }
+else scrie("ok robotul de lățime (toate textele au formă cunoscută)");
 const msg = mesaj(gasite, MOTIV);
 if (msg && !FARA_DISCORD && esteWebhookDiscord(WEBHOOK)) {
   try { const r = await fetch(WEBHOOK, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(mesajDiscord(msg)), signal: AbortSignal.timeout(15000) }); scrie("Discord: " + r.status); } catch (e) { scrie("Discord picat: " + String(e && e.message || e)); }
