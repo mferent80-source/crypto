@@ -71,6 +71,16 @@ await test("A7 lipsa ≠ 0: fără soldul liber Pionex ⇒ partea Pionex „—�
   assert.ok(C.CRIZE.some((c) => c.cod === "covidTot" && c.de === "2020-02-19" && c.pana === "2020-03-23")); assert.ok(C.CRIZE.some((c) => c.cod === "tarife25" && c.de === "2025-02-19" && c.pana === "2025-04-08"));
 });
 
+await test("A8 istoria lungă: începe de la pozițiile care fac ≥ 90 % din expunere; o poziție mică și tânără iese din probă (spusă), nu taie istoria; una MARE și tânără o scurtează", () => {
+  const s = (de, n) => { const o = {}; for (let i = 0; i < n; i++) o[new Date(Date.parse(de) + i * ZI).toISOString().slice(0, 10)] = 0.01; return o; };
+  const serii = { A: s("2022-04-14", 900), B: s("2020-01-02", 1500), H: s("2025-11-29", 300) };
+  const mic = C.istoriaLunga([{ cheie: "A", nume: "A", notionalLei: 5000 }, { cheie: "B", nume: "B", notionalLei: 15000 }, { cheie: "H", nume: "HYPE (bot)", notionalLei: -400 }], serii, 0.9);
+  assert.equal(mic.de, "2022-04-14"); assert.deepEqual(Array.from(mic.lungi, (x) => x.cheie), ["B", "A"]); assert.equal(mic.scurte.length, 1); assert.equal(mic.scurte[0].nume, "HYPE (bot)"); assert.equal(mic.scurte[0].de, "2025-11-29"); aproape(mic.scurte[0].pondere, 400 / 20400);
+  const mare = C.istoriaLunga([{ cheie: "A", nume: "A", notionalLei: 5000 }, { cheie: "B", nume: "B", notionalLei: 15000 }, { cheie: "H", nume: "H", notionalLei: 9000 }], serii, 0.9); assert.equal(mare.de, "2025-11-29"); assert.equal(mare.scurte.length, 0); assert.equal(mare.lungi.length, 3);
+  const fara = C.istoriaLunga([{ cheie: "A", nume: "A", notionalLei: 5000 }, { cheie: "X", nume: "X", notionalLei: 100 }], serii, 0.9); assert.equal(fara.de, "2022-04-14"); assert.equal(fara.scurte[0].nume, "X"); assert.equal(fara.scurte[0].de, null);
+  const src = citeste("scripts", "lib", "tura-cont.mjs"); assert.match(src, /const IL = C\.istoriaLunga\(folosite, seriiL, 0\.9\)/); assert.match(src, /C\.pnlIstoric\(IL\.lungi, seriiL, fxL/);
+});
+
 // ---------------- B. colectorul ----------------
 const TC = await import(pathToFileURL(path.join(RAD, "scripts", "lib", "tura-cont.mjs")).href);
 await test("B1 ziua valorii: rândul se scrie o dată pe zi (frâna ține de ziua citirii) și duce ora citirii; pagina îl etichetează cu ziua pe care o ÎNCHIDE (00:11 pe 20.11 ⇒ 19.11; 08:00 ⇒ 20.11; fără oră ⇒ ziua lui)", () => {
@@ -87,7 +97,7 @@ await test("B3 netul boților (nu brutul), fără procentul boților și fără 
   const src = citeste("scripts", "lib", "tura-cont.mjs");
   assert.match(src, /baniB = C\.baniBoti\(d\.JurnalTrade\.din\(await d\.botiInchisi\(\)\), leiZi, acum - 365 \* 86400000\)/); assert.doesNotMatch(src, /C\.seriaBoti\(/); assert.doesNotMatch(src, /C\.combina\(/); assert.doesNotMatch(src, /investit: t\.pus \|\| t\.investit, rezultat: t\.rezultat/);
   assert.match(src, /corelatii: perechi\.map\(/); assert.doesNotMatch(src, /perechi\.slice\(0, 15\)/); assert.match(src, /corelatiiN: perechi\.length/);
-  assert.match(src, /if \(!Array\.isArray\(saltL\)\) lipsuri\.push\("Salt"\);/); assert.match(src, /const formaVeche = st\.forma !== FORMA_RAPORT && st\.la > 0;/); assert.equal(TC.FORMA_RAPORT, 369);
+  assert.match(src, /if \(!Array\.isArray\(saltL\)\) lipsuri\.push\("Salt"\);/); assert.match(src, /const formaVeche = st\.forma !== FORMA_RAPORT && st\.la > 0;/); assert.equal(TC.FORMA_RAPORT, 369.1);
   assert.match(citeste("scripts", "colector.mjs"), /salt: async \(\) => \(ultimeleSalt && Array\.isArray\(ultimeleSalt\.randuri\) \? ultimeleSalt\.randuri : null\)/);
   assert.match(src, /CORECTII_INDUSTRIE = \{ QCOM: \["Technology", "Semiconductors"\] \}/);
 });
@@ -215,6 +225,11 @@ await test("C14 graficele: patru noi (riscul pe zile, banii boților, pariurile,
   const n = (H.match(/<svg class="jgSvg"/g) || []).length; assert.equal(n, 4, "cele 4 grafice noi");
   assert.equal((H.match(/<svg class="ciZileGraf"/g) || []).length, 1); assert.doesNotMatch(H.replace(/<svg class="ciZileGraf[\s\S]*?<\/svg>/, ""), /<svg[^>]*(fill|stroke)="#/, "fără culori scrise în SVG");
   const G = ctx.ContGrafice; assert.equal(G.riscZile([]), ""); assert.equal(G.carte([[zz(0), 0]]), "");
+});
+
+await test("C15 pagina spune ce a ieșit din proba riscului (poziția cu istorie prea scurtă), cu ponderea ei", () => {
+  const r = JSON.parse(JSON.stringify(RAP)); r.riscAcum.scoase = [{ nume: "HYPE (bot short 3×)", motiv: "istorie prea scurtă pentru probă (din 29.11.2025), 1,8 % din expunere" }];
+  assert.match(ctx.ciHtml(r, ST), /Cifra de acum și proba sunt fără HYPE \(bot short 3×\) \(istorie prea scurtă pentru probă \(din 29\.11\.2025\), 1,8 % din expunere\)\./); assert.doesNotMatch(H, /Cifra de acum și proba sunt fără/);
 });
 
 // ---------------- D. legarea + E. versiunile ----------------

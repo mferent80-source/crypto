@@ -260,6 +260,7 @@ function ciRiscHtml(r) {
     h += '<div class="t212TabWrap"><table class="t212Tab ciTab ciKupiec"><thead><tr><th>Anul</th><th>Zile</th><th>Peste cifra veche</th><th>Peste cifra de acum</th></tr></thead><tbody>'
       + Object.keys(ani).sort().map(function (a) { var y = ani[a]; return "<tr><td>" + ciEsc(a) + '</td><td class="num">' + y.n + '</td><td class="num">' + ciEt("veche") + ciEsc(y.vechi + " (" + ciPctF(y.vechi / y.n) + ")") + '</td><td class="num">' + ciEt("acum") + ciEsc(y.acum + " (" + ciPctF(y.acum / y.n) + ")") + "</td></tr>"; }).join("")
       + "</tbody></table></div>";
+    if (ra.scoase && ra.scoase.length) h += '<p class="tbSub">' + ciEsc("Cifra de acum și proba sunt fără " + ra.scoase.map(function (x) { return x.nume + " (" + x.motiv + ")"; }).join(", ") + ".") + "</p>";
     h += '<p class="tbSub">' + ciEsc("Agitația: pe ultimele 20 de zile pozițiile au mișcat ~" + ciLei(ra.sigma20) + " pe zi (o abatere standard), pe 250 de zile ~" + ciLei(ra.sigmaFer) + "; pentru mâine ~" + ciLei(ra.sigma) + ". Pe zilele REALE ale contului (de când se ține valoarea) zilele sunt încă prea puține ca să judece ceva.") + "</p>";
   }
   var G = typeof ContGrafice !== "undefined" ? ContGrafice : null, g = r.grafice || {};

@@ -12,7 +12,7 @@ async function incearca(d, ce, fn) { try { return await fn(); } catch (e) { d.ju
 const bareDinRanduri = (G, randuri) => G.bareBursa(randuri || [], Date.now()).map((b) => ({ t: b.t, c: b.c, h: b.h, l: b.l }));   // v100.178: + h / l (MAE / MFE)
 // prețurile zilnice prin cache-ul de pe disc (d.bareZi) când există, altfel direct
 const zilnic = (d, cale) => (d.bareZi ? d.bareZi(cale) : d.cere(cale));
-export const FORMA_RAPORT = 369;   // v100.369: forma raportului (bani, riscAcum, carte, grafice); alta ⇒ raportul se reface la prima tură
+export const FORMA_RAPORT = 369.1;   // v100.369: forma raportului (bani, riscAcum, carte, grafice); alta ⇒ raportul se reface la prima tură (.1: istoria lungă pe ≥ 90 % din expunere)
 const CORECTII_INDUSTRIE = { QCOM: ["Technology", "Semiconductors"] };
 // începutul unei zile (AAAA-LL-ZZ) în ora României, în ms (ora de vară / iarnă din Intl)
 export function inceputZiRo(z) {
@@ -161,20 +161,21 @@ async function faRaport(d, st, acum) {
   }
   const stres = C.stres(e, { factori, bareLungi, betas, leiPe });
   // 6b. v100.369 (el 20.11, „cifra de acum + proba”): riscul pe agitația de acum (EWMA) și proba pe zilele reale, pe istoria lungă a pozițiilor
-  // de acum (de la ziua în care există TOATE - altfel cea mai nouă ar ieși din socoteală); aceleași zile dau și scăderea cărții de acum și
-  // pariurile independente pe ferestre
+  // de acum; aceleași zile dau și scăderea cărții de acum și pariurile independente pe ferestre. Istoria începe în ziua de la care există
+  // pozițiile care fac ≥ 90 % din expunere (C.istoriaLunga): pe viu, un bot mic pe o monedă listată de un an tăia proba de la ~900 la 106
+  // zile; pozițiile prea tinere ies din probă și se spun (riscAcum.scoase), nu taie istoria celorlalte.
   let riscA = null, carte = null, pariuriF = null;
   try {
     const fxL = {};
     for (const m of new Set(folosite.map((x) => (x.moneda === "GBX" ? "GBP" : x.moneda === "USDT" ? "USD" : x.moneda)))) { const b = await lung(m + "RON=X"); fxL[m] = b && b.length ? C.randamente(b) : fxSerii[m] || {}; }
     const seriiL = {}; for (const x of folosite) seriiL[x.cheie] = bareLungi[x.cheie] && bareLungi[x.cheie].length ? C.randamente(bareLungi[x.cheie]) : serii[x.cheie];
-    const st0 = folosite.map((x) => Object.keys(seriiL[x.cheie] || {}).sort()[0]).filter(Boolean).sort().pop(), zs = {};
-    folosite.forEach((x) => Object.keys(seriiL[x.cheie] || {}).forEach((z) => { if (z >= st0) zs[z] = 1; }));
-    const istL = C.pnlIstoric(folosite, seriiL, fxL, { zile: Object.keys(zs).sort() }), folL = folosite.filter((x) => istL.folosite.includes(x.cheie));
+    const IL = C.istoriaLunga(folosite, seriiL, 0.9), st0 = IL.de, zs = {};
+    IL.lungi.forEach((x) => Object.keys(seriiL[x.cheie] || {}).forEach((z) => { if (z >= st0) zs[z] = 1; }));
+    const istL = C.pnlIstoric(IL.lungi, seriiL, fxL, { zile: Object.keys(zs).sort() }), folL = IL.lungi.filter((x) => istL.folosite.includes(x.cheie));
     riscA = C.riscAcum(istL.zile, {});
     carte = C.scadereCarte(istL.zile, folL.reduce((a, x) => a + Math.abs(x.notionalLei), 0), { rar: 2 });
     pariuriF = C.pariuriFerestre(folL, seriiL, istL.zile, { de: new Date(acum - 730 * 86400000).toISOString().slice(0, 10) });
-    if (riscA) riscA.scoase = istL.scoase;
+    if (riscA) riscA.scoase = istL.scoase.concat(IL.scurte.map((x) => ({ nume: x.nume, motiv: "istorie prea scurtă pentru probă (din " + (x.de ? x.de.slice(8, 10) + "." + x.de.slice(5, 7) + "." + x.de.slice(0, 4) : "—") + "), " + (Math.round(x.pondere * 1000) / 10).toString().replace(".", ",") + " % din expunere" })));
   } catch (err) { d.jurnal("cont risc acum", err.message); }
 
   // 7. reconcilierea cu brokerii

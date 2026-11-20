@@ -602,6 +602,15 @@ var ContIntreg = (function () {
     }
     return out;
   }
+  // istoria lungă a cărții începe în ziua de la care există pozițiile care fac cel puțin `prag` din expunere (cele mai vechi întâi);
+  // pozițiile mai tinere ies din probă și se spun (scurte: ziua de început, ponderea) - una mică și nouă nu taie istoria celorlalte
+  function istoriaLunga(poz, serii, prag) {
+    var l = (poz || []).map(function (x) { var k = Object.keys(serii && serii[x.cheie] || {}).sort(); return { x: x, de: k.length ? k[0] : null, exp: Math.abs(x.notionalLei) || 0 }; });
+    var tot = l.reduce(function (a, y) { return a + y.exp; }, 0), cu = l.filter(function (y) { return y.de; }).sort(function (a, b) { return a.de < b.de ? -1 : a.de > b.de ? 1 : 0; });
+    var cum = 0, de = null; for (var i = 0; i < cu.length; i++) { cum += cu[i].exp; de = cu[i].de; if (tot > 0 && cum >= (prag || 0.9) * tot) break; }
+    return { de: de, lungi: cu.filter(function (y) { return y.de <= de; }).map(function (y) { return y.x; }),
+      scurte: l.filter(function (y) { return !y.de || y.de > de; }).map(function (y) { return { nume: y.x.nume, cheie: y.x.cheie, de: y.de, pondere: tot > 0 ? y.exp / tot : null }; }) };
+  }
   // scăderea de la vârf a cărții de ACUM, pe istoria ei (aceleași poziții ținute tot timpul): valoarea relativă înlănțuită zi cu zi
   function scadereCarte(zile, expunere, o) {
     o = o || {}; var P = (zile || []).filter(function (x) { return x && isFinite(x.pnl); }); if (P.length < 60 || !(expunere > 0)) return null;
@@ -611,7 +620,7 @@ var ContIntreg = (function () {
     return { expunere: expunere, acum: serie[serie.length - 1][1], max: cea, z5: rau(5), z20: rau(20), serie: serie.filter(function (x, i) { return i % (o.rar || 1) === 0 || i === serie.length - 1; }) };
   }
 
-  return { ZI: ZI, CRIZE: CRIZE, executie: executie, kupiec: kupiec, riscAcum: riscAcum, baniBoti: baniBoti, reperLei: reperLei, interval: interval, pariuriFerestre: pariuriFerestre, scadereCarte: scadereCarte, m32: m32, setMonede: setMonede, extremFereastra: extremFereastra, monedaTicker: monedaTicker, inLei: inLei, dinBot: dinBot, dinT212: dinT212, dinSalt: dinSalt, valoare: valoare,
+  return { ZI: ZI, CRIZE: CRIZE, executie: executie, kupiec: kupiec, riscAcum: riscAcum, baniBoti: baniBoti, reperLei: reperLei, interval: interval, pariuriFerestre: pariuriFerestre, scadereCarte: scadereCarte, istoriaLunga: istoriaLunga, m32: m32, setMonede: setMonede, extremFereastra: extremFereastra, monedaTicker: monedaTicker, inLei: inLei, dinBot: dinBot, dinT212: dinT212, dinSalt: dinSalt, valoare: valoare,
     randamente: randamente, pnlIstoric: pnlIstoric, varEs: varEs, ziuaCeaMaiRea: cuDatele, corel: corel, corelatii: corelatii, diversificare: diversificare,
     randFereastra: randFereastra, beta: beta, pnlBot: pnlBot, scenariu: scenariu, stres: stres,
     reconciliereT212: reconciliereT212, reconciliereArhiva: reconciliereArhiva, reconciliereUrmarire: reconciliereUrmarire,
