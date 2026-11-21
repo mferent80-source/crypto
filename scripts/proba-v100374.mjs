@@ -754,8 +754,8 @@ await test("K2 stilurile noi stau înaintea zonei păzite a temei și nu poartă
 });
 await test("K3 versiunea v100.374 e pusă peste tot și proba e în lanț, după v100.373", () => {
   const pk = JSON.parse(citeste("package.json")), idx = citeste("public", "index.html");
-  assert.equal(pk.version, "100.374.0"); assert.equal((idx.match(/v100\.374/g) || []).length >= 4, true, "index.html: v100.374 de cel puțin 4 ori");
-  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-374/); assert.match(citeste("functions", "_shared", "versiune.js"), /100\.374/);
+  assert.ok(+(/^100\.(\d+)\.0$/.exec(pk.version) || [])[1] >= 374, "package.json: de la 100.374 încolo"); assert.equal((idx.match(/v100\.(\d+)/g) || []).filter((v) => +v.slice(5) >= 374).length >= 4, true, "index.html: v100.374 sau mai nou, de cel puțin 4 ori");
+  assert.ok(+(/crypto-radar-v100-(\d+)/.exec(citeste("public", "sw.js")) || [])[1] >= 374, "sw.js"); assert.ok(+(/"v100\.(\d+)"/.exec(citeste("functions", "_shared", "versiune.js")) || [])[1] >= 374, "versiune.js");
   assert.match(pk.scripts.test, /npm run test:v100373 && npm run test:v100374/); assert.equal(pk.scripts["test:v100374"], "node scripts/proba-v100374.mjs");
 });
 

@@ -4276,6 +4276,79 @@ html.pzDemo #alerts [data-rand="deschis"]:not([hidden])::before{content:"▾  st
 #alerts .cnBloc .card{margin-top:6px}
 #alerts #alSCentru>#pzV-alerts{order:-1}   /* caseta „CRITICE” sus în rândul alertelor (era copilul paginii, cu order 10) */
 /* v100.367: sfârșit */
+/* v100.375 design: început */
+/* v100.375 design (el 21.11: „optimizează vizual pagina botului” ⇒ „fa idei și tot restul”): restul paginii. Doar așezare - nimic scos, nicio culoare nouă.
+   1. rândurile pliate stau pe CAPITOLE (Decizia, Riscul, Banii, Piața, Jurnalul și dovada), fiecare sub titlul lui;
+   2. cele 4 cifre: o bandă pe un rând când au toată lățimea; pe telefon un registru - numele în stânga, cifra în dreapta, rândurile ei dedesubt, pe toată lățimea;
+   3. pliurile vechi (details) arată pe telefon ca restul rândurilor: titlul sus, rezumatul dedesubt. */
+#tabloubot .tbCap{display:none}
+html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru>.tbCap{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 10px;grid-column:1 / -1!important;grid-row:auto!important;margin:28px 0 0;padding:10px 0 8px;border-top:2px solid var(--pzT0);font-size:20px;font-weight:600;line-height:1.25;color:var(--pzT0)}
+html.pzDemo #tabloubot .tbCadru>.tbCap>span{font-size:12px;font-weight:400;color:var(--pzT2)}
+/* ordinea: capitolul, apoi rândurile lui. „Dacă prețul ajunge la…” și „Banii botului” stau în aceeași învelitoare: ea se dă la o parte și fiecare merge
+   la capitolul lui, pliată sau deschisă (rândul deschis rămâne pe locul lui, nu sare în altă parte a paginii) */
+html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru #tbCap-decizia{order:300!important}
+html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru #tbTodo{order:302!important}
+html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru #tbSemaforCard{order:304!important}
+html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru #tbMotive{order:305!important}
+html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru #tbPl-sfaturi{order:306!important}
+html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru #tbPl-plan{order:308!important}
+html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru #tbCap-risc{order:320!important}
+html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru #tbConcret{order:322!important}
+html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru #tbScenariiCard{order:324!important}
+html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru #tbMcSus{order:326!important}
+html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru #tbPl-risc{order:328!important}
+html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru #tbPl-prob{order:330!important}
+html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru #tbCap-bani{order:340!important}
+html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru #tbBaniCard{order:342!important}
+html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru #tbAcumCard{order:344!important}
+html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru #tbPl-sapt{order:346!important}
+html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru #tbPl-fisa{order:348!important}
+html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru #tbPl-port{order:350!important}
+html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru>.contTot{order:352!important}
+html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru #tbCap-piata{order:360!important}
+html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru #tbTrendCard{order:362!important}
+html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru #tbCitireCard{order:364!important}
+html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru #tbCitireMobil{order:364!important}
+html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru>.piataAzi{order:366!important}
+html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru #tbIdei{order:368!important}
+html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru #tbGridNou{order:370!important}
+html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru #tbCap-jurnal{order:380!important}
+html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru #tbPl-alerte{order:382!important}
+html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru #tbPl-avert{order:384!important}
+html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru #tbPl-socoteala{order:386!important}
+html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru>.tbGrilaNoua,
+html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru>.tbGrilaNoua>:is(.tbMain,.tbSideNou){display:contents!important}
+html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru :is(#tbScenariiCard,#tbBaniCard){grid-column:1 / -1!important;grid-row:auto!important;min-width:0}
+html.pzDemo #tabloubot#tabloubot#tabloubot .tbCadru>details.tbPl>summary>.tbSub{font-weight:400}
+html.pzDemo #tabloubot#tabloubot#tabloubot .tbCadru>details.tbPl>summary::before{width:10px;flex:0 0 10px}
+@media (min-width:641px){html.pzDemo #tabloubot#tabloubot#tabloubot .tbCadru>details.tbPl>summary>b{flex-basis:254px}}
+/* „Trendul pe TF-uri”: rândurile goale ale grilei lui nu mai lasă 32 px albi sub „Vremea monedei, pe larg” */
+html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru #tbTrendCard{row-gap:0!important}
+html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru #tbTrendCard>:not(.tbBlocCap):not([hidden]){margin-top:8px}
+/* sub 1181 px lista „Ce spune piața acum” stă deschisă (copia ei de telefon): merge în capitolul Piața, iar rândul pliat cu aceeași listă nu se mai arată a doua oară */
+@media (max-width:1180px){
+html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru #tbCitireCard:not([hidden]){display:none!important}
+}
+/* cele 4 cifre pe un rând când banda are toată lățimea („Contează acum” n-are nimic de spus) - la 1181–1699 rămâneau 2×2 pe 1.140 px */
+@media (min-width:1181px) and (max-width:1699px){
+html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#ctAcum:not([hidden]) .ctGol)>.tbSus>#tbKpi{grid-template-columns:minmax(0,1.6fr) repeat(3,minmax(0,1fr))!important;row-gap:0!important}
+html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#ctAcum:not([hidden]) .ctGol)>.tbSus #tbKpi>.tbKpiCel:nth-child(3){border-left:1px solid var(--pzLi);padding-left:18px}
+}
+@media (max-width:640px){
+/* registrul cifrelor */
+html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru>.tbSus>#tbKpi{grid-template-columns:minmax(0,1fr)!important;row-gap:0!important}
+html.pzDemo #tabloubot#tabloubot#tabloubot.on #tbKpi>.tbKpiCel{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:12px;align-items:baseline;border-left:0;border-top:1px solid var(--pzLi);padding:10px 0 8px}
+html.pzDemo #tabloubot#tabloubot#tabloubot.on #tbKpi>.tbKpiCel:first-child{border-top:0;padding-top:0}
+html.pzDemo #tabloubot#tabloubot#tabloubot.on #tbKpi>.tbKpiCel>*{grid-column:1 / -1;min-width:0}
+html.pzDemo #tabloubot#tabloubot#tabloubot.on #tbKpi>.tbKpiCel>.tbEt2{grid-column:1;grid-row:1}
+html.pzDemo #tabloubot#tabloubot#tabloubot.on #tbKpi>.tbKpiCel>:is(.tbKpiVal,.tbKpiRand){grid-column:2;grid-row:1;justify-self:end;text-align:right}
+html.pzDemo #tabloubot#tabloubot#tabloubot.on #tbKpi>.tbKpiCel>.tbKpiRand{flex-direction:row-reverse;flex-wrap:nowrap}
+/* pliurile vechi: titlul sus, rezumatul dedesubt (era titlul pe 250 px și rezumatul înghesuit lângă el) */
+html.pzDemo #tabloubot#tabloubot#tabloubot .tbCadru>details.tbPl>summary{flex-wrap:wrap;row-gap:2px}
+html.pzDemo #tabloubot#tabloubot#tabloubot .tbCadru>details.tbPl>summary>b{flex:1 1 0;max-width:none}
+html.pzDemo #tabloubot#tabloubot#tabloubot .tbCadru>details.tbPl>summary>.tbSub{flex:0 0 100%;margin-left:0;text-align:left;font-weight:400;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+}
+/* v100.375 design: sfârșit */
 /* v100.374 design (el 21.11: „optimizează vizual pagina botului”): capul - banda de cifre și barele șanselor; paleta și fonturile casei, nicio culoare nouă */
 html.pzDemo #tabloubot #pzVerdict .pzLedger{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));margin:10px 0 10px;border-top:1px solid var(--pzLi);border-bottom:1px solid var(--pzLi)}
 html.pzDemo #tabloubot #pzVerdict .pzLg{display:flex;flex-direction:column;gap:2px;min-width:0;padding:9px 14px 9px 0}
