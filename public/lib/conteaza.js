@@ -73,7 +73,9 @@ var Conteaza = (function () {
         var ps = sanse["iese-" + (s.parte === "sus" ? "sus" : "jos") + "-24"], are = nr(ps) !== null;
         pune({ cheie: "margine", ton: s.ton === "critic" ? "rosu" : "galben", grav: s.ton === "critic" ? 0 : 3,
           nr: are ? din100(ps) : nr(s.pctJos) !== null ? num1(s.pctJos) : "!", nrSub: are ? "din 100 · 24 h" : "% până la margine",
-          titlu: s.titlu, sub: are ? "o atinge într-o zi în " + din100(ps) + " din 100 de cazuri (istoria monedei)" : "", faCe: String(s.faCe || ""), copiaza: s.copiaza });
+          titlu: s.titlu, sub: are ? "o atinge într-o zi în " + din100(ps) + " din 100 de cazuri (istoria monedei)" : "", faCe: String(s.faCe || ""), copiaza: s.copiaza,
+          /* v100.374 (I-902): marginea asta e deja în capul paginii, cu șansele și banii ei ⇒ aici rămâne un rând scurt, iar locul îl ia următorul rând cu bani */
+          inCap: !!x.inCap && x.inCap === (s.parte === "sus" ? "sus" : "jos") });
       } else if (s.cod === "zero" && s.tpPus) {
         // v100.322 (el: „am pus TP dar Contează acum nu îl vede”): take-profit-ul pus = hotărârea e luată ⇒ rândul confirmă, verde, ultimul
         // revizia 11.11: verde doar când ieși pe plus sau practic pe zero (sfatul „bine”); dacă take-profit-ul închide sub zero, rămâne auriu, de urmărit
@@ -95,7 +97,8 @@ var Conteaza = (function () {
     var st = randStop(x.stop); if (st) out.push(st);
     out.forEach(function (it, i) { it.ord = i; });
     out.sort(function (a, b) { return a.grav - b.grav || a.ord - b.ord; });
-    return out.slice(0, MAX).map(function (it) { delete it.ord; return it; });
+    var sus = out.filter(function (it) { return it.inCap; });
+    return out.filter(function (it) { return !it.inCap; }).slice(0, MAX).concat(sus).map(function (it) { delete it.ord; if (!it.inCap) delete it.inCap; return it; });
   }
 
   function html(l, esc) {
@@ -109,8 +112,10 @@ var Conteaza = (function () {
            cifra de data trecută, de când), banii la prețul rândului, butoanele potrivite. Fără ele, rândul e ca înainte. */
         var sem = Array.isArray(x.semne) && x.semne.length ? '<span class="ctSemne">' + x.semne.map(function (q) { return '<em class="' + esc(q.cls) + '">' + esc(q.text) + '</em>'; }).join("") + '</span>' : "";
         var but = Array.isArray(x.butoane) && x.butoane.length ? x.butoane.map(function (q) { return '<button type="button" class="tbBtnLinie ctBtn" data-action-click="' + esc(q.click) + '"' + (q.value != null ? ' value="' + esc(q.value) + '"' : "") + '>' + esc(q.text) + '</button>'; }).join("") : "";
-        return '<div class="ctRand ' + (x.ton === "rosu" ? "ctRosu" : x.ton === "verde" ? "ctVerde" : "ctGalben") + '"><div class="ctNr">' + esc(x.nr) + '<small>' + esc(x.nrSub) + '</small></div><div class="ctTxt"><b>' + esc(x.titlu) + '</b>' + sem
+        var rd = '<div class="ctRand ' + (x.ton === "rosu" ? "ctRosu" : x.ton === "verde" ? "ctVerde" : "ctGalben") + '"><div class="ctNr">' + esc(x.nr) + '<small>' + esc(x.nrSub) + '</small></div><div class="ctTxt"><b>' + esc(x.titlu) + '</b>' + sem
           + (x.sub ? '<span>' + esc(x.sub) + '</span>' : "") + (x.bani ? '<span class="ctBani">' + esc(x.bani) + '</span>' : "") + (x.faCe ? '<p class="ctFac">👉 ' + esc(x.faCe) + '</p>' : "") + (cop || but ? '<div class="ctCopiere">' + cop + but + '</div>' : "") + '</div></div>';
+        /* v100.374 (I-902): marginea arătată în cap - rândul ei rămâne ÎNTREG aici, la un clic (semnele, banii, „ce aș face”, butoanele) */
+        return x.inCap ? '<details class="ctInCap"><summary>↑ <b>' + esc(x.titlu) + '</b> — e în capul paginii</summary>' + rd + '</details>' : rd;
       }).join("");
   }
 
@@ -120,6 +125,7 @@ var Conteaza = (function () {
   // Acasă: doar stopul sau un rând roșu (ce cere o hotărâre azi); restul îl vezi în Tablou
   function acasa(l, nume) {
     if (!Array.isArray(l) || !l.length) return null;
+    l = l.filter(function (q) { return !q.inCap; }); if (!l.length) return null;   /* v100.374: rândul scurt („e în capul paginii”) e al Tabloului */
     var x = l.filter(function (q) { return q.cheie === "stop" || q.ton === "rosu"; })[0]; if (!x) return null;
     // revizia 11.11: rândul verde („take-profit pus”) e o confirmare, nu ceva „de văzut” ⇒ nu se numără
     var t = x.cheie === "stop" ? x.titlu.replace(/^Stopul tău \(/, "stopul (") : x.titlu.charAt(0).toLowerCase() + x.titlu.slice(1), rest = l.filter(function (q) { return q !== x && q.ton !== "verde"; }).length;

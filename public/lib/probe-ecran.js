@@ -73,8 +73,26 @@ function prProbe(d, acum) {
       : "pe istoric: după − înainte −0,5 USDT pe bot, iar doar mecanica ar da +3,8 (p 0,01, dar 1 din cel puțin 6 teste); aici se vede pe zile noi",
     ultima: tr && tr.la ? "ultima tură: " + prOra(tr.la) + (acum - tr.la > 30 * 3600000 ? " · VECHE" : "") + (tr.asteapta ? " · " + sugCate(tr.asteapta, "zi așteaptă", "zile așteaptă") + " închiderea boților" : "") : "aștept tura de după 00:30 UTC",
     drum: { svg: prDrumSvg(Math.min(tC, tN) / tN, [], "3 la rând: " + Math.min(tC, tN) + " din cele " + sugCate(tN, "zi", "zile") + " care contează ale verdictului"), text: "fără dată fixă: verdictul la a " + tN + "-a zi care contează, cel târziu la " + prZi(tr && tr.limita || PR_TREI.limita) + "; " + PR_TREI.putere } });
+  // v100.374 (I-908): proba marginii - „stop la margine sau nu?” (la capăt: probele vechi citesc rândurile după poziție); regulile, scrise înainte
+  // de cifre, în docs/cercetare/2026-11-21-v100374-proba-marginii.md; sub prag doar cifre, verdictul de la 60 de episoade pe 20 de zile
+  var mg = d.probaMargine, mN = mg && mg.minEpisoade || PR_MARGINE.n, mZ = mg && mg.minZile || PR_MARGINE.zile, mB = mg && mg.boti || null;
+  var p1 = function (v) { return v == null || !isFinite(v) ? "—" : (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(1).replace(".", ",") + "%"; };
+  /* revizia (21.11): sub prag se arată DOAR numărătoarea (media văzută la fiecare tură ar fi o privire pe parcurs); verdictul e cel ÎNGHEȚAT de
+     colector la prima tură cu toată arhiva citită și pragul atins - episoadele de după se numără, dar nu-l schimbă */
+  var mV = mg && mg.inghetat && mg.inghetat.verdict ? mg.inghetat : null, mIc = mV && mV.ic ? " (interval 95% pe zile: " + p1(mV.ic[0]) + " … " + p1(mV.ic[1]) + ")" : "";
+  var mAlte = mB ? (mB.drumTaiat || 0) + (mB.gol || 0) + (mB.mutat || 0) : 0;
+  R.push({ k: "margine", nume: "🧱 Stop la margine sau nu? · boții tăi, din clipa în care prețul trece de marginea contra", de: prZi(PR_MARGINE.start),
+    jud: mg ? sugCate(mg.n || 0, "episod", "episoade") + " în " + sugCate(mg.zile || 0, "zi", "zile") + " (istoria din arhivă și datele noi)" + (mB ? " · citiți " + mB.judecati + " din " + sugCate(mB.total, "bot închis", "boți închiși") + ": " + (mB.inGrid || 0) + " rămași în grid, " + (mB.faraDrum || 0) + " fără drum în arhivă, " + mAlte + " cu drumul tăiat, cu goluri sau cu gridul mutat chiar la trecere (boții ținuți peste 7 zile nu intră)" : "") : "aștept colectorul (o dată pe oră, câte 90 de boți închiși)",
+    sta: mV ? "VERDICT (înghețat la " + prOra(mV.la) + ", pe " + sugCate(mV.n, "episod", "episoade") + " în " + sugCate(mV.zile, "zi", "zile") + "): " + (mV.verdict === "inchiderea" ? "închiderea la margine ar fi fost mai bună" : mV.verdict === "lasatul" ? "lăsatul a fost mai bun" : "n-am aflat" + (mV.seContrazic ? " (istoria și datele noi se contrazic)" : "")) + " · lăsat − închis la margine: " + p1(mV.medie) + " din suma pusă, în medie pe bot" + mIc + " · în total " + prUsd(mV.suma) + " USDT"
+        + (mg.n > mV.n ? " · de atunci s-au mai adunat " + sugCate(mg.n - mV.n, "episod", "episoade") + " (verdictul nu se schimbă)" : "")
+      : mg ? "doar numărătoarea până la prag: diferența dintre „lăsat” și „închis la margine” se arată o singură dată, la verdict" + (mB && mB.ramasi ? " · mai sunt de citit " + sugCate(mB.ramasi, "bot", "boți") : "") : "pe boții închiși dincolo de margine (176): −9.855,0 USDT, din care estimat −4.900,4 făcuți după margine; ce ar fi adus închiderea acolo se vede abia cu drumul fiecărui bot",
+    ultima: mg && mg.la ? "ultima tură: " + prOra(mg.la) + (acum - mg.la > 8 * 3600000 ? " · VECHE" : "") : "",
+    drum: { svg: prDrumSvg(Math.min((mg && mg.n || 0) / mN, (mg && mg.zile || 0) / mZ), [], "Proba marginii: " + (mg && mg.n || 0) + " din " + sugCate(mN, "episod", "episoade") + ", " + (mg && mg.zile || 0) + " din " + sugCate(mZ, "zi", "zile")),
+      text: "fără dată fixă: verdictul de la " + sugCate(mN, "episod", "episoade") + " pe " + sugCate(mZ, "zi", "zile") + "; " + PR_MARGINE.putere } });
   return R;
 }
+/* v100.374: proba marginii - ce se știe dinainte (din documentul pre-înregistrării) */
+var PR_MARGINE = { n: 60, zile: 20, start: "2026-11-21", putere: "o diferență medie sub ~2,6% din sumă rămâne „n-am aflat”" };
 // v100.360: „3 la rând” - ce se știe dinainte (din documentul pre-înregistrării, secțiunea 9); cifrele rezultatelor cu o singură zecimală
 var PR_TREI = { N: 45, start: "2026-11-19", limita: "2027-11-18", putere: "puterea e mică: cam 2 șanse din 3 să prindă un efect cât cel văzut pe ritmul mediu de până acum (în cam 8–9 luni), cam 1 din 5 pe ritmul din ultimele 6 luni (atunci verdictul vine la limită)" };
 function prUsd(v) { return v == null || !isFinite(v) ? "—" : (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(1).replace(".", ","); }
@@ -180,6 +198,7 @@ async function prPorneste(fortat) {
       pas("directie", function () { return getJSON("/api/istoric-bot?action=directie").then(function (r) { return r && r.directie || null; }); }),
       pas("oscilo", function () { return getJSON("/api/istoric-bot?action=oscilo").then(function (r) { return r && r.oscilo || null; }); }),   /* v100.353 */
       pas("treiLaRand", function () { return getJSON("/api/istoric-bot?action=treiLaRand").then(function (r) { return r && r.treiLaRand || null; }); }),   /* v100.360 */
+      pas("probaMargine", function () { return getJSON("/api/istoric-bot?action=probaMargine").then(function (r) { return r && r.probaMargine || null; }); }),   /* v100.374 */
       pas("trend12", function () { return getJSON("/api/istoric-bot?action=trend12").then(function (r) { return r && r.trend || null; }); }),
       pas("probaA", function () { return getJSON("/api/istoric-bot?action=probaA").then(function (r) { return r && r.probaA || null; }); }),
       pas("pareri", function () { return getJSON("/api/istoric-bot?action=pareri"); })

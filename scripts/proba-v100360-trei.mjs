@@ -173,18 +173,20 @@ const TR = { forma: 1, la: ACUM - 8 * ORA, start: "2026-11-19", limita: M.REG.li
   zileCuDeclansare: 9, zileConteaza: 8, nD: 31, nI: 22, statistica: -1.2345, mecanica: 3.6789, peste: -4.9134, pH0: 0.0312, verdict: null, verdictLa: null, inghetat: null };
 const vizibil = (s) => String(s).replace(/<[^>]+>/g, " ");
 await test("🔑 T12 Probe: rândul „✋ 3 pierderi la rând” la CAPĂT (după Oscilo), de când / judecate / cum stă fără p înainte de orizont / drumul până la N", () => {
-  const P = pagina(), R = JSON.parse(JSON.stringify(P.prProbe({ treiLaRand: TR }, ACUM))), o = R[R.length - 1];
-  assert.equal(o.k, "trei"); assert.equal(R[R.length - 2].k, "osc", "Oscilo rămâne înainte"); assert.match(o.nume, /^✋ 3 pierderi la rând = gata ziua/);
+  const P = pagina(), R = JSON.parse(JSON.stringify(P.prProbe({ treiLaRand: TR }, ACUM))), iT = R.findIndex((r) => r.k === "trei"), o = R[iT];
+  /* v100.374: după „3 la rând” a venit proba marginii (la capăt); rândul lui se caută după cheie, ordinea de dinainte rămâne */
+  assert.equal(o.k, "trei"); assert.equal(R[iT - 1].k, "osc", "Oscilo rămâne înainte"); assert.equal(R[R.length - 1].k, "margine"); assert.match(o.nume, /^✋ 3 pierderi la rând = gata ziua/);
   assert.equal(o.de, "19.11.2026"); assert.equal(o.jud, "52 de zile judecate, 9 cu declanșare, 8 din " + M.REG.N + " care contează (cu boți și înainte, și după)");
   assert.equal(o.sta, "după − înainte: −1,2 USDT pe bot; doar mecanica ar da +3,7; sub " + M.REG.N + (M.REG.N >= 20 ? " de" : "") + " zile care contează, cifrele sunt zgomot");
   assert.doesNotMatch(o.sta, /\bp\b|VERDICT|ține:/, "fără p și fără verdict înainte de orizont");
   assert.match(o.ultima, /^ultima tură: 10\.01 0[24]:00 · 1 zi așteaptă închiderea boților$/);
   assert.match(o.drum.svg, new RegExp('aria-label="3 la rând: 8 din cele ' + M.REG.N + (M.REG.N >= 20 ? " de" : "") + ' zile care contează ale verdictului"'));  assert.match(o.drum.text, new RegExp("^fără dată fixă: verdictul la a " + M.REG.N + "-a zi care contează, cel târziu la " + M.REG.limita.split("-").reverse().join("\\.") + "; puterea"));
-  const g = JSON.parse(JSON.stringify(P.prProbe({}, ACUM))).pop(); assert.equal(g.k, "trei"); assert.match(g.jud, /^nicio zi judecată încă/); assert.match(g.sta, /^pe istoric: după − înainte −0,5 USDT pe bot, iar doar mecanica ar da \+3,8/); assert.equal(g.ultima, "aștept tura de după 00:30 UTC");
+  const trei = (d) => JSON.parse(JSON.stringify(P.prProbe(d, ACUM))).find((r) => r.k === "trei");
+  const g = trei({}); assert.equal(g.k, "trei"); assert.match(g.jud, /^nicio zi judecată încă/); assert.match(g.sta, /^pe istoric: după − înainte −0,5 USDT pe bot, iar doar mecanica ar da \+3,8/); assert.equal(g.ultima, "aștept tura de după 00:30 UTC");
   const V = Object.assign({}, TR, { zileConteaza: M.REG.N, verdict: "nu-tine", inghetat: { la: ACUM, verdict: "nu-tine", motiv: "N", pana: "2027-06-01", zileConteaza: M.REG.N, statistica: 0.512, mecanica: 3.71, peste: -3.2, pH0: 0.1734 } });
-  const v = JSON.parse(JSON.stringify(P.prProbe({ treiLaRand: V }, ACUM))).pop(); assert.match(v.sta, /^VERDICT pe \d+ (de )?zile \(până la 01\.06\.2027\): nedovedit pe zilele noi \(nu înseamnă că regula e greșită\) · după − înainte \+0,5 USDT pe bot, mecanica singură \+3,7, p 0,17$/);
-  const vt = JSON.parse(JSON.stringify(P.prProbe({ treiLaRand: Object.assign({}, V, { verdict: "tine", inghetat: Object.assign({}, V.inghetat, { verdict: "tine", pH0: 0.021 }) }) }, ACUM))).pop(); assert.match(vt.sta, /: ține: boții porniți după 3 pierderi la rând au ieșit mai prost decât dă mecanica · .* p 0,02$/);
-  const vechi = JSON.parse(JSON.stringify(P.prProbe({ treiLaRand: Object.assign({}, TR, { la: ACUM - 40 * ORA }) }, ACUM))).pop(); assert.match(vechi.ultima, / · VECHE/);
+  const v = trei({ treiLaRand: V }); assert.match(v.sta, /^VERDICT pe \d+ (de )?zile \(până la 01\.06\.2027\): nedovedit pe zilele noi \(nu înseamnă că regula e greșită\) · după − înainte \+0,5 USDT pe bot, mecanica singură \+3,7, p 0,17$/);
+  const vt = trei({ treiLaRand: Object.assign({}, V, { verdict: "tine", inghetat: Object.assign({}, V.inghetat, { verdict: "tine", pH0: 0.021 }) }) }); assert.match(vt.sta, /: ține: boții porniți după 3 pierderi la rând au ieșit mai prost decât dă mecanica · .* p 0,02$/);
+  const vechi = trei({ treiLaRand: Object.assign({}, TR, { la: ACUM - 40 * ORA }) }); assert.match(vechi.ultima, / · VECHE/);
   // convențiile: virgula zecimală, minusul tipografic, fără engleză / null
   const tot = [o, g, v].map((x) => (({ drum, ...y }) => JSON.stringify(y) + " " + drum.text)(x)).join(" ");
   assert.doesNotMatch(vizibil(tot).replace(/\b\d{1,2}\.\d{2}(\.\d{4})?\b/g, "DATA"), /\d\.\d/); assert.doesNotMatch(tot, /(^|[\s(])-\d/); assert.doesNotMatch(tot, /\b(NaN|undefined|null|trigger|bots)\b/i);

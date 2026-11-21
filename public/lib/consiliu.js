@@ -19,15 +19,19 @@ var Consiliu = (function () {
   // v100.106 (el, 06.10, TAKE la 72% din grid: „prețul nu e lângă marginea de jos”): scurtul spunea „lângă” oricărui sfat „margine” galben,
   // iar sfatul e galben după cât de des scade moneda atât într-o zi (≥ 20%), nu după cât de aproape e - acum spune cifra și frecvența
   // doi = al doilea motiv din titlu („Stopul costă peste plan, iar marginea de jos e la −0,4%”): fără frecvență, ca să încapă în 60
-  function scurtMargine(s, doi) {
+  /* v100.374 (I-902): `sansa` = cifra din capul paginii pentru marginea asta („66 din 100”, ferestre de 24 h în situații ca acum). Cu ea, titlul
+     nu mai poartă „atinsă în N% din zile” (zile calendaristice, altă măsură: pe primul ecran erau două cifre pentru aceeași întrebare);
+     procentul din zile rămâne în explicația motivului. */
+  function scurtMargine(s, doi, sansa) {
     // v100.257: partea vine de pe sfat. Fără parte rămâne jos (fixturele vechi și long/neutru).
     var sus = !!(s && s.parte === "sus");
     var p = nr(s && s.pctJos), z = nr(s && s.zile), dinT = p === null ? /(\d+(?:[.,]\d+)?)\s?%/.exec(String(s && s.titlu || "")) : null;
     if (p === null && dinT) p = Number(dinT[1].replace(",", "."));   // forma veche a sfatului: cifra din titlu
     if (p === null) return mic(s && s.titlu);
     var lat = sus ? "sus" : "jos", semn = sus ? "+" : "−";
-    if (p < 0.05) return "marginea de " + lat + " e chiar la preț" + (z !== null && !doi ? ", atinsă în " + Math.round(z) + "% din zile" : "");   /* v100.107: nu „−0,0%” */
-    return "marginea de " + lat + " e la " + semn + TextRo.pct(p) + (z !== null && !doi ? ", atinsă în " + Math.round(z) + "% din zile" : "");
+    var coada = doi ? "" : sansa ? ", " + sansa + " în 24 h" : z !== null ? ", atinsă în " + Math.round(z) + "% din zile" : "";
+    if (p < 0.05) return "marginea de " + lat + " e chiar la preț" + coada;   /* v100.107: nu „−0,0%” */
+    return "marginea de " + lat + " e la " + semn + TextRo.pct(p) + coada;
   }
   // revizia 01.10 (actiuni): un simbol in capul frazei („ECHO e în…”) nu se micsoreaza - inainte ajungea „eCHO” pe Discord
   function mic(s) { s = String(s || ""); var b = s.charAt(1); return b && b === b.toUpperCase() && b !== b.toLowerCase() ? s : s.charAt(0).toLowerCase() + s.slice(1); }
@@ -112,11 +116,19 @@ var Consiliu = (function () {
     });
     // 2) cartela Stopul: peste plan / fara protectie
     var cs = (Array.isArray(x.concret) ? x.concret : []).filter(function (c) { return c && c.cod === "stop"; })[0];
-    if (cs && cs.tag && cs.tag.c === "bad" && !cand.some(function (m) { return m.cod === "plan"; })) {
+    /* revizia (21.11): roșu DOAR la eticheta „fără protecție” (eticheta „bad” o au și „peste plan” și „stopul nu apucă: lichidarea vine întâi”,
+       adică boți CU stop) și judecat înaintea gărzii „plan” (cu componenta „plan” în semafor motivul „stop” nu mai intra deloc) */
+    var rosuFS = !!(cs && cs.tag && cs.tag.t === "fără protecție" && x.afaraContra && nr(x.total) !== null && nr(x.total) < 0);
+    if (cs && cs.tag && cs.tag.c === "bad" && (rosuFS || !cand.some(function (m) { return m.cod === "plan"; }))) {
       // v100.61: titlul cu cifra (cat costa stopul atins), textul = de ce (cartela il da in deCe; o fixtura veche - actiunea ei)
       var pp = cs.tag.t === "peste plan", cost = nr(cs.atins) !== null ? nr(cs.atins) : cs.cifre ? nr(cs.cifre.laOpritor) : null;
-      cand.push({ cod: "stop", nivel: "atentie", c: "r", titlu: pp ? "Stopul e peste plan" + (cost !== null ? ": atins, ≈ −" + TextRo.num(Math.abs(cost), 1) + " USDT" : "") : "Botul n-are stop activ în Pionex", text: cs.deCe || cs.act || "", faCe: cs.act || "",
-        scurt: pp ? "stopul costă peste plan" : "botul n-are stop", cifre: cs.cifre || null, bani: cs.bani || null });
+      /* v100.374 (I-904): fără stop, cu prețul trecut de marginea contra botului și totalul pe minus ⇒ ROȘU. Pe boții lui fără stop (371, până la
+         20.11.2026) toată pierderea stă în cei 33 închiși dincolo de margine (−3.342,0 USDT, cea mai mare −878,6; ceilalți 338: +689,8), iar cei
+         ținuți peste o zi ÎN grid au ieșit pe plus (24 de boți, +72,8) - de aceea pragul e „afară din grid”, nu vârsta botului. E contabilitate cu
+         selecție, deci acțiunea e protecția (un stop), nu o prognoză; dovada vine din pagină (x.dovadaFaraStop) și stă sub motiv. */
+      cand.push({ cod: "stop", nivel: rosuFS ? "iesi" : "atentie", c: "r", titlu: pp ? "Stopul e peste plan" + (cost !== null ? ": atins, ≈ −" + TextRo.num(Math.abs(cost), 1) + " USDT" : "") : rosuFS ? "Botul e afară din grid, pe minus și fără stop" : "Botul n-are stop activ în Pionex",
+        text: cs.deCe || cs.act || "", faCe: rosuFS ? "Aș pune acum un stop " + (x.afaraContra === "sus" ? "peste" : "sub") + " prețul de acum sau aș închide botul: fără el, pierderea n-are capăt până la lichidare." : cs.act || "",
+        scurt: pp ? "stopul costă peste plan" : rosuFS ? "afară din grid, pe minus și fără stop" : "botul n-are stop", cifre: cs.cifre || null, bani: cs.bani || null, extra: cs.tag.t === "fără protecție" && x.dovadaFaraStop ? String(x.dovadaFaraStop) : null });
     }
     // revizia Opus a 2b (2): trendul pe medii (sfatul „trend”), cand nu e un avertisment, se spune LANGA directia pietei, ca „structura pe
     // medii” - nu ca sfat separat cu actiunea lui („L-aș lăsa să lucreze” sub „Piața merge împotriva botului” erau doua voci)
@@ -133,7 +145,7 @@ var Consiliu = (function () {
       folosite[cheieSf(s)] = 1;
       cand.push({ cod: s.cod, nivel: s.ton === "critic" ? "iesi" : "atentie", c: s.ton === "critic" ? "r" : "g", titlu: s.titlu, text: s.cod === "directie" ? structura(s.text) : s.text || "", faCe: s.faCe || "",
         parte: s.parte || null,
-        scurt: s.cod === "margine" ? scurtMargine(s) : mic(s.titlu), scurtDoi: s.cod === "margine" ? scurtMargine(s, true) : null });
+        scurt: s.cod === "margine" ? scurtMargine(s, false, x.sanseMargine && x.sanseMargine[s.parte === "sus" ? "sus" : "jos"]) : mic(s.titlu), scurtDoi: s.cod === "margine" ? scurtMargine(s, true) : null });
     });
     // 3b) v100.51 (I-477): gridul incheie sub jumatate din perechile pe care le astepta fisa pe istoricul de dinaintea pornirii
     var pe = x.perechi;

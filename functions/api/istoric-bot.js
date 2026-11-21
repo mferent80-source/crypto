@@ -32,7 +32,7 @@ export function taieContrafactual(m,maxReal=CF_REALI_MAX,maxTot=ARHIVA_MAX){
   while(peste>0&&reali.length){delete m[reali.shift()];peste--}
   return m;
 }
-const CAMPURI=["perechi","pretPerp","profitNet","comisioane","gridProfitBrut","investit","profitTotal","distantaLichidarePct"];
+const CAMPURI=["perechi","pretPerp","profitNet","comisioane","gridProfitBrut","investit","profitTotal","distantaLichidarePct","gridJos","gridSus"];   /* v100.374: marginile din clipa punctului (gridul se poate muta la același bot) */
 // Lipsa ramane null (Number(null) ar da 0, iar un 0 in istoric ar minti).
 const nr=v=>{if(typeof v==="number")return Number.isFinite(v)?v:null;if(typeof v!=="string"||!v.trim())return null;const x=Number(v);return Number.isFinite(x)?x:null};
 const idBot=v=>String(v||"").replace(/[^A-Za-z0-9_-]/g,"").slice(0,64);
@@ -143,6 +143,13 @@ async function istoricGet(request,env){
   if(action==="directie"){let v=null;try{v=JSON.parse(await env.ISTORIC.get("sugestii:directie")||"null")}catch{v=null}return json({directie:v})}
   if(action==="oscilo"){let v=null;try{v=JSON.parse(await env.ISTORIC.get("sugestii:oscilo")||"null")}catch{v=null}return json({oscilo:v})}   /* v100.353: Oscilo (în probă) */
   if(action==="alerteRegistru"){let v=null;try{v=JSON.parse(await env.ISTORIC.get("alerte:registru")||"null")}catch{v=null}return json({registru:v})}   /* v100.367: registrul alertelor (rezumatul colectorului) */
+  /* v100.374 (I-898 + I-908): drumul botului - `brut` = lista `ist:<bot>` întreagă (rămâne în KV și după închidere; `citeste` o taie după timp),
+     `rarit` = copia de păstrat (`drum:<bot>`, pusă de tura probei marginii); bilanțul probei marginii pentru pagina Probe */
+  if(action==="drum"){const bot=idBot(u.searchParams.get("bot"));if(!bot)return json({error:"Lipseste bot"},400);let r=null,brut=null,citit=true;
+    /* `citit:false` = KV-ul n-a putut fi citit (nu „botul n-are drum”): tura probei nu-l trece atunci ca judecat */
+    try{r=JSON.parse(await env.ISTORIC.get("drum:"+bot)||"null");if(u.searchParams.get("brut")!=="0"){const v=JSON.parse(await env.ISTORIC.get("ist:"+bot)||"[]");brut=Array.isArray(v)?v:[]}}catch{citit=false}
+    return json({bot,brut,rarit:r,citit})}
+  if(action==="probaMargine"){let v=null;try{v=JSON.parse(await env.ISTORIC.get("proba:margine")||"null")}catch{v=null}return json({probaMargine:v})}
   if(action==="treiLaRand"){let v=null;try{v=JSON.parse(await env.ISTORIC.get("proba:treiLaRand")||"null")}catch{v=null}return json({treiLaRand:v})}   /* v100.360: proba „3 pierderi la rând = gata ziua” */
   // v100.312 (I-843): caietul de păreri judecate - lista (o scrie pagina) + judecățile (le scrie colectorul, tura-pareri.mjs), pe chei separate
   if(action==="pareri"){let l,j;try{l=JSON.parse(await env.ISTORIC.get("pareri:lista")||"[]");j=JSON.parse(await env.ISTORIC.get("pareri:judecate")||"{}")}catch{return json({error:"caietul nu s-a putut citi acum"},503)}if(!Array.isArray(l)||!j||typeof j!=="object"||Array.isArray(j))return json({error:"caietul nu s-a putut citi acum"},503);return json({pareri:l,judecate:j})}   /* revizia: la o eroare de citire 503, nu gol - colectorul ar fi șters judecățile */
@@ -376,7 +383,9 @@ export async function onRequestPost({request,env}){
     const bot=idBot(corp&&corp.bot);if(!bot)return json({error:"Lipseste bot"},400);
     const txt=(v,m)=>typeof v==="string"?v.slice(0,m):"";
     const NIV=["tine","atentie","iesi","info"];
-    const log=(Array.isArray(corp.log)?corp.log:[]).slice(-200).map(e=>e&&typeof e==="object"?{t:nr(e.t),cod:txt(e.cod,24).replace(/[^a-z0-9-]/g,""),nivel:NIV.includes(e.nivel)?e.nivel:"info",motiv:txt(e.motiv,200),total:nr(e.total),dreptate:e.dreptate===true?true:e.dreptate===false?false:null,totalDupa:nr(e.totalDupa),judecatLa:nr(e.judecatLa),laInchidere:e.laInchidere===true?true:undefined}:null).filter(e=>e&&e.t!==null);   // v100.43: judecata la inchiderea botului (I-466)
+    const log=(Array.isArray(corp.log)?corp.log:[]).slice(-200).map(e=>e&&typeof e==="object"?{t:nr(e.t),cod:txt(e.cod,24).replace(/[^a-z0-9-]/g,""),nivel:NIV.includes(e.nivel)?e.nivel:"info",motiv:txt(e.motiv,200),total:nr(e.total),dreptate:e.dreptate===true?true:e.dreptate===false?false:null,totalDupa:nr(e.totalDupa),judecatLa:nr(e.judecatLa),laInchidere:e.laInchidere===true?true:undefined,
+      /* v100.374 (I-910): ce a urmat la 1 h și la 4 h după sfat (totalul din drumul botului și judecata lui); `oj` = orizonturile au fost citite */
+      o1:e.oj===true&&nr(e.o1)!==null?nr(e.o1):undefined,d1:e.oj===true&&typeof e.d1==="boolean"?e.d1:undefined,o4:e.oj===true&&nr(e.o4)!==null?nr(e.o4):undefined,d4:e.oj===true&&typeof e.d4==="boolean"?e.d4:undefined,oj:e.oj===true?true:undefined}:null).filter(e=>e&&e.t!==null);   // v100.43: judecata la inchiderea botului (I-466)
     const a=corp.acum&&typeof corp.acum==="object"?corp.acum:null;
     const acum=a?{la:nr(a.la),btc:a.btc&&typeof a.btc==="object"?{nivel:txt(a.btc.nivel,10),text:txt(a.btc.text,300),r:nr(a.btc.r)}:null,aglomerare:a.aglomerare&&typeof a.aglomerare==="object"?{nivel:txt(a.aglomerare.nivel,10),text:txt(a.aglomerare.text,400),semne:nr(a.aglomerare.semne),dovezi:txt(a.aglomerare.dovezi,300)}:null,afaraOre:nr(a.afaraOre),regimBtc:a.regimBtc&&typeof a.regimBtc==="object"?{r4h:nr(a.regimBtc.r4h),r24h:nr(a.regimBtc.r24h),miscare:!!a.regimBtc.miscare}:null}:null;
     await env.ISTORIC.put("semnale:"+bot,JSON.stringify({log,acum}));
@@ -439,6 +448,19 @@ export async function onRequestPost({request,env}){
   if(action==="directie"){if(!(nr(corp&&corp.la)>0)||!/^\d{4}-\d{2}-\d{2}$/.test(String(corp.zi||""))||!Array.isArray(corp.lista)||corp.lista.length>20||!corp.urmarire||typeof corp.urmarire!=="object")return json({error:"directie: la + zi + lista (≤ 20) + urmarire"},400);await env.ISTORIC.put("sugestii:directie",JSON.stringify(corp));return json({ok:true})}   /* v100.311 */
   if(action==="oscilo"){if(!(nr(corp&&corp.la)>0)||!/^\d{4}-\d{2}-\d{2}$/.test(String(corp.zi||""))||!Array.isArray(corp.lista)||corp.lista.length>30||!corp.urmarire||typeof corp.urmarire!=="object")return json({error:"oscilo: la + zi + lista (≤ 30) + urmarire"},400);await env.ISTORIC.put("sugestii:oscilo",JSON.stringify(corp));return json({ok:true})}   /* v100.353: Oscilo (în probă), din tura-oscilo.mjs */
   /* v100.360: proba „3 la rând” (scripts/lib/tura-trei-la-rand.mjs) - doar câmpurile știute; verdictul null, "tine" sau "nu-tine" */
+  if(action==="drum"){const bot=idBot(corp&&corp.bot),d=corp&&corp.drum,numN=(v)=>v===null||(typeof v==="number"&&Number.isFinite(v));
+    if(!bot||!d||typeof d!=="object"||Array.isArray(d)||!(nr(d.creat)>0)||!(nr(d.inchis)>0||d.viu===true)||!Array.isArray(d.p)||!d.p.length||d.p.length>1200||!d.p.every(r=>Array.isArray(r)&&r.length===5&&nr(r[0])>0&&nr(r[1])>0&&r.every(numN)))return json({error:"drum: bot, creat, inchis, p (cel mult 1200 de rânduri [t, preț, total, perechi, grile])"},400);
+    /* I-909: nota botului PORNIT (`viu:true`, fără `inchis`): până unde s-a citit drumul (`scanat`) și dacă nota e bună (`stare`) */
+    const ie=d.iesire&&typeof d.iesire==="object"&&nr(d.iesire.t)>0?{t:nr(d.iesire.t),total:nr(d.iesire.total),inv:nr(d.iesire.inv)}:null,viu=d.viu===true&&!(nr(d.inchis)>0);
+    await env.ISTORIC.put("drum:"+bot,JSON.stringify({la:Date.now(),creat:nr(d.creat),inchis:nr(d.inchis),viu:viu?true:undefined,scanat:viu?nr(d.scanat):undefined,stare:viu&&["ok","taiat","gol","pornit-afara","mutat"].includes(d.stare)?d.stare:undefined,p:d.p,iesire:ie}));return json({ok:true,puncte:d.p.length})}
+  if(action==="probaMargine"){const c=corp,ent=(v)=>Number.isInteger(v)&&v>=0,num=(v)=>v===null||(typeof v==="number"&&Number.isFinite(v)),ic=(v)=>v===null||(Array.isArray(v)&&v.length===2&&v.every(x=>typeof x==="number"&&Number.isFinite(x))),VER=[null,"inchiderea","lasatul","n-am aflat"];
+    const parte=(p)=>p&&typeof p==="object"&&ent(p.n)&&ent(p.zile)&&num(p.medie)&&ic(p.ic)?{n:p.n,zile:p.zile,medie:p.medie,ic:p.ic}:null,grup=(p)=>p&&typeof p==="object"&&ent(p.n)&&num(p.medie)?{n:p.n,medie:p.medie,suma:nr(p.suma)}:null;
+    if(!c||typeof c!=="object"||Array.isArray(c)||c.forma!==1||!(nr(c.la)>0)||c.la>Date.now()+600000||!ent(c.n)||!ent(c.zile)||!num(c.medie)||!num(c.suma)||!ic(c.ic)||!VER.includes(c.verdict)||!ent(c.minEpisoade)||!ent(c.minZile))return json({error:"probaMargine: forma 1, la, n, zile, minEpisoade, minZile (întregi), medie / suma (număr sau null), ic (null sau două numere), verdict (null, inchiderea, lasatul, n-am aflat)"},400);
+    const B=c.boti&&typeof c.boti==="object"?c.boti:{},boti={};["total","judecati","ramasi","episoade","inGrid","faraDrum","drumTaiat","gol","mutat","pornitAfara","neutri"].forEach(k=>{boti[k]=ent(B[k])?B[k]:0});
+    /* verdictul se îngheață o singură dată (tura colectorului); `verdict` de sus e cel înghețat sau null */
+    const g=c.inghetat,ing=g&&typeof g==="object"&&!Array.isArray(g)&&nr(g.la)>0&&ent(g.n)&&ent(g.zile)&&num(g.medie)&&num(g.suma)&&ic(g.ic)&&VER.includes(g.verdict)&&g.verdict!==null?{la:nr(g.la),n:g.n,zile:g.zile,medie:g.medie,suma:g.suma,ic:g.ic,verdict:g.verdict,seContrazic:g.seContrazic===true}:null;
+    const dupa={};[1,4,24].forEach(h=>{const q=c.dupa&&c.dupa[h];dupa[h]=q&&typeof q==="object"&&ent(q.n)&&ent(q.intorsi)&&num(q.medie)?{n:q.n,intorsi:q.intorsi,medie:q.medie}:null});
+    await env.ISTORIC.put("proba:margine",JSON.stringify({forma:1,la:c.la,n:c.n,zile:c.zile,medie:c.medie,suma:c.suma,ic:c.ic,verdict:ing?ing.verdict:null,inghetat:ing,seContrazic:c.seContrazic===true,minEpisoade:c.minEpisoade,minZile:c.minZile,vechi:parte(c.vechi),nou:parte(c.nou),dupa,cuStop:grup(c.cuStop),faraStop:grup(c.faraStop),boti}));return json({ok:true})}
   if(action==="treiLaRand"){const c=corp,ent=(v)=>Number.isInteger(v)&&v>=0,zi=(v)=>typeof v==="string"&&/^\d{4}-\d{2}-\d{2}$/.test(v),num=(v)=>v===null||(typeof v==="number"&&Number.isFinite(v)),VER=[null,"tine","nu-tine"];
     if(!c||typeof c!=="object"||Array.isArray(c)||c.forma!==1||!(nr(c.la)>0)||c.la>Date.now()+600000||!zi(c.start)||!zi(c.limita)||!(c.ultimaZi===null||zi(c.ultimaZi))||!(Number.isInteger(c.prag)&&c.prag>=1&&c.prag<=50)||![c.N,c.B,c.zileJudecate,c.asteapta,c.zileCuDeclansare,c.zileConteaza,c.nD,c.nI].every(ent)||![c.statistica,c.mecanica,c.peste].every(num)||!(c.pH0===null||(typeof c.pH0==="number"&&c.pH0>=0&&c.pH0<=1))||!VER.includes(c.verdict)||!(c.verdict===null||(c.inghetat&&typeof c.inghetat==="object"&&!Array.isArray(c.inghetat))))return json({error:"treiLaRand: forma 1, la, start, limita, prag, N, B, zile (întregi), statistica / mecanica / peste / pH0 (număr sau null), verdict (null, tine, nu-tine)"},400);
     const g=c.inghetat,o={forma:1,la:c.la,start:c.start,limita:c.limita,prag:c.prag,N:c.N,B:c.B,alfa:nr(c.alfa),zileJudecate:c.zileJudecate,ultimaZi:c.ultimaZi,asteapta:c.asteapta,zileCuDeclansare:c.zileCuDeclansare,zileConteaza:c.zileConteaza,nD:c.nD,nI:c.nI,statistica:c.statistica,mecanica:c.mecanica,peste:c.peste,pH0:c.pH0,verdict:c.verdict,verdictLa:nr(c.verdictLa),
@@ -762,9 +784,9 @@ export async function onRequestPost({request,env}){
   // v100.43 (I-466): socoteala sfaturilor pe toti botii (colectorul, o data pe ora) - {la, boti, peCod:{cod:{n,judecate,corecte,bani,baniN,ic,stare,nume}}}
   if(action==="socoteala"){
     const pc=corp&&corp.peCod&&typeof corp.peCod==="object"?corp.peCod:null;if(!pc)return json({error:"lipseste peCod"},400);
-    const STARI=["necunoscut","ajuta","nesigur","tace"],out={};
+    const STARI=["necunoscut","ajuta","nesigur","tace"],out={},oriz=(o)=>o&&typeof o==="object"&&nr(o.judecate)!==null&&nr(o.corecte)!==null?{judecate:nr(o.judecate),corecte:nr(o.corecte),zile:nr(o.zile),rataZile:nr(o.rataZile),reper:nr(o.reper)}:null;   /* v100.374 (I-910) */
     Object.keys(pc).slice(0,40).forEach(k=>{const x=pc[k],c=String(k).replace(/[^a-z0-9-]/g,"").slice(0,24);if(!c||!x||typeof x!=="object")return;
-      out[c]={n:nr(x.n),judecate:nr(x.judecate),corecte:nr(x.corecte),bani:nr(x.bani),baniN:nr(x.baniN),zile:nr(x.zile),rataZile:nr(x.rataZile),reper:nr(x.reper),p:nr(x.p),baniPeste:nr(x.baniPeste),fel:x.fel==="tine"?"tine":x.fel==="iesi"?"iesi":null,ic:Array.isArray(x.ic)?x.ic.slice(0,2).map(nr):null,stare:STARI.includes(x.stare)?x.stare:"necunoscut",nume:typeof x.nume==="string"?x.nume.slice(0,60):c}});
+      out[c]={n:nr(x.n),judecate:nr(x.judecate),corecte:nr(x.corecte),bani:nr(x.bani),baniN:nr(x.baniN),zile:nr(x.zile),rataZile:nr(x.rataZile),reper:nr(x.reper),p:nr(x.p),baniPeste:nr(x.baniPeste),fel:x.fel==="tine"?"tine":x.fel==="iesi"?"iesi":null,ic:Array.isArray(x.ic)?x.ic.slice(0,2).map(nr):null,stare:STARI.includes(x.stare)?x.stare:"necunoscut",nume:typeof x.nume==="string"?x.nume.slice(0,60):c,la1:oriz(x.la1),la4:oriz(x.la4)}});
     await env.ISTORIC.put("socoteala",JSON.stringify({la:nr(corp.la)||Date.now(),boti:nr(corp.boti),peCod:out}));
     return json({ok:true,coduri:Object.keys(out).length});
   }

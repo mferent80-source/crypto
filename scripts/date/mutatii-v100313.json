@@ -191,7 +191,7 @@
   {
    "nume": "revizia: plafonul pe partea greșită a marginii",
    "fisier": "public/app.js",
-   "cauta": "parte=dir===\"long\"&&gj>0&&s.stop<gj?\"jos\"",
+   "cauta": "parte=dir===\"long\"&&gj>0&&s.stop<=gj?\"jos\"",
    "pune": "parte=dir===\"long\"&&gj>0&&s.stop>gj?\"jos\""
   },
   {

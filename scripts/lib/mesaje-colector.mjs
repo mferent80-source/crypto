@@ -4,6 +4,21 @@
 // (faptul · „👉 ” actiunea la persoana I), virgula zecimala, fara majuscule de strigat.
 // Cuvinte de care depinde codul: „nu mai poate citi” / „citește din nou” (TabloExtra.alertaRezolvata), „n-are plan” („Ce ai de făcut acum”).
 
+// v101.208 (Radar v100.374; el, 21.11.2026: a mutat gridul botului pornit, iar stopul a rămas chiar pe marginea nouă): „ai mutat gridul” -
+// ce era, cât pierde acum la marginea contra, stopul rămas pe ea, zero-ul care nu se mai atinge. O dată pe mutare (colectorul ține gridul).
+// x = { nume, jos0, sus0, jos, sus, parte: „jos” | „sus” | null (marginea contra; null la botul neutru), laMargine, stopPeMargine, zeroNeatins, laMargineaLui }
+export function gridMutat(x) {
+  const n = (v) => Number(v), P = (v) => String(Number(n(v).toPrecision(6))), fin = (v) => v !== null && v !== undefined && Number.isFinite(Number(v));
+  if (!x || !(n(x.jos) > 0) || !(n(x.sus) > n(x.jos)) || !(n(x.jos0) > 0) || !(n(x.sus0) > 0) || (n(x.jos) === n(x.jos0) && n(x.sus) === n(x.sus0))) return null;
+  let fapt = "Era " + P(x.jos0) + "–" + P(x.sus0) + ".";
+  if (x.parte === "jos" || x.parte === "sus") {
+    if (fin(x.laMargine)) fapt += " La marginea de " + x.parte + (Number(x.laMargine) < 0 ? " pierzi acum " : " rămâi cu ") + U2(x.laMargine) + (x.stopPeMargine ? "; stopul e chiar pe ea" : "") + ".";
+    else if (x.stopPeMargine) fapt += " Stopul e chiar pe marginea de " + x.parte + ".";
+    if (x.zeroNeatins) fapt += " Pe zero nu mai ajunge în grid" + (fin(x.laMargineaLui) ? " (" + (x.parte === "jos" ? "sus" : "jos") + " rămâi cu " + U2(x.laMargineaLui) + ")" : "") + ".";
+  }
+  return { nivel: "atentie", titlu: String(x.nume || "botul") + ": ai mutat gridul la " + P(x.jos) + "–" + P(x.sus),
+    mesaj: fapt + "\n" + (x.stopPeMargine && x.parte ? "👉 M-aș uita la stop: e pe margine, deci marginea atinsă înseamnă bot închis." : "👉 M-aș uita în Tabloul botului la cifrele gridului nou.") };
+}
 // v100.76 (revizia ideilor): „1 bot”, „20 de boți”, „101 cazuri” - TextRo.cate; rezerva știe aceeași regulă (contextele fără TextRo)
 function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
 // v101.116 (auditul sever, 🔵12): regula lui - rezultatele cu O SINGURĂ zecimală (și pe Discord): „−21,3 USDT”, nu „−21,31”;

@@ -121,6 +121,7 @@
     if (!(p > 0)) return null;
     return { p: p, n: raport ? "stop " + (r >= 0 ? "+" : "−") + Math.abs(r * 100).toFixed(1).replace(".", ",") + "%" : "stop", tit: raport ? "stopul din Pionex în procente din investiție; procentul se copiază; prețul de pe bară e doar acum și se mută cu grilele" : "stopul din Pionex" };
   }
+  var ctSansaUlt = null;
   function nivele(b) {
     var L = [], add = function (p, n, c, cls, tit) { p = nr(p); if (p != null && p > 0) L.push({ p: p, n: n, c: c, cls: cls || "", tit: tit || "" }); };
     var bl = botLive(b), s = stopDrum(bl);
@@ -128,6 +129,9 @@
     if (s) add(s.p, s.n, "var(--pzJos)", "", s.tit);
     // v100.313: cifra măsurată a stopului (curba stopului, din Tabloul botului) lângă prețul lui
     if (s && L.length && typeof tbStopSansaDrum === "function") { var sj = null; try { sj = tbStopSansaDrum(bl); } catch (e) { sj = null; } if (sj) L[L.length - 1].sansa = sj; }
+    /* v100.374: cifra de pe Drum s-a schimbat (prețul viu) ⇒ și blocul „Contează acum” al botului din Tablou se redesenează, ca ecranul să aibă o singură cifră */
+    var sjN = s && sj ? sj : null;
+    if (sjN !== ctSansaUlt && D.bot && bl && String(D.bot.id) === String(bl.id)) { ctSansaUlt = sjN; try { if (typeof tbRenderConteaza === "function") tbRenderConteaza(); } catch (e) {} }
     // v100.322 (el, 11.11.2026: „am pus TP dar pagina botului nu îl vede”): take-profit-ul pus, pe drum ca pe grafic (în procente: socotit live)
     if (bl && bl.opritorProfitActiv) { var TEp = window.TabloExtra, tp = TEp && TEp.pretTpLive ? TEp.pretTpLive(bl) : nr(bl.opritorProfit); if (tp > 0) add(tp, "take-profit", "var(--pzSus)", "", "take-profit-ul tău din Pionex"); }
     return L;
@@ -281,11 +285,38 @@
     // boții lui; Consilierul coboară sub ea, ca informație (siguranța - lichidarea, stopul, planul - rămâne titlul). Fără cifrele marginii: ca înainte.
     /* cât Consilierul socotește, capul e verdictul SALVAT (pastila, titlul și acțiunea lui) - marginea nu-l acoperă (revizia: „IEȘI” rămânea fără motiv) */
     var cap = null; try { cap = !dinSalvat && typeof tbCapMargine === "function" && typeof CapMargine !== "undefined" ? tbCapMargine(b) : null; } catch (e) { cap = null; }
+    /* v100.374 (I-902): „Contează acum” află ce margine e arătată în cap (rândul ei de acolo coboară la un rând scurt); la schimbare se redesenează o dată */
+    var ctV = window.pzCapMargine || null, ctN = cap ? { botId: b.id, parte: cap.parte } : null;
+    if ((ctV ? ctV.botId + "|" + ctV.parte : "") !== (ctN ? ctN.botId + "|" + ctN.parte : "")) { window.pzCapMargine = ctN; try { if (typeof tbRenderConteaza === "function") tbRenderConteaza(); } catch (e) {} }
     var corpV = '<div class="pzVerbTxt"><b>' + esc(txtTit) + '</b>' + (txtFac ? '<p>' + esc(txtFac) + '</p>' : "") + nota + '<p class="pzDin">din: Consilierul · motivele întregi în cartela lui, mai jos</p>';
     if (cap) {
       var snC = CapMargine.textSanse(cap), bnC = CapMargine.textBani(cap), stC = CapMargine.textStop(cap);
+      /* v100.374: expunerea (I-903) sub titlu; între margine și stop (I-897) sub bani, cu prețul marginii de copiat; dovada boților fără stop (I-904) */
+      var exC = CapMargine.textExpunere ? CapMargine.textExpunere(cap) : "", inC = CapMargine.textIntre ? CapMargine.textIntre(cap) : "";
+      var copC = Array.isArray(cap.copiaza) && cap.copiaza.length ? cap.copiaza.map(function (q) { return ' <button type="button" class="tbBtnLinie tbTodoCopiaza ctBtn pzMargCop" value="' + esc(q.exact || q.pret) + '" data-action-click="gridCopiaza(this.value)" aria-label="Copiază prețul pentru ' + esc(q.ce) + ': ' + esc(q.pret) + '">copiază ' + esc(q.ce) + ' ' + esc(q.pret) + '</button>'; }).join("") : "";
+      /* „Dacă muți gridul acum” (el, 21.11): pliu deschis de la sine; dacă îl închide, rămâne închis (capul se redesenează la fiecare preț) */
+      var mt = CapMargine.textMut ? CapMargine.textMut(cap) : null, mutH = "";
+      if (mt) { var mutDesc = true; try { mutDesc = localStorage.getItem("pzMutDeschis") !== "0"; } catch (e) { mutDesc = true; }
+        var TR = CapMargine.trepte ? CapMargine.trepte(cap) : [], trH = TR.length ? '<div class="pzTrepte" role="group" aria-label="Întoarcerea în grid, pe boții tăi">' + TR.map(function (q) { return '<div class="pzTreapta' + (q.acum ? " pzTreaptaAcum" : "") + '"><span>' + esc(q.et) + '</span><b>' + esc(q.val) + '</b><progress max="100" value="' + Math.round(q.p * 100) + '"></progress><small>' + esc(q.sub) + '</small></div>'; }).join("") + '</div>' : "";
+        mutH = '<details class="pzMut"' + (mutDesc ? " open" : "") + '><summary>' + esc(mt.titlu) + '</summary>' + mt.randuri.map(function (r) { return /^Întoarcerea, pe boții tăi/.test(r) && trH ? '<p class="pzTrepteEt">Întoarcerea în grid în următoarele 24 de ore, pe boții tăi (ieșiri pe oricare parte a gridului)</p>' + trH : '<p>' + esc(r) + '</p>'; }).join("") + '<p class="pzDin">' + esc(mt.nota) + '</p></details>'; }
+      /* DESIGN (v100.374, el 21.11: „optimizează vizual pagina botului”): aceleași cifre, așezate - banda (poziția, 1% contra, la margine, la stop,
+         zero-ul) și barele șanselor pe aceeași scară 0–100; propozițiile rămân doar unde spun ceva ce banda nu poate (ce se reface, stopul pe
+         margine, între margine și stop, întoarcerea). Fără stiluri în linie: lățimea barei e a unui <progress>. */
+      var PL = CapMargine.placi ? CapMargine.placi(cap) : [], ME = CapMargine.metri ? CapMargine.metri(cap) : [], areM = function (k) { return ME.some(function (q) { return q.k === k; }); };
+      var ledH = PL.length ? '<div class="pzLedger pzMargExp">' + PL.map(function (q) { return '<div class="pzLg' + (q.ton ? " pzLg-" + q.ton : "") + (q.k === "zero" ? " pzMargZero" : "") + '"><span>' + esc(q.et) + '</span><b>' + esc(q.val) + '</b>' + (q.sub ? '<small>' + esc(q.sub) + '</small>' : "") + '</div>'; }).join("") + '</div>'
+        : (exC ? '<p class="pzMargExp">' + esc(exC) + '</p>' : "") + (bnC ? '<p class="pzMargBani">' + esc(bnC) + '</p>' : "");
+      var metH = ME.map(function (m) { return '<div class="pzMetru pzMargSanse" role="group" aria-label="' + esc(m.et) + '"><span class="pzMetruEt">' + esc(m.et) + '</span><div class="pzMetruBare">' + m.bare.map(function (q) {
+        return '<div class="pzBara"><span>' + esc(q.et) + '</span><b>' + esc(q.text) + '</b><progress max="100" value="' + Math.max(0, Math.min(100, Math.round(q.p * 1000) / 10)) + '" aria-label="' + esc(m.et + " în " + q.et + ": " + q.text) + '"></progress></div>'; }).join("") + '</div><small class="pzMetruSursa">' + esc(m.sursa) + '</small></div>'; }).join("");
+      var afC = CapMargine.textAfara ? CapMargine.textAfara(cap) : "", stMC = CapMargine.textStopMargine ? CapMargine.textStopMargine(cap) : "";
       corpV = '<div class="pzVerbTxt pzMarg"><b>' + esc(cap.titlu) + '</b>' + (cap.fapt ? '<p class="pzMargFapt">' + esc(cap.fapt) + '</p>' : "")
-        + (snC ? '<p class="pzMargSanse">' + esc(snC) + '</p>' : "") + (bnC ? '<p class="pzMargBani">' + esc(bnC) + '</p>' : "") + (stC ? '<p class="pzMargSanse">' + esc(stC) + '</p>' : "")
+        + (CapMargine.textMutare && CapMargine.textMutare(cap) ? '<p class="pzMargMut">' + esc(CapMargine.textMutare(cap)) + '</p>' : "")   /* I-912 */
+        + ledH
+        + (afC && / · /.test(afC) ? '<p class="pzMargAfara">' + esc(afC) + '</p>' : "")   /* I-911: durata e deja în bandă; rândul rămâne când spune și întoarcerea */
+        + (snC && !areM("margine") ? '<p class="pzMargSanse">' + esc(snC) + '</p>' : "") + metH + (stC && !areM("stop") ? '<p class="pzMargSanse">' + esc(stC) + '</p>' : "")
+        + (stMC ? '<p class="pzNota pzMargStopM">' + esc(stMC) + '</p>' + (cap.stopMargine.dovada ? '<p class="pzDin pzMargDov">' + esc(cap.stopMargine.dovada) + '</p>' : "") : "")   /* I-913 */
+        + (inC || copC ? '<p class="pzMargIntre">' + esc(inC) + copC + '</p>' : "")
+        + mutH
+        + (cap.faraStop ? '<p class="pzDin pzMargDov pzMargFaraStop">' + esc(cap.faraStop) + '</p>' : "")
         + (cap.faCe ? '<p class="pzMargFac">' + esc(cap.faCe.replace(/^👉\s*/, "")) + '</p>' : "") + nota
         + (cap.cons ? '<p class="pzMargCons">Consilierul: <b>' + esc(cap.cons.titlu) + '</b> · ' + (cap.cons.dovedit ? "dovedit pe boții tăi" : "informație, nedovedit pe boții tăi") + ' · motivele în cartela lui, mai jos</p>' : "")
         + (cap.dovada ? '<p class="pzDin pzMargDov">' + esc(cap.dovada) + '</p>' : "")
@@ -297,6 +328,7 @@
       + '<b id="pzPret" class="pzPret"></b></div>' + motivG
       + (V.length ? '<div class="pzVoci">' + V.map(vocePzHtml).join("") + '</div>' : "");   /* v100.336 (I-866): vocea își poartă scorul */
     if (!el) { el = document.createElement("section"); el.id = "pzVerdict"; var ref = gL || $("tbKpi"); if (!ref) return; ref.parentNode.insertBefore(el, ref); }
+    if (!el._mutAsc) { el._mutAsc = true; el.addEventListener("toggle", function (ev) { var t = ev.target; if (t && t.classList && t.classList.contains("pzMut")) { try { localStorage.setItem("pzMutDeschis", t.open ? "1" : "0"); } catch (e) {} } }, true); }
     el.hidden = false; if (el._h !== h) { el.innerHTML = h; el._h = h; pzPretUmple(); }
     if (gL) gL.classList.toggle("pzInVerdict", !!motivG && el.contains(el.querySelector(".pzMotiv")));   // cartela se ascunde DOAR după ce textul ei e în verdict (revizia I5)
   }

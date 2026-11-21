@@ -124,7 +124,7 @@ await test("revizia 🔵10: rândul ales și intervalul rămân ale fiecărei pa
 });
 await test("🔑 „Unde e fiecare probă”: 5 probe (căderi, direcție, proba A, Trend 12 luni, caietul) cu de când, judecate, cum stă, privirile fixate", () => {
   const P = pagina(), d = DATE(), R = J(P.prProbe(d, ACUM));
-  assert.deepEqual(R.map((r) => r.k), ["cad", "dir", "a", "trend", "caiet", "osc", "trei"]);   // v100.353: Oscilo la capăt; v100.360: „3 la rând” după el
+  assert.deepEqual(R.map((r) => r.k), ["cad", "dir", "a", "trend", "caiet", "osc", "trei", "margine"]);   // v100.353: Oscilo la capăt; v100.360: „3 la rând” după el; v100.374: proba marginii după ele
   const c = R[0], dr = R[1], a = R[2], k = R[4];
   assert.equal(c.de, "20.10.2026"); assert.equal(c.drum.text, "prima privire 01.03.2027 · verdictul 08.11.2027");
   assert.equal(dr.drum.text, "doar cifrele 08.05.2027 · a doua privire 08.11.2027"); assert.match(dr.sta, /^M1 a nimerit \d+%, M2 \d+% \(față de piață \d+% \/ \d+%\)/);

@@ -637,6 +637,32 @@ var SemnaleBot = (function () {
     });
     return out;
   }
+  // v100.374 (I-910, el 21.11: „fă ideile”): „ce a urmat la 1 h și la 4 h” după fiecare sfat, din drumul botului (un punct pe minut).
+  // Aceeași regulă ca `judeca` (prag de zgomot: 0,5% din investiție), pe orizontul la care se iau hotărârile (un bot de-al lui trăiește în
+  // mediană 21 de minute). DESCRIPTIV: nu dă „dovedit”, nu mută sfaturile și nu schimbă ce tace pe Discord - doar cifrele, cu reperul lor.
+  var ORIZ = [1, 4];
+  function judecaLaOrizont(log, drum, investit) {
+    var L = (Array.isArray(drum) ? drum : []).filter(function (q) { return q && nr(q.t) > 0 && nr(q.profitTotal) !== null; }).sort(function (a, b) { return a.t - b.t; });
+    var prag = (nr(investit) || 0) * 0.005, u = L.length ? L[L.length - 1].t : null;
+    return (Array.isArray(log) ? log : []).map(function (e) {
+      if (!e || e.oj === true || e.total === null || e.total === undefined || nr(e.t) === null) return e;
+      var o = {}; for (var k in e) o[k] = e[k];
+      ORIZ.forEach(function (h) {
+        var tt = e.t + h * ORA, q = null; if (u === null || u < tt - 2 * 60000) return;   /* drumul nu ajunge până acolo (botul s-a închis înainte) */
+        for (var i = 0; i < L.length; i++) { if (L[i].t <= tt) q = L[i]; else break; }
+        if (!q || q.t < e.t || tt - q.t > 5 * 60000) return;   /* revizia a doua: cu un gol în drum, „la o oră” nu ia un punct de acum 55 de minute */
+        o["o" + h] = q.profitTotal; o["d" + h] = stai(e) ? q.profitTotal >= e.total - prag : q.profitTotal < e.total - prag;
+      });
+      o.oj = true; return o;
+    });
+  }
+  // socoteala unui orizont: aceleași numărători și același reper pe zile ca la închidere, pe judecata de la h ore
+  function socotealaOrizont(toate, h) {
+    var um = toate.filter(function (e) { return e && typeof e["d" + h] === "boolean"; }).map(function (e) { return { t: e.t, cod: e.cod, nivel: e.nivel, total: e.total, totalDupa: e["o" + h], dreptate: e["d" + h] }; });
+    var r = socoteala(um), z = peZile(um), out = {};
+    Object.keys(r).forEach(function (k) { var zk = z[k] || null; out[k] = { judecate: r[k].judecate, corecte: r[k].corecte, zile: zk ? zk.zile : 0, rataZile: zk ? zk.rataZile : null, reper: zk ? zk.reper : null }; });
+    return out;
+  }
   var NUME_SFAT = { tine: "„Ține-l”", "cu-botul": "„Mișcarea e cu botul”", podea: "„Ținta devine podea”", lichidare: "Lichidarea aproape", plan: "Planul tău", busola: "Busola: după agitație gridul pierde mai mult",
     trend: "Trendul împotriva botului", miscare: "Mișcare mare", "ia-profit": "„Încasează acum”", muta: "„Mută gridul”", costuri: "„Costurile mănâncă grilele”",
     btc: "„BTC în mișcare”", aglomerare: "„Mulțimea înghesuită”" };
@@ -659,6 +685,9 @@ var SemnaleBot = (function () {
       var rk = rep[x.fel]; x.baniPeste = x.baniN && rk.n ? x.bani - x.baniN * rk.s / rk.n : null;
       x.stare = x.zile < ZILE_MIN ? "necunoscut" : seVede[k] ? "ajuta" : (x.judecate >= 30 && x.bani <= 0 && !NU_TACE[k]) ? "tace" : "nesigur";
     });
+    /* v100.374 (I-910): lângă judecata de la închidere, cea de la 1 h și de la 4 h (doar unde drumul botului a ajuns până acolo) */
+    var o1 = socotealaOrizont(toate, 1), o4 = socotealaOrizont(toate, 4);
+    Object.keys(r).forEach(function (k) { r[k].la1 = o1[k] || null; r[k].la4 = o4[k] || null; });
     return r;
   }
   function tacute(soc) { var o = {}; Object.keys(soc || {}).forEach(function (k) { if (soc[k] && soc[k].stare === "tace") o[k] = true; }); return o; }
@@ -666,6 +695,15 @@ var SemnaleBot = (function () {
   // până la tura nouă a colectorului) se scrie ca înainte
   /* v100.373: `cod` = cheia sfatului, pentru forma veche din KV (fără `fel`): „ține” / „podea” / „cu-botul” se judecă ținând botul, restul ieșind la semnal */
   var STAI_COD = { tine: 1, podea: 1, "cu-botul": 1 };
+  /* v100.374 (I-910): „ · la o oră după sfat: 12 din 30 (40,0% față de 35,2% de obicei, pe 14 zile) · la 4 ore: … (descriptiv)” */
+  function textOrizonturi(x) {
+    var pz = function (v) { return TextRo.pct(v * 100, 1); }, b = [];
+    [["la1", "la o oră după sfat"], ["la4", "la 4 ore"]].forEach(function (q) {
+      var o = x && x[q[0]]; if (!o || !(o.judecate >= 5)) return;
+      b.push(q[1] + ": " + o.corecte + " din " + o.judecate + (nr(o.zile) >= ZILE_MIN && nr(o.rataZile) !== null && nr(o.reper) !== null ? " (" + pz(o.rataZile) + " față de " + pz(o.reper) + " de obicei, pe " + cate(o.zile, "zi", "zile") + ")" : ""));
+    });
+    return b.length ? " · " + b.join(" · ") + " (pe orizontul scurt e doar descriere, nu dovadă)" : "";
+  }
   function textIncredere(x, cod) {
     if (!x) return "încă nu știm (niciun caz)";
     var nou = nr(x.zile) !== null && nr(x.reper) !== null, pz = function (v) { return TextRo.pct(v * 100, 1); };
@@ -676,7 +714,7 @@ var SemnaleBot = (function () {
     var bz = function (v) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(1).replace(".", ","); }, tin = x.fel ? x.fel === "tine" : cod ? !!STAI_COD[cod] : null;
     if (x.baniN) s += ", ~" + bz(x.bani) + " USDT " + (tin === null ? "dacă-l urmai de fiecare dată" : tin ? "ținându-l de fiecare dată" : "dacă închideai botul la semnal") + (nr(x.baniPeste) !== null && tin !== null ? " (" + bz(x.baniPeste) + " peste „" + (tin ? "țin" : "ies") + " la orice sfat”)" : "");
     if (x.stare === "tace") s += nou ? " · nu-l trimit pe Discord: nu se vede peste rata de bază și urmat n-ar fi salvat bani" : " · nu-l trimit pe Discord: nu se descurcă mai bine decât întâmplarea";   /* v100.106: era „tăcut pe Discord (nu bate hazardul)” */
-    return s;
+    return s + textOrizonturi(x);
   }
 
   // v97.1: "tinta devine podea" pe banii lui - prima data cand tinta a fost atinsa (in jurnalul de semnale) fata de acum
@@ -687,7 +725,7 @@ var SemnaleBot = (function () {
     return { la: prima.t, laIesire: prima.total, acum: t, dif: t - prima.total };
   }
 
-  return { griliMoarte: griliMoarte, planPeCartela: planPeCartela, distantaLaOra: distantaLaOra, laMargine: laMargine, judecaLaInchidere: judecaLaInchidere, socotealaToti: socotealaToti, tacute: tacute, textIncredere: textIncredere, NUME_SFAT: NUME_SFAT, podeaPeBani: podeaPeBani, sensFata: sensFata, pasiCuBotul: pasiCuBotul, semafor: semafor, mutaGridul: mutaGridul, btcAvertizare: btcAvertizare, aglomerare: aglomerare, iaProfit: iaProfit, noteaza: noteaza, judeca: judeca, socoteala: socoteala,
+  return { judecaLaOrizont: judecaLaOrizont, griliMoarte: griliMoarte, planPeCartela: planPeCartela, distantaLaOra: distantaLaOra, laMargine: laMargine, judecaLaInchidere: judecaLaInchidere, socotealaToti: socotealaToti, tacute: tacute, textIncredere: textIncredere, NUME_SFAT: NUME_SFAT, podeaPeBani: podeaPeBani, sensFata: sensFata, pasiCuBotul: pasiCuBotul, semafor: semafor, mutaGridul: mutaGridul, btcAvertizare: btcAvertizare, aglomerare: aglomerare, iaProfit: iaProfit, noteaza: noteaza, judeca: judeca, socoteala: socoteala,
     gridMaiDes: gridMaiDes, fisaOpreste: fisaOpreste, textTrend: textTrend, acumConcret: acumConcret, pasBot: pasBot, celelalteMotive: celelalteMotive, pretStopEcran: pretStopEcran, etichetaStopProc: etichetaStopProc, stopLaZeroPrematur: stopLaZeroPrematur };
 })();
 if (typeof globalThis !== "undefined") globalThis.SemnaleBot = SemnaleBot;

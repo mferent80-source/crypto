@@ -4276,6 +4276,48 @@ html.pzDemo #alerts [data-rand="deschis"]:not([hidden])::before{content:"▾  st
 #alerts .cnBloc .card{margin-top:6px}
 #alerts #alSCentru>#pzV-alerts{order:-1}   /* caseta „CRITICE” sus în rândul alertelor (era copilul paginii, cu order 10) */
 /* v100.367: sfârșit */
+/* v100.374 design (el 21.11: „optimizează vizual pagina botului”): capul - banda de cifre și barele șanselor; paleta și fonturile casei, nicio culoare nouă */
+html.pzDemo #tabloubot #pzVerdict .pzLedger{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));margin:10px 0 10px;border-top:1px solid var(--pzLi);border-bottom:1px solid var(--pzLi)}
+html.pzDemo #tabloubot #pzVerdict .pzLg{display:flex;flex-direction:column;gap:2px;min-width:0;padding:9px 14px 9px 0}
+html.pzDemo #tabloubot #pzVerdict .pzLg>span{font-size:11.5px;line-height:1.3;color:var(--pzT2)}
+html.pzDemo #tabloubot #pzVerdict .pzLg>b{font-size:16px;line-height:1.2;font-weight:600;font-variant-numeric:tabular-nums;color:var(--pzT0);overflow-wrap:anywhere}
+html.pzDemo #tabloubot #pzVerdict .pzLg>small{font-size:11.5px;line-height:1.35;color:var(--pzT2);font-variant-numeric:tabular-nums}
+html.pzDemo #tabloubot #pzVerdict .pzLg-rau>b{color:var(--pzJos)}html.pzDemo #tabloubot #pzVerdict .pzLg-atentie>b{color:var(--pzAur)}
+html.pzDemo #tabloubot #pzVerdict .pzMetru{display:grid;grid-template-columns:122px minmax(0,1fr);gap:2px 12px;align-items:start;margin:8px 0 0}
+html.pzDemo #tabloubot #pzVerdict .pzMetruEt{font-size:12.5px;font-weight:600;color:var(--pzT1);padding-top:1px}
+html.pzDemo #tabloubot #pzVerdict .pzMetruBare{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px 14px}
+html.pzDemo #tabloubot #pzVerdict .pzBara{display:grid;grid-template-columns:auto minmax(0,1fr);gap:3px 8px;align-items:baseline;font-size:12.5px;min-width:0}
+html.pzDemo #tabloubot #pzVerdict .pzBara>span{color:var(--pzT2)}html.pzDemo #tabloubot #pzVerdict .pzBara>b{text-align:right;font-weight:600;font-variant-numeric:tabular-nums;color:var(--pzT0)}
+html.pzDemo #tabloubot #pzVerdict :is(.pzBara,.pzTreapta)>progress{grid-column:1/-1;display:block;width:100%;height:5px;border:0;border-radius:3px;overflow:hidden;appearance:none;-webkit-appearance:none;background:var(--pzLi);color:var(--pzT1)}
+html.pzDemo #tabloubot #pzVerdict :is(.pzBara,.pzTreapta)>progress::-webkit-progress-bar{background:var(--pzLi);border-radius:3px}
+html.pzDemo #tabloubot #pzVerdict :is(.pzBara,.pzTreapta)>progress::-webkit-progress-value{background:var(--pzT1);border-radius:3px}
+html.pzDemo #tabloubot #pzVerdict :is(.pzBara,.pzTreapta)>progress::-moz-progress-bar{background:var(--pzT1);border-radius:3px}
+html.pzDemo #tabloubot #pzVerdict .pzMetruSursa{grid-column:2;font-size:11px;line-height:1.35;color:var(--pzT2)}
+html.pzDemo #tabloubot #pzVerdict .pzMarg>p.pzNota{margin:10px 0 0;padding:6px 0 6px 10px;border-left:3px solid var(--pzAur);font-weight:600;color:var(--pzT0)}
+html.pzDemo #tabloubot #pzVerdict .pzTrepte{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px 14px;margin:4px 0 6px}
+html.pzDemo #tabloubot #pzVerdict .pzTreapta{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 8px;align-items:baseline;font-size:12.5px;min-width:0}
+html.pzDemo #tabloubot #pzVerdict .pzTreapta>span{color:var(--pzT2)}html.pzDemo #tabloubot #pzVerdict .pzTreapta>b{font-weight:600;font-variant-numeric:tabular-nums;color:var(--pzT0)}
+html.pzDemo #tabloubot #pzVerdict .pzTreapta>small{grid-column:1/-1;font-size:11px;color:var(--pzT2)}html.pzDemo #tabloubot #pzVerdict .pzTreaptaAcum>span{color:var(--pzT0);font-weight:600}
+html.pzDemo #tabloubot #pzVerdict .pzMut>p.pzTrepteEt{margin-top:8px;font-size:12px;color:var(--pzT2)}
+html.pzDemo #tabloubot #pzVerdict .pzMarg>p.pzMargDov{margin-top:4px;font-size:11.5px;line-height:1.35}
+/* „Contează acum” fără niciun rând: nu mai ține o coloană goală lângă cap - capul, cifrele și Drumul iau toată lățimea, iar rândul lui stă dedesubt */
+@media (min-width:900px){html.pzDemo #tabloubot#tabloubot#tabloubot.on .tbCadru:has(>#ctAcum:not([hidden]) .ctGol)>:is(#pzVerdict,.tbSus,#pzDrumCard){grid-column:1 / -1!important}html.pzDemo #tabloubot#tabloubot#tabloubot.on .tbCadru:has(>#ctAcum:not([hidden]) .ctGol)>#ctAcum:not([hidden]){grid-column:1 / -1!important;grid-row:auto!important;order:2;align-self:auto;display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 12px;margin:0;padding:8px 16px}html.pzDemo #tabloubot#tabloubot#tabloubot.on .tbCadru:has(>#ctAcum:not([hidden]) .ctGol)>#ctAcum .ctGol{margin:0}}
+@media (max-width:550px){html.pzDemo #tabloubot #pzVerdict .pzLedger{grid-template-columns:repeat(2,minmax(0,1fr))}html.pzDemo #tabloubot #pzVerdict .pzLg:last-child:nth-child(odd){grid-column:1 / -1}html.pzDemo #tabloubot #pzVerdict .pzTrepte{grid-template-columns:minmax(0,1fr)}html.pzDemo #tabloubot #pzVerdict .pzMetru{grid-template-columns:minmax(0,1fr)}html.pzDemo #tabloubot #pzVerdict .pzMetruSursa{grid-column:1}html.pzDemo #tabloubot #pzVerdict .pzMetruBare{gap:4px 10px}html.pzDemo #tabloubot #pzVerdict .pzBara{font-size:12px}}
+/* v100.374 (el 21.11: „da fa tot”): rândurile noi din cap (expunerea, între margine și stop, „fără stop”), rândul scurt din „Contează acum”, Vremea monedei */
+html.pzDemo #tabloubot #pzVerdict .pzMarg>p.pzMargExp{font-variant-numeric:tabular-nums;color:var(--pzT0);font-weight:600}
+html.pzDemo #tabloubot #pzVerdict .pzMarg>p.pzMargIntre,html.pzDemo #tabloubot #pzVerdict .pzMarg>p.pzMargAfara{font-variant-numeric:tabular-nums;color:var(--pzT1)}
+html.pzDemo #tabloubot #pzVerdict .pzMarg>p.pzMargIntre .pzMargCop{margin:2px 0 2px 6px;vertical-align:baseline}
+html.pzDemo #tabloubot #pzVerdict .pzMarg>p.pzMargZero,html.pzDemo #tabloubot #pzVerdict .pzMarg>p.pzMargMut{font-variant-numeric:tabular-nums;color:var(--pzT0)}
+html.pzDemo #tabloubot #pzVerdict .pzMarg>p.pzMargStopM{font-variant-numeric:tabular-nums;color:var(--pzT0);font-weight:600}
+html.pzDemo #tabloubot #pzVerdict .pzMut{margin:8px 0 2px;padding:8px 0 0;border-top:1px solid var(--pzLinie,var(--line))}
+html.pzDemo #tabloubot #pzVerdict .pzMut>summary{cursor:pointer;font-weight:600;color:var(--pzT0);min-height:40px;box-sizing:border-box;padding:4px 0}
+html.pzDemo #tabloubot #pzVerdict .pzMut>p{margin:4px 0 0;font-variant-numeric:tabular-nums;color:var(--pzT1)}
+#tabloubot .ctInCap{margin:8px 0 0;border-top:1px solid var(--pzLinie,var(--line))}
+#tabloubot .ctInCap>summary{cursor:pointer;min-height:40px;box-sizing:border-box;padding:10px 0;font-size:12.5px;color:var(--pzT2,var(--muted))}
+#tabloubot .ctInCap>summary b{font-weight:600;color:var(--pzT1,inherit)}
+#tabloubot .tbVremea{margin:0 0 6px;font-size:13.5px;line-height:1.45;color:var(--pzT1,inherit)}#tabloubot .tbVremea[hidden]{display:none}
+#tabloubot .tbVremeaLarg{margin-top:0}#tabloubot .tbVremeaLarg>summary{min-height:40px;box-sizing:border-box;padding:10px 0}
+#tabloubot .tbVremeaLarg[open]>summary{margin-bottom:6px}
 /* v100.373 (el 20.11: „putem să optimizăm pagina botului, la verdicte”): capul = marginea contra botului; rândul de cost; pliul de 3 și 7 zile */
 html.pzDemo #tabloubot #pzVerdict .pzMarg>p.pzMargSanse,html.pzDemo #tabloubot #pzVerdict .pzMarg>p.pzMargBani{font-variant-numeric:tabular-nums;color:var(--pzT0)}
 html.pzDemo #tabloubot #pzVerdict .pzMarg>p.pzMargBani{font-weight:600}
@@ -4949,6 +4991,16 @@ html.pzDemo #contintreg [data-rand="deschis"]:not([hidden])::before{content:"▾
 @media (max-width:640px){#alerts .cnMare{font-size:20px}}
 #alerts .alRep>summary{font-size:12px}
 #alerts .alRepRand{font-size:12px}
+html.pzDemo #tabloubot #pzVerdict .pzLg>span{font-size:12px}
+html.pzDemo #tabloubot #pzVerdict .pzLg>b{font-size:15px}
+html.pzDemo #tabloubot #pzVerdict .pzLg>small{font-size:12px}
+html.pzDemo #tabloubot #pzVerdict .pzMetruEt{font-size:12px}
+html.pzDemo #tabloubot #pzVerdict .pzBara{font-size:12px}
+html.pzDemo #tabloubot #pzVerdict .pzMetruSursa{font-size:12px}
+html.pzDemo #tabloubot #pzVerdict .pzTreapta{font-size:12px}
+html.pzDemo #tabloubot #pzVerdict .pzTreapta>small{font-size:12px}
+html.pzDemo #tabloubot #pzVerdict .pzMarg>p.pzMargDov{font-size:12px}
+#tabloubot .ctInCap>summary{font-size:12px}
 html.pzDemo #tabloubot #pzVerdict .pzMarg>p.pzMargCons{font-size:12px}
 html.pzDemo #tabloubot #pzVerdict .pzMarg>p.pzMargCons b{font-size:12px}
 #tabloubot .tbKpiCost .pzKv small{font-size:12px}
