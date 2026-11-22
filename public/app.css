@@ -2260,7 +2260,7 @@ details.grAlte>summary{cursor:pointer;color:var(--muted);font-size:13.5px}
 #montecarlo .rlTab{overflow-x:auto}
 /* v100.117 (I-561): carnetul fișei - tabelul stopului promis */
 .cnTab{width:auto;border-collapse:collapse;font-variant-numeric:tabular-nums;min-width:420px}.cnTab th,.cnTab td{padding:6px 10px;border-bottom:1px solid var(--line-soft);text-align:right}.cnTab th:first-child,.cnTab td:first-child{text-align:left}.cnTab th{font-size:12px;color:var(--muted);font-weight:600}#montecarlo .rlTab table{border-collapse:collapse;width:100%;font-size:13px}#montecarlo .rlTab th,#montecarlo .rlTab td{text-align:left;padding:6px 10px 6px 0;border-bottom:1px solid var(--line-soft);vertical-align:top}
-#montecarlo .rlTab th{color:var(--muted);font-size:12px;white-space:nowrap}#montecarlo .rlNr{text-align:right!important;white-space:nowrap;font-variant-numeric:tabular-nums}
+#montecarlo .rlTab th{color:var(--muted);font-size:12px;white-space:nowrap}#montecarlo .rlNr{text-align:right!important;white-space:nowrap;font-variant-numeric:tabular-nums}#montecarlo .rlTab tr.rlPutini td{color:var(--muted)}
 #montecarlo .rlPill{white-space:nowrap;font-size:12px;font-weight:600;border-radius:3px;padding:1px 8px;border:1px solid var(--muted);color:var(--muted)}#montecarlo .rlPill.rl-rau{border-color:var(--bad);color:var(--bad)}#montecarlo .rlPill.rl-bine{border-color:var(--good);color:var(--good)}
 #montecarlo .rlMetoda summary,#montecarlo .rlVechi>summary{cursor:pointer;color:var(--accent);font-size:13px}#montecarlo .rlMetoda ul{color:var(--muted);font-size:13px;display:grid;gap:4px;max-width:95ch}#montecarlo .rlVechi{margin-top:12px}
 #tabloubot #tbRisc{display:grid;gap:6px;padding:6px 0}#tabloubot .tbRiscR{margin:0;line-height:1.45}
@@ -4317,16 +4317,16 @@ html.pzDemo #tabloubot #pzVerdict .pzVerbTxt.pzMarg>.pzLedger:has(>.pzLg:nth-chi
    „Contează acum” pe o treime. Jumătățile din 11.11 erau pentru verdictul scund (altfel „Contează acum” îl depășea și lăsa goluri); cu capul marginii, jumătatea
    din dreapta rămânea goală pe ~800 px, iar capul stătea înghesuit. Fără capul marginii rămân jumătățile; cu „Contează acum” gol, tot rândul (ca până acum). */
 @media (min-width:1181px) and (max-width:1699px){
-html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])):has(>#pzVerdict .pzVerbTxt.pzMarg):has(>#ctAcum:not([hidden]) .ctRand)>:is(#pzVerdict,.tbSus,#tbGridLarg){grid-column:1 / 5!important}
-html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])):has(>#pzVerdict .pzVerbTxt.pzMarg):has(>#ctAcum:not([hidden]) .ctRand)>#ctAcum:not([hidden]){grid-column:5 / -1!important}
-html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])):has(>#pzVerdict .pzVerbTxt.pzMarg):has(>#ctAcum:not([hidden]) .ctRand)>.tbSus>#tbKpi{grid-template-columns:minmax(0,2.4fr) minmax(max-content,1fr) repeat(2,minmax(min-content,1fr))!important;row-gap:0!important}
-html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])):has(>#pzVerdict .pzVerbTxt.pzMarg):has(>#ctAcum:not([hidden]) .ctRand)>.tbSus #tbKpi>.tbKpiCel:nth-child(3){border-left:1px solid var(--pzLi);padding-left:18px}
-html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])):has(>#pzVerdict .pzVerbTxt.pzMarg):has(>#ctAcum:not([hidden]) .ctRand)>#ctAcum .ctCopiere>.ctBtn{flex:0 1 auto;max-width:100%;white-space:normal}
+html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])):has(>#pzVerdict .pzVerbTxt.pzMarg):has(>#ctAcum:not([hidden]) :is(.ctRand,.ctConcret))>:is(#pzVerdict,.tbSus,#tbGridLarg){grid-column:1 / 5!important}
+html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])):has(>#pzVerdict .pzVerbTxt.pzMarg):has(>#ctAcum:not([hidden]) :is(.ctRand,.ctConcret))>#ctAcum:not([hidden]){grid-column:5 / -1!important}
+html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])):has(>#pzVerdict .pzVerbTxt.pzMarg):has(>#ctAcum:not([hidden]) :is(.ctRand,.ctConcret))>.tbSus>#tbKpi{grid-template-columns:minmax(0,2.4fr) minmax(max-content,1fr) repeat(2,minmax(min-content,1fr))!important;row-gap:0!important}
+html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])):has(>#pzVerdict .pzVerbTxt.pzMarg):has(>#ctAcum:not([hidden]) :is(.ctRand,.ctConcret))>.tbSus #tbKpi>.tbKpiCel:nth-child(3){border-left:1px solid var(--pzLi);padding-left:18px}
+html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])):has(>#pzVerdict .pzVerbTxt.pzMarg):has(>#ctAcum:not([hidden]) :is(.ctRand,.ctConcret))>#ctAcum .ctCopiere>.ctBtn{flex:0 1 auto;max-width:100%;white-space:normal}
 }
 /* „fa idei” (a șaptea oară): sub 1340 px, pe două treimi, „Rezultat total” are ~200–290 px - calificativul „pornire și închidere” al rândului de cost se ascunde
    (explicația lui e în titlul rândului și se vede la toate celelalte lățimi); rândul stă pe un rând */
 @media (min-width:1181px) and (max-width:1339px){
-html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])):has(>#pzVerdict .pzVerbTxt.pzMarg):has(>#ctAcum:not([hidden]) .ctRand)>.tbSus #tbKpiCost .pzKv small{display:none}
+html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])):has(>#pzVerdict .pzVerbTxt.pzMarg):has(>#ctAcum:not([hidden]) :is(.ctRand,.ctConcret))>.tbSus #tbKpiCost .pzKv small{display:none}
 }
 #tabloubot .tbCitGri{display:none}
 /* I-919 starea de azi în titlul capitolului; I-916 cuprinsul capitolelor: sub 1181 px în șir, între „Contează acum” și grafic; de la 1181 px pe rândul
@@ -4403,7 +4403,7 @@ html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru #tbPl-fis
 html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru #tbPl-port{order:350!important}
 html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru>.contTot{order:352!important}
 html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru #tbCap-piata{order:360!important}
-html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru #tbTrendCard{order:362!important}
+/* v100.377: „Trendul pe TF-uri” nu mai are ordine de capitol - stă sub grafic (regulile lui sunt în blocul v100.377, după acest bloc) */
 html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru #tbCitireCard{order:364!important}
 html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru #tbCitireMobil{order:364!important}
 html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru>.piataAzi{order:366!important}
@@ -4446,6 +4446,33 @@ html.pzDemo #tabloubot#tabloubot#tabloubot .tbCadru>details.tbPl>summary>b{flex:
 html.pzDemo #tabloubot#tabloubot#tabloubot .tbCadru>details.tbPl>summary>.tbSub{flex:0 0 100%;margin-left:0;text-align:left;font-weight:400;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 }
 /* v100.375 design: sfârșit */
+/* v100.377 (el 22.11: „fa idei”): pagina Probe - rândul „La boții porniți acum”, pe toată lățimea faptelor, la orice lățime */
+.prFapte .prAcum{grid-column:1/-1}
+/* v100.377: „Consilierul, concret” în cutia „Contează acum” - stopul, gridul, mișcarea, cu sfatul fiecăruia (aceleași rânduri ca în cartela din Riscul) */
+#tabloubot .ctNimic{margin:6px 0 2px;color:var(--pzT2,var(--muted))}
+#tabloubot .ctConcret{margin:10px 0 4px;border-top:1px solid var(--pzLi,var(--line));padding-top:8px}
+#tabloubot .ctCcTitlu{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:2px 10px}
+#tabloubot .ctCcTitlu>b{font-size:14px;font-weight:600;color:var(--pzT0,var(--text))}
+#tabloubot .ctCcTitlu>.ctBtn{width:auto;flex:0 0 auto}
+#tabloubot .ctCcRand{margin-top:8px;padding:2px 0 4px 10px;border-left:3px solid var(--pzLi2,var(--line))}
+#tabloubot .ctCcCap{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px}
+#tabloubot .ctCcCap>b{font-size:13.5px;font-weight:600;color:var(--pzT0,var(--text))}
+#tabloubot .ctCcMare{font-size:13.5px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--pzT0,var(--text))}
+#tabloubot .ctCcMare>small{font-size:12px;font-weight:400;color:var(--pzT2,var(--muted))}
+#tabloubot .ctCcAct{margin:3px 0 0;font-size:13.5px;line-height:1.45;color:var(--pzT0,var(--text))}
+#tabloubot .ctCcBani{margin:3px 0 0;font-size:12.5px;line-height:1.45;color:var(--pzT1,var(--muted))}
+#tabloubot .ctCcRand>.ctBtn{width:auto;max-width:100%;margin-top:6px;white-space:normal}
+/* pe tabletă cutia are toată lățimea paginii: cele trei sfaturi stau pe un rând */
+@media (min-width:700px) and (max-width:1180px){
+#tabloubot .ctConcret{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));column-gap:18px;align-items:start}
+#tabloubot .ctConcret>.ctCcTitlu{grid-column:1 / -1}
+}
+/* v100.377 (el 22.11: „nici vremea monedei nu mai e sub chart să fie ușor de văzut”): „Trendul pe TF-uri” (rândul „Vremea monedei” + tabelul pliat) stă iar
+   SUB GRAFIC, la orice lățime, cum era până la v100.375 (plecase în capitolul Piața, sub Decizia, Riscul și Banii) */
+html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru #tbTrendCard{order:19!important}
+@media (max-width:1180px){
+html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru #tbTrendCard{order:13!important;grid-column:1 / -1!important;grid-row:auto!important;min-width:0}
+}
 /* v100.374 design (el 21.11: „optimizează vizual pagina botului”): capul - banda de cifre și barele șanselor; paleta și fonturile casei, nicio culoare nouă */
 html.pzDemo #tabloubot #pzVerdict .pzLedger{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));margin:10px 0 10px;border-top:1px solid var(--pzLi);border-bottom:1px solid var(--pzLi)}
 html.pzDemo #tabloubot #pzVerdict .pzLg{display:flex;flex-direction:column;gap:2px;min-width:0;padding:9px 14px 9px 0}
@@ -5161,6 +5188,8 @@ html.pzDemo #contintreg [data-rand="deschis"]:not([hidden])::before{content:"▾
 @media (max-width:640px){#alerts .cnMare{font-size:20px}}
 #alerts .alRep>summary{font-size:12px}
 #alerts .alRepRand{font-size:12px}
+#tabloubot .ctCcTitlu>b{font-size:13.5px}
+#tabloubot .ctCcBani{font-size:12px}
 html.pzDemo #tabloubot #pzVerdict .pzLg>span{font-size:12px}
 html.pzDemo #tabloubot #pzVerdict .pzLg>b{font-size:15px}
 html.pzDemo #tabloubot #pzVerdict .pzLg>small{font-size:12px}

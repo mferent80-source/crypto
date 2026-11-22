@@ -46,6 +46,16 @@ var GridPlan = (function () {
       lichidare: G.lichidare(G.niveluri(jos, sus, N), P, o.dir, L), perOrdin: o.suma * L / N, profitGrila: g - 2 * C.COMISION_GRILA, minOrdin: mo || null, sumaMica: sumaMica };
   }
   // totalul in USDT daca pretul merge DREPT de la pornire pana la stop (parte = "pierdere") sau pana la tinta
+  // v100.377 (I-906, el 22.11: „idei care chiar să conteze”): costul dus-întors ÎNAINTE de pornire. Taxa de intrare se plătește pe ce cumpără botul
+  // la pornire: suma × levierul × partea gridului dinspre câștig (ca TabloExtra.taxaIntrare), la comisionul de piață; o ieșire imediată vinde
+  // aceeași poziție, deci dus-întors = de două ori. În % din sumă și în perechi de grile încheiate care îl acoperă. La boții lui ținuți sub
+  // 15 minute, comisioanele fac cea mai mare parte din pierdere.
+  function dusIntors(x) {
+    if (!x || !(x.suma > 0) || !(x.levier > 0) || !(x.sus > x.jos) || !(x.pret > 0) || (x.dir !== "long" && x.dir !== "short")) return null;   /* auditul 22.11: direcție necunoscută = lipsă, nu „cost 0” */
+    var parte = Math.min(1, Math.max(0, x.dir === "long" ? (x.sus - x.pret) / (x.sus - x.jos) : x.dir === "short" ? (x.pret - x.jos) / (x.sus - x.jos) : 0));
+    var intrare = x.suma * x.levier * parte * C.COMISION, cost = 2 * intrare, peGrila = x.perOrdin > 0 && x.profitGrila > 0 ? x.perOrdin * x.profitGrila : null;
+    return { intrare: intrare, cost: cost, dinSuma: cost / x.suma, perechi: peGrila ? cost / peGrila : null };
+  }
   function laMargine(st, parte) {
     var P = st.pret, lung = st.dir === "long", spreJos = (parte === "pierdere") === lung;
     var tinta = spreJos ? st.stop.jos * 0.999 : st.stop.sus * 1.001;
@@ -309,6 +319,6 @@ var GridPlan = (function () {
     return { k: null, t: cand[0].t, simbol: cand[0].simbol, verdict: cand[0].verdict || null, rec: cand[0].rec || null };
   }
 
-  return { fabrica: fabrica, verdictFereastra: verdictFereastra, variante: variante, proba: proba, dePornire: dePornire, pierdere: pierdere, castig: castig, potrivire: potrivire, alege: alege, deSarit: deSarit, textPornit: textPornit, motive: motive, setareFereastra: setareFereastra, recunoaste: recunoaste, fereastraBotului: fereastraBotului };
+  return { dusIntors: dusIntors, fabrica: fabrica, verdictFereastra: verdictFereastra, variante: variante, proba: proba, dePornire: dePornire, pierdere: pierdere, castig: castig, potrivire: potrivire, alege: alege, deSarit: deSarit, textPornit: textPornit, motive: motive, setareFereastra: setareFereastra, recunoaste: recunoaste, fereastraBotului: fereastraBotului };
 })();
 if (typeof globalThis !== "undefined") globalThis.GridPlan = GridPlan;

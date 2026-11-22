@@ -897,7 +897,7 @@ var TabloExtra = (function () {
   }
 
   // v100.149 (I-581): „ce a urmat” după o alertă - prețul botului la alertă (KV: pret) și după 24 h (KV: dupa.pret, scris de colector)
-  var NUME_ALERTA = { "busola-miscare": "mai agitată", "busola-directie": "invers față de bot", "busola-btc": "BTC contra", "busola-voci": "toate vocile contra", "grid-larg": "gridul prea larg", "minus-24h": "pe minus 24 h", "ceas-larg": "ceasul larg", "fara-plan": "fără plan", "pornit-ca": "pornit ca" };
+  var NUME_ALERTA = { "busola-miscare": "mai agitată", "busola-directie": "invers față de bot", "busola-btc": "BTC contra", "busola-voci": "toate vocile contra", "grid-larg": "gridul prea larg", "minus-4h": "pe minus 4 h", "minus-24h": "pe minus 24 h", "stop-pe-margine": "stopul pe margine", "ceas-larg": "ceasul larg", "fara-plan": "fără plan", "pornit-ca": "pornit ca" };
   function dupaAlerta(a) {
     if (!a || !(Number(a.pret) > 0) || !a.dupa || !(Number(a.dupa.pret) > 0)) return null;
     var x = (Number(a.dupa.pret) / Number(a.pret) - 1) * 100;

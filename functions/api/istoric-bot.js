@@ -78,11 +78,12 @@ async function istoricGet(request,env){
     return json({la:Date.now(),parti})}
   if(action==="config")return json({config:await citesteConfig(env)});
   // v100.25: arhiva botilor inchisi (toata istoria Pionex), stransa de colector; ?la=<ultima vazuta> -> fara lista daca nu s-a schimbat
-  if(action==="botiInchisi"){let a=null;try{a=JSON.parse(await env.ISTORIC.get("botiInchisi")||"null")}catch{a=null}
+  /* revizia reparațiilor (22.11, N1): `citit:false` = cheia n-a putut fi citită (nu „arhiva e goală”) - colectorul nu o ia atunci drept arhivă venită */
+  if(action==="botiInchisi"){let a=null,citit=true,tA=null;try{tA=await env.ISTORIC.get("botiInchisi")}catch{citit=false}try{a=JSON.parse(tA||"null")}catch{a=null;citit=false}
     // v100.26: „completa” doar pe forma de acum (una veche are toti botii, dar fara suma pusa reala - se reface)
     const boti=a&&Array.isArray(a.boti)?a.boti:[],la=a&&nr(a.la)||null,forma=a&&nr(a.forma)||1,complet=!!(a&&a.complet)&&forma===FORMA_ARHIVA;
-    if(la&&nr(u.searchParams.get("la"))===la)return json({la,complet,forma,n:boti.length,neschimbat:true});
-    return json({la,complet,forma,n:boti.length,boti})}
+    if(la&&nr(u.searchParams.get("la"))===la)return json({la,complet,forma,n:boti.length,neschimbat:true,citit});
+    return json({la,complet,forma,n:boti.length,boti,citit})}
   // v79 F3: clasamentul "pe care monede pornesc grid acum?", scris de colector o data pe ora
   if(action==="clasament"){let c=null,st=null;try{c=JSON.parse(await env.ISTORIC.get("clasament")||"null")}catch{c=null}try{st=JSON.parse(await env.ISTORIC.get("clasament:stare")||"null")}catch{st=null}return json({clasament:c,stare:st})}   /* v100.276: + starea turelor (de ce lipsește) */
   // v79.1: alertele colectorului (fara ntfy) - cele mai noi primele
@@ -149,7 +150,10 @@ async function istoricGet(request,env){
     /* `citit:false` = KV-ul n-a putut fi citit (nu „botul n-are drum”): tura probei nu-l trece atunci ca judecat */
     try{r=JSON.parse(await env.ISTORIC.get("drum:"+bot)||"null");if(u.searchParams.get("brut")!=="0"){const v=JSON.parse(await env.ISTORIC.get("ist:"+bot)||"[]");brut=Array.isArray(v)?v:[]}}catch{citit=false}
     return json({bot,brut,rarit:r,citit})}
-  if(action==="probaMargine"){let v=null;try{v=JSON.parse(await env.ISTORIC.get("proba:margine")||"null")}catch{v=null}return json({probaMargine:v})}
+  /* revizia reparațiilor (22.11, N7): `citit:false` = cheia n-a putut fi citită - tura cu starea pierdută nu ia asta drept „niciun verdict înghețat” */
+  if(action==="probaMargine"){let v=null,citit=true,t=null;try{t=await env.ISTORIC.get("proba:margine")}catch{citit=false}try{v=JSON.parse(t||"null")}catch{v=null}return json({probaMargine:v,citit})}
+  if(action==="probaTimp"){let v=null,citit=true,t=null;try{t=await env.ISTORIC.get("proba:timp")}catch{citit=false}try{v=JSON.parse(t||"null")}catch{v=null}return json({probaTimp:v,citit})}   /* v100.377: „închid după 4 ore pe minus” */
+  if(action==="probaPierdere"){let v=null,citit=true,t=null;try{t=await env.ISTORIC.get("proba:pierdere")}catch{citit=false}try{v=JSON.parse(t||"null")}catch{v=null}return json({probaPierdere:v,citit})}   /* v100.377: „închid la −5% din sumă” */
   if(action==="treiLaRand"){let v=null;try{v=JSON.parse(await env.ISTORIC.get("proba:treiLaRand")||"null")}catch{v=null}return json({treiLaRand:v})}   /* v100.360: proba „3 pierderi la rând = gata ziua” */
   // v100.312 (I-843): caietul de păreri judecate - lista (o scrie pagina) + judecățile (le scrie colectorul, tura-pareri.mjs), pe chei separate
   if(action==="pareri"){let l,j;try{l=JSON.parse(await env.ISTORIC.get("pareri:lista")||"[]");j=JSON.parse(await env.ISTORIC.get("pareri:judecate")||"{}")}catch{return json({error:"caietul nu s-a putut citi acum"},503)}if(!Array.isArray(l)||!j||typeof j!=="object"||Array.isArray(j))return json({error:"caietul nu s-a putut citi acum"},503);return json({pareri:l,judecate:j})}   /* revizia: la o eroare de citire 503, nu gol - colectorul ar fi șters judecățile */
@@ -243,7 +247,8 @@ export async function onRequestPost({request,env}){
   // v100.25: colectorul trimite botii inchisi pe bucati; se unesc cu arhiva (compact, fara dubluri); „completa” nu se mai pierde
   if(action==="botiInchisi"){
     if(!corp||!Array.isArray(corp.boti))return json({error:"Lipseste lista boti"},400);
-    let a=null;try{a=JSON.parse(await env.ISTORIC.get("botiInchisi")||"null")}catch{a=null}
+    /* a doua trecere a reviziei (22.11, D7): cheia care NU se poate citi ⇒ 503 și nimic scris (altfel bucata trimisă devenea TOATĂ arhiva); o valoare stricată se reface */
+    let a=null,tA=null;try{tA=await env.ISTORIC.get("botiInchisi")}catch{return json({error:"botiInchisi: arhiva de acum nu poate fi citită - nu scriu peste ea (reîncearcă tura viitoare)"},503)}try{a=JSON.parse(tA||"null")}catch{a=null}
     // v100.26: o arhiva de forma veche nu mai e „completa” pana nu o reface colectorul pe forma de acum
     const deAcum=!!(a&&nr(a.forma)===FORMA_ARHIVA),boti=uneste(a&&a.boti,corp.boti),complet=!!(deAcum&&a.complet)||corp.complet===true,la=Date.now(),forma=complet?FORMA_ARHIVA:(a&&nr(a.forma))||1;
     await env.ISTORIC.put("botiInchisi",JSON.stringify({la,complet,forma,boti}));
@@ -453,14 +458,23 @@ export async function onRequestPost({request,env}){
     /* I-909: nota botului PORNIT (`viu:true`, fără `inchis`): până unde s-a citit drumul (`scanat`) și dacă nota e bună (`stare`) */
     const ie=d.iesire&&typeof d.iesire==="object"&&nr(d.iesire.t)>0?{t:nr(d.iesire.t),total:nr(d.iesire.total),inv:nr(d.iesire.inv)}:null,viu=d.viu===true&&!(nr(d.inchis)>0);
     await env.ISTORIC.put("drum:"+bot,JSON.stringify({la:Date.now(),creat:nr(d.creat),inchis:nr(d.inchis),viu:viu?true:undefined,scanat:viu?nr(d.scanat):undefined,stare:viu&&["ok","taiat","gol","pornit-afara","mutat"].includes(d.stare)?d.stare:undefined,p:d.p,iesire:ie}));return json({ok:true,puncte:d.p.length})}
-  if(action==="probaMargine"){const c=corp,ent=(v)=>Number.isInteger(v)&&v>=0,num=(v)=>v===null||(typeof v==="number"&&Number.isFinite(v)),ic=(v)=>v===null||(Array.isArray(v)&&v.length===2&&v.every(x=>typeof x==="number"&&Number.isFinite(x))),VER=[null,"inchiderea","lasatul","n-am aflat"];
+  if(action==="probaMargine"||action==="probaPierdere"||action==="probaTimp"){const eP=action==="probaPierdere",eT=action==="probaTimp",c=corp,ent=(v)=>Number.isInteger(v)&&v>=0,num=(v)=>v===null||(typeof v==="number"&&Number.isFinite(v)),ic=(v)=>v===null||(Array.isArray(v)&&v.length===2&&v.every(x=>typeof x==="number"&&Number.isFinite(x))),VER=[null,"inchiderea","lasatul","n-am aflat"];
     const parte=(p)=>p&&typeof p==="object"&&ent(p.n)&&ent(p.zile)&&num(p.medie)&&ic(p.ic)?{n:p.n,zile:p.zile,medie:p.medie,ic:p.ic}:null,grup=(p)=>p&&typeof p==="object"&&ent(p.n)&&num(p.medie)?{n:p.n,medie:p.medie,suma:nr(p.suma)}:null;
-    if(!c||typeof c!=="object"||Array.isArray(c)||c.forma!==1||!(nr(c.la)>0)||c.la>Date.now()+600000||!ent(c.n)||!ent(c.zile)||!num(c.medie)||!num(c.suma)||!ic(c.ic)||!VER.includes(c.verdict)||!ent(c.minEpisoade)||!ent(c.minZile))return json({error:"probaMargine: forma 1, la, n, zile, minEpisoade, minZile (întregi), medie / suma (număr sau null), ic (null sau două numere), verdict (null, inchiderea, lasatul, n-am aflat)"},400);
-    const B=c.boti&&typeof c.boti==="object"?c.boti:{},boti={};["total","judecati","ramasi","episoade","inGrid","faraDrum","drumTaiat","gol","mutat","pornitAfara","neutri"].forEach(k=>{boti[k]=ent(B[k])?B[k]:0});
+    if(!c||typeof c!=="object"||Array.isArray(c)||c.forma!==1||!(nr(c.la)>0)||c.la>Date.now()+600000||!ent(c.n)||!ent(c.zile)||!num(c.medie)||!num(c.suma)||!ic(c.ic)||!VER.includes(c.verdict)||!ent(c.minEpisoade)||!ent(c.minZile))return json({error:action+": forma 1, la, n, zile, minEpisoade, minZile (întregi), medie / suma (număr sau null), ic (null sau două numere), verdict (null, inchiderea, lasatul, n-am aflat)"},400);
+    const B=c.boti&&typeof c.boti==="object"?c.boti:{},boti={};(eT?["total","judecati","ramasi","episoade","scurt","pePlus","faraDrum","drumTaiat","gol","vechi","necititi"]:eP?["total","judecati","ramasi","episoade","pestePrag","faraDrum","drumTaiat","gol","pornitSub","vechi","necititi"]:["total","judecati","ramasi","episoade","inGrid","faraDrum","drumTaiat","gol","mutat","pornitAfara","neutri","necititi"]).forEach(k=>{boti[k]=ent(B[k])?B[k]:0});
     /* verdictul se îngheață o singură dată (tura colectorului); `verdict` de sus e cel înghețat sau null */
     const g=c.inghetat,ing=g&&typeof g==="object"&&!Array.isArray(g)&&nr(g.la)>0&&ent(g.n)&&ent(g.zile)&&num(g.medie)&&num(g.suma)&&ic(g.ic)&&VER.includes(g.verdict)&&g.verdict!==null?{la:nr(g.la),n:g.n,zile:g.zile,medie:g.medie,suma:g.suma,ic:g.ic,verdict:g.verdict,seContrazic:g.seContrazic===true}:null;
     const dupa={};[1,4,24].forEach(h=>{const q=c.dupa&&c.dupa[h];dupa[h]=q&&typeof q==="object"&&ent(q.n)&&ent(q.intorsi)&&num(q.medie)?{n:q.n,intorsi:q.intorsi,medie:q.medie}:null});
-    await env.ISTORIC.put("proba:margine",JSON.stringify({forma:1,la:c.la,n:c.n,zile:c.zile,medie:c.medie,suma:c.suma,ic:c.ic,verdict:ing?ing.verdict:null,inghetat:ing,seContrazic:c.seContrazic===true,minEpisoade:c.minEpisoade,minZile:c.minZile,vechi:parte(c.vechi),nou:parte(c.nou),dupa,cuStop:grup(c.cuStop),faraStop:grup(c.faraStop),boti}));return json({ok:true})}
+    /* auditul 22.11 (🟡): un verdict DEJA înghețat în KV nu se înlocuiește cu altul - dacă tura colectorului și-a pierdut starea și ar îngheța a doua
+       oară, pe alte date, rămâne cel dintâi („o singură privire”). Revizia reparațiilor (N7): cheia care NU se poate citi ⇒ 503, nu se scrie nimic
+       (altfel un verdict înghețat necitit era înlocuit); o valoare stricată (JSON) nu mai are ce păstra și se rescrie. */
+    let ingF=ing,tK=null;try{tK=await env.ISTORIC.get(eT?"proba:timp":eP?"proba:pierdere":"proba:margine")}catch{return json({error:action+": bilanțul de acum nu poate fi citit - nu scriu peste el (reîncearcă tura viitoare)"},503)}
+    try{const vK=JSON.parse(tK||"null"),gK=vK&&vK.inghetat;if(gK&&typeof gK==="object"&&!Array.isArray(gK)&&nr(gK.la)>0&&VER.includes(gK.verdict)&&gK.verdict!==null)ingF=gK}catch{}
+    const ob={forma:1,la:c.la,n:c.n,zile:c.zile,medie:c.medie,suma:c.suma,ic:c.ic,verdict:ingF?ingF.verdict:null,inghetat:ingF,seContrazic:c.seContrazic===true,minEpisoade:c.minEpisoade,minZile:c.minZile,vechi:parte(c.vechi),nou:parte(c.nou),dupa,cuStop:grup(c.cuStop),faraStop:grup(c.faraStop),boti};
+    /* v100.377: proba pierderii („închid la −5% din sumă”) - aceeași formă, cheia ei, plus pragul și coada intervalului */
+    if(eT){await env.ISTORIC.put("proba:timp",JSON.stringify(Object.assign({prag:nr(c.prag),coada:nr(c.coada),ore:nr(c.ore)},ob)));return json({ok:true})}   /* v100.377: proba timpului - aceeași formă, cheia ei */
+    if(eP){await env.ISTORIC.put("proba:pierdere",JSON.stringify(Object.assign({prag:nr(c.prag),coada:nr(c.coada)},ob)));return json({ok:true})}
+    await env.ISTORIC.put("proba:margine",JSON.stringify(ob));return json({ok:true})}
   if(action==="treiLaRand"){const c=corp,ent=(v)=>Number.isInteger(v)&&v>=0,zi=(v)=>typeof v==="string"&&/^\d{4}-\d{2}-\d{2}$/.test(v),num=(v)=>v===null||(typeof v==="number"&&Number.isFinite(v)),VER=[null,"tine","nu-tine"];
     if(!c||typeof c!=="object"||Array.isArray(c)||c.forma!==1||!(nr(c.la)>0)||c.la>Date.now()+600000||!zi(c.start)||!zi(c.limita)||!(c.ultimaZi===null||zi(c.ultimaZi))||!(Number.isInteger(c.prag)&&c.prag>=1&&c.prag<=50)||![c.N,c.B,c.zileJudecate,c.asteapta,c.zileCuDeclansare,c.zileConteaza,c.nD,c.nI].every(ent)||![c.statistica,c.mecanica,c.peste].every(num)||!(c.pH0===null||(typeof c.pH0==="number"&&c.pH0>=0&&c.pH0<=1))||!VER.includes(c.verdict)||!(c.verdict===null||(c.inghetat&&typeof c.inghetat==="object"&&!Array.isArray(c.inghetat))))return json({error:"treiLaRand: forma 1, la, start, limita, prag, N, B, zile (întregi), statistica / mecanica / peste / pH0 (număr sau null), verdict (null, tine, nu-tine)"},400);
     const g=c.inghetat,o={forma:1,la:c.la,start:c.start,limita:c.limita,prag:c.prag,N:c.N,B:c.B,alfa:nr(c.alfa),zileJudecate:c.zileJudecate,ultimaZi:c.ultimaZi,asteapta:c.asteapta,zileCuDeclansare:c.zileCuDeclansare,zileConteaza:c.zileConteaza,nD:c.nD,nI:c.nI,statistica:c.statistica,mecanica:c.mecanica,peste:c.peste,pH0:c.pH0,verdict:c.verdict,verdictLa:nr(c.verdictLa),

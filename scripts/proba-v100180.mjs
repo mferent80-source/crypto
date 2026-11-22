@@ -39,7 +39,7 @@ await test("telefon: sertarul „⋯ More” are și el „🧭 Busola ↗”, i
   const html = citeste("public", "index.html");
   assert.match(html, /<button class="moreBtn" data-action-click="moreNav\('tabloubot',true\)"><b>◉<\/b>Tablou bot<\/button>\s*<button class="moreBtn" data-action-click="closeMoreDrawer\(\);deschideBusola\(\)"><b>🧭<\/b>Busola ↗<\/button>/);
 });
-await test("deschideBusola(): pe Tablou cu bot ⇒ moneda botului pe intervalul graficului; altfel moneda și intervalul din Radar; fereastră nouă, noopener", () => {
+await test("deschideBusola(): cu un bot citit ⇒ moneda botului pe intervalul graficului lui, de pe ORICE pagină (v100.377, el 22.11); fără bot ⇒ moneda și intervalul din Radar; fereastră nouă, noopener", () => {
   const src = citeste("public", "app.js"), i = src.indexOf("function deschideBusola(");
   assert.ok(i > 0, "deschideBusola există"); const f = src.slice(i, src.indexOf("\n", i));
   const deschise = [], el = { symbol: { value: "ETH" }, tf: { value: "1h" } };
@@ -47,8 +47,11 @@ await test("deschideBusola(): pe Tablou cu bot ⇒ moneda botului pe intervalul 
     assetClass: () => "CRYPTO", $: (id) => el[id] || null, window: { open: (u, t, o) => { deschise.push([u, t, o]); return {}; } }, document: { querySelector: () => ({ dataset: { nav: c.paginaActiva } }) } };
   vm.createContext(c); vm.runInContext(f, c);
   c.deschideBusola(); assert.deepEqual(deschise.pop(), [URL0 + "?sym=TAKE&interval=4h", "_blank", "noopener"]);
-  c.paginaActiva = "dash"; c.deschideBusola(); assert.deepEqual(deschise.pop(), [URL0 + "?sym=ETH&interval=1h", "_blank", "noopener"], "pe altă pagină: moneda din Radar");
-  c.paginaActiva = "tabloubot"; c.tbStare.bot = null; c.deschideBusola(); assert.equal(deschise.pop()[0], URL0 + "?sym=ETH&interval=1h", "Tablou fără bot");
+  /* v100.377 (el 22.11: „când deschid Busola nu îmi deschide pe moneda botului”): de pe altă pagină ieșea moneda rămasă în câmpul Radarului (ultima analizată) */
+  c.paginaActiva = "dash"; c.deschideBusola(); assert.deepEqual(deschise.pop(), [URL0 + "?sym=TAKE&interval=4h", "_blank", "noopener"], "pe altă pagină, cu bot citit: tot moneda botului");
+  c.paginaActiva = "gridset"; c.assetClass = () => "STOCKS"; c.deschideBusola(); assert.equal(deschise.pop()[0], URL0 + "?sym=TAKE&interval=4h", "și cu Radarul pe acțiuni: botul e pe crypto"); c.assetClass = () => "CRYPTO";
+  c.paginaActiva = "tabloubot"; c.tbStare.bot = null; c.deschideBusola(); assert.equal(deschise.pop()[0], URL0 + "?sym=ETH&interval=1h", "Tablou fără bot: moneda din Radar");
+  c.paginaActiva = "dash"; c.deschideBusola(); assert.equal(deschise.pop()[0], URL0 + "?sym=ETH&interval=1h", "altă pagină, fără bot: moneda din Radar");
   c.assetClass = () => "STOCKS"; c.paginaActiva = "dash"; c.deschideBusola(); assert.equal(deschise.pop()[0], URL0, "pe acțiuni: capul Busolei");
 });
 await test("fișa botului: rândul „🧭 deschide în Busola ↗” pe moneda botului și intervalul graficului, link extern sigur", () => {

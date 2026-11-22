@@ -617,7 +617,7 @@ await test("K3 capul îngust (cutia de 400–899 px: tableta și așezarea pe ju
 
 /* ---------- L („fa idei”, a cincea oară): capul pe două treimi lângă „Contează acum”, „dacă prețul stă pe loc” o singură dată, semnul „+” în scenarii ---------- */
 await test("L1 1181–1699 px, „Contează acum” cu rânduri lângă capul marginii: capul și cifrele pe două treimi (4 din 6 coloane), „Contează acum” pe o treime; cifrele pe un rând; butoanele lui se rup în loc să iasă din cutie", () => {
-  const M = "@media (min-width:1181px) and (max-width:1699px)", P = "html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])):has(>#pzVerdict .pzVerbTxt.pzMarg):has(>#ctAcum:not([hidden]) .ctRand)";
+  const M = "@media (min-width:1181px) and (max-width:1699px)", P = "html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])):has(>#pzVerdict .pzVerbTxt.pzMarg):has(>#ctAcum:not([hidden]) :is(.ctRand,.ctConcret))";
   const r = R.filter((x) => x.media === M && x.sel.startsWith(P));
   assert.deepEqual(r.map((x) => [x.sel.slice(P.length), x.decl]), [
     [">:is(#pzVerdict,.tbSus,#tbGridLarg)", "grid-column:1 / 5!important"],
@@ -626,7 +626,7 @@ await test("L1 1181–1699 px, „Contează acum” cu rânduri lângă capul ma
     [">.tbSus #tbKpi>.tbKpiCel:nth-child(3)", "border-left:1px solid var(--pzLi);padding-left:18px"],
     [">#ctAcum .ctCopiere>.ctBtn", "flex:0 1 auto;max-width:100%;white-space:normal"]]);
   /* doar cu capul marginii (înalt) și doar cu rânduri: verdictul scund păstrează jumătățile din 11.11, „Contează acum” gol rămâne pe tot rândul */
-  assert.equal(R.filter((x) => x.media === M && /grid-column:(1 \/ 5|5 \/ -1)/.test(x.decl)).every((x) => x.sel.includes(":has(>#pzVerdict .pzVerbTxt.pzMarg)") && x.sel.includes(":has(>#ctAcum:not([hidden]) .ctRand)")), true);
+  assert.equal(R.filter((x) => x.media === M && /grid-column:(1 \/ 5|5 \/ -1)/.test(x.decl)).every((x) => x.sel.includes(":has(>#pzVerdict .pzVerbTxt.pzMarg)") && x.sel.includes(":has(>#ctAcum:not([hidden]) :is(.ctRand,.ctConcret))")), true);
   /* jumătățile vechi rămân în foaie, pentru verdictul scund (probele v100.323 / v100.325 le țin) */
   assert.ok(CSS.includes("html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden]))>#ctAcum:not([hidden]){grid-column:4 / -1!important;grid-row:2 / span 3!important}"));
   /* rândul plin din „Contează acum” are clasa pe care se sprijină regula; starea goală nu o are */
@@ -672,7 +672,7 @@ await test("L4 proba de ecran a Tabloului (Chrome adevărat, rulată de poarta d
 
 /* ---------- M („fa idei”, a șaptea oară): rândul costului sub 1340 px, pasul de ecran la tabletă și calculator, ștampila probelor de ecran ---------- */
 await test("M1 pe două treimi, sub 1340 px: calificativul „pornire și închidere” al rândului de cost se ascunde (celula are ~200–290 px); explicația lui rămâne în titlul rândului", () => {
-  const M = "@media (min-width:1181px) and (max-width:1339px)", P = "html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])):has(>#pzVerdict .pzVerbTxt.pzMarg):has(>#ctAcum:not([hidden]) .ctRand)";
+  const M = "@media (min-width:1181px) and (max-width:1339px)", P = "html.pzDemo #tabloubot#tabloubot#tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])):has(>#pzVerdict .pzVerbTxt.pzMarg):has(>#ctAcum:not([hidden]) :is(.ctRand,.ctConcret))";
   assert.deepEqual(R.filter((x) => x.media === M).map((x) => [x.sel, x.decl]), [[P + ">.tbSus #tbKpiCost .pzKv small", "display:none"]]);
   /* nimic pierdut: titlul rândului spune ce ascunde regula, iar <small> e chiar calificativul */
   assert.match(functie(APP, "tbCostDeseneaza"), /<span title="Comisionul plătit la pornire plus cel de la închidere \(estimat\)\.[^"]*">costul botului <small>pornire și închidere<\/small><\/span>/);
@@ -725,9 +725,10 @@ await test("M3 legăturile: probele de ecran își scriu ștampila doar la rular
 
 await test("D3 versiunea v100.376 e pusă peste tot și proba e în lanț, după v100.375", () => {
   const pk = JSON.parse(citeste("package.json")), bi = JSON.parse(citeste("BUILD_INFO.json"));
-  assert.equal(pk.version, "100.376.0"); assert.equal(bi.version, "v100.376"); assert.ok(bi.tb376 && bi.tb376.length > 200, "BUILD_INFO.tb376");
-  assert.equal((HTML.match(/v100\.376/g) || []).length >= 4, true, "index.html: v100.376 de cel puțin 4 ori");
-  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-376/); assert.match(citeste("functions", "_shared", "versiune.js"), /100\.376/);
+  /* v100.377: „de la 376 încolo” (versiunea merge mai departe) */
+  assert.ok(+(/^100\.(\d+)\.0$/.exec(pk.version) || [])[1] >= 376, "package.json: de la 100.376 încolo"); assert.ok(+(/^v100\.(\d+)$/.exec(bi.version) || [])[1] >= 376); assert.ok(bi.tb376 && bi.tb376.length > 200, "BUILD_INFO.tb376");
+  assert.equal((HTML.match(/v100\.(\d+)/g) || []).filter((v) => +v.slice(5) >= 376).length >= 4, true, "index.html: v100.376 sau mai nou, de cel puțin 4 ori");
+  assert.ok(+(/crypto-radar-v100-(\d+)/.exec(citeste("public", "sw.js")) || [])[1] >= 376, "sw.js"); assert.ok(+(/"v100\.(\d+)"/.exec(citeste("functions", "_shared", "versiune.js")) || [])[1] >= 376, "versiune.js");
   assert.match(pk.scripts.test, /npm run test:v100375 && npm run test:v100376/); assert.equal(pk.scripts["test:v100376"], "node scripts/proba-v100376.mjs");
 });
 

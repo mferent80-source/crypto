@@ -371,7 +371,8 @@ await test("22a grStareText: „PEPE · calculat la 13:44 · se reface singur la
   assert.match(fnApp("renderGrid"), /stare\.textContent=grStareText\(grStare,\$\("grMoneda"\)&&\$\("grMoneda"\)\.value\)/);
 });
 await test("22b porneGrid precompletează moneda cu botul activ când câmpul e gol (nu suprascrie ce a scris el)", () => {
-  assert.match(fnApp("porneGrid"), /var gm=\$\("grMoneda"\);if\(gm&&!gm\.value\.trim\(\)&&tbStare\.bot&&tbStare\.bot\.baza\)gm\.value=String\(tbStare\.bot\.baza\)\.replace\(\/\\\.PERP\$\/,""\)/);
+  /* v100.377 (22.11): câmpul gol ia TICKERUL botului (PUMPFUN.PERP ⇒ PUMP), nu numele lui - altfel fișa răspundea „PUMPFUN nu există ca PERP pe Pionex” */
+  assert.match(fnApp("porneGrid"), /var gm=\$\("grMoneda"\);if\(gm&&!gm\.value\.trim\(\)&&tbStare\.bot&&tbStare\.bot\.baza\)gm\.value=grMonedaBot\(tbStare\.bot\);/);
 });
 
 // ---------------------------------------------------------------- 23. T212: o singură pierdere în lei pe poziție, cu sursa scrisă

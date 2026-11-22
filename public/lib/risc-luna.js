@@ -59,6 +59,53 @@ var RiscLuna = (function () {
     return praguri.map(function (h) { var s = l.filter(function (x) { return x[camp] >= h; }); if (!s.length) return { h: h, n: 0, pePlus: null, mari: null, medie: null };
       return { h: h, n: s.length, pePlus: s.filter(function (x) { return x.r > 0; }).length / s.length, mari: s.filter(function (x) { return x.r <= MARE; }).length / s.length, medie: medie(s) }; });
   }
+  // v100.377 (I-907, el 22.11: „idei care chiar să conteze”): PLATA. Cât aduce în medie un bot pe plus față de cât pierde unul pe minus, în % din suma
+  // pusă (sumele diferă de la bot la bot), și cât la sută ar trebui să iasă pe plus ca media să fie zero: trebuie = pierdere / (câștig + pierdere).
+  // Pe vârsta ATINSĂ (botul era încă pornit la vârsta aceea - se știa atunci), nu pe durata finală (știută abia la închidere). `net` = bani reali.
+  // Descriere din arhiva lui, nu test: nu spune ce ar fi ieșit cu altă regulă de ieșire.
+  function plata(s) {
+    var W = [], L = [], net = 0; var Z = 0;   /* auditul 22.11: un bot ieșit exact pe zero nu e nici câștig, nici pierdere; `null` nu e număr (isFinite(null) e adevărat) */
+    (s || []).forEach(function (x) { if (!x || typeof x.r !== "number" || !isFinite(x.r)) return; if (x.r > 0) W.push(x.r); else if (x.r < 0) L.push(-x.r); else Z++; if (typeof x.inv === "number" && isFinite(x.inv)) net += x.r * x.inv; });
+    var n = W.length + L.length + Z; if (!n) return null;
+    var med = function (a) { return a.length ? a.reduce(function (p, q) { return p + q; }, 0) / a.length : null; }, w = med(W), p = med(L);
+    return { n: n, pePlus: W.length / n, castig: w, pierdere: p, trebuie: w !== null && p !== null && w + p > 0 ? p / (w + p) : null, net: net };
+  }
+  function plataPeVarste(l, praguri) {
+    var tot = plata(l); if (!tot) return null;
+    return { tot: tot, varste: (praguri || []).map(function (h) { var q = plata(l.filter(function (x) { return x.ore >= h; })) || { n: 0, pePlus: null, castig: null, pierdere: null, trebuie: null, net: 0 }; q.h = h; return q; }) };
+  }
+  var PLATA_MIN = 20;   // sub 20 de boți la o vârstă, rândul se arată în tabel, dar nu se scrie în propoziții
+  function randPlata(pl, ore) {
+    /* auditul 22.11: rândul vârstei ATINSE se ia și când toți boții de acolo au ieșit pe aceeași parte (fără „le trebuiau”); înainte textul cobora
+       la o vârstă mai mică („ajunși la 15 minute” pentru un bot de 5 ore) */
+    if (!pl || !pl.tot) return null; var r = null, bun = function (x) { return x && x.n >= PLATA_MIN && (x.castig !== null && x.castig !== undefined || x.pierdere !== null && x.pierdere !== undefined); };
+    (pl.varste || []).forEach(function (x) { if (bun(x) && x.h <= ore) r = x; });
+    return r || (bun(pl.tot) ? pl.tot : null);
+  }
+  function textPlata(pl, ore, suma) {
+    var x = randPlata(pl, ore); if (!x) return null;
+    var cine = x.h ? "Din boții tăi care au ajuns la " + (x.h < 1 ? cate(Math.round(x.h * 60), "minut", "minute") : x.h + " h") + " (" + x.n + ")" : "Din toți boții tăi închiși (" + x.n + ")";
+    if (x.trebuie === null || x.trebuie === undefined || !isFinite(x.trebuie)) return cine + ": " + plataOParte(x);
+    var t = cine + ": cei pe plus au adus în medie +" + v1(x.castig * 100) + "% din sumă, cei pe minus au pierdut în medie −" + v1(x.pierdere * 100) + "%. Ca să iasă pe zero le trebuiau " + v1(x.trebuie * 100) + "% pe plus; au fost " + v1(x.pePlus * 100) + "%" + (x.pePlus >= x.trebuie ? " (destul)" : "") + ".";
+    var S = Number(suma); if (S > 0) t += " La suma botului de acum (" + v1(S) + " USDT): +" + v1(x.castig * S) + " față de −" + v1(x.pierdere * S) + " USDT.";
+    return t;
+  }
+  function plataOParte(x) { return x.castig === null || x.castig === undefined ? "niciunul n-a ieșit pe plus; au pierdut în medie −" + v1(x.pierdere * 100) + "% din sumă." : (x.pePlus < 1 ? "niciunul n-a ieșit pe minus; cei pe plus au adus în medie +" : "toți au ieșit pe plus, în medie +") + v1(x.castig * 100) + "% din sumă."; }   /* cu un bot pe zero nu sunt „toți pe plus” */
+  /* auditul 22.11 (🟡5): „pierderea crește cu vârsta botului, câștigul nu” se spune DOAR când raportul de acum o arată (aceeași regulă pentru concluzia
+     paginii și pentru alerta de 4 ore): pierderea medie urcă de la 1 h la 4 h la 24 h și ajunge peste 1,3 × cea a tuturor, iar câștigul mediu stă pe loc */
+  function plataCreste(pl) {
+    var pt = pl && pl.tot; if (!pt || pt.pierdere === null || pt.pierdere === undefined || pt.castig === null || pt.castig === undefined) return null;
+    var vr = (pl.varste || []).filter(function (x) { return x.n >= PLATA_MIN && x.pierdere !== null && x.castig !== null; }), alese = vr.filter(function (x) { return x.h === 1 || x.h === 4 || x.h === 24; });
+    var c = vr.map(function (x) { return x.castig; }).concat([pt.castig]), cMin = Math.min.apply(null, c), cMax = Math.max.apply(null, c);
+    var urca = alese.every(function (x, i) { return !i || x.pierdere >= alese[i - 1].pierdere; });
+    return { vr: vr, alese: alese, creste: alese.length >= 2 && urca && alese[alese.length - 1].pierdere > 1.3 * pt.pierdere, peLoc: cMax <= 1.5 * cMin };
+  }
+  /* pentru alerte (un rând, o frază): doar procentele rândului de vârstă */
+  function textPlataScurt(pl, ore) {
+    var x = randPlata(pl, ore); if (!x) return null;
+    if (x.trebuie === null || x.trebuie === undefined || !isFinite(x.trebuie)) return (x.h ? "Din boții tăi ajunși la " + (x.h < 1 ? cate(Math.round(x.h * 60), "minut", "minute") : x.h + " h") + " (" + x.n + ")" : "Din toți boții tăi închiși (" + x.n + ")") + ", " + plataOParte(x);
+    return (x.h ? "Din boții tăi ajunși la " + (x.h < 1 ? cate(Math.round(x.h * 60), "minut", "minute") : x.h + " h") + " (" + x.n + ")" : "Din toți boții tăi închiși (" + x.n + ")") + ", cei pe plus au adus în medie +" + v1(x.castig * 100) + "% din sumă, cei pe minus au pierdut −" + v1(x.pierdere * 100) + "%.";
+  }
   function pragulAtins(s, durata) { var p = null; (s || []).forEach(function (x) { if (x.n > 0 && x.h <= durata) p = x; }); return p; }
 
   // v100.196 (auditul sever 14.10, 🔴1): boții / acțiunile trec prin ACEEAȘI piață, iar obiceiul vine în faze (săptămâni cu stop, săptămâni
@@ -255,6 +302,16 @@ var RiscLuna = (function () {
       if (c && c.laS < 0 && c.restLaS > 0) out.boti.push({ nivel: "atentie", titlu: "Câțiva boți cu pierderi mari șterg câștigul celorlalți",   /* v100.350 (auditul MC): netestat - cei mai răi 10% sunt pe minus aproape prin definiție; obiceiul «Stop pus» din tabel e cel testat */
         text: "Cei mai răi 10% (" + cate(c.n, "bot", "boți") + ", fiecare sub " + semn1(c.prag * 100) + "%) au pierdut " + mii(-c.laS).replace(/^[+−]/, "") + " USDT la suma ta de acum (~" + v1(S) + " USDT pe bot), iar ceilalți 90% au câștigat " + mii(c.restLaS).replace(/^[+−]/, "") + ".",
         faCe: "Aș pune stop la fiecare bot, la marginea gridului: fără el, o pierdere mare nu are margine." });
+      /* v100.377 (I-907): plata - descriere din arhiva lui (fără „rău”: nicio regulă de ieșire nu e probată încă) */
+      var pl = B.plata, pt = pl && pl.tot;
+      if (pt && pt.n >= 50 && pt.trebuie !== null && pt.castig > 0 && pt.pePlus < pt.trebuie) {
+        var pc = plataCreste(pl), vr = pc.vr, alese = pc.alese, creste = pc.creste, peLoc = pc.peLoc, r4 = vr.filter(function (x) { return x.h === 4; })[0];
+        out.boti.push({ nivel: "atentie", titlu: "Pierderea medie e de " + v1(pt.pierdere / pt.castig) + " ori câștigul mediu",
+          text: "Un bot pe plus aduce în medie +" + v1(pt.castig * 100) + "% din sumă, unul pe minus pierde −" + v1(pt.pierdere * 100) + "%: ca să ieși pe zero îți trebuie " + v1(pt.trebuie * 100) + "% din boți pe plus, ai " + v1(pt.pePlus * 100) + "%."
+            + (creste ? " " + (peLoc ? "Câștigul mediu rămâne cam același oricât stă botul, iar pierderea medie crește: " : "Pierderea medie crește cu vârsta botului: ") + alese.map(function (x) { return "−" + v1(x.pierdere * 100) + "% la cei ajunși la " + x.h + " h"; }).join(", ") + "." : "")
+            + (r4 && pt.net < 0 && r4.net < 0 ? " Boții ajunși la 4 h (" + pct(r4.n / pt.n) + " din boți) au făcut " + (r4.net / pt.net > 1 ? "mai mult decât toată pierderea (ceilalți, la un loc, au ieșit pe plus)." : pct(r4.net / pt.net) + " din toată pierderea.") : ""),
+          faCe: "Aș hotărî la pornire pierderea la care închid botul și aș ține-o. O regulă anume de ieșire n-am probat-o încă pe boții tăi: îmi trebuie drumul fiecărui bot, ținut abia din 21.11." });
+      }
       var lung = (d.durate || []).filter(function (x) { return x.de >= 24; }), scurt = (d.durate || []).filter(function (x) { return x.pana !== null && x.pana <= 4; });
       var sl = lung.reduce(function (s, x) { return s + x.laS; }, 0), nl = lung.reduce(function (s, x) { return s + x.n; }, 0), ss = scurt.reduce(function (s, x) { return s + x.laS; }, 0), ns = scurt.reduce(function (s, x) { return s + x.n; }, 0);
       if (nl >= 10 && sl < 0) out.boti.push({ nivel: "atentie", titlu: "Boții ținuți peste o zi au pierdut", text: "Cei ținuți peste 24 h (" + nl + ") au adus " + mii(sl) + " USDT, cei sub 4 h (" + ns + ") " + mii(ss) + ". Dar durata o știi abia la închidere: ții mai mult ce merge prost, deci e urmare cel puțin cât e cauză (n-am probat-o ca obicei).",
@@ -290,7 +347,7 @@ var RiscLuna = (function () {
       var rb = ritm(toti, acum), Ks = [rb.K, 10, 30, 60].filter(function (k, i, a) { return a.indexOf(k) === i; });
       out.boti = { n: toti.length, nMc: mcB.length, de: toti[0].t, pana: toti[toti.length - 1].t, ritm: rb,
         mc: Ks.map(function (K) { return monteCarlo(mcB, { K: K, S: rb.S, n: nMc, seed: 558 + K }); }).filter(Boolean),
-        supravietuire: supravietuire(toti, [1, 4, 12, 24, 48, 72, 168], "ore"), desc: descBoti(toti, rb.S), comportament: comportamentBoti(o.boti, { de: de, S: rb.S, reps: reps }) };
+        supravietuire: supravietuire(toti, [1, 4, 12, 24, 48, 72, 168], "ore"), plata: plataPeVarste(toti, [0.25, 1, 4, 12, 24, 48, 72, 168]), desc: descBoti(toti, rb.S), comportament: comportamentBoti(o.boti, { de: de, S: rb.S, reps: reps }) };
     }
     // tranzacțiile T212 (FIFO, rezultatul real în lei) vin gata făcute de la colector, unde T212 nu e global; pe pagină se pot socoti aici
     var ep = episoade(o.umpleri), per = o.perechi || (typeof T212 !== "undefined" && T212.perechi ? T212.perechi(o.umpleri || []) : { inchise: [] });
@@ -306,6 +363,7 @@ var RiscLuna = (function () {
 
   return { bazinBoti: bazinBoti, ritm: ritm, monteCarlo: monteCarlo, supravietuire: supravietuire, pragulAtins: pragulAtins, comportamentBoti: comportamentBoti, descBoti: descBoti,
     episoade: episoade, comportamentActiuni: comportamentActiuni, descActiuni: descActiuni, corelatie: corelatie, perechiCorelate: perechiCorelate,
+    plata: plata, plataPeVarste: plataPeVarste, textPlata: textPlata, textPlataScurt: textPlataScurt, plataCreste: plataCreste, PLATA_MIN: PLATA_MIN,
     textBot: textBot, textActiune: textActiune, textMediere: textMediere, textLuna: textLuna, raport: raport, generator: generator, textObicei: textObicei, concluzii: concluzii, textTotiBotii: textTotiBotii, textCorelatie: textCorelatie, verdict: verdict };
 })();
 if (typeof globalThis !== "undefined") globalThis.RiscLuna = RiscLuna;

@@ -311,7 +311,7 @@ await test("I1 tura: judecă boții nefăcuți (cei mai noi întâi, cel mult c�
   assert.equal(st.facute[1], "episod"); assert.equal(st.episoade.length, 1); assert.equal(r2.episoadeNoi, 1); assert.equal(r2.ramasi, 0);
   const dr = trimise.filter((q) => q[0] === "drum"), pm = trimise.filter((q) => q[0] === "probaMargine");
   assert.deepEqual(dr.map((q) => q[1].bot), ["2", "1"], "drumul rărit doar unde există drum"); assert.deepEqual(dr[1][1].drum.iesire, { t: ZI0 + 30 * MIN, total: -9 });
-  assert.equal(pm.length, 2); assert.equal(pm[1][1].n, 1); assert.equal(pm[1][1].verdict, null); assert.deepEqual(pm[1][1].boti, { total: 3, judecati: 3, ramasi: 0, episoade: 1, inGrid: 1, faraDrum: 1, drumTaiat: 0, gol: 0, mutat: 0, pornitAfara: 0, neutri: 0 }); assert.equal(pm[1][1].inghetat, null);
+  assert.equal(pm.length, 2); assert.equal(pm[1][1].n, 1); assert.equal(pm[1][1].verdict, null); assert.deepEqual(pm[1][1].boti, { total: 3, judecati: 3, necititi: 0, ramasi: 0, episoade: 1, inGrid: 1, faraDrum: 1, drumTaiat: 0, gol: 0, mutat: 0, pornitAfara: 0, neutri: 0 });   /* v100.377: + boții cu drumul necitit */ assert.equal(pm[1][1].inghetat, null);
   assert.equal(st.episoade[0].mutat, false); assert.equal(st.episoade[0].dinNota, false, "(revizia a doua) starea ține semnele episodului");
   cerute.length = 0; await turaProbaMargine(d, st); assert.deepEqual(cerute, [], "nimic de refăcut: niciun drum cerut a doua oară");
 });

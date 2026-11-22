@@ -33,7 +33,34 @@ function prPeDate(start, priviri, acum, nume) {
 }
 
 // rândurile „unde e fiecare probă” - aceleași cifre ca fișele, fără verdict înainte de privire
+/* v100.377 (el 22.11: „fa idei”): câți boți PORNIȚI sunt chiar acum în clipa pe care o judecă proba - aceleași praguri ca episodul probei
+   (scripts/lib/proba-margine.mjs: PRAG_PIERDERE 5% din sumă; PRAG_TIMP 0,5% între 4 și 24 de ore) și ca alerta de 4 ore. Un fapt de azi lângă o probă
+   care încă n-are verdict, nu un sfat. `null` = lista boților necunoscută (nu se scrie nimic); boții fără suma citită se numără separat. */
+var PR_MINUS_TIMP = 0.005, PR_ORE_MAX = 24;
+function prPorniti(boti, acum) {
+  if (!Array.isArray(boti)) return null;
+  var A = boti.filter(function (b) { return b && b.activ !== false; }), L = A.filter(function (b) { return Number(b.investit) > 0 && typeof b.profitTotal === "number" && isFinite(b.profitTotal); });
+  var fa = function (cine) { var t = 0, s = 0; cine.forEach(function (b) { t += b.profitTotal; s += Number(b.investit); }); return { n: cine.length, total: t, suma: s }; };
+  return { activi: A.length, n: L.length,
+    pierdere: fa(L.filter(function (b) { return b.profitTotal <= -PR_PIERDERE.prag / 100 * Number(b.investit); })),
+    timp: fa(L.filter(function (b) { var p = Number(b.pornitLa), v = acum - p; return p > 0 && v >= PR_TIMP.ore * 3600000 && v < PR_ORE_MAX * 3600000 && b.profitTotal <= -PR_MINUS_TIMP * Number(b.investit); })) };
+}
+function prPornitiText(P, ce, areVerdict) {
+  if (!P) return undefined;
+  if (!P.activi) return "niciun bot pornit acum";
+  var g = P[ce], fara = P.activi - P.n, coada = fara > 0 ? sugCate(fara, "bot pornit", "boți porniți") + " fără suma citită, " + (fara === 1 ? "nenumărat" : "nenumărați") : "";
+  var z1 = function (v) { var p = Math.abs(v).toFixed(1).split("."); return p[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "," + p[1]; }, minus = String(PR_MINUS_TIMP * 100).replace(".", ",");
+  if (!P.n) return coada;
+  if (!g.n) return (P.n === 1 ? "botul pornit nu e" : "niciunul din cei " + sugCate(P.n, "bot pornit", "boți porniți") + " nu e")
+    + (ce === "pierdere" ? " acum la −" + PR_PIERDERE.prag + "% din sumă" : ", între " + PR_TIMP.ore + " și " + PR_ORE_MAX + " de ore de la pornire, pe minus cu " + minus + "% din sumă") + (coada ? " · " + coada : "");
+  return sugCate(g.n, "bot pornit", "boți porniți")
+    + (ce === "pierdere" ? (g.n === 1 ? " e" : " sunt") + " acum la −" + PR_PIERDERE.prag + "% din sumă sau sub" : (g.n === 1 ? " a trecut de " : " au trecut de ") + sugCate(PR_TIMP.ore, "oră", "ore") + (g.n === 1 ? " și e" : " și sunt") + " pe minus cu cel puțin " + minus + "% din sumă")
+    + ": total " + (g.total < 0 ? "−" : "+") + z1(g.total) + " USDT din " + z1(g.suma) + " USDT puși (" + (g.total < 0 ? "−" : "+") + z1(g.total / g.suma * 100) + "%)"
+    + (areVerdict ? "" : " · proba încă n-are verdict") + (coada ? " · " + coada : "");
+}
 function prProbe(d, acum) {
+  /* lista boților porniți: cea a Tabloului, deja încărcată în pagină (fără altă cerere la Pionex) */
+  var BP = prPorniti(d && d.botiPorniti ? d.botiPorniti : (typeof tbStare !== "undefined" && tbStare && Array.isArray(tbStare.boti) ? tbStare.boti : null), acum);
   d = d || {}; var R = [];
   var c = d.caderi, u = c && c.urmarire, E = u && u.grupuri && u.grupuri.E, cs = c && c.start || "2026-11-07", pc = prPeDate(cs, [["2027-03-01", "prima privire"], ["2027-11-08", "verdictul"]], acum, "Căderile");
   R.push({ k: "cad", nume: "📉 După o cădere mare · monede Pionex", de: prZi(cs), jud: u ? sugCate(u.evenimente || 0, "cădere", "căderi") + " în " + sugCate(u.zile || 0, "zi judecată", "zile judecate") : "încă nimic: prima zi se judecă la 7 zile după ea",
@@ -81,8 +108,37 @@ function prProbe(d, acum) {
      colector la prima tură cu toată arhiva citită și pragul atins - episoadele de după se numără, dar nu-l schimbă */
   var mV = mg && mg.inghetat && mg.inghetat.verdict ? mg.inghetat : null, mIc = mV && mV.ic ? " (interval 95% pe zile: " + p1(mV.ic[0]) + " … " + p1(mV.ic[1]) + ")" : "";
   var mAlte = mB ? (mB.drumTaiat || 0) + (mB.gol || 0) + (mB.mutat || 0) : 0;
+  /* revizia reparațiilor (22.11, N3): boții al căror drum n-a putut fi citit nici după 24 de ture ies din probă - numărați aici, nu pe tăcute; a doua trecere (D1): se reîncearcă zilnic, iar peste 3 țin verdictul - spus aici */
+  var necititText = function (B) { return B && B.necititi > 0 ? " · " + sugCate(B.necititi, "bot cu drumul necitit", "boți cu drumul necitit") + " (se reîncearcă o dată pe zi" + (B.necititi > 3 ? "; cât sunt mai mult de 3, verdictul nu se dă" : "") + ")" : ""; };
+  /* v100.377 (el, 22.11: „idei care chiar să conteze”): proba pierderii - a doua regulă de ieșire pusă la probă; sub prag doar numărătoarea */
+  var pg = d.probaPierdere, pN = pg && pg.minEpisoade || PR_PIERDERE.n, pZ = pg && pg.minZile || PR_PIERDERE.zile, pB = pg && pg.boti || null;
+  var pV = pg && pg.inghetat && pg.inghetat.verdict ? pg.inghetat : null, pIc = pV && pV.ic ? " (interval 99,5% pe zile: " + p1(pV.ic[0]) + " … " + p1(pV.ic[1]) + ")" : "";
+  var pAlte = pB ? (pB.drumTaiat || 0) + (pB.gol || 0) + (pB.pornitSub || 0) : 0;
+  R.push({ k: "pierdere", nume: "✂️ Închid la −" + PR_PIERDERE.prag + "% din sumă sau las? · boții tăi, din clipa în care totalul ajunge acolo", de: prZi(PR_PIERDERE.start), acum: prPornitiText(BP, "pierdere", !!pV),
+    jud: pg ? sugCate(pg.n || 0, "episod", "episoade") + " în " + sugCate(pg.zile || 0, "zi", "zile") + (pB ? " · citiți " + sugCate(pB.judecati, "bot închis", "boți închiși") + ": " + (pB.pestePrag || 0) + " n-au ajuns la prag, " + (pB.faraDrum || 0) + " fără drum, " + pAlte + " cu drumul tăiat sau cu goluri (boții ținuți peste 7 zile și cei încă deschiși nu intră: lipsesc tocmai cei lăsați cel mai mult, deci un „lăsatul a fost mai bun” e mai slab decât pare)" : "") + necititText(pB) : "aștept colectorul (o dată pe oră)",
+    sta: pV ? "VERDICT (înghețat la " + prOra(pV.la) + ", pe " + sugCate(pV.n, "episod", "episoade") + " în " + sugCate(pV.zile, "zi", "zile") + "): " + (pV.verdict === "inchiderea" ? "închiderea la −" + PR_PIERDERE.prag + "% ar fi fost mai bună" : pV.verdict === "lasatul" ? "lăsatul a fost mai bun" : "n-am aflat" + (pV.seContrazic ? " (datele se contrazic)" : "")) + " · lăsat − închis la prag: " + p1(pV.medie) + " din suma pusă, în medie pe bot" + pIc + " · în total " + prUsd(pV.suma) + " USDT"
+        + (pg.n > pV.n ? " · de atunci s-au mai adunat " + sugCate(pg.n - pV.n, "episod", "episoade") + " (verdictul nu se schimbă)" : "")
+      : pg ? "doar numărătoarea până la prag: diferența dintre „lăsat” și „închis la −" + PR_PIERDERE.prag + "%” se arată o singură dată, la verdict" + (pB && pB.ramasi ? " · mai sunt de citit " + sugCate(pB.ramasi, "bot", "boți") : "")
+        : "din arhiva ta, la 22.11.2026: câștigul mediu rămâne ~3% din sumă oricât stă botul, pierderea medie crește cu vârsta lui; dacă închiderea devreme ar fi ajutat se vede abia cu drumul fiecărui bot",
+    ultima: pg && pg.la ? "ultima tură: " + prOra(pg.la) + (acum - pg.la > 8 * 3600000 ? " · VECHE" : "") : "",
+    drum: { svg: prDrumSvg(Math.min((pg && pg.n || 0) / pN, (pg && pg.zile || 0) / pZ), [], "Proba pierderii: " + (pg && pg.n || 0) + " din " + sugCate(pN, "episod", "episoade") + ", " + (pg && pg.zile || 0) + " din " + sugCate(pZ, "zi", "zile")),
+      text: "fără dată fixă: verdictul de la " + sugCate(pN, "episod", "episoade") + " pe " + sugCate(pZ, "zi", "zile") + "; o singură regulă, un singur prag (cel de „pierdere mare” al paginii), scrise înainte de date" } });
+  /* v100.377 (el, 22.11: „fă ideile astea”): proba timpului - „închid după 4 ore pe minus”, clipa alertei de 4 ore; sub prag doar numărătoarea */
+  var tg = d.probaTimp, tN = tg && tg.minEpisoade || PR_TIMP.n, tZ = tg && tg.minZile || PR_TIMP.zile, tB = tg && tg.boti || null;
+  var tV = tg && tg.inghetat && tg.inghetat.verdict ? tg.inghetat : null, tIc = tV && tV.ic ? " (interval 99,5% pe zile: " + p1(tV.ic[0]) + " … " + p1(tV.ic[1]) + ")" : "";
+  var tAlte = tB ? (tB.drumTaiat || 0) + (tB.gol || 0) : 0;
+  var tOre = sugCate(PR_TIMP.ore, "oră", "ore");   /* „4 ore”: numărul nu se lipește de substantiv */
+  R.push({ k: "timp", nume: "⏱️ Închid după " + tOre + " pe minus sau las? · boții tăi, din clipa alertei „a trecut de " + tOre + " și e pe minus”", de: prZi(PR_TIMP.start), acum: prPornitiText(BP, "timp", !!tV),
+    jud: tg ? sugCate(tg.n || 0, "episod", "episoade") + " în " + sugCate(tg.zile || 0, "zi", "zile") + (tB ? " · citiți " + sugCate(tB.judecati, "bot închis", "boți închiși") + ": " + (tB.scurt || 0) + " închiși înainte de " + tOre + ", " + (tB.pePlus || 0) + " n-au fost pe minus între " + PR_TIMP.ore + " și 24 de ore, " + (tB.faraDrum || 0) + " fără drum, " + tAlte + " cu drumul tăiat sau cu goluri (boții ținuți peste 7 zile și cei încă deschiși nu intră: lipsesc tocmai cei lăsați cel mai mult, deci un „lăsatul a fost mai bun” e mai slab decât pare)" : "") + necititText(tB) : "aștept colectorul (o dată pe oră)",
+    sta: tV ? "VERDICT (înghețat la " + prOra(tV.la) + ", pe " + sugCate(tV.n, "episod", "episoade") + " în " + sugCate(tV.zile, "zi", "zile") + "): " + (tV.verdict === "inchiderea" ? "închiderea la " + tOre + " ar fi fost mai bună" : tV.verdict === "lasatul" ? "lăsatul a fost mai bun" : "n-am aflat" + (tV.seContrazic ? " (datele se contrazic)" : "")) + " · lăsat − închis atunci: " + p1(tV.medie) + " din suma pusă, în medie pe bot" + tIc + " · în total " + prUsd(tV.suma) + " USDT"
+        + (tg.n > tV.n ? " · de atunci s-au mai adunat " + sugCate(tg.n - tV.n, "episod", "episoade") + " (verdictul nu se schimbă)" : "")
+      : tg ? "doar numărătoarea până la prag: diferența dintre „lăsat” și „închis la " + tOre + "” se arată o singură dată, la verdict" + (tB && tB.ramasi ? " · mai sunt de citit " + sugCate(tB.ramasi, "bot", "boți") : "")
+        : "din arhiva ta, la 22.11.2026: boții ajunși la " + tOre + " erau 22% din boți și făcuseră 64% din pierdere; dacă închiderea de atunci ar fi ajutat se vede abia cu drumul fiecărui bot",
+    ultima: tg && tg.la ? "ultima tură: " + prOra(tg.la) + (acum - tg.la > 8 * 3600000 ? " · VECHE" : "") : "",
+    drum: { svg: prDrumSvg(Math.min((tg && tg.n || 0) / tN, (tg && tg.zile || 0) / tZ), [], "Proba timpului: " + (tg && tg.n || 0) + " din " + sugCate(tN, "episod", "episoade") + ", " + (tg && tg.zile || 0) + " din " + sugCate(tZ, "zi", "zile")),
+      text: "fără dată fixă: verdictul de la " + sugCate(tN, "episod", "episoade") + " pe " + sugCate(tZ, "zi", "zile") + "; pragurile alertei de " + tOre + ", scrise înainte de date; două reguli de ieșire sunt la probă deodată (și cea de −5%)" } });
   R.push({ k: "margine", nume: "🧱 Stop la margine sau nu? · boții tăi, din clipa în care prețul trece de marginea contra", de: prZi(PR_MARGINE.start),
-    jud: mg ? sugCate(mg.n || 0, "episod", "episoade") + " în " + sugCate(mg.zile || 0, "zi", "zile") + " (istoria din arhivă și datele noi)" + (mB ? " · citiți " + mB.judecati + " din " + sugCate(mB.total, "bot închis", "boți închiși") + ": " + (mB.inGrid || 0) + " rămași în grid, " + (mB.faraDrum || 0) + " fără drum în arhivă, " + mAlte + " cu drumul tăiat, cu goluri sau cu gridul mutat chiar la trecere (boții ținuți peste 7 zile nu intră)" : "") : "aștept colectorul (o dată pe oră, câte 90 de boți închiși)",
+    jud: mg ? sugCate(mg.n || 0, "episod", "episoade") + " în " + sugCate(mg.zile || 0, "zi", "zile") + " (istoria din arhivă și datele noi)" + (mB ? " · citiți " + mB.judecati + " din " + sugCate(mB.total, "bot închis", "boți închiși") + ": " + (mB.inGrid || 0) + " rămași în grid, " + (mB.faraDrum || 0) + " fără drum în arhivă, " + mAlte + " cu drumul tăiat, cu goluri sau cu gridul mutat chiar la trecere (boții ținuți peste 7 zile nu intră)" : "") + necititText(mB) : "aștept colectorul (o dată pe oră, câte 90 de boți închiși)",
     sta: mV ? "VERDICT (înghețat la " + prOra(mV.la) + ", pe " + sugCate(mV.n, "episod", "episoade") + " în " + sugCate(mV.zile, "zi", "zile") + "): " + (mV.verdict === "inchiderea" ? "închiderea la margine ar fi fost mai bună" : mV.verdict === "lasatul" ? "lăsatul a fost mai bun" : "n-am aflat" + (mV.seContrazic ? " (istoria și datele noi se contrazic)" : "")) + " · lăsat − închis la margine: " + p1(mV.medie) + " din suma pusă, în medie pe bot" + mIc + " · în total " + prUsd(mV.suma) + " USDT"
         + (mg.n > mV.n ? " · de atunci s-au mai adunat " + sugCate(mg.n - mV.n, "episod", "episoade") + " (verdictul nu se schimbă)" : "")
       : mg ? "doar numărătoarea până la prag: diferența dintre „lăsat” și „închis la margine” se arată o singură dată, la verdict" + (mB && mB.ramasi ? " · mai sunt de citit " + sugCate(mB.ramasi, "bot", "boți") : "") : "pe boții închiși dincolo de margine (176): −9.855,0 USDT, din care estimat −4.900,4 făcuți după margine; ce ar fi adus închiderea acolo se vede abia cu drumul fiecărui bot",
@@ -92,6 +148,9 @@ function prProbe(d, acum) {
   return R;
 }
 /* v100.374: proba marginii - ce se știe dinainte (din documentul pre-înregistrării) */
+/* v100.377: proba pierderii („închid la −5% din sumă”); regulile în docs/cercetare/2026-11-22-v100377-proba-pierderii.md */
+var PR_PIERDERE = { n: 60, zile: 20, start: "2026-11-22", prag: 5 };
+var PR_TIMP = { n: 60, zile: 20, start: "2026-11-22", ore: 4 };
 var PR_MARGINE = { n: 60, zile: 20, start: "2026-11-21", putere: "o diferență medie sub ~2,6% din sumă rămâne „n-am aflat”" };
 // v100.360: „3 la rând” - ce se știe dinainte (din documentul pre-înregistrării, secțiunea 9); cifrele rezultatelor cu o singură zecimală
 var PR_TREI = { N: 45, start: "2026-11-19", limita: "2027-11-18", putere: "puterea e mică: cam 2 șanse din 3 să prindă un efect cât cel văzut pe ritmul mediu de până acum (în cam 8–9 luni), cam 1 din 5 pe ritmul din ultimele 6 luni (atunci verdictul vine la limită)" };
@@ -102,7 +161,7 @@ function prStadiuHtml(d, acum) {
   return '<section class="tbBloc prStadiu" data-pr="stadiu"><div class="sugPandaCap"><h4>Unde e fiecare probă</h4><span class="tbSub">regulile s-au fixat înainte; până la privire doar cifre, fără verdict</span></div><div class="prRanduri">'
     + R.map(function (r) {
       return '<div class="prRand" data-proba="' + r.k + '"><div class="prNume"><b>' + sugEsc(r.nume) + '</b> <span class="sugVerdict sugVerdict-p">ÎN PROBĂ</span>' + (r.act ? ' <button type="button" class="t212BtnLinie prDu" data-action-click="' + sugEsc(r.act[1]) + '">' + sugEsc(r.act[0]) + '</button>' : '') + '</div>'
-        + '<dl class="prFapte"><div><dt>De când</dt><dd>' + sugEsc(r.de) + '</dd></div><div><dt>Judecate</dt><dd>' + sugEsc(r.jud) + '</dd></div><div class="prSta"><dt>Cum stă, fără verdict</dt><dd>' + sugEsc(r.sta) + '</dd></div></dl>'
+        + '<dl class="prFapte"><div><dt>De când</dt><dd>' + sugEsc(r.de) + '</dd></div><div><dt>Judecate</dt><dd>' + sugEsc(r.jud) + '</dd></div><div class="prSta"><dt>Cum stă, fără verdict</dt><dd>' + sugEsc(r.sta) + '</dd></div>' + (r.acum ? '<div class="prAcum"><dt>La boții porniți acum</dt><dd>' + sugEsc(r.acum) + '</dd></div>' : '') + '</dl>'
         + '<div class="prDrum">' + (r.drum && r.drum.svg || "") + '<p class="tbSub">' + sugEsc((r.drum && r.drum.text) || "") + (r.drum && r.drum.mai ? " · " + sugEsc(r.drum.mai) : "") + (r.ultima ? " · " + sugEsc(r.ultima) : "") + '</p></div></div>';
     }).join("") + '</div></section>';
 }
@@ -199,6 +258,8 @@ async function prPorneste(fortat) {
       pas("oscilo", function () { return getJSON("/api/istoric-bot?action=oscilo").then(function (r) { return r && r.oscilo || null; }); }),   /* v100.353 */
       pas("treiLaRand", function () { return getJSON("/api/istoric-bot?action=treiLaRand").then(function (r) { return r && r.treiLaRand || null; }); }),   /* v100.360 */
       pas("probaMargine", function () { return getJSON("/api/istoric-bot?action=probaMargine").then(function (r) { return r && r.probaMargine || null; }); }),   /* v100.374 */
+      pas("probaPierdere", function () { return getJSON("/api/istoric-bot?action=probaPierdere").then(function (r) { return r && r.probaPierdere || null; }); }),   /* v100.377 */
+      pas("probaTimp", function () { return getJSON("/api/istoric-bot?action=probaTimp").then(function (r) { return r && r.probaTimp || null; }); }),   /* v100.377 */
       pas("trend12", function () { return getJSON("/api/istoric-bot?action=trend12").then(function (r) { return r && r.trend || null; }); }),
       pas("probaA", function () { return getJSON("/api/istoric-bot?action=probaA").then(function (r) { return r && r.probaA || null; }); }),
       pas("pareri", function () { return getJSON("/api/istoric-bot?action=pareri"); })

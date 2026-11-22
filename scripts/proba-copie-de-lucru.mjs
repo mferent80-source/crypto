@@ -13,7 +13,7 @@ const ORIGIN = path.join(T, "origin.git"), RAD = path.join(T, "crypto"), ALT = p
 const sh = (cwd, ...a) => { const r = spawnSync("git", a, { cwd, encoding: "utf8" }); if (r.status !== 0) throw new Error(`git ${a.join(" ")}: ${r.stderr}`); return String(r.stdout).trim(); };
 const scrie = (p, s) => { fs.mkdirSync(path.dirname(p), { recursive: true }); fs.writeFileSync(p, s); };
 const citeste = (p) => fs.readFileSync(p, "utf8");
-const unealta = (...a) => { const r = spawnSync(process.execPath, [UNEALTA, ...a], { cwd: RAD, encoding: "utf8", env: { ...process.env, COPIE_RADACINA: RAD } }); return { cod: r.status, text: String(r.stdout) + String(r.stderr) }; };
+const unealta = (...a) => { const r = spawnSync(process.execPath, [UNEALTA, ...a], { cwd: RAD, encoding: "utf8", env: { ...process.env, COPIE_RADACINA: RAD, COPIE_FARA_SERVER: "1" } }); return { cod: r.status, text: String(r.stdout) + String(r.stderr) }; };
 const cfg = (cwd) => { sh(cwd, "config", "user.email", "proba@local"); sh(cwd, "config", "user.name", "proba"); sh(cwd, "config", "core.autocrlf", "false"); };
 let teste = 0, picate = 0;
 const test = (nume, f) => { teste++; try { f(); console.log(`  ok   ${nume}`); } catch (e) { picate++; console.log(`  PICA ${nume}\n       ${e && e.message}`); } };
@@ -54,11 +54,14 @@ test("livreaza fără commit-uri / cu modificări necomise ⇒ 1, nimic publicat
   assert.equal(unealta("livreaza", "t1").cod, 1);
   scrie(path.join(COPIE, "a.txt"), "a.txt neterminat\n");
   const r = unealta("livreaza", "t1"); assert.equal(r.cod, 1); assert.match(r.text, /necomise/);
+  assert.match(r.text, /REZULTAT: NIMIC publicat\.$/m, "v100.377: ultimul rând spune ce s-a întâmplat");
   sh(COPIE, "checkout", "--", "a.txt");
 });
 test("livreaza: teste ⇒ push ⇒ principalul adus (avans simplu)", () => {
   comite(COPIE, "a.txt", "a.txt 2\n", "a2");
   const r = unealta("livreaza", "t1"); assert.equal(r.cod, 0, r.text);
+  /* v100.377: rândul de la capăt (fără hook instalat, poarta „n-a spus nimic” - se spune) */
+  assert.match(r.text, /REZULTAT: PUBLICAT [0-9a-f]{7,} pe origin\/main · principalul adus · fără avertismente\.$/m); assert.match(r.text, /poarta de dinaintea împingerii n-a spus nimic/);
   assert.equal(pe("origin/main", "a.txt"), "a.txt 2");
   assert.equal(citeste(path.join(RAD, "a.txt")), "a.txt 2\n", "principalul are codul");
 });
@@ -66,6 +69,7 @@ test("🔑 principalul cu modificări NECOMISE pe același fișier ⇒ publicat,
   scrie(path.join(RAD, "b.txt"), "b.txt lucrul vecinei\n");
   comite(COPIE, "b.txt", "b.txt al meu\n", "b-meu");
   const r = unealta("livreaza", "t1"); assert.equal(r.cod, 2, r.text); assert.match(r.text, /b\.txt/);
+  assert.match(r.text, /REZULTAT: PUBLICAT [0-9a-f]{7,} pe origin\/main · principalul NU a fost adus \(motivul e mai sus\) · fără avertismente\.$/m);
   assert.equal(citeste(path.join(RAD, "b.txt")), "b.txt lucrul vecinei\n", "lucrul vecinei rămâne");
   assert.equal(pe("origin/main", "b.txt"), "b.txt al meu");
   sh(RAD, "checkout", "--", "b.txt"); sh(RAD, "merge", "--ff-only", "-q", "origin/main");
@@ -90,8 +94,29 @@ test("npm test pică ⇒ 1, nimic publicat", () => {
   const inainte = sh(RAD, "rev-parse", "origin/main");
   comite(COPIE, "PICA", "x\n", "pica");
   const r = unealta("livreaza", "t1"); assert.equal(r.cod, 1, r.text); assert.match(r.text, /PICAT/);
+  assert.match(r.text, /REZULTAT: NIMIC publicat — npm test a picat\.$/m);
   sh(COPIE, "fetch", "-q", "origin"); assert.equal(sh(COPIE, "rev-parse", "origin/main"), inainte);
   sh(COPIE, "reset", "-q", "--hard", "HEAD~1");
+});
+// v100.377: poarta de dinaintea împingerii (hook-ul pre-push) - ce spune ea ajunge în jurnalul livrării; o probă picată acolo oprește tot, cu motivul în rezultat
+test("🔑 poarta de dinaintea împingerii: rândurile ei se văd; când oprește push-ul ⇒ 1, nimic publicat, motivul în rândul de rezultat", () => {
+  const hook = path.join(RAD, ".git", "hooks", "pre-push"), pune = (corp) => { scrie(hook, "#!/bin/sh\n" + corp + "\n"); try { fs.chmodSync(hook, 0o755); } catch {} };
+  try {
+    pune('echo "[pre-push] probele de ecran: sărite - serverul servește v1, depozitul are v2"; echo "alt rând, de la altcineva"; exit 0');
+    comite(COPIE, "c.txt", "c.txt poarta 1\n", "poarta1");
+    let r = unealta("livreaza", "t1"); assert.equal(r.cod, 0, r.text);
+    assert.match(r.text, /^\[pre-push\] probele de ecran: sărite - serverul servește v1, depozitul are v2$/m, "rândul porții e în jurnal"); assert.equal(/alt rând, de la altcineva/.test(r.text), false, "doar rândurile porții și bilanțurile probelor");
+    /* revizia reparațiilor (22.11, N4): poarta care a SĂRIT probele nu mai trece drept „fără avertismente” */
+    assert.equal(/n-a spus nimic/.test(r.text), false); assert.match(r.text, /REZULTAT: PUBLICAT [0-9a-f]{7,} pe origin\/main · principalul adus · 1 avertisment: \(1\) poarta de dinaintea împingerii a SĂRIT probele de ecran \(motivul e mai sus\)\./);
+    const inainte = sh(RAD, "rev-parse", "origin/main");
+    pune('echo "[pre-push] proba de telefon pe v2 (toate paginile la 390 px; ~3 min)…"; echo "58/59 trec · poze în x"; echo "[pre-push] proba de telefon a PICAT - push oprit. (ocolire, doar dacă știi de ce: SARI_PROBA_TELEFON=1)"; exit 1');
+    comite(COPIE, "c.txt", "c.txt poarta 2\n", "poarta2");
+    r = unealta("livreaza", "t1"); assert.equal(r.cod, 1, r.text);
+    assert.match(r.text, /^58\/59 trec · poze în x$/m, "bilanțul probei"); assert.match(r.text, /Poarta de dinaintea împingerii a OPRIT push-ul \(o probă de ecran a picat\) — nimic publicat/);
+    assert.match(r.text, /REZULTAT: NIMIC publicat — o probă de ecran a picat la poarta de dinaintea împingerii\.$/m);
+    sh(COPIE, "fetch", "-q", "origin"); assert.equal(sh(COPIE, "rev-parse", "origin/main"), inainte, "nimic urcat");
+    sh(COPIE, "reset", "-q", "--hard", "HEAD~1");
+  } finally { try { fs.rmSync(hook, { force: true }); } catch {} }
 });
 test("conflict cu ce a urcat altcineva ⇒ rebase oprit, copia neatinsă, nimic publicat", () => {
   sh(T, "clone", "-q", ORIGIN, ALT); cfg(ALT); comite(ALT, "c.txt", "c.txt al altuia\n", "alt"); sh(ALT, "push", "-q", "origin", "main");

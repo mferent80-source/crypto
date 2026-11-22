@@ -112,25 +112,77 @@ export function episodCuNota(x, drum, rarit) {
 
 const medie = (a) => (a.length ? a.reduce((s, v) => s + v, 0) / a.length : null);
 // media diferenței (% din suma pusă) cu interval 95% prin reeșantionare pe ZILE
-export function interval(E, samanta) {
+export function interval(E, samanta, coada) {   /* v100.377: `coada` (implicit 0,025 = interval 95%); proba pierderii cere 0,005 (99%) */
   const peZi = new Map(); for (const e of E) { if (!peZi.has(e.zi)) peZi.set(e.zi, []); peZi.get(e.zi).push(e.dPct); }
   const Z = [...peZi.values()]; if (Z.length < 2) return null;
   const r = mulberry32(samanta === undefined ? SAMANTA : samanta), M = [];
   for (let k = 0; k < RESAMPLARI; k++) { let s = 0, n = 0; for (let i = 0; i < Z.length; i++) { const z = Z[Math.floor(r() * Z.length)]; for (const v of z) { s += v; n++; } } M.push(s / n); }
   M.sort((a, b) => a - b);
-  return [M[Math.floor(0.025 * RESAMPLARI)], M[Math.min(RESAMPLARI - 1, Math.floor(0.975 * RESAMPLARI))]];
+  const c = coada > 0 && coada < 0.5 ? coada : 0.025;
+  return [M[Math.floor(c * RESAMPLARI)], M[Math.min(RESAMPLARI - 1, Math.floor((1 - c) * RESAMPLARI))]];
 }
-function parte(E, samanta) { const zile = new Set(E.map((e) => e.zi)).size; return { n: E.length, zile, medie: medie(E.map((e) => e.dPct)), suma: E.reduce((s, e) => s + e.d, 0), ic: zile >= MIN_ZILE_INTERVAL ? interval(E, samanta) : null }; }
+function parte(E, samanta, coada) { const zile = new Set(E.map((e) => e.zi)).size; return { n: E.length, zile, medie: medie(E.map((e) => e.dPct)), suma: E.reduce((s, e) => s + e.d, 0), ic: zile >= MIN_ZILE_INTERVAL ? interval(E, samanta, coada) : null }; }
 const semn = (p) => (p && p.ic ? (p.ic[1] < 0 ? -1 : p.ic[0] > 0 ? 1 : 0) : 0);
 
 // bilanțul probei: verdictul doar de la MIN_EPISOADE pe MIN_ZILE; „inchiderea” (media sub 0), „lasatul” (peste 0), „n-am aflat”
 export function bilant(episoade, o) {
   const E = (Array.isArray(episoade) ? episoade : []).filter((e) => e && nr(e.t0) > 0 && nr(e.dPct) !== null && nr(e.d) !== null && e.zi), s = o && o.samanta;
-  const tot = parte(E, s), vechi = parte(E.filter((e) => !e.nou), s), nou = parte(E.filter((e) => e.nou), s);
+  const c = o && o.coada, tot = parte(E, s, c), vechi = parte(E.filter((e) => !e.nou), s, c), nou = parte(E.filter((e) => e.nou), s, c);
   const destule = tot.n >= MIN_EPISOADE && tot.zile >= MIN_ZILE, contra = semn(vechi) * semn(nou) < 0;
   const verdict = !destule || !tot.ic ? null : contra ? "n-am aflat" : tot.ic[1] < 0 ? "inchiderea" : tot.ic[0] > 0 ? "lasatul" : "n-am aflat";
   const dupa = {}; for (const h of [1, 4, 24]) { const l = E.map((e) => e.dupa && e.dupa[h]).filter(Boolean); dupa[h] = { n: l.length, intorsi: l.filter((q) => q.inGrid).length, medie: medie(l.map((q) => q.total)) }; }
   const pe = (f) => { const l = E.filter(f); return { n: l.length, medie: medie(l.map((e) => e.dPct)), suma: l.reduce((a, e) => a + e.d, 0) }; };
   return { forma: 1, n: tot.n, zile: tot.zile, medie: tot.medie, suma: tot.suma, ic: tot.ic, verdict, seContrazic: destule && contra, minEpisoade: MIN_EPISOADE, minZile: MIN_ZILE,
     vechi: { n: vechi.n, zile: vechi.zile, medie: vechi.medie, ic: vechi.ic }, nou: { n: nou.n, zile: nou.zile, medie: nou.medie, ic: nou.ic }, dupa, cuStop: pe((e) => e.stop), faraStop: pe((e) => !e.stop) };
+}
+
+// ---------- v100.377 (22.11.2026): PROBA PIERDERII - a doua regulă de ieșire pusă la probă ----------
+// „Închid botul prima oară când totalul lui e la −5% din suma pusă sau sub.” Regulile sunt scrise ÎNAINTE de a citi vreun drum, în
+// docs/cercetare/2026-11-22-v100377-proba-pierderii.md: pragul e cel de „pierdere mare” al casei (MARE = −0,05 din risc-luna.js), nu se încearcă
+// altele; intervalul e de 99% (cel de 97,5% dădea verdict fals în 3–6% din seturi la simularea sub H0, făcută înainte de date); aceleași 60 de episoade pe 20 de zile, verdict înghețat o singură dată.
+/* COADA 0,0025 = interval de 99,5%: hotărât pe 22.11, înainte de date, pe simularea pentru DOUĂ reguli (scripts/sim-h0-v100377-doua-reguli.mjs,
+   a doua variantă): cu 99% familia trecea de pragul scris dinainte (~5%). Amendamentul e în pre-înregistrare. */
+export const PRAG_PIERDERE = 0.05, START_PIERDERE = Date.UTC(2026, 10, 22), COADA_PIERDERE = 0.0025;
+/* auditul 22.11 (🟡4): botul închis chiar la clipa regulii (la cel mult atâtea minute de punctul ei) e ACEEAȘI faptă ⇒ diferența e zero. Fără asta,
+   comisionul închiderii închipuite (socotit pe poziția maximă: suma × levierul) făcea ca, ascultând regula, proba să dea „lăsatul a fost mai bun”. */
+/* revizia reparațiilor (22.11, N2): „aceeași faptă” = același TIMP și aceiași BANI. Doar timpul ștergea diferențe adevărate: un bot atins de stop
+   sau lichidat la 3 minute după prag ieșea cu d = 0 în loc de −3 sau −34. Acum botul trebuie să fi ieșit și la cel mult un comision de închidere de
+   totalul din punctul regulii. */
+export const LA_REGULA_MIN = 5;
+// episodul unui bot: { id, t0, … } sau { id, fara: motivul } sau null. `d` = cum a ieșit − (totalul la prag − comisionul de închidere): sub zero =
+// închiderea la prag ar fi fost mai bună. Totalul e cel din PUNCTUL în care pragul e atins (prețul poate sări: pierderea e cea de acolo).
+export function episodPierdere(x, drum) {
+  const b = botDin(x); if (!b || !b.id) return null;
+  const L = puncte(drum); if (!L.length) return { id: b.id, fara: "fara-drum" };
+  if (L[0].t - b.creat > MAX_INTARZIERE_MIN * MIN) return { id: b.id, fara: "drum-taiat" };
+  /* suma pusă = cea din clipa punctului (drumul o poartă): marja adăugată DUPĂ ar muta pragul tocmai la boții „salvați” cu marjă */
+  const suma = (q) => (nr(q.investit) > 0 ? nr(q.investit) : b.inv), sub = (q) => q.profitTotal <= -PRAG_PIERDERE * suma(q);
+  if (sub(L[0])) return { id: b.id, fara: "pornit-sub" };
+  const i = L.findIndex(sub); if (i < 0) return { id: b.id, fara: "peste-prag" };
+  if (L[i].t - L[i - 1].t > MAX_GOL_MIN * MIN) return { id: b.id, fara: "gol" };
+  const p0 = L[i], inv0 = suma(p0), com = inv0 * b.lev * COMISION_INCHIDERE, laRegula = b.inchis - p0.t <= LA_REGULA_MIN * MIN && Math.abs(b.final - p0.profitTotal) <= com, d = laRegula ? 0 : b.final - (p0.profitTotal - com), u = L[L.length - 1];
+  /* ce a urmat după h ore (doar dacă botul mai trăia): cât s-a mișcat totalul și dacă era înapoi peste prag */
+  const la = (h) => { const tt = p0.t + h * ORA; if (u.t < tt - 2 * MIN) return null; let q = null; for (const z of L) { if (z.t <= tt) q = z; else break; } return q ? { total: q.profitTotal - p0.profitTotal, inGrid: !sub(q) } : null; };
+  return { id: b.id, t0: p0.t, zi: zi(p0.t), dir: b.dir, inv: inv0, laPrag: p0.profitTotal, comision: com, final: b.final, d, dPct: d / inv0 * 100, laRegula, stop: b.stop, nou: p0.t >= START_PIERDERE, dupa: { 1: la(1), 4: la(4), 24: la(24) } };
+}
+// v100.377 (el 22.11: „fă ideile astea”): a doua regulă de ieșire pe bani pusă la probă, pe TIMP - „închid botul prima oară când, între 4 și 24 de ore
+// de la pornire, totalul lui e pe minus cu cel puțin 0,5% din suma pusă” (clipa alertei „a trecut de 4 ore și e pe minus”, aceleași praguri).
+// Pre-înregistrarea: docs/cercetare/2026-11-22-v100377-proba-timpului.md. `d` = cum a ieșit − (totalul din punctul acela − comisionul de închidere):
+// sub zero = închiderea de atunci ar fi fost mai bună.
+export const ORE_TIMP = 4, ORE_TIMP_MAX = 24, PRAG_TIMP = 0.005, START_TIMP = Date.UTC(2026, 10, 22), COADA_TIMP = 0.0025;
+export function episodTimp(x, drum) {
+  const b = botDin(x); if (!b || !b.id) return null;
+  const L = puncte(drum); if (!L.length) return { id: b.id, fara: "fara-drum" };
+  if (L[0].t - b.creat > MAX_INTARZIERE_MIN * MIN) return { id: b.id, fara: "drum-taiat" };
+  const suma = (q) => (nr(q.investit) > 0 ? nr(q.investit) : b.inv), varsta = (q) => q.t - b.creat, sub = (q) => q.profitTotal <= -PRAG_TIMP * suma(q);
+  /* botul n-a apucat 4 ore: regula nu-l privește („scurt”). Dacă a trăit mai mult, dar drumul lui se oprește înainte, nu se știe ce a fost: „gol” */
+  if (varsta(L[L.length - 1]) < ORE_TIMP * ORA) return { id: b.id, fara: b.inchis - b.creat >= ORE_TIMP * ORA + MAX_GOL_MIN * MIN ? "gol" : "scurt" };
+  const inFereastra = (q) => varsta(q) >= ORE_TIMP * ORA && varsta(q) < ORE_TIMP_MAX * ORA;
+  /* „n-a fost pe minus” se spune doar cu puncte în fereastră; un drum fără niciun punct între 4 și 24 de ore e tot „gol” */
+  const i = L.findIndex((q) => inFereastra(q) && sub(q)); if (i < 0) return { id: b.id, fara: L.some(inFereastra) ? "pe-plus" : "gol" };
+  /* un gol chiar înaintea punctului: clipa adevărată putea fi în gol, cu alt total */
+  if (i >= 1 && L[i].t - L[i - 1].t > MAX_GOL_MIN * MIN) return { id: b.id, fara: "gol" };
+  const p0 = L[i], inv0 = suma(p0), comisionT = inv0 * b.lev * COMISION_INCHIDERE, laRegulaT = b.inchis - p0.t <= LA_REGULA_MIN * MIN && Math.abs(b.final - p0.profitTotal) <= comisionT, d = laRegulaT ? 0 : b.final - (p0.profitTotal - comisionT), u = L[L.length - 1];
+  const la = (h) => { const tt = p0.t + h * ORA; if (u.t < tt - 2 * MIN) return null; let q = null; for (const z of L) { if (z.t <= tt) q = z; else break; } return q ? { total: q.profitTotal - p0.profitTotal, inGrid: !sub(q) } : null; };
+  return { id: b.id, t0: p0.t, zi: zi(p0.t), dir: b.dir, inv: inv0, laPrag: p0.profitTotal, comision: comisionT, final: b.final, d, dPct: d / inv0 * 100, laRegula: laRegulaT, stop: b.stop, nou: p0.t >= START_TIMP, dupa: { 1: la(1), 4: la(4), 24: la(24) } };
 }

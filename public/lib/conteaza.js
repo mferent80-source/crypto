@@ -48,8 +48,8 @@ var Conteaza = (function () {
     // altfel poartă totalul de acolo (la stopul pe preț; la cel în procente procentul îl spune deja) și, în grid, câte grile nu mai lucrează dincolo de el
     var oprit = s.mutOprit === "lichidare", bani = rap === null && nr(s.mutTotal) !== null ? ", totalul acolo ≈ " + usdt1(s.mutTotal) : "";
     var gr = s.mutGrile && nr(s.mutGrile.moarte) >= 1 && nr(s.mutGrile.intervale) >= 1 ? "; " + (s.sus ? "peste" : "sub") + " el nu mai lucrează " + s.mutGrile.moarte + " din " + cate(s.mutGrile.intervale, "grilă", "grile") : "";
-    var mut = nr(s.mut20) === null ? null : rap === null ? "~" + pret(s.mut20) + " (acolo ~20 din 100 într-o zi" + bani + gr + ")"
-      : mR !== null ? "~" + pct1(mR) + " din investiție (acum pe la ~" + pret(s.mut20) + "; acolo ~20 din 100 într-o zi" + gr + ")" : null;
+    var mut = nr(s.mut20) === null ? null : rap === null ? "~" + pret(s.mut20) + " (acolo ~" + (nr(s.mutP24) !== null ? din100(s.mutP24) : "20") + " din 100 într-o zi" + bani + gr + ")"
+      : mR !== null ? "~" + pct1(mR) + " din investiție (acum pe la ~" + pret(s.mut20) + "; acolo ~" + (nr(s.mutP24) !== null ? din100(s.mutP24) : "20") + " din 100 într-o zi" + gr + ")" : null;
     return { cheie: "stop", ton: rosu ? "rosu" : "galben", grav: rosu ? 1 : 4, nr: din100(p), nrSub: "din 100 · 24 h",
       titlu: "Stopul tău (" + et + ") e atins într-o zi în ~" + din100(p) + " din 100 de cazuri",
       sub: "e la " + num1(s.d) + " ATR de preț" + (nr(s.p72) !== null ? " · în 3 zile: ~" + din100(s.p72) + " din 100" : "") + " · măsurat pe " + (perechi > 0 ? cate(perechi, "monedă", "monede") : "monedele mari")

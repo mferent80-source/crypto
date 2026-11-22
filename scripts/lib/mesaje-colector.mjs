@@ -110,6 +110,22 @@ const sfat24 = (p) => !p ? "Aș verifica acum stopul botului, dacă nu are unul.
   : "Aș închide botul care stă de peste o zi pe minus, în loc să aștept să revină.";
 export const minus24h = (nume, ore, total, textBot, p) => ({ nivel: "atentie", cheie: "minus-24h", titlu: nume + ": " + Math.round(ore) + " h pe minus (" + U2(total) + ")",
   mesaj: msg(textBot && p ? textBot : "Botul stă de " + Math.round(ore) + " h și e pe " + U2(total) + "; încă n-am raportul de risc cu istoria ta.", sfat24(textBot ? p : null)) });
+// v101.210 (Radar v100.377; el, 22.11.2026: „idei care chiar să conteze”): botul a trecut de 4 ore și e pe minus. Pe arhiva lui, boții ajunși la 4 h
+// (22% din boți) fac 64% din toată pierderea, iar pierderea medie crește cu vârsta botului (câștigul mediu nu). O dată pe bot, cu plata boților
+// lui ajunși la vârsta asta (RiscLuna.textPlataScurt, din raportul de noapte: o frază); fără raport, doar faptul. Descriere, nu regulă probată: sfatul cere o hotărâre, nu o închidere.
+/* auditul 22.11 (🟡5): „la tine pierderea crește cu vârsta botului, câștigul nu” pleacă doar când raportul de ACUM o arată (`creste`, din RiscLuna.plataCreste) */
+export const minus4h = (nume, ore, total, textPlata, creste) => ({ nivel: "atentie", cheie: "minus-4h", titlu: nume + ": " + Math.round(ore) + " h și e pe minus (" + U2(total) + ")",
+  mesaj: msg(textPlata || "Botul a trecut de 4 ore și e pe " + U2(total) + "; încă n-am raportul de risc cu plata boților tăi.",
+    textPlata && creste === true ? "Aș hotărî acum pierderea la care îl închid: la tine pierderea crește cu vârsta botului, câștigul nu." : "Aș hotărî acum pierderea la care îl închid.") });
+// v101.210 (Radar v100.377; el 22.11, „fa idei”): stopul pus chiar pe marginea contra botului - prima atingere a marginii îl închide. E un FAPT, nu o
+// judecată: dacă e mai bine așa se află abia la proba „stop la margine sau nu?”. `dovada` = CapMargine.textDovadaStopMargineScurt (boții lui închiși).
+export const stopPeMargine = (nume, parte, pretStop, total, dovada) => {
+  /* auditul 22.11: suma e totalul botului LA MARGINE (acolo îl închide stopul), spus ca atare; sfatul nu mai pomenește o probă „în curs” (rămânea scris și după verdict) */
+  const cuBani = total !== null && total !== undefined && Number.isFinite(Number(total)), t1 = nume + ": stopul e pe marginea de " + parte + (cuBani ? " (la margine: " + U2(total) + ")" : "");
+  return { nivel: "atentie", cheie: "stop-pe-margine", titlu: t1.length <= 60 ? t1 : nume + ": stopul e pe marginea de " + parte,
+    mesaj: msg(dovada ? "Prima atingere a marginii închide botul; " + dovada + "." : "Stopul (" + pretStop + ") e chiar pe marginea de " + parte + ": prima atingere a marginii închide botul" + (cuBani ? " la " + U2(total) : "") + ".",
+      "Aș hotărî dacă îl las acolo sau îl mut dincolo de margine.") };
+};
 // v101.73 (I-540): ceasul ferestrei LARG - botul stă de peste 2× durata tipică din proba ferestrei
 export const ceasLarg = (nume, ore, tipic) => ({ nivel: "info", cheie: "ceas-larg", titlu: nume + ": LARG stă de " + Math.round(ore) + " h (tipic " + Math.round(tipic) + " h)",
   mesaj: msg("Banii stau în grid de peste două ori mai mult decât în probă.", "Aș închide aproape de zero dacă prețul nu mai trece prin grid; dacă lucrează, îl las.") });

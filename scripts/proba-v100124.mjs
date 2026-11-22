@@ -55,7 +55,7 @@ await test("(2b) proba pornește doar când serverul servește versiunea din dep
 });
 await test("(2c) scriptul: doar la schimbări în public/, serverul viu (/health), proba cu ieșirea ei; ocolire cu SARI_PROBA_TELEFON=1", () => {
   const s = citeste("scripts", "inainte-de-push.mjs");
-  assert.match(s, /startsWith\("public\/"\)/); assert.match(s, /127\.0\.0\.1:8788\/health/); assert.match(s, /proba-ecran-telefon\.mjs/);
+  assert.match(s, /startsWith\("public\/"\)/); assert.match(s, /export const ADRESA_SANATATE = "http:\/\/127\.0\.0\.1:8788\/api\/market\?type=health";/);   /* v100.377: `/health` nu mai există pe serverul local (404) ⇒ poarta sărea probele */ assert.match(s, /proba-ecran-telefon\.mjs/);
   assert.match(s, /SARI_PROBA_TELEFON/); assert.match(s, /process\.exit\(r\.status/);
   assert.match(citeste("scripts", "hooks", "pre-push"), /node scripts\/inainte-de-push\.mjs/);
   const pj = JSON.parse(citeste("package.json")).scripts; assert.match(pj["instaleaza-hook"], /scripts\/hooks\/pre-push/);

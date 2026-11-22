@@ -39,7 +39,8 @@ const CAPITOLE = [
   ["#tbCap-decizia", "Decizia", ["#tbTodo", "#tbSemaforCard", "#tbMotive", "#tbPl-sfaturi", "#tbPl-plan"]],
   ["#tbCap-risc", "Riscul", ["#tbConcret", "#tbScenariiCard", "#tbMcSus", "#tbPl-risc", "#tbPl-prob"]],
   ["#tbCap-bani", "Banii", ["#tbBaniCard", "#tbAcumCard", "#tbPl-sapt", "#tbPl-fisa", "#tbPl-port", ".contTot"]],
-  ["#tbCap-piata", "Piața", ["#tbTrendCard", "#tbCitireCard", ".piataAzi", "#tbIdei", "#tbGridNou"]],
+  /* v100.377 (el 22.11: „nici vremea monedei nu mai e sub chart”): „Trendul pe TF-uri” stă iar sub grafic, nu în capitolul Piața (proba v100.377, J3) */
+  ["#tbCap-piata", "Piața", ["#tbCitireCard", ".piataAzi", "#tbIdei", "#tbGridNou"]],
   ["#tbCap-jurnal", "Jurnalul și dovada", ["#tbPl-alerte", "#tbPl-avert", "#tbPl-socoteala"]],
 ];
 

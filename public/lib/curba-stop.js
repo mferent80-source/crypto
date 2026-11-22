@@ -92,5 +92,15 @@ var CurbaStop = (function () {
     return { d: d, p24: p24, p72: p72, dMut20: dm, mut20: mut, stop: stop, pret: pret, sus: sus, perechi: c.perechi, zile: c.zile, la: c.la };
   }
 
-  return { D: D, atr14: atr14, curba: curba, valida: valida, sansa: sansa, pentruStop: pentruStop, VECHE: VECHE };
+  // v100.377 (el 22.11, „o singură propunere de stop”): prețul la care atingerea într-o zi scade la `tinta` (implicit 20 din 100), socotit de la prețul
+  // de ACUM, nu de la stopul de acum: long = sub preț, short = deasupra. Aceleași paze ca pentruStop; null când curba nu coboară până acolo.
+  function pretLa(o) {
+    o = o || {}; var c = o.curba, atr = nr(o.atr), pret = nr(o.pret), dir = String(o.dir || "").toLowerCase(), acum = nr(o.acum) || Date.now(), tinta = nr(o.tinta) > 0 ? nr(o.tinta) : 0.2;
+    if (!valida(c) || !(atr > 0) || !(pret > 0) || acum - c.la > VECHE || (dir !== "long" && dir !== "short")) return null;
+    var dm = distantaPentru(c, tinta, -1); if (dm === null) return null;
+    var x = dir === "short" ? pret + dm * atr : pret - dm * atr; if (!(x > 0)) return null;
+    return { pret: x, d: dm, tinta: tinta, perechi: c.perechi, zile: c.zile };
+  }
+
+  return { D: D, atr14: atr14, curba: curba, valida: valida, sansa: sansa, pentruStop: pentruStop, pretLa: pretLa, VECHE: VECHE };
 })();

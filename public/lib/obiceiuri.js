@@ -155,6 +155,26 @@ var Obiceiuri = (function () {
   }
   // I-468: cat ar fi economisit frana pe istorie - botii PORNITI dupa ce frana suna (in ziua / saptamana / seria aceea) n-ar mai fi pornit.
   // Pe inchisi, in-sample: e o ipoteza (spusa asa pe ecran), nu o promisiune.
+  // v100.377 (ideea 2, 22.11: „idei care chiar schimbă ceva”): boții PORNIȚI azi - câți (închiși sau încă deschiși, numărați ca în frână), câți din ei
+  // s-au și închis, ce comisioane au plătit aceia și cu cât au ieșit. Pe arhiva lui, boții ținuți sub 15 minute pierd cât comisionul.
+  function porniriAzi(o) {
+    o = o || {}; var acum = o.acum || Date.now(), z0 = inceputZiRo(acum), n = 0, inch = 0, com = 0, areCom = 0, net = 0;
+    (Array.isArray(o.trades) ? o.trades : []).forEach(function (t) {
+      if (!t || nr(t.inchis) === null || netT(t) === null) return; var p0 = nr(t.pornit); if (p0 === null || p0 < z0 || p0 > acum) return;
+      n++; if (t.inchis > acum) return; inch++; net += netT(t); var c = nr(t.comisioane); if (c !== null) { com += Math.abs(c); areCom++; }
+    });
+    (Array.isArray(o.deschise) ? o.deschise : []).forEach(function (b) { var p0 = b ? nr(b.pornitLa !== undefined && b.pornitLa !== null ? b.pornitLa : b.pornit) : null; if (b && b.activ !== false && p0 !== null && p0 >= z0 && p0 <= acum) n++; });
+    /* lista boților închiși poate fi doar „ultimii N”: dacă toți cei veniți sunt porniți azi, mai vechi de ei pot lipsi ⇒ „cel puțin” */
+    var L = (Array.isArray(o.trades) ? o.trades : []).filter(function (t) { return t && nr(t.pornit) !== null; }), plin = L.length >= 5 && L.every(function (t) { return t.pornit >= z0; });
+    return { n: n, inchisi: inch, comisioane: areCom === inch && inch > 0 ? -com : null, net: inch > 0 ? net : null, prag: praguriFrana(o.praguri).boti, celPutin: plin };
+  }
+  // o propoziție, de la a doua pornire a zilei (prima nu e „repetată”); comisioanele doar când le are fiecare bot închis
+  function textPorniriAzi(p) {
+    if (!p || !(p.n >= 2)) return "";
+    var t = "Azi ai pornit deja " + (p.celPutin ? "cel puțin " : "") + cate(p.n, "bot", "boți") + " (pragul tău: " + p.prag + ")";
+    if (p.inchisi > 0 && p.net !== null) t += " · " + (p.inchisi === p.n ? "toți închiși" : p.inchisi === 1 ? "unul închis" : "cei " + p.inchisi + " închiși") + ": " + (p.comisioane !== null ? "comisioane " + U(p.comisioane) + ", " : "") + "net " + U(p.net);
+    return t + ".";
+  }
   function franaIstoric(trades, praguri) {
     var P0 = praguriFrana(praguri), l = (Array.isArray(trades) ? trades : []).filter(function (t) { return t && nr(t.inchis) !== null && nr(t.pornit) !== null && netT(t) !== null; })
       .sort(function (a, b) { return a.pornit - b.pornit; }), sarite = 0, economisit = 0, cedat = 0;
@@ -319,6 +339,6 @@ var Obiceiuri = (function () {
     if (rele.length && rele.every(function (x) { return x.cod === "moneda"; })) return { fac: "Aș porni cu o sumă mai mică și aș ține stopul la plan.", nota: "Fișa, planul și levierul sunt în regulă, dar pe moneda asta istoria ta e pe minus; îl notez în jurnal." };
     return { fac: "Aș aștepta până trec regulile de mai sus.", nota: "Dacă pornești totuși, îl notez în jurnal și socoteala va arăta cine a avut dreptate." };
   }
-  return { facPoarta: facPoarta, frana: frana, franaIstoric: franaIstoric, franaLaPornire: franaLaPornire, praguriFrana: praguriFrana, inceputZiRo: inceputZiRo, poarta: poarta, istoricMoneda: istoricMoneda, subOOra: subOOra, portofoliu: portofoliu, raportDuminica: raportDuminica, autopsie: autopsie, reguliPersonale: reguliPersonale, hartie: hartie };
+  return { porniriAzi: porniriAzi, textPorniriAzi: textPorniriAzi, facPoarta: facPoarta, frana: frana, franaIstoric: franaIstoric, franaLaPornire: franaLaPornire, praguriFrana: praguriFrana, inceputZiRo: inceputZiRo, poarta: poarta, istoricMoneda: istoricMoneda, subOOra: subOOra, portofoliu: portofoliu, raportDuminica: raportDuminica, autopsie: autopsie, reguliPersonale: reguliPersonale, hartie: hartie };
 })();
 if (typeof globalThis !== "undefined") globalThis.Obiceiuri = Obiceiuri;

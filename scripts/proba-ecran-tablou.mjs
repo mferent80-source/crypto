@@ -1260,7 +1260,7 @@ async function main() {
       const CAP = `{ dir: "long", pret: 1.28, jos: 1.2, sus: 1.36, stop: 1.15, stopActiv: true, laMargine: (p) => (p === "jos" ? -19.1 : -8.7), laStop: -24.3, total: -10.2, sanse: {}, pas: 0.006,
         expunere: { pozitie: 47, investit: 150 }, tp: 1.52, laTp: 4.5, tpRaport: 0.03, tpDinPret: false, tpGrile: { zile: 3.4, netZi: 3.9 }, zero: { pret: null, neatins: true, pretPoz: 1.49, grile: { zile: 2.6, netZi: 3.9 } },
         stopScurt: [{ ore: 1, pStop: 0.001, pTp: 0.0005 }, { ore: 4, pStop: 0.002, pTp: 0.001 }, { ore: 24, pStop: 0.05, pTp: 0.026 }] }`;
-      const PUNE = `(() => { const el = document.getElementById("ctAcum"); el.hidden = false; el.innerHTML = Conteaza.html(${JSON.stringify(RANDURI)}, escapeHtml); return true; })()`;
+      const PUNE = `(() => { const el = document.getElementById("ctAcum"); el.hidden = false; el.innerHTML = Conteaza.html(${JSON.stringify(RANDURI)}, escapeHtml) + (typeof tbConcretSusHtml === "function" && tbStare.bot ? tbConcretSusHtml(tbStare.bot) : ""); return true; })()`;   /* v100.377: și sfaturile Consilierului, ca pe pagină */
       const MASOARA = `(() => {
         const q = (s) => { const e = document.querySelector(s); if (!e) return null; const r = e.getBoundingClientRect(); return r.width > 0 ? { y: Math.round(r.top + scrollY), l: Math.round(r.width), h: Math.round(r.height) } : null; };
         const ct = document.getElementById("ctAcum"), dr = ct.getBoundingClientRect().right, W = document.documentElement.clientWidth, rad = document.getElementById("tabloubot");
@@ -1325,6 +1325,48 @@ async function main() {
         }
       } finally {
         await b.ev(`if (typeof tbRandToate === "function") tbRandToate(false); true`);
+        await b.marime(390, 900); await b.ev(`renderTabloBot()`); await asteapta(1900);
+      }
+    });
+
+    // v100.377 (auditul 22.11): cele două cerințe ale lui din 22.11 („consilierul … nu mai este sus și nici vremea monedei nu mai e sub chart”) erau probate
+    // doar pe forma sursei. Aici se măsoară pe pagina desenată, la lățimile lui: cele trei sfaturi ale Consilierului stau în cutia „Contează acum”
+    // (nimic nu iese din ea sau din ecran), iar „Trendul pe TF-uri” începe sub grafic și înaintea detaliilor cifrelor și a capitolului Decizia.
+    await test("D12i. telefon, tabletă, calculator (390 / 768 / 1280 / 1440 / 1920 / 2560): sfaturile Consilierului (stop, grid, mișcare) sunt în cutia de sus; Trendul cu „Vremea monedei” e sub grafic, înaintea capitolelor", async () => {
+      try {
+        for (const lat of [390, 768, 1280, 1440, 1920, 2560]) {
+          await b.marime(lat, 900);
+          await incarcaBotSanatos({ strategyId: "7640" });
+          await b.ev(`navTo('tabloubot')`); await b.ev(`renderTabloBot()`); await asteapta(2400);   /* stratul de așezare trece la 1,5 s */
+          const r = await b.ev(`(() => {
+            const q = (s) => { const e = typeof s === "string" ? document.querySelector(s) : s; if (!e) return null; const c = e.getBoundingClientRect(); return c.width > 0 && c.height > 0 ? { sus: Math.round(c.top + scrollY), jos: Math.round(c.bottom + scrollY), st: Math.round(c.left), dr: Math.round(c.right) } : null; };
+            const ct = document.getElementById("ctAcum"), W = document.documentElement.clientWidth, rad = document.getElementById("tabloubot"), cdr = ct.getBoundingClientRect().right;
+            const sfaturi = [...ct.querySelectorAll(".ctConcret .ctCcRand")].map((e) => ({ cod: (String(e.className).match(/ctCc-([a-z]+)/) || [])[1], act: (e.querySelector(".ctCcAct") || {}).textContent || "", vazut: e.getBoundingClientRect().height > 0 }));
+            return { ascunsa: ct.hidden, ct: q(ct), cap: q("#pzVerdict"), sfaturi, titlu: (ct.querySelector(".ctCcTitlu>b") || {}).textContent || "", gol: !!ct.querySelector(".ctGol"),
+              dinCutie: [...ct.querySelectorAll("*")].filter((e) => { const c = e.getBoundingClientRect(); return c.width > 0 && c.right > cdr + 0.5; }).slice(0, 4).map((e) => String(e.className).split(" ")[0] + " +" + Math.round(e.getBoundingClientRect().right - cdr) + "px"),
+              dinEcran: [...rad.querySelectorAll("*")].filter((e) => { const c = e.getBoundingClientRect(); if (!(c.width > 0) || c.right <= W + 1) return false;
+                for (let a = e.parentElement; a && a !== rad; a = a.parentElement) { const o = getComputedStyle(a).overflowX; if ((o === "auto" || o === "scroll") && a.getBoundingClientRect().right <= W + 1) return false; }
+                return true; }).length,
+              grafic: q("#tbGrafic .gbZona") || q("#tbGrafic svg"), trend: q("#tbTrendCard"), detalii: q("#tbKpiDetalii"), decizia: q("#tbCap-decizia"), piata: q("#tbCap-piata"),
+              vremea: !!document.querySelector("#tbTrendCard #tbVremea"), larg: !!document.querySelector("#tbTrendCard #tbVremeaLarg") }; })()`);
+          assert.equal(r.ascunsa, false, `${lat}: cutia „Contează acum” e ascunsă`); assert.ok(r.ct && r.cap, `${lat}: lipsește cutia sau capul: ${JSON.stringify(r)}`);
+          assert.equal(r.titlu, "Consilierul, concret", `${lat}: blocul sfaturilor lipsește din cutie`);
+          assert.deepEqual(r.sfaturi.map((x) => x.cod), ["stop", "grid", "miscare"], `${lat}: cele trei sfaturi`);
+          assert.ok(r.sfaturi.every((x) => x.vazut && x.act.trim().length > 8), `${lat}: un sfat e gol sau nevăzut: ${JSON.stringify(r.sfaturi)}`);
+          assert.equal(r.gol, false, `${lat}: cutia cu sfaturi nu poartă starea „goală” (ar lua așezarea de bandă subțire)`);
+          assert.deepEqual(r.dinCutie, [], `${lat}: ies din cutia „Contează acum”: ${r.dinCutie.join(", ")}`); assert.equal(r.dinEcran, 0, `${lat}: ${r.dinEcran} elemente ies din ecran`);
+          /* sus = înaintea graficului; pe calculator, lângă cap */
+          assert.ok(r.grafic && r.trend, `${lat}: lipsește graficul sau cartela Trendului: ${JSON.stringify({ g: r.grafic, t: r.trend })}`);
+          assert.ok(r.ct.sus < r.grafic.sus, `${lat}: cutia cu sfaturi (${r.ct.sus}) e sub grafic (${r.grafic.sus})`);
+          if (lat >= 1181) assert.ok(Math.abs(r.ct.sus - r.cap.sus) <= 4 && r.ct.st >= r.cap.dr - 2, `${lat}: pe calculator cutia stă lângă cap (cutia ${r.ct.sus} / ${r.ct.st}, capul ${r.cap.sus} / ${r.cap.dr})`);
+          /* Trendul (cu „Vremea monedei”): sub grafic, înaintea detaliilor cifrelor și a capitolelor */
+          assert.ok(r.vremea && r.larg, `${lat}: „Vremea monedei” nu mai e în cartela Trendului`);
+          assert.ok(r.trend.sus >= r.grafic.jos - 2, `${lat}: Trendul (${r.trend.sus}) începe peste capătul graficului (${r.grafic.jos})`);
+          if (r.detalii) assert.ok(r.trend.jos <= r.detalii.sus + 2, `${lat}: Trendul (${r.trend.jos}) a ajuns sub detaliile cifrelor (${r.detalii.sus})`);
+          assert.ok(r.decizia && r.trend.jos <= r.decizia.sus + 2, `${lat}: Trendul (${r.trend.jos}) a ajuns sub capitolul Decizia (${r.decizia && r.decizia.sus})`);
+          assert.ok(r.piata && r.trend.jos <= r.piata.sus, `${lat}: Trendul a rămas în capitolul Piața`);
+        }
+      } finally {
         await b.marime(390, 900); await b.ev(`renderTabloBot()`); await asteapta(1900);
       }
     });

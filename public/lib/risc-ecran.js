@@ -39,6 +39,18 @@ function rlSuprav(l, unitate) {
   return '<div class="rlTab"><table><thead><tr><th>Ajunse la</th><th>Câte</th><th>Pe plus</th><th>Pierdere peste 5%</th><th>Media</th></tr></thead><tbody>' + (l || []).filter(function (x) { return x.n > 0; }).map(function (x) {
     return "<tr><td>" + rlEsc(unitate === "ore" ? x.h + " h" : rlCate(x.h, "zi", "zile")) + '</td><td class="rlNr">' + rlN(x.n) + '</td><td class="rlNr">' + rlPct(x.pePlus) + '</td><td class="rlNr">' + rlPct(x.mari) + '</td><td class="rlNr ' + (x.medie < 0 ? "bad" : "good") + '">' + rlEsc(rlV1(x.medie * 100)) + "%</td></tr>"; }).join("") + "</tbody></table></div>";
 }
+/* v100.377 (I-907): plata pe vârsta atinsă - câștigul mediu al unui bot pe plus, pierderea medie a unuia pe minus, cât le trebuia pe plus, partea din pierdere */
+function rlPlata(pl, unit) {
+  if (!pl || !pl.tot) return "";
+  var tot = pl.tot, p1 = function (x) { return x == null || !isFinite(x) ? "—" : rlV1(x * 100).replace(/^[+−]/, "") + "%"; };
+  var rand = function (et, x) { var putini = x.n < 20;
+    return "<tr" + (putini ? ' class="rlPutini"' : "") + "><td>" + rlEsc(et) + '</td><td class="rlNr">' + rlN(x.n) + '</td><td class="rlNr">' + p1(x.pePlus) + '</td><td class="rlNr good">' + (x.castig == null ? "—" : "+" + p1(x.castig)) + '</td><td class="rlNr bad">' + (x.pierdere == null ? "—" : (x.pierdere > 0 ? "−" : "") + p1(x.pierdere))
+      + '</td><td class="rlNr ' + (x.trebuie != null && x.pePlus != null && x.pePlus < x.trebuie ? "bad" : "") + '">' + p1(x.trebuie) + '</td><td class="rlNr ' + (x.net < 0 ? "bad" : "good") + '">' + rlEsc(rlBani(rlN(x.net), unit)) + (tot.net < 0 && x.net < 0 && x !== tot ? " · " + (x.net / tot.net > 1 ? "peste 100%" : Math.round(100 * x.net / tot.net) + "%") : "") + "</td></tr>"; };
+  return '<details class="rlPli" open><summary><h4>Plata: cât aduce un bot pe plus, cât pierde unul pe minus</h4></summary><p class="tbSub">În % din suma pusă pe fiecare bot. „Ajunși la” = botul era încă pornit la vârsta aceea (se știa atunci). „Le trebuiau pe plus” = cât la sută ar fi trebuit să iasă pe plus ca media să fie zero. Ultima coloană: banii reali și partea din toată pierderea („peste 100%” = ceilalți boți, la un loc, au ieșit pe plus).</p>'
+    + '<div class="rlTab"><table><thead><tr><th>Boții</th><th>Câți</th><th>Pe plus</th><th>Câștig mediu</th><th>Pierdere medie</th><th>Le trebuiau pe plus</th><th>Rezultat real</th></tr></thead><tbody>'
+    + rand("toți", tot) + (pl.varste || []).filter(function (x) { return x.n > 0; }).map(function (x) { return rand("ajunși la " + (x.h < 1 ? Math.round(x.h * 60) + " min" : x.h + " h"), x); }).join("")
+    + '</tbody></table></div><p class="tbSub">Descriere din arhiva ta, nu o regulă probată: nu spune ce ar fi ieșit dacă închideai mai devreme. Rândurile cu sub 20 de boți sunt prea puține ca să tragi ceva din ele.</p></details>';
+}
 function rlParte(tip, P, k, conc) {
   var boti = tip === "boti", unit = boti ? "USDT" : "lei", noun = boti ? ["bot", "boți"] : ["poziție", "poziții"];
   var mc = (P.mc || []).filter(function (m) { return m.K === k; })[0] || (P.mc || [])[0];
@@ -53,6 +65,7 @@ function rlParte(tip, P, k, conc) {
     + '<div class="rlCifre">' + cif.map(function (c, i) { return '<div class="rlCifra"><span>' + rlEsc(c[0]) + '</span><b class="' + (i === 2 || i === 3 ? "bad" : i === 4 ? "good" : "") + '">' + rlEsc(c[1]) + "</b><small>" + rlEsc(c[2]) + "</small></div>"; }).join("") + "</div>"
     + '<p class="tbSub">' + rlEsc((mc.n ? mc.n.toLocaleString("ro-RO") + " de luni simulate" : "Lunile simulate") + (mc.legat ? ", fiecare dintr-o fereastră reală de 30 de zile din istoria ta (K extrageri cu revenire din aceeași fereastră de 30 de zile)" : ", din tot istoricul (prea puține ferestre de 30 de zile)") + ".") + "</p>" + rlHist(mc, unit)
     + "<h4>Ce înseamnă pentru tine</h4>" + rlConcl(conc) + '<details class="rlPli" open><summary><h4>Obiceiurile tale</h4></summary>' + rlObiceiuri(P.comportament, tip, unit) + "</details>"   /* v100.350: blocurile secundare pliate (Ce înseamnă rămâne deschis: e fapta) */
+    + (boti ? rlPlata(P.plata, unit) : "")
     + '<details class="rlPli"><summary><h4>' + (boti ? "Din boții care au ajuns la o vârstă, cum s-au terminat" : "Din pozițiile ținute peste un timp, cum s-au încheiat") + "</h4></summary>" + rlSuprav(P.supravietuire, boti ? "ore" : "zile") + "</details>";
   var d = P.desc || {};
   if (boti) {

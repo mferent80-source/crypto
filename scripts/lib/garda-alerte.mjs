@@ -265,6 +265,13 @@ export function situatiiAlerte(pune) {
   const t24 = "Din boții tăi care au ajuns la 24 h (76), 57% au ieșit pe plus și 29% au pierdut peste 5% (media −12,6%).";
   for (const [k, p] of [["media pe plus", { pePlus: 0.6, medie: 0.02 }], ["mulți revin", { pePlus: 0.57, medie: -0.126 }], ["rău", { pePlus: 0.4, medie: -0.126 }]]) co("24 h pe minus, " + k, "minus24h", MC.minus24h("MARSCOIN", 26.4, -12.345, t24, p));
   co("24 h pe minus, fără raport", "minus24h", MC.minus24h("CRV", 30, -1.2, null, null));
+  // v101.210 (Radar v100.377): 4 h pe minus - cu plata boților lui ajunși la vârsta asta și fără raport
+  co("4 h pe minus, cu plata", "minus4h", MC.minus4h("MARSCOIN", 4.2, -12.345, "Din boții tăi ajunși la 4 h (428), cei pe plus au adus în medie +3,1% din sumă, cei pe minus au pierdut −14,3%.", true));
+  co("4 h pe minus, cu plata care nu crește cu vârsta", "minus4h", MC.minus4h("MARSCOIN", 4.2, -12.345, "Din boții tăi ajunși la 4 h (428), cei pe plus au adus în medie +9,0% din sumă, cei pe minus au pierdut −5,0%.", false));
+  co("4 h pe minus, fără raport", "minus4h", MC.minus4h("CRV", 5, -1.2, null));
+  // v101.210 (Radar v100.377): stopul chiar pe marginea contra botului - cu dovada din boții lui și fără
+  co("stop pe margine, cu dovada", "stopPeMargine", MC.stopPeMargine("PUMPFUN", "sus", "0.002499", -7.63, "din 143 de boți ai tăi cu stop închiși dincolo de margine, 86 îl aveau la cel mult 0,5% de ea"));
+  co("stop pe margine, fără dovadă", "stopPeMargine", MC.stopPeMargine("MARSCOINLUNG", "jos", "54.0000", null, ""));
   co("gridul îngust, mesaj întârziat", "ceasIngust", MC.ceasIngust("CRV", 6, "14:30", true));
   co("Trading 212 nu mai răspunde (cheia)", "t212Rau", MC.t212Rau(18, 401, "HTTP 401"));
   co("Trading 212 răspunde din nou", "t212DinNou", MC.t212DinNou());

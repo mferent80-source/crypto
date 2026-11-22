@@ -151,7 +151,8 @@ await test("v100.174 listă Pionex GOALĂ ⇒ fără „lipsește din Pionex” 
   assert.match(col2, /const listaGoala = !boti\.length;/); assert.match(col2, /if \(!fisa && listaGoala\) continue;/);
 });
 await test("v100.174 arhiva e „completă” doar cu listă reală; cazuri / rețea / profil / arhiva pe ore cer lista completă", () => {
-  assert.match(col2, /Array\.isArray\(a && a\.boti\)\) arhivaOk = true;|if \(Array\.isArray\(a && a\.boti\)\) arhivaOk = true;/);
+  /* v100.377 (revizia reparațiilor, N1): „listă reală” = nevidă, cu data ei, citită și întreagă - răspunsul 200 cu lista goală trecea drept arhivă */
+  assert.match(col2, /if \(a && a\.citit !== false && Array\.isArray\(a\.boti\) && a\.boti\.length > 0 && Number\(a\.la\) > 0 && a\.complet !== false\) arhivaOk = true;/);
   assert.match(col2, /async function botiInchisiCompleti\(\)/);
   assert.ok((col2.match(/await botiInchisiCompleti\(\)/g) || []).length >= 4, "cel puțin 4 apelanți care țin minte");
 });

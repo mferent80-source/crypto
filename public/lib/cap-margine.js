@@ -100,6 +100,15 @@ var CapMargine = (function () {
       + s.rest.n + ": " + usdt(s.rest.net) + "." + (c && c.afara.n >= 5 && c.afara.max < 0 ? " La cei cu stop, cea mai mare pierdere dincolo de margine: " + usdt(c.afara.max) + "." : "") + " Așa au ieșit, nu ce urmează.";
   }
 
+  // v100.377 („fa idei”): regula „stopul e chiar pe margine” ca funcție (aceeași pentru capul paginii și pentru alerta colectorului) și dovada pe scurt,
+  // cât să încapă într-o alertă. Auditul 22.11 (🟡6): spune exact ce numără - boții CU STOP închiși dincolo de margine și pragul de 0,5% al
+  // numărătorii (alerta se aprinde la 0,2%); fără sumă (un bot cu stopul pe margine, închis dincolo de ea, a pierdut prin construcție, iar cei
+  // închiși în grid, pe plus, nu sunt în numărătoare - suma s-ar citi ca „prețul stopului pe margine”)
+  function stopPeMargine(stop, niv) { stop = nr(stop); niv = nr(niv); return stop !== null && stop > 0 && niv !== null && niv > 0 && Math.abs(stop - niv) / niv <= PRAG_STOP_FARA_PAS; }
+  function textDovadaStopMargineScurt(d) {
+    var c = d && d.stop && d.stop.cu; if (!c || !(c.laMargine.n >= 5) || !(c.afara.n >= MIN_BOTI)) return "";
+    return "din " + cate(c.afara.n, "bot al tău cu stop închis", "boți ai tăi cu stop închiși") + " dincolo de margine, " + c.laMargine.n + " îl aveau la cel mult " + num(PRAG_STOP_MARGINE * 100, 1) + "% de ea";
+  }
   function textDovadaStopMargine(d) {
     var c = d && d.stop && d.stop.cu; if (!c || !(c.afara.n >= MIN_BOTI) || !(c.laMargine.n >= 5)) return "";
     return "Pe boții tăi închiși dincolo de margine cu stop pus (" + cate(c.afara.n, "bot", "boți") + "): " + c.laMargine.n + " aveau stopul chiar pe margine (la cel mult " + num(PRAG_STOP_MARGINE * 100, 1) + "% de ea) și au făcut " + usdt(c.laMargine.net) + ". Așa au ieșit, nu ce urmează.";
@@ -216,7 +225,7 @@ var CapMargine = (function () {
       if (zi0.grile && typeof zi0.grile === "object") zeroI.grile = zi0.grile; }
     /* I-913: stopul chiar pe marginea contra (la mai puțin de o grilă): prima atingere a marginii închide botul */
     var pasG = nr(x.pas), stopM = null;
-    if (stop !== null && !afara && Math.abs(stop - niv) / niv <= PRAG_STOP_FARA_PAS) {   /* revizia a doua: nu „sub o grilă” - la pasul de 1%, un stop cu 0,8% sub margine primea „prima atingere închide botul” lângă „între margine și stop mai pierzi…” */ var s24 = sanse.filter(function (q) { return q.ore === 24 && !q.vechi; })[0];
+    if (stop !== null && !afara && stopPeMargine(stop, niv)) {   /* revizia a doua: nu „sub o grilă” - la pasul de 1%, un stop cu 0,8% sub margine primea „prima atingere închide botul” lângă „între margine și stop mai pierzi…” */ var s24 = sanse.filter(function (q) { return q.ore === 24 && !q.vechi; })[0];
       stopM = { total: bS, sansa: !afara && s24 ? s24.text : null, dovada: textDovadaStopMargine(x.dovada) }; }
     /* I-912: gridul mutat de curând (din drumul botului) */
     var mv = x.mutare && nr(x.mutare.la) > 0 && nr(x.mutare.jos0) > 0 && nr(x.mutare.sus0) > 0 ? { la: x.mutare.la, jos0: x.mutare.jos0, sus0: x.mutare.sus0, total0: nr(x.mutare.total0), jos: jos, sus: sus } : null;
@@ -453,7 +462,7 @@ var CapMargine = (function () {
     if (c.stopDrum !== null && c.stopDrum !== undefined) { var k = Math.round(c.stopDrum * 100); l.push("în 24 h — " + (k < 1 ? "< 1%" : k > 99 ? "> 99%" : "~" + k + "%") + " (curba stopului, ca pe Drum)"); }
     return l.length ? "stopul atins: " + l.join(" · ") : "";
   }
-  return { COMISION: COMISION, CUTII: CUTII, PRAG_VECHI: PRAG_VECHI, sansaMutata: sansaMutata, placi: placi, metri: metri, trepte: trepte, mutareDin: mutareDin, textZero: textZero, textStopMargine: textStopMargine, textMutare: textMutare, textDovadaStopMargine: textDovadaStopMargine, textMut: textMut, textAfara: textAfara, textExpunere: textExpunere, textIntre: textIntre, textFaraStop: textFaraStop, textSansa: textSansa, textStop: textStop, rand: rand, afaraContra: afaraContra, comisionPerechi: comisionPerechi, costAcoperit: costAcoperit, dinBoti: dinBoti, textDurata: textDurata, textDovada: textDovada,
+  return { stopPeMargine: stopPeMargine, textDovadaStopMargineScurt: textDovadaStopMargineScurt, PRAG_STOP_FARA_PAS: PRAG_STOP_FARA_PAS, COMISION: COMISION, CUTII: CUTII, PRAG_VECHI: PRAG_VECHI, sansaMutata: sansaMutata, placi: placi, metri: metri, trepte: trepte, mutareDin: mutareDin, textZero: textZero, textStopMargine: textStopMargine, textMutare: textMutare, textDovadaStopMargine: textDovadaStopMargine, textMut: textMut, textAfara: textAfara, textExpunere: textExpunere, textIntre: textIntre, textFaraStop: textFaraStop, textSansa: textSansa, textStop: textStop, rand: rand, afaraContra: afaraContra, comisionPerechi: comisionPerechi, costAcoperit: costAcoperit, dinBoti: dinBoti, textDurata: textDurata, textDovada: textDovada,
     cost: cost, textCost: textCost, parteaContra: parteaContra, alcatuieste: alcatuieste, textSanse: textSanse, textBani: textBani };
 })();
 if (typeof module !== "undefined" && module.exports) module.exports = CapMargine;

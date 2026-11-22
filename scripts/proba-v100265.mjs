@@ -137,7 +137,7 @@ function cutie(raspunsuri, opt = {}) {
   const deps = { $, assetClass: () => "CRYPTO", norm: (s) => s, document: { getElementById: (id) => $(id) }, window: win, markFresh() {},
     simBinanceFut: new Function("return " + APP.match(/function simBinanceFut\([^\n]*/)[0])(),
     getJSON: async (u) => { cerute.push(u); if (/type=pionex_funding/.test(u)) return raspunsuri.pionex; if (u.startsWith("/api/")) return raspunsuri.futures; throw new Error("400"); },
-    oiChangeAt: new Function("return " + fnApp("oiChangeAt"))(), pctText: new Function("return " + fnApp("pctText"))(),
+    oiChangeAt: new Function("return " + fnApp("oiChangeAt"))(), pctText: new Function("return " + fnApp("pctText"))(), pctTextRo: new Function("return " + fnApp("pctTextRo"))(),   /* v100.377: schimbarea OI de pe ecran, cu o zecimală */
     fundingSummary: new Function("pctRank", "return " + fnApp("fundingSummary"))(new Function("return " + fnApp("pctRank"))()),
     fundingRo: new Function("return " + fnApp("fundingRo"))(), compact: (x) => Intl.NumberFormat("ro-RO", { notation: "compact", maximumFractionDigits: 2 }).format(x),
     eroareDeParola: () => false, textEroare: (e) => String(e && e.message), updateFlowWindow() {}, renderLiquidationProxy() {}, renderQuantFlow() {},
