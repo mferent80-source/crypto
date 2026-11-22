@@ -208,7 +208,7 @@ await test("14 serverul (istoric-bot?action=mcVerdict) păstrează raportul risc
   const c = (await g.json()).mcVerdict.calibrareScurt;
   assert.ok(c && Array.isArray(c.ore), "raportul s-a pierdut pe server");
   assert.deepEqual(c.ore.map((x) => x.ore), [1, 4, 24], "doar 1 / 4 / 24");
-  assert.deepEqual(c.ore[1], unul(4));
+  assert.deepEqual(c.ore[1], Object.assign(unul(4), { nTp: null, zileTp: null, pTpMed: null, tpRata: null, tpDifJos: null, tpDifSus: null, verdictTp: null }));   /* v100.376: și câmpurile verificării take-profit-ului (aici lipsă ⇒ null) */
   assert.equal(c.ore[0].rau, undefined); assert.equal(c.ore[0].verdictStop, null, "verdictul doar din listă"); assert.equal(c.strain, undefined);
   const g0 = await mod.onRequestPost({ request: new Request("https://exemplu.test/api/istoric-bot?action=mcVerdict", { method: "POST", headers: Hh, body: JSON.stringify({ la: 8, boti: {} }) }), env });
   assert.equal(g0.status, 200);

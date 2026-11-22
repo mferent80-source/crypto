@@ -34,6 +34,11 @@
 import { spawn, spawnSync } from "node:child_process";
 import { rmSync, existsSync } from "node:fs";
 import assert from "node:assert/strict";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { scrieStampila, servesteDepozitul } from "./lib/amprenta-ecran.mjs";
+
+const RAD_E = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 const URL_T = (process.argv[2] || "http://127.0.0.1:8788/").replace(/\/+$/, "") + "/";
 // un --doar=... pus pe locul 3 NU e token (se lua drept parola si strica probele de autentificare)
@@ -192,6 +197,8 @@ async function porneste(lat, inal, profil) {
       return r?.result?.value;
     },
     async navigheaza(url) { await send("Page.navigate", { url }); },
+    /* v100.376: aceeași pagină la altă lățime (pasul D12g, pe calculator), fără repornirea browserului */
+    async marime(l, h) { await send("Emulation.setDeviceMetricsOverride", { width: l, height: h, deviceScaleFactor: 1, mobile: false }); },
     inchide() {
       try { ws.close(); } catch {}
       // proc.kill() omoara doar procesul de sus; pe Windows copiii Chrome raman
@@ -877,7 +884,8 @@ async function main() {
       assert.ok(bani, "lipseste #tbBani pe Tablou");
       for (const re of [/Investit\s*150,00 USDT/, /Realizat, după comisioane\s*\+4,9 USDT/, /Poziția deschisă nerealizat\s*\+7,5 USDT/, /Total\s*\+12,4 USDT/])   // v100.196: virgula
         assert.match(String(bani), re, `Tabloul nu arata ${re}: ${bani}`);
-      const kpi = await textEl(b, "tbKpi");
+      /* v100.376 (I-920): rândurile fiecărei cifre stau în blocul „Detaliile cifrelor” la orice lățime (în bandă rămân numele și cifra) */
+      const kpi = (await textEl(b, "tbKpi")) + " · " + (await textEl(b, "tbKpiDetalii"));
       for (const re of [/Rezultat total, USDT\s*\+12,4/, /trebuie să scadă până la\s*0[.,]8000/])
         assert.match(String(kpi), re, `banda de sus nu arata ${re}: ${kpi}`);
       const av = await textEl(b, "tbAvertismente");
@@ -1238,6 +1246,89 @@ async function main() {
       assert.deepEqual(iesite, [], `ies din ecranul de telefon: ${iesite.join(', ')}`);
     });
 
+    // v100.376 („fa idei”, 21.11.2026): „Contează acum” cu rânduri pline, pe calculator. Coloana ei e îngustă (jumătate lângă verdictul scund, o treime
+    // lângă capul marginii), iar la 311 px un buton lung ieșea din cutie - s-a văzut doar în poză, nicio probă nu se uita. Rândurile sunt desenate de
+    // Conteaza.html (desenul adevărat) din date de probă; capul marginii vine din CapMargine.alcatuieste pe date de probă (tbCapMargine e înlocuită cât
+    // ține pasul și pusă la loc). Cifrele sunt inventate.
+    await test("D12g. calculator: „Contează acum” cu trei rânduri pline nu iese din cutia ei, nici din ecran; lângă verdictul scund stă pe jumătate, lângă capul marginii pe o treime", async () => {
+      const RANDURI = [
+        { ton: "rosu", nr: "38%", nrSub: "atinge stopul în 24 h", titlu: "Stopul tău (1.1500) e la 4,2% sub marginea de jos", semne: [{ cls: "ctGravRosu", text: "acționează azi" }, { cls: "ctNou", text: "nou" }], sub: "Monte Carlo pe botul tău · 1 din 3 drumuri îl atinge până mâine.", bani: "La stop: −24,3 USDT în total", faCe: "Aș muta gridul mai jos sau aș închide acum cu −10,2 USDT.", copiaza: [{ ce: "stopul", pret: "1.1500" }], butoane: [{ text: "Simulează", click: "navTo('simgrid',true)" }] },
+        { ton: "galben", nr: "✓", nrSub: "take-profit pus", titlu: "Take-profit-ul tău e pus la 1.5200", semne: [{ cls: "ctGravGalben", text: "urmărește" }], sub: "Când se atinge, ieși cu −9,0 USDT în total.", faCe: "Take-profit-ul ăsta închide pe minus: l-aș scoate sau l-aș muta." },
+        { ton: "galben", nr: "12", nrSub: "din 100 în 24 h", titlu: "Prețul poate ieși din grid pe sus (1.3600)", semne: [{ cls: "ctGravGalben", text: "urmărește" }, { cls: "", text: "era 9 ieri" }], sub: "Istoria monedei, pe 30 de zile.", bani: "Acolo rămâi cu −8,7 USDT și fără poziție", faCe: "Dacă iese, botul stă: aș pregăti un grid mai sus.", copiaza: [{ ce: "marginea de sus", pret: "1.3600" }] },
+        { ton: "galben", nr: "5", nrSub: "din 100 în 24 h", titlu: "Marginea de jos (1.2000) e la 6,3% sub preț", inCap: true, sub: "Istoria monedei." },
+      ];
+      const CAP = `{ dir: "long", pret: 1.28, jos: 1.2, sus: 1.36, stop: 1.15, stopActiv: true, laMargine: (p) => (p === "jos" ? -19.1 : -8.7), laStop: -24.3, total: -10.2, sanse: {}, pas: 0.006,
+        expunere: { pozitie: 47, investit: 150 }, tp: 1.52, laTp: 4.5, tpRaport: 0.03, tpDinPret: false, tpGrile: { zile: 3.4, netZi: 3.9 }, zero: { pret: null, neatins: true, pretPoz: 1.49, grile: { zile: 2.6, netZi: 3.9 } },
+        stopScurt: [{ ore: 1, pStop: 0.001, pTp: 0.0005 }, { ore: 4, pStop: 0.002, pTp: 0.001 }, { ore: 24, pStop: 0.05, pTp: 0.026 }] }`;
+      const PUNE = `(() => { const el = document.getElementById("ctAcum"); el.hidden = false; el.innerHTML = Conteaza.html(${JSON.stringify(RANDURI)}, escapeHtml); return true; })()`;
+      const MASOARA = `(() => {
+        const q = (s) => { const e = document.querySelector(s); if (!e) return null; const r = e.getBoundingClientRect(); return r.width > 0 ? { y: Math.round(r.top + scrollY), l: Math.round(r.width), h: Math.round(r.height) } : null; };
+        const ct = document.getElementById("ctAcum"), dr = ct.getBoundingClientRect().right, W = document.documentElement.clientWidth, rad = document.getElementById("tabloubot");
+        const nume = (e) => (e.id ? "#" + e.id : "") + "." + String(e.className).split(" ")[0] + " +" + Math.round(e.getBoundingClientRect().right - dr) + "px";
+        return { cap: q("#pzVerdict"), ct: q("#ctAcum"), drum: q("#pzDrumCard"), sus: q("#tabloubot .tbSus"), margine: !!document.querySelector("#pzVerdict .pzVerbTxt.pzMarg"), randuri: ct.querySelectorAll(".ctRand").length,
+          celule: document.querySelectorAll("#pzVerdict .pzLedger>.pzLg").length, bare: document.querySelectorAll("#pzVerdict .pzMetru").length,
+          dinCutie: [...ct.querySelectorAll("*")].filter((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.right > dr + 0.5; }).slice(0, 5).map(nume),
+          dinEcran: [...rad.querySelectorAll("*")].filter((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.right > W + 1; }).length,
+          ctJos: Math.round(ct.lastElementChild.getBoundingClientRect().bottom + scrollY), kpi: [...new Set([...document.querySelectorAll("#tbKpi>.tbKpiCel")].map((e) => Math.round(e.getBoundingClientRect().top)))].length };
+      })()`;
+      const comun = (r, unde) => {
+        assert.ok(r.cap && r.ct && r.drum && r.sus, `${unde}: lipsește capul, „Contează acum”, cifrele sau Drumul: ${JSON.stringify(r)}`);
+        assert.equal(r.randuri, 4, `${unde}: rândurile din „Contează acum” (3 pline + cel scurt al marginii)`);
+        assert.deepEqual(r.dinCutie, [], `${unde}: ies din cutia „Contează acum” (${r.ct.l} px): ${r.dinCutie.join(", ")}`);
+        assert.equal(r.dinEcran, 0, `${unde}: ${r.dinEcran} elemente ies din ecran`);
+        assert.ok(r.ctJos <= r.ct.y + r.ct.h + 1, `${unde}: rândurile trec de cutia „Contează acum” cu ${r.ctJos - r.ct.y - r.ct.h} px`);
+        assert.ok(r.drum.y >= r.ct.y + r.ct.h - 1 && r.drum.y >= r.cap.y + r.cap.h - 1, `${unde}: Drumul (${r.drum.y}) începe peste „Contează acum” (${r.ct.y + r.ct.h}) sau peste cap (${r.cap.y + r.cap.h})`);
+      };
+      try {
+        for (const lat of [1280, 1440]) {
+          await b.marime(lat, 900);
+          await incarcaBotSanatos({ strategyId: "7620" });
+          await b.ev(`navTo('tabloubot')`); await b.ev(`window.__capProba = window.__capProba || tbCapMargine; tbCapMargine = () => null; renderTabloBot(); true`); await asteapta(2200);   /* stratul de așezare trece la 1,5 s */
+          /* 1. verdictul scund (capul Consilierului, fără cifrele marginii - tbCapMargine dă nimic): jumătățile din 11.11 */
+          await b.ev(PUNE); const s = await b.ev(MASOARA);
+          assert.equal(s.margine, false, `${lat}: precheck - fără cifrele marginii capul e verdictul scund`);
+          comun(s, `${lat}, verdictul scund`);
+          assert.ok(Math.abs(s.cap.l - s.ct.l) <= 40, `${lat}: lângă verdictul scund „Contează acum” stă pe jumătate (capul ${s.cap.l} px, ea ${s.ct.l} px)`);
+          /* 2. capul marginii (banda de 7 cifre + 3 bare): două treimi / o treime, cifrele pe un rând */
+          await b.ev(`tbCapMargine = () => CapMargine.alcatuieste(${CAP}); true`); await asteapta(2200);
+          await b.ev(PUNE); const m = await b.ev(MASOARA);
+          assert.equal(m.margine, true, `${lat}: precheck - capul marginii s-a desenat`); assert.equal(m.celule, 7, `${lat}: banda are ${m.celule} cifre`); assert.equal(m.bare, 2, `${lat}: barele (stopul, take-profit-ul): ${m.bare}`);
+          comun(m, `${lat}, capul marginii`);
+          assert.ok(m.cap.l > 1.7 * m.ct.l, `${lat}: lângă capul marginii capul ia două treimi (capul ${m.cap.l} px, „Contează acum” ${m.ct.l} px)`);
+          assert.ok(Math.abs(m.sus.l - m.cap.l) <= 2, `${lat}: cifrele stau sub cap, pe aceeași lățime (${m.sus.l} față de ${m.cap.l})`);
+          assert.equal(m.kpi, 1, `${lat}: cele 4 cifre stau pe un rând`);
+        }
+      } finally {
+        await b.ev(`if (window.__capProba) { tbCapMargine = window.__capProba; delete window.__capProba; } true`);
+        await b.marime(390, 900); await b.ev(`renderTabloBot()`); await asteapta(1900);
+      }
+    });
+
+    // v100.376 („fa idei”, 21.11.2026): D12f se uită doar la telefon. Pe 21.11 două cusururi de pe tabletă și calculator (rânduri rămase înaintea
+    // capitolului lor la 768; un buton ieșit din coloana îngustă la 1280) s-au văzut doar în poze. Aceeași măsură, la lățimile lui: tabletă și calculator.
+    await test("D12h. tabletă și calculator (768 / 1024 / 1440 / 1920): nimic din Tablou nu iese din ecran, cu toate pliurile deschise; pagina nu curge lateral", async () => {
+      try {
+        for (const lat of [768, 1024, 1440, 1920]) {
+          await b.marime(lat, 900);
+          await incarcaBotSanatos({ strategyId: "7630" });
+          await b.ev(`navTo('tabloubot')`); await b.ev(`renderTabloBot()`); await asteapta(2200);   /* stratul de așezare trece la 1,5 s */
+          await b.ev(`if (typeof tbRandToate === "function") tbRandToate(true); document.querySelectorAll('#tabloubot details').forEach(d=>d.open=true); true`); await asteapta(400);
+          const r = await b.ev(`(() => { const W = document.documentElement.clientWidth, rad = document.getElementById('tabloubot');
+            const iesite = [...rad.querySelectorAll('*')].filter((e) => { const r = e.getBoundingClientRect(); if (!(r.width > 0) || r.right <= W + 1) return false;
+              for (let a = e.parentElement; a && a !== rad; a = a.parentElement) { const o = getComputedStyle(a).overflowX; if ((o === 'auto' || o === 'scroll') && a.getBoundingClientRect().right <= W + 1) return false; }
+              return true; }).slice(0, 6).map((e) => (e.id ? '#' + e.id : '') + '.' + String(e.className).split(' ')[0] + ' ' + Math.round(e.getBoundingClientRect().width) + 'px');
+            return { iesite, pagina: document.documentElement.scrollWidth - document.documentElement.clientWidth, W, cap: !!document.querySelector('#pzVerdict:not([hidden])'), cifre: document.querySelectorAll('#tbKpi>.tbKpiCel').length }; })()`);
+          assert.ok(r.cap && r.cifre === 4, `${lat}: precheck - Tabloul e desenat (capul ${r.cap}, ${r.cifre} cifre)`);
+          assert.ok(r.W <= lat && r.W >= lat - 20, `${lat}: precheck - lățimea paginii e ${r.W} (ecranul fără bara de derulare)`);
+          assert.deepEqual(r.iesite, [], `la ${lat} px ies din ecran: ${r.iesite.join(', ')}`);
+          assert.ok(r.pagina <= 1, `la ${lat} px pagina curge lateral cu ${r.pagina} px`);
+        }
+      } finally {
+        await b.ev(`if (typeof tbRandToate === "function") tbRandToate(false); true`);
+        await b.marime(390, 900); await b.ev(`renderTabloBot()`); await asteapta(1900);
+      }
+    });
+
     await test("D14. Health inainte de orice analiza: verificarile locale sunt NEINCERCAT, nu FAIL; starea generala vine din furnizori (v100.196); watchdog-ul nu intra in SAFE MODE pentru asta", async () => {
       const r = await b.ev(`(async () => {
         // "inainte de orice analiza": fara stare, fara mostra REST, fara tick WS
@@ -1436,10 +1527,12 @@ async function main() {
       try {
         await b.ev(`window.__lichProba = { valoare: 37.5, partea: "jos", depasita: false, pretLichidare: 0.8, stare: "bine", unitate: "%" }`);
         await incarcaBotSanatos({ strategyId: "7801" });
-        const rigla = await textEl(b, "tbRigla"), masura = (await celula(b, 4))?.valoare, bani = await textEl(b, "tbKpi");
+        const rigla = await textEl(b, "tbRigla"), masura = (await celula(b, 4))?.valoare, bani = await textEl(b, "tbKpi"), baniDet = await textEl(b, "tbKpiDetalii");
         assert.match(String(rigla), /lichidare jos la −37[.,]5%/,   /* v100.259: virgula */ `rigla: ${rigla}`);
         assert.match(String(masura), /jos −37,5%/, `masura: ${masura}`);
-        assert.match(String(bani), /Până la lichidare\s*38,5%\s*prețul trebuie să scadă până la/, `banda de sus: ${bani}`);
+        /* v100.376 (I-920): cifra în bandă, rândul ei în blocul „Detaliile cifrelor”, pe coloana „Până la lichidare” */
+        assert.match(String(bani), /Până la lichidare\s*38,5%/, `banda de sus: ${bani}`);
+        assert.match(String(baniDet), /Până la lichidare\s*prețul trebuie să scadă până la/, `detaliile cifrelor: ${baniDet}`);
         await b.ev(`window.__lichProba = { valoare: -2.1, partea: "sus", depasita: true, pretLichidare: 1.26, stare: "rau", unitate: "%" }`);
         await b.ev(`renderTabloBot()`);
         const rigla2 = await b.ev(`[...document.querySelectorAll('#tbRigla .bad')].map(x => x.textContent).join(' ')`);
@@ -1637,6 +1730,8 @@ async function main() {
   console.log(`\n  ${ok} ok · ${picate} pica\n`);
   if (picate) process.exit(1);
   console.log("  ecranul pastreaza purtarile reparate.\n");
+  /* v100.376: proba trecută ÎNTREAGĂ își scrie ștampila (lanțul o citește pe ultimul lui rând: scripts/stare-probe-ecran.mjs); nu la --doar și nu când serverul servește altă copie */
+  if (!DOAR) { try { if (await servesteDepozitul(RAD_E, URL_T)) { scrieStampila(RAD_E, "proba-ecran-tablou.mjs", { ok, url: URL_T }); console.log("  ștampila probei de ecran: scrisă.\n"); } else console.log("  ⚠ serverul de pe " + URL_T + " nu servește fișierele acestui depozit: ștampila probei NU se scrie.\n"); } catch (e) { console.log("  ⚠ ștampila probei nu s-a putut scrie: " + e.message + "\n"); } }
   process.exit(0);
 }
 

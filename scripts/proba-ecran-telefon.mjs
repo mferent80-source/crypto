@@ -19,6 +19,8 @@ import { spawn } from "node:child_process";
 import { rmSync, existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { scrieStampila, servesteDepozitul } from "./lib/amprenta-ecran.mjs";
 import { abateri, PAGINI_CONVENTII, TEXT_VAZUT_JS } from "./proba-ecran-telefon-conventii.mjs";
 
 const URL_T = (process.argv[2] || "http://127.0.0.1:8788/").replace(/\/+$/, "") + "/";
@@ -146,4 +148,6 @@ try {
   try { rmSync(profil, { recursive: true, force: true }); } catch {}
 }
 console.log(`\n${PAGINI_TOTAL - picate}/${PAGINI_TOTAL} trec · poze în ${DOSAR_POZE}`);
+/* v100.376: proba trecută ÎNTREAGĂ își scrie ștampila (lanțul o citește pe ultimul lui rând: scripts/stare-probe-ecran.mjs); nu cu pagini alese de mână și nu când serverul servește altă copie */
+if (!picate && !process.argv[4]) { try { const RAD_E = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."); if (await servesteDepozitul(RAD_E, URL_T)) { scrieStampila(RAD_E, "proba-ecran-telefon.mjs", { url: URL_T }); console.log("ștampila probei de telefon: scrisă."); } else console.log("⚠ serverul de pe " + URL_T + " nu servește fișierele acestui depozit: ștampila probei NU se scrie."); } catch (e) { console.log("⚠ ștampila probei nu s-a putut scrie: " + e.message); } }
 if (picate) process.exit(1);

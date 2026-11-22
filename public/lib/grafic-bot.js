@@ -276,11 +276,12 @@ var GraficBot = (function () {
     ad("gridSus", b.gridSus, "grid sus", COL.accent, "fine", "grid↑");
     if (o.planPlus && nr(o.planPlus.pret)) ad("planPlus", o.planPlus.pret, "plan +" + o.planPlus.usdt + " USDT", COL.good, "dash", "+" + o.planPlus.usdt);
     ad("zero", o.zero, "zero-ul botului", COL.warn, "dash", "zero");
+    if (nr(o.zero) === null) ad("zeroPoz", o.zeroPoz, "zero, pe poziția de acum", COL.warn, "dash", "zero*");   /* v100.376: altă cheie decât „zero” - fără șansă de atingere lângă el (atingerea prețului nu aduce botul pe zero) */
     ad("intrare", b.pretDeschidere, "intrarea medie", COL.intrare, "dash", "intrare");
     if (o.planMinus && nr(o.planMinus.pret)) ad("planMinus", o.planMinus.pret, "plan −" + o.planMinus.usdt + " USDT", COL.bad, "dash", "−" + o.planMinus.usdt);
     ad("gridJos", b.gridJos, "grid jos", COL.accent, "fine", "grid↓");
     if (b.opritorPierdereActiv) ad("stop", o.stopLive != null ? o.stopLive : b.opritorPierdere, "stopul tău", COL.bad, "solid", "stop");   // audit 19.10: stopul în procente socotit live (TabloExtra.pretStopLive)
-    if (b.opritorProfitActiv) ad("tp", o.tpLive != null ? o.tpLive : b.opritorProfit, "take-profit-ul tău", COL.good, "solid", "TP");   // v100.322 (el: „am pus TP dar pagina botului nu îl vede”); în procente: socotit live (TabloExtra.pretTpLive)
+    if (b.opritorProfitActiv) ad("tp", o.tpLive != null ? o.tpLive : b.opritorProfit, o.tpPozitie ? "take-profit, pe poziția de acum" : "take-profit-ul tău", COL.good, "solid", "TP");   /* v100.376: în procente și neatins din preț ⇒ prețul Pionex pe poziția de acum, numit așa */   // v100.322 (el: „am pus TP dar pagina botului nu îl vede”); în procente: socotit live (TabloExtra.pretTpLive)
     ad("lich", b.pretLichidare, "lichidare", COL.bad, "lich", "lich.");
     return l;
   }
@@ -373,7 +374,7 @@ var GraficBot = (function () {
     var z = TE ? TE.dacaInchizi(b) : null, plus = pl ? nr(pl.plus) : null, minus = pl ? nr(pl.minus) : null;
     // v100.98: planul CU gridul pe drum (pretTintaPentru / pretOpritorPentru)
     var pPl = TE && plus > 0 ? TE.pretTintaPentru(b, plus) : null, pMi = TE && minus > 0 ? TE.pretOpritorPentru(b, -minus) : null;
-    var niv = cuSanse(niveluriBot({ bot: b, zero: z && z.pretZero, planPlus: pPl ? { pret: pPl, usdt: plus } : null, planMinus: pMi ? { pret: pMi, usdt: minus } : null, stopLive: TE && TE.pretStopLive ? TE.pretStopLive(b) : null, tpLive: TE && TE.pretTpLive ? TE.pretTpLive(b) : null }), d.sanse);
+    var niv = cuSanse(niveluriBot({ bot: b, zero: z && z.pretZero, zeroPoz: z && z.zeroNeatins ? z.pretZeroPozitie : null, tpPozitie: !!(TE && TE.tpDinPret && TE.tpDinPret(b) === false), planPlus: pPl ? { pret: pPl, usdt: plus } : null, planMinus: pMi ? { pret: pMi, usdt: minus } : null, stopLive: TE && TE.pretStopLive ? TE.pretStopLive(b) : null, tpLive: TE && TE.pretTpLive ? TE.pretTpLive(b) : null }), d.sanse);
     var xo = d.brut && d.brut.buOrderData || {}, gj = nr(xo.bottom), gs = nr(xo.top);
     var grila = { jos: gj !== null ? gj : nr(b.gridJos), sus: gs !== null ? gs : nr(b.gridSus), linii: nr(xo.row), geo: String(xo.gridType || "").toLowerCase() === "geometric" };
     var zi = ziObisnuita(viu || (raw.length ? raw[raw.length - 1].c : null), d.profil);   // v100.51 (I-470, I-476)
@@ -732,6 +733,7 @@ var GraficBot = (function () {
     var Lg = o.actiune ? [] : ['<span><i style="border-color:' + COL.accent + ';opacity:.7"></i>banda și treptele gridului' + (gl ? " (" + cate(gl, "linie", "linii") + ")" : "") + '</span>', ];
     var are = function (k) { return niv.some(function (x) { return x.k === k; }); };
     if (are("zero")) Lg.push('<span><i class="gbDash" style="border-color:' + COL.warn + '"></i>zero-ul botului</span>');
+    else if (are("zeroPoz")) Lg.push('<span><i class="gbDash" style="border-color:' + COL.warn + '"></i>zero, pe poziția de acum (gridul închide poziția pe drum: în grid botul nu ajunge pe zero)</span>');
     if (are("planPlus")) Lg.push('<span><i class="gbDash" style="border-color:' + COL.good + '"></i>planul, pe plus</span>');
     if (are("planMinus")) Lg.push('<span><i class="gbDash" style="border-color:' + COL.bad + '"></i>planul, pe minus</span>');
     var nivStop = niv.filter(function (x) { return x.k === "stop"; })[0];   // v100.292: eticheta nivelului (Sugestii: „stopul propus”), altfel „stopul tău”

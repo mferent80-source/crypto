@@ -179,7 +179,7 @@ await test("14 serverul păstrează riscul scurt al fiecărui bot curățat (cel
   await mod.onRequestPost({ request: new Request("https://exemplu.test/api/istoric-bot?action=mcVerdict", { method: "POST", headers: H, body: JSON.stringify({ la: 7, boti: { "2601": { cat: "zgomot", stare: "atentie", text: "t", la: 1, ultima: 2, scurt } } }) }), env });
   const g = await mod.onRequestGet({ request: new Request("https://exemplu.test/api/istoric-bot?action=mcVerdict", { headers: H }), env });
   const s = (await g.json()).mcVerdict.boti["2601"].scurt;
-  assert.deepEqual(s, [{ ore: 1, pStop: 0.02, pLich: 0, p5: -1.2 }, { ore: 4, pStop: 0.07, pLich: 0, p5: -2.1 }, { ore: 24, pStop: 0.21, pLich: 0.004, p5: -4.4 }]);
+  assert.deepEqual(s, [{ ore: 1, pStop: 0.02, pLich: 0, p5: -1.2, pTp: null }, { ore: 4, pStop: 0.07, pLich: 0, p5: -2.1, pTp: null }, { ore: 24, pStop: 0.21, pLich: 0.004, p5: -4.4, pTp: null }]);   /* v100.376: și șansa take-profit-ului (aici lipsă ⇒ null) */
 });
 await test("15 pe pagina botului: rândul riscului pe termen scurt (riscul, nu câștigul), procente cu o zecimală, USDT cu minus „−”", () => {
   const box2 = { TextRo: globalThis.TextRo, escapeHtml: box.escapeHtml }; vm.createContext(box2); vm.runInContext(fnApp("tbMcScurtHtml"), box2);

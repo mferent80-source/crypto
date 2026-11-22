@@ -45,10 +45,10 @@ const CAPITOLE = [
 
 await test("A1 cele cinci titluri de capitol sunt în pagină, o dată fiecare, copii ai cadrului (lângă pliurile vechi), cu numele și rândul lor mic", () => {
   for (const [id, nume] of CAPITOLE) {
-    const m = HTML.match(new RegExp('<h3 class="tbCap" id="' + id.slice(1) + '">([^<]+)<span>([^<]+)</span></h3>', "g")) || [];
+    const m = HTML.match(new RegExp('<h3 class="tbCap" id="' + id.slice(1) + '">([^<]+)<span>([^<]+)</span>(?:<em class="tbCapAzi" id="tbCapAzi-[a-z]+"></em>)?</h3>', "g")) || [];
     assert.equal(m.length, 1, id); assert.ok(m[0].includes(">" + nume + "<span>"), id + " se numește „" + nume + "”");
   }
-  assert.match(HTML, /(<h3 class="tbCap" id="tbCap-[a-z]+">[^<]+<span>[^<]+<\/span><\/h3>){5}<details class="tbPl" id="tbPl-prob"/, "titlurile stau la rând, chiar înaintea unui copil direct al cadrului");
+  assert.match(HTML, /(<h3 class="tbCap" id="tbCap-[a-z]+">[^<]+<span>[^<]+<\/span>(?:<em class="tbCapAzi" id="tbCapAzi-[a-z]+"><\/em>)?<\/h3>){5}<details class="tbPl" id="tbPl-prob"/,   /* v100.376: și locul cifrei de azi */ "titlurile stau la rând, chiar înaintea unui copil direct al cadrului");
 });
 
 await test("A2 fiecare capitol: titlul întâi, apoi rândurile lui, în ordinea hotărâtă; capitolele nu se încalecă; Decizia, Riscul, Banii, Piața, Jurnalul", () => {
@@ -121,9 +121,9 @@ await test("D2 pagina „niciun bot pornit” rămâne neatinsă: titlurile sunt
 
 await test("D3 versiunea v100.375 e pusă peste tot și proba e în lanț, după v100.374", () => {
   const pk = JSON.parse(citeste("package.json")), bi = JSON.parse(citeste("BUILD_INFO.json"));
-  assert.equal(pk.version, "100.375.0"); assert.equal(bi.version, "v100.375"); assert.ok(bi.tb375 && bi.tb375.length > 200, "BUILD_INFO.tb375");
-  assert.equal((HTML.match(/v100\.375/g) || []).length >= 4, true, "index.html: v100.375 de cel puțin 4 ori");
-  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-375/); assert.match(citeste("functions", "_shared", "versiune.js"), /100\.375/);
+  assert.ok(+(/^100\.(\d+)\.0$/.exec(pk.version) || [])[1] >= 375, "package.json: de la 100.375 încolo"); assert.ok(+(/^v100\.(\d+)$/.exec(bi.version) || [])[1] >= 375); assert.ok(bi.tb375 && bi.tb375.length > 200, "BUILD_INFO.tb375");
+  assert.equal((HTML.match(/v100\.(\d+)/g) || []).filter((v) => +v.slice(5) >= 375).length >= 4, true, "index.html: v100.375 sau mai nou, de cel puțin 4 ori");
+  assert.ok(+(/crypto-radar-v100-(\d+)/.exec(citeste("public", "sw.js")) || [])[1] >= 375, "sw.js"); assert.ok(+(/"v100\.(\d+)"/.exec(citeste("functions", "_shared", "versiune.js")) || [])[1] >= 375, "versiune.js");
   assert.match(pk.scripts.test, /npm run test:v100374 && npm run test:v100375/); assert.equal(pk.scripts["test:v100375"], "node scripts/proba-v100375.mjs");
 });
 

@@ -329,7 +329,10 @@ const ORE_SCURT = [1, 4, 24], ORA_MS = 3600000, FEREASTRA_SCURT_MS = 20 * 60000,
 const r4 = (x) => (x === null || !isFinite(x) ? null : Math.round(x * 10000) / 10000);
 const deschisa = (e) => e && e.stare === "deschis";
 // scurt = GridSim.riscScurt(rez): [{ ore, pStop, pLich, p5 }]; o notare pe orizont, doar dacă pe (bot, h) nu e una deschisă
-export function noteazaScurt(jurnal, { id, scurt, total, acum, areStop } = {}) {
+// v100.376 (el, 21.11.2026: „pune și «atinge TP»” ⇒ „fa idei”): notarea ține și șansa take-profit-ului (pTp), DOAR la botul cu take-profit pus (areTp) -
+// fără el „prezis 0 = atins 0” ar fi un „se potrivește” gol, ca la botul fără stop. Notările de dinainte (fără pTp) nu intră în scorul take-profit-ului.
+// Regula judecății și pragurile: docs/cercetare/2026-11-21-v100376-sansa-take-profit.md (scrisă înainte de prima notare).
+export function noteazaScurt(jurnal, { id, scurt, total, acum, areStop, areTp } = {}) {
   const l = Array.isArray(jurnal) ? jurnal : [], t = nr(total), la = nr(acum);
   if (id == null || t === null || la === null || !Array.isArray(scurt)) return l;
   const noi = [];
@@ -337,7 +340,9 @@ export function noteazaScurt(jurnal, { id, scurt, total, acum, areStop } = {}) {
     const s = scurt.find((x) => x && nr(x.ore) === ore); if (!s) continue;
     const pS = nr(s.pStop), p5 = nr(s.p5); if (pS === null || pS < 0 || pS > 1 || p5 === null) continue;
     if (l.some((e) => deschisa(e) && e.id === String(id) && e.ore === ore)) continue;   // fereastra de dinainte încă deschisă
-    noi.push({ id: String(id), ore, t: la, z: new Date(la).toISOString().slice(0, 10), pStop: r4(pS), p5: Math.round(p5 * 100) / 100, total: r4(t), stare: "deschis", areStop: areStop !== false });   /* totalul la 4 zecimale: jurnalul stă în ritmuri.json */
+    const nota = { id: String(id), ore, t: la, z: new Date(la).toISOString().slice(0, 10), pStop: r4(pS), p5: Math.round(p5 * 100) / 100, total: r4(t), stare: "deschis", areStop: areStop !== false };   /* totalul la 4 zecimale: jurnalul stă în ritmuri.json */
+    const pT = nr(s.pTp); if (areTp === true && pT !== null && pT >= 0 && pT <= 1) { nota.pTp = r4(pT); nota.areTp = true; }
+    noi.push(nota);
   }
   return noi.length ? l.concat(noi).slice(-MAX_SCURT_JURNAL) : l;
 }
@@ -351,7 +356,8 @@ export function noteazaScurtBoti(jurnal, { boti, stareBoti, la, deLa } = {}) {
     // revizia: și „ca bot pornit acum” (simularea n-a putut relua botul real - cifrele sunt ale unui bot nou) nu se notează
     const sb = st[String(b.id)]; if (!sb || !(nr(sb.ultima) >= de) || /«Reluarea arată|ca bot pornit acum|socotite de aici încolo/.test(String(sb.text || ""))) continue;
     const areStop = nr(b.opritorPierdere) > 0 || nr(b.opritorPierdereRaport) !== null;   /* revizia: botul fără stop nu intră în scorul stopului */
-    j = noteazaScurt(j, { id: b.id, scurt: sb.scurt, total: b.profitTotal === null || b.profitTotal === undefined || b.profitTotal === "" ? null : Number(b.profitTotal), acum: la, areStop });
+    const areTp = b.opritorProfitActiv === true || nr(b.opritorProfit) > 0 || nr(b.opritorProfitRaport) !== null;   /* v100.376: botul fără take-profit nu intră în scorul lui */
+    j = noteazaScurt(j, { id: b.id, scurt: sb.scurt, total: b.profitTotal === null || b.profitTotal === undefined || b.profitTotal === "" ? null : Number(b.profitTotal), acum: la, areStop, areTp });
   }
   return j;
 }
@@ -365,7 +371,7 @@ export function judecaScurt(jurnal, totaluri, la) {
     const are = !!(totaluri && totaluri.has(e.id)), tot = are ? nr(totaluri.get(e.id)) : null;
     if (acum <= fin + FEREASTRA_SCURT_MS) {
       if (tot === null) return e;
-      schimbat = true; return Object.assign({}, e, { stare: "judecat", stop: 0, sub5: tot - e.total < e.p5 ? 1 : 0, totalDupa: r4(tot), la: acum });
+      schimbat = true; return Object.assign({}, e, { stare: "judecat", stop: 0, sub5: tot - e.total < e.p5 ? 1 : 0, totalDupa: r4(tot), la: acum }, e.areTp ? { tp: 0 } : null);   /* botul încă pornit la capătul ferestrei: nici stopul, nici take-profit-ul nu l-au închis */
     }
     // fereastra trecută: botul pornit ⇒ colectorul n-a citit la timp; botul lipsă ⇒ judecata la închidere, cel mult 6 h
     if (are || acum > fin + FEREASTRA_SCURT_MS + ASTEPT_INCHIDEREA_MS) { schimbat = true; return Object.assign({}, e, { stare: "expirat", la: acum }); }
@@ -393,30 +399,32 @@ export function judecaScurtLaInchidere(jurnal, id, { total, motiv, inchisLa } = 
     if (la === null) return Object.assign({}, e, { stare: "necitit", motivBrut: brut });
     const fin = e.t + e.ore * ORA_MS;
     if (e.t > la || la > fin + FEREASTRA_SCURT_MS) return Object.assign({}, e, { stare: "expirat", la });   // notat după închidere / fereastra ratată
-    if (la > fin) return Object.assign({}, e, { stare: "judecat", stop: 0, sub5: sub5(e), totalDupa: r4(t), la, laInchidere: true });   // pornit la t+h
+    if (la > fin) return Object.assign({}, e, { stare: "judecat", stop: 0, sub5: sub5(e), totalDupa: r4(t), la, laInchidere: true }, e.areTp ? { tp: 0 } : null);   // pornit la t+h
     // revizia: închis de tine (sau de Pionex) înainte de orizont ⇒ stopul NEATINS, șansa pe cât a stat deschis (pExp), „sub p5” pe totalul final
-    if (cls === "tine" || cls === "pionex") return Object.assign({}, e, { stare: "judecat", stop: 0, pExp: r4(e.pStop * Math.max(0, Math.min(1, (la - e.t) / (e.ore * ORA_MS)))), sub5: sub5(e), totalDupa: r4(t), la, laInchidere: true, motiv: cls, deTine: cls === "tine" });
+    if (cls === "tine" || cls === "pionex") return Object.assign({}, e, { stare: "judecat", stop: 0, pExp: r4(e.pStop * Math.max(0, Math.min(1, (la - e.t) / (e.ore * ORA_MS)))), sub5: sub5(e), totalDupa: r4(t), la, laInchidere: true, motiv: cls, deTine: cls === "tine" }, e.areTp ? { tp: 0, pExpTp: r4(e.pTp * Math.max(0, Math.min(1, (la - e.t) / (e.ore * ORA_MS)))) } : null);   /* v100.376: la fel pentru take-profit - neatins, șansa pe cât a stat deschis */
     if (cls === "necitit") return Object.assign({}, e, { stare: "necitit", la, motivBrut: brut });
-    return Object.assign({}, e, { stare: "judecat", stop: cls === "stop" ? 1 : 0, sub5: sub5(e), totalDupa: r4(t), la, laInchidere: true, motiv: cls });
+    return Object.assign({}, e, { stare: "judecat", stop: cls === "stop" ? 1 : 0, sub5: sub5(e), totalDupa: r4(t), la, laInchidere: true, motiv: cls }, e.areTp ? { tp: cls === "tinta" ? 1 : 0 } : null);   /* „tinta” = închis de take-profit (Pionex profit_stop) */
   });
   return schimbat ? out : l;
 }
 // t pe 98,75% (două cifre pe ecran ⇒ Bonferroni, 97,5% fiecare), Cornish-Fisher pe z = 2,2414: la 9 grade 2,685, la 20 2,423 (ca în tabele);
 // se folosește doar de la 10 zile (≥ 9 grade), unde aproximarea e bună
-function tBonf(df) {
-  const z = 2.241402727604947, v = Math.max(1, df), z3 = z ** 3, z5 = z ** 5, z7 = z ** 7, z9 = z ** 9;
+// v100.376: z0 = cuantila normală de pornire; lipsă ⇒ cea pentru două cifre pe ecran (stopul și „sub p5”). Take-profit-ul e a treia cifră ⇒ Z_TP (0,05 / 3, două cozi).
+const Z_TP = 2.3939797998185104;
+function tBonf(df, z0) {
+  const z = z0 > 0 ? z0 : 2.241402727604947, v = Math.max(1, df), z3 = z ** 3, z5 = z ** 5, z7 = z ** 7, z9 = z ** 9;
   return z + (z3 + z) / (4 * v) + (5 * z5 + 16 * z3 + 3 * z) / (96 * v ** 2) + (3 * z7 + 19 * z5 + 17 * z3 - 15 * z) / (384 * v ** 3) + (79 * z9 + 776 * z7 + 1482 * z5 - 1920 * z3 - 945 * z) / (92160 * v ** 4);
 }
 // d = [{ z, x, p }]: x = ce s-a întâmplat (0/1), p = șansa prezisă. Media (x − p) pe judecate; varianța pe ZILE (CR1, centrată), dar nu sub cea a
 // aruncărilor cu șansele prezise corelate în zi cu ICC_ZI - zilele fără niciun stop au altfel varianța ~0 și intervalul ar „arăta” prea mult din nimic
 const ICC_ZI = 0.1;
-function intervalScurt(d, marja) {
+function intervalScurt(d, marja, z0) {
   const n = d.length, zile = new Map(); let s = 0;
   for (const e of d) { s += e.x - e.p; const z = zile.get(e.z) || { r: 0, k: 0, v: 0, q: 0 }; z.r += e.x - e.p; z.k++; z.v += e.p * (1 - e.p); z.q += Math.sqrt(e.p * (1 - e.p)); zile.set(e.z, z); }
   const D = zile.size; if (n < MIN_SCURT || D < MIN_ZILE_SCURT) return { jos: null, sus: null, verdict: "putine" };
   const dif = s / n; let sc = 0, v0 = 0;
   for (const z of zile.values()) { const r = z.r - z.k * dif; sc += r * r; v0 += z.v + ICC_ZI * (z.q * z.q - z.v); }   // Var(suma zilei) cu corelația ICC_ZI între notări
-  const m = tBonf(D - 1) * Math.sqrt(Math.max(D / (D - 1) * sc, v0) / (n * n)), jos = dif - m, sus = dif + m;
+  const m = tBonf(D - 1, z0) * Math.sqrt(Math.max(D / (D - 1) * sc, v0) / (n * n)), jos = dif - m, sus = dif + m;
   return { jos, sus, verdict: jos > 0 ? "prea-putin" : sus < 0 ? "prea-mult" : jos >= -marja && sus <= marja ? "potrivit" : "nedecis" };
 }
 export function raportScurt(jurnal) {
@@ -427,7 +435,11 @@ export function raportScurt(jurnal) {
     const s5 = j.filter((e) => e.sub5 === 0 || e.sub5 === 1).map((e) => ({ z: e.z, x: e.sub5, p: 0.05 }));
     const med = (a, f) => (a.length ? r4(a.reduce((s, x) => s + f(x), 0) / a.length) : null), pStopMed = med(st, (x) => x.p);
     const iS = intervalScurt(st, Math.max(0.03, 0.5 * (pStopMed || 0))), i5 = intervalScurt(s5, 0.05);
+    /* v100.376: take-profit-ul, pe aceeași regulă ca stopul - doar notările cu take-profit pus și cu șansa lui notată; închișii de tine pe cât au stat deschiși */
+    const tpL = j.filter((e) => (e.tp === 0 || e.tp === 1) && nr(e.pTp) !== null && e.areTp === true).map((e) => ({ z: e.z, x: e.tp, p: nr(e.pExpTp) !== null ? e.pExpTp : e.pTp }));
+    const pTpMed = med(tpL, (x) => x.p), iT = intervalScurt(tpL, Math.max(0.03, 0.5 * (pTpMed || 0)), Z_TP);
     return { ore, n: j.length, zile: new Set(j.map((e) => e.z)).size, pStopMed, stopRata: med(st, (x) => x.x), stopDifJos: r4(iS.jos), stopDifSus: r4(iS.sus), verdictStop: iS.verdict,
+      nTp: tpL.length, zileTp: new Set(tpL.map((e) => e.z)).size, pTpMed, tpRata: med(tpL, (x) => x.x), tpDifJos: r4(iT.jos), tpDifSus: r4(iT.sus), verdictTp: iT.verdict,
       nSub5: s5.length, sub5Rata: med(s5, (x) => x.x), sub5Jos: i5.jos !== null ? r4(i5.jos + 0.05) : null, sub5Sus: i5.sus !== null ? r4(i5.sus + 0.05) : null, verdictP5: i5.verdict,
       tine: L.filter((e) => e.deTine || e.stare === "tine").length, necitit: c("necitit"), expirat: c("expirat"), deschise: c("deschis") };
   }) };

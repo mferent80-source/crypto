@@ -237,12 +237,12 @@ await test("așezarea: blocul v100.322 e doar pe calculator (≥ 1181 px) și pu
   assert.deepEqual(B.match(/[^\n{}]*\{display:none[^}]*\}/g).map((r) => r.trim()).sort(),
     ["#tabloubot.tbFaraBot #tbKpiDetalii{display:none!important}", P + " #tbGrafic>.gbValori .gbVS:empty{display:none}"].sort());
 });
-await test("detaliile cifrelor: 4 coloane sub grafic, în ordinea cifrelor; tbKpiAsezare le mută acolo pe calculator și ÎNAPOI sub cifre pe ecranele înguste", () => {
+await test("detaliile cifrelor: 4 coloane sub grafic, în ordinea cifrelor; tbKpiAsezare le mută acolo (din v100.376 la orice lățime - până atunci, pe îngust se întorceau sub cifre)", () => {
   assert.match(HTML, /<div class="tbKpiDetalii" id="tbKpiDetalii" hidden aria-label="Detaliile cifrelor"><div class="tbKpiDetCol"><span class="tbEt2">Rezultat total<\/span><\/div><div class="tbKpiDetCol"><span class="tbEt2">Până la lichidare<\/span><\/div><div class="tbKpiDetCol"><span class="tbEt2">Prețul în grid<\/span><\/div><div class="tbKpiDetCol"><span class="tbEt2">Piața față de bot<\/span><\/div><\/div><div class="tbGraficRand">/);
   assert.match(APP, /var TB_KPI_DET=\[\["tbKpiGrid","tbKpiTotalSub","tbKpiTotalViu"\],\["tbKpiLichSub"\],\["tbKpiPretSub"\],\["tbKpiPiataSub"\]\];/);   /* v100.340: și „la prețul viu”, lângă ora citirii */
   const f = functie(APP, "tbKpiAsezare");
-  assert.match(f, /var t=lat\?dest\.children\[i\]:cel\[i\]/, "pe îngust se întorc în cartela cifrei");
-  assert.match(f, /dest\.hidden=!lat;/);
+  assert.match(f, /var t=dest\.children\[i\];if\(!t\)return;/, "v100.376 (I-920): rândurile stau în bloc la orice lățime");
+  assert.match(f, /if\(dest\.hidden\)dest\.hidden=false;/);
   for (const id of ["tbKpiGrid", "tbKpiTotalSub", "tbKpiLichSub", "tbKpiPretSub", "tbKpiPiataSub"]) assert.ok(HTML.includes('id="' + id + '"'), id + " lipsește din pagină");
 });
 await test("graficul la deschidere: lățimea din cutia lui (și când e „transparentă”), înălțimea după ecran doar pe calculator, prețul niciodată sub 220 px", () => {
@@ -302,10 +302,11 @@ await test("revizia: „de la ultima privire” = ultima TA privire (după ≥ 3
 });
 await test("revizia: Drumul botului are și take-profit-ul pus (ca pe grafic)", () => {
   const src = citeste("public", "lib", "asezare-paznic.js");
-  assert.match(src, /if \(bl && bl\.opritorProfitActiv\) \{ var TEp = window\.TabloExtra, tp = TEp && TEp\.pretTpLive \? TEp\.pretTpLive\(bl\) : nr\(bl\.opritorProfit\); if \(tp > 0\) add\(tp, "take-profit", "var\(--pzSus\)"/);
+  assert.match(src, /if \(bl && bl\.opritorProfitActiv\) \{ var TEp = window\.TabloExtra, tp = TEp && TEp\.pretTpLive \? TEp\.pretTpLive\(bl\) : nr\(bl\.opritorProfit\); if \(tp > 0\) \{/);
+  assert.match(src, /add\(tp, pozT \? "take-profit, pe poziția de acum" : "take-profit", "var\(--pzSus\)"/);   /* v100.376: în procente și neatins din preț, prețul se numește „pe poziția de acum” */
 });
 await test("revizia: tbKpiAsezare scrie `hidden` doar când se schimbă", () => {
-  assert.match(functie(APP, "tbKpiAsezare"), /if\(dest\.hidden!==!lat\)dest\.hidden=!lat;/);
+  assert.match(functie(APP, "tbKpiAsezare"), /if\(dest\.hidden\)dest\.hidden=false;/);   /* v100.376: tot „doar când se schimbă”, dar blocul nu se mai ascunde pe îngust */
 });
 
 console.log(`\n${teste - picate}/${teste} trec`);

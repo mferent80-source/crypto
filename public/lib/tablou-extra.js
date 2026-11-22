@@ -121,7 +121,7 @@ var TabloExtra = (function () {
     comision = comision == null ? C.COMISION : comision;
     var inv = nr(b && b.investit), tot = nr(b && b.profitTotal), net = nr(b && b.profitNet);
     var poz = nr(b && b.pozitie), pd = nr(b && b.pretDeschidere), p = nr(b && b.pretCurent), dir = String(b && b.directie || "").toLowerCase();
-    var out = { iei: null, comisionInchidere: null, pretZero: null, distantaZeroPct: null };
+    var out = { iei: null, comisionInchidere: null, pretZero: null, distantaZeroPct: null, pretZeroPozitie: null };
     if (poz !== null && p !== null) out.comisionInchidere = Math.abs(poz) * p * comision;
     if (inv !== null && tot !== null) out.iei = inv + tot - (out.comisionInchidere || 0);
     var q = poz !== null ? Math.abs(poz) : null;
@@ -131,7 +131,14 @@ var TabloExtra = (function () {
     // botul nu mai iese pe zero in grid: pretZero ramane null si zeroNeatins = true (nu se inventeaza un pret dincolo de grid).
     if (q > 0 && pd > 0 && net !== null && b.pnlNerealizatSigur !== false && (dir === "long" || dir === "short")) {
       var zx = pretCuGrid(b, 0, comision);
-      if (zx.pret !== null) out.pretZero = zx.pret; else if (zx.neatins) out.zeroNeatins = true;
+      if (zx.pret !== null) out.pretZero = zx.pret;
+      /* v100.376 (el, 21.11.2026: „arată și zero-ul botului chiar dacă nu e în grid”): când din preț, în grid, nu se mai ajunge pe zero, rămâne de ARĂTAT
+         prețul de zero pe poziția de ACUM (ținută întreagă, fără ce închide gridul pe drum - formula veche, pretFix). E doar o cifră de afișat, cu numele
+         ei: `pretZero` rămâne null, deci alertele, sfaturile și stopul „la zero” nu o iau drept zero-ul botului.
+         Se dă DOAR când cade dincolo de marginea dinspre câștig a gridului (long: peste grid sus; short: sub grid jos): înăuntrul gridului ar fi un preț
+         la care botul NU e pe zero (gridul a închis din poziție până acolo) - un take-profit pus acolo ar închide pe minus (capcana din auditul din 14.10). */
+      else if (zx.neatins) { out.zeroNeatins = true; var zP = pretFix(b, 0, comision), gJ = nr(b.gridJos), gS = nr(b.gridSus);
+        if (zP !== null && (dir === "long" ? gS !== null && zP > gS : gJ !== null && zP < gJ)) out.pretZeroPozitie = zP; }
     }
     if (out.pretZero !== null && p > 0) out.distantaZeroPct = (out.pretZero - p) / p;
     return out;
@@ -417,6 +424,16 @@ var TabloExtra = (function () {
   // (totalul creste cu pretul la long, scade la short); planul deja atins la pretul de acum -> null.
   // v100.322 (revizia 11.11): take-profit-ul pus în PROCENTE din investiție se socotește live, ca stopul (pretStopLive): prețul la care totalul
   // ajunge la r × investit, cu grilele de pe drum - aceeași cifră ca banii din sfat (totalLaTinta); ne-atins în grid ⇒ prețul dat de server
+  // v100.376 (îndreptare, 21.11.2026): take-profit-ul în PROCENTE din investiție (Pionex profit_ratio) se declanșează la un TOTAL, nu la un preț.
+  // ⇒ true = totalul lui se atinge din preț, în grid (pretTpLive dă prețul acela); false = din preț, în gridul ăsta, nu se atinge (peste marginea
+  // dinspre câștig totalul nu mai crește) - doar din grile, în timp, iar pretTpLive cade pe prețul socotit de Pionex pe poziția de acum;
+  // null = take-profit pus ca preț, fără take-profit sau fără date.
+  function tpDinPret(b, comision) {
+    if (!b || !b.opritorProfitActiv || b.opritorProfitTip !== "raport") return null;
+    var inv = nr(b.investit), r = nr(b.opritorProfitRaport), tot = nr(b.profitTotal);
+    if (r === null || !(inv > 0) || tot === null || !(r * inv > tot)) return null;
+    return pretTintaPentru(b, r * inv, comision) !== null;
+  }
   function pretTpLive(b, comision) {
     if (!b || !b.opritorProfitActiv) return null;
     var inv = nr(b.investit), r = nr(b.opritorProfitRaport), tp = nr(b.opritorProfit);
@@ -907,7 +924,7 @@ var TabloExtra = (function () {
       + (dov.length || inv.length ? "" : "; încă niciun verdict (după 60 de zile sau 30 de cazuri pe fel)") + ".";
   }
 
-  return { taxaIntrare: taxaIntrare, textRegistruAlerte: textRegistruAlerte, stopDincoloDeLichidare: stopDincoloDeLichidare, stopPropus: stopPropus, grileDincolo: grileDincolo, grileDincoloK: grileDincoloK, dupaAlerta: dupaAlerta, bilantAlerte: bilantAlerte, cifreActiuni: cifreActiuni, textBani: textBani, frecventaAtingere: frecventaAtingere, codTVBot: codTVBot, gridDiferitDeBot: gridDiferitDeBot, alertaRezolvata: alertaRezolvata, alerteleBotului: alerteleBotului, marcheazaDepasite: marcheazaDepasite, ritmRecuperare: ritmRecuperare, comisionDinUmplere: comisionDinUmplere, ceAiDeFacut: ceAiDeFacut, oraSfat: oraSfat, distanteGrid: distanteGrid, geometrieBot: geometrieBot, profitPeGrila: profitPeGrila, fundingBot: fundingBot, fundingPct: fundingPct, notaTotal: notaTotal, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, pretPentruTotal: pretPentruTotal, totalLaPret: totalLaPret, totalLaPretViu: totalLaPretViu, totalCuGridLa: totalCuGridLa, totalCuGridContinuu: totalCuGridContinuu, pozitieCuGridLa: pozitieCuGridLa, modelTotal: modelTotal, gridVsPlan: gridVsPlan, pragDinPlanuri: pragDinPlanuri, totalLaOpritor: totalLaOpritor, pretOpritorPentru: pretOpritorPentru, pretStopLive: pretStopLive, pretTpLive: pretTpLive, totalLaTinta: totalLaTinta, pretTintaPentru: pretTintaPentru, miscareZi: miscareZi, podeaUrca: podeaUrca, propunePlan: propunePlan, fisaInchidere: fisaInchidere, legaturaJurnal: legaturaJurnal,
+  return { taxaIntrare: taxaIntrare, textRegistruAlerte: textRegistruAlerte, stopDincoloDeLichidare: stopDincoloDeLichidare, stopPropus: stopPropus, grileDincolo: grileDincolo, grileDincoloK: grileDincoloK, dupaAlerta: dupaAlerta, bilantAlerte: bilantAlerte, cifreActiuni: cifreActiuni, textBani: textBani, frecventaAtingere: frecventaAtingere, codTVBot: codTVBot, gridDiferitDeBot: gridDiferitDeBot, alertaRezolvata: alertaRezolvata, alerteleBotului: alerteleBotului, marcheazaDepasite: marcheazaDepasite, ritmRecuperare: ritmRecuperare, comisionDinUmplere: comisionDinUmplere, ceAiDeFacut: ceAiDeFacut, oraSfat: oraSfat, distanteGrid: distanteGrid, geometrieBot: geometrieBot, profitPeGrila: profitPeGrila, fundingBot: fundingBot, fundingPct: fundingPct, notaTotal: notaTotal, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, pretPentruTotal: pretPentruTotal, totalLaPret: totalLaPret, totalLaPretViu: totalLaPretViu, totalCuGridLa: totalCuGridLa, totalCuGridContinuu: totalCuGridContinuu, pozitieCuGridLa: pozitieCuGridLa, modelTotal: modelTotal, gridVsPlan: gridVsPlan, pragDinPlanuri: pragDinPlanuri, totalLaOpritor: totalLaOpritor, pretOpritorPentru: pretOpritorPentru, pretStopLive: pretStopLive, pretTpLive: pretTpLive, tpDinPret: tpDinPret, totalLaTinta: totalLaTinta, pretTintaPentru: pretTintaPentru, miscareZi: miscareZi, podeaUrca: podeaUrca, propunePlan: propunePlan, fisaInchidere: fisaInchidere, legaturaJurnal: legaturaJurnal,
     peZile: peZile, marjaNoua: marjaNoua, vsPozitie: vsPozitie, planStare: planStare, evenimente: evenimente };
 })();
 if (typeof globalThis !== "undefined") globalThis.TabloExtra = TabloExtra;

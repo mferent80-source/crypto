@@ -643,7 +643,7 @@ await test("Q4 I-912 „ai mutat gridul”: ultima schimbare a marginilor din dr
 });
 await test("Q5 legarea: pagina dă capului zero-ul, pasul gridului și mutarea; rândurile noi se desenează", () => {
   const a = citeste("public", "app.js"), pz = citeste("public", "lib", "asezare-paznic.js");
-  assert.match(a, /zero:\(function\(\)\{try\{var q=TabloExtra\.dacaInchizi\(b\);return q\?\{pret:q\.pretZero,neatins:q\.zeroNeatins===true\}:null\}/); assert.match(a, /SemnaleBot\.pasBot\(b\)/);
+  assert.match(a, /zero:\(function\(\)\{try\{var q=TabloExtra\.dacaInchizi\(b\);return q\?\{pret:q\.pretZero,neatins:q\.zeroNeatins===true(?:,pretPoz:q\.pretZeroPozitie)?(?:,grile:tbZeroGrile\(b\))?\}:null\}/); assert.match(a, /SemnaleBot\.pasBot\(b\)/);
   assert.match(a, /CapMargine\.mutareDin\(s\.intrari,Date\.now\(\)\)/); assert.match(a, /String\(s\.bot\)===String\(b\.id\)/);
   for (const k of ["pzMargZero", "pzMargStopM", "pzMargMut"]) assert.ok(pz.includes(k), k);   /* v100.374 design: clasele stau acum lângă cele ale benzii */
   /* stopul chiar pe margine: plafonat la șansa marginii, ca stopul de dincolo de ea (același preț nu poate avea două cifre) */

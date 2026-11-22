@@ -133,7 +133,18 @@
     var sjN = s && sj ? sj : null;
     if (sjN !== ctSansaUlt && D.bot && bl && String(D.bot.id) === String(bl.id)) { ctSansaUlt = sjN; try { if (typeof tbRenderConteaza === "function") tbRenderConteaza(); } catch (e) {} }
     // v100.322 (el, 11.11.2026: „am pus TP dar pagina botului nu îl vede”): take-profit-ul pus, pe drum ca pe grafic (în procente: socotit live)
-    if (bl && bl.opritorProfitActiv) { var TEp = window.TabloExtra, tp = TEp && TEp.pretTpLive ? TEp.pretTpLive(bl) : nr(bl.opritorProfit); if (tp > 0) add(tp, "take-profit", "var(--pzSus)", "", "take-profit-ul tău din Pionex"); }
+    if (bl && bl.opritorProfitActiv) { var TEp = window.TabloExtra, tp = TEp && TEp.pretTpLive ? TEp.pretTpLive(bl) : nr(bl.opritorProfit); if (tp > 0) {
+        /* v100.376: take-profit-ul în procente care din preț, în grid, nu se atinge ⇒ prețul e doar cel socotit de Pionex pe poziția de acum și se numește așa;
+           lângă preț, șansa lui pe 24 h (Monte Carlo pe botul lui), cum are stopul */
+        var pozT = !!(TEp && TEp.tpDinPret && TEp.tpDinPret(bl) === false);
+        add(tp, pozT ? "take-profit, pe poziția de acum" : "take-profit", "var(--pzSus)", "", pozT ? "take-profit-ul tău e în procente din investiție: din preț, în grid, nu se atinge - prețul e cel socotit de Pionex pe poziția de acum" : "take-profit-ul tău din Pionex");
+        if (typeof tbTpSansaDrum === "function") { var tj = null; try { tj = tbTpSansaDrum(bl); } catch (e) { tj = null; } if (tj) L[L.length - 1].sansa = tj; } } }
+    /* v100.376 (el, 21.11.2026: „ARATĂ ȘI ZERO BOTULUI PE DRUMUL BOTULUI”): zero-ul stă pe drum mereu - cel din grid (cu grilele de pe drum) sau, când
+       din preț nu se mai atinge și cade dincolo de marginea gridului, cel „pe poziția de acum” (poziția ținută întreagă). Până acum drumul nu avea
+       zero deloc (v100.216: gridul, stopul, take-profit-ul). */
+    try { var TEz = window.TabloExtra, zz = bl && TEz && TEz.dacaInchizi ? TEz.dacaInchizi(bl) : null;
+      if (zz && zz.pretZero > 0) add(zz.pretZero, "zero", "var(--pzAur)", "", "prețul la care botul e pe zero, cu grilele de pe drum");
+      else if (zz && zz.zeroNeatins && zz.pretZeroPozitie > 0) add(zz.pretZeroPozitie, "zero, pe poziția de acum", "var(--pzAur)", "", "cu poziția ținută întreagă; gridul o închide pe drum, deci în grid botul nu ajunge pe zero"); } catch (e) {}
     return L;
   }
   // v100.242: lățimea se cuantifică și nu se mută cât ține o bară de derulare (~15 px). 0 nu mai cade pe 280 (multe rânduri, card înalt).

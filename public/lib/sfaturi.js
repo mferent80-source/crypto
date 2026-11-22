@@ -231,6 +231,17 @@ var Sfaturi = (function () {
         titlu: "Take-profit-ul tău e pus la " + etTp + " (zero-ul e la " + pret(z.pretZero) + ")",
         text: (laT !== null ? "Când se atinge, ieși " + (peZero ? "practic pe zero (" + usdt(laT) + ")" : "cu " + usdt(laT) + " în total") + "; închis acum, ai lua " : "Închis acum, ai lua ") + (z.iei != null ? TextRo.num(z.iei, 1) + " USDT" : "—") + (inv ? " din " + TextRo.num(inv, 2) + " investiți" : "") + ".",
         faCe: laT !== null && laT < 0 && !peZero ? "Ieșirea exact fără pierdere e la " + pret(z.pretZero) + "; la take-profit-ul de acum lași " + usdt(-laT).replace(/^\+/, "") + "." : "" });
+    } else if (tot !== null && tot < 0 && (tpRap !== null || tpPret > 0) && nr(x.laTinta) !== null && !(z && z.pretZero != null)) {
+      /* v100.376 (el, 21.11.2026: „pune și «atinge TP»” ⇒ „fa idei”): take-profit-ul e pus, dar din preț, în grid, botul nu ajunge pe zero - până acum
+         sfatul tăcea de tot (cerea „zero-ul e la …”), iar „Contează acum” zicea „nimic”. În procente (Pionex profit_ratio) se declanșează la un total,
+         nu la un preț: dacă totalul ăsta nu se atinge din preț (TabloExtra.tpDinPret = false), se spune; pus ca preț și cu total negativ acolo, închide pe minus. */
+      var laT2 = nr(x.laTinta), neat = x.tpDinPret === false;
+      /* „nu se atinge din preț” e o stare, nu bani în joc azi ⇒ fără `tpPus` (nu urcă în „Contează acum”); rămâne în lista de sfaturi, cu `tpNeatins` */
+      out.push({ cod: "zero", ton: neat ? "info" : laT2 >= 0 ? "bine" : "atentie", tpPus: !neat, tpNeatins: neat,
+        titlu: "Take-profit-ul tău e pus la " + (tpRap !== null ? proc(100 * tpRap) + " din investiție (" + usdt(laT2) + ")" : pret(tpPret)),
+        text: (neat ? "Din preț, în gridul ăsta, nu se atinge: dincolo de margine totalul botului nu mai crește. Se poate atinge doar din grile, în timp"
+          : "Când se atinge, ieși cu " + usdt(laT2) + " în total") + "; închis acum, ai lua " + (z && z.iei != null ? TextRo.num(z.iei, 1) + " USDT" : "—") + (inv ? " din " + TextRo.num(inv, 2) + " investiți" : "") + ".",
+        faCe: !neat && laT2 < 0 ? "Take-profit-ul ăsta închide pe minus: l-aș scoate sau l-aș muta." : "" });
     } else if (z && z.pretZero != null && z.distantaZeroPct != null && tot !== null && tot < 0) {
       // v100.330 (el, 12.11, HYPE short pornit la 10:12, −0,10 = comisioanele: „Aș pune take-profit-ul la 71.2203 … o prostie”): pe ORICE minus
       // sfatul cerea un take-profit la zero - ÎN grid, deci botul se închidea la prima oscilație, fără câștig (regula lui din 05.10: nimic în mijlocul
@@ -340,7 +351,7 @@ var Sfaturi = (function () {
     return { bot: b, scen: scen, sanse: sanse, rezumat: o.rezumat || null, funding: o.funding, fundingOre: oreFunding(o.fundingHist), fundingPionex: fundingPionex, fata4h: o.fata4h || null, dir4h: o.dir4h, fisa: o.fisa || null,
       costuri: TE ? TE.grileVsCosturi(b, acum) : null, zero: TE ? TE.dacaInchizi(b) : null, geom: TE ? TE.geometrieBot(b) : null, ritm: ritm,
       fisaLa: nr(o.fisaLa) > 0 ? nr(o.fisaLa) : null,   /* v100.333 (🔵10): fișa ținută minte (Tabloul, cât se reface) - ora ei în motiv */
-      laTinta: TE && TE.totalLaTinta ? TE.totalLaTinta(b) : null, tpLive: TE && TE.pretTpLive ? TE.pretTpLive(b) : null, acum: acum };   // v100.322: banii și prețul la take-profit-ul pus (sfatul „zero”); v100.330: `acum` = vârsta botului pentru sfatul „zero”
+      laTinta: TE && TE.totalLaTinta ? TE.totalLaTinta(b) : null, tpLive: TE && TE.pretTpLive ? TE.pretTpLive(b) : null, tpDinPret: TE && TE.tpDinPret ? TE.tpDinPret(b) : null, acum: acum };   // v100.322: banii și prețul la take-profit-ul pus (sfatul „zero”); v100.330: `acum` = vârsta botului pentru sfatul „zero”
   }
   return { sfaturi: sfaturi, intrare: intrare, pret: pret, griliTaiateTp: griliTaiateTp };
 })();

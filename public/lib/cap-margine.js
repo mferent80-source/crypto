@@ -34,6 +34,7 @@ var CapMargine = (function () {
   function num(v, z) { var T = TR(); return T && T.num ? T.num(v, z) : (Math.round(v * Math.pow(10, z)) / Math.pow(10, z)).toFixed(z).replace(".", ",").replace("-", "−"); }
   function usdt(v) { var T = TR(); return T && T.usdt ? T.usdt(v, 1) : (v > 0 ? "+" : "") + num(v, 1) + " USDT"; }
   function cate(n, sg, pl) { var T = TR(); return T && T.cate ? T.cate(n, sg, pl) : n + " " + pl; }
+  function z1(v) { return num(v, 1); }   /* o zecimală, pentru numere cu virgulă lângă un substantiv („2,5 zile” nu ia „de”) */
   function pret(v) { var T = TR(); if (T && T.pret) return T.pret(v); if (v === null) return "—"; var a = Math.abs(v); return v.toFixed(a >= 100 ? 2 : 4); }
   function zi(ms) { var d = new Date(ms), z = function (n) { return (n < 10 ? "0" : "") + n; }; return z(d.getUTCDate()) + "." + z(d.getUTCMonth() + 1) + "." + d.getUTCFullYear(); }
 
@@ -209,7 +210,10 @@ var CapMargine = (function () {
     var zi0 = x.zero || null, zeroI = null;
     if (zi0 && nr(zi0.pret) !== null && zi0.pret > 0) zeroI = { pret: zi0.pret, dist: (zi0.pret - p) / p };
     else if (zi0 && zi0.neatins === true) { var parteL = parte === "jos" ? "sus" : "jos", nivL = parteL === "jos" ? jos : sus, bL = typeof x.laMargine === "function" ? nr(x.laMargine(parteL)) : null;
-      zeroI = { neatins: true, parte: parteL, nivel: nivL, dist: nivL !== null ? (nivL - p) / p : null, total: bL }; }
+      zeroI = { neatins: true, parte: parteL, nivel: nivL, dist: nivL !== null ? (nivL - p) / p : null, total: bL };
+      /* v100.376 (el: „arată și zero-ul botului chiar dacă nu e în grid”): prețul de zero pe poziția de acum - doar când pagina îl are */
+      if (nr(zi0.pretPoz) !== null && zi0.pretPoz > 0) { zeroI.pretPoz = zi0.pretPoz; zeroI.distPoz = (zi0.pretPoz - p) / p; }
+      if (zi0.grile && typeof zi0.grile === "object") zeroI.grile = zi0.grile; }
     /* I-913: stopul chiar pe marginea contra (la mai puțin de o grilă): prima atingere a marginii închide botul */
     var pasG = nr(x.pas), stopM = null;
     if (stop !== null && !afara && Math.abs(stop - niv) / niv <= PRAG_STOP_FARA_PAS) {   /* revizia a doua: nu „sub o grilă” - la pasul de 1%, un stop cu 0,8% sub margine primea „prima atingere închide botul” lângă „între margine și stop mai pierzi…” */ var s24 = sanse.filter(function (q) { return q.ore === 24 && !q.vechi; })[0];
@@ -232,7 +236,7 @@ var CapMargine = (function () {
       var urm = ao !== null && ao > 0 ? bune.filter(function (r) { return r.h > ao; }).slice(0, 2).map(function (r) { return { h: r.h, n: r.n, intoarse: r.intoarse, la: acumM !== null ? acumM + (r.h - ao) * ORA_MS : null }; }) : [];
       mut = { iei: mm.iei, investit: mm.investit, pierdere: pierd, comisioane: mm.iei * levM * 0.5 * COMISION_PIATA, acum: acumM,
         stop: stop !== null && bS !== null ? { pret: stop, dist: semn(stop), total: bS } : null, margine: bM !== null ? { pret: niv, dist: semn(niv), total: bM } : null,
-        zero: nr(mm.pretZero) > 0 ? { pret: mm.pretZero, dist: semn(mm.pretZero) } : null, zeroNeatins: !!(zeroI && zeroI.neatins), risc: stop !== null && bS !== null && tot !== null && bS < tot ? tot - bS : null, recuperat: bM !== null && tot !== null && bM > tot ? bM - tot : null,
+        zero: nr(mm.pretZero) > 0 ? { pret: mm.pretZero, dist: semn(mm.pretZero) } : null, zeroNeatins: !!(zeroI && zeroI.neatins), zeroPoz: zeroI && zeroI.neatins && zeroI.pretPoz ? zeroI.pretPoz : null, risc: stop !== null && bS !== null && tot !== null && bS < tot ? tot - bS : null, recuperat: bM !== null && tot !== null && bM > tot ? bM - tot : null,
         fisa: fisaM, stop24: stop !== null ? nr(x.stopDrum) : null, curent: afaraDe && afaraDe.rand ? afaraDe.rand : null, urmatoare: urm, ritm: ritM, oreGrile: ritM !== null ? -pierd / ritM : null };
     }
     /* I-897: cât mai pierde între margine și stop (în grid: stopul dincolo de margine; afară: de aici până la stop) */
@@ -249,11 +253,17 @@ var CapMargine = (function () {
     /* stopul pe termen scurt, din Monte Carlo pe botul lui (rândul „Pe termen scurt”: 1 h / 4 h / 24 h) */
     var stopS = stop !== null && Array.isArray(x.stopScurt) ? x.stopScurt.filter(function (q) { return q && (q.ore === 1 || q.ore === 4 || (q.ore === 24 && sd === null)) && nr(q.pStop) !== null && (sd === null || q.pStop <= sd); }).map(function (q) { return { ore: q.ore, p: q.pStop }; }) : [];
     var faraStop = stop === null && !x.stopActiv;
-    return { parte: parte, nivel: niv, dist: dist, afara: afara, titlu: sigur ? String(cons.titlu) : titlu, fapt: sigur ? titlu : "", sanse: afara ? [] : sanse,
+    /* v100.376 (el, 21.11.2026: „pune și «atinge TP» la fel cum faci cu margine și cu stop”): take-profit-ul - prețul lui, totalul botului acolo (cu grilele
+       de pe drum; dincolo de grid botul ajunge fără poziție) și șansa de a-l atinge pe 1 h / 4 h / 24 h, din același Monte Carlo ca stopul */
+    var tpP = nr(x.tp), tpI = tpP !== null && tpP > 0 ? { pret: tpP, total: nr(x.laTp), dist: (tpP - p) / p, dincolo: sus !== null && tpP > sus ? "peste" : jos !== null && tpP < jos ? "sub" : "", raport: nr(x.tpRaport), dinPret: x.tpDinPret === true ? true : x.tpDinPret === false ? false : null, grile: x.tpGrile && typeof x.tpGrile === "object" ? x.tpGrile : null } : null;
+    var tpS = tpI && Array.isArray(x.stopScurt) ? x.stopScurt.filter(function (q) { return q && (q.ore === 1 || q.ore === 4 || q.ore === 24) && nr(q.pTp) !== null; }).map(function (q) { return { ore: q.ore, p: q.pTp }; }) : [];
+    var rez = { parte: parte, nivel: niv, dist: dist, afara: afara, titlu: sigur ? String(cons.titlu) : titlu, fapt: sigur ? titlu : "", sanse: afara ? [] : sanse,
       sanseVechi: vechi && sanse.length ? { fel: vechi, dist: d0 } : null, sanseDist: d0, sanseOra: x.sanseOra ? String(x.sanseOra) : "", stopScurt: stopS, stopDrum: sd,
       expunere: exp, intre: intre, afaraDe: afaraDe, zero: zeroI, stopMargine: stopM, mutare: mv, mut: mut, parteMargine: parte, copiaza: afara ? null : [{ ce: "marginea de " + parte, pret: pret(niv), exact: String(niv) }], faraStop: faraStop ? textFaraStop(x.dovada) : "",
       bani: { margine: afara ? null : bM, stop: bS, stopPret: stop, stopActiv: !!x.stopActiv, stopEticheta: x.stopEticheta ? String(x.stopEticheta) : "" }, faCe: faCe, sigur: sigur,
       cons: cons && !sigur && cons.titlu && cons.cod !== "margine" ? { titlu: String(cons.titlu), dovedit: !!cons.dovedit } : null, dovada: textDovada(x.dovada) };
+    if (tpI) { rez.tp = tpI; rez.tpScurt = tpS; rez.tpVerif = Array.isArray(x.tpVerif) ? x.tpVerif : null; }
+    return rez;
   }
   function textSanse(c) {
     if (!c || !c.sanse.length) return "";
@@ -304,6 +314,8 @@ var CapMargine = (function () {
   function textZero(c) {
     var z = c && c.zero; if (!z) return "";
     if (!z.neatins) return "Zero-ul botului: " + pret(z.pret) + " (" + pcS(z.dist) + " de aici)";
+    if (z.pretPoz) return "Zero-ul, pe poziția de acum: " + pret(z.pretPoz) + " (" + pcS(z.distPoz) + " de aici), cu poziția ținută întreagă. Gridul o închide pe drum, deci în gridul ăsta botul nu ajunge pe zero"
+      + (z.total !== null && z.nivel !== null ? ": la marginea de " + z.parte + " (" + pret(z.nivel) + ", " + pcS(z.dist) + ") rămâi cu " + usdt(z.total) : "");
     return "Pe zero botul nu mai ajunge în gridul ăsta" + (z.total !== null && z.nivel !== null ? ": la marginea de " + z.parte + " (" + pret(z.nivel) + ", " + pcS(z.dist) + ") rămâi cu " + usdt(z.total) : "");
   }
   function textStopMargine(c) {
@@ -332,8 +344,25 @@ var CapMargine = (function () {
     } else if (b.stopPret !== null) P.push({ k: "stop", et: "Stopul tău", val: pret(b.stopPret), sub: "totalul de acolo nu se poate socoti" });
     else if (b.stopActiv) P.push({ k: "stop", et: "Stopul", val: b.stopEticheta || "în procente", sub: "fără preț socotit" });
     else P.push({ k: "stop", et: "Stopul", val: "fără stop", sub: "pierderea n-are capăt până la lichidare", ton: "rau" });
-    if (z) P.push(z.neatins ? { k: "zero", et: "Zero-ul botului", val: "nu se mai atinge", sub: z.total !== null && z.nivel !== null ? "la marginea de " + z.parte + " rămâi cu " + usdt(z.total) : "în gridul ăsta", ton: "atentie" }
+    /* take-profit-ul: banii de acolo, ca la margine și la stop; pe minus se spune (dincolo de grid botul ajunge fără poziție și închide cu ce are) */
+    if (c.tp) { var tk = c.tp, pt;
+      /* take-profit în PROCENTE din investiție: se declanșează la un total (procentul × investiția), nu la un preț - banii de acolo sunt cei din procent;
+         când din preț, în grid, totalul ăsta nu se atinge, celula o spune (prețul socotit de Pionex pe poziția de acum nu se arată ca țintă) */
+      if (tk.raport !== null) { pt = { k: "tp", et: "La take-profit", val: tk.total !== null ? usdt(tk.total) : "—", sub: pcS(tk.raport) + " din investiție · " + (tk.dinPret === false ? "din preț, în grid, nu se atinge" + textTpGrile(tk.grile, !!(z && z.neatins && z.grile && !z.grile.tanar && nr(z.grile.zile) !== null && z.grile.zile > 0)) : "pe la " + pret(tk.pret) + " (" + pcS(tk.dist) + " de aici)") };
+        if (tk.dinPret === false) pt.ton = "atentie"; }
+      else { pt = { k: "tp", et: "La take-profit", val: tk.total !== null ? usdt(tk.total) : pret(tk.pret), sub: (tk.total !== null ? pret(tk.pret) + " · " : "") + pcS(tk.dist) + " de aici" + (tk.dincolo ? " · " + tk.dincolo + " grid" : "") };
+        if (tk.total !== null && tk.total < 0) { pt.ton = "rau"; pt.sub += " · închide pe minus"; } }
+      P.push(pt); }
+    if (z && z.neatins && z.pretPoz) P.push({ k: "zero", et: "Zero-ul, pe poziția de acum", val: pret(z.pretPoz), ton: "atentie",
+      sub: pcS(z.distPoz) + " de aici, " + (z.parte === "jos" ? "sub" : "peste") + " grid · " + (z.total !== null && z.nivel !== null ? "la marginea de " + z.parte + " rămâi cu " + usdt(z.total) : "în gridul ăsta botul nu ajunge pe zero") });
+    else if (z) P.push(z.neatins ? { k: "zero", et: "Zero-ul botului", val: "nu se mai atinge", sub: z.total !== null && z.nivel !== null ? "la marginea de " + z.parte + " rămâi cu " + usdt(z.total) : "în gridul ăsta", ton: "atentie" }
       : { k: "zero", et: "Zero-ul botului", val: pret(z.pret), sub: pcS(z.dist) + " de aici" });
+    /* v100.376 („FA IDEI”): drumul care chiar există spre zero - grilele, în timp; cifra e a ritmului de recuperare de sub „Rezultat total” */
+    var zg = z && z.neatins ? z.grile : null;
+    if (zg && zg.tanar) P.push({ k: "zeroGrile", et: "Pe zero, din grile", val: "după o zi", sub: "ritmul se socotește după o zi de viață a botului" });
+    else if (zg && nr(zg.zile) !== null && zg.zile > 0) P.push({ k: "zeroGrile", et: "Pe zero, din grile", val: "~" + (zg.zile < 10 ? z1(zg.zile) + " zile" : cate(Math.round(zg.zile), "zi", "zile")),
+      sub: "la ritmul de azi" + (nr(zg.netZi) !== null ? " (" + usdt(zg.netZi) + " pe zi)" : "") + ", dacă prețul stă pe loc" });
+    else if (zg && zg.zile === null) P.push({ k: "zeroGrile", et: "Pe zero, din grile", val: "nu, la ritmul de azi", sub: "grilele nu acoperă costurile", ton: "atentie" });
     return P;
   }
   /* barele șanselor, pe aceeași scară 0–100: marginea (doar cât nicio cifră nu e „de refăcut” - altfel rămâne propoziția ei) și stopul */
@@ -343,8 +372,29 @@ var CapMargine = (function () {
       bare: S.map(function (s) { return { et: s.ore + " h", p: s.p, text: s.text.replace(/ din 100$/, "") }; }) });
     var B = mc.map(function (s) { return { et: s.ore + " h", p: s.p, text: s.p * 100 < 0.05 ? "sub 0,1%" : num(s.p * 100, 1) + "%" }; }), are24 = sd !== null && sd !== undefined;
     if (are24) { var k = Math.round(sd * 100); B.push({ et: "24 h", p: sd, text: k < 1 ? "< 1%" : k > 99 ? "> 99%" : "~" + k + "%" }); }
+    var Tp = (c.tpScurt || []).map(function (s) { return { et: s.ore + " h", p: s.p, text: s.p * 100 < 0.05 ? "sub 0,1%" : num(s.p * 100, 1) + "%" }; });
     if (B.length) M.push({ k: "stop", et: "Atinge stopul", sursa: mc.length && are24 ? mc.map(function (s) { return s.ore + " h"; }).join(" și ") + ": Monte Carlo pe botul tău · 24 h: curba stopului, ca pe Drum" : mc.length ? "Monte Carlo pe botul tău" : "curba stopului, ca pe Drum", bare: B });
+    if (Tp.length) M.push({ k: "tp", et: "Atinge take-profit-ul", sursa: "Monte Carlo pe botul tău · " + textTpVerif(c.tpVerif), bare: Tp });
     return M;
+  }
+  /* v100.376 („fa idei”): ce spune jurnalul colectorului despre șansa take-profit-ului pe boții lui (raportScurt: nTp / zileTp / verdictTp pe 1 h, 4 h, 24 h).
+     Se spune orizontul cu cele mai multe judecate; cuvintele vin doar din verdictul raportului (sub 30 de judecate pe 10 zile: „strânge date”). */
+  /* take-profit-ul care din preț nu se atinge: cât durează din grile, la ritmul de azi (ca „Pe zero, din grile”); fără ritm, fraza de până acum */
+  function textTpGrile(g, scurt) {   /* scurt: celula „Pe zero, din grile” e alături și spune ritmul și „dacă prețul stă pe loc” - o singură dată în bandă */
+    if (g && g.tanar) return ": doar din grile, în timp (ritmul se socotește după o zi de viață a botului)";
+    if (g && nr(g.zile) !== null && g.zile > 0) return " · din grile: ~" + (g.zile < 10 ? z1(g.zile) + " zile" : cate(Math.round(g.zile), "zi", "zile")) + " la ritmul de azi" + (scurt ? "" : ", dacă prețul stă pe loc");
+    if (g && g.zile === null && nr(g.netZi) !== null) return " · nici din grile, la ritmul de azi: nu acoperă costurile";
+    return ": doar din grile, în timp";
+  }
+  function textTpVerif(v) {
+    var L = (Array.isArray(v) ? v : []).filter(function (x) { return x && (x.ore === 1 || x.ore === 4 || x.ore === 24) && nr(x.nTp) !== null && x.nTp > 0; });
+    if (!L.length) return "șansa take-profit-ului nu e încă verificată pe boții tăi, ca a stopului";
+    var k = L.slice().sort(function (a, b) { return b.nTp - a.nTp || a.ore - b.ore; })[0], cat = cate(k.nTp, "judecată", "judecate") + " pe " + cate(nr(k.zileTp) || 0, "zi", "zile") + ", la " + k.ore + " h";
+    if (k.verdictTp === "potrivit") return "verificată pe boții tăi: se potrivește (" + cat + ")";
+    if (k.verdictTp === "prea-putin") return "pe boții tăi prezice prea puțin: take-profit-ul se atinge mai des (" + cat + ")";
+    if (k.verdictTp === "prea-mult") return "pe boții tăi prezice prea mult: take-profit-ul se atinge mai rar (" + cat + ")";
+    if (k.verdictTp === "nedecis") return "verificarea pe boții tăi e încă nedecisă (" + cat + ")";
+    return "verificarea pe boții tăi strânge date (" + cat + "; trebuie 30 pe 10 zile)";
   }
   /* treptele întoarcerii (blocul „Dacă muți gridul acum”): cea împlinită și următoarele, cu ora la care se împlinesc */
   function trepte(c) {
@@ -361,7 +411,7 @@ var CapMargine = (function () {
     var ora = function (t) { var d = new Date(t), z = function (n) { return (n < 10 ? "0" : "") + n; }; return z(d.getHours()) + ":" + z(d.getMinutes()); };
     var R = [], r0 = [m.stop ? "la stopul tău (" + pret(m.stop.pret) + ", " + pc(m.stop.dist) + "): " + usdt(m.stop.total) : c.bani.stopPret !== null ? "la stopul tău (" + pret(c.bani.stopPret) + "): totalul nu se poate socoti" : c.bani.stopActiv ? "stopul tău: " + (c.bani.stopEticheta || "pus în procente") : "fără stop pus"];
     if (m.margine) r0.push("la marginea de " + c.parteMargine + " (" + pret(m.margine.pret) + ", " + pc(m.margine.dist) + "): " + usdt(m.margine.total));
-    if (m.zero) r0.push("pe zero la " + pret(m.zero.pret) + " (" + pc(m.zero.dist) + ")"); else if (m.zeroNeatins) r0.push("pe zero nu se mai ajunge în gridul ăsta");
+    if (m.zero) r0.push("pe zero la " + pret(m.zero.pret) + " (" + pc(m.zero.dist) + ")"); else if (m.zeroNeatins) r0.push("pe zero nu se mai ajunge în gridul ăsta" + (m.zeroPoz ? " (pe poziția de acum zero-ul e la " + pret(m.zeroPoz) + ")" : ""));
     R.push("Dacă rămâi: " + r0.join(" · "));
     if (m.risc !== null && m.recuperat !== null) { var k = m.stop24 !== null && m.stop24 !== undefined ? Math.round(m.stop24 * 100) : null;
       R.push("Riști încă " + fara(m.risc) + " până la stop, pentru " + fara(m.recuperat) + " recuperați dacă prețul se întoarce la margine" + (k !== null ? " · stopul atins în 24 h: " + (k < 1 ? "< 1%" : k > 99 ? "> 99%" : "~" + k + "%") + " (curba stopului)" : "")); }

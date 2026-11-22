@@ -653,7 +653,8 @@ var GridSim = (function () {
     ORIZ_SCURT.forEach(function (z) {
       var o = l.filter(function (x) { return x && Math.abs(Number(x.zile) - z) < 1e-6; })[0]; if (!o) return;
       var p5 = o.deAici && isFinite(o.deAici.p5) ? o.deAici.p5 : o.p5;
-      out.push({ ore: Math.round(z * 24), pStop: isFinite(o.pStop) ? o.pStop : null, pLich: isFinite(o.pLich) ? o.pLich : null, p5: isFinite(p5) ? Math.round(p5 * 100) / 100 : null });
+      /* v100.376 (el, 21.11.2026: „pune și «atinge TP»”): și șansa take-profit-ului, socotită de aceeași simulare pe aceleași drumuri (pTp) */
+      out.push({ ore: Math.round(z * 24), pStop: isFinite(o.pStop) ? o.pStop : null, pLich: isFinite(o.pLich) ? o.pLich : null, p5: isFinite(p5) ? Math.round(p5 * 100) / 100 : null, pTp: isFinite(o.pTp) ? o.pTp : null });
     });
     return out;
   }

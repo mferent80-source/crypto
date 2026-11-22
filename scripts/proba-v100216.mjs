@@ -64,14 +64,15 @@ function incarcaAsezarea(extra) {
   ctx.window = ctx; vm.createContext(ctx); vm.runInContext(AS, ctx);
   return ctx;
 }
-await test("nivelurile drumului: grid jos, grid sus, stop - fără lichidare, plan, zero, intrare", () => {
+await test("nivelurile drumului: grid jos, grid sus, stop și (din v100.376, la cuvântul lui din 21.11.2026) zero-ul botului - fără lichidare, plan, intrare", () => {
   // graficul a desenat deja cu TOATE nivelurile: drumul nu le mai ia de acolo
   const ctx = incarcaAsezarea({ tbGraficUltim: { botId: "7", niv: [{ k: "gridSus", p: 0.5 }, { k: "planPlus", p: 0.49 }, { k: "zero", p: 0.465 }, { k: "intrare", p: 0.47 }, { k: "planMinus", p: 0.43 }, { k: "gridJos", p: 0.4 }, { k: "stop", p: 0.4535 }, { k: "lich", p: 0.31 }], stopPlan: 0.42 } });
   const A = ctx.AsezarePaznic; assert.equal(typeof A.nivele, "function", "AsezarePaznic.nivele");
   const L = A.nivele(bot()), n = L.map((x) => x.n).join(" | ");
-  assert.doesNotMatch(n, /lichidare|plan|zero|intrare/, n);
+  assert.doesNotMatch(n, /lichidare|plan|intrare/, n);
   assert.match(n, /grid jos/); assert.match(n, /grid sus/); assert.match(n, /stop/);
-  assert.equal(L.length, 3, n);
+  assert.equal(L.length, 4, n);
+  const zr = L.find((x) => x.n === "zero"); assert.ok(zr && Math.abs(zr.p - T.dacaInchizi(bot()).pretZero) < 1e-12, "zero-ul drumului = cel socotit de pagină (cu grilele de pe drum), nu cel desenat de grafic (0,465)");
   const st = L.find((x) => /stop/.test(x.n));
   assert.ok(Math.abs(st.p - T.pretStopLive(bot())) < 1e-12, "stopul drumului = cel socotit live: " + st.p);
   assert.match(st.n, /stop −5,0%/, "stopul în procente se spune: " + st.n);
@@ -84,10 +85,10 @@ await test("drumul ia prețul LIVE al botului (pvBotLive), nu cel de la ultima c
   assert.match(h, /acum 0[.,]44/, "„acum” = prețul live");
   assert.doesNotMatch(h, /lichidare/, "fără lichidare pe drum");
 });
-await test("fără stop: drumul are doar gridul (și „acum”)", () => {
+await test("fără stop: drumul are doar gridul, zero-ul (din v100.376) și „acum”", () => {
   const ctx = incarcaAsezarea({});
   const L = ctx.AsezarePaznic.nivele(bot({ opritorPierdereActiv: false }));
-  assert.equal(JSON.stringify(L.map((x) => x.n)), JSON.stringify(["grid jos", "grid sus"]));
+  assert.equal(JSON.stringify(L.map((x) => x.n)), JSON.stringify(["grid jos", "grid sus", "zero"]));   /* v100.376: și zero-ul */
 });
 await test("graficul: linia „stopul tău” folosește același preț live", () => {
   const G = citeste("public", "lib", "grafic-bot.js");
