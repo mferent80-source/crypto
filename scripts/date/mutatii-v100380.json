@@ -1,0 +1,198 @@
+{
+ "_nota": "v100.380 (23.11.2026): botul de semnal (Pionex smart_copy). Fiecare greșeală plantată trebuie PRINSĂ de proba listei (ieșire ≠ 0). Scoasă ca ECHIVALENTĂ: „poziția neclară dă alerte” (garda inPozitie de la „ieșit” o acoperă deja).",
+ "proba": "scripts/proba-v100380.mjs",
+ "mutatii": [
+  {
+   "nume": "botul de semnal trecut prin traducerea de grid",
+   "fisier": "functions/api/bot-orders.js",
+   "cauta": "if(bot&&bot.buOrderType===\"smart_copy\")return normalizeazaSemnal(bot,preturi||{},harta);",
+   "pune": ""
+  },
+  {
+   "nume": "tokenul webhook-ului lăsat în răspuns",
+   "fisier": "functions/api/bot-orders.js",
+   "cauta": "if(rest.buOrderData&&typeof rest.buOrderData===\"object\"&&\"userSignals\" in rest.buOrderData){const {userSignals,...d}=rest.buOrderData;rest.buOrderData=d}",
+   "pune": ""
+  },
+  {
+   "nume": "botul de semnal luat drept grid activ",
+   "fisier": "functions/api/bot-orders.js",
+   "cauta": "activ:false,   /* v100.380: activ = grid pornit",
+   "pune": "activ:true,   /* v100.380: activ = grid pornit"
+  },
+  {
+   "nume": "moneda din base („-”)",
+   "fisier": "functions/api/bot-orders.js",
+   "cauta": "const baza=typeof p.tradeBase===\"string\"",
+   "pune": "const baza=false&&typeof p.tradeBase===\"string\""
+  },
+  {
+   "nume": "botul oprit trece drept pornit",
+   "fisier": "functions/api/bot-orders.js",
+   "cauta": "ruleaza:stare===\"open\"&&!bot.canceling&&!(nr(bot.closeTime)>0),",
+   "pune": "ruleaza:true,"
+  },
+  {
+   "nume": "rezultatul din suma de acum, fără profitul Pionex",
+   "fisier": "functions/api/bot-orders.js",
+   "cauta": "const profitTotal=nr(x.profit)??",
+   "pune": "const profitTotal=null??"
+  },
+  {
+   "nume": "short luat drept long",
+   "fisier": "functions/api/bot-orders.js",
+   "cauta": "const directie=pozitieNeclara?null:long?\"long\":short?\"short\":null;",
+   "pune": "const directie=pozitieNeclara?null:long||short?\"long\":null;"
+  },
+  {
+   "nume": "lichidarea inventată (0)",
+   "fisier": "functions/api/bot-orders.js",
+   "cauta": "pretLichidare:null,lichidarePartea:null,distantaLichidarePct:null,lichidareDepasita:false,motivFaraDistanta:\"semnal\",",
+   "pune": "pretLichidare:0,lichidarePartea:null,distantaLichidarePct:0,lichidareDepasita:false,motivFaraDistanta:\"semnal\","
+  },
+  {
+   "nume": "sumarul de grid strică iar totalurile",
+   "fisier": "functions/api/bot-orders.js",
+   "cauta": "const grid=bots.filter(b=>b.tip!==\"semnal\");",
+   "pune": "const grid=bots;"
+  },
+  {
+   "nume": "starea fără poziție spusă LONG",
+   "fisier": "public/lib/bot-semnal.js",
+   "cauta": "return { cod: \"fara\", titlu: \"fără poziție\"",
+   "pune": "return { cod: \"long\", titlu: \"LONG\""
+  },
+  {
+   "nume": "zero cu plus („+0,0”)",
+   "fisier": "public/lib/bot-semnal.js",
+   "cauta": "return (r > 0 ? \"+\" : \"\") + num(r === 0 ? 0 : r, 1); }",
+   "pune": "return (r >= 0 ? \"+\" : \"\") + num(r === 0 ? 0 : r, 1); }"
+  },
+  {
+   "nume": "prima citire dă alertă",
+   "fisier": "public/lib/bot-semnal.js",
+   "cauta": "if (!ref) return { ev: null, ref: nou, ant: null };",
+   "pune": "if (!ref) ref = { d: null, q: null, n: 0 };"
+  },
+  {
+   "nume": "ieșirea nerecunoscută",
+   "fisier": "public/lib/bot-semnal.js",
+   "cauta": "else if (ref.d && !d && !b.inPozitie) ev = \"iesit\";",
+   "pune": ""
+  },
+  {
+   "nume": "întoarcerea nerecunoscută",
+   "fisier": "public/lib/bot-semnal.js",
+   "cauta": "else if (ref.d && d && ref.d !== d) ev = \"intors\";",
+   "pune": ""
+  },
+  {
+   "nume": "aceeași cheie la fiecare eveniment (Discord le-ar înghiți ca repetări)",
+   "fisier": "public/lib/bot-semnal.js",
+   "cauta": "cheie = \"semnal-\" + r.ev + \"-\" + String(b.id) + \"-\" + String(r.ref.t);",
+   "pune": "cheie = \"semnal-\" + r.ev + \"-\" + String(b.id);"
+  },
+  {
+   "nume": "mărirea pleacă pe Discord",
+   "fisier": "public/lib/bot-semnal.js",
+   "cauta": "return { nivel: \"info\", cheie: cheie, doarRadar: true, titlu:",
+   "pune": "return { nivel: \"info\", cheie: cheie, titlu:"
+  },
+  {
+   "nume": "rezultatul pe poziție față de pornire, nu față de intrare",
+   "fisier": "public/lib/bot-semnal.js",
+   "cauta": "else if (ev === \"intrat\" || ev === \"intors\") { nou.pr0 = ref.pr; nou.p0 = nou.p; }",
+   "pune": ""
+  },
+  {
+   "nume": "poza de pe disc ia orice câmp (și unul nou, necunoscut)",
+   "fisier": "public/lib/bot-semnal.js",
+   "cauta": "POZA_BOT.forEach(function (k) { if (k in x && ok(x[k])) o.bot[k] = x[k]; });",
+   "pune": "Object.keys(x).forEach(function (k) { if (k !== \"portfolio\" && k !== \"userSignals\") o.bot[k] = x[k]; });"
+  },
+  {
+   "nume": "Tabloul nu mai trece în felul „semnal”",
+   "fisier": "public/app.js",
+   "cauta": "if(pnl&&pnl.classList)pnl.classList.toggle(\"tbSemnal\",semnalTb);",
+   "pune": ""
+  },
+  {
+   "nume": "botul de semnal iar „oprit”",
+   "fisier": "public/app.js",
+   "cauta": "var eticheta=semnalTb?(b.ruleaza?\"pornit\":\"oprit\")",
+   "pune": "var eticheta=semnalTb?(\"oprit\")"
+  },
+  {
+   "nume": "Piața azi iar „niciun bot pornit”",
+   "fisier": "public/lib/acasa-ecran.js",
+   "cauta": "return b && b.tip === \"semnal\" && b.ruleaza; }) : [];",
+   "pune": "return false; }) : [];"
+  },
+  {
+   "nume": "noaptea intrările pleacă pe Discord",
+   "fisier": "scripts/lib/politica-alerte.mjs",
+   "cauta": ", [/^semnal-/, \"semnal\"]",
+   "pune": ""
+  },
+  {
+   "nume": "colectorul nu mai urmărește boții de semnal",
+   "fisier": "scripts/colector.mjs",
+   "cauta": "try { await turaSemnale(boti, acum); } catch (e) { jurnal(\"semnale\", e.message); }",
+   "pune": ""
+  },
+  {
+   "nume": "ascunderea Consilierului scoasă",
+   "fisier": "public/app.css",
+   "cauta": "html #tabloubot#tabloubot#tabloubot#tabloubot.tbSemnal #tbSemaforCard,",
+   "pune": ""
+  },
+  {
+   "nume": "revizia 🔴: direcția iar din banii poziției, peste cantitate",
+   "fisier": "functions/api/bot-orders.js",
+   "cauta": "const long=areCant?(qL||0)>0:(aL||0)>0,short=areCant?(qS||0)>0:(aS||0)>0;",
+   "pune": "const long=(qL||0)>0||(aL||0)>0,short=(qS||0)>0||(aS||0)>0;"
+  },
+  {
+   "nume": "revizia: poziția neclară nerecunoscută",
+   "fisier": "functions/api/bot-orders.js",
+   "cauta": "const pozitieNeclara=(long&&short)||(areCant&&!long&&!short&&((aL||0)>0||(aS||0)>0));",
+   "pune": "const pozitieNeclara=false;"
+  },
+  {
+   "nume": "revizia: rezerva (suma de acum − suma pusă) și cu poziția deschisă",
+   "fisier": "functions/api/bot-orders.js",
+   "cauta": "const profitTotal=nr(x.profit)??(!inPozitie&&toate(sumaAcum,investit)?sumaAcum-investit:null);",
+   "pune": "const profitTotal=nr(x.profit)??(toate(sumaAcum,investit)?sumaAcum-investit:null);"
+  },
+  {
+   "nume": "revizia: runda dintre citiri trece neanunțată",
+   "fisier": "public/lib/bot-semnal.js",
+   "cauta": "else if (!ref.d && !d && nr(ref.r) !== null && nou.r !== null && nou.r > ref.r) ev = \"runda\";",
+   "pune": ""
+  },
+  {
+   "nume": "revizia: cardul nu spune că rezultatul cu poziția e neverificat",
+   "fisier": "public/lib/bot-semnal.js",
+   "cauta": "b.rezultatNeverificat ? \"după Pionex; cu poziția deschisă: neverificat dacă o cuprinde\" : \"după Pionex\"",
+   "pune": "\"după Pionex\""
+  },
+  {
+   "nume": "revizia: botul oprit, încă în listă, căutat printre cei închiși la fiecare minut",
+   "fisier": "scripts/colector.mjs",
+   "cauta": "if (!b.ruleaza) continue;   /* revizia: botul încă în listă",
+   "pune": "if (!b.ruleaza) { delete vii[b.id]; continue; }   /* revizia: botul încă în listă"
+  },
+  {
+   "nume": "revizia: starea urmărită nu se mai scrie pe disc",
+   "fisier": "scripts/colector.mjs",
+   "cauta": "  if (schimbat) { try { scrieStare(); } catch (e) { jurnal(\"semnal: starea pe disc\", e.message); } }",
+   "pune": ""
+  },
+  {
+   "nume": "revizia: avertismentele pe calculator iar în cifrele de grid ascunse",
+   "fisier": "public/app.js",
+   "cauta": "if(lat&&sus&&!faraBot&&!semnalAv)",
+   "pune": "if(lat&&sus&&!faraBot)"
+  }
+ ]
+}

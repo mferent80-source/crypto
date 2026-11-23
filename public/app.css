@@ -6830,6 +6830,27 @@ html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru #tbMiscare{grid-column:1 / -1
 #dash .acZiN{border-top:0;padding-top:0;margin-top:0}
 #dash .acZiN>span{color:var(--muted)}
 #dash .acZiN b i{font-style:normal}
+/* v100.380 (el, 23.11.2026: „vede radarul botul meu spot?” ⇒ „da”): Tabloul pe botul de SEMNAL (Pionex „smart_copy”). Cardul lui stă în locul
+   verdictului (rândul 2 pe lat, ordinea 10 pe îngust). Ce ține de grid se ascunde DOAR la el (#tabloubot.tbSemnal): verdictul de grid, „Contează acum”,
+   cele 4 cifre și detaliile lor, Drumul, gridul larg / nou / „dacă prețul ajunge la”, Consilierul (cartela, „concret”), Monte Carlo, „pe zi, la
+   închidere”, capitolele Decizia și Riscul cu pliurile lor (și butoanele lor din cuprins), fișa și săptămâna grilelor, măsurile de grid, „Simulează”
+   și „Schimbă modul”. Rămân: graficul, Mișcarea, trendul, „Ce spune piața acum”, contul întreg, piața, banii, jurnalul. Pe botul de grid: nimic schimbat.
+   Selectorul are 4 id-uri: bate așezarea pe coloane (3 id-uri, display:contents!important). */
+html #tabloubot#tabloubot#tabloubot#tabloubot.tbSemnal #pzVerdict,html #tabloubot#tabloubot#tabloubot#tabloubot.tbSemnal #ctAcum,html #tabloubot#tabloubot#tabloubot#tabloubot.tbSemnal .tbSus,html #tabloubot#tabloubot#tabloubot#tabloubot.tbSemnal #tbKpiDetalii,html #tabloubot#tabloubot#tabloubot#tabloubot.tbSemnal #pzDrumCard,html #tabloubot#tabloubot#tabloubot#tabloubot.tbSemnal #tbGridLarg,html #tabloubot#tabloubot#tabloubot#tabloubot.tbSemnal #tbSemaforCard,html #tabloubot#tabloubot#tabloubot#tabloubot.tbSemnal #tbMotive,html #tabloubot#tabloubot#tabloubot#tabloubot.tbSemnal #tbConcret,html #tabloubot#tabloubot#tabloubot#tabloubot.tbSemnal #tbMcSus,html #tabloubot#tabloubot#tabloubot#tabloubot.tbSemnal #tbAcumCard,html #tabloubot#tabloubot#tabloubot#tabloubot.tbSemnal #tbCap-decizia,html #tabloubot#tabloubot#tabloubot#tabloubot.tbSemnal #tbCap-risc,html #tabloubot#tabloubot#tabloubot#tabloubot.tbSemnal #tbPl-plan,html #tabloubot#tabloubot#tabloubot#tabloubot.tbSemnal #tbPl-sfaturi,html #tabloubot#tabloubot#tabloubot#tabloubot.tbSemnal #tbPl-prob,html #tabloubot#tabloubot#tabloubot#tabloubot.tbSemnal #tbPl-risc,html #tabloubot#tabloubot#tabloubot#tabloubot.tbSemnal #tbPl-fisa,html #tabloubot#tabloubot#tabloubot#tabloubot.tbSemnal #tbPl-sapt,html #tabloubot#tabloubot#tabloubot#tabloubot.tbSemnal .tbGrilaNoua,html #tabloubot#tabloubot#tabloubot#tabloubot.tbSemnal #tbGridNou,html #tabloubot#tabloubot#tabloubot#tabloubot.tbSemnal #tbDetalii,html #tabloubot#tabloubot#tabloubot#tabloubot.tbSemnal #tbSimBtn,html #tabloubot#tabloubot#tabloubot#tabloubot.tbSemnal #tbSchimbaModulBtn,html #tabloubot#tabloubot#tabloubot#tabloubot.tbSemnal #tbTodo,html #tabloubot#tabloubot#tabloubot#tabloubot.tbSemnal #tbCuprins [data-action-click="tbSariLa('decizia')"],html #tabloubot#tabloubot#tabloubot#tabloubot.tbSemnal #tbCuprins [data-action-click="tbSariLa('risc')"]{display:none!important}
+html #tabloubot#tabloubot#tabloubot#tabloubot.tbSemnal #tbSemnalCard{display:block!important;grid-column:1 / -1!important;grid-row:2!important;order:10!important;margin:0 0 12px;min-width:0}
+html #tabloubot#tabloubot#tabloubot#tabloubot #tbSemnalCard[hidden]{display:none!important}
+#tabloubot .tbSemnalCard .tbBlocCap{justify-content:flex-start;flex-wrap:wrap;gap:4px 12px}
+#tabloubot .tbSemnalCard .bsmCifre{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;margin:6px 0 10px}
+#tabloubot .tbSemnalCard .bsmCel{display:flex;flex-direction:column;gap:2px;min-width:0;padding:0 16px;border-left:1px solid var(--tb-linie)}
+#tabloubot .tbSemnalCard .bsmCel:first-child{padding-left:0;border-left:0}
+#tabloubot .tbSemnalCard .bsmCel .tbKpiVal{font-size:20px;font-weight:600;line-height:1.25;font-variant-numeric:tabular-nums}
+#tabloubot .tbSemnalCard .bsmCel .tbSub{font-size:12px;line-height:1.35;margin:0;visibility:visible;overflow-wrap:anywhere}
+#tabloubot .tbSemnalCard .bsmNota{margin:2px 0 0;font-size:12px;visibility:visible}
+@media (max-width:640px){
+  #tabloubot .tbSemnalCard .bsmCifre{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 0}
+  #tabloubot .tbSemnalCard .bsmCel:nth-child(3){padding-left:0;border-left:0}
+}
+#dash .acSemnal>span{color:var(--muted)}
 @media (max-width:640px){.sugPandaTab thead{display:table-header-group}.sugPandaTab{display:table}.sugPandaTab tbody{display:table-row-group}.sugPandaTab tr{display:table-row}.sugPandaTab td,.sugPandaTab th{display:table-cell}}
 /* v100.224: pe paginile de zi rămân alertele, banda botului și versiunea. Cipurile de cercetare revin la analiza monedei și în laborator. */
 body.peAcasa:not(.acMonedaDeschisa) .topLeft,body.peTablou .topLeft,body.peT212 .topLeft,body.peJurnal .topLeft,body.peGrid .topLeft,body.pePaginaNoua .topLeft,

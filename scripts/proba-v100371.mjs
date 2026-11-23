@@ -62,7 +62,7 @@ await test("V versiunile de la v100.371 încolo (index ×4, sw, versiune.js, pac
   const H = citeste("public", "index.html"), vh = (H.match(/v100\.(\d{3})/g) || []).map((v) => +v.slice(5)); assert.equal(vh.length, 4); assert.ok(vh.every((v) => v >= 371 && v === vh[0]), "index: " + vh.join(", ")); assert.doesNotMatch(H, /v100\.370/);   /* v100.372: „de la încolo” */
   assert.ok(+(/crypto-radar-v100-(\d+)/.exec(citeste("public", "sw.js")) || [])[1] >= 371); assert.ok(+(/"v100\.(\d+)"/.exec(citeste("functions", "_shared", "versiune.js")) || [])[1] >= 371);
   const p = JSON.parse(citeste("package.json")); assert.ok(+(/^100\.(\d+)\.0$/.exec(p.version) || [])[1] >= 371, p.version); assert.match(p.scripts.test, /npm run test:v100370 && npm run test:v100371/); assert.equal(p.scripts["test:v100371"], "node scripts/proba-v100371.mjs");
-  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.match(bi.badge, /^v100\.37[1-9]/); assert.ok(bi.mi371 && bi.ci370);
+  const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.ok(+(/^v100\.(\d+)/.exec(bi.badge) || [])[1] >= 371, bi.badge);   /* v100.380: „de la 371 încolo” și peste 379 (tiparul 37[1-9] se oprea la v100.379) */ assert.ok(bi.mi371 && bi.ci370);
 });
 
 console.log(`\n${teste - picate}/${teste} ${picate ? "PICĂ" : "trec"}`);

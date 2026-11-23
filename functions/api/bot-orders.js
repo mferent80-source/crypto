@@ -15,7 +15,11 @@ import {lacatRamasMs,lacatDinRaspuns,eroareLacat} from "../_shared/lacat-pionex.
 
 const H={"content-type":"application/json","cache-control":"no-store"};
 const json=(x,status=200,antete={})=>new Response(JSON.stringify(x),{status,headers:{...H,...antete}});
-const faraIdCont=b=>{if(!b||typeof b!=="object")return b;const {userId,keyId,...rest}=b;return rest};
+const faraIdCont=b=>{if(!b||typeof b!=="object")return b;const {userId,keyId,...rest}=b;
+  /* v100.380 (botul de semnal, 23.11.2026): buOrderData.userSignals ține adresa webhook-ului TradingView CU TOKENUL ei - cine o are poate trimite
+     semnale botului (ordine cu banii lui). Nu pleacă spre pagină și nici mai departe; nimeni din pagină sau din colector nu o citește. */
+  if(rest.buOrderData&&typeof rest.buOrderData==="object"&&"userSignals" in rest.buOrderData){const {userSignals,...d}=rest.buOrderData;rest.buOrderData=d}
+  return rest};
 
 // null/undefined/""/spatii/nenumeric -> null; "0" -> 0.
 const nr=v=>{
@@ -130,8 +134,70 @@ function lichidare(pret,lichJos,lichSus,directie){
   return {pretLichidare:p.pret,lichidarePartea:p.partea,distantaLichidarePct:Math.round(p.dist*100)/100,lichidareDepasita:p.dist<0};
 }
 
+// v100.380 (el, 23.11.2026: „vede radarul botul meu spot?”): botul de SEMNAL (Pionex „smart_copy”: TradingView trimite intrările și ieșirile,
+// Pionex le execută). Câmpurile lui nu sunt ale gridului: moneda stă în portofoliu (buOrderData.portfolio[0].tradeBase, „BTC.PERP”; base vine „-”),
+// starea „main_loop” = pornit, banii în quoteTotalInvestment / currentQuoteAmount / profit (profit = suma de acum − suma pusă: dovedit pe 23 de
+// boți închiși, JurnalTrade v100.27). Poziția din qtyLong / qtyShort (cantitatea) și amountLong / amountShort (banii ei) - semnificația exactă se
+// verifică la prima poziție deschisă (până atunci, la botul LUI, toate au fost 0). Gridul, grilele, lichidarea, prețul de intrare și opritoarele
+// NU există aici ⇒ lipsă, nu 0 și nu inventate.
+// „activ” rămâne al GRIDULUI: colectorul (alertele de grid, Monte Carlo, probele, frâna) și calculele paginii îl iau drept „grid pornit”;
+// botul de semnal pornit are „ruleaza: true” și „tip: "semnal"”, iar paginile și colectorul îl tratează pe drumul lui.
+function normalizeazaSemnal(bot,preturi,harta){
+  const x=bot.buOrderData||{},p=(Array.isArray(x.portfolio)&&x.portfolio[0]&&typeof x.portfolio[0]==="object")?x.portfolio[0]:{};
+  const dinBase=typeof bot.base==="string"&&/^[A-Za-z0-9]{1,24}(\.PERP)?$/.test(bot.base)?bot.base:null;
+  const baza=typeof p.tradeBase==="string"&&/^[A-Za-z0-9]{1,24}(\.PERP)?$/.test(p.tradeBase)?p.tradeBase:dinBase;
+  const quote=typeof bot.quote==="string"&&bot.quote?bot.quote:"USDT";
+  const simbolPionex=baza?simbolTicker(baza,quote,harta):null,pret=simbolPionex?(preturi[simbolPionex]??null):null;
+  const investit=nr(x.quoteTotalInvestment)??nr(x.quoteOriginalInvestment),sumaAcum=nr(x.currentQuoteAmount);
+  const qL=nr(p.qtyLong),qS=nr(p.qtyShort),aL=nr(p.amountLong),aS=nr(p.amountShort);
+  /* revizia (🔴): cantitatea CITITĂ hotărăște direcția; banii poziției doar când cantitatea lipsește (altfel o sumă rămasă după ieșire ținea botul
+     „LONG” pentru totdeauna și ieșirea nu se mai anunța). Cantitatea 0 cu bani > 0, sau long și short deodată = NECLAR: fără direcție, fără alertă. */
+  const areCant=qL!==null||qS!==null;
+  const long=areCant?(qL||0)>0:(aL||0)>0,short=areCant?(qS||0)>0:(aS||0)>0;
+  const pozitieNeclara=(long&&short)||(areCant&&!long&&!short&&((aL||0)>0||(aS||0)>0));
+  const directie=pozitieNeclara?null:long?"long":short?"short":null;
+  const inPozitie=long||short||pozitieNeclara;
+  const pozitie=pozitieNeclara?null:directie==="long"?((qL||0)>0?qL:null):directie==="short"?((qS||0)>0?-qS:null):(areCant?0:null);
+  const pozitieBani=directie==="long"?aL:directie==="short"?aS:null;
+  /* revizia (🟡): „profit” de la Pionex; rezerva (suma de acum − suma pusă) doar FĂRĂ poziție - cu poziția deschisă suma de acum poate fi doar USDT-ul
+     rămas (restul stă în poziție) și ar ieși −50. Cu poziția deschisă nu se știe încă dacă „profit” o cuprinde ⇒ rezultatNeverificat. */
+  const profitTotal=nr(x.profit)??(!inPozitie&&toate(sumaAcum,investit)?sumaAcum-investit:null);
+  const stare=String(bot.status||"").toLowerCase();
+  return {
+    id:String(bot.strategyId??bot.buOrderId??""),
+    tip:"semnal",
+    semnal:typeof x.signalName==="string"?x.signalName.replace(/[^\w.\- ]/g,"").slice(0,40):null,
+    piata:typeof x.market==="string"?x.market.replace(/[^\w]/g,"").slice(0,24):null,
+    simbol:baza?`${baza.replace(/\.PERP$/,"")}/${quote}`:`-/${quote}`,
+    baza,quote,
+    stare:bot.status,stareInterna:x.status||null,
+    ruleaza:stare==="open"&&!bot.canceling&&!(nr(bot.closeTime)>0),
+    activ:false,   /* v100.380: activ = grid pornit (vezi deasupra funcției); botul de semnal pornit are ruleaza:true */
+    pornitLa:nr(bot.createTime),
+    inchisLa:nr(bot.closeTime)||null,
+    investit,sumaAcum,profitTotal,
+    // ce n-are botul de semnal: lipsă, ca paginile să nu deseneze nimic inventat
+    margine:null,profitNet:null,profitRealizatBrut:null,gridProfitBrut:null,comisioane:null,finantare:nr(p.fundingFee)??nr(x.fundingFee),
+    pnlNerealizat:null,pnlNerealizatSigur:null,echitate:null,volum:null,ordinePlasate:null,ordinePerechi:null,
+    levier:nr(p.leverage),
+    directie,pozitie,pozitieBani,inPozitie,pozitieNeclara,rezultatNeverificat:inPozitie,
+    pretDeschidere:null,pretPornire:nr(p.initPrice),
+    runde:nr(p.roundCount),rundePePlus:nr(p.profitRoundCount),runda:nr(p.currentRound),
+    pretCurent:pret,simbolPionex,
+    gridJos:null,gridSus:null,lichidareJos:null,lichidareSus:null,
+    pretLichidare:null,lichidarePartea:null,distantaLichidarePct:null,lichidareDepasita:false,motivFaraDistanta:"semnal",
+    stareRisc:null,stareMargine:null,
+    opritorProfit:null,opritorProfitActiv:false,opritorProfitTip:null,opritorProfitRaport:null,
+    opritorPierdere:null,opritorPierdereActiv:false,opritorPierdereTip:null,opritorPierdereRaport:null,
+    motivInchidere:typeof x.reasonBy==="string"?x.reasonBy.replace(/[^a-z_]/gi,"").slice(0,30):null,
+    avertismente:[],
+    brut:faraIdCont(bot),
+  };
+}
+
 /* v100.339: exportată ca probele să treacă botul de probă prin normalizarea adevărată (scripts/lib/bot-de-proba.mjs) */
 export function normalizeaza(bot,preturi,harta){
+  if(bot&&bot.buOrderType==="smart_copy")return normalizeazaSemnal(bot,preturi||{},harta);   /* v100.380: botul de semnal, pe drumul lui */
   const x=bot.buOrderData||{};
   const jos=nr(x.bottom),sus=nr(x.top);
   const simbolPionex=simbolTicker(bot.base,bot.quote,harta);
@@ -278,17 +344,21 @@ export async function onRequestGet({request,env}){
   const bots=brute.map(b=>normalizeaza(b,preturi,harta));
   // Un total cu un termen lipsa e LIPSA, nu o suma mai mica: se spune ce lipseste.
   const incomplete=[];
+  /* v100.380: sumarul e al boților de GRID (panoul „Boți de grid” din Contul Pionex) - botul de semnal n-are grile, comisioane sau funding de grid
+     și făcea toate totalurile „incomplete”; el se numără separat (semnale) */
+  const grid=bots.filter(b=>b.tip!=="semnal");
   const suma=(camp,numeTotal)=>{
-    if(bots.some(b=>b[camp]===null)){incomplete.push(numeTotal);return null}
-    return bots.reduce((t,b)=>t+b[camp],0);
+    if(grid.some(b=>b[camp]===null)){incomplete.push(numeTotal);return null}
+    return grid.reduce((t,b)=>t+b[camp],0);
   };
   const raspuns={
     citit:Date.now(),
     bots,
     nextPageToken:next,
     sumar:{
-      numar:bots.length,
+      numar:bots.length,   /* toți boții din listă (și cei de semnal); totalurile de mai jos sunt doar ale gridului */
       active:bots.filter(b=>b.activ).length,
+      semnale:bots.filter(b=>b.tip==="semnal"&&b.ruleaza).length,   /* v100.380: boții de semnal porniți (nu intră în „active”, care e al gridului) */
       investitTotal:suma("investit","investitTotal"),
       profitNetTotal:suma("profitNet","profitNetTotal"),
       gridProfitBrutTotal:suma("gridProfitBrut","gridProfitBrutTotal"),

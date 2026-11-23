@@ -225,7 +225,7 @@ await test("F5 raportul de risc al colectorului duce plata (aceiași boți ca re
   aproape(rp.boti.plata.tot.pePlus, 48 / 60); aproape(rp.boti.plata.tot.castig, 0.04, "NETUL: realizatul plus comisionul"); aproape(rp.boti.plata.tot.pierdere, 0.15);
   assert.deepEqual(rp.boti.plata.varste.map((x) => x.h), [0.25, 1, 4, 12, 24, 48, 72, 168]); assert.deepEqual(rp.boti.plata.varste.map((x) => x.n), [45, 45, 30, 15, 15, 0, 0, 0]);
   assert.ok(JSON.stringify(rp).length < 100000, "raportul rămâne mic (KV)");
-  assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.210";   \/\* v101\.210 \(22\.11, Radar v100\.377\): raportul de risc duce și plata boților pe vârsta atinsă/);
+  /* v100.380: „de la v101.210 încolo” (colectorul merge mai departe); nota lui v101.210 rămâne în fișier */ assert.ok(+(/const VERSIUNE_COLECTOR = "v101\.(\d+)";/.exec(citeste("scripts", "colector.mjs")) || [])[1] >= 210, "colectorul de la v101.210 încolo"); assert.match(citeste("scripts", "colector.mjs"), /v101\.210 \(22\.11, Radar v100\.377\): raportul de risc duce și plata boților pe vârsta atinsă/);
 });
 
 await test("F6 pe pagină: tabelul plății în „Riscul tău” (boți, nu acțiuni), cu rândurile de sub 20 de boți estompate și cu nota „descriere, nu regulă probată”; lângă botul pornit, în Tablou", () => {

@@ -7727,7 +7727,7 @@ function tbMiAduBtc(simBtc){
     if(tbPanouVizibil()&&tbStare.bot)tbMiscareDeseneaza(tbStare.bot,true);
   })();
 }
-function tbMiVarsta(ms){var h=ms/3600000;return h<48?TextRo.oreN(Math.max(1,Math.round(h))):TextRo.num(h/24,1)+" zile"}
+function tbMiVarsta(ms){var h=ms/3600000;return h<1?Math.max(1,Math.round(ms/60000))+" min":h<48?TextRo.oreN(Math.max(1,Math.round(h))):TextRo.num(h/24,1)+" zile"}   /* v100.380: sub o oră în minute (46 de minute ieșea „1 oră: prima cifră după o oră”) */
 function tbMiscareSchelet(){
   var F=Miscare.FERESTRE,CAT={"24h":"24 de ore","3z":"3 zile","7z":"7 zile","30z":"30 de zile"};
   var cap='<div class="miRand miCap"><span class="miEt"></span>'+F.map(function(f){return '<button type="button" class="miFer" data-mi-tf="'+f.tf+'" data-action-click="tbAlegeInterval(\''+f.tf+'\')" title="arată graficul pe '+CAT[f.k]+'">'+f.et+'</button>'}).join("")+'</div>';
@@ -8148,7 +8148,7 @@ function renderTabloDirectia(){
   if(typeof renderTabloTv==="function")renderTabloTv();   // v100.320: nota TradingView, în același card (garda: probele rulează bucata singură)
   /* v100.267 (auditul 29.10): rezumatul doar din direcția monedei botului de acum (garda din renderTabloTrend) */
   var b=tbStare.routeOk===false?null:tbStare.bot,d=b&&tbStare.directie&&tbStare.directie.simbol===tbCheieDir(b)?tbStare.directie:null;
-  if($("tbDirectieBot"))$("tbDirectieBot").textContent=b?("botul e "+(b.directie||"?")+(b.levier!=null?" "+b.levier+"×":"")):"—";
+  if($("tbDirectieBot"))$("tbDirectieBot").textContent=b?(b.tip==="semnal"&&typeof BotSemnal!=="undefined"?BotSemnal.textBanda(b):"botul e "+(b.directie||"?")+(b.levier!=null?" "+b.levier+"×":"")):"—";   /* v100.380: botul de semnal fără poziție nu e „?” */
   if(!b){rz.className="tbRezumat mutedInfo";rz.textContent="Fără bot, n-am față de ce să judec direcția.";tbDeseneazaKpi();return}
   if(!d||!d.rez){rz.className="tbRezumat mutedInfo";rz.textContent="Aștept lumânările…";tbDeseneazaKpi();return}
   var z=Directie.rezumat(d.rez,b.directie);
@@ -9336,7 +9336,8 @@ function tbPiataPeBot(){
 function tbAvertGazda(avNou){var av=avNou||$("tbAvertVizibil"),anc=$("tbGridLarg"),kpi=$("tbKpi");if(!av||!anc||!anc.parentNode)return;
   var lat=typeof matchMedia==="function"&&matchMedia("(min-width:1181px)").matches,faraBot=tbStare.routeOk===true&&!tbStare.bot&&!tbStare.citireGoala;   /* aceeași condiție ca starea „fără bot” a paginii (renderTabloBot: fbA) */
   var sus=kpi&&kpi.parentNode&&kpi.parentNode!==anc.parentNode?kpi.parentNode:null;
-  if(lat&&sus&&!faraBot){if(av.parentNode!==sus)sus.insertBefore(av,kpi)}   /* se mută doar când își schimbă gazda (nu la fiecare desen) */
+  var semnalAv=tbStare.bot&&tbStare.bot.tip==="semnal";   /* v100.380 (revizia): la botul de semnal cifrele de grid sunt ascunse ⇒ rândul rămâne lângă gridul larg, ca fără bot */
+  if(lat&&sus&&!faraBot&&!semnalAv){if(av.parentNode!==sus)sus.insertBefore(av,kpi)}   /* se mută doar când își schimbă gazda (nu la fiecare desen) */
   else if(av.parentNode!==anc.parentNode)anc.parentNode.insertBefore(av,anc)}
 function tbAvertVizibil(lista,parola){
   /* v100.340: cardul ascuns a fost scos din pagină. La eroarea de parolă rândul poartă și butonul spre Setări, care stătea în cardul ascuns
@@ -9369,6 +9370,10 @@ function renderTabloBot(){
   // activ…” și al indicatoarelor goale; decorul gol se ascunde din CSS (#tabloubot.tbFaraBot), faptele rămân (ultimii închiși, „Pe ce aș porni”, contul)
   var fbA=faraBot&&!tbStare.citireGoala,pnl=$("tabloubot"),cfb=$("tbFaraBotCard");if(pnl&&pnl.classList)pnl.classList.toggle("tbFaraBot",fbA);
   if(cfb){cfb.hidden=!fbA;if(fbA){var hfb=tbFaraBotHtml();if(cfb._h!==hfb){cfb._h=hfb;cfb.innerHTML=hfb}}}
+  /* v100.380 (el, 23.11.2026: „vede radarul botul meu spot?” ⇒ botul de SEMNAL, Pionex „smart_copy”): în locul verdictului și al cifrelor de grid,
+     cardul lui (poziția, rezultatul, intrările, de când merge); ce ține de grid se ascunde din CSS (#tabloubot.tbSemnal), restul rămâne */
+  var semnalTb=!!(b&&b.tip==="semnal"&&typeof BotSemnal!=="undefined");if(pnl&&pnl.classList)pnl.classList.toggle("tbSemnal",semnalTb);
+  var csm=$("tbSemnalCard");if(csm){if(csm.hidden!==!semnalTb)csm.hidden=!semnalTb;if(semnalTb){var hsm=BotSemnal.cardHtml(b,escapeHtml,{acum:Date.now()});if(csm._h!==hsm){csm._h=hsm;csm.innerHTML=hsm}}}
   var m=TabloBot.masoara({bot:brut,klinePerp:klinePentruMasura,
     pretSpot:pretSpotPentruMasura,istoric:ist,acum:Date.now(),
     pretPerpViu:(!eroareActiva&&b)?b.pretCurent:null});
@@ -9403,7 +9408,7 @@ function renderTabloBot(){
       // "activ" DOAR cand chiar e activ - altfel botul ales (singurul disponibil,
       // caci n-a fost niciunul pornit) e OPRIT, si omul trebuie sa afle asta,
       // nu sa citeasca o eticheta care minte exact ca cea reparata la I4/I5.
-      var eticheta=b.activ?(total>1?"activ, din "+TextRo.cate(total,"bot","boți"):""):("oprit"+(total>1?", din "+TextRo.cate(total,"bot","boți"):""));
+      var eticheta=semnalTb?(b.ruleaza?"pornit":"oprit")+(total>1?", din "+TextRo.cate(total,"bot","boți"):""):b.activ?(total>1?"activ, din "+TextRo.cate(total,"bot","boți"):""):("oprit"+(total>1?", din "+TextRo.cate(total,"bot","boți"):""));   /* v100.380: botul de semnal rulează fără să fie „activ” (activ = grid) */
       $("tbSimbol").textContent=b.simbol+(eticheta?" · "+eticheta:"");
       // Daca botul ales de om a disparut, ecranul NU are voie sa arate tacut
       // altul: omul ar crede ca se uita la al lui.
@@ -9415,8 +9420,8 @@ function renderTabloBot(){
     if(eroareActiva||!b)$("tbMod").textContent="—";
     else{
       var directieNecunoscuta=mod.mod==="DIRECTIONAL"&&m.directieBot===0;
-      $("tbMod").textContent=mod.mod+(mod.presupus?" (presupus)":"")+
-        (directieNecunoscuta?" · direcție necunoscută":"");
+      $("tbMod").textContent=semnalTb?"SEMNAL · TradingView":mod.mod+(mod.presupus?" (presupus)":"")+
+        (directieNecunoscuta?" · direcție necunoscută":"");   /* v100.380: nu „GRID (presupus)” */
     }
   }
   if($("tbSchimbaModulBtn"))

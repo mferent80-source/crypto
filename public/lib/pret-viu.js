@@ -85,7 +85,9 @@ var PretViu = (function () {
   // Banda de sus: bucatile in ordine; pretul e a doua, imediat dupa nume.
   function banda(o) {
     var b = o.bot; if (!b) return null;
-    var parti = [{ k: "nume", t: String(b.baza || "").replace(/\.PERP$/, "") + " " + (b.directie || "") + (b.levier != null ? " " + b.levier + "×" : "") }];
+    // v100.380: botul de SEMNAL își spune numele și poziția („BTC semnal 1× · fără poziție”); fără lichidare și fără grid (n-are)
+    var BS = b.tip === "semnal" && typeof BotSemnal !== "undefined" ? BotSemnal : null;
+    var parti = [{ k: "nume", t: BS ? BotSemnal.textBanda(b) : String(b.baza || "").replace(/\.PERP$/, "") + " " + (b.directie || "") + (b.levier != null ? " " + b.levier + "×" : "") }];
     var pa = pretDeAratat(b, o.pretViu, o.botLa, o.acum);
     if (pa) parti.push({ k: "pret", t: pa.text + (pa.viu && pa.dir === "sus" ? " ▲" : pa.viu && pa.dir === "jos" ? " ▼" : ""), viu: pa.viu, dir: pa.viu ? pa.dir : null, title: "Prețul botului " + pa.sursa });
     var zt = pa ? textZi(procentZi(pa.pret, o.zi)) : null;
@@ -98,6 +100,7 @@ var PretViu = (function () {
     var tr2 = tot === null ? null : Math.round(tot * 10) / 10;   // v100.196: rezultatul cu O zecimală
     var nN = notaNeutru(b);   /* v100.272 (ideile auditului 29.10): botul neutru - semnul poziției din total e nesigur, spus lângă cifră */
     parti.push({ k: "total", t: (tr2 === null ? "total —" : "total " + (tr2 > 0 ? "+" : tr2 < 0 ? "−" : "") + Math.abs(tr2).toFixed(1).replace(".", ",") + " USDT") + (nN ? " (semn nesigur)" : ""), title: nN ? "Totalul cuprinde poziția deschisă: " + nN : undefined });
+    if (BS) return { parti: parti, clasa: tot === null ? "tbWarn" : tr2 < 0 ? "tbWarn" : "good", pret: pa };   /* v100.380: botul de semnal - fără lichidare, grid și „piața față de bot” */
     // v100.272 (ideile auditului 29.10): distanța la lichidare din prețul ARĂTAT (viu sau din citire), nu din citirea botului lângă prețul viu
     var bl = pa && pa.viu ? botLaPret(b, pa.pret) : b, dist = nr(bl.distantaLichidarePct);
     parti.push({ k: "lich", t: textLich(bl) });

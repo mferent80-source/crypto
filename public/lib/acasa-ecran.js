@@ -978,7 +978,9 @@ function acasaDeseneaza() {
   // 4. ce inseamna pentru tine
   var boti = typeof tbStare !== "undefined" && tbStare.boti && tbStare.boti.length ? tbStare.boti : (typeof contTot !== "undefined" ? contTot.boti : null);
   var act = (boti || []).filter(function (b) { return b && b.activ; });
-  var hb = '<div class="acCap"><h4>Boții tăi</h4><span class="acSub">' + (boti ? acCate(act.length, "activ", "activi") + " · Pionex" : "aduc boții…") + '</span></div>';
+  /* v100.380: boții de SEMNAL porniți (Pionex „smart_copy”) - nu sunt „activi” (activ = grid), dar rulează: rândul lor, nu „niciun bot pornit” */
+  var sem = typeof BotSemnal !== "undefined" ? (boti || []).filter(function (b) { return b && b.tip === "semnal" && b.ruleaza; }) : [];
+  var hb = '<div class="acCap"><h4>Boții tăi</h4><span class="acSub">' + (boti ? acCate(act.length, "activ", "activi") + (sem.length ? " · " + acCate(sem.length, "bot de semnal", "boți de semnal") : "") + " · Pionex" : "aduc boții…") + '</span></div>';
   /* v100.313: „CONTEAZĂ ACUM” și pe Acasă - doar stopul (≥ 30 din 100 într-o zi) sau un rând roșu, pentru botul din Tablou (Conteaza.acasa) */
   var ctB = typeof tbStare !== "undefined" && tbStare.routeOk !== false && tbStare.bot && act.some(function (b) { return b.id === tbStare.bot.id; }) ? tbStare.bot : null;
   var ctA = ctB && typeof tbConteazaLista === "function" && typeof Conteaza !== "undefined" ? Conteaza.acasa(tbConteazaLista(ctB), String(ctB.baza || "").replace(/\.PERP$/, "")) : null;
@@ -992,8 +994,10 @@ function acasaDeseneaza() {
       + '<div class="acLin"><span>Mediul lui</span><b class="' + (m2 === null ? "acMut" : m2 ? "bad" : "good") + '">' + (m2 === null ? "fără date" : (m2 ? "mișcare" : "liniște") + (rg ? " · " + (rg.r24h != null ? rg.r24h.toFixed(1).replace(".", ",") + "× pe 24 h" : (rg.r4h || 0).toFixed(1).replace(".", ",") + "× pe 4 h") : "")) + '</b></div>'   /* v100.272: cifra pe 24 h, ca „Mișcarea” BTC */
       + acPandaLin(b);
   });
+  sem.slice(0, 3).forEach(function (b) { var r = BotSemnal.randAcasa(b); if (r) hb += '<div class="acLin acSemnal"><span>' + escapeHtml(r.et) + '</span><b class="' + r.cls + '">' + escapeHtml(r.val) + '</b></div>'; });
   if (typeof tbStare !== "undefined" && tbStare.citireGoala) hb += '<p class="acMut">Citirea a venit goală: țin boții de dinainte.</p>';
-  else if (boti && !act.length) hb += '<p class="acMut">Niciun bot pornit acum.</p>' + acUltimInchis(typeof contTot !== "undefined" && contTot.inchiseOk ? Acasa.botiStatistici(contTot.inchise, Date.now()).ultim : null);   /* v100.277 */
+  else if (boti && !act.length && !sem.length) hb += '<p class="acMut">Niciun bot pornit acum.</p>' + acUltimInchis(typeof contTot !== "undefined" && contTot.inchiseOk ? Acasa.botiStatistici(contTot.inchise, Date.now()).ultim : null);   /* v100.277 */
+  else if (boti && !act.length) hb += acUltimInchis(typeof contTot !== "undefined" && contTot.inchiseOk ? Acasa.botiStatistici(contTot.inchise, Date.now()).ultim : null);   /* v100.380: doar botul de semnal pornit ⇒ „ultimul închis” (de grid) rămâne, fără „niciun bot pornit” */
   // v95: ziua ta - fata de poza de ieri dimineata (colectorul, dupa ora 9)
   var ct = typeof t212 !== "undefined" && t212.cont && t212.cont.cash;
   var botiPeId = {}; act.forEach(function (b) { var v2 = Number(b.profitTotal); if (b.id && isFinite(v2)) botiPeId[String(b.id)] = v2; });
