@@ -662,6 +662,84 @@ function t212BaraVie(bare, pret, perMs, acum, deschisa, tk) {
   v.push({ t: zi ? acum : u.t + Math.floor((acum - u.t) / perMs) * perMs, o: u.c, h: Math.max(u.c, pret), l: Math.min(u.c, pret), c: pret, v: 0, viu: true });
   return v;
 }
+// v100.378 (I-924, I-925; el, 23.11.2026: „la Trade 212 să fie vizibilă mișcarea live, cât a crescut astăzi sau scăzut, 3 zile, 5-7” ⇒ „și 3 zile
+// la acțiuni”): mișcarea poziției - azi (față de închiderea de dinaintea ședinței; cu bursa închisă, ultima ședință, pe închiderea ei), 3 / 5 / 30
+// de ședințe - din barele zilnice deja aduse și prețul din coloana „Acum”; în lei din valoarea de acum a poziției, la cursul de acum. La acțiunile
+// americane și față de Nasdaq-100 (QQQ), în puncte. Calculul e în lib/miscare.js. Fapte, nu semnal.
+t212.qqqViu = t212.qqqViu || { la: 0, inLucru: false, pret: null, t: null };
+var T212_QQQ_MS = 10 * 60000;
+// prețul de acum al QQQ: barele paginii n-au ziua în formare (GridCalcul.bareBursa o scoate cât bursa e deschisă) ⇒ ultima bară brută, cel mult
+// o dată la 10 minute, doar când ședința judecată n-are (încă) bară. Serverul ține prețurile zilnice 30 de minute: reperul poate fi cu atât în
+// urmă, iar rândul spune ora lui.
+function t212QqqAdu(acum) {
+  var q = t212.qqqViu; if (q.inLucru || acum - q.la < T212_QQQ_MS) return;
+  q.inLucru = true; q.la = acum;
+  getJSON("/api/t212?action=preturi&interval=1d&ticker=QQQ_US_EQ").then(function (b) {
+    var v = GridCalcul.bareToate(b && b.randuri || []), u = v.length ? v[v.length - 1] : null;
+    if (u && u.c > 0) { q.pret = u.c; q.t = u.t; q.citit = Date.now(); }
+  }).catch(function () {}).then(function () { q.inLucru = false; });
+}
+// valoarea de ACUM a poziției în lei: aceeași ca la ponderi (t212ValoriLei - la SUA bucăți × preț ÷ curs; altfel costul în lei + rezultatul); neștiută ⇒ null
+function t212MiValLei(p) { var v = typeof t212DejaLei === "function" ? t212DejaLei(p.ticker) : null; return v > 0 ? v : null; }
+// ultima zi ÎNCHISĂ a bursei simbolului (cu zilele scurte și sărbătorile ei); fără calendar ⇒ null (rămâne regula de dinainte)
+function t212MiZiInchisa(tk, acum) { if (typeof CalendarBursa !== "undefined" && CalendarBursa.ultimaZiInchisa) { try { return CalendarBursa.ultimaZiInchisa(acum, tk); } catch (e) {} } return null; }
+function t212Miscare(p) {
+  if (typeof Miscare === "undefined" || !p) return null;
+  var acum = Date.now(), tk = p.ticker, bare = t212.bare[tk], des = t212SedintaPt(tk, acum) === true;
+  if (!Array.isArray(bare) || !bare.length) return { astept: true };
+  var ziL = function (t) { if (typeof CalendarBursa !== "undefined" && CalendarBursa.ziLocala) { try { return CalendarBursa.ziLocala(t, tk); } catch (e) {} } return t212ZiNY(t); };
+  /* revizia (🔴): cu ultima zi închisă a bursei, ședința care încă n-are bară nu mai e luată drept cea de dinainte (CalendarBursa.ultimaZiInchisa( )) */
+  var s = Miscare.sedinte(bare, ziL(acum), ziL, des, t212MiZiInchisa(tk, acum));
+  /* ședința închisă se socotește pe ÎNCHIDEREA ei (s.inchidere), nu pe prețul de după program; în curs sau încă fără bară: prețul din „Acum” */
+  var m = Miscare.actiune(s.ant, s.inchidere !== null ? s.inchidere : p.pret), val = t212MiValLei(p);
+  /* cumpărată chiar în ședința judecată (initialFillDate): în lei contează doar ce a făcut DE LA cumpărare = rezultatul ei, nu toată ziua acțiunii */
+  var brut = (t212.poz || []).filter(function (x) { return x && x.ticker === tk; })[0], tc = brut ? Date.parse(brut.initialFillDate || "") : NaN;
+  var cumparataAzi = isFinite(tc) && !!s.zi && ziL(tc) === s.zi;
+  var o = { m: m, eAzi: s.eAzi, zi: s.zi, cumparataAzi: cumparataAzi, val: val, lei: m.azi === null ? null : cumparataAzi ? (isFinite(p.ppl) ? Number(p.ppl) : null) : Miscare.leiDinPct(val, m.azi), q: null, qLa: null };
+  var qb = /_US_EQ$/.test(tk) && tk !== "QQQ_US_EQ" ? t212.bare.QQQ_US_EQ : null;
+  if (Array.isArray(qb) && qb.length) {
+    var sq = Miscare.sedinte(qb, t212ZiNY(acum), t212ZiNY, des, t212MiZiInchisa("QQQ_US_EQ", acum) /* ultimaZiInchisa( ) a reperului */), qv = t212.qqqViu, pq = sq.inchidere;
+    /* ședința reperului în curs sau încă fără bară: citirea lui de acum, doar dacă e a aceleiași zile */
+    if (pq === null) { t212QqqAdu(acum); pq = qv.pret > 0 && t212ZiNY(qv.t) === sq.zi ? qv.pret : null; }
+    if (pq > 0 && sq.zi === s.zi) { o.q = Miscare.actiune(sq.ant, pq); o.qLa = sq.inchidere === null ? qv.citit : null; }
+  }
+  return o;
+}
+function t212MiscareHtml(p) {
+  var o = t212Miscare(p); if (!o) return "";
+  if (o.astept) return '<span class="t212Estompat">mișcarea: aștept prețurile zilnice</span>';
+  var m = o.m; if (m.nesigur) return '<span class="t212Estompat" title="Prețul de acum e la peste 50% de ultima închidere zilnică: unitatea (pence / lire) sau un split nu se potrivesc.">mișcarea: prețurile zilnice nu se potrivesc cu prețul de acum</span>';
+  if (m.azi === null) return "";
+  /* semnul și culoarea după cifra ROTUNJITĂ; un zero rotunjit n-are semn și nici culoare (revizia: „−0,0%” verde) */
+  var cls = function (r) { return r > 0 ? "good" : r < 0 ? "bad" : ""; };
+  var P = function (v) { var r = Miscare.rot(v, 1); return '<b class="' + cls(r) + '">' + t212Pct(r / 100) + '</b>'; };
+  var L = function (v) { var r = Miscare.rot(v, 0); return '<span class="' + cls(r) + '">' + t212Lei(r) + '</span>'; };
+  var et = o.eAzi ? "azi" : "ultima ședință (" + t212ZiScurta(o.zi) + ")";
+  var h = '<span class="t212MiAzi">' + et + ' ' + P(m.azi) + (o.lei === null ? '' : o.cumparataAzi ? ' <span class="t212Estompat" title="Poziția e cumpărată în această ședință: în lei e rezultatul ei de la cumpărare, nu toată mișcarea zilei.">· cumpărată azi:</span> ' + L(o.lei) + ' de la cumpărare' : ' ' + L(o.lei)) + '</span>';
+  [["z3", "3 zile"], ["z5", "5 zile"], ["z30", "30 de zile"]].forEach(function (x) { if (m[x[0]] !== null) h += ' <span class="t212MiFer">· ' + x[1] + ' ' + P(m[x[0]]) + '</span>'; });
+  if (o.q && o.q.azi !== null) {
+    var d = function (k) { return m[k] !== null && o.q[k] !== null ? m[k] - o.q[k] : null; }, d1 = d("azi"), d5 = d("z5");
+    /* el, 23.11.2026: „ce înseamnă 2.1p?” ⇒ în cuvinte: „2,1 peste” / „4,1 sub” / „la fel”, fără prescurtare */
+    var pc = function (v) { var r = Miscare.rot(v, 1); return r === 0 ? "la fel" : TextRo.num(Math.abs(r), 1) + (r > 0 ? " peste" : " sub"); };
+    h += '<span class="t212MiRef" title="Cu câte puncte procentuale a făcut acțiunea mai mult (peste) sau mai puțin (sub) decât Nasdaq-100 (QQQ) pe aceeași fereastră' + (o.qLa ? "; Nasdaq citit la " + new Date(o.qLa).toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" }) + ", se împrospătează la cel mult 30 de minute" : "") + '.">față de Nasdaq: ' + (o.eAzi ? "azi" : "ultima ședință") + ' ' + pc(d1) + (d5 !== null ? ' · 5 zile ' + pc(d5) : '') + '</span>';
+  }
+  return h;
+}
+// rândul de deasupra listei: suma în lei a mișcării pozițiilor DIN ACEEAȘI ȘEDINȚĂ (cele de azi, dacă există; altfel ultima ședință) și cele
+// care o fac (cel mult 3). Pozițiile de pe o bursă care n-a deschis azi se numără separat, nu se adună (revizia). Cursul nu e în cifră.
+function t212ContAziHtml(poz) {
+  if (typeof Miscare === "undefined" || !Array.isArray(poz) || !poz.length) return "";
+  var l = poz.map(function (p) { var o = t212Miscare(p), ok = !!(o && !o.astept); return { simbol: p.simbol, lei: ok ? o.lei : null, eAzi: !!(ok && o.eAzi), zi: ok ? o.zi : null, val: ok ? o.val : null }; });
+  var c = Miscare.contSedinta(l), nAstept = l.filter(function (x) { return !x.zi; }).length, alte = c.altele - nAstept, lipsa = c.lipsa + nAstept;
+  if (c.total === null) return '<div class="t212ContAzi" id="t212ContAzi"><span class="t212Estompat">Mișcarea de azi a pozițiilor: aștept prețurile zilnice.</span></div>';
+  var baza = 0; l.forEach(function (x) { if ((c.eAzi ? x.eAzi : x.zi === c.zi) && x.lei !== null && x.val !== null) baza += x.val - x.lei; });
+  var tot = Miscare.rot(c.total, 0), pct = baza > 0 ? Miscare.rot(c.total / baza * 100, 1) : null, cls = function (r) { return r > 0 ? "good" : r < 0 ? "bad" : ""; };
+  return '<div class="t212ContAzi" id="t212ContAzi" title="Suma mișcării pozițiilor deschise, la cursul de acum (mișcarea cursului dolar / leu nu e în cifră). Fără numerar, fără pozițiile închise azi.">'
+    + '<span class="t212CaEt">' + (c.eAzi ? "Pozițiile tale azi" : "Pozițiile tale, ultima ședință (" + t212ZiScurta(c.zi) + ")") + '</span> <b class="' + cls(tot) + '">' + t212Lei(tot) + '</b>' + (pct !== null ? ' <span class="t212Mic">(' + t212Pct(pct / 100) + ')</span>' : '')
+    + (c.top.length ? ' <span class="t212CaTop">· cel mai mult: ' + c.top.map(function (x) { var r = Miscare.rot(x.lei, 0); return escapeHtml(x.simbol) + ' <span class="' + cls(r) + '">' + t212Lei(r) + '</span>'; }).join(" · ") + '</span>' : '')
+    + (lipsa ? ' <span class="t212Estompat">· ' + TextRo.cate(lipsa, "poziție", "poziții") + ' fără cifră</span>' : '')
+    + (alte > 0 ? ' <span class="t212Estompat">· ' + TextRo.cate(alte, "poziție", "poziții") + (c.eAzi ? ' pe o bursă care n-a deschis azi' : ' din altă ședință') + ', neadunate</span>' : '') + '</div>';
+}
 // curba pe 30 de zile din rândul poziției: închiderile, iar cu bursa deschisă și prețul viu la capăt (decor: aria-hidden; cifrele sunt alături)
 function t212SparkHtml(bare, pret, deschisa) {
   var c = (bare || []).slice(-30).map(function (x) { return x && x.c; }).filter(function (x) { return x > 0; });
@@ -748,6 +826,8 @@ async function t212Intretinere() {
     if (!s || (s.n > 0 && t212BareAstept(tk))) continue;   /* neîncercate: citirea întreagă; cele în reîncercare: cronometrul lor */
     if (t212BareTrebuie(tk, false, acum) && (await t212BareAdu(tk, false))) adus = true;
   }
+  /* v100.378 (revizia): și reperul - altfel, după închidere, QQQ_US_EQ rămânea pe ieri și „față de Nasdaq” dispărea până la o citire întreagă */
+  if (t212.bareStare.QQQ_US_EQ && t212BareTrebuie("QQQ_US_EQ", false, acum) && (await t212BareAdu("QQQ_US_EQ", false))) adus = true;
   if (adus && !t212ViuStare(Date.now()).scrie) t212Render(true);
 }
 async function t212Ceas() { try { await t212Intretinere(); } catch (e) {} return t212ViuTic(); }
@@ -1054,7 +1134,7 @@ function t212Render(viu) {   // v100.291: viu = recitirea la 30 s ⇒ doar ce de
     // v100.326 (el, 11.11.2026: T212 „în aceleași condiții ca și pagina botului” - fără goluri): pe LAT rândurile într-un tabel (lista, lipicioasă), fișele în al
     // doilea; pe ÎNGUST un singur tabel, fișa imediat după rândul ei (revizia: Tab-ul și cititorul de ecran merg ca ochiul). Dacă fereastra se micșorează între
     // două recitiri, order 2i / 2i+1 ține „rând, fișa lui” pe ecran. Rândurile se citesc la fel (#t212Continut tr.t212Rand / tr.t212Det).
-    var cap212 = '<thead><tr><th>Acțiune</th><th>Acum</th><th>Rezultat</th><th>Stop calculat</th><th>Țintă</th><th>Trend</th><th>Din cont</th><th>Plan</th><th>30 de zile</th></tr></thead>';
+    var cap212 = '<thead><tr><th>Acțiune</th><th>Acum</th><th>Rezultat</th><th>Stop calculat</th><th>Țintă</th><th>Trend</th><th>Din cont</th><th>Plan</th><th>30 de zile</th><th>Mișcarea</th></tr></thead>';
     var lst0 = box.querySelector ? box.querySelector(".t212PozLista") : null, stL = lst0 ? lst0.scrollTop : 0;   // revizia: derularea listei rămâne la recitirea de 30 s
     if (t212Ingust()) box.innerHTML = '<div class="t212TabWrap" style="--n:' + poz.length + '"><table class="t212Tab">' + cap212 + '<tbody>' + poz.map(t212RandPozitie).join("") + '</tbody></table></div>';
     else {
@@ -1068,6 +1148,8 @@ function t212Render(viu) {   // v100.291: viu = recitirea la 30 s ⇒ doar ce de
       }
     }
   }
+  /* v100.378 (I-924): „Pozițiile tale azi” în fața listei - pus după desen, ca șirurile listei (probele vechi le caută literă cu literă) să rămână */
+  if (poz.length && box.insertAdjacentHTML) box.insertAdjacentHTML("afterbegin", t212ContAziHtml(poz));
   t212PastreazaPune(box, pastr);
   t212GraficeDeseneaza(viu);   // v100.332 (🟡 Y3): la recitire lumânările fișei se readuc la 15 minute (t212GraficeDeseneaza) · v100.291: la recitire, fără lumânări Twelve Data noi (revizia 🟡6) · v100.56: graficele detaliilor deschise (latimea reala, dupa randare)
 
@@ -1383,6 +1465,7 @@ function t212RandPozitie(p) {
     + '<td class="c-pond">' + iPond + '</td>'
     + '<td class="c-plan">' + iPlan + '</td>'
     + '<td class="c-spark">' + t212SparkHtml(t212.bare[p.ticker], p.pret, t212SedintaPt(p.ticker, Date.now()) === true) + '</td>'   /* v100.291: curba pe 30 de zile */
+    + '<td class="c-misc">' + t212MiscareHtml(p) + '</td>'   /* v100.378 (I-924, I-925): azi / 3 / 5 / 30 de zile, în lei, față de Nasdaq */
     + '</tr>';
   // detaliul
   var info = [p.bareNota ? "⚠️ " + p.bareNota.replace(/\.$/, "") : "", tr !== "fara-date" ? "trend " + tr + " (" + p.st.trend.tarie + ")" : "", p.st.distMax52 !== null ? "față de maximul pe 52 săpt. " + t212Pct(p.st.distMax52) : "", p.maxDupaCumparare ? "de la maximul de după cumpărare " + t212Pct(p.pret / p.maxDupaCumparare - 1) : "", t212.beta[p.ticker] ? "beta " + t212.beta[p.ticker].toFixed(2).replace(".", ",") : "", p.fxPpl && Math.abs(p.fxPpl) >= 1 ? "din rezultat, cursul dolar/leu: " + t212Lei(p.fxPpl) : "",

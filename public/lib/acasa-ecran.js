@@ -709,6 +709,15 @@ function acUltimInchis(t) {
   return '<div class="acLin"><span>Ultimul închis: ' + escapeHtml(acNumeTrade(t)) + ' <span class="acMut">· a ținut ' + escapeHtml(Acasa.durataScurta((t.inchis - t.pornit) / 60000)) + " · " + escapeHtml(cand) + '</span></span><b class="' + acClsUsd(t.net) + '">' + acUsd(t.net) + "</b></div>";
 }
 // v100.280 (el, 30.10: „fă tot” - analiza comportamentală): contorul zilei pe pragurile frânei TALE (Grid → Poarta) - boți porniți azi,
+// v100.378 (I-926): „față de acum 3 zile · 7 zile” pe un rând, sub „Față de ieri dimineață”; fereastra fără poză în ziua ei rămâne „—” (nu vecina)
+function acZileInapoiHtml(v3, v7, scrie, titlu, z) {
+  var lipsa = function (v) { return v === null || v === undefined || !isFinite(v); };
+  if (lipsa(v3) && lipsa(v7)) return "";
+  /* revizia: semnul și culoarea după cifra rotunjită la z zecimale; un zero rotunjit n-are semn (ieșea „−0,0 USDT” roșu) */
+  var rot = function (v) { var k = Math.pow(10, z || 0), r = Math.round(v * k) / k; return r === 0 ? 0 : r; };
+  var una = function (v) { if (lipsa(v)) return '<i class="acMut">—</i>'; var r = rot(v); return '<i class="' + (r === 0 ? "acMut" : r > 0 ? "good" : "bad") + '">' + (r > 0 ? "+" : r < 0 ? "−" : "") + escapeHtml(scrie(Math.abs(r))) + '</i>'; };
+  return '<div class="acLin acZi acZiN"' + (titlu ? ' title="' + escapeHtml(titlu) + '"' : '') + '><span>Față de acum 3 zile · 7 zile</span><b>' + una(v3) + ' · ' + una(v7) + '</b></div>';
+}
 // pe minus la rând, pierderea zilei și pe 7 zile. Aceeași frână ca alerta de pe Discord; avertizează, nu blochează („pragul e un privilegiu”).
 function acFranaZileiHtml(inchise, boti, praguri, acum) {
   if (typeof Obiceiuri === "undefined" || !Obiceiuri.frana || !Array.isArray(inchise)) return "";
@@ -990,6 +999,9 @@ function acasaDeseneaza() {
   var botiPeId = {}; act.forEach(function (b) { var v2 = Number(b.profitTotal); if (b.id && isFinite(v2)) botiPeId[String(b.id)] = v2; });
   var zt = Acasa.ziuaTa({ botiTotal: act.length ? act.reduce(function (s2, b) { var v2 = Number(b.profitTotal); return s2 + (isFinite(v2) ? v2 : 0); }, 0) : null, botiPeId: botiPeId, t212Total: ct ? Number(ct.total) : null }, pc.instantanee || [], fz, typeof contTot !== "undefined" ? contTot.inchise : null);   // v100.40: pe bot
   if (zt && zt.boti !== null) hb += '<div class="acLin acZi"><span>Față de ieri dimineață' + (zt.inchiseDupa ? ' <span class="acMut">· cu ' + escapeHtml(acCate(zt.inchiseDupa, "bot închis", "boți închiși")) + ' de atunci</span>' : '') + '</span><b class="' + (zt.boti >= 0 ? "good" : "bad") + '">' + (zt.boti >= 0 ? "+" : "−") + Math.abs(zt.boti).toFixed(1).replace(".", ",") + '\u00a0USDT</b></div>';   /* v100.196: rezultatele cu O SINGURĂ zecimală */
+  /* v100.378 (I-926; el, 23.11.2026: „cât a crescut astăzi sau scăzut, 3 zile, 5-7”): aceeași socoteală față de pozele de acum 3 și 7 zile */
+  var ztN = function (n) { return Acasa.ziuaTaInapoi({ botiTotal: act.length ? act.reduce(function (s2, b) { var v2 = Number(b.profitTotal); return s2 + (isFinite(v2) ? v2 : 0); }, 0) : null, botiPeId: botiPeId, t212Total: ct ? Number(ct.total) : null }, pc.instantanee || [], fz, typeof contTot !== "undefined" ? contTot.inchise : null, n); }, zt3 = ztN(3), zt7 = ztN(7);
+  hb += acZileInapoiHtml(zt3 ? zt3.boti : null, zt7 ? zt7.boti : null, function (v) { return v.toFixed(1).replace(".", ",") + "\u00a0USDT"; }, "", 1);
   hb += acFranaZileiHtml(typeof contTot !== "undefined" && contTot.inchiseOk ? contTot.inchise : null, act, d.franaCfg, Date.now());   /* v100.280: contorul zilei */
   hb += acBotiStatHtml(typeof contTot === "undefined" || !contTot.inchise ? null : contTot.inchiseOk ? contTot.inchise : false, Date.now());   /* v100.277: azi + 7 zile, pe net; v100.278: picat ≠ zero boți */
   $("acBoti").innerHTML = hb + '<button class="acBtn" type="button" data-action-click="navTo(\'tabloubot\',true)">Deschide Tabloul</button>';
@@ -999,7 +1011,7 @@ function acasaDeseneaza() {
   $("acT212").innerHTML = '<div class="acCap"><h4>Acțiunile tale</h4><span class="acSub">Trading 212 · ' + (deschis ? "bursa e deschisă" : "bursa e închisă") + '</span></div>'
     + (c ? '<div class="acLin"><span>Contul</span><b>' + escapeHtml(acLei(c.total)) + '</b></div><div class="acLin"><span>Pozițiile deschise</span><b class="' + (Number(c.ppl) >= 0 ? "good" : "bad") + '">' + escapeHtml(typeof t212Lei === "function" ? t212Lei(c.ppl) : String(c.ppl)) + '</b></div>'
       + '<div class="acLin"><span>Semafoare</span><b class="' + (iesi == null ? (fdT ? "warn" : "acMut") : iesi ? "bad" : "good") + '">' + (iesi == null ? (fdT ? "⚠ " + TextRo.cate(fdT, "poziție", "poziții") + " fără date" : "aduc prețurile…") : iesi ? iesi + " de ieșit" + (fdT ? " · " + TextRo.cate(fdT, "poziție", "poziții") + " fără date" : "") : "nimic roșu") + '</b></div>'   /* v100.40: null = inca nu stiu, nu „nimic roșu”; v100.332 (🔴 R1): după reîncercări, pozițiile fără prețuri se spun, nu „aduc prețurile…” la nesfârșit */
-      + (zt && zt.t212 !== null ? '<div class="acLin acZi"><span>Față de ieri dimineață</span><b class="' + (zt.t212 >= 0 ? "good" : "bad") + '">' + (zt.t212 >= 0 ? "+" : "−") + escapeHtml(acLei(Math.abs(zt.t212))) + '</b></div>' : '') : '<p class="acMut">Aduc contul…</p>')
+      + (zt && zt.t212 !== null ? '<div class="acLin acZi"><span>Față de ieri dimineață</span><b class="' + (zt.t212 >= 0 ? "good" : "bad") + '">' + (zt.t212 >= 0 ? "+" : "−") + escapeHtml(acLei(Math.abs(zt.t212))) + '</b></div>' : '') + acZileInapoiHtml(zt3 ? zt3.t212 : null, zt7 ? zt7.t212 : null, acLei, "Totalul contului față de atunci: cuprinde și depunerile sau retragerile făcute între timp.", 0)   /* v100.378 (I-926) */ : '<p class="acMut">Aduc contul…</p>')
     + (rz.length ? '<div class="acEt" style="margin-top:4px">Următoarele rezultate financiare' + (rz.some(function (x) { return !x.sigur; }) ? " (estimate)" : "") + ':</div><div class="acRez">' + rz.slice(0, 3).map(function (x) { var z = zile(x.data); return '<b>' + escapeHtml(x.simbol) + '</b><span>' + escapeHtml(acZiRo(x.data)) + '</span><b class="' + (z <= 14 ? "warn" : "acMut") + '">' + (z <= 0 ? "azi" : z === 1 ? "mâine" : "peste " + acCate(z, "zi", "zile")) + '</b>'; }).join("") + '</div>' : '')
     + '<button class="acBtn" type="button" data-action-click="navTo(\'t212\',true)">Deschide T212</button>'
     + (typeof saltAcasaHtml === "function" && typeof contTot !== "undefined" ? saltAcasaHtml(contTot.salt) : "");   // v100.126: Salt lângă T212 (rezumatul colectorului)

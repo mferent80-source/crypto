@@ -6138,6 +6138,7 @@ body :is(#tabloubot,#t212,#dash,#rangefilter,#sugestii,#probe,#gridset,#gridsim,
 :is(#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade,#comportament,#tradezilei,#carnet,#scan,#salt,#alerts,#contintreg).tbZi .sectionHead .sugTemaBtn:hover{border-color:#C3CCD8}
 :is(#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade,#comportament,#tradezilei,#carnet,#scan,#salt,#alerts,#contintreg).tbZi .sectionHead .sugTemaBtn:focus-visible{outline:2px solid #2456E6}
 #tabloubot.tbZi{--lrBar:#2456E6}
+:is(#tabloubot,#t212,#dash,#rangefilter,#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade,#comportament,#tradezilei,#carnet,#scan,#salt,#alerts,#contintreg).tbZi .t212ContAzi{border:1px solid var(--tb-linie,rgba(14,26,43,.16))}
 /* ==== v100.316 TEMA TABLOULUI: sfârșit ==== */
 /* Colțurile rămân de cel mult 5 px și ordinea singură pe rând începe cu „.pzDemo #tabloubot .tbCadru>” (regulile temei PAZNIC, proba v100.151). */
 /* v100.316 (el, 10.11.2026: îl deranjează culorile, ordinea, aglomerația, literele ⇒ „Aplică desenul nou în Radar”): DESENUL NOU al Tabloului botului.
@@ -6770,6 +6771,65 @@ html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidde
 html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru:has(>#tbKpiDetalii:not([hidden])) #tbTrendCard>#tbTrendDet[open] .tbIndSumar .ibGrafice{max-width:none}
 }
 /* v100.335: sfârșitul așezării detaliilor */
+/* v100.378 (I-922…I-926; el, 23.11.2026: „să fie vizibilă mișcarea live, cât a crescut astăzi sau scăzut, 3 zile, 5-7” ⇒ „fă toate, 24 de ore,
+   și 3 zile la acțiuni”). Tabloul: banda „Mișcarea” deasupra graficului - un tabel mic (rânduri: prețul, față de BTC, botul; coloane: ferestrele),
+   cifrele aliniate la dreapta, o singură cifră mare pe celulă, restul estompat. Sub 641 px eticheta rândului urcă deasupra celor 4 coloane.
+   Trading 212: mișcarea pe rândul poziției (aria „misc”, sub rezultat) și rândul „Pozițiile tale azi” deasupra listei. Piața azi: rândul de
+   3 și 7 zile, lipit de „Față de ieri dimineață”. Culoare doar pe semn. */
+#tabloubot .tbMiscare{padding:10px 14px}
+#tabloubot .tbMiscare .tbBlocCap{margin:0 0 6px;justify-content:flex-start;gap:4px 12px;flex-wrap:wrap}
+#tabloubot .miGrila{display:grid;gap:0}
+/* așezarea: Tabloul e o grilă cu rânduri numerotate (html.pzDemo; graficul ține rândurile 6–12). Banda e un rând întreg, imediat sub grafic,
+   înaintea detaliilor celor 4 cifre (ordinea 20 pe lat, 14 pe îngust) - fără să mute vreun rând numerotat. Plată, cu linie sus, ca vecinele. */
+#tabloubot #tbMiscare[hidden]{display:none!important}
+html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru #tbMiscare{grid-column:1 / -1!important;grid-row:auto!important;order:19;margin:10px 0 0;padding:12px 0 6px;border:0;border-top:1px solid var(--pzLi);border-radius:0;background:none;min-width:0}
+@media (max-width:1180px){html.pzDemo #tabloubot.on:not(.tbFaraBot) .tbCadru #tbMiscare{order:13}}
+#tabloubot .miGrila{max-width:900px}
+#tabloubot .miRand{display:grid;grid-template-columns:96px repeat(4,minmax(0,1fr));gap:0 12px;align-items:start;padding:5px 0}
+#tabloubot .miRand+.miRand{border-top:1px solid var(--tb-linie)}
+#tabloubot .miRand[hidden]{display:none}
+#tabloubot .miCap{padding:0 0 2px;align-items:center}
+#tabloubot .miEt{font-size:12px;color:var(--muted);padding-top:3px}
+#tabloubot .miFer{appearance:none;border:0!important;background:none!important;box-shadow:none!important;border-radius:0;padding:2px 0;margin:0;font:inherit;font-size:12px;font-weight:600;color:var(--muted);text-align:right;cursor:pointer;min-height:24px;width:auto;justify-self:end}
+#tabloubot .miFer:hover{color:var(--accent);text-decoration:underline}
+#tabloubot .miFer:focus-visible{outline:2px solid var(--accent);outline-offset:1px;border-radius:3px}
+#tabloubot .miCel{display:flex;flex-direction:column;align-items:flex-end;gap:1px;min-width:0;text-align:right}
+#tabloubot .miVal{font-size:15px;font-weight:600;line-height:1.25;font-variant-numeric:tabular-nums}
+#tabloubot .miVal.miMic{font-size:13.5px}
+#tabloubot .miRigla{position:relative;display:block;width:100%;max-width:120px;height:4px;border-radius:2px;background:var(--tb-linie);margin:3px 0 2px}
+#tabloubot .miRigla>i{position:absolute;top:-3px;width:3px;height:10px;border-radius:1px;background:var(--text);transform:translateX(-50%)}
+#tabloubot .miRigla>i[hidden]{display:none}
+#tabloubot .miCel .tbSub{font-size:12px;line-height:1.3;margin:0;visibility:visible;overflow-wrap:anywhere}
+#tabloubot .miCel .tbSub:empty{display:none}
+#tabloubot .miBot{grid-template-columns:96px minmax(0,1fr)}
+#tabloubot .miBotCel{display:flex;flex-wrap:wrap;gap:4px 22px;justify-content:flex-end;align-items:flex-start;min-width:0}
+#tabloubot .miBotCel .miCel[hidden]{display:none}
+#tabloubot .miFerEt{font-size:12px;font-weight:600;color:var(--muted)}
+#tabloubot .miBotNota{flex:1 0 100%;text-align:right;font-size:12px;margin:0;visibility:visible}
+#tabloubot .miBotNota:empty{display:none}
+@media(max-width:640px){
+  #tabloubot .tbMiscare{padding:10px 12px}
+  #tabloubot .miRand{grid-template-columns:repeat(4,minmax(0,1fr));gap:0 8px}
+  #tabloubot .miEt{grid-column:1/-1;padding:0 0 2px}
+  #tabloubot .miBot{grid-template-columns:minmax(0,1fr)}
+  #tabloubot .miBotCel{justify-content:space-between;gap:4px 12px}
+  #tabloubot .miCap .miEt{display:none}
+  #tabloubot .miFer{min-height:44px}
+}
+#t212Continut tr.t212Rand{grid-template-areas:"pill sim acum spark" "rez rez rez pond" "misc misc misc misc" "mod mod mod mod"}
+#t212Continut tr.t212Rand td.c-misc{grid-area:misc;white-space:normal;font-size:12px;line-height:1.4;color:var(--muted);font-variant-numeric:tabular-nums}
+#t212Continut tr.t212Rand td.c-misc:empty{display:none}
+#t212Continut tr.t212Rand td.c-misc b{font-weight:600}
+#t212Continut tr.t212Rand td.c-misc .t212MiAzi{color:var(--text)}
+#t212Continut tr.t212Rand td.c-misc .t212MiRef{display:block}
+.t212ContAzi{margin:0 0 8px;padding:8px 12px;border:1px solid var(--tb-linie,rgba(159,179,196,.16));border-radius:5px;background:var(--tb-fond,transparent);font-size:13.5px;line-height:1.45;font-variant-numeric:tabular-nums}
+.t212ContAzi>b{font-size:15px;font-weight:600}
+.t212ContAzi .t212Mic{display:inline;margin-left:2px}
+.t212ContAzi .t212CaEt{color:var(--muted)}
+.t212ContAzi .t212CaTop{color:var(--muted)}
+#dash .acZiN{border-top:0;padding-top:0;margin-top:0}
+#dash .acZiN>span{color:var(--muted)}
+#dash .acZiN b i{font-style:normal}
 @media (max-width:640px){.sugPandaTab thead{display:table-header-group}.sugPandaTab{display:table}.sugPandaTab tbody{display:table-row-group}.sugPandaTab tr{display:table-row}.sugPandaTab td,.sugPandaTab th{display:table-cell}}
 /* v100.224: pe paginile de zi rămân alertele, banda botului și versiunea. Cipurile de cercetare revin la analiza monedei și în laborator. */
 body.peAcasa:not(.acMonedaDeschisa) .topLeft,body.peTablou .topLeft,body.peT212 .topLeft,body.peJurnal .topLeft,body.peGrid .topLeft,body.pePaginaNoua .topLeft,

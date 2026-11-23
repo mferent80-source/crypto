@@ -1,0 +1,192 @@
+{
+ "_nota": "v100.378 (I-922…I-926, 23.11.2026): mișcarea pe ferestre. Fiecare greșeală plantată trebuie PRINSĂ de proba listei (ieșire ≠ 0).",
+ "proba": "scripts/proba-v100378.mjs",
+ "mutatii": [
+  {
+   "nume": "procentul întors (reper / preț)",
+   "fisier": "public/lib/miscare.js",
+   "cauta": "pct: (p / ref - 1) * 100, ref: ref",
+   "pune": "pct: (ref / p - 1) * 100, ref: ref"
+  },
+  {
+   "nume": "reperul mereu deschiderea lumânării",
+   "fisier": "public/lib/miscare.js",
+   "cauta": "ref = tinta - t0 < per / 2 ? nr(b.o) : nr(b.c);",
+   "pune": "ref = nr(b.o);"
+  },
+  {
+   "nume": "istorie scurtă luată drept fereastră întreagă",
+   "fisier": "public/lib/miscare.js",
+   "cauta": "else if (t0 - tinta <= per) ref = nr(b.o);",
+   "pune": "else if (t0 - tinta <= per * 100000) ref = nr(b.o);"
+  },
+  {
+   "nume": "locul între minim și maxim, întors",
+   "fisier": "public/lib/miscare.js",
+   "cauta": "loc: max > min ? (p - min) / (max - min) : 0.5",
+   "pune": "loc: max > min ? (max - p) / (max - min) : 0.5"
+  },
+  {
+   "nume": "ziua obișnuită din prea puține ferestre",
+   "fisier": "public/lib/miscare.js",
+   "cauta": "if (a.length < 60) return null;",
+   "pune": "if (a.length < 6) return null;"
+  },
+  {
+   "nume": "de câte ori, cu semn",
+   "fisier": "public/lib/miscare.js",
+   "cauta": "Math.abs(p) / zi.mediana",
+   "pune": "p / zi.mediana"
+  },
+  {
+   "nume": "față de reper: adunat în loc de scăzut",
+   "fisier": "public/lib/miscare.js",
+   "cauta": "x === null || y === null ? null : x - y;",
+   "pune": "x === null || y === null ? null : x + y;"
+  },
+  {
+   "nume": "botul tânăr primește cifră",
+   "fisier": "public/lib/miscare.js",
+   "cauta": "if (pornit !== null && pornit > tinta) return { motiv: \"tanar\"",
+   "pune": "if (pornit !== null && pornit < 0) return { motiv: \"tanar\""
+  },
+  {
+   "nume": "gaura colectorului sărită (toleranță uriașă)",
+   "fisier": "public/lib/miscare.js",
+   "cauta": "if (d > tolBot(ms)) return",
+   "pune": "if (d > tolBot(ms) * 1000) return"
+  },
+  {
+   "nume": "toleranța de la ferestrele scurte",
+   "fisier": "public/lib/miscare.js",
+   "cauta": "return Math.min(TOL_BOT_MS, ms / 12);",
+   "pune": "return Math.min(TOL_BOT_MS, ms / 2);"
+  },
+  {
+   "nume": "restul = total + grile",
+   "fisier": "public/lib/miscare.js",
+   "cauta": "rest: grile === null ? null : total - grile",
+   "pune": "rest: grile === null ? null : total + grile"
+  },
+  {
+   "nume": "gridul mutat nu se mai vede",
+   "fisier": "public/lib/miscare.js",
+   "cauta": "Math.abs(a / b2 - 1) > 1e-6",
+   "pune": "Math.abs(a / b2 - 1) > 1e6"
+  },
+  {
+   "nume": "ședința deschisă pierde ultima închidere",
+   "fisier": "public/lib/miscare.js",
+   "cauta": "if (deschisa) return { ant: c, eAzi: true, zi: ziAzi || null, inchidere: null };",
+   "pune": "if (deschisa) return { ant: c.slice(0, -1), eAzi: true, zi: ziAzi || null, inchidere: null };"
+  },
+  {
+   "nume": "seria nepotrivită trece drept bună",
+   "fisier": "public/lib/miscare.js",
+   "cauta": "if (Math.abs(p / a[n - 1] - 1) > SARE_MAX)",
+   "pune": "if (Math.abs(p / a[n - 1] - 1) > SARE_MAX * 1000)"
+  },
+  {
+   "nume": "fereastra de ședințe decalată cu una",
+   "fisier": "public/lib/miscare.js",
+   "cauta": "var r = n >= k ? a[n - k] : null;",
+   "pune": "var r = n >= k ? a[n - k - 1] : null;"
+  },
+  {
+   "nume": "leii din valoarea de dinainte, nu de acum",
+   "fisier": "public/lib/miscare.js",
+   "cauta": "v * p / (100 + p)",
+   "pune": "v * p / 100"
+  },
+  {
+   "nume": "primele trei după semn, nu după mărime",
+   "fisier": "public/lib/miscare.js",
+   "cauta": "Math.abs(nr(b.lei)) - Math.abs(nr(a.lei))",
+   "pune": "nr(b.lei) - nr(a.lei)"
+  },
+  {
+   "nume": "3 zile ia poza vecină",
+   "fisier": "public/lib/acasa.js",
+   "cauta": "return x && x.zi === tinta; }).pop();",
+   "pune": "return x && x.zi <= tinta; }).pop();"
+  },
+  {
+   "nume": "modulul scos din pagină",
+   "fisier": "public/index.html",
+   "cauta": "<script src=\"/lib/miscare.js\"></script>",
+   "pune": ""
+  },
+  {
+   "nume": "banda nu mai merge cu prețul viu",
+   "fisier": "public/app.js",
+   "cauta": "tbKpiPretDeseneaza(b);tbCitireLive(b,pa);tbMiscareDeseneaza(b);",
+   "pune": "tbKpiPretDeseneaza(b);tbCitireLive(b,pa);"
+  },
+  {
+   "nume": "celula mișcării fără loc în rând",
+   "fisier": "public/app.css",
+   "cauta": "td.c-misc{grid-area:misc;",
+   "pune": "td.c-misc{grid-area:mod;"
+  },
+  {
+   "nume": "rândul de 3 și 7 zile scos de pe Piața azi",
+   "fisier": "public/lib/acasa-ecran.js",
+   "cauta": "var ztN = function (n) { return Acasa.ziuaTaInapoi(",
+   "pune": "var ztN = function (n) { return Acasa.ziuaTa("
+  },
+  {
+   "nume": "revizia: ședința fără bară luată drept cea de dinainte (două ședințe într-o cifră)",
+   "fisier": "public/lib/miscare.js",
+   "cauta": "if (ziInchisa && ziU && ziU < ziInchisa) return",
+   "pune": "if (ziInchisa && ziU && ziU > ziInchisa) return"
+  },
+  {
+   "nume": "revizia: ultima ședință pe prețul de după program",
+   "fisier": "public/lib/miscare.js",
+   "cauta": "return { ant: c.slice(0, -1), eAzi: false, zi: ziU, inchidere: ultima };",
+   "pune": "return { ant: c.slice(0, -1), eAzi: false, zi: ziU, inchidere: null };"
+  },
+  {
+   "nume": "revizia: după închidere, azi pe prețul de după program",
+   "fisier": "public/lib/miscare.js",
+   "cauta": "inchidere: deschisa ? null : ultima };",
+   "pune": "inchidere: null };"
+  },
+  {
+   "nume": "revizia: ziua obișnuită din toate lumânările aduse",
+   "fisier": "public/lib/miscare.js",
+   "cauta": ".slice(-181, -1).map(",
+   "pune": ".slice(0, -1).map("
+  },
+  {
+   "nume": "revizia: zero rotunjit cu semn",
+   "fisier": "public/lib/miscare.js",
+   "cauta": "r = Math.round(x * k) / k; return r === 0 ? 0 : r; }",
+   "pune": "r = Math.round(x * k) / k; return r; }"
+  },
+  {
+   "nume": "revizia: azi adunat cu ultima ședință",
+   "fisier": "public/lib/miscare.js",
+   "cauta": "var grup = azi.length ? azi : t.filter(function (x) { return x.zi === zi; }), c = contAzi(grup);",
+   "pune": "var grup = t, c = contAzi(grup);"
+  },
+  {
+   "nume": "revizia: poziția pe prețul de acum și când ședința e închisă",
+   "fisier": "public/lib/t212-ecran.js",
+   "cauta": "Miscare.actiune(s.ant, s.inchidere !== null ? s.inchidere : p.pret)",
+   "pune": "Miscare.actiune(s.ant, p.pret)"
+  },
+  {
+   "nume": "revizia: QQQ scos din întreținere",
+   "fisier": "public/lib/t212-ecran.js",
+   "cauta": "if (t212.bareStare.QQQ_US_EQ && t212BareTrebuie(\"QQQ_US_EQ\", false, acum) && (await t212BareAdu(\"QQQ_US_EQ\", false))) adus = true;",
+   "pune": ""
+  },
+  {
+   "nume": "revizia: BTC vechi folosit ca proaspăt",
+   "fisier": "public/app.js",
+   "cauta": "proaspat=laB>0&&acum-laB<TB_MI_BTC_VECHI_MS,lb=bp&&proaspat?bp[f.tf]:null",
+   "pune": "proaspat=true,lb=bp?bp[f.tf]:null"
+  }
+ ]
+}

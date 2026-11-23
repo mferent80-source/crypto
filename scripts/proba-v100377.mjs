@@ -1202,10 +1202,11 @@ await test("N10 (el 22.11: „fa idei”) pagina Probe: lângă regulile „−5
 
 await test("D1 versiunea v100.377 e pusă peste tot și proba e în lanț, după v100.376", () => {
   const pk = JSON.parse(citeste("package.json")), bi = JSON.parse(citeste("BUILD_INFO.json")), HTML = citeste("public", "index.html");
-  assert.equal(pk.version, "100.377.0"); assert.equal(bi.version, "v100.377"); assert.ok(bi.li377 && bi.li377.length > 200, "BUILD_INFO.li377");
-  assert.equal((HTML.match(/v100\.377/g) || []).length >= 4, true, "index.html: v100.377 de cel puțin 4 ori");
-  assert.match(citeste("public", "sw.js"), /crypto-radar-v100-377/); assert.match(citeste("functions", "_shared", "versiune.js"), /100\.377/);
-  assert.match(pk.scripts.test, /npm run test:v100376 && npm run test:v100377 && node scripts\/mutatii\.mjs --doar-tiparele && node scripts\/stare-probe-ecran\.mjs$/); assert.equal(pk.scripts["test:v100377"], "node scripts/proba-v100377.mjs");
+  /* v100.378: „de la 377 încolo” (versiunea merge mai departe; după ea în lanț vine proba v100.378) */
+  assert.ok(+(/^100\.(\d+)\.0$/.exec(pk.version) || [])[1] >= 377, "package.json: de la 100.377 încolo"); assert.ok(+(/^v100\.(\d+)$/.exec(bi.version) || [])[1] >= 377); assert.ok(bi.li377 && bi.li377.length > 200, "BUILD_INFO.li377");
+  assert.equal((HTML.match(/v100\.(\d+)/g) || []).filter((v) => +v.slice(5) >= 377).length >= 4, true, "index.html: v100.377 sau mai nou, de cel puțin 4 ori");
+  assert.ok(+(/crypto-radar-v100-(\d+)/.exec(citeste("public", "sw.js")) || [])[1] >= 377, "sw.js"); assert.ok(+(/"v100\.(\d+)"/.exec(citeste("functions", "_shared", "versiune.js")) || [])[1] >= 377, "versiune.js");
+  assert.match(pk.scripts.test, /npm run test:v100376 && npm run test:v100377/); assert.match(pk.scripts.test, /node scripts\/mutatii\.mjs --doar-tiparele && node scripts\/stare-probe-ecran\.mjs$/); assert.equal(pk.scripts["test:v100377"], "node scripts/proba-v100377.mjs");
 });
 
 console.log(`\n${teste - picate} din ${teste} au trecut\n`);

@@ -7697,7 +7697,96 @@ function tbKpiAsezare(){
   if(dest.hidden)dest.hidden=false;   /* revizia 11.11: atributul doar când se schimbă (altfel o mutație + recalculul :has() la fiecare desen); v100.376: blocul se arată la orice lățime */
   if(typeof tbAvertGazda==="function")tbAvertGazda();   /* v100.340: și rândul de avertismente își schimbă gazda cu lățimea */
 }
-function tbDeseneazaKpi(){if(typeof tbKpiAsezare==="function")tbKpiAsezare();
+// v100.378 (I-922, I-923, I-925; el, 23.11.2026: „în Radar, și la bot și la Trade 212, să fie vizibilă mișcarea live, cât a crescut astăzi sau scăzut,
+// 3 zile, 5-7” ⇒ „fă toate, 24 de ore”): banda „Mișcarea”, deasupra graficului (#tbMiscare) - prețul pe 24 h / 3 zile / 7 zile / 30 de zile, cu locul
+// lui între minimul și maximul ferestrei; aceeași fereastră față de BTC, în puncte; și cât a făcut BOTUL (USDT) pe 24 h / 3 / 7 zile, din grile și
+// din rest. Zero cereri noi pentru bot: lumânările sunt ale „Direcției” (5 intervale, la 5 minute) sau ale graficului, istoria botului e cea de 7 zile
+// adusă deja (tbSapt). Doar BTC se aduce în plus: 4 cereri la 5 minute. Calculul e în lib/miscare.js; aici doar desenul, care atinge numai ce s-a
+// schimbat (cel mult o dată pe secundă la prețul viu). Sunt fapte, nu semnal: culoarea e doar semnul, după efectul pe bot (la short, prețul în sus e roșu).
+var tbMi={raw:{},bare:{},btc:{sim:null,la:0,inLucru:false,pe:null,laPe:{}},desLa:0,botMemo:null};
+var TB_MI_BTC_MS=5*60000,TB_MI_BTC_VECHI_MS=15*60000,TB_MI_BTC_LIM={"5M":300,"15M":300,"60M":180,"4H":190};
+function tbMiLumPe(b){
+  var s=TabloBot.simboluri(b.baza,b.quote,b.simbolPionex).pionex,d=tbStare.directie,dOk=!!(d&&d.randuriPe&&d.simbol===tbCheieDir(b)),pe={};
+  Miscare.FERESTRE.forEach(function(f){
+    var rd=dOk?d.randuriPe[f.tf]:null,c=tbStare.graficCache?tbStare.graficCache[s+"|"+f.tf]:null,r=Array.isArray(rd)&&rd.length?rd:c&&Array.isArray(c.randuri)&&c.randuri.length?c.randuri:null,k=s+"|"+f.tf;
+    if(!r){pe[f.tf]=null;return}
+    if(tbMi.raw[k]!==r){tbMi.raw[k]=r;tbMi.bare[k]=GridCalcul.bareToate(r)}   /* lumânările se citesc o dată pe aducere, nu la fiecare tranzacție */
+    pe[f.tf]=tbMi.bare[k];
+  });
+  return pe;
+}
+function tbMiAduBtc(simBtc){
+  var q=tbMi.btc;if(q.inLucru||(q.sim===simBtc&&Date.now()-q.la<TB_MI_BTC_MS))return;
+  q.inLucru=true;
+  (async function(){
+    /* revizia: ora citirii pe FIECARE interval, pusă doar la reușită (laPe) - una picată ține ce avea, cu ora ei veche; peste 15 minute nu se mai
+       folosește (altfel „față de BTC” compara moneda la zi cu BTC de acum trei ore, sub „BTC citit la <acum>”) */
+    var pe={},laPe={},adu=tbAduTf(simBtc),vechi=q.sim===simBtc?q:null;
+    for(var i=0;i<Miscare.FERESTRE.length;i++){var f=Miscare.FERESTRE[i];try{pe[f.tf]=GridCalcul.bareToate(await adu(f.tf,TB_MI_BTC_LIM[f.tf]));laPe[f.tf]=Date.now()}catch(e){pe[f.tf]=vechi&&vechi.pe?vechi.pe[f.tf]||null:null;laPe[f.tf]=vechi&&vechi.laPe?vechi.laPe[f.tf]||0:0}}
+    tbMi.btc={sim:simBtc,la:Date.now(),inLucru:false,pe:pe,laPe:laPe};
+    if(tbPanouVizibil()&&tbStare.bot)tbMiscareDeseneaza(tbStare.bot,true);
+  })();
+}
+function tbMiVarsta(ms){var h=ms/3600000;return h<48?TextRo.oreN(Math.max(1,Math.round(h))):TextRo.num(h/24,1)+" zile"}
+function tbMiscareSchelet(){
+  var F=Miscare.FERESTRE,CAT={"24h":"24 de ore","3z":"3 zile","7z":"7 zile","30z":"30 de zile"};
+  var cap='<div class="miRand miCap"><span class="miEt"></span>'+F.map(function(f){return '<button type="button" class="miFer" data-mi-tf="'+f.tf+'" data-action-click="tbAlegeInterval(\''+f.tf+'\')" title="arată graficul pe '+CAT[f.k]+'">'+f.et+'</button>'}).join("")+'</div>';
+  var pret='<div class="miRand" id="miPretRand"><span class="miEt">Prețul</span>'+F.map(function(f){return '<span class="miCel"><b id="miP-'+f.k+'" class="miVal mutedInfo">—</b><span class="miRigla" aria-hidden="true"><i id="miL-'+f.k+'" hidden></i></span><span id="miS-'+f.k+'" class="tbSub"></span></span>'}).join("")+'</div>';
+  var btc='<div class="miRand" id="miBtcRand"><span class="miEt">față de BTC</span>'+F.map(function(f){return '<span class="miCel"><b id="miB-'+f.k+'" class="miVal miMic mutedInfo">—</b><span id="miBs-'+f.k+'" class="tbSub"></span></span>'}).join("")+'</div>';
+  /* rândul botului are ferestrele LUI (1 oră, 4 ore, 24 h, 3 zile, 7 zile), cu eticheta în celulă: boții lui trăiesc ore, nu zile */
+  var bot='<div class="miRand miBot" id="miBotRand"><span class="miEt">Botul, USDT</span><span class="miBotCel">'+Miscare.FERESTRE_BOT.map(function(f){return '<span class="miCel" id="miC-'+f.k+'" hidden><span class="miFerEt">'+f.et+'</span><b id="miT-'+f.k+'" class="miVal mutedInfo">—</b><span id="miG-'+f.k+'" class="tbSub"></span></span>'}).join("")+'<span class="tbSub miBotNota" id="miBotNota"></span></span></div>';
+  return '<div class="tbBlocCap"><h4>Mișcarea</h4><span class="tbSub" id="miNota">cât s-a mișcat până acum, nu ce urmează</span></div><div class="miGrila">'+cap+pret+btc+bot+'</div>';
+}
+function tbMiscareDeseneaza(b,forta){
+  var el=$("tbMiscare");if(!el||typeof Miscare==="undefined")return;
+  if(!b){if(!el.hidden)el.hidden=true;return}
+  var acum=Date.now();if(!forta&&acum-tbMi.desLa<1000)return;tbMi.desLa=acum;
+  if(!$("miP-24h"))el.innerHTML=tbMiscareSchelet();
+  if(el.hidden)el.hidden=false;
+  var pune=function(id,text,cls,titlu){var e=$(id);if(!e)return;if(e.textContent!==text)e.textContent=text;if(cls!=null&&e.className!==cls)e.className=cls;if(titlu!=null&&e.title!==titlu)e.title=titlu};
+  var s=TabloBot.simboluri(b.baza,b.quote,b.simbolPionex).pionex,eBtc=/^BTC_/.test(s),simBtc=/_PERP$/.test(s)?"BTC_USDT_PERP":"BTC_USDT";
+  var bl=typeof pvBotLive==="function"?pvBotLive(b):b,pret=botiNr(bl.pretCurent),pe=tbMiLumPe(b),fer=Miscare.ferestre(pe,pret,acum),zi=Miscare.ziObisnuita(pe["4H"]);
+  var cl=function(r){return r>0?(bsTonEfect("sus",b.directie)==="sus"?"good":"bad"):r<0?(bsTonEfect("jos",b.directie)==="jos"?"bad":"good"):""},rot=function(v){return Math.round(v*10)/10};
+  /* culoarea prețului e după EFECTUL pe bot (ca „azi” din banda de sus): la short, prețul în sus e roșu - spus lângă titlu, ca plusul roșu să nu mire */
+  var eShort=String(b.directie||"").toLowerCase()==="short";pune("miNota","cât s-a mișcat până acum, nu ce urmează"+(eShort?" · bot short: prețul în sus e roșu":""),"tbSub");
+  if(!eBtc)tbMiAduBtc(simBtc);
+  var bp=!eBtc&&tbMi.btc.sim===simBtc?tbMi.btc.pe:null,ult=function(l){return l&&l.length?l[l.length-1].c:null};
+  var rb=$("miBtcRand");if(rb&&rb.hidden!==eBtc)rb.hidden=eBtc;
+  Miscare.FERESTRE.forEach(function(f){
+    var w=fer[f.k];
+    pune("miP-"+f.k,w?TextRo.pctSemn(w.pct,1):"—","miVal "+(w?cl(rot(w.pct)):"mutedInfo"),w?"de la "+tbPretScurt(w.ref)+" la "+tbPretScurt(pret)+" · în fereastră: minim "+tbPretScurt(w.min)+", maxim "+tbPretScurt(w.max):pe[f.tf]?"istoria monedei e mai scurtă decât fereastra":"aștept lumânările");
+    var m=$("miL-"+f.k);if(m){var L=w?(Math.min(1,Math.max(0,w.loc))*100).toFixed(1)+"%":"";if(m.hidden!==!w)m.hidden=!w;if(w&&m.style.left!==L)m.style.left=L}
+    var ori=f.k==="24h"&&w?Miscare.deCateOri(w.pct,zi):null,sub=ori!==null?TextRo.ori(ori,1)+" o zi obișnuită":"";
+    pune("miS-"+f.k,sub,"tbSub",sub?"mișcarea pe 24 h față de mediana mișcării ei pe 24 h din ultimele 30 de zile ("+TextRo.pct(zi.mediana,1)+")":"");
+    if(eBtc)return;
+    var laB=bp&&tbMi.btc.laPe?tbMi.btc.laPe[f.tf]||0:0,proaspat=laB>0&&acum-laB<TB_MI_BTC_VECHI_MS,lb=bp&&proaspat?bp[f.tf]:null,wb=lb?Miscare.fereastra(lb,ult(lb),acum,f.ms,f.per):null,df=Miscare.fataDe(w,wb),oraB=laB?new Date(laB).toLocaleTimeString("ro-RO",{hour:"2-digit",minute:"2-digit"}):"";
+    /* el, 23.11.2026: „ce înseamnă 2.1p?” ⇒ în cuvinte, fără prescurtare: „2,1 peste” / „4,1 sub” / „la fel” */
+    var rd=df===null?null:rot(df);
+    pune("miB-"+f.k,df===null?"—":rd===0?"la fel":TextRo.num(Math.abs(rd),1)+(rd>0?" peste":" sub"),"miVal miMic "+(df===null?"mutedInfo":cl(rd)),df===null?(!bp?"aduc lumânările BTC":laB&&!proaspat?"BTC n-a mai putut fi citit de la "+oraB:""):"cu câte puncte procentuale a făcut moneda mai mult (peste) sau mai puțin (sub) decât BTC pe aceeași fereastră; BTC citit la "+oraB);
+    pune("miBs-"+f.k,wb?"BTC "+TextRo.pctSemn(wb.pct,1):"","tbSub");
+  });
+  var ist=typeof tbSapt!=="undefined"&&tbSapt&&tbSapt.botId===b.id?tbSapt:null;
+  /* revizia: istoria are ~10.000 de puncte ⇒ banii botului se socotesc o dată pe citire și pe minut (tbMi.botMemo), nu la fiecare secundă de preț viu */
+  var cheieB=ist&&Array.isArray(ist.intrari)?[b.id,ist.la,ist.intrari.length,b.profitTotal,b.gridProfitBrut,b.gridJos,b.gridSus,Math.floor(acum/60000)].join("|"):null;
+  if(cheieB&&!(tbMi.botMemo&&tbMi.botMemo.k===cheieB))tbMi.botMemo={k:cheieB,v:Miscare.botFerestre(ist.intrari,acum,{total:botiNr(b.profitTotal),grile:botiNr(b.gridProfitBrut),pornitLa:botiNr(b.pornitLa),gridJos:botiNr(b.gridJos),gridSus:botiNr(b.gridSus)})};
+  var bf=cheieB?tbMi.botMemo.v:null;
+  var s1=function(v){var x=TextRo.num(v,1);return v>0&&x!=="0,0"?"+"+x:x};
+  /* se arată doar ferestrele pe care botul le-a trăit; cele mai lungi decât vârsta lui se spun o dată, într-o notă (nu câte un „—” pe fiecare) */
+  var nVaz=0,varsta=null;
+  Miscare.FERESTRE_BOT.forEach(function(f){
+    var r=bf?bf[f.k]:null,cel=$("miC-"+f.k),arat=!!(r&&r.motiv!=="tanar"),tx="—",c="miVal mutedInfo",sb="";
+    if(r&&r.motiv==="tanar"&&varsta===null)varsta=r.varsta;
+    if(cel&&cel.hidden!==!arat)cel.hidden=!arat;
+    if(!arat)return;nVaz++;
+    if(r.motiv==="scurt")sb="fără istorie atât de veche";
+    else if(r.motiv==="gol")sb="colectorul a stat atunci";
+    else{var rt=rot(r.total);tx=s1(r.total);c="miVal "+(rt>0?"good":rt<0?"bad":"");sb=(r.grile===null?"":"grile "+s1(r.grile)+" · restul "+s1(r.rest))+(r.gridMutat?" · grid mutat":"")}
+    pune("miT-"+f.k,tx,c,!r.motiv?"rezultatul total de acum minus cel de acum "+f.et+"; restul = poziția deschisă, finanțarea și celelalte costuri":"");pune("miG-"+f.k,sb,"tbSub");
+  });
+  pune("miBotNota",!ist?"aștept istoria botului":ist.eroare?"istoria botului: "+String(ist.eroare):!bf?"":varsta!==null?(nVaz?"botul are "+tbMiVarsta(varsta)+": ferestrele mai lungi apar pe măsură ce le trăiește":"botul are "+tbMiVarsta(varsta)+": prima cifră după o oră"):"","tbSub miBotNota");
+}
+function tbDeseneazaKpi(){if(typeof tbKpiAsezare==="function")tbKpiAsezare();if(typeof tbMiscareDeseneaza==="function")tbMiscareDeseneaza(tbStare.routeOk===false?null:tbStare.bot,true);   /* v100.378: banda mișcării, la fiecare citire a botului */
+  
   var b=tbStare.routeOk===false?null:tbStare.bot;
   var pune=function(id,text,cls){var e=$(id);if(!e)return;if(e.textContent!==text)e.textContent=text;if(cls!=null){var c=(e.classList.contains("tbKpiVal")?"tbKpiVal ":"tbSub ")+cls;if(e.className!==c)e.className=c}};   /* audit 23.10: doar ce s-a schimbat (1.114 mutații / 20 s în repaus) */
   if(!b){tbKpiTotalViuDeseneaza(null);   /* revizia: fără bot, „la prețul viu” nu rămâne cu cifra veche */
@@ -9193,7 +9282,8 @@ function pvArata(){
   var pz=$("pzPret");
   if(pz){var pzT=pa?bsPretText(pa)+sag:"",pzC="pzPret"+(pa&&pa.viu&&pa.dir?" "+pa.dir:"");if(pz.textContent!==pzT)pz.textContent=pzT;if(pz.className!==pzC)pz.className=pzC}   // audit 23.10: doar când s-a schimbat
   if(b&&tbPanouVizibil()){
-    tbKpiPretDeseneaza(b);tbCitireLive(b,pa);
+    tbKpiPretDeseneaza(b);tbCitireLive(b,pa);tbMiscareDeseneaza(b);   /* v100.378: și banda mișcării merge cu prețul viu (cel mult o dată pe secundă) */
+    
     var g=$("tbGrafic");
     if(pa&&pa.viu&&Date.now()-pvStare.grafLa>=5000&&!(g&&g.querySelector(".gbTip:not([hidden])"))){pvStare.grafLa=Date.now();renderTabloGrafic()}
   }

@@ -389,6 +389,15 @@ var Acasa = (function () {
     var o = { boti: boti, t212: d("t212Total"), de: ier.zi, inchiseDupa: typeof nDupa === "number" ? nDupa : 0 };
     return o.boti === null && o.t212 === null ? null : o;
   }
+  // v100.378 (I-926; el, 23.11.2026: „cât a crescut astăzi sau scăzut, 3 zile, 5-7”): aceeași socoteală față de poza de acum `zile` zile (3, 7) -
+  // din aceleași poze zilnice (se țin 14), cu aceleași reguli pe boți (prezenți în ambele, închiși de atunci). Poza trebuie să fie EXACT din ziua
+  // căutată: dacă lipsește (colectorul a stat), null - nu se ia vecina, ca „3 zile” să nu însemne 5.
+  function ziuaTaInapoi(azi, lista, ziAzi, inchise, zile) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(ziAzi || "")), n = Math.round(Number(zile)); if (!m || !(n >= 1)) return null;
+    var tinta = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3] - n)).toISOString().slice(0, 10);
+    var poza = (Array.isArray(lista) ? lista : []).filter(function (x) { return x && x.zi === tinta; }).pop();
+    return poza ? ziuaTa(azi, [poza], ziAzi, inchise) : null;
+  }
   // ora 9 (ora României) a unei zile „AAAA-LL-ZZ”, în ms - decalajul de vară / iarnă luat din Intl, nu scris de mână
   function ora9Ro(zi) {
     var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(zi || "")); if (!m) return null;
@@ -823,7 +832,7 @@ var Acasa = (function () {
     return o;
   }
 
-  return { SURSE: SURSE, deUndeStiu: deUndeStiu, franaSurse: franaSurse, surseHtml: surseHtml, bursaNYDeschisa: bursaNYDeschisa, franaContMotive: franaContMotive,bareInchise: bareInchise, botiPeMonede: botiPeMonede, botiScurtiLungi: botiScurtiLungi, botiCosturi: botiCosturi, botiPeZile: botiPeZile, PRAG_SCURT_MIN: PRAG_SCURT_MIN, perioadaBoti: perioadaBoti, botiStatistici: botiStatistici, durataScurta: durataScurta, ora9Ro: ora9Ro, clasamentLipsa: clasamentLipsa, textCorelatie: textCorelatie, SECTOR: SECTOR, sectoare: sectoare, ziuaTa: ziuaTa, raportSaptamana: raportSaptamana, socotealaAlerte: socotealaAlerte, miscareTipica: miscareTipica, fundingPiata: fundingPiata, fundingAtentie: fundingAtentie, schimbari: schimbari, vreme: vreme, miscari: miscari, fg: fg, fgValid: fgValid, largime: largime, ro: ro, rezumatActiune: rezumatActiune, largimeNdx: largimeNdx, vremeBursa: vremeBursa, sensBursa: sensBursa, fgNume: fgNume, corelatie: corelatie, calendar: calendar, MAG7: MAG7, franaVerb: franaVerb, franaCont: franaCont, frazaPauza: frazaPauza, masuraFranei: masuraFranei, unesteZileFrana: unesteZileFrana,
+  return { SURSE: SURSE, deUndeStiu: deUndeStiu, franaSurse: franaSurse, surseHtml: surseHtml, bursaNYDeschisa: bursaNYDeschisa, franaContMotive: franaContMotive,bareInchise: bareInchise, botiPeMonede: botiPeMonede, botiScurtiLungi: botiScurtiLungi, botiCosturi: botiCosturi, botiPeZile: botiPeZile, PRAG_SCURT_MIN: PRAG_SCURT_MIN, perioadaBoti: perioadaBoti, botiStatistici: botiStatistici, durataScurta: durataScurta, ora9Ro: ora9Ro, clasamentLipsa: clasamentLipsa, textCorelatie: textCorelatie, SECTOR: SECTOR, sectoare: sectoare, ziuaTa: ziuaTa, ziuaTaInapoi: ziuaTaInapoi, raportSaptamana: raportSaptamana, socotealaAlerte: socotealaAlerte, miscareTipica: miscareTipica, fundingPiata: fundingPiata, fundingAtentie: fundingAtentie, schimbari: schimbari, vreme: vreme, miscari: miscari, fg: fg, fgValid: fgValid, largime: largime, ro: ro, rezumatActiune: rezumatActiune, largimeNdx: largimeNdx, vremeBursa: vremeBursa, sensBursa: sensBursa, fgNume: fgNume, corelatie: corelatie, calendar: calendar, MAG7: MAG7, franaVerb: franaVerb, franaCont: franaCont, frazaPauza: frazaPauza, masuraFranei: masuraFranei, unesteZileFrana: unesteZileFrana,
     ndxVechi: ndxVechi, evenimentAzi: evenimentAzi, riscNecunoscut: riscNecunoscut, CLASAMENT_VECHI_MS: CLASAMENT_VECHI_MS, NDX_VECHI_MS: NDX_VECHI_MS };   /* v100.332 (auditul 12.11) */
 })();
 if (typeof globalThis !== "undefined") globalThis.Acasa = Acasa;
