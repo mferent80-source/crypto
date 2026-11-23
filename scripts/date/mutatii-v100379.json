@@ -1,0 +1,54 @@
+{
+ "_nota": "v100.379 (23.11.2026): «azi» de lângă prețul viu, pe ultimele 24 de ore. Fiecare greșeală plantată trebuie PRINSĂ de proba listei (ieșire ≠ 0).",
+ "proba": "scripts/proba-v100379.mjs",
+ "mutatii": [
+  {
+   "nume": "eticheta rămâne «azi»",
+   "fisier": "public/lib/pret-viu.js",
+   "cauta": "return { t: \"24 h \" + (r > 0 ? \"+\" : r < 0 ? \"−\" : \"\")",
+   "pune": "return { t: \"azi \" + (r > 0 ? \"+\" : r < 0 ? \"−\" : \"\")"
+  },
+  {
+   "nume": "semnul înainte de rotunjire (−0,0%)",
+   "fisier": "public/lib/pret-viu.js",
+   "cauta": "ton: r > 0 ? \"sus\" : r < 0 ? \"jos\" : \"egal\" }; }",
+   "pune": "ton: p > 0 ? \"sus\" : p < 0 ? \"jos\" : \"egal\" }; }"
+  },
+  {
+   "nume": "fără lumânări dispare și «azi»",
+   "fisier": "public/lib/pret-viu.js",
+   "cauta": "if (z24) zt = z24;",
+   "pune": "zt = z24;"
+  },
+  {
+   "nume": "banda de sus nu mai primește mișcarea pe 24 h",
+   "fisier": "public/app.js",
+   "cauta": "pct24:typeof pvPct24===\"function\"?function(p){return pvPct24(b,p)}:undefined,",
+   "pune": ""
+  },
+  {
+   "nume": "fereastra de 12 ore în loc de 24",
+   "fisier": "public/app.js",
+   "cauta": "Miscare.fereastra(bare,pret,Date.now(),86400000,300000)",
+   "pune": "Miscare.fereastra(bare,pret,Date.now(),43200000,300000)"
+  },
+  {
+   "nume": "lumânările altei monede",
+   "fisier": "public/app.js",
+   "cauta": "return s&&h&&h.simbol===s.pionex&&h.bare&&h.bare.length?h.bare:null}",
+   "pune": "return s&&h&&h.bare&&h.bare.length?h.bare:null}"
+  },
+  {
+   "nume": "cifra nu se mai rescrie la prețul viu",
+   "fisier": "public/app.js",
+   "cauta": "var z24=pa&&PretViu.text24&&typeof pvPct24===\"function\"?PretViu.text24(pvPct24(b,pa.pret)):null;if(z24)zt=z24;",
+   "pune": "var z24=null;"
+  },
+  {
+   "nume": "deschiderea zilei scoasă (rezerva)",
+   "fisier": "public/app.js",
+   "cauta": "pvPorneste(s.pionex);pvAduZi(s.pionex);if(typeof pvAdu24===\"function\")pvAdu24(s.pionex)}",
+   "pune": "pvPorneste(s.pionex);if(typeof pvAdu24===\"function\")pvAdu24(s.pionex)}"
+  }
+ ]
+}

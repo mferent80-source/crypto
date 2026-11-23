@@ -9154,10 +9154,10 @@ function tbActualizeazaBanda(){
   var el=$("botStrip");if(!el)return;
   var b=tbStare.routeOk===false?null:tbStare.bot;
   if(!b){el.hidden=true;pvOpreste();pvArata();return}
-  var s=TabloBot.simboluri(b.baza,b.quote,b.simbolPionex);if(s&&s.pionex){pvPorneste(s.pionex);pvAduZi(s.pionex)}
+  var s=TabloBot.simboluri(b.baza,b.quote,b.simbolPionex);if(s&&s.pionex){pvPorneste(s.pionex);pvAduZi(s.pionex);if(typeof pvAdu24==="function")pvAdu24(s.pionex)}
   /* v100.267 (auditul 29.10): „piața” din bandă doar din direcția monedei botului de acum */
   var d=tbStare.directie&&tbStare.directie.simbol===tbCheieDir(b)?tbStare.directie:null,z=d&&d.rez&&typeof Directie!=="undefined"?Directie.rezumat(d.rez,b.directie):null;
-  var r=typeof PretViu!=="undefined"?PretViu.banda({bot:b,pretViu:pvPretPentru(b),botLa:tbStare.botLa,acum:Date.now(),zi:pvZiPentru(b),
+  var r=typeof PretViu!=="undefined"?PretViu.banda({bot:b,pretViu:pvPretPentru(b),botLa:tbStare.botLa,acum:Date.now(),zi:pvZiPentru(b),pct24:typeof pvPct24==="function"?function(p){return pvPct24(b,p)}:undefined,
     distanteGrid:typeof TabloExtra!=="undefined"?TabloExtra.distanteGrid(pvBotLive(b)):null,piata:z}):null;
   if(!r){el.hidden=true;return}
   // audit 23.10: verde = bine pentru tine. „azi +13%” la un SHORT e rău (roșu); totalul pe minus e roșu, nu galbenul benzii
@@ -9258,6 +9258,26 @@ function pvAduZi(simbol){
     pvStare.zi=z&&z.simbol===simbol&&z.azi===azi?{simbol:simbol,azi:azi,la:acum-9*60000,zi:z.zi}:{simbol:simbol,azi:azi,la:acum-9*60000,zi:null};
   }).then(function(){pvStare.ziInLucru=false;pvArata()});
 }
+// v100.379 (el, 23.11.2026: „trece azi pe 24 de ore”): cifra mică de lângă prețul viu = mișcarea pe ULTIMELE 24 h, nu de la 00:00 UTC.
+// Lumânările de 5 minute ale botului (289 = 24 h și încă una), o dată la 10 minute; clipa „acum − 24 h” înaintează în lumânările deja aduse
+// (închise, nu se mai schimbă), deci cifra e exactă și între două aduceri. Socoteala e Miscare.fereastra - aceeași ca fereastra de 24 h din
+// banda „Mișcarea” ⇒ aceeași cifră în ambele locuri. Deschiderea zilei (pvAduZi) se aduce în continuare: e rezerva când lumânările lipsesc.
+var TB_TITLU_24="Mișcarea prețului pe ultimele 24 de ore (din lumânările de 5 minute)";
+function pv24Pentru(b){var s=b?TabloBot.simboluri(b.baza,b.quote,b.simbolPionex):null,h=pvStare.h24;return s&&h&&h.simbol===s.pionex&&h.bare&&h.bare.length?h.bare:null}
+function pvPct24(b,pret){var bare=pv24Pentru(b);if(!bare||typeof Miscare==="undefined")return null;var w=Miscare.fereastra(bare,pret,Date.now(),86400000,300000);return w?w.pct:null}
+function pvAdu24(simbol){
+  var acum=Date.now(),h=pvStare.h24;
+  if(pvStare.h24InLucru||typeof GridCalcul==="undefined")return;
+  if(h&&h.simbol===simbol&&acum-h.la<10*60000)return;
+  pvStare.h24InLucru=true;
+  getJSON("/api/market?type=pionex_klines&symbol="+encodeURIComponent(simbol)+"&interval=5M&limit=289").then(function(k){
+    var r=k&&k.data&&Array.isArray(k.data.klines)?k.data.klines:null;if(!r)throw new Error("fără lumânări");
+    pvStare.h24={simbol:simbol,la:Date.now(),bare:GridCalcul.bareToate(r)};
+  }).catch(function(){
+    /* păstrăm lumânările de dinainte ale ACELEIAȘI monede; reîncercăm peste un minut, nu la fiecare pas */
+    pvStare.h24={simbol:simbol,la:acum-9*60000,bare:h&&h.simbol===simbol?h.bare:null};
+  }).then(function(){pvStare.h24InLucru=false;pvArata()});
+}
 // Doar pretul se rescrie la fiecare tranzactie (banda + capul Tabloului + „Pretul in grid”), nu tot ecranul;
 // graficul se redeseneaza cu pretul live cel mult o data la 5 s si niciodata cat tii mouse-ul pe el.
 // audit 23.10 (ideea 3): prețul botului în bandă și în capul Tabloului - sub 1 cu TextRo.pret (ca graficul și Drumul), de la 1 în sus textul Pionex
@@ -9269,11 +9289,12 @@ function pvArata(){
   var pa=b&&typeof PretViu!=="undefined"?PretViu.pretDeAratat(b,pvPretPentru(b),tbStare.botLa,Date.now()):null;
   var sag=pa&&pa.viu&&pa.dir==="sus"?" ▲":pa&&pa.viu&&pa.dir==="jos"?" ▼":"";
   var zt=pa?PretViu.textZi(PretViu.procentZi(pa.pret,pvZiPentru(b))):null;
+  var z24=pa&&PretViu.text24&&typeof pvPct24==="function"?PretViu.text24(pvPct24(b,pa.pret)):null;if(z24)zt=z24;   /* v100.379: pe ultimele 24 h când lumânările sunt aduse; altfel „azi”, ca înainte */
   var bp=$("botStripPret");
   if(bp&&pa){bp.textContent=bsPretText(pa)+sag;bp.className="bsPret"+(pa.viu?" viu":"");bp.title="Prețul botului "+pa.sursa}
   var el=$("botStrip");
   if(el&&b){
-    var bz=el.querySelector('.bsParte[data-k="zi"]');if(bz&&zt){bz.textContent=zt.t;bz.className="bsParte "+bsTonEfect(zt.ton,b.directie)}
+    var bz=el.querySelector('.bsParte[data-k="zi"]');if(bz&&zt){bz.textContent=zt.t;bz.className="bsParte "+bsTonEfect(zt.ton,b.directie);if(z24&&bz.title!==TB_TITLU_24)bz.title=TB_TITLU_24}
     var bg=el.querySelector('.bsParte[data-k="grid"]'),dg=typeof TabloExtra!=="undefined"?TabloExtra.distanteGrid(pvBotLive(b)):null;
     if(bg&&dg)bg.textContent=PretViu.textGrid(dg);
     /* v100.272 (ideile auditului 29.10): și distanța la lichidare, din prețul arătat (viu) - ca „azi” și distanțele gridului */

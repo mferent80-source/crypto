@@ -56,6 +56,8 @@ var PretViu = (function () {
   function procentZi(pret, zi) { var p = nr(pret), d = zi && nr(zi.deschidere); return p > 0 && d > 0 ? (p / d - 1) * 100 : null; }
   // v100.75 (ideea 1): virgula zecimală și „−”, ca în restul softului (semnul după valoarea rotunjită: fără „−0,0%”)
   function textZi(pct) { if (pct === null) return null; var r = Math.round(pct * 10) / 10; return { t: "azi " + (r > 0 ? "+" : r < 0 ? "−" : "") + Math.abs(r).toFixed(1).replace(".", ",") + "%", ton: pct > 0 ? "sus" : pct < 0 ? "jos" : "egal" }; }
+  // v100.379: „24 h +1,2%” - semnul și tonul după cifra ROTUNJITĂ (un zero rotunjit n-are semn); lipsa rămâne lipsă
+  function text24(pct) { var p = nr(pct); if (p === null) return null; var r = Math.round(p * 10) / 10; return { t: "24 h " + (r > 0 ? "+" : r < 0 ? "−" : "") + Math.abs(r).toFixed(1).replace(".", ",") + "%", ton: r > 0 ? "sus" : r < 0 ? "jos" : "egal" }; }
   // distanțele până la marginile gridului - o singură formă pentru bandă și pentru reîmprospătarea live din app.js
   function textGrid(dg) { var f = function (v) { return (v * 100).toFixed(1).replace(".", ",") + "%"; }; return !dg ? "" : dg.inGrid ? "grid ↓" + f(dg.josPct) + " ↑" + f(dg.susPct) : dg.text; }
   // Copia botului cu pretul live - ca „Pretul in grid” si distantele pana la marginile gridului sa mearga pe pretul de ACUM.
@@ -87,7 +89,11 @@ var PretViu = (function () {
     var pa = pretDeAratat(b, o.pretViu, o.botLa, o.acum);
     if (pa) parti.push({ k: "pret", t: pa.text + (pa.viu && pa.dir === "sus" ? " ▲" : pa.viu && pa.dir === "jos" ? " ▼" : ""), viu: pa.viu, dir: pa.viu ? pa.dir : null, title: "Prețul botului " + pa.sursa });
     var zt = pa ? textZi(procentZi(pa.pret, o.zi)) : null;
-    if (zt) parti.push({ k: "zi", t: zt.t, ton: zt.ton, title: "Mișcarea de azi, față de deschiderea zilei (00:00 UTC, lumânarea 1D Pionex)" });
+    // v100.379 (el, 23.11.2026: „trece azi pe 24 de ore”): cu lumânările de 5 minute aduse, cifra e mișcarea pe ULTIMELE 24 h (o.pct24(preț),
+    // aceeași socoteală ca banda „Mișcarea”); fără ele (monedă de sub o zi, citire picată) rămâne „azi”, de la deschiderea zilei, ca înainte
+    var z24 = pa && typeof o.pct24 === "function" ? text24(o.pct24(pa.pret)) : null;
+    if (z24) zt = z24;
+    if (zt) parti.push({ k: "zi", t: zt.t, ton: zt.ton, title: z24 ? "Mișcarea prețului pe ultimele 24 de ore (din lumânările de 5 minute)" : "Mișcarea de azi, față de deschiderea zilei (00:00 UTC, lumânarea 1D Pionex)" });
     var tot = nr(b.profitTotal);
     var tr2 = tot === null ? null : Math.round(tot * 10) / 10;   // v100.196: rezultatul cu O zecimală
     var nN = notaNeutru(b);   /* v100.272 (ideile auditului 29.10): botul neutru - semnul poziției din total e nesigur, spus lângă cifră */
@@ -103,5 +109,5 @@ var PretViu = (function () {
     return { parti: parti, clasa: rau ? "bad" : (tot === null || dist === null || tot < 0) ? "tbWarn" : "good", pret: pa };
   }
 
-  return { VIU_MS: VIU_MS, mesaj: mesaj, eViu: eViu, directia: directia, ora: ora, pretDeAratat: pretDeAratat, banda: banda, ziDinKlines: ziDinKlines, procentZi: procentZi, textZi: textZi, textGrid: textGrid, botLaPret: botLaPret, textLich: textLich };
+  return { VIU_MS: VIU_MS, mesaj: mesaj, eViu: eViu, directia: directia, ora: ora, pretDeAratat: pretDeAratat, banda: banda, ziDinKlines: ziDinKlines, procentZi: procentZi, textZi: textZi, text24: text24, textGrid: textGrid, botLaPret: botLaPret, textLich: textLich };
 })();
