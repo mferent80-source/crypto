@@ -48,7 +48,17 @@ await test("(I-879) proba de ecran a Tabloului rulează unde rulează și proba 
   assert.match(citeste("scripts", "copie-de-lucru.mjs"), /proba-ecran-telefon\.mjs[\s\S]{0,700}proba-ecran-tablou\.mjs/, "după publicare: întâi telefonul, apoi ecranul Tabloului");
   // reparația de fond a probei: datele false ajung la pagină (plasa de 3 s a cererilor identice se golește la fiecare schimbare de date)
   const pe = citeste("scripts", "proba-ecran-tablou.mjs");
-  assert.match(pe, /apiTokenRespins = null; if \(typeof getJsonGoleste === "function"\) getJsonGoleste\(\);/); assert.match(pe, /x => \/\^market\\\\\?\.\*klines\/\.test\(x\)/, "pana de rută numără doar lumânările");
+  assert.match(pe, /apiTokenRespins = null; if \(typeof getJsonGoleste === "function"\) getJsonGoleste\(\);/); assert.match(pe, /if \(mApi\[1\] === "market" && url\.indexOf\("klines"\) >= 0\) \(window\.__proba\.lumanari = window\.__proba\.lumanari \|\| \[\]\)\.push\(/, "pana de rută numără doar lumânările");
+  /* 23.11.2026 (după livrarea v100.377: pasul 3 a picat o dată cu „49 !== 48” și a trecut apoi de două ori pe aceleași fișiere): măsurătoarea nu mai
+     depinde de lista surselor care cer lumânări fără legătură cu pana */
+  const p3 = pe.slice(pe.indexOf('await test("3. cand /api/bot-orders da eroare'), pe.indexOf("await test(", pe.indexOf('await test("3. cand /api/bot-orders da eroare') + 20));   /* până la pasul următor */
+  const iPana = p3.indexOf('await seteazaMock(b, "botOrders", { reteaPicata: true });'), iLiniste = p3.indexOf("await linisteLumanari(b)"), iAdu = p3.lastIndexOf("await b.ev(`tbAduDate()`);");
+  assert.ok(iPana > 0 && iLiniste > iPana && iAdu > iLiniste, "ruta se strică ÎNTÂI, apoi liniștea, abia apoi reîmprospătarea măsurată (o reîmprospătare automată reușită nu mai cade între numărat și pană)");
+  assert.match(p3, /for \(let incercare = 1; incercare <= 3; incercare\+\+\) \{/, "o cerere rătăcită = măsurătoarea se repetă, de cel mult trei ori");
+  assert.match(p3, /const dinPana = m\.inPlus\.filter\(\(x\) => x\.dinTimerPana \|\| x\.stiva\.some\(\(r\) => \/tbAduDate\/\.test\(r\)\)\);\s*assert\.equal\(dinPana\.length, 0,/, "cererea pornită din reîmprospătarea de pe pană (sau dintr-un temporizator pus de ea) pică pe loc");
+  assert.match(p3, /if \(!inPlus\.length\) break;\s*\}\s*assert\.equal\(inPlus\.length, 0,/, "o sursă care cere la FIECARE măsurătoare tot pică");
+  assert.match(p3, /assert\.equal\(m\.scrieri, 0,/, "scrierile în istoric se judecă la fiecare măsurătoare"); assert.match(p3, /\} finally \{ await b\.ev\(`window\.__proba\.inPana = false`\); \}/, "semnul penei se scoate și când pasul pică");
+  assert.match(pe, /async function linisteLumanari\(b, ms = 800\) \{/); assert.match(pe, /if \(typeof f !== "function" \|\| !window\.__proba\.inPana \|\| String\(new Error\(\)\.stack\)\.indexOf\("tbAduDate"\) < 0\) return st\.apply\(window, arguments\);/, "temporizatoarele se însemnează doar cât ține pana și doar cele puse din reîmprospătare");
   assert.match(citeste("package.json"), /"test:ecran": "node scripts\/proba-ecran-tablou\.mjs"/);
 });
 

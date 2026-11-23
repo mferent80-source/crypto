@@ -74,12 +74,20 @@ const BOOTSTRAP = `(() => {
     setItemLog: [],
     blocheazaScriereaPentru: null,
   };
+  // pasul 3: cât ține pana (__proba.inPana), un setTimeout pus din tbAduDate își poartă semnul - cererea de lumânări pornită din el e a penei
+  (function () { var st = window.setTimeout; window.setTimeout = function (f) {
+    if (typeof f !== "function" || !window.__proba.inPana || String(new Error().stack).indexOf("tbAduDate") < 0) return st.apply(window, arguments);
+    var a = Array.prototype.slice.call(arguments), g = f;
+    a[0] = function () { window.__proba.dinTimerPana = (window.__proba.dinTimerPana || 0) + 1; try { return g.apply(this, arguments); } finally { window.__proba.dinTimerPana--; } };
+    return st.apply(window, a); }; })();
   window.fetch = function (intrare, optiuni) {
     const url = typeof intrare === "string" ? intrare : (intrare && intrare.url) || String(intrare);
     const potriveste = (nume) => new RegExp("/api/" + nume).test(url);
     const mApi = url.match(/\\/api\\/([a-z0-9-]+)(\\?[^#]*)?/i);
     if (mApi) {
       window.__proba.apeluri.push(mApi[1] + (mApi[2] || ""));
+      // pasul 3: fiecare cerere de LUMÂNĂRI cu clipa și cu stiva ei (V8 ține și cadrele „async”), ca să se știe cine a pornit-o
+      if (mApi[1] === "market" && url.indexOf("klines") >= 0) (window.__proba.lumanari = window.__proba.lumanari || []).push({ la: Date.now(), u: (mApi[2] || "").slice(0, 110), dinTimerPana: !!window.__proba.dinTimerPana, stiva: String(new Error().stack).split(String.fromCharCode(10)).slice(2, 16).map(function (x) { return x.trim().slice(0, 90); }) });
       const r = window.__proba.rute[mApi[1]];
       if (r) {
         if (r.reteaPicata) return Promise.reject(new TypeError("Failed to fetch"));
@@ -439,6 +447,14 @@ async function main() {
     if (TOKEN) await b.ev(`try{sessionStorage.setItem("cryptoRadarApiTokenV54",${JSON.stringify(TOKEN)})}catch(e){}`);
 
     /* ═══ bot sanatos, folosit ca stare de start pentru mai multe scenarii ═══ */
+    // liniște = semnalele încărcărilor libere ȘI nicio cerere de lumânări în ultimele `ms` (orice lanț de cereri aflat pe drum, fără să-l știu pe nume)
+    async function linisteLumanari(b, ms = 800) {
+      for (let i = 0; i < 150; i++) {
+        if (await b.ev(`!(tbStare.directie&&tbStare.directie.inLucru)&&!(tbStare.grafic&&tbStare.grafic.inLucru)&&!(typeof pvStare!=="undefined"&&pvStare.ziInLucru)&&(function(l){return !l.length||Date.now()-l[l.length-1].la>=${ms}})(window.__proba.lumanari||[])`)) return true;
+        await asteapta(200);
+      }
+      return false;
+    }
     async function incarcaBotSanatos(over = {}) {
       await seteazaMock(b, "botOrders", { corp: { bots: [botNormalizat(botBrut(Object.assign({ strategyId: "8001", baza: "ADA.PERP", quote: "USDT" }, over)))] }, stare: 200 });
       await seteazaMock(b, "market", { corp: lumanariCorpMock(60), stare: 200 });
@@ -563,20 +579,35 @@ async function main() {
       const scrisLaInceput = await b.ev(`window.__proba.setItemLog.some(k=>k==='tabloBotIstoric_v1_${id}')`);
       assert.ok(scrisLaInceput, "precheck: primul apel reusit ar trebui sa scrie un istoric");
 
-      // v91.10: cererile PORNITE inainte de pana (directia: 4 intervale + funding + BTC, distantate de server)
-      // nu sunt "cerute in timpul penei" - se asteapta sa se termine, apoi se numara
-      // v100.9: si deschiderea zilei (pvAduZi, lumanarea 1D a botului, v100.7) pornita inainte de pana
-      for (let i = 0; i < 60; i++) { if (await b.ev(`!(tbStare.directie&&tbStare.directie.inLucru)&&!(tbStare.grafic&&tbStare.grafic.inLucru)&&!(typeof pvStare!=="undefined"&&pvStare.ziInLucru)`)) break; await asteapta(500); }
-      await b.ev(`window.__proba.setItemLog = []`);
-      // v100.341 (I-879): doar cererile de LUMÂNĂRI - prețul viu (tickerul) se cere periodic și nimerea uneori în fereastră (55 ≠ 54)
-      const lumanariCerute = () => b.ev(`window.__proba.apeluri.filter(x => /^market\\?.*klines/.test(x)).length`);
-      const apeluriMarketInainte = await lumanariCerute();
+      /* 23.11.2026 (după livrarea v100.377: 77 ok · 1 pică, „49 !== 48”, apoi 78 · 0 de două ori pe aceleași fișiere). Pasul număra ORICE cerere de
+         lumânări dintre „am numărat” și „am terminat”, iar pagina are surse care cer lumânări fără legătură cu pana: direcția (4 intervale + funding
+         + BTC), graficul, deschiderea zilei, fișa monedei, reluarea direcției la 30 s și reîmprospătarea automată a Tabloului la 8 s (lumânările de
+         5 min îi rămân bune 45 s). De trei ori (v91.10, v100.9, v100.341) s-a adăugat câte o sursă la lista de așteptat. Acum măsurătoarea nu mai
+         depinde de listă:
+           1. ruta se strică ÎNTÂI, apoi se așteaptă liniștea - o reîmprospătare automată reușită nu mai poate cădea între numărat și pană;
+           2. o cerere de lumânări cu tbAduDate în stivă (pornită chiar din reîmprospătarea de pe pană) sau pornită dintr-un temporizator pus de ea
+              cât ține pana = defectul păzit, pică pe loc;
+           3. o cerere fără tbAduDate în stivă poate fi una rătăcită ⇒ măsurătoarea se repetă, de cel mult trei ori; dacă apare de FIECARE dată,
+              e o sursă care cere mereu în timpul penei (de pildă printr-un temporizator pornit de reîmprospătare) - tot defect;
+           4. mesajul spune care cerere și cine a pornit-o. */
       await seteazaMock(b, "botOrders", { reteaPicata: true });
-      await b.ev(`tbAduDate()`);
-      const scrieriInTimpulPenei = await b.ev(`window.__proba.setItemLog.filter(k=>k.startsWith('tabloBotIstoric_v1_')).length`);
-      const apeluriMarketDupa = await lumanariCerute();
-      assert.equal(scrieriInTimpulPenei, 0, `n-ar trebui nicio scriere in istoric in timpul penei, au fost ${scrieriInTimpulPenei}`);
-      assert.equal(apeluriMarketDupa, apeluriMarketInainte, "n-ar trebui cerute lumanari in timpul penei de ruta");
+      await b.ev(`window.__proba.inPana = true`);
+      try {
+      const descrie = (l) => l.map((x) => x.u + (x.dinTimerPana ? " ← (temporizator pus de reîmprospătare)" : "") + " ← " + x.stiva.map((r) => (r.match(/at (?:async )?([A-Za-z0-9_.$]+) /) || [])[1]).filter((n) => n && n !== "window.fetch").slice(0, 6).join(" ← ")).join(" ¦ ");
+      let inPlus = [];
+      for (let incercare = 1; incercare <= 3; incercare++) {
+        assert.ok(await linisteLumanari(b), "pagina nu s-a liniștit în 30 s (cereri de lumânări una după alta)");
+        await b.ev(`window.__proba.setItemLog = []; window.__proba.nPana = (window.__proba.lumanari || []).length`);
+        await b.ev(`tbAduDate()`);
+        await asteapta(300);   // și cererile pornite cu o mică întârziere (un temporizator din ramura de eroare)
+        const m = JSON.parse(await b.ev(`JSON.stringify({ scrieri: window.__proba.setItemLog.filter(k=>k.startsWith('tabloBotIstoric_v1_')).length, inPlus: (window.__proba.lumanari || []).slice(window.__proba.nPana) })`));
+        assert.equal(m.scrieri, 0, `n-ar trebui nicio scriere in istoric in timpul penei, au fost ${m.scrieri}`);
+        const dinPana = m.inPlus.filter((x) => x.dinTimerPana || x.stiva.some((r) => /tbAduDate/.test(r)));
+        assert.equal(dinPana.length, 0, "n-ar trebui cerute lumanari in timpul penei de ruta - reîmprospătarea de pe pană a cerut: " + descrie(dinPana));
+        inPlus = m.inPlus; if (!inPlus.length) break;
+      }
+      assert.equal(inPlus.length, 0, "n-ar trebui cerute lumanari in timpul penei de ruta - la trei măsurători la rând a apărut câte o cerere: " + descrie(inPlus));
+      } finally { await b.ev(`window.__proba.inPana = false`); }
     });
 
     /* ═══ 4. Badge-uri neutre la eroare ═══════════════════════════════════ */
