@@ -636,7 +636,7 @@ await test("L3 un singur preț: rândul din „Contează acum” spune prețul c
   assert.match(rand(Object.assign({}, baza, { mutP24: 0.13 })).faCe, /^Hotărăște acum: ori accepți ieșirea la 75(\.0+)?, ori muți stopul la ~78\.2(0+)? \(acolo ~13 din 100 într-o zi\)\.$/);
   assert.match(rand(baza).faCe, /\(acolo ~20 din 100 într-o zi\)\.$/, "fără șansa măsurată (prețul curbei): ca până acum");
   assert.match(rand(Object.assign({}, baza, { mutP24: 0.004 })).faCe, /acolo ~1 din 100 într-o zi/, "niciodată „0 din 100”");
-  assert.match(rand(Object.assign({}, baza, { raport: -0.1, mutRaport: -0.351, mutP24: 0.13 })).faCe, /ori muți stopul la ~−35,1% din investiție \(acum pe la ~78\.2(0+)?; acolo ~13 din 100 într-o zi\)\.$/);
+  /* v100.381: fără „~” lipit de procentul cu semn („~−35,1%” ⇒ „−35,1%”) */ assert.match(rand(Object.assign({}, baza, { raport: -0.1, mutRaport: -0.351, mutP24: 0.13 })).faCe, /ori muți stopul la −35,1% din investiție \(acum pe la ~78\.2(0+)?; acolo ~13 din 100 într-o zi\)\.$/);
 });
 
 await test("L4 stopul CHIAR pe margine (≤ 0,2% de ea, prețul în grid): cartela nu mai zice „l-aș lăsa” (un fir de păr dincolo) și nici „stă în grid” (un fir de păr dincoace) - spune faptul, prețul propus și cele două sume", () => {

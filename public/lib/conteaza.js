@@ -49,12 +49,21 @@ var Conteaza = (function () {
     var oprit = s.mutOprit === "lichidare", bani = rap === null && nr(s.mutTotal) !== null ? ", totalul acolo ≈ " + usdt1(s.mutTotal) : "";
     var gr = s.mutGrile && nr(s.mutGrile.moarte) >= 1 && nr(s.mutGrile.intervale) >= 1 ? "; " + (s.sus ? "peste" : "sub") + " el nu mai lucrează " + s.mutGrile.moarte + " din " + cate(s.mutGrile.intervale, "grilă", "grile") : "";
     var mut = nr(s.mut20) === null ? null : rap === null ? "~" + pret(s.mut20) + " (acolo ~" + (nr(s.mutP24) !== null ? din100(s.mutP24) : "20") + " din 100 într-o zi" + bani + gr + ")"
-      : mR !== null ? "~" + pct1(mR) + " din investiție (acum pe la ~" + pret(s.mut20) + "; acolo ~" + (nr(s.mutP24) !== null ? din100(s.mutP24) : "20") + " din 100 într-o zi" + gr + ")" : null;
+      : mR !== null ? /* v100.381: fără „~” lipit de procentul cu semn („~−94,2%”) */ pct1(mR) + " din investiție (acum pe la ~" + pret(s.mut20) + "; acolo ~" + (nr(s.mutP24) !== null ? din100(s.mutP24) : "20") + " din 100 într-o zi" + gr + ")" : null;
+    /* v100.381 (el, 24.11.2026: „cum poate să atingă și stopul și TP în proporție de 72% ambele?” ⇒ „fa idei”): la botul cu take-profit, curba spune
+       doar că PREȚUL ajunge la stop - botul poate ieși înainte pe take-profit. Dedesubt, ce vine întâi după simularea pe botul lui (aceeași cifră ca
+       bara din cap). Pragul și roșul rămân pe curbă: avertizarea nu se ascunde după o cifră a simulării. */
+    var it = s.intai && nr(s.intai.stop) !== null && nr(s.intai.tp) !== null ? s.intai : null;
+    /* v100.381 („rezolvă tot”, BULLA 24.11: aici „ori muți stopul la ~−94,2%”, dedesubt Consilierul „l-aș lăsa unde e” pentru ACELAȘI preț): când propunerea
+       pierde mai mult decât stopul de acum (banii: TabloExtra.stopPropus), rândul spune banii la ambele și aceeași concluzie ca a Consilierului */
+    var laS = nr(s.laStop), mT = nr(s.mutTotal), maiMult = laS !== null && mT !== null && mT < laS;
     return { cheie: "stop", ton: rosu ? "rosu" : "galben", grav: rosu ? 1 : 4, nr: din100(p), nrSub: "din 100 · 24 h",
-      titlu: "Stopul tău (" + et + ") e atins într-o zi în ~" + din100(p) + " din 100 de cazuri",
-      sub: "e la " + num1(s.d) + " ATR de preț" + (nr(s.p72) !== null ? " · în 3 zile: ~" + din100(s.p72) + " din 100" : "") + " · măsurat pe " + (perechi > 0 ? cate(perechi, "monedă", "monede") : "monedele mari")
+      titlu: it ? "Prețul ajunge la stopul tău (" + et + ") într-o zi în ~" + din100(p) + " din 100 de cazuri" : "Stopul tău (" + et + ") e atins într-o zi în ~" + din100(p) + " din 100 de cazuri",
+      sub: (it ? "cu take-profit-ul tău, botul iese întâi pe stop în ~" + din100(it.stop) + " din 100 și pe take-profit în ~" + din100(it.tp) + " din 100 (simularea pe botul tău, pe 24 h) · " : "") + "e la " + num1(s.d) + " ATR de preț" + (nr(s.p72) !== null ? " · în 3 zile: ~" + din100(s.p72) + " din 100" : "") + " · măsurat pe " + (perechi > 0 ? cate(perechi, "monedă", "monede") : "monedele mari")
         + ", ultimele " + cate(zile, "zi", "zile") + ", jos și sus la un loc (direcția nu se știe)" + (s.plafon ? " · plafonat la șansa marginii de " + (s.plafon === "sus" ? "sus" : "jos") + " (stopul e dincolo de ea)" : ""),
-      faCe: mut !== null ? "Hotărăște acum: ori accepți ieșirea la " + iesire + ", ori muți stopul la " + mut + "."
+      faCe: mut !== null && maiMult ? "Hotărăște acum: ori accepți ieșirea la " + iesire + " (" + usdt1(laS) + "), ori muți stopul la " + mut + ". Eu l-aș lăsa unde e: mutarea scade șansa de la ~" + din100(p)
+          + " la ~" + (nr(s.mutP24) !== null ? din100(s.mutP24) : "20") + " din 100 într-o zi, dar pierderea maximă crește de la " + num1(Math.abs(laS)) + " la " + num1(Math.abs(mT)) + " USDT."
+        : mut !== null ? "Hotărăște acum: ori accepți ieșirea la " + iesire + ", ori muți stopul la " + mut + "."
         : s.mutOprit === "adapost" ? "Hotărăște acum dacă accepți ieșirea la " + iesire + ": stopul păstrează " + (nr(s.mutLaStop) !== null ? usdtMic(s.mutLaStop) : "câștigul") + ", mai departe l-ar da înapoi."   /* v100.333 (🔵11) */
         : oprit ? "Hotărăște acum dacă accepți ieșirea la " + iesire + ": mai departe nu propun, acolo vine întâi lichidarea" + (nr(s.mutLich) !== null ? " (" + pret(s.mutLich) + ")" : "") + "."
         : "Hotărăște acum: ori accepți ieșirea la " + iesire + ", ori pui stopul mult mai departe." };
@@ -128,7 +137,7 @@ var Conteaza = (function () {
     l = l.filter(function (q) { return !q.inCap; }); if (!l.length) return null;   /* v100.374: rândul scurt („e în capul paginii”) e al Tabloului */
     var x = l.filter(function (q) { return q.cheie === "stop" || q.ton === "rosu"; })[0]; if (!x) return null;
     // revizia 11.11: rândul verde („take-profit pus”) e o confirmare, nu ceva „de văzut” ⇒ nu se numără
-    var t = x.cheie === "stop" ? x.titlu.replace(/^Stopul tău \(/, "stopul (") : x.titlu.charAt(0).toLowerCase() + x.titlu.slice(1), rest = l.filter(function (q) { return q !== x && q.ton !== "verde"; }).length;
+    var t = x.cheie === "stop" ? x.titlu.replace(/^Stopul tău \(/, "stopul (").replace(/^Prețul ajunge la stopul tău \(/, "prețul ajunge la stopul (") /* v100.381 */ :x.titlu.charAt(0).toLowerCase() + x.titlu.slice(1), rest = l.filter(function (q) { return q !== x && q.ton !== "verde"; }).length;
     return { titlu: String(nume || "botul") + ": " + t, text: "👉 hotărăște în Tablou" + (rest > 0 ? " · încă " + rest + " de văzut acolo" : ""), ton: x.ton };
   }
 

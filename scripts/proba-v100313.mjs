@@ -389,7 +389,8 @@ await test("revizia 🟡4: stopul pus în PROCENTE — blocul spune procentul di
   assert.equal(s.raport, -0.15); assert.ok(Math.abs(s.mutRaport - (s.mut20 - 0.3375) * 1000 / 89.18) < 1e-9, JSON.stringify(s));
   const { Conteaza } = M(); const r = J(Conteaza.alege({ stop: s }))[0];
   assert.match(r.titlu, /^Stopul tău \(−15,0% din investiție, acum pe la 0\.3300\) e atins într-o zi în ~\d+ din 100 de cazuri$/);
-  assert.match(r.faCe, /^Hotărăște acum: ori accepți ieșirea la −15,0%, ori muți stopul la ~−\d+,\d% din investiție \(acum pe la ~0\.\d{4}; acolo ~20 din 100 într-o zi\)\.$/);
+  /* v100.381: fără „~” lipit de procentul cu semn („~−33,6%” ⇒ „−33,6%”); restul neschimbat */
+  assert.match(r.faCe, /^Hotărăște acum: ori accepți ieșirea la −15,0%, ori muți stopul la −\d+,\d% din investiție \(acum pe la ~0\.\d{4}; acolo ~20 din 100 într-o zi\)\.$/);
   assert.match(J(Conteaza.acasa([r], "STX")).titlu, /^STX: stopul \(−15,0% din investiție/);
 });
 await test("revizia 🟡5 + 🟡6: stopul dincolo de lichidare ⇒ fără cifră (lichidarea vine întâi); stopul dincolo de margine nu e atins mai des decât marginea (plafon, spus)", () => {

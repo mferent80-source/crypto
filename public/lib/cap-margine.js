@@ -266,12 +266,18 @@ var CapMargine = (function () {
        de pe drum; dincolo de grid botul ajunge fără poziție) și șansa de a-l atinge pe 1 h / 4 h / 24 h, din același Monte Carlo ca stopul */
     var tpP = nr(x.tp), tpI = tpP !== null && tpP > 0 ? { pret: tpP, total: nr(x.laTp), dist: (tpP - p) / p, dincolo: sus !== null && tpP > sus ? "peste" : jos !== null && tpP < jos ? "sub" : "", raport: nr(x.tpRaport), dinPret: x.tpDinPret === true ? true : x.tpDinPret === false ? false : null, grile: x.tpGrile && typeof x.tpGrile === "object" ? x.tpGrile : null } : null;
     var tpS = tpI && Array.isArray(x.stopScurt) ? x.stopScurt.filter(function (q) { return q && (q.ore === 1 || q.ore === 4 || q.ore === 24) && nr(q.pTp) !== null; }).map(function (q) { return { ore: q.ore, p: q.pTp }; }) : [];
+    /* v100.381 (el, 24.11.2026: „cum poate să atingă și stopul și TP în proporție de 72% ambele?”): curba stopului e a PIEȚEI și nu știe de take-profit
+       („prețul ajunge la nivelul stopului”), iar take-profit-ul vine din Monte Carlo, unde fiecare drum se oprește la ce vine ÎNTÂI ⇒ ~72% + 72,6%.
+       Cu take-profit și cifra lui pe 24 h, stopul ia toate trei orizonturile din aceeași simulare (împreună cel mult 100%); curba rămâne reper, numită. */
+    var mc24 = tpI && stop !== null && Array.isArray(x.stopScurt) ? x.stopScurt.filter(function (q) { return q && q.ore === 24 && nr(q.pTp) !== null && nr(q.pStop) !== null; })[0] : null;
+    if (mc24) { stopS = x.stopScurt.filter(function (q) { return q && (q.ore === 1 || q.ore === 4 || q.ore === 24) && nr(q.pStop) !== null; }).map(function (q) { return { ore: q.ore, p: q.pStop }; }); if (mut) mut.stopMc24 = nr(mc24.pStop); }
     var rez = { parte: parte, nivel: niv, dist: dist, afara: afara, titlu: sigur ? String(cons.titlu) : titlu, fapt: sigur ? titlu : "", sanse: afara ? [] : sanse,
       sanseVechi: vechi && sanse.length ? { fel: vechi, dist: d0 } : null, sanseDist: d0, sanseOra: x.sanseOra ? String(x.sanseOra) : "", stopScurt: stopS, stopDrum: sd,
       expunere: exp, intre: intre, afaraDe: afaraDe, zero: zeroI, stopMargine: stopM, mutare: mv, mut: mut, parteMargine: parte, copiaza: afara ? null : [{ ce: "marginea de " + parte, pret: pret(niv), exact: String(niv) }], faraStop: faraStop ? textFaraStop(x.dovada) : "",
       bani: { margine: afara ? null : bM, stop: bS, stopPret: stop, stopActiv: !!x.stopActiv, stopEticheta: x.stopEticheta ? String(x.stopEticheta) : "" }, faCe: faCe, sigur: sigur,
       cons: cons && !sigur && cons.titlu && cons.cod !== "margine" ? { titlu: String(cons.titlu), dovedit: !!cons.dovedit } : null, dovada: textDovada(x.dovada) };
     if (tpI) { rez.tp = tpI; rez.tpScurt = tpS; rez.tpVerif = Array.isArray(x.tpVerif) ? x.tpVerif : null; }
+    if (mc24) rez.stopImpreuna = true;   /* v100.381: stopul și take-profit-ul din aceeași simulare */
     return rez;
   }
   function textSanse(c) {
@@ -380,7 +386,12 @@ var CapMargine = (function () {
     if (S.length && !S.some(function (s) { return s.vechi; })) M.push({ k: "margine", et: "Atinge marginea, din 100", sursa: "istoria monedei" + (c.sanseOra ? ", socotit la " + c.sanseOra : "") + " · amănuntele în Probabilități",
       bare: S.map(function (s) { return { et: s.ore + " h", p: s.p, text: s.text.replace(/ din 100$/, "") }; }) });
     var B = mc.map(function (s) { return { et: s.ore + " h", p: s.p, text: s.p * 100 < 0.05 ? "sub 0,1%" : num(s.p * 100, 1) + "%" }; }), are24 = sd !== null && sd !== undefined;
-    if (are24) { var k = Math.round(sd * 100); B.push({ et: "24 h", p: sd, text: k < 1 ? "< 1%" : k > 99 ? "> 99%" : "~" + k + "%" }); }
+    /* v100.381: cu take-profit, toate trei din aceeași simulare - „ce vine întâi”; curba stopului rămâne în sursă, cu ce măsoară ea */
+    if (c.stopImpreuna && B.length) { var kc = are24 ? Math.round(sd * 100) : null;
+      M.push({ k: "stop", et: "Atinge stopul", sursa: "Monte Carlo pe botul tău: ce vine întâi, stopul sau take-profit-ul (împreună cel mult 100%) · " + textStopVerif24(c.tpVerif)
+        + (kc !== null ? " · prețul ajunge la nivelul stopului în 24 h: " + (kc < 1 ? "< 1%" : kc > 99 ? "> 99%" : "~" + kc + "%") + " (curba stopului, ca pe Drum), dar take-profit-ul poate închide botul înainte" : ""), bare: B });
+      B = []; }
+    else if (are24) { var k = Math.round(sd * 100); B.push({ et: "24 h", p: sd, text: k < 1 ? "< 1%" : k > 99 ? "> 99%" : "~" + k + "%" }); }
     var Tp = (c.tpScurt || []).map(function (s) { return { et: s.ore + " h", p: s.p, text: s.p * 100 < 0.05 ? "sub 0,1%" : num(s.p * 100, 1) + "%" }; });
     if (B.length) M.push({ k: "stop", et: "Atinge stopul", sursa: mc.length && are24 ? mc.map(function (s) { return s.ore + " h"; }).join(" și ") + ": Monte Carlo pe botul tău · 24 h: curba stopului, ca pe Drum" : mc.length ? "Monte Carlo pe botul tău" : "curba stopului, ca pe Drum", bare: B });
     if (Tp.length) M.push({ k: "tp", et: "Atinge take-profit-ul", sursa: "Monte Carlo pe botul tău · " + textTpVerif(c.tpVerif), bare: Tp });
@@ -394,6 +405,17 @@ var CapMargine = (function () {
     if (g && nr(g.zile) !== null && g.zile > 0) return " · din grile: ~" + (g.zile < 10 ? z1(g.zile) + " zile" : cate(Math.round(g.zile), "zi", "zile")) + " la ritmul de azi" + (scurt ? "" : ", dacă prețul stă pe loc");
     if (g && g.zile === null && nr(g.netZi) !== null) return " · nici din grile, la ritmul de azi: nu acoperă costurile";
     return ": doar din grile, în timp";
+  }
+  /* v100.381 („fa idei”): verificarea stopului pe 24 h din jurnalul colectorului (calibrareScurt, aceeași listă ca a take-profit-ului) - pe 24.11:
+     47 de judecate pe 24 de zile, prezis 18,8%, atins 15,2%, nedecis. Sub 30 de judecate sau 10 zile: „strânge date”, ca rândul Monte Carlo. */
+  function textStopVerif24(v) {
+    var k = (Array.isArray(v) ? v : []).filter(function (x) { return x && x.ore === 24 && nr(x.n) !== null && x.n > 0; })[0];
+    if (!k) return "pe 24 h simularea nu e încă verificată";
+    var cat = cate(k.n, "judecată", "judecate") + " pe " + cate(nr(k.zile) || 0, "zi", "zile");
+    if (k.n < 30 || !(nr(k.zile) >= 10)) return "pe 24 h, verificarea pe boții tăi strânge date (" + cat + "; trebuie 30 pe 10 zile)";
+    if (nr(k.pStopMed) === null || nr(k.stopRata) === null) return "pe 24 h simularea nu e încă verificată";
+    var CUV = { potrivit: "se potrivește", "prea-putin": "prezice prea puțin: stopul se atinge mai des", "prea-mult": "prezice prea mult: stopul se atinge mai rar", nedecis: "încă nedecis" };
+    return "pe 24 h, pe boții tăi: stopul prezis " + num(k.pStopMed * 100, 1) + "%, atins " + num(k.stopRata * 100, 1) + "% (" + cat + ")" + (CUV[k.verdictStop] ? " — " + CUV[k.verdictStop] : "");
   }
   function textTpVerif(v) {
     var L = (Array.isArray(v) ? v : []).filter(function (x) { return x && (x.ore === 1 || x.ore === 4 || x.ore === 24) && nr(x.nTp) !== null && x.nTp > 0; });
@@ -422,8 +444,11 @@ var CapMargine = (function () {
     if (m.margine) r0.push("la marginea de " + c.parteMargine + " (" + pret(m.margine.pret) + ", " + pc(m.margine.dist) + "): " + usdt(m.margine.total));
     if (m.zero) r0.push("pe zero la " + pret(m.zero.pret) + " (" + pc(m.zero.dist) + ")"); else if (m.zeroNeatins) r0.push("pe zero nu se mai ajunge în gridul ăsta" + (m.zeroPoz ? " (pe poziția de acum zero-ul e la " + pret(m.zeroPoz) + ")" : ""));
     R.push("Dacă rămâi: " + r0.join(" · "));
-    if (m.risc !== null && m.recuperat !== null) { var k = m.stop24 !== null && m.stop24 !== undefined ? Math.round(m.stop24 * 100) : null;
-      R.push("Riști încă " + fara(m.risc) + " până la stop, pentru " + fara(m.recuperat) + " recuperați dacă prețul se întoarce la margine" + (k !== null ? " · stopul atins în 24 h: " + (k < 1 ? "< 1%" : k > 99 ? "> 99%" : "~" + k + "%") + " (curba stopului)" : "")); }
+    if (m.risc !== null && m.recuperat !== null) { var k = m.stop24 !== null && m.stop24 !== undefined ? Math.round(m.stop24 * 100) : null, kt = function (v) { return v < 1 ? "< 1%" : v > 99 ? "> 99%" : "~" + v + "%"; };
+      /* v100.381: cu take-profit, întâi cifra simulării (înaintea take-profit-ului), apoi curba, numită ce e */
+      if (m.stopMc24 !== null && m.stopMc24 !== undefined) R.push("Riști încă " + fara(m.risc) + " până la stop, pentru " + fara(m.recuperat) + " recuperați dacă prețul se întoarce la margine · stopul atins în 24 h, înaintea take-profit-ului: "
+        + (m.stopMc24 * 100 < 0.05 ? "sub 0,1%" : num(m.stopMc24 * 100, 1) + "%") + " (Monte Carlo pe botul tău)" + (k !== null ? " · prețul la nivelul stopului: " + kt(k) + " (curba stopului, fără take-profit)" : ""));
+      else R.push("Riști încă " + fara(m.risc) + " până la stop, pentru " + fara(m.recuperat) + " recuperați dacă prețul se întoarce la margine" + (k !== null ? " · stopul atins în 24 h: " + (k < 1 ? "< 1%" : k > 99 ? "> 99%" : "~" + k + "%") + " (curba stopului)" : "")); }
     var t = [];
     if (m.curent) t.push("după " + cate(m.curent.h, "oră", "ore") + " afară, în " + din100(m.curent.intoarse) + " de cazuri prețul s-a întors în grid în următoarele 24 de ore (" + cate(m.curent.n, "episod", "episoade") + ", ieșiri pe oricare parte a gridului)");
     m.urmatoare.forEach(function (u, i) { if (u.la === null) return; t.push(oraZi(u.la, m.acum) + (u.h === 1 ? " se face o oră" : " se fac " + cate(u.h, "oră", "ore")) + (!m.curent && i === 0 ? " afară" : "") + ": " + din100(u.intoarse)); });
@@ -457,6 +482,11 @@ var CapMargine = (function () {
     if (!c) return "";
     /* „0,0%” nu e o cifră: sub o zecime de procent se spune „sub 0,1%” */
     var mc = (c.stopScurt || []).map(function (s) { return "în " + s.ore + " h — " + (s.p * 100 < 0.05 ? "sub 0,1%" : num(s.p * 100, 1) + "%"); }), l = [];
+    /* v100.381: cu take-profit, cifrele simulării sunt „înaintea take-profit-ului”, iar curba se spune ca ce e: prețul la nivelul stopului */
+    if (c.stopImpreuna) {
+      if (mc.length) l.push(mc.join(" · ") + " (Monte Carlo pe botul tău, înaintea take-profit-ului)");
+      if (c.stopDrum !== null && c.stopDrum !== undefined) { var kd = Math.round(c.stopDrum * 100); l.push("prețul la nivelul stopului în 24 h — " + (kd < 1 ? "< 1%" : kd > 99 ? "> 99%" : "~" + kd + "%") + " (curba stopului, fără take-profit)"); }
+      return l.length ? "stopul atins: " + l.join(" · ") : ""; }
     if (mc.length) l.push(mc.join(" · ") + " (Monte Carlo pe botul tău)");
     /* cifra de pe Drum, scrisă ca acolo (app.js tbStopSansaDrum): „~42%”, „< 1%”, „> 99%” */
     if (c.stopDrum !== null && c.stopDrum !== undefined) { var k = Math.round(c.stopDrum * 100); l.push("în 24 h — " + (k < 1 ? "< 1%" : k > 99 ? "> 99%" : "~" + k + "%") + " (curba stopului, ca pe Drum)"); }

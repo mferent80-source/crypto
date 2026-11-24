@@ -4992,6 +4992,10 @@ function explicaEroareaAplicatiei(mesaj,status){
   if(typeof TabloBot!=='undefined'&&TabloBot.explicaEroarea)return TabloBot.explicaEroarea(mesaj,status,(typeof location!=='undefined'&&location.hostname)||'');
   return {titlu:"Nu am putut citi boții",ceFac:String(mesaj||"")}
 }
+/* v100.381 (el, 24.11: „arată că sunt 2 boți, dar cum îi văd pe amândoi?”): „Boți activi” arăta „1 / 2” - sumarul e al GRIDULUI (v100.380), dar numărul
+   cuprindea și botul de semnal, care părea oprit. Acum: gridul „activi / toți”, iar boții de semnal separat („· 1 de semnal”, cu câți rulează când nu toți). */
+function botiNumarText(s,bots){s=s||{};bots=Array.isArray(bots)?bots:[];var sem=bots.filter(function(b){return b&&b.tip==="semnal"}),pornite=sem.filter(function(b){return b.ruleaza===true}).length,grid=bots.length-sem.length;
+  return (s.active!=null?s.active:"—")+" / "+(sem.length?grid:(s.numar!=null?s.numar:bots.length))+(sem.length?" · "+TextRo.cate(sem.length,"bot de semnal","boți de semnal")+(pornite<sem.length?" ("+TextRo.cate(pornite,"pornit","pornite")+")":""):"")}
 async function incarcaBoti(cuToast=false){
   const stare=$('botiStare'),randuri=$('botiRanduri');
   if(stare)stare.textContent='CITESC…';
@@ -5019,7 +5023,7 @@ async function incarcaBoti(cuToast=false){
   }
   window.__botiPionex=d;
   const s=d.sumar||{},bots=d.bots.filter(Boolean);
-  if($('botiNumar'))$('botiNumar').textContent=`${s.active??'—'} / ${s.numar??bots.length}`;
+  if($('botiNumar'))$('botiNumar').textContent=botiNumarText(s,bots);
   if($('botiInvestit'))$('botiInvestit').textContent=botiBan(s.investitTotal,2,false);
   if($('botiProfitNet')){const n=$('botiProfitNet');n.textContent=botiBan(s.profitNetTotal);n.className=botiClasa(s.profitNetTotal)}
   const nerealizat=botiSuma(bots,'pnlNerealizat'),total=botiSuma(bots,'profitTotal');
@@ -5100,7 +5104,7 @@ function tbDeseneazaSelectorul(){
   for(var i=0;i<boti.length;i++){
     var b=boti[i],id=String(b.id);
     html+='<option value="'+escapeHtml(id)+'"'+(id===curent?" selected":"")+">"+
-      escapeHtml(b.simbol+(b.activ?"":" (oprit)"))+"</option>";
+      escapeHtml(b.simbol+(b.tip==="semnal"?" · bot de semnal"+(b.ruleaza?"":" (oprit)"):b.activ?"":" (oprit)"))+"</option>";   /* v100.381: „activ” e al gridului (v100.380); botul de semnal pornit nu e „(oprit)” */
   }
   sel.innerHTML=html;
 }
@@ -8338,7 +8342,11 @@ function tbProbRanduriHtml(l){
   try{nota=d&&typeof CapMargine!=="undefined"?CapMargine.textDurata(d,72):""}catch(e){nota=""}
   return sc.map(tbProbRandHtml).join("")+(lg.length?'<details class="tbProbFara tbProbLung"><summary>Pe 3 zile · '+lg.length+'</summary>'+(nota?'<p class="tbSub">'+escapeHtml(nota.charAt(0).toUpperCase()+nota.slice(1))+'; cifrele de mai jos descriu un bot ținut atât.</p>':'')+lg.map(tbProbRandHtml).join("")+'</details>':'');
 }
-function tbConteazaLista(b,inCap){if(!b||typeof Conteaza==="undefined")return [];try{return Conteaza.alege({stop:tbStopSansa(b),sfaturi:tbStare.sfaturiLista||[],lista:tbStare.todoLista||[],sanse:tbSansePt(b)||[],acum:Date.now(),inCap:inCap||null})}catch(e){return []}}
+/* v100.381 („fa idei”): la botul cu take-profit, „Contează acum” primește lângă curba stopului și ce vine întâi după simularea botului (stopul / take-profit-ul
+   pe 24 h, aceleași cifre ca bara din cap și Drumul); gărzile simulării ca la tbStopMcDrum */
+function tbMcIntai24(b){try{var mr=typeof tbMc!=="undefined"&&tbMc&&b&&String(tbMc.botId)===String(b.id)&&tbMc.rand&&!tbMc.eroare?tbMc.rand:null;if(!mr||!Array.isArray(mr.scurt)||/Reluarea arată botul/.test(String(mr.text||"")+" "+String(mr.faCe||"")))return null;var s=mr.scurt.filter(function(x){return x&&x.ore===24&&typeof x.pTp==="number"&&isFinite(x.pTp)&&typeof x.pStop==="number"&&isFinite(x.pStop)})[0];return s?{stop:s.pStop,tp:s.pTp}:null}catch(e){return null}}
+function tbStopCuIntai(b){var s=tbStopSansa(b);if(!s||!b||!b.opritorProfitActiv)return s;var i=tbMcIntai24(b);return i?Object.assign({},s,{intai:i}):s}
+function tbConteazaLista(b,inCap){if(!b||typeof Conteaza==="undefined")return [];try{return Conteaza.alege({stop:typeof tbStopCuIntai==="function"?tbStopCuIntai(b):tbStopSansa(b),sfaturi:tbStare.sfaturiLista||[],lista:tbStare.todoLista||[],sanse:tbSansePt(b)||[],acum:Date.now(),inCap:inCap||null})}catch(e){return []}}
 /* v100.374 (I-902): partea marginii arătate ACUM în capul paginii (o pune stratul de așezare când desenează capul; fără el, nimic nu coboară) */
 function tbCapParte(b){try{var c=typeof window!=="undefined"?window.pzCapMargine:null;return c&&b&&String(c.botId)===String(b.id)?c.parte:null}catch(e){return null}}
 // v100.322 (el, 11.11.2026: „îmbunătățește Contează acum” ⇒ ales: banii în USDT pe rând, butonul potrivit, ce s-a schimbat de la ultima privire,
@@ -8447,6 +8455,9 @@ function tbCitirePeLoc(el,h){
 }
 /* v100.376 („fa idei”, a treia oară): șansa take-profit-ului pe 24 h lângă prețul lui pe Drum - aceeași cifră ca bara din cap (Monte Carlo pe botul lui,
    cu aceeași gardă: nu când reluarea arată botul oprit, nu din tura care a picat) */
+/* v100.381 (el, 24.11.2026: „cum poate să atingă și stopul și TP în proporție de 72% ambele?”): lângă take-profit, pe Drum, stopul ia cifra din ACEEAȘI simulare
+   (ce vine întâi), ca bara din cap; fără cifra take-profit-ului rămâne curba stopului (tbStopSansaDrum) */
+function tbStopMcDrum(b){try{var mr=typeof tbMc!=="undefined"&&tbMc&&b&&String(tbMc.botId)===String(b.id)&&tbMc.rand&&!tbMc.eroare?tbMc.rand:null;if(!mr||!Array.isArray(mr.scurt)||/Reluarea arată botul/.test(String(mr.text||"")+" "+String(mr.faCe||"")))return null;var s=mr.scurt.filter(function(x){return x&&x.ore===24&&typeof x.pTp==="number"&&isFinite(x.pTp)&&typeof x.pStop==="number"&&isFinite(x.pStop)})[0];return s?"24 h: "+(s.pStop*100<0.05?"sub 0,1%":TextRo.num(s.pStop*100,1)+"%"):null}catch(e){return null}}
 function tbTpSansaDrum(b){try{var mr=typeof tbMc!=="undefined"&&tbMc&&b&&String(tbMc.botId)===String(b.id)&&tbMc.rand&&!tbMc.eroare?tbMc.rand:null;if(!mr||!Array.isArray(mr.scurt)||/Reluarea arată botul/.test(String(mr.text||"")+" "+String(mr.faCe||"")))return null;var s=mr.scurt.filter(function(x){return x&&x.ore===24&&typeof x.pTp==="number"&&isFinite(x.pTp)})[0];return s?"24 h: "+(s.pTp*100<0.05?"sub 0,1%":TextRo.num(s.pTp*100,1)+"%"):null}catch(e){return null}}
 /* v100.376 (el, 21.11.2026: „FA IDEI”, a doua oară): în cât timp ajunge botul pe zero DIN GRILE - aceeași socoteală ca „ritmul de recuperare” de sub
    „Rezultat total” (TabloExtra.grileVsCosturi + ritmRecuperare, o singură sursă), dată capului lângă zero-ul care din preț nu se mai atinge.

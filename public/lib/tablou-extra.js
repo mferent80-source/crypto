@@ -328,6 +328,8 @@ var TabloExtra = (function () {
     // v100.333 (auditul 12.11, 🔵11): stopul de acum, atins, păstrează câștigul (totalul la el ≥ 0) ⇒ nu se propune unul mai departe (ar da câștigul
     // înapoi); rândul spune cât păstrează. Prudent: doar nu se mai împinge, stopul rămâne al lui.
     var laSt = b && s ? totalLaOpritor(b) : null;
+    /* v100.381 („rezolvă tot”): și banii stopului de acum, ca „Contează acum” să compare propunerea ca în Consilierul (semnale-bot.js textBaniStop) */
+    if (s && laSt !== null) s.laStop = laSt;
     if (laSt !== null && laSt >= 0) { s.mut20 = null; s.dMut20 = null; s.mutOprit = "adapost"; s.mutLaStop = laSt; return s; }
     if (!b || !s || nr(s.mut20) === null) return s;
     var x = nr(s.mut20), subPret = !s.sus, inv = nr(b.investit), lq = nr(subPret ? b.lichidareJos : b.lichidareSus);

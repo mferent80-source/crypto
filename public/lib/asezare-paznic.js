@@ -78,7 +78,10 @@
   // audit 23.10: textul etichetelor Drumului (10,5 px) avea 4,0:1 pe card ⇒ o nuanță deschisă a aceleiași culori (≥ 4,5:1); liniuța rămâne în culoarea ei
   function culText(c) { return c === "var(--pzInfo)" ? "var(--pzInfoTxt,#82ACDA)" : c === "var(--pzJos)" ? "var(--pzJosTxt,#F2847C)" : c; }
   // eticheta lângă margine se ancorează spre interior (pe 390 ieșea din ecran)
-  function ancora(x) { x = +x; return x < 12 ? "transform:translateX(-6px);" : x > 88 ? "transform:translateX(calc(-100% + 6px));" : ""; }
+  function ancora(x, w, W) { x = +x; var f = ancoraFel(x, w, W); return f === "st" ? "transform:translateX(-6px);" : f === "dr" ? "transform:translateX(calc(-100% + 6px));" : ""; }
+  /* v100.381 („fa idei”, poza lui de pe S24): o etichetă lungă centrată sub linia ei ieșea din cartelă pe telefon („stop −15,0% … 24 h: 20,6%” la ~15%) ⇒
+     cu lățimea estimată (w) și a cartelei (W), eticheta care centrată n-ar încăpea se lipește de margine, ca sub 12% / peste 88%. Fără w / W: ca înainte. */
+  function ancoraFel(x, w, W) { x = +x; if (x < 12) return "st"; if (x > 88) return "dr"; w = +w; W = +W; if (w > 0 && W > 0) { var cx = x * W / 100; if (cx - w / 2 < 0) return "st"; if (cx + w / 2 > W) return "dr"; } return ""; }
 
   // ---------- datele paginii (o dată pe tură) ----------
   var D = {};
@@ -138,7 +141,9 @@
            lângă preț, șansa lui pe 24 h (Monte Carlo pe botul lui), cum are stopul */
         var pozT = !!(TEp && TEp.tpDinPret && TEp.tpDinPret(bl) === false);
         add(tp, pozT ? "take-profit, pe poziția de acum" : "take-profit", "var(--pzSus)", "", pozT ? "take-profit-ul tău e în procente din investiție: din preț, în grid, nu se atinge - prețul e cel socotit de Pionex pe poziția de acum" : "take-profit-ul tău din Pionex");
-        if (typeof tbTpSansaDrum === "function") { var tj = null; try { tj = tbTpSansaDrum(bl); } catch (e) { tj = null; } if (tj) L[L.length - 1].sansa = tj; } } }
+        if (typeof tbTpSansaDrum === "function") { var tj = null; try { tj = tbTpSansaDrum(bl); } catch (e) { tj = null; } if (tj) L[L.length - 1].sansa = tj;
+          /* v100.381: cu cifra take-profit-ului lângă el, stopul ia cifra din aceeași simulare (ce vine întâi), ca în cap - nu curba, care nu știe de take-profit */
+          if (tj && s && typeof tbStopMcDrum === "function") { var sm = null; try { sm = tbStopMcDrum(bl); } catch (e) { sm = null; } var ls = L.filter(function (q) { return q.n === s.n && q.p === nr(s.p); })[0]; if (sm && ls) ls.sansa = sm; } } } }
     /* v100.376 (el, 21.11.2026: „ARATĂ ȘI ZERO BOTULUI PE DRUMUL BOTULUI”): zero-ul stă pe drum mereu - cel din grid (cu grilele de pe drum) sau, când
        din preț nu se mai atinge și cade dincolo de marginea gridului, cel „pe poziția de acum” (poziția ținută întreagă). Până acum drumul nu avea
        zero deloc (v100.216: gridul, stopul, take-profit-ul). */
@@ -163,11 +168,11 @@
     for (var mi = L.length - 1; mi >= 1; mi--) if (Math.abs(L[mi].p - L[mi - 1].p) / (hi - lo) < 0.004) { L[mi - 1].n += " · " + L[mi].n; L[mi - 1].cls += " " + L[mi].cls; L.splice(mi, 1); }
     var W = Math.max(280, latime || 1100), rand = [];   // rândurile etichetelor după lățimea REALĂ a cartelei (revizia I7)
     /* audit 23.10: var w = (x.n.length + 8) * 6.3 … rand[k] > cx - w / 2 - 8 socotea etichete centrate; sub 12% / peste 88% ancora() le lipește de margine ⇒ pe telefon se călcau. Acum: intervalul real (ancora + lungimea prețului). */
-    L.forEach(function (x) { var w = (x.n.length + 1 + fP(x.p).length + (x.sansa ? x.sansa.length + 1 : 0)) * 6.3, xp = +X(x.p), cx = xp * W / 100, a = xp < 12 ? cx - 6 : xp > 88 ? cx + 6 - w : cx - w / 2, k = 0; while (rand[k] != null && rand[k] > a - 8) k++; rand[k] = a + w; x.rand = k; });
+    L.forEach(function (x) { var w = (x.n.length + 1 + fP(x.p).length + (x.sansa ? x.sansa.length + 1 : 0)) * 6.3, xp = +X(x.p), cx = xp * W / 100, fa = ancoraFel(xp, w, W), a = fa === "st" ? cx - 6 : fa === "dr" ? cx + 6 - w : cx - w / 2, k = 0; x.w = w; while (rand[k] != null && rand[k] > a - 8) k++; rand[k] = a + w; x.rand = k; });
     var nrR = Math.max.apply(null, L.map(function (x) { return (x.rand || 0) + 1; })), h = '<div class="pzDrum' + (mic ? " pzDrumMic" : "") + '"' + (mic ? "" : ' style="padding-bottom:' + (14 + nrR * 16) + 'px"') + '><div class="pzDrumPista">';
     var gj = nr(b.gridJos), gs = nr(b.gridSus);
     if (gj && gs) h += '<i class="pzDrumGrid" style="left:' + X(gj) + '%;width:' + (X(gs) - X(gj)).toFixed(2) + '%"></i>';
-    L.forEach(function (x) { h += '<i class="pzDrumNiv ' + x.cls + '" style="left:' + X(x.p) + '%;background:' + x.c + '" title="' + esc(x.n + " " + fP(x.p) + (x.tit ? " · " + x.tit : "")) + '"></i>' + (mic ? "" : '<span class="pzDrumEt" style="left:' + X(x.p) + '%;' + ancora(X(x.p)) + 'top:' + (16 + x.rand * 16) + 'px;color:' + culText(x.c) + '">' + esc(x.n) + ' <b>' + fP(x.p) + '</b>' + (x.sansa ? ' <span class="pzDrumSansa">' + esc(x.sansa) + '</span>' : '') + '</span>'); });
+    L.forEach(function (x) { h += '<i class="pzDrumNiv ' + x.cls + '" style="left:' + X(x.p) + '%;background:' + x.c + '" title="' + esc(x.n + " " + fP(x.p) + (x.tit ? " · " + x.tit : "")) + '"></i>' + (mic ? "" : '<span class="pzDrumEt" style="left:' + X(x.p) + '%;' + ancora(X(x.p), x.w, W) + 'top:' + (16 + x.rand * 16) + 'px;color:' + culText(x.c) + '">' + esc(x.n) + ' <b>' + fP(x.p) + '</b>' + (x.sansa ? ' <span class="pzDrumSansa">' + esc(x.sansa) + '</span>' : '') + '</span>'); });
     h += '<i class="pzDrumAcum" style="left:' + X(p) + '%" title="acum ' + fP(p) + '"></i>' + (mic ? "" : '<span class="pzDrumAcumEt" style="left:' + X(p) + '%;' + ancora(X(p)) + '">acum ' + fP(p) + '</span>');
     return h + '</div></div>';
   }

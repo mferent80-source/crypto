@@ -112,7 +112,13 @@ await test("🔴1e. fără lichidare în drum și în afara gridului: propunerea
   assert.equal(vechi, "Hotărăște acum: ori accepți ieșirea la 96.5000, ori muți stopul la ~" + Conteaza.pret(s0.mut20) + " (acolo ~20 din 100 într-o zi).");
   const s = TabloExtra.stopPropus(b, s0), t = TabloExtra.totalCuGridLa(b, s.mut20);
   assert.ok(s.mut20 < 97 && s.mut20 > 80 && !s.mutGrile && !s.mutOprit);
-  assert.equal(Conteaza.alege({ stop: s, sfaturi: [], lista: [], sanse: [] })[0].faCe, "Hotărăște acum: ori accepți ieșirea la 96.5000, ori muți stopul la ~" + Conteaza.pret(s.mut20) + " (acolo ~20 din 100 într-o zi, totalul acolo ≈ " + TextRo.usdt(t, 1) + ").");
+  /* v100.381 („rezolvă tot”): stopPropus pune și banii stopului de acum (laStop); când propunerea pierde mai mult, rândul spune banii la ambele și
+     aceeași concluzie ca a Consilierului. Altfel textul de mai jos rămâne cel vechi. */
+  const laSt = TabloExtra.totalLaOpritor(b), d100 = (p) => String(Math.max(1, Math.min(99, Math.round(p * 100)))), n1 = (v) => TextRo.num(Math.abs(v), 1);
+  assert.equal(s.laStop, laSt === null ? undefined : laSt);
+  assert.equal(Conteaza.alege({ stop: s, sfaturi: [], lista: [], sanse: [] })[0].faCe, laSt !== null && t < laSt
+    ? "Hotărăște acum: ori accepți ieșirea la 96.5000 (" + TextRo.usdt(laSt, 1) + "), ori muți stopul la ~" + Conteaza.pret(s.mut20) + " (acolo ~20 din 100 într-o zi, totalul acolo ≈ " + TextRo.usdt(t, 1) + "). Eu l-aș lăsa unde e: mutarea scade șansa de la ~" + d100(s.p24) + " la ~20 din 100 într-o zi, dar pierderea maximă crește de la " + n1(laSt) + " la " + n1(t) + " USDT."
+    : "Hotărăște acum: ori accepți ieșirea la 96.5000, ori muți stopul la ~" + Conteaza.pret(s.mut20) + " (acolo ~20 din 100 într-o zi, totalul acolo ≈ " + TextRo.usdt(t, 1) + ").");
 });
 await test("🔴1f. pagina: tbStopSansa trece propunerea prin TabloExtra.stopPropus, iar butonul „copiază stopul propus” dispare", () => {
   const { ctx, pune } = pagina(FIX.acum), curba = ctx.CurbaStop.curba(BARE, FIX.acum, { zile: FIX.zile, pas: FIX.pas }), b = bot(LONG10());
