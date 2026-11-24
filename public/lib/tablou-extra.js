@@ -967,7 +967,7 @@ var TabloExtra = (function () {
   // Culoarea doar la cel puțin două semne deodată. Lichidările din piață nu se pot citi fără cont la Binance - se spune.
   function fx1(v) { return TextRo.num(v, 1); }
   function fx2(v) { return TextRo.num(v, 2); }
-  function fxP(f) { return (f < 0 ? "−" : "+") + TextRo.num(Math.abs(f) * 100, 1) + "%"; }
+  function fxP(f) { return (Math.abs(f) < 0.0005 ? "" : f < 0 ? "−" : "+") + TextRo.num(Math.abs(f) * 100, 1) + "%"; }   /* sub 0,05% fără semn („−0,0%” nu spune nimic) */
   function fxP4(f) { return (f < 0 ? "−" : "+") + TextRo.num(Math.abs(f) * 100, 4) + "%"; }
   function fluxBot(f, pxRates, b) {
     if (!f || typeof f !== "object" || !b) return null;
@@ -996,7 +996,32 @@ var TabloExtra = (function () {
     p.push("lichidările din piață nu le am (Binance le dă doar cu cont)");
     return "Fluxul pe " + (baza || "monedă") + " (Binance futures): " + p.join(" · ") + (r.semne.length ? " — semne contra botului (ipoteze, nedovedite pe boții tăi): " + r.semne.join("; ") : " — niciun semn contra botului acum");
   }
-  return { fluxBot: fluxBot, textFlux: textFlux, curbaBot: curbaBot, curbaBotHtml: curbaBotHtml, taxaIntrare: taxaIntrare, textRegistruAlerte: textRegistruAlerte, stopDincoloDeLichidare: stopDincoloDeLichidare, stopPropus: stopPropus, grileDincolo: grileDincolo, grileDincoloK: grileDincoloK, dupaAlerta: dupaAlerta, bilantAlerte: bilantAlerte, cifreActiuni: cifreActiuni, textBani: textBani, frecventaAtingere: frecventaAtingere, codTVBot: codTVBot, gridDiferitDeBot: gridDiferitDeBot, alertaRezolvata: alertaRezolvata, alerteleBotului: alerteleBotului, marcheazaDepasite: marcheazaDepasite, ritmRecuperare: ritmRecuperare, comisionDinUmplere: comisionDinUmplere, ceAiDeFacut: ceAiDeFacut, oraSfat: oraSfat, distanteGrid: distanteGrid, geometrieBot: geometrieBot, profitPeGrila: profitPeGrila, fundingBot: fundingBot, fundingPct: fundingPct, notaTotal: notaTotal, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, pretPentruTotal: pretPentruTotal, totalLaPret: totalLaPret, totalLaPretViu: totalLaPretViu, totalCuGridLa: totalCuGridLa, totalCuGridContinuu: totalCuGridContinuu, pozitieCuGridLa: pozitieCuGridLa, modelTotal: modelTotal, gridVsPlan: gridVsPlan, pragDinPlanuri: pragDinPlanuri, totalLaOpritor: totalLaOpritor, pretOpritorPentru: pretOpritorPentru, pretStopLive: pretStopLive, pretTpLive: pretTpLive, tpDinPret: tpDinPret, totalLaTinta: totalLaTinta, pretTintaPentru: pretTintaPentru, miscareZi: miscareZi, podeaUrca: podeaUrca, propunePlan: propunePlan, fisaInchidere: fisaInchidere, legaturaJurnal: legaturaJurnal,
+  // v100.386 (I-938, el: „fă tot” după auditul paginii): RISCUL DE PIAȚĂ al monedei - cât de nou e contractul (lumânările zilnice Pionex, cel mult 500), cât s-a
+  // tranzacționat azi pe Pionex, și cât diferă prețul mark de la Binance de ultimul preț Pionex față de distanța până la stop (un fitil pe o piață subțire ia stopul).
+  // Pe ce preț declanșează Pionex stopul (mark sau ultimul) nu se vede din API - se spune. Pure: zile = numărul lumânărilor 1D; tonul „atentie” la contract sub
+  // 30 de zile sau diferența mark ↔ ultimul peste jumătate din distanța la stop.
+  function riscPiata(k1d, b, mark, stopPret) {
+    if (!b) return null;
+    var L = (Array.isArray(k1d) ? k1d : []).map(function (x) { return { t: nr(x && (x.time != null ? x.time : x.t)), c: nr(x && (x.close != null ? x.close : x.c)), v: nr(x && (x.volume != null ? x.volume : x.v)) }; }).filter(function (x) { return x.t !== null; }).sort(function (a, c) { return a.t - c.t; });
+    var P = nr(b.pretCurent), M = nr(mark), S = nr(stopPret), r = { zile: L.length ? L.length : null, plin: L.length >= 500, volAzi: null, markDif: null, stopDist: null, semne: [] };
+    if (L.length) { var u = L[L.length - 1]; if (u.v !== null && u.c !== null) r.volAzi = u.v * u.c; }
+    if (M !== null && M > 0 && P !== null && P > 0) r.markDif = M / P - 1;
+    if (S !== null && S > 0 && P !== null && P > 0) r.stopDist = Math.abs(S / P - 1);
+    if (r.zile !== null && !r.plin && r.zile < 30) r.semne.push("contract nou: " + TextRo.cate(r.zile, "zi", "zile") + " de istorie pe Pionex (fitiluri mari, istorie scurtă pentru cifre)");
+    if (r.markDif !== null && r.stopDist !== null && Math.abs(r.markDif) > r.stopDist / 2) r.semne.push("prețurile diferă cu " + fxP(r.markDif) + " (mark Binance ↔ ultimul Pionex), mai mult de jumătate din distanța până la stop (" + TextRo.num(r.stopDist * 100, 1) + "%)");
+    r.ton = r.semne.length ? "atentie" : "info";
+    return r;
+  }
+  function textRiscPiata(r) {
+    if (!r) return "";
+    var m = function (v) { return v >= 1e6 ? TextRo.num(v / 1e6, 1) + " mil." : v >= 1e3 ? TextRo.num(v / 1e3, 1) + " mii" : TextRo.num(v, 0); }, p = [];
+    if (r.zile !== null) p.push(r.plin ? "contract cu peste 500 de zile pe Pionex" : "contract cu " + TextRo.cate(r.zile, "zi", "zile") + " de istorie pe Pionex");
+    if (r.volAzi !== null) p.push("tranzacționat azi pe Pionex ≈ " + m(r.volAzi) + " USDT");
+    if (r.markDif !== null) p.push("mark Binance față de ultimul preț Pionex: " + fxP(r.markDif) + (r.stopDist !== null ? " (stopul e la " + TextRo.num(r.stopDist * 100, 1) + "%)" : ""));
+    p.push("pe ce preț declanșează Pionex stopul (mark sau ultimul) nu se vede din API");
+    return "Riscul pieței monedei: " + p.join(" · ") + (r.semne.length ? " — atenție: " + r.semne.join("; ") : "");
+  }
+  return { riscPiata: riscPiata, textRiscPiata: textRiscPiata, fluxBot: fluxBot, textFlux: textFlux, curbaBot: curbaBot, curbaBotHtml: curbaBotHtml, taxaIntrare: taxaIntrare, textRegistruAlerte: textRegistruAlerte, stopDincoloDeLichidare: stopDincoloDeLichidare, stopPropus: stopPropus, grileDincolo: grileDincolo, grileDincoloK: grileDincoloK, dupaAlerta: dupaAlerta, bilantAlerte: bilantAlerte, cifreActiuni: cifreActiuni, textBani: textBani, frecventaAtingere: frecventaAtingere, codTVBot: codTVBot, gridDiferitDeBot: gridDiferitDeBot, alertaRezolvata: alertaRezolvata, alerteleBotului: alerteleBotului, marcheazaDepasite: marcheazaDepasite, ritmRecuperare: ritmRecuperare, comisionDinUmplere: comisionDinUmplere, ceAiDeFacut: ceAiDeFacut, oraSfat: oraSfat, distanteGrid: distanteGrid, geometrieBot: geometrieBot, profitPeGrila: profitPeGrila, fundingBot: fundingBot, fundingPct: fundingPct, notaTotal: notaTotal, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, pretPentruTotal: pretPentruTotal, totalLaPret: totalLaPret, totalLaPretViu: totalLaPretViu, totalCuGridLa: totalCuGridLa, totalCuGridContinuu: totalCuGridContinuu, pozitieCuGridLa: pozitieCuGridLa, modelTotal: modelTotal, gridVsPlan: gridVsPlan, pragDinPlanuri: pragDinPlanuri, totalLaOpritor: totalLaOpritor, pretOpritorPentru: pretOpritorPentru, pretStopLive: pretStopLive, pretTpLive: pretTpLive, tpDinPret: tpDinPret, totalLaTinta: totalLaTinta, pretTintaPentru: pretTintaPentru, miscareZi: miscareZi, podeaUrca: podeaUrca, propunePlan: propunePlan, fisaInchidere: fisaInchidere, legaturaJurnal: legaturaJurnal,
     peZile: peZile, marjaNoua: marjaNoua, vsPozitie: vsPozitie, planStare: planStare, evenimente: evenimente };
 })();
 if (typeof globalThis !== "undefined") globalThis.TabloExtra = TabloExtra;

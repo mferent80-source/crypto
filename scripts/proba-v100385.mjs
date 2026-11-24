@@ -80,10 +80,11 @@ await test("E  I-931 pagina: futures + funding Pionex o dată la 5 minute pe mon
 
 await test("V  versiunea v100.385 (index ×4, sw, versiune.js, package + lanț, BUILD_INFO), colectorul neatins (v101.213)", () => {
   const pk = JSON.parse(citeste("../package.json")), bi = JSON.parse(citeste("../BUILD_INFO.json")), HTML = citeste("../public/index.html");
-  assert.equal(pk.version, "100.385.0"); assert.equal(bi.version, "v100.385"); assert.ok(bi.li385 && bi.li385.length > 150, "BUILD_INFO.li385");
-  assert.ok((HTML.match(/v100\.385/g) || []).length >= 4); assert.match(citeste("../public/sw.js"), /crypto-radar-v100-385/); assert.match(citeste("../functions/_shared/versiune.js"), /"v100\.385"/);
-  assert.match(citeste("./colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.213";/);
-  assert.match(pk.scripts.test, /npm run test:v100384 && npm run test:v100385 && node scripts\/mutatii\.mjs --doar-tiparele/); assert.equal(pk.scripts["test:v100385"], "node scripts/proba-v100385.mjs");
+  /* v100.386: „de la 385 încolo” (versiunea merge mai departe; după ea în lanț vine proba v100.386) */
+  assert.ok(+(/^100\.(\d+)\.0$/.exec(pk.version) || [])[1] >= 385); assert.ok(+(/^v100\.(\d+)$/.exec(bi.version) || [])[1] >= 385); assert.ok(bi.li385 && bi.li385.length > 150, "BUILD_INFO.li385");
+  assert.ok((HTML.match(/v100\.(\d+)/g) || []).filter((v) => +v.slice(5) >= 385).length >= 4); assert.ok(+(/crypto-radar-v100-(\d+)/.exec(citeste("../public/sw.js")) || [])[1] >= 385); assert.ok(+(/"v100\.(\d+)"/.exec(citeste("../functions/_shared/versiune.js")) || [])[1] >= 385);
+  assert.ok(+(/const VERSIUNE_COLECTOR = "v101\.(\d+)";/.exec(citeste("./colector.mjs")) || [])[1] >= 213);
+  assert.match(pk.scripts.test, /npm run test:v100384 && npm run test:v100385/); assert.equal(pk.scripts["test:v100385"], "node scripts/proba-v100385.mjs");
 });
 
 console.log(`\n${teste - picate}/${teste} trecute` + (picate ? ` · ${picate} PICATE` : ""));

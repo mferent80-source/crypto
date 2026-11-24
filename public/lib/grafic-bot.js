@@ -433,9 +433,13 @@ var GraficBot = (function () {
     }
     // lumanarile se strang cand sunt prea dese (cel mult ~1 la 2,8 px) - v100.98: marginea etichetelor a crescut (13 px), 24 h de bare de 5 min
     // trebuie sa ramana o lumanare pe bara la 1000 px (proba v100)
-    var f = Math.max(1, Math.ceil(raw.length * 2.8 / plotW)), B = [];
-    for (var i = 0; i < raw.length; i += f) {
-      var g = raw.slice(i, i + f), h = -Infinity, l = Infinity, v = 0;
+    /* v100.386 (I-932, el: „fă tot” după auditul paginii): o.zoom = { n: câte lumânări se văd, dr: câte sunt ascunse la dreapta } - indicatorii (S) rămân
+       socotiți pe TOATE lumânările (aceleași valori ca fără zoom), se desenează doar fereastra [z0, z1) */
+    var z0 = 0, z1 = raw.length;
+    if (o.zoom && nr(o.zoom.n) !== null && o.zoom.n >= 20 && o.zoom.n < raw.length) { var zdr = Math.max(0, Math.min(raw.length - Math.round(o.zoom.n), Math.round(nr(o.zoom.dr) || 0))); z1 = raw.length - zdr; z0 = z1 - Math.round(o.zoom.n); }
+    var f = Math.max(1, Math.ceil((z1 - z0) * 2.8 / plotW)), B = [];
+    for (var i = z0; i < z1; i += f) {
+      var g = raw.slice(i, Math.min(i + f, z1)), h = -Infinity, l = Infinity, v = 0;
       g.forEach(function (x) { if (x.h > h) h = x.h; if (x.l < l) l = x.l; v += x.v; });
       B.push({ t: g[0].t, o: g[0].o, h: h, l: l, c: g[g.length - 1].c, v: v, k: i + g.length - 1 });
     }
@@ -570,6 +574,7 @@ var GraficBot = (function () {
     var U = o.umpleri && Array.isArray(o.umpleri.umpleri) ? o.umpleri.umpleri : [], GU = {}, GUk = [], acumU = nr(o.acum) || Date.now(), pasU = nr(o.umpleriPas) || (raw.length > 1 ? raw[1].t - raw[0].t : 0);   /* revizia Opus: pasul umplerilor (1 min), nu al graficului */
     U.forEach(function (u) {
       if (!(u.p >= lo && u.p <= hi)) return;
+      if (n && (z0 > 0 && u.t < B[0].t || z1 < raw.length && u.t >= raw[z1].t)) return;   /* v100.386 (I-932): umplerile din afara ferestrei de zoom nu se strâng la margine */
       var bi = 0; while (bi < n - 1 && B[bi + 1].t <= u.t) bi++;   /* v100.146: după TIMP - umplerile pot veni din lumânările de 1 min */
       var kk = bi + "|" + u.tip; if (!GU[kk]) { GU[kk] = { bi: bi, tip: u.tip, l: [] }; GUk.push(kk); } GU[kk].l.push(u);
     });
@@ -685,7 +690,7 @@ var GraficBot = (function () {
     q.push('<text x="' + f1(cmp ? LX : plotW + 6) + '" y="' + (vy0 + (ingust ? 10 : 12)) + '" font-size="' + (ingust ? 10.5 : 12) + '" fill="' + COL.mut + '">volum</text>');
     B.forEach(function (b, bi) { var hh = b.v / vmx * (volH - 2); q.push('<rect class="gbV" x="' + f1(X(bi) - bw / 2) + '" y="' + f1(vy0 + volH - hh) + '" width="' + f1(bw) + '" height="' + f1(Math.max(0.5, hh)) + '" fill="' + (b.c >= b.o ? "rgba(38,169,108,.35)" : "rgba(224,82,74,.35)") + '"/>'); });
     // banda de alerte - doar ale botului (le filtreaza chematorul), stranse cand sunt apropiate
-    var ly0 = vy0 + volH + gap, t0 = B.length ? B[0].t : 0, pas = raw.length > 1 ? raw[1].t - raw[0].t : 0, t1 = raw.length ? raw[raw.length - 1].t + pas : 1;
+    var ly0 = vy0 + volH + gap, t0 = B.length ? B[0].t : 0, pas = raw.length > 1 ? raw[1].t - raw[0].t : 0, t1 = z1 > 0 ? raw[z1 - 1].t + pas : 1;   /* v100.386 (I-932): capătul ferestrei desenate */
     var TX = function (t) { return (t - t0) / ((t1 - t0) || 1) * plotW; };
     if (!o.actiune) {   // v100.56: actiunile n-au banda alertelor botului
       q.push('<rect x="0" y="' + ly0 + '" width="' + f1(plotW) + '" height="' + laneH + '" rx="6" fill="' + COL.fond + '"/>');
@@ -770,12 +775,12 @@ var GraficBot = (function () {
         '<span>▲▼ umpleri deschise: gri · galben = de peste o oră · <i class="gbPct" style="background:' + COL.good + '"></i>perechi închise, jos (' + (o.umpleri ? o.umpleri.perechi : 0) + ')</span>',
         '<span><i class="gbPct" style="background:' + COL.warn + '"></i>alertă: galben atenție · gri info · roșu critic (' + evs.length + ')</span>'];
       if (LgFer) Lg.push(LgFer);   /* v100.143: și pe rândul scurt */
-      return { svg: svg, inaltime: HT, legenda: Lg.join(""), valori: valori, harta: { bare: B, S: S, cw: cw, plotW: plotW, grupuri: gr2, per: o.per, f: f, W: W, H: HT, lo: lo, hi: hi, mainH: mainH, sus: bandaSem, gut: gut } };
+      return { svg: svg, inaltime: HT, legenda: Lg.join(""), valori: valori, harta: { bare: B, S: S, cw: cw, plotW: plotW, grupuri: gr2, per: o.per, f: f, W: W, H: HT, lo: lo, hi: hi, mainH: mainH, sus: bandaSem, gut: gut, rawLen: raw.length, z0: z0, z1: z1 } };
     }
     if (!o.actiune) Lg.push('<span><i class="gbPct" style="background:' + COL.bad + '"></i>critic</span><span><i class="gbPct" style="background:' + COL.warn + '"></i>atenție</span><span><i class="gbPct" style="background:' + COL.info + '"></i>info</span>');
     if (o.actiune) { if (f > 1) Lg.push('<span class="mutedInfo">o lumânare = ' + (o.unitate && o.unitate.length === 2 ? cate(f, o.unitate[0], o.unitate[1]) : cate(f, "zi", "zile") + ' de bursă') + '</span>'); }   /* v100.344: o.unitate (Sugestii: monedele pe 4h / 1z, acțiunile pe 1h) */
     else Lg.push('<span class="mutedInfo">' + cate(evs.length, "alertă", "alerte") + ' ale botului în perioadă' + (f > 1 ? " · o lumânare = " + cate(f, "bară", "bare") : "") + '</span>');
-    return { svg: svg, inaltime: HT, legenda: Lg.join(""), valori: valori, harta: { bare: B, S: S, cw: cw, plotW: plotW, grupuri: gr2, per: o.per, f: f, W: W, H: HT, lo: lo, hi: hi, mainH: mainH, sus: bandaSem, gut: gut } };
+    return { svg: svg, inaltime: HT, legenda: Lg.join(""), valori: valori, harta: { bare: B, S: S, cw: cw, plotW: plotW, grupuri: gr2, per: o.per, f: f, W: W, H: HT, lo: lo, hi: hi, mainH: mainH, sus: bandaSem, gut: gut, rawLen: raw.length, z0: z0, z1: z1 } };
   }
 
   // ce spune cursorul la x (in coordonatele SVG-ului): bara, indicatorii, alertele din apropiere - totul scapat
@@ -787,6 +792,23 @@ var GraficBot = (function () {
   // mai vechi decât ea - atunci și cifrele Pionex sunt „pe tot botul”); umplerile din afara cadrului graficului se spun, nu se ascund.
   // Rezultatele cu o zecimală; sub 0,05 USDT se spune „aproape 0”, nu „0,0” și nu „sub 0,1” cu semnul pierdut
   function bani1(v) { if (v == null || !isFinite(v)) return "—"; if (v !== 0 && Math.abs(v) < 0.05) return "aproape 0 USDT"; return (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(1).replace(".", ",") + " USDT"; }
+  // v100.386 (I-937, el: „fă tot” după auditul paginii): HARTA UMPLERILOR pe liniile gridului - din umplerile deduse (estimat): perechile încheiate pe fiecare
+  // linie, liniile fără nicio umplere de la pornire („moarte”: gridul prea larg pentru mișcare) și liniile care țin poziție acum. linii = câte linii are gridul.
+  function hartaUmpleri(U, linii) {
+    var l = U && Array.isArray(U.umpleri) ? U.umpleri : []; if (!l.length) return null;
+    var pe = {}; l.forEach(function (u) { var k = String(u.k); pe[k] = pe[k] || { k: u.k, p: u.p, perechi: 0, umpleri: 0, tine: false }; pe[k].umpleri++; if (u.pereche) pe[k].perechi++; if (!u.pereche && !u.inchisa) pe[k].tine = true; });
+    var v = Object.keys(pe).map(function (k) { return pe[k]; }), N = nr(linii), lucrate = v.length;
+    var top = v.filter(function (x) { return x.perechi > 0; }).sort(function (a, b) { return b.perechi - a.perechi || a.p - b.p; }).slice(0, 3);
+    return { linii: v.sort(function (a, b) { return a.p - b.p; }), lucrate: lucrate, moarte: N !== null && N > 0 ? Math.max(0, N - lucrate) : null, total: N, tin: v.filter(function (x) { return x.tine; }).length, top: top };
+  }
+  function textHarta(h) {
+    if (!h) return "";
+    var p = [];
+    if (h.top.length) p.push("cele mai multe perechi pe " + h.top.map(function (x) { return fmtP(x.p) + " (" + x.perechi + ")"; }).join(", "));
+    if (h.moarte !== null) p.push(h.moarte + " din " + cate(h.total, "linie", "linii") + " fără nicio umplere de la pornire");
+    if (h.tin) p.push("poziția stă acum pe " + cate(h.tin, "linie", "linii"));
+    return p.length ? "harta liniilor (estimat): " + p.join(" · ") : "";
+  }
   function bilantUmpleri(U, bot, o) {
     var l = U && Array.isArray(U.umpleri) ? U.umpleri : [], b = bot || {}; o = o || {}; if (!l.length) return null;
     var inchise = nr(U.perechi) || 0, deschise = l.filter(function (u) { return !u.pereche && !u.inchisa; }).length, pp = nr(b.ordinePerechi), gp = nr(b.gridProfitBrut);
@@ -797,7 +819,8 @@ var GraficBot = (function () {
     var ultTxt = ult > 0 ? (pasB >= 3600000 ? " · ultima pereche în bara de la " : " · ultima pereche la ") + ora(ult, !azi) : " · nicio pereche încă";
     var t = "deduse din " + (o.eticheta ? "lumânările de " + o.eticheta : "lumânări") + (inF ? ", de la pornire: " : ", de la începutul ferestrei: ") + cate(inchise, "pereche închisă", "perechi închise") + " · " + cate(deschise, "deschisă", "deschise")
       + (afara ? " (" + afara + " în afara graficului)" : "") + ultTxt + " · Pionex" + (inF ? "" : " pe tot botul") + ": " + (pp !== null && pp > 0 ? cate(pp, "pereche", "perechi") + (gp !== null ? " · " + bani1(gp) + " din grid" : "") : "n-a dat încă perechile");
-    return { inchise: inchise, deschise: deschise, afara: afara, pionex: { perechi: pp, grid: gp }, text: t };
+    var hu = nr(o.linii) !== null ? hartaUmpleri(U, o.linii) : null, th = hu ? textHarta(hu) : ""; if (th) t += " · " + th;   /* v100.386 (I-937): doar când pagina dă numărul de linii */
+    return { inchise: inchise, deschise: deschise, afara: afara, pionex: { perechi: pp, grid: gp }, text: t, harta: hu };
   }
 
   // v100.143 (el 08.10: „graficul e foarte îngrămădit… unde e activitate”): pe intervalele de zi (bare de cel mult 15 min) fereastra începe cu
@@ -835,6 +858,6 @@ var GraficBot = (function () {
     return h;
   }
 
-  return { COL: COL, fmtP: fmtP, vwapDeLa: vwapDeLa, fereastraBot: fereastraBot, bilantUmpleri: bilantUmpleri, ziObisnuita: ziObisnuita, ziObisnuitaActiune: ziObisnuitaActiune, niveluriActiune: niveluriActiune, bare: bare, umpleri: umpleri, liniiPionex: liniiPionex, ema: ema, bollinger: bollinger, rsi: rsi, niveluriBot: niveluriBot, grupeaza: grupeaza, desen: desen, tip: tip, tema: tema, esc: esc, adx: adx, citire: citire, pretLaY: pretLaY, cuPretViu: cuPretViu, intrareBot: intrareBot, cuSanse: cuSanse, stopProba: stopProba, semafor: semafor, trendTabel: trendTabel, trendSumar: trendSumar, TF_SEM: TF_SEM, semZi: semZi };   /* v100.252: fmtP e aceeași scriere ca scara */
+  return { COL: COL, fmtP: fmtP, vwapDeLa: vwapDeLa, hartaUmpleri: hartaUmpleri, textHarta: textHarta, fereastraBot: fereastraBot, bilantUmpleri: bilantUmpleri, ziObisnuita: ziObisnuita, ziObisnuitaActiune: ziObisnuitaActiune, niveluriActiune: niveluriActiune, bare: bare, umpleri: umpleri, liniiPionex: liniiPionex, ema: ema, bollinger: bollinger, rsi: rsi, niveluriBot: niveluriBot, grupeaza: grupeaza, desen: desen, tip: tip, tema: tema, esc: esc, adx: adx, citire: citire, pretLaY: pretLaY, cuPretViu: cuPretViu, intrareBot: intrareBot, cuSanse: cuSanse, stopProba: stopProba, semafor: semafor, trendTabel: trendTabel, trendSumar: trendSumar, TF_SEM: TF_SEM, semZi: semZi };   /* v100.252: fmtP e aceeași scriere ca scara */
 })();
 if (typeof globalThis !== "undefined") globalThis.GraficBot = GraficBot;
