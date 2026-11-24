@@ -7121,6 +7121,24 @@ async function tbAduPlan(b){
   try{var p=await getJSON("/api/istoric-bot?action=plan&bot="+encodeURIComponent(b.id));tbPlan={botId:b.id,plan:p&&p.plan||null,la:Date.now()};tbPlanInForm()}
   catch(e){if(!(tbPlan.botId===b.id&&tbPlan.la>0))tbPlan={botId:b.id,plan:null,la:0,eroare:e&&e.status===503?"planul se ține doar pe Radarul de pe server":textEroare(e),eroareLa:Date.now(),faraServer:!!(e&&e.status===503)}}
 }
+/* v100.385 (I-931, el: „fă tot” după auditul paginii): fluxul monedei botului sub „Stopul, gridul, mișcarea” - OI, funding-ul Pionex în bani pe poziția lui,
+   long/short (TabloExtra.fluxBot / textFlux); o dată la 5 minute pe monedă. Locul se face singur după #tbConcret (index.html neatins). */
+var tbFlux={sim:null,la:0,inLucru:false,f:null,px:null};
+async function tbAduFlux(b){
+  if(!b||!b.baza||tbFlux.inLucru||typeof TabloExtra==="undefined"||!TabloExtra.fluxBot)return;
+  var baza=String(b.baza).replace(/\.PERP$/,"").toUpperCase(),sim=simBinanceFut(baza+"USDT");
+  if(tbFlux.sim===sim&&Date.now()-tbFlux.la<5*60000){tbDeseneazaFlux(b);return}
+  tbFlux.inLucru=true;
+  try{var px=TabloBot.simboluri(b.baza,b.quote,b.simbolPionex).pionex,rr=await Promise.all([getJSON("/api/market?type=futures&symbol="+encodeURIComponent(sim)).catch(function(){return null}),getJSON("/api/market?type=pionex_funding&symbol="+encodeURIComponent(px)).catch(function(){return null})]);
+    tbFlux={sim:sim,la:Date.now(),inLucru:false,f:rr[0]&&!rr[0].faraContract?rr[0]:null,px:rr[1]&&rr[1].data&&Array.isArray(rr[1].data.rates)?rr[1].data.rates:null}}
+  catch(e){tbFlux={sim:sim,la:Date.now(),inLucru:false,f:null,px:null}}
+  if(tbPanouVizibil()&&tbStare.bot&&tbStare.bot.id===b.id)tbDeseneazaFlux(tbStare.bot)}
+function tbDeseneazaFlux(b){
+  var cc=$("tbConcret");if(!cc||!cc.parentNode)return;var el=$("tbFlux");
+  if(!el){el=document.createElement("p");el.id="tbFlux";el.className="tbSub tbFlux";cc.parentNode.insertBefore(el,cc.nextSibling)}
+  var r=b&&tbFlux.f?TabloExtra.fluxBot(tbFlux.f,tbFlux.px,b):null;
+  if(!r){el.hidden=true;return}
+  el.hidden=false;el.className="tbSub tbFlux tbFlux-"+r.ton;el.textContent=(r.ton==="rau"?"⚠ ":"")+TabloExtra.textFlux(r,String(b.baza||"").replace(/\.PERP$/,""))}
 async function tbAduSaptamana(b){
   if(!b||!b.id||tbSapt.inLucru)return;
   if(tbSapt.botId===b.id&&Date.now()-tbSapt.la<10*60000){
@@ -7136,7 +7154,7 @@ async function tbAduSaptamana(b){
   catch(e){tbSapt={botId:b.id,la:Date.now(),intrari:null,eroare:e&&e.status===503?"doar pe Radarul de pe server":textEroare(e),inLucru:true}}
   try{await tbAduPlan(b)}finally{tbSapt.inLucru=false}
   /* planul sosit schimbă și verdictul (pragul atins, podeaua): semaforul întâi, cartela planului îi ia fraza (🟡1) */
-  if(tbPanouVizibil()&&tbStare.bot&&tbStare.bot.id===b.id){tbDeseneazaSemafor(tbStare.bot);tbDeseneazaSaptPlan(tbStare.bot)}
+  if(tbPanouVizibil()&&tbStare.bot&&tbStare.bot.id===b.id){tbDeseneazaSemafor(tbStare.bot);tbDeseneazaSaptPlan(tbStare.bot);if(typeof tbDeseneazaBanii==="function")try{tbDeseneazaBanii(tbStare.bot)}catch(e){}}   /* v100.385 (I-930): curba din istoria sosită */
 }
 // v97.6 (27.09, ICP pornit fara plan): propunerea de plan pentru botul care n-are, dupa planul lui cel mai nou
 var tbPropPlan={botId:null,p:null,inLucru:false};
@@ -7476,10 +7494,10 @@ function tbDeseneazaBanii(b){
     (pg?rand("Pe grilă, după comision",GridCalcul.procent(pg.pct)+(pg.usdt!==null?" ≈ "+tbPeGrilaUsdt(pg.usdt)+" USDT":"")/* v100.332 (🔵9): virgula, ca KPI-ul de sus; v100.333: o zecimală */,"",TextRo.cate(pg.grile,"grilă","grile")+" "+pg.mod):"")+
     rand("Comisioane",botiBan(b.comisioane),"tbSubVal")+
     rand("Finanțare",botiBan(b.finantare),"tbSubVal")+
-    tbRandUmpleri(b);
+    tbRandUmpleri(b)+(typeof TabloExtra!=="undefined"&&TabloExtra.curbaBotHtml?TabloExtra.curbaBotHtml(typeof tbSapt!=="undefined"&&tbSapt&&tbSapt.botId===b.id?tbSapt.intrari:null,b,Date.now()):"");   /* v100.385 (I-930): drumul botului de la pornire */
   tbAduUmpleri(b);
   /* v100.332 (auditul 12.11, 🟡1): semaforul înaintea cartelei planului - cartela îi ia fraza, iar lista „Ce ai de făcut” vede verdictul de acum */
-  tbFisaRestaureaza(b);tbDeseneazaExtra(b);tbAduFisaBot(b);tbDeseneazaSemafor(b);tbDeseneazaSaptPlan(b);tbAduSaptamana(b);tbAduSemnale(b);tbDeseneazaPortofoliu();if(typeof gridLaboratorAdu==="function")gridLaboratorAdu();
+  tbFisaRestaureaza(b);tbDeseneazaExtra(b);tbAduFisaBot(b);tbDeseneazaSemafor(b);tbDeseneazaSaptPlan(b);tbAduSaptamana(b);if(typeof tbAduFlux==="function")tbAduFlux(b);tbAduSemnale(b);tbDeseneazaPortofoliu();if(typeof gridLaboratorAdu==="function")gridLaboratorAdu();
   var lista=Array.isArray(b.avertismente)?b.avertismente:[];
   if(av)av.innerHTML=lista.length?lista.map(function(a){return '<div class="tbAvert">'+escapeHtml(a)+'</div>'}).join(""):'<p class="tbSub">Niciun avertisment de la server.</p>';
   tbStare.avertLista=lista;tbRenderTodo();
