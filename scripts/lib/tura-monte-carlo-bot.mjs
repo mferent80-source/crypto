@@ -114,8 +114,11 @@ export async function turaMonteCarloBot(d) {
       opt.zile = Math.max(...opt.orizonturi);
       /* v100.339 (I-868): botul e activ ⇒ botRuleaza; dacă reluarea îl oprea pe stop / țintă, pragurile se socotesc de aici încolo */
       // v100.350 (el: „de aici încolo din poziția Pionex”): drumurile pornesc din poziția reală a botului
-      let rez = await calc(d, "simuleaza", b15, set, Object.assign({ pornitLa: s.pornitLa, stPrefix: s.pornitLa ? set : null, botRuleaza: true, pozitiePionex: s.pornitLa ? s.pozitie : null }, opt)), nota = "";
+      // v100.383 (el, 24.11: „monte Carlo bate câmpii”): și din BANII din Pionex (profitTotal) - stopul / ținta în procente cad la banii lui, nu la ai reluării
+      const totalPx = s.pornitLa ? nr(b.profitTotal) : null;
+      let rez = await calc(d, "simuleaza", b15, set, Object.assign({ pornitLa: s.pornitLa, stPrefix: s.pornitLa ? set : null, botRuleaza: true, pozitiePionex: s.pornitLa ? s.pozitie : null, totalPionex: totalPx }, opt)), nota = "";
       if (rez.praguriDeAici) nota = "stopul și ținta socotite de aici încolo (pe drumul real prețul le-a atins, dar botul rulează): ";
+      { const na = d.GridSim.notaAncorare ? d.GridSim.notaAncorare(rez) : ""; if (na) nota = na + ": "; }
       if (rez.eroare && s.pornitLa) { const motiv = String(rez.eroare).split(/[.:]/)[0]; rez = await calc(d, "simuleaza", b15, set, Object.assign({ pornitLa: null }, opt)); if (!rez.eroare) nota = "ca bot pornit acum (" + motiv + "): "; }
       if (rez.eroare) throw new Error(rez.eroare);
       const v = d.GridSim.verdictScurt(rez, set, plan, b), cat = categorie(v.faCe), text = nota + v.text;
@@ -123,7 +126,7 @@ export async function turaMonteCarloBot(d) {
       let hot = st.boti[String(b.id)] && st.boti[String(b.id)].hot || null;
       if (s.pornitLa && d.GridSim.hotarare && !(hot && acum - (nr(hot.ultima) || 0) < HOT_MS)) {
         try {
-          const h = await calc(d, "hotarare", b15, set, { pornitLa: s.pornitLa, pozitiePionex: s.pozitie, lich: s.lich, plan, bilantPierdut: !!d.bilantPierdut /* v100.355: regula B */, n: d.nHot || HOT_N, seed: 12, orizonturi: [1, 7], p5Plan: p5PlanDin(rez, opt) }), p = pasHotarare(hot, h, acum, nume);
+          const h = await calc(d, "hotarare", b15, set, { pornitLa: s.pornitLa, pozitiePionex: s.pozitie, totalPionex: totalPx, lich: s.lich, plan, bilantPierdut: !!d.bilantPierdut /* v100.355: regula B */, n: d.nHot || HOT_N, seed: 12, orizonturi: [1, 7], p5Plan: p5PlanDin(rez, opt) }), p = pasHotarare(hot, h, acum, nume);
           hot = p.hot; let anuntat = false;
           if (p.anunt && await d.anunta(p.anunt, b.id, (p.dupaAnunt.plan && p.dupaAnunt.cheie === "inchide" ? "hotplan-" : "hot-") + p.dupaAnunt.cheie + "-" + b.id)   /* revizia: cu botul (rezumatul de dimineață îi numără pe toți) */) { hot = p.dupaAnunt; anuntat = true; out.anuntate++; }   /* v100.352: „îl închid” pe planul tău nu așteaptă dimineața */
           // v100.352 (auditul): nota ține ce s-a AFIȘAT (recomandarea confirmată, pe Tablou), nu candidatul încă neconfirmat
@@ -147,7 +150,7 @@ export async function turaMonteCarloBot(d) {
             else {
               // revizia Opus: aceeași reluare ca verdictul principal (prefixul de la pornire; căzut ⇒ ca bot nou), altfel cele două n-ar fi comparabile
               const starturi = d.GridSim.starturiRegim(b15, rg.ferestre, 96), zile = Math.ceil(starturi.length / 96);
-              let rr = await calc(d, "simuleaza", b15, set, Object.assign({ pornitLa: s.pornitLa, stPrefix: s.pornitLa ? set : null, botRuleaza: true, pozitiePionex: s.pornitLa ? s.pozitie : null }, opt, { starturi })), notaR = "";
+              let rr = await calc(d, "simuleaza", b15, set, Object.assign({ pornitLa: s.pornitLa, stPrefix: s.pornitLa ? set : null, botRuleaza: true, pozitiePionex: s.pornitLa ? s.pozitie : null, totalPionex: totalPx }, opt, { starturi })), notaR = "";
               if (rr.praguriDeAici) notaR = "stopul și ținta socotite de aici încolo (pe drumul real prețul le-a atins, dar botul rulează): ";
               if (rr.eroare && s.pornitLa && !/regimul de acum/.test(String(rr.eroare))) { rr = await calc(d, "simuleaza", b15, set, Object.assign({ pornitLa: null }, opt, { starturi })); if (!rr.eroare) notaR = "ca bot pornit acum: "; }
               regim = rr.eroare ? { stare: rg.stare, zile, text: String(rr.eroare).slice(0, 200), eroare: true, nevalidat: !d.regimValidat }

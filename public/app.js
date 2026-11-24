@@ -8798,8 +8798,11 @@ async function tbMcPorneste(b,k){
     if(!(b.brut&&b.brut.buOrderData&&Number(b.brut.buOrderData.row)>1))note.push("număr de grile necunoscut, am pus 20");   /* revizia (10) */
     await new Promise(function(r){setTimeout(r,30)});   /* „socotesc…” apare înainte de calcul */
     /* v100.271 (ideile auditului 29.10): drumuri de 7 zile = cel mai lung orizont citit (era 14): aceleași cifre în limita tragerii, ~40% mai repede */
-    var rez=await tbMcSimuleaza(tbMc.b15,st,{plan:plan,pornitLa:pornitLa,stPrefix:pornitLa?st:null,botRuleaza:!!pornitLa,pozitiePionex:pornitLa?d.pozitie:null,n:500,seed:12,orizonturi:[1/24,4/24,1,7],zile:7});
+    /* v100.383 (el, 24.11: „monte Carlo bate câmpii grav”): și din BANII din Pionex (profitTotal) - stopul / ținta în procente cad la banii lui, nu la ai reluării */
+    var totalPx=pornitLa&&b.profitTotal!==null&&b.profitTotal!==undefined&&b.profitTotal!==""&&isFinite(Number(b.profitTotal))?Number(b.profitTotal):null;
+    var rez=await tbMcSimuleaza(tbMc.b15,st,{plan:plan,pornitLa:pornitLa,stPrefix:pornitLa?st:null,botRuleaza:!!pornitLa,pozitiePionex:pornitLa?d.pozitie:null,totalPionex:totalPx,n:500,seed:12,orizonturi:[1/24,4/24,1,7],zile:7});
     if(rez.praguriDeAici)note.push("stopul și ținta socotite de aici încolo (pe drumul real prețul le-a atins, dar botul rulează)");   /* v100.339 (I-868) */
+    if(GridSim.notaAncorare){var naP=GridSim.notaAncorare(rez);if(naP)note.push(naP)}   /* v100.383 */
     if(rez.eroare&&pornitLa){var motiv=String(rez.eroare).split(/[.:]/)[0];rez=await tbMcSimuleaza(tbMc.b15,st,{plan:plan,pornitLa:null,n:500,seed:12,orizonturi:[1/24,4/24,1,7],zile:7});if(!rez.eroare)note.push("ca bot pornit acum ("+motiv+")")}   /* revizia (6): motivul adevărat */
     tbMc.rez=rez;tbMc.st=st;tbMc.plan=plan;tbMc.rand=GridSim.verdictScurt(rez,st,plan,b);tbMc.rand.scurt=GridSim.riscScurt?GridSim.riscScurt(rez):null;   /* v100.312 (I-842): ce poate face piața botului în 7 zile - gridul față de mișcarea obișnuită, ieșirea din grid, pierderea la stop */tbMc.rand.sapt=typeof tbMcSapt==="function"?tbMcSapt(rez,tbMc.b15,b):null;   /* v100.269 (auditul MC): riscul pe 1 h / 4 h / o zi */if(note.length)tbMc.rand.text=note.join(" · ")+": "+tbMc.rand.text;tbMc.randLa=Date.now();tbMc.randSursa="pagina";ok=true;
   }catch(e){tbMc.eroare=textEroare(e)}   /* revizia (9): verdictul vechi rămâne pe ecran, cu ora lui */

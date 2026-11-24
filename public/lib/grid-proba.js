@@ -106,21 +106,30 @@ var GridProba = (function () {
     // botul se închide când rezultatul, CU grilele umplute pe drum, ajunge la r. Prețul serverului e socotit pe poziția de la un moment dat
     // (fără grilele de pe drum) ⇒ ieșea prea jos (−14,1 în loc de −10). Fără stopRaport, drumul e exact cel de dinainte.
     var raportValid = function (v) { return v !== null && v !== undefined && v !== "" && isFinite(v) && Number(v) < 0 ? Number(v) : null; };
-    var sr = raportValid(st.stopRaport);
+    // v100.383 (el, 24.11.2026: „monte Carlo bate câmpii grav”): și ținta pusă în PROCENTE (Pionex profit_ratio) - st.tpRaport = r (pozitiv): botul se
+    // închide când rezultatul, CU grilele de pe drum, ajunge la r (prețul serverului e socotit pe poziția de acum, fără grilele de pe drum - ca la stop).
+    // st.pragAncorat: pragurile sunt mutate pe banii din Pionex (GridSim.simuleaza cu o.totalPionex), deci pot sta și de cealaltă parte a lui zero.
+    var anc = !!st.pragAncorat, finit = function (v) { return v !== null && v !== undefined && v !== "" && isFinite(v) ? Number(v) : null; };
+    var prS = function (v) { return anc ? finit(v) : raportValid(v); }, prT = function (v) { var f = finit(v); return f !== null && (anc || f > 0) ? f : null; };
+    var sr = prS(st.stopRaport), tR = prT(st.tpRaport), felR = null;
     // pe drumul de la a la x, nivel cu nivel (între două niveluri poziția nu se schimbă, deci rezultatul e liniar în preț): prețul la care
-    // rezultatul atinge sr, sau null (atunci prețul a ajuns la x cu toate umplerile făcute)
+    // rezultatul atinge sr (stopul) sau tR (ținta), sau null (atunci prețul a ajuns la x cu toate umplerile făcute); felR = care dintre ele
     function mergiCuRaport(a, x) {
       var rup = [], j;
       if (x < a) { for (j = primulPeste(niv, a) - 1; j >= 0 && niv[j] > x; j--) rup.push(niv[j]); }
       else if (x > a) { for (j = primulPeste(niv, a); j <= N && niv[j] < x; j++) if (niv[j] > a) rup.push(niv[j]); }
       rup.push(x);
-      var cur = a;
+      var cur = a, taie = function (v, A0, B, y) { var z = B !== 0 ? (v - A0) / B : y; if (!((z - cur) * (z - y) <= 0)) z = y; return z; };
       for (var k2 = 0; k2 < rup.length; k2++) {
         var y = rup[k2], B = Ql - Qs - (Ql + Qs) * com, A0 = real - fee - Cl + Cs;
-        if (A0 + B * cur <= sr) return cur;   // deja dincolo de prag (pornit sub el): Pionex închide pe loc
-        if (A0 + B * y <= sr) { var z = B !== 0 ? (sr - A0) / B : y; if (!((z - cur) * (z - y) <= 0)) z = y; return z; }
+        if (sr !== null && A0 + B * cur <= sr) { felR = "stop"; return cur; }   // deja dincolo de prag (pornit sub el): Pionex închide pe loc
+        if (tR !== null && A0 + B * cur >= tR) { felR = "tp"; return cur; }
+        if (sr !== null && A0 + B * y <= sr) { felR = "stop"; return taie(sr, A0, B, y); }
+        if (tR !== null && A0 + B * y >= tR) { felR = "tp"; return taie(tR, A0, B, y); }
         misca(cur, y); cur = y;
-        if (netLa(y) <= sr) return y;   // umplerea de la nivel (comisionul ei) poate trece pragul chiar acolo
+        var nl = netLa(y);   // umplerea de la nivel (comisionul ei) poate trece pragul chiar acolo
+        if (sr !== null && nl <= sr) { felR = "stop"; return y; }
+        if (tR !== null && nl >= tR) { felR = "tp"; return y; }
       }
       return null;
     }
@@ -130,7 +139,7 @@ var GridProba = (function () {
     var fin = Math.min(b.length, start + lungime);
     for (var i = start; i < fin; i++) {
       var x = b[i], drum = x.c >= x.o ? [x.o, x.l, x.h, x.c] : [x.o, x.h, x.l, x.c];
-      if (sd && i - start === dinBara) { sj = sd.jos > 0 ? sd.jos : -Infinity; ss = sd.sus > 0 ? sd.sus : Infinity; if ("raport" in sd) sr = raportValid(sd.raport); sd = null; }   // v100.136; v100.259: și raportul
+      if (sd && i - start === dinBara) { sj = sd.jos > 0 ? sd.jos : -Infinity; ss = sd.sus > 0 ? sd.sus : Infinity; if ("raport" in sd) sr = prS(sd.raport); if ("raportTp" in sd) tR = prT(sd.raportTp); sd = null; }   // v100.136; v100.259: și raportul; v100.383: și ținta în procente
       // v100.134: la 8 h; v100.135: cu semn pe pozitia neta; revizia: de la bara 0 (Pionex ia la urmatoarea ora de funding: 3 plati pe zi
       // si pe orizontul de o zi); st.fundingCost (rata PRESUPUSA, nu cea reala) = cost oricare ar fi directia, pe |Ql - Qs|
       var plataF = false; if (fundingZi) { if (tS !== null) { var ta = tS + (i - start) * dtB, Tf = Math.ceil(ta / 288e5) * 288e5; plataF = Tf < ta + dtB; } else plataF = (i - start) % fper === 0; }
@@ -143,7 +152,8 @@ var GridProba = (function () {
       var gap = !st.faraGap;
       // v100.351 (mărunt rămas din v100.350): stopul în PROCENTE și ținta în aceeași bară ⇒ întâi partea rea a barei (pesimist, ca la stopul pe preț - v100.196),
       // nu ordinea după culoarea lumânării (verde O→L→H→C dădea stopul întâi la long, roșie O→H→L→C dădea ținta)
-      if (sr !== null && ((parteStop === "jos" && ss < Infinity && x.h >= ss) || (parteStop === "sus" && sj > -Infinity && x.l <= sj))) drum = parteStop === "jos" ? [x.o, x.l, x.h, x.c] : [x.o, x.h, x.l, x.c];
+      // v100.383: ținta în procente ⇒ la fel, întâi partea rea a barei (ordinea din bară nu se știe)
+      if (parteStop && (tR !== null || (sr !== null && ((parteStop === "jos" && ss < Infinity && x.h >= ss) || (parteStop === "sus" && sj > -Infinity && x.l <= sj))))) drum = parteStop === "jos" ? [x.o, x.l, x.h, x.c] : [x.o, x.h, x.l, x.c];
       if (gap && parteStop === "jos" && x.o >= ss && ss < Infinity) { misca(pret, x.o); if (inauntru) iesiri++; return inchide(x.o, "sus", i - start + 1); }   /* revizia: deschisă peste TP (long) ⇒ TP la deschidere, chiar dacă bara coboară apoi sub stop */
       if (gap && parteStop === "sus" && x.o <= sj && sj > -Infinity) { misca(pret, x.o); if (inauntru) iesiri++; return inchide(x.o, "jos", i - start + 1); }
       if (parteStop && x.l <= sj && x.h >= ss) { var nivS = parteStop === "jos" ? (gap && x.o < sj ? x.o : sj) : (gap && x.o > ss ? x.o : ss); misca(pret, nivS); if (inauntru) iesiri++; return inchide(nivS, parteStop, i - start + 1); }
@@ -151,7 +161,9 @@ var GridProba = (function () {
         var p = drum[d];
         if (p <= sj) { var exJ = gap && d === 0 ? Math.min(sj, p) : sj; misca(pret, exJ); if (inauntru) iesiri++; return inchide(exJ, "jos", i - start + 1); }
         if (p >= ss) { var exS = gap && d === 0 ? Math.max(ss, p) : ss; misca(pret, exS); if (inauntru) iesiri++; return inchide(exS, "sus", i - start + 1); }
-        if (sr !== null) { var xr = mergiCuRaport(pret, p); if (xr !== null) { if (inauntru) iesiri++; return inchide(xr, xr < pret ? "jos" : xr > pret ? "sus" : (st.dir === "short" ? "sus" : "jos"), i - start + 1); } }   // v100.259
+        // v100.259; v100.383: partea ieșirii după CE prag a închis (stopul: partea stopului; ținta în procente: partea profitului - long sus, short jos),
+        // nu după încotro mergea prețul: un prag deja trecut la începutul drumului (prețul pe loc) ar fi ieșit mereu pe aceeași parte. La neutru, direcția.
+        if (sr !== null || tR !== null) { var xr = mergiCuRaport(pret, p); if (xr !== null) { if (inauntru) iesiri++; var pTpR = st.dir === "long" ? "sus" : st.dir === "short" ? "jos" : null, pIes = felR === "tp" && pTpR ? pTpR : felR === "stop" && parteStop ? parteStop : xr < pret ? "jos" : xr > pret ? "sus" : (st.dir === "short" ? "sus" : "jos"); return inchide(xr, pIes, i - start + 1); } }
         else misca(pret, p);
         pret = p;
         if (tr) { var nlp = netLa(p); if (nlp < bMin) bMin = nlp; if (nlp > bMax) bMax = nlp; }   // v100.135: in interiorul barei

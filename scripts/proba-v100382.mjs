@@ -50,11 +50,12 @@ await test("ruta obișnuită: tot fără adresa webhook-ului (v100.380, neschimb
 console.log("\nversiunea");
 await test("v100.382 e pusă peste tot (colectorul neatins, v101.211), proba e în lanț după v100.381", () => {
   const pk = JSON.parse(citeste("../package.json")), bi = JSON.parse(citeste("../BUILD_INFO.json")), HTML = citeste("../public/index.html");
-  assert.equal(pk.version, "100.382.0"); assert.equal(bi.version, "v100.382"); assert.ok(bi.li382 && bi.li382.length > 150, "BUILD_INFO.li382");
-  assert.equal((HTML.match(/v100\.382/g) || []).length >= 4, true, "index.html: v100.382 de cel puțin 4 ori");
-  assert.match(citeste("../public/sw.js"), /crypto-radar-v100-382/); assert.match(citeste("../functions/_shared/versiune.js"), /"v100\.382"/);
-  assert.match(citeste("./colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.211";/);
-  assert.match(pk.scripts.test, /npm run test:v100381 && npm run test:v100382 && node scripts\/mutatii\.mjs --doar-tiparele && node scripts\/stare-probe-ecran\.mjs$/); assert.equal(pk.scripts["test:v100382"], "node scripts/proba-v100382.mjs");
+  /* v100.383: „de la 382 încolo” (versiunea și colectorul merg mai departe; după ea în lanț vine proba v100.383) */
+  assert.ok(+(/^100\.(\d+)\.0$/.exec(pk.version) || [])[1] >= 382, "package.json"); assert.ok(+(/^v100\.(\d+)$/.exec(bi.version) || [])[1] >= 382); assert.ok(bi.li382 && bi.li382.length > 150, "BUILD_INFO.li382");
+  assert.equal((HTML.match(/v100\.(\d+)/g) || []).filter((v) => +v.slice(5) >= 382).length >= 4, true, "index.html: v100.382 sau mai nou, de cel puțin 4 ori");
+  assert.ok(+(/crypto-radar-v100-(\d+)/.exec(citeste("../public/sw.js")) || [])[1] >= 382, "sw.js"); assert.ok(+(/"v100\.(\d+)"/.exec(citeste("../functions/_shared/versiune.js")) || [])[1] >= 382, "versiune.js");
+  assert.ok(+(/const VERSIUNE_COLECTOR = "v101\.(\d+)";/.exec(citeste("./colector.mjs")) || [])[1] >= 211, "colectorul de la v101.211 încolo");
+  assert.match(pk.scripts.test, /npm run test:v100381 && npm run test:v100382/); assert.match(pk.scripts.test, /node scripts\/mutatii\.mjs --doar-tiparele && node scripts\/stare-probe-ecran\.mjs$/); assert.equal(pk.scripts["test:v100382"], "node scripts/proba-v100382.mjs");
 });
 
 console.log(`\n${teste - picate} / ${teste} teste trec.\n`);

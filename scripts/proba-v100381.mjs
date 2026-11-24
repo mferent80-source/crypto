@@ -220,7 +220,7 @@ await test("v100.381 e pusă peste tot (colectorul neatins, v101.211), proba e �
   assert.ok(+(/^100\.(\d+)\.0$/.exec(pk.version) || [])[1] >= 381, "package.json"); assert.ok(+(/^v100\.(\d+)$/.exec(bi.version) || [])[1] >= 381); assert.ok(bi.li381 && bi.li381.length > 200, "BUILD_INFO.li381");
   assert.equal((HTML.match(/v100\.(\d+)/g) || []).filter((v) => +v.slice(5) >= 381).length >= 4, true, "index.html: v100.381 sau mai nou, de cel puțin 4 ori");
   assert.ok(+(/crypto-radar-v100-(\d+)/.exec(citeste("../public/sw.js")) || [])[1] >= 381, "sw.js"); assert.ok(+(/"v100\.(\d+)"/.exec(citeste("../functions/_shared/versiune.js")) || [])[1] >= 381, "versiune.js");
-  assert.match(citeste("./colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.211";/);
+  assert.ok(+(/const VERSIUNE_COLECTOR = "v101\.(\d+)";/.exec(citeste("./colector.mjs")) || [])[1] >= 211, "colectorul de la v101.211 încolo");   /* v100.383: colectorul merge mai departe */
   assert.match(pk.scripts.test, /npm run test:v100380 && npm run test:v100381/); assert.match(pk.scripts.test, /node scripts\/mutatii\.mjs --doar-tiparele && node scripts\/stare-probe-ecran\.mjs$/); assert.equal(pk.scripts["test:v100381"], "node scripts/proba-v100381.mjs");
 });
 
