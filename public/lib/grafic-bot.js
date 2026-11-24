@@ -278,6 +278,7 @@ var GraficBot = (function () {
     ad("zero", o.zero, "zero-ul botului", COL.warn, "dash", "zero");
     if (nr(o.zero) === null) ad("zeroPoz", o.zeroPoz, "zero, pe poziția de acum", COL.warn, "dash", "zero*");   /* v100.376: altă cheie decât „zero” - fără șansă de atingere lângă el (atingerea prețului nu aduce botul pe zero) */
     ad("intrare", b.pretDeschidere, "intrarea medie", COL.intrare, "dash", "intrare");
+    ad("vwap", o.vwap, "VWAP de la pornirea botului", COL.bb, "dash", "VWAP");   /* v100.384 (I-936): prețul mediu cu volum al pieței de la pornirea botului */
     if (o.planMinus && nr(o.planMinus.pret)) ad("planMinus", o.planMinus.pret, "plan −" + o.planMinus.usdt + " USDT", COL.bad, "dash", "−" + o.planMinus.usdt);
     ad("gridJos", b.gridJos, "grid jos", COL.accent, "fine", "grid↓");
     if (b.opritorPierdereActiv) ad("stop", o.stopLive != null ? o.stopLive : b.opritorPierdere, "stopul tău", COL.bad, "solid", "stop");   // audit 19.10: stopul în procente socotit live (TabloExtra.pretStopLive)
@@ -286,6 +287,15 @@ var GraficBot = (function () {
     return l;
   }
 
+  // v100.384 (I-936, el: „fă tot” după auditul paginii): VWAP ancorat la pornirea botului - Σ(prețul tipic × volum) / Σ volum pe lumânările de la
+  // pornire încoace (lumânarea care cuprinde pornirea intră). O lumânare fără volum ⇒ null (cifra ar minți), ca la Volume Profile.
+  function vwapDeLa(bare, t0) {
+    var p0 = nr(t0); if (p0 === null || !Array.isArray(bare) || bare.length < 2) return null;
+    var pas = bare[1].t - bare[0].t, pv = 0, v = 0, n = 0;
+    if (bare[0].t > p0) return null;   /* lumânările nu ajung înapoi până la pornire: VWAP-ul ar fi al altei ferestre */
+    for (var i = 0; i < bare.length; i++) { var x = bare[i]; if (!x || x.t + pas <= p0) continue; var vol = nr(x.v); if (vol === null || !(vol > 0)) return null; pv += (x.h + x.l + x.c) / 3 * vol; v += vol; n++; }
+    return n && v > 0 ? pv / v : null;
+  }
   // v100.38 (30.09): PIONEX NUMARA LINIILE - „Număr de grile” / row = linii (jos si sus incluse), intervalele = row − 1 (dovedit pe ~2.000
   // de boti inchisi, loturile de la pornire, si pe botul CRV viu). Inainte se socotea pe row intervale - o linie in plus, toate decalate.
   function liniiPionex(jos, sus, linii, geo) {
@@ -374,7 +384,8 @@ var GraficBot = (function () {
     var z = TE ? TE.dacaInchizi(b) : null, plus = pl ? nr(pl.plus) : null, minus = pl ? nr(pl.minus) : null;
     // v100.98: planul CU gridul pe drum (pretTintaPentru / pretOpritorPentru)
     var pPl = TE && plus > 0 ? TE.pretTintaPentru(b, plus) : null, pMi = TE && minus > 0 ? TE.pretOpritorPentru(b, -minus) : null;
-    var niv = cuSanse(niveluriBot({ bot: b, zero: z && z.pretZero, zeroPoz: z && z.zeroNeatins ? z.pretZeroPozitie : null, tpPozitie: !!(TE && TE.tpDinPret && TE.tpDinPret(b) === false), planPlus: pPl ? { pret: pPl, usdt: plus } : null, planMinus: pMi ? { pret: pMi, usdt: minus } : null, stopLive: TE && TE.pretStopLive ? TE.pretStopLive(b) : null, tpLive: TE && TE.pretTpLive ? TE.pretTpLive(b) : null }), d.sanse);
+    var b1mV = Array.isArray(d.bare1m) && d.bare1m.length > 1 && nr(b.pornitLa) !== null && d.bare1m[0].t <= nr(b.pornitLa) ? d.bare1m : null;   /* v100.384 (I-936): VWAP pe 1 minut când acoperă pornirea */
+    var niv = cuSanse(niveluriBot({ vwap: vwapDeLa(b1mV || rawTot, b.pornitLa), bot: b, zero: z && z.pretZero, zeroPoz: z && z.zeroNeatins ? z.pretZeroPozitie : null, tpPozitie: !!(TE && TE.tpDinPret && TE.tpDinPret(b) === false), planPlus: pPl ? { pret: pPl, usdt: plus } : null, planMinus: pMi ? { pret: pMi, usdt: minus } : null, stopLive: TE && TE.pretStopLive ? TE.pretStopLive(b) : null, tpLive: TE && TE.pretTpLive ? TE.pretTpLive(b) : null }), d.sanse);
     var xo = d.brut && d.brut.buOrderData || {}, gj = nr(xo.bottom), gs = nr(xo.top);
     var grila = { jos: gj !== null ? gj : nr(b.gridJos), sus: gs !== null ? gs : nr(b.gridSus), linii: nr(xo.row), geo: String(xo.gridType || "").toLowerCase() === "geometric" };
     var zi = ziObisnuita(viu || (raw.length ? raw[raw.length - 1].c : null), d.profil);   // v100.51 (I-470, I-476)
@@ -824,6 +835,6 @@ var GraficBot = (function () {
     return h;
   }
 
-  return { COL: COL, fmtP: fmtP, fereastraBot: fereastraBot, bilantUmpleri: bilantUmpleri, ziObisnuita: ziObisnuita, ziObisnuitaActiune: ziObisnuitaActiune, niveluriActiune: niveluriActiune, bare: bare, umpleri: umpleri, liniiPionex: liniiPionex, ema: ema, bollinger: bollinger, rsi: rsi, niveluriBot: niveluriBot, grupeaza: grupeaza, desen: desen, tip: tip, tema: tema, esc: esc, adx: adx, citire: citire, pretLaY: pretLaY, cuPretViu: cuPretViu, intrareBot: intrareBot, cuSanse: cuSanse, stopProba: stopProba, semafor: semafor, trendTabel: trendTabel, trendSumar: trendSumar, TF_SEM: TF_SEM, semZi: semZi };   /* v100.252: fmtP e aceeași scriere ca scara */
+  return { COL: COL, fmtP: fmtP, vwapDeLa: vwapDeLa, fereastraBot: fereastraBot, bilantUmpleri: bilantUmpleri, ziObisnuita: ziObisnuita, ziObisnuitaActiune: ziObisnuitaActiune, niveluriActiune: niveluriActiune, bare: bare, umpleri: umpleri, liniiPionex: liniiPionex, ema: ema, bollinger: bollinger, rsi: rsi, niveluriBot: niveluriBot, grupeaza: grupeaza, desen: desen, tip: tip, tema: tema, esc: esc, adx: adx, citire: citire, pretLaY: pretLaY, cuPretViu: cuPretViu, intrareBot: intrareBot, cuSanse: cuSanse, stopProba: stopProba, semafor: semafor, trendTabel: trendTabel, trendSumar: trendSumar, TF_SEM: TF_SEM, semZi: semZi };   /* v100.252: fmtP e aceeași scriere ca scara */
 })();
 if (typeof globalThis !== "undefined") globalThis.GraficBot = GraficBot;

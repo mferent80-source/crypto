@@ -36,8 +36,9 @@ const BAZA = { dir: "long", pret: 60.567, jos: 60, sus: 66, stop: 56, stopActiv:
 await test("A1 stopul atins: 1 h și 4 h din Monte Carlo, 24 h = cifra de pe Drum (curba stopului), scrisă ca acolo", () => {
   const c = module_("text-ro.js", "cap-margine.js");
   const k = c.CapMargine.alcatuieste({ ...BAZA, stopScurt: [{ ore: 1, pStop: 0.003 }, { ore: 4, pStop: 0.048 }, { ore: 24, pStop: 0.314 }], stopDrum: 0.42 });
-  assert.equal(c.CapMargine.textStop(k), "stopul atins: în 1 h — 0,3% · în 4 h — 4,8% (Monte Carlo pe botul tău) · în 24 h — ~42% (curba stopului, ca pe Drum)");
-  assert.doesNotMatch(c.CapMargine.textStop(k), /31,4/, "cifra Monte Carlo pe 24 h nu mai apare lângă cea de pe Drum");
+  /* v100.384 (I-933): și fără take-profit rândul stopului e al simulării pe toate trei orizonturile; curba stopului rămâne reperul numit al pieței */
+  assert.equal(c.CapMargine.textStop(k), "stopul atins: în 1 h — 0,3% · în 4 h — 4,8% · în 24 h — 31,4% (Monte Carlo pe botul tău) · reper: prețul la nivelul stopului în 24 h — ~42% (curba stopului, piața)");
+  assert.doesNotMatch(c.CapMargine.textStop(k), /ca pe Drum/, "o singură cifră pentru „botul iese pe stop”: Drumul ia și el cifra simulării");
 });
 await test("A2 stopul atins: fără cifra de pe Drum rămâne Monte Carlo și la 24 h; „0,0%” nu se scrie - „sub 0,1%”", () => {
   const c = module_("text-ro.js", "cap-margine.js");
@@ -716,7 +717,8 @@ await test("S3 barele șanselor: marginea (1 h / 4 h / 24 h) și stopul pe aceea
   const c = module_("text-ro.js", "cap-margine.js"), M = (x) => curat(c.CapMargine.metri(c.CapMargine.alcatuieste(x)));
   const m = M({ ...BAZA, stopScurt: [{ ore: 1, pStop: 0.003 }, { ore: 4, pStop: 0.048 }, { ore: 24, pStop: 0.3 }], stopDrum: 0.42 });
   assert.deepEqual(m[0], { k: "margine", et: "Atinge marginea, din 100", sursa: "istoria monedei, socotit la 22:52 · amănuntele în Probabilități", bare: [{ et: "1 h", p: 0.29, text: "29" }, { et: "4 h", p: 0.55, text: "55" }, { et: "24 h", p: 0.66, text: "66" }] });
-  assert.deepEqual(m[1], { k: "stop", et: "Atinge stopul", sursa: "1 h și 4 h: Monte Carlo pe botul tău · 24 h: curba stopului, ca pe Drum", bare: [{ et: "1 h", p: 0.003, text: "0,3%" }, { et: "4 h", p: 0.048, text: "4,8%" }, { et: "24 h", p: 0.42, text: "~42%" }] });
+  /* v100.384 (I-933): și fără take-profit rândul stopului e al simulării pe toate trei orizonturile; curba stopului rămâne reperul numit al pieței */
+  assert.deepEqual(m[1].bare.map((q) => [q.et, q.p]), [["1 h", 0.003], ["4 h", 0.048], ["24 h", 0.3]]); assert.match(m[1].sursa, /^Monte Carlo pe botul tău: botul iese pe stop · .+ · reper: prețul ajunge la nivelul stopului în 24 h: ~42% \(curba stopului, piața\)$/);
   /* o cifră „de refăcut” ⇒ marginea rămâne pe propoziția ei (care spune ce se reface), nu pe bare */
   const vechi = M({ ...BAZA, pret: 60.975, sansePret: 60.79, sanse: { jos: { 1: f(0.12), 4: f(0.55), 24: f(0.72) } } }); assert.equal(vechi.some((q) => q.k === "margine"), false);
   assert.deepEqual(M({ ...BAZA, stopDrum: 0.004 })[1], { k: "stop", et: "Atinge stopul", sursa: "curba stopului, ca pe Drum", bare: [{ et: "24 h", p: 0.004, text: "< 1%" }] });

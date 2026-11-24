@@ -131,10 +131,11 @@ await test("H  Tabloul, Simulatorul și colectorul dau totalPionex; versiunea v1
   assert.match(APP, /pozitiePionex:pornitLa\?d\.pozitie:null,totalPionex:totalPx,/); assert.match(APP, /GridSim\.notaAncorare\(rez\)/);
   assert.equal((SIM.match(/totalPionex: /g) || []).length, 4, "Simulatorul: 4 apeluri"); assert.equal((COL.match(/totalPionex: totalPx/g) || []).length, 3, "colectorul: 3 apeluri");
   const pk = JSON.parse(citeste("package.json")), bi = JSON.parse(citeste("BUILD_INFO.json")), HTML = citeste("public", "index.html");
-  assert.equal(pk.version, "100.383.0"); assert.equal(bi.version, "v100.383"); assert.ok(bi.li383 && bi.li383.length > 200, "BUILD_INFO.li383");
-  assert.ok((HTML.match(/v100\.383/g) || []).length >= 4, "index.html"); assert.match(citeste("public", "sw.js"), /crypto-radar-v100-383/); assert.match(citeste("functions", "_shared", "versiune.js"), /"v100\.383"/);
-  assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.212";/);
-  assert.match(pk.scripts.test, /npm run test:v100382 && npm run test:v100383 && node scripts\/mutatii\.mjs --doar-tiparele && node scripts\/stare-probe-ecran\.mjs$/); assert.equal(pk.scripts["test:v100383"], "node scripts/proba-v100383.mjs");
+  /* v100.384: „de la 383 încolo” (versiunea și colectorul merg mai departe; după ea în lanț vine proba v100.384) */
+  assert.ok(+(/^100\.(\d+)\.0$/.exec(pk.version) || [])[1] >= 383, "package.json"); assert.ok(+(/^v100\.(\d+)$/.exec(bi.version) || [])[1] >= 383); assert.ok(bi.li383 && bi.li383.length > 200, "BUILD_INFO.li383");
+  assert.ok((HTML.match(/v100\.(\d+)/g) || []).filter((v) => +v.slice(5) >= 383).length >= 4, "index.html"); assert.ok(+(/crypto-radar-v100-(\d+)/.exec(citeste("public", "sw.js")) || [])[1] >= 383); assert.ok(+(/"v100\.(\d+)"/.exec(citeste("functions", "_shared", "versiune.js")) || [])[1] >= 383);
+  assert.ok(+(/const VERSIUNE_COLECTOR = "v101\.(\d+)";/.exec(citeste("scripts", "colector.mjs")) || [])[1] >= 212, "colectorul de la v101.212 încolo");
+  assert.match(pk.scripts.test, /npm run test:v100382 && npm run test:v100383/); assert.match(pk.scripts.test, /node scripts\/mutatii\.mjs --doar-tiparele && node scripts\/stare-probe-ecran\.mjs$/); assert.equal(pk.scripts["test:v100383"], "node scripts/proba-v100383.mjs");
 });
 
 console.log(`\n${teste - picate}/${teste} trecute` + (picate ? ` · ${picate} PICATE` : ""));

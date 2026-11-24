@@ -134,6 +134,9 @@
     if (s && L.length && typeof tbStopSansaDrum === "function") { var sj = null; try { sj = tbStopSansaDrum(bl); } catch (e) { sj = null; } if (sj) L[L.length - 1].sansa = sj; }
     /* v100.374: cifra de pe Drum s-a schimbat (prețul viu) ⇒ și blocul „Contează acum” al botului din Tablou se redesenează, ca ecranul să aibă o singură cifră */
     var sjN = s && sj ? sj : null;
+    /* v100.384 (I-933): când simularea pe botul lui are cifra pe 24 h, stopul de pe Drum o ia pe ea (ca rândul din cap și titlul Riscului) - și fără take-profit;
+       curba rămâne reperul numit din cap și cifra mare din „Contează acum” (pragul avertizării). sjN (redesenarea lui „Contează acum”) rămâne pe curbă. */
+    if (s && typeof tbStopMcDrum === "function") { var smA = null; try { smA = tbStopMcDrum(bl); } catch (e) { smA = null; } var lsA = L.filter(function (q) { return q.n === s.n && q.p === nr(s.p); })[0]; if (smA && lsA) lsA.sansa = smA; }
     if (sjN !== ctSansaUlt && D.bot && bl && String(D.bot.id) === String(bl.id)) { ctSansaUlt = sjN; try { if (typeof tbRenderConteaza === "function") tbRenderConteaza(); } catch (e) {} }
     // v100.322 (el, 11.11.2026: „am pus TP dar pagina botului nu îl vede”): take-profit-ul pus, pe drum ca pe grafic (în procente: socotit live)
     if (bl && bl.opritorProfitActiv) { var TEp = window.TabloExtra, tp = TEp && TEp.pretTpLive ? TEp.pretTpLive(bl) : nr(bl.opritorProfit); if (tp > 0) {

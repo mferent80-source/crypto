@@ -54,12 +54,15 @@ var Conteaza = (function () {
        doar că PREȚUL ajunge la stop - botul poate ieși înainte pe take-profit. Dedesubt, ce vine întâi după simularea pe botul lui (aceeași cifră ca
        bara din cap). Pragul și roșul rămân pe curbă: avertizarea nu se ascunde după o cifră a simulării. */
     var it = s.intai && nr(s.intai.stop) !== null && nr(s.intai.tp) !== null ? s.intai : null;
+    /* v100.384 (I-933): și fără take-profit, dedesubt cifra simulării (aceeași ca în cap, pe Drum și în titlul Riscului) - „botul iese pe stop”; titlul spune
+       întrebarea curbei („prețul ajunge la stopul tău”), ca pagina să nu aibă două cifre pentru aceeași întrebare */
+    var faraTp = it && s.intai.faraTp === true;
     /* v100.381 („rezolvă tot”, BULLA 24.11: aici „ori muți stopul la ~−94,2%”, dedesubt Consilierul „l-aș lăsa unde e” pentru ACELAȘI preț): când propunerea
        pierde mai mult decât stopul de acum (banii: TabloExtra.stopPropus), rândul spune banii la ambele și aceeași concluzie ca a Consilierului */
     var laS = nr(s.laStop), mT = nr(s.mutTotal), maiMult = laS !== null && mT !== null && mT < laS;
     return { cheie: "stop", ton: rosu ? "rosu" : "galben", grav: rosu ? 1 : 4, nr: din100(p), nrSub: "din 100 · 24 h",
       titlu: it ? "Prețul ajunge la stopul tău (" + et + ") într-o zi în ~" + din100(p) + " din 100 de cazuri" : "Stopul tău (" + et + ") e atins într-o zi în ~" + din100(p) + " din 100 de cazuri",
-      sub: (it ? "cu take-profit-ul tău, botul iese întâi pe stop în ~" + din100(it.stop) + " din 100 și pe take-profit în ~" + din100(it.tp) + " din 100 (simularea pe botul tău, pe 24 h) · " : "") + "e la " + num1(s.d) + " ATR de preț" + (nr(s.p72) !== null ? " · în 3 zile: ~" + din100(s.p72) + " din 100" : "") + " · măsurat pe " + (perechi > 0 ? cate(perechi, "monedă", "monede") : "monedele mari")
+      sub: (it ? (faraTp ? "botul iese pe stop într-o zi în ~" + din100(it.stop) + " din 100 (simularea pe botul tău, ca în cap) · " : "cu take-profit-ul tău, botul iese întâi pe stop în ~" + din100(it.stop) + " din 100 și pe take-profit în ~" + din100(it.tp) + " din 100 (simularea pe botul tău, pe 24 h) · ") : "") + "e la " + num1(s.d) + " ATR de preț" + (nr(s.p72) !== null ? " · în 3 zile: ~" + din100(s.p72) + " din 100" : "") + " · măsurat pe " + (perechi > 0 ? cate(perechi, "monedă", "monede") : "monedele mari")
         + ", ultimele " + cate(zile, "zi", "zile") + ", jos și sus la un loc (direcția nu se știe)" + (s.plafon ? " · plafonat la șansa marginii de " + (s.plafon === "sus" ? "sus" : "jos") + " (stopul e dincolo de ea)" : ""),
       faCe: mut !== null && maiMult ? "Hotărăște acum: ori accepți ieșirea la " + iesire + " (" + usdt1(laS) + "), ori muți stopul la " + mut + ". Eu l-aș lăsa unde e: mutarea scade șansa de la ~" + din100(p)
           + " la ~" + (nr(s.mutP24) !== null ? din100(s.mutP24) : "20") + " din 100 într-o zi, dar pierderea maximă crește de la " + num1(Math.abs(laS)) + " la " + num1(Math.abs(mT)) + " USDT."

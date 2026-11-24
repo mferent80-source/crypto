@@ -67,9 +67,10 @@ await test("A4 propoziția stopului și blocul „Dacă muți gridul” spun la 
 console.log("\nB. ce NU se schimbă");
 await test("B1 fără take-profit: pe 24 h rămâne curba stopului (îndreptarea 1 din v100.374), cu textul de până acum", () => {
   const s = bara({ tp: null, laTp: null, tpRaport: null, tpDinPret: null }, "stop");
-  assert.deepEqual(s, { k: "stop", et: "Atinge stopul", sursa: "1 h și 4 h: Monte Carlo pe botul tău · 24 h: curba stopului, ca pe Drum",
-    bare: [{ et: "1 h", p: 0.058, text: "5,8%" }, { et: "4 h", p: 0.118, text: "11,8%" }, { et: "24 h", p: 0.72, text: "~72%" }] });
-  assert.equal(CM.textStop(A({ tp: null })), "stopul atins: în 1 h — 5,8% · în 4 h — 11,8% (Monte Carlo pe botul tău) · în 24 h — ~72% (curba stopului, ca pe Drum)");
+  /* v100.384 (I-933): și fără take-profit rândul stopului e al simulării pe toate trei orizonturile; curba stopului rămâne reperul numit al pieței */
+  assert.deepEqual(s.bare, [{ et: "1 h", p: 0.058, text: "5,8%" }, { et: "4 h", p: 0.118, text: "11,8%" }, { et: "24 h", p: 0.213, text: "21,3%" }]);
+  assert.match(s.sursa, /^Monte Carlo pe botul tău: botul iese pe stop · .+ · reper: prețul ajunge la nivelul stopului în 24 h: ~72% \(curba stopului, piața\)$/);
+  assert.equal(CM.textStop(A({ tp: null })), "stopul atins: în 1 h — 5,8% · în 4 h — 11,8% · în 24 h — 21,3% (Monte Carlo pe botul tău) · reper: prețul la nivelul stopului în 24 h — ~72% (curba stopului, piața)");
 });
 await test("B2 simulare veche, fără cifra take-profit-ului pe 24 h: stopul rămâne pe curbă, take-profit-ul fără bara de 24 h", () => {
   const sc = [{ ore: 1, pStop: 0.058, pTp: 0.16 }, { ore: 4, pStop: 0.118, pTp: 0.362 }, { ore: 24, pStop: 0.213, pTp: null }];
@@ -103,7 +104,7 @@ await test("D1 lângă take-profit, stopul de pe Drum ia cifra din aceeași simu
   ctx.window = ctx; vm.createContext(ctx); vm.runInContext(LIBF("asezare-paznic.js"), ctx);
   const b = botDrum(lume.GridCalcul), L = () => J(ctx.AsezarePaznic.nivele(b)), stopN = () => L().find((x) => /^stop/.test(x.n)), tpN = () => L().find((x) => /take-profit/.test(x.n));
   assert.equal(stopN().sansa, "24 h: 21,3%"); assert.equal(tpN().sansa, "24 h: 72,6%");
-  st.tp = null; assert.equal(stopN().sansa, "24 h: ~72%", "fără cifra take-profit-ului: curba, ca până acum");
+  st.tp = null; assert.equal(stopN().sansa, "24 h: 21,3%", "v100.384 (I-933): și fără cifra take-profit-ului, cifra simulării (ca în cap)");
   st.tp = "24 h: 72,6%"; st.mc = null; assert.equal(stopN().sansa, "24 h: ~72%", "simularea fără cifra stopului: curba");
   st.mc = "24 h: 21,3%"; delete ctx.tbStopMcDrum; assert.equal(stopN().sansa, "24 h: ~72%", "fără funcție (cadru vechi): curba, fără ReferenceError");
 });
@@ -138,7 +139,7 @@ await test("E2 pagina dă Contează acum cifrele simulării doar la botul cu tak
   const mk = (tbMc, sansa) => { const c2 = vm.createContext({ tbMc, tbStopSansa: () => sansa, TextRo: globalThis.TextRo, isFinite, String, Array, Object }); vm.runInContext(functie(APP, "tbMcIntai24") + functie(APP, "tbStopCuIntai"), c2); return (b) => { c2.b = b; return J(vm.runInContext("tbStopCuIntai(b)", c2)); }; };
   const SC = [{ ore: 1, pStop: 0.058, pTp: 0.16 }, { ore: 24, pStop: 0.206, pTp: 0.722 }], S = { p24: 0.7, stop: 0.02251 };
   assert.deepEqual(mk({ botId: "7", rand: { scurt: SC } }, S)({ id: 7, opritorProfitActiv: true }), { ...S, intai: { stop: 0.206, tp: 0.722 } });
-  assert.deepEqual(mk({ botId: "7", rand: { scurt: SC } }, S)({ id: 7, opritorProfitActiv: false }), S, "fără take-profit: neschimbat");
+  assert.deepEqual(mk({ botId: "7", rand: { scurt: SC } }, S)({ id: 7, opritorProfitActiv: false }), { ...S, intai: { stop: 0.206, tp: 0.722, faraTp: true } }, "v100.384 (I-933): și fără take-profit, cifra simulării (faraTp)");
   assert.deepEqual(mk({ botId: "8", rand: { scurt: SC } }, S)({ id: 7, opritorProfitActiv: true }), S, "simularea altui bot");
   assert.deepEqual(mk({ botId: "7", rand: { scurt: SC, text: "«Reluarea arată botul OPRIT»" } }, S)({ id: 7, opritorProfitActiv: true }), S);
   assert.deepEqual(mk({ botId: "7", rand: { scurt: [{ ore: 24, pStop: 0.2 }] } }, S)({ id: 7, opritorProfitActiv: true }), S, "simulare veche, fără pTp");
