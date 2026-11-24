@@ -333,7 +333,9 @@ export async function onRequestGet({request,env}){
     return json(corp,e.status||502,e.retryAfter?{"retry-after":String(e.retryAfter)}:{});
   }
 
-  if(brutCerut)return json({citit:Date.now(),bots:brute,nextPageToken:next});
+  /* v100.382 (24.11.2026): și ruta brută fără adresa webhook-ului cu token (userSignals) și fără userId / keyId - colectorul citește de aici doar
+     strategyId / buOrderId / buOrderData; până acum lista pleca neatinsă la oricine avea parola aplicației */
+  if(brutCerut)return json({citit:Date.now(),bots:(brute||[]).map(faraIdCont),nextPageToken:next});
 
   let preturi={},harta=null;
   await Promise.all([

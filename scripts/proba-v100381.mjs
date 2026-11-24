@@ -216,11 +216,12 @@ await test("F4 Contul Pionex, „Boți activi”: gridul ca până acum, iar bo�
 console.log("\nC. versiunea");
 await test("v100.381 e pusă peste tot (colectorul neatins, v101.211), proba e în lanț după v100.380", () => {
   const pk = JSON.parse(citeste("../package.json")), bi = JSON.parse(citeste("../BUILD_INFO.json")), HTML = citeste("../public/index.html");
-  assert.equal(pk.version, "100.381.0"); assert.equal(bi.version, "v100.381"); assert.ok(bi.li381 && bi.li381.length > 200, "BUILD_INFO.li381");
-  assert.equal((HTML.match(/v100\.381/g) || []).length >= 4, true, "index.html: v100.381 de cel puțin 4 ori");
-  assert.match(citeste("../public/sw.js"), /crypto-radar-v100-381/); assert.match(citeste("../functions/_shared/versiune.js"), /"v100\.381"/);
+  /* v100.382: „de la 381 încolo” (versiunea merge mai departe; după ea în lanț vine proba v100.382) */
+  assert.ok(+(/^100\.(\d+)\.0$/.exec(pk.version) || [])[1] >= 381, "package.json"); assert.ok(+(/^v100\.(\d+)$/.exec(bi.version) || [])[1] >= 381); assert.ok(bi.li381 && bi.li381.length > 200, "BUILD_INFO.li381");
+  assert.equal((HTML.match(/v100\.(\d+)/g) || []).filter((v) => +v.slice(5) >= 381).length >= 4, true, "index.html: v100.381 sau mai nou, de cel puțin 4 ori");
+  assert.ok(+(/crypto-radar-v100-(\d+)/.exec(citeste("../public/sw.js")) || [])[1] >= 381, "sw.js"); assert.ok(+(/"v100\.(\d+)"/.exec(citeste("../functions/_shared/versiune.js")) || [])[1] >= 381, "versiune.js");
   assert.match(citeste("./colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.211";/);
-  assert.match(pk.scripts.test, /npm run test:v100380 && npm run test:v100381 && node scripts\/mutatii\.mjs --doar-tiparele && node scripts\/stare-probe-ecran\.mjs$/); assert.equal(pk.scripts["test:v100381"], "node scripts/proba-v100381.mjs");
+  assert.match(pk.scripts.test, /npm run test:v100380 && npm run test:v100381/); assert.match(pk.scripts.test, /node scripts\/mutatii\.mjs --doar-tiparele && node scripts\/stare-probe-ecran\.mjs$/); assert.equal(pk.scripts["test:v100381"], "node scripts/proba-v100381.mjs");
 });
 
 console.log(`\n${teste - picate} / ${teste} teste trec.\n`);
