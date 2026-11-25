@@ -149,7 +149,10 @@ function normalizeazaSemnal(bot,preturi,harta){
   const quote=typeof bot.quote==="string"&&bot.quote?bot.quote:"USDT";
   const simbolPionex=baza?simbolTicker(baza,quote,harta):null,pret=simbolPionex?(preturi[simbolPionex]??null):null;
   const investit=nr(x.quoteTotalInvestment)??nr(x.quoteOriginalInvestment),sumaAcum=nr(x.currentQuoteAmount);
-  const qL=nr(p.qtyLong),qS=nr(p.qtyShort),aL=nr(p.amountLong),aS=nr(p.amountShort);
+  /* v100.393 (auditul 25.11, citit pe viu): Pionex dă short-ul cu MINUS („qtyShort”: "-0.0009") ⇒ ținem MĂRIMEA, ca la gridul futures (Math.abs);
+     „> 0” de mai jos îl făcea „neclar” (fără direcție, fără alertă). Lipsa rămâne lipsă (null), nu 0. */
+  const abs=v=>v===null?null:Math.abs(v);
+  const qL=abs(nr(p.qtyLong)),qS=abs(nr(p.qtyShort)),aL=abs(nr(p.amountLong)),aS=abs(nr(p.amountShort));
   /* revizia (🔴): cantitatea CITITĂ hotărăște direcția; banii poziției doar când cantitatea lipsește (altfel o sumă rămasă după ieșire ținea botul
      „LONG” pentru totdeauna și ieșirea nu se mai anunța). Cantitatea 0 cu bani > 0, sau long și short deodată = NECLAR: fără direcție, fără alertă. */
   const areCant=qL!==null||qS!==null;
