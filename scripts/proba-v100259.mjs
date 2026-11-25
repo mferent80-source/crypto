@@ -8,6 +8,7 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import vm from "node:vm";
 import { fileURLToPath } from "node:url";
+import { cuTablou } from "./lib/sursa-app.mjs";   /* v100.392 (I-940): app.js lipit de modulele Tabloului */
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8");
@@ -55,7 +56,7 @@ await test("Simulatorul: stopul schimbat de mână anulează procentul venit de 
   assert.match(src("public", "lib", "grid-sim-ecran.js"), /if \(st\.stopRaport && !aceeasiStop\) delete st\.stopRaport;/);
 });
 await test("Poarta gridului trimite direcția, grilele și levierul; serverul le păstrează (măsura pe bani)", () => {
-  assert.match(src("public", "app.js"), /verdictTrimite\(\{s:"poarta-grid",k:f\.simbol,n:f\.verdict\.nivel,p:f\.pret,j:stV&&stV\.jos,u:stV&&stV\.sus,d:stV&&stV\.dir,g:stV&&stV\.grile,l:stV&&stV\.levier\}\)/);
+  assert.match(cuTablou(src("public", "app.js")), /verdictTrimite\(\{s:"poarta-grid",k:f\.simbol,n:f\.verdict\.nivel,p:f\.pret,j:stV&&stV\.jos,u:stV&&stV\.sus,d:stV&&stV\.dir,g:stV&&stV\.grile,l:stV&&stV\.levier\}\)/);
   assert.match(src("functions", "api", "istoric-bot.js"), /if\(o\.j&&\(d==="long"\|\|d==="short"\|\|d==="neutru"\)\)o\.d=d;if\(o\.j&&g>=2&&g<=150\)o\.g=Math\.round\(g\);if\(o\.j&&l>=1&&l<=125\)o\.l=l;/);
 });
 await test("tura verdictelor: măsura pe bani ținută pe disc (barele de 15 min acoperă doar ~31 de zile) și laboratorul în registru", async () => {
@@ -80,7 +81,7 @@ await test("Contul întreg: măsura pe bani a porții gridului e pe zile, nu pe 
   assert.match(src("public", "lib", "cont-ecran.js"), /r\.masura === "linistit" \|\| r\.masura === "net" \? ciCate\(r\.h, "zi", "zile"\) : ciCate\(r\.h, "zi", "zile"\) \+ " de bursă"/);   /* v100.369: „de” de la 20 */
 });
 await test("pagina laboratorului spune că „dovedit” e pe bani (net, pe zile, ferestre care nu se suprapun)", () => {
-  assert.match(src("public", "app.js"), /diferența de bani \(netul\) pe zile, pe ferestre care nu se suprapun, cu p sub 0,05 și același semn pe zilele de alegere și pe cele nevăzute/);
+  assert.match(cuTablou(src("public", "app.js")), /diferența de bani \(netul\) pe zile, pe ferestre care nu se suprapun, cu p sub 0,05 și același semn pe zilele de alegere și pe cele nevăzute/);
 });
 await test("Consilierul ține ambele margini la un bot neutru (jos și sus), nu doar prima", () => {
   const vm2 = { console, Math, Object, Array, String, Number, JSON, isFinite, TextRo: globalThis.TextRo };

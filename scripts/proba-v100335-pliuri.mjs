@@ -22,7 +22,7 @@ function element() {
     querySelectorAll(sel) { if (sel === "details[open]>summary") return pl.filter((d) => d.open).map((d) => d.sum); if (sel === "details>summary") return pl.map((d) => d.sum); return []; }, get pliuri() { return pl; } };
   return el;
 }
-const ia = () => { assert.ok(/function puneCuPliuri\(/.test(A), "lipsește puneCuPliuri în app.js"); return new Function(fnDin(A, "pliuCheie") + "\n" + fnDin(A, "puneCuPliuri") + "; return puneCuPliuri;")(); };
+const ia = () => { assert.ok(/function puneCuPliuri\(/.test(A), "lipsește puneCuPliuri în app.js"); return new Function(fnDin(A, "pliuCheie") + "\n" + fnDin(A, "puneCuPliuri") + "\n; return puneCuPliuri;")(); };   /* v100.392: rând nou — felia se poate termina cu un comentariu // (rândul-trimitere I-940) care ar înghiți return-ul */
 const H = (n) => '<div><details class="tbProbFara"><summary>Fără semn · ' + n + '</summary><p>x</p></details><details class="tbProbFara"><summary>Cum s-a verificat</summary><p>y</p></details></div>';
 
 await test("1 · „Cum s-a verificat” deschis rămâne deschis după redesen; cel închis rămâne închis", () => {

@@ -1,5 +1,6 @@
 import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
+import { cuTablou } from './lib/sursa-app.mjs';
 import {onRequestGet as extGet} from '../functions/api/external-intel.js';
 
 // 1) Exercise the research worker in a VM without browser dependencies.
@@ -17,7 +18,7 @@ const env={APP_API_TOKEN:'x',COINGLASS_API_KEY:'cg'};const r=await extGet({reque
 
 
 // 3) Exercise actual app.js MTF coverage and conservative same-candle paths.
-const appSrc=await readFile(new URL('../public/app.js',import.meta.url),'utf8');
+const appSrc=cuTablou(await readFile(new URL('../public/app.js',import.meta.url),'utf8'));   /* v100.392 (I-940): cu modulele Tabloului */
 function extractFunction(src,name){
   const start=src.indexOf(`function ${name}(`);if(start<0)throw Error(`missing function ${name}`);const body=src.indexOf('{',src.indexOf(')',start));let depth=0;for(let i=body;i<src.length;i++){if(src[i]==='{')depth++;else if(src[i]==='}'){depth--;if(depth===0)return src.slice(start,i+1)}}throw Error(`unterminated ${name}`)
 }

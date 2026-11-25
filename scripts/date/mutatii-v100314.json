@@ -76,7 +76,7 @@
   },
   {
    "nume": "tabelul semnalelor: iar două zecimale",
-   "fisier": "public/app.js",
+   "fisier": "public/lib/tablou-consilier.js",
    "cauta": "U2=function(v){return TextRo.usdt(v,TextRo.zecMici(v))}",
    "pune": "U2=function(v){return TextRo.usdt(v,2)}"
   },

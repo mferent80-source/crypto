@@ -8,6 +8,7 @@
 // stop-loss la gridul propus SHORT, Scan-ul fara actiuni/marfuri tokenizate si pe gridul des.
 // LIB=<dosar> ruleaza proba pe alt cod (ex. versiunea veche scoasa din git) - asa s-a vazut picand inainte de reparatie.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -24,7 +25,7 @@ const AL = new Function("GridCalcul", `${lib("alerte.js")}; return Alerte;`)(G);
 const SC = new Function(`${lib("scenariu.js")}; return Scenariu;`)();
 const CL = new Function("GridCalcul", `${lib("grid-clasament.js")}; return GridClasament;`)(G);
 const AC = new Function("GridCalcul", `${lib("acasa.js")}; return Acasa;`)(G);
-const app = fs.readFileSync(APP, "utf8");
+const app = cuTablou(fs.readFileSync(APP, "utf8"));   /* v100.392 (I-940): app.js lipit de modulele Tabloului (rândul „Stop-loss sus” stă în lib/tablou-consilier.js) */
 const scanEcran = lib("scan-ecran.js"), jurnal = lib("jurnal-trade.js");
 
 let teste = 0, picate = 0;

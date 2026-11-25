@@ -9,6 +9,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
 import "./garda-texte.mjs";   // incarca modulele (Obiceiuri, Consiliu, JurnalTrade…)
+import { cuTablou } from "./lib/sursa-app.mjs";   /* v100.392 (I-940): app.js lipit de modulele Tabloului */
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const { Obiceiuri: OB, Consiliu: CS, TextRo: TR } = globalThis;
@@ -42,7 +43,7 @@ await test("(1) raportul salvat pe 27.09: sumele cu virgulă și „−” tipog
   const tr = (i) => ({ id: "n" + i, moneda: "CRV", rezultat: i % 2 ? -3.456 : 2.1, net: i % 2 ? -3.9 : 1.8, inchis: T0 - (i + 1) * ORA, pornit: T0 - (i + 5) * ORA, durataOre: 4, comisioane: -0.3, funding: -0.1, dir: "long", greseli: [] });
   const nou = OB.raportDuminica({ trades: Array.from({ length: 25 }, (_, i) => tr(i)), acum: T0 }).linii;
   assert.deepEqual(nou.map(TR.cifreNoi), nou);
-  assert.match(citeste("public/app.js"), /R\.linii\.map\(function\(x\)\{return '<li>'\+escapeHtml\(TextRo\.cifreNoi\(x\)\)\+'<\/li>'\}\)/, "jurnalul nu trece raportul salvat prin TextRo.cifreNoi");
+  assert.match(cuTablou(citeste("public/app.js")), /R\.linii\.map\(function\(x\)\{return '<li>'\+escapeHtml\(TextRo\.cifreNoi\(x\)\)\+'<\/li>'\}\)/, "jurnalul nu trece raportul salvat prin TextRo.cifreNoi");
 });
 
 // (2) jurnalul colectorului: forma „n + " boți"” și forma cu virgulă „jurnal(…, n, "monede")”, pe substantivele numărate

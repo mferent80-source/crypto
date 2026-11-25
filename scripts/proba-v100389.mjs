@@ -55,7 +55,7 @@ await test("E  mutat NESCHIMBAT: corpul modulului = rândurile 7681–8077 din a
   const bloc = vechi.replace(/\r\n/g, "\n").split("\n").slice(7680, 8077).join("\n");
   const corp = KPI.replace(/\r\n/g, "\n"), corpFaraCap = corp.slice(corp.indexOf("*/") + 3).replace(/\n$/, "");
   assert.equal(corpFaraCap, bloc);
-  assert.match(APP, /\/\/ v100\.389 \(I-940\): cifrele mari[^\n]*mutat în public\/lib\/tablou-kpi\.js/);
+  assert.match(APP, /(?:\/\/|\/\*) v100\.389 \(I-940\): cifrele mari[^\n]*mutat în public\/lib\/tablou-kpi\.js/);
 });
 
 await test("O  ordinea: niciun cod de nivel 0 din app.js (în afara funcțiilor) nu atinge variabilele modulului", () => {

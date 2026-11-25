@@ -15,10 +15,11 @@ import path from "node:path";
 import vm from "node:vm";
 import { fileURLToPath } from "node:url";
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";   /* v100.392 (I-940): funcțiile se caută și în modulele Tabloului */
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 /* APP_JS = altă copie de app.js (pentru mutații: aceeași probă pe codul cu o reparație scoasă) */
-const APP = fs.readFileSync(process.env.APP_JS || path.join(RAD, "public", "app.js"), "utf8").replace(/\r\n/g, "\n");
+const APP = cuTablou(fs.readFileSync(process.env.APP_JS || path.join(RAD, "public", "app.js"), "utf8").replace(/\r\n/g, "\n"));
 /* de la „function nume(” (sau „async function nume(”) la început de rând până la următoarea funcție de la început de rând */
 const fnApp = (nume) => {
   let k = APP.indexOf("\nfunction " + nume + "(");

@@ -62,7 +62,7 @@ await test("E  mutat NESCHIMBAT: corpul modulului = rândurile 8774–8957 din a
   const corp = MC.replace(/\r\n/g, "\n"), corpFaraCap = corp.slice(corp.indexOf("*/") + 3).replace(/\n$/, "");
   const corpCmp = corpFaraCap;
   assert.equal(corpCmp, bloc);
-  assert.match(APP, /\/\/ v100\.388 \(I-940\): Monte Carlo pe botul tău[^\n]*mutat în public\/lib\/tablou-mc\.js/);
+  assert.match(APP, /(?:\/\/|\/\*) v100\.388 \(I-940\): Monte Carlo pe botul tău[^\n]*mutat în public\/lib\/tablou-mc\.js/);
 });
 
 await test("F  modulul lucrează singur, fără app.js (rândul pe termen scurt, scorul, săptămâna)", () => {

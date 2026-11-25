@@ -59,7 +59,7 @@ await test("E  mutat NESCHIMBAT: corpul modulului = rândurile 7858–8197 din a
   const bloc = vechi.replace(/\r\n/g, "\n").split("\n").slice(7857, 8197).join("\n");
   const corp = laMutare.replace(/\r\n/g, "\n"), corpFaraCap = corp.slice(corp.indexOf("*/") + 3).replace(/\n$/, "");
   assert.equal(corpFaraCap, bloc);
-  assert.match(APP, /\/\/ v100\.390 \(I-940\): citirea de sus[^\n]*mutat în public\/lib\/tablou-citire\.js/);
+  assert.match(APP, /(?:\/\/|\/\*) v100\.390 \(I-940\): citirea de sus[^\n]*mutat în public\/lib\/tablou-citire\.js/);
 });
 
 await test("O  ordinea: niciun cod de nivel 0 din app.js (în afara funcțiilor) nu atinge variabilele modulului", () => {

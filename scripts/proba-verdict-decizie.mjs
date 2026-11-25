@@ -1,6 +1,7 @@
 import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
-const src=await readFile(new URL('../public/app.js',import.meta.url),'utf8');
+import { cuTablou } from './lib/sursa-app.mjs';   /* v100.392 (I-940): app.js lipit de modulele Tabloului */
+const src=cuTablou(await readFile(new URL('../public/app.js',import.meta.url),'utf8'));
 function extractFunction(name){
   const start=src.indexOf(`function ${name}(`);if(start<0)throw Error(`missing ${name}`);const body=src.indexOf('{',src.indexOf(')',start));let d=0;for(let i=body;i<src.length;i++){if(src[i]==='{')d++;else if(src[i]==='}'){d--;if(d===0)return src.slice(start,i+1)}}throw Error(`unterminated ${name}`)
 }

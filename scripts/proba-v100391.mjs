@@ -13,6 +13,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
+import { cuTablou } from "./lib/sursa-app.mjs";   /* v100.392: app.js lipit de modulele Tabloului (paza G din proba v100392) */
 
 const RAD = path.resolve(new URL("..", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1"));
 const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8");
@@ -20,7 +21,7 @@ let teste = 0, picate = 0;
 async function test(nume, fn) { teste++; try { await fn(); console.log(`  ok   ${nume}`); } catch (e) { picate++; console.log(`  PICA ${nume}\n       ${String(e.message).split("\n")[0]}`); } }
 console.log("\nv100.391 · fila „Riscul” pe botul de semnal · proba\n");
 
-const APP = citeste("public", "app.js"), CSS = citeste("public", "app.css"), MOD = citeste("public", "lib", "tablou-citire.js"), HTML = citeste("public", "index.html"), SW = citeste("public", "sw.js");
+const APP = cuTablou(citeste("public", "app.js")), CSS = citeste("public", "app.css"), MOD = citeste("public", "lib", "tablou-citire.js"), HTML = citeste("public", "index.html"), SW = citeste("public", "sw.js");
 
 /* o pagină falsă, cât îi trebuie lui tbFilaAplica / tbSariLa: elementele fiecărui selector din TB_FILE, bara cu butoanele, panoul cu clasa lui */
 function lume(semnal, salvat) {
@@ -78,9 +79,10 @@ await test("E  app.js: fila se potrivește pe loc după comutarea clasei tbSemna
 
 await test("V  versiunea v100.391 (index ×4, sw, versiune.js, package + lanț, BUILD_INFO)", () => {
   const pk = JSON.parse(citeste("package.json")), bi = JSON.parse(citeste("BUILD_INFO.json"));
-  assert.equal(pk.version, "100.391.0"); assert.equal(bi.version, "v100.391"); assert.ok(bi.li391 && bi.li391.length > 100, "BUILD_INFO.li391");
-  assert.ok((HTML.match(/v100\.391/g) || []).length >= 4); assert.match(SW, /crypto-radar-v100-391/); assert.match(citeste("functions", "_shared", "versiune.js"), /"v100\.391"/);
-  assert.match(pk.scripts.test, /npm run test:v100390 && npm run test:v100391 && node scripts\/mutatii\.mjs --doar-tiparele/); assert.equal(pk.scripts["test:v100391"], "node scripts/proba-v100391.mjs");
+  /* v100.392: „de la 391 încolo” (versiunea merge mai departe; după ea în lanț vine proba v100.392) */
+  assert.ok(+(/^100\.(\d+)\.0$/.exec(pk.version) || [])[1] >= 391); assert.ok(+(/^v100\.(\d+)$/.exec(bi.version) || [])[1] >= 391); assert.ok(bi.li391 && bi.li391.length > 100, "BUILD_INFO.li391");
+  assert.ok((HTML.match(/v100\.(\d+)/g) || []).filter((v) => +v.slice(5) >= 391).length >= 4); assert.ok(+(/crypto-radar-v100-(\d+)/.exec(SW) || [])[1] >= 391); assert.ok(+(/"v100\.(\d+)"/.exec(citeste("functions", "_shared", "versiune.js")) || [])[1] >= 391);
+  assert.match(pk.scripts.test, /npm run test:v100390 && npm run test:v100391/); assert.equal(pk.scripts["test:v100391"], "node scripts/proba-v100391.mjs");
 });
 
 console.log(`\n${teste - picate}/${teste} trecute` + (picate ? ` · ${picate} PICATE` : ""));
