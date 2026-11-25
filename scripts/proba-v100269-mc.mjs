@@ -3,6 +3,7 @@
 // Regula, scrisă ÎNAINTE de a număra: verdictul = „pe plus” când șansa notată e peste 50%, „pe minus” sub 50%; 50% fix nu se numără.
 // A avut dreptate când botul a ieșit așa (totalul la 7 zile sau la închidere, față de cel de la notare). Unitatea intervalului = ZIUA.
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
@@ -81,7 +82,7 @@ await test("5 serverul (istoric-bot?action=mcVerdict) păstrează scorul curăț
 });
 
 // ---------------------------------------------------------------- pagina botului
-const APP = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8").replace(/\r\n/g, "\n");
+const APP = cuTablou(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8")).replace(/\r\n/g, "\n");
 const fnApp = (nume) => { const i = APP.indexOf("\nfunction " + nume + "("); assert.ok(i >= 0, "lipsește " + nume + " în app.js"); const j = APP.indexOf("\nfunction ", i + 10); return APP.slice(i + 1, j < 0 ? undefined : j); };
 const box = { TextRo: globalThis.TextRo, escapeHtml: (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])) };
 const scorHtml = () => { vm.createContext(box); vm.runInContext(fnApp("tbMcScorHtml"), box); return box.tbMcScorHtml; };

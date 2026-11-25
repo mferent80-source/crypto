@@ -4,13 +4,14 @@
 //   Restul rămâne la 3 s (lumânările, boții deschiși, alertele, planul...). Orice scriere golește tot (getJsonGoleste), ca înainte.
 //   node scripts/proba-v100330-viteza.mjs
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
 import { fileURLToPath } from "node:url";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const app = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8").replace(/\r\n/g, "\n");
+const app = cuTablou(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8")).replace(/\r\n/g, "\n");
 let teste = 0, picate = 0;
 async function test(nume, f) { teste++; await Promise.resolve().then(f).then(() => console.log(`  ok   ${nume}`)).catch((e) => { picate++; console.log(`  PICA ${nume}\n       ${String(e && e.stack || e).split("\n").slice(0, 2).join(" | ").slice(0, 500)}`); }); }
 console.log("\nV100.330 · datele grele cerute o singură dată pe minut · proba\n");

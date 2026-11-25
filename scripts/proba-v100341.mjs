@@ -4,6 +4,7 @@
 //   I-878  bilanțul notei TradingView față de verdictul Radarului, pe pagină de la 30 de zile, ca fapt
 //   I-877  reluarea efectului „benzi largi ⇒ drum mai lung” pe date noi: regulile scrise dinainte, scriptul refuză până sunt destule zile
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -18,7 +19,7 @@ const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8").replace(
 let teste = 0, picate = 0;
 async function test(nume, f) { teste++; await Promise.resolve().then(f).then(() => console.log(`  ok   ${nume}`)).catch((e) => { picate++; console.log(`  PICA ${nume}\n       ${String(e && e.stack || e).slice(0, 900)}`); }); }
 console.log("\nV100.341 · ideile I-876..I-879 · proba\n");
-const APP = citeste("public", "app.js"), taiePagina = (nume) => taie(APP, nume);
+const APP = cuTablou(citeste("public", "app.js")), taiePagina = (nume) => taie(APP, nume);
 
 // ---------------- I-876: categoria scannerului ----------------
 await test("(I-876) rețeta de grid a scannerului se numește „Candidați de grid”: spune ce sunt, nu că ar fi buni; explicația zice ce e măsurat și ce nu; filtrul e neschimbat", () => {

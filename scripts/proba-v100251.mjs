@@ -1,6 +1,7 @@
 // Proba v100.251 (22.10, el: toate cele 6 idei, și încă o dată că nu se pierde nimic).
 // Nu cheamă alte probe.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -143,7 +144,7 @@ await test("coloana de 240 vine după 280 și 340, trendul vechi rămâne în fi
   assert.match(css, /@media \(max-width:1180px\)\{#tabloubot \.tbGraficRand\{grid-template-columns:1fr\}/);
   assert.match(css, /@media \(max-width:1180px\)\{#tabloubot #tbCitireCard\{display:none\}/);
   assert.match(css.trim().split("\n").pop(), /#topLive\{display:none!important\}/);
-  const app = citeste("public", "app.js");
+  const app = cuTablou(citeste("public", "app.js"));
   assert.match(app, /var d=\{bb:true,ema:true,rsi:true,vp:true,zi:true,val:true,adx:true\};d\.scara=true/);
   assert.match(app, /st:tbIndStare\(\),scara:tbIndStare\(\)\.scara/);
   assert.match(app, /gbCrucePret/);

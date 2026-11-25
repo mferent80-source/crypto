@@ -2,6 +2,7 @@
 // (2) pe telefon semaforul de trend stă în banda lui deasupra graficului, nu peste lumânări; (3) săgețile ▲▼ colorate după soartă:
 // verde = pereche închisă, gri = încă deschisă (forma rămâne cumpărare / vânzare).
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -9,7 +10,7 @@ import { fileURLToPath } from "node:url";
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8").replace(/\r\n/g, "\n");
 const G = new Function(`${citeste("public", "lib", "grafic-bot.js")}; return GraficBot;`)();
-const HTML = citeste("public", "index.html"), APP = citeste("public", "app.js"), CSS = citeste("public", "app.css");
+const HTML = citeste("public", "index.html"), APP = cuTablou(citeste("public", "app.js")), CSS = citeste("public", "app.css");
 const functie = (src, n) => { const i = src.search(new RegExp("(async )?function " + n + "\\(")); if (i < 0) throw new Error(n + "() lipsește"); let a = 0, j = src.indexOf("{", i); for (; j < src.length; j++) { if (src[j] === "{") a++; else if (src[j] === "}" && --a === 0) break; } return src.slice(i, j + 1); };
 let teste = 0, picate = 0;
 async function test(nume, f) { teste++; await Promise.resolve().then(f).then(() => console.log(`  ok   ${nume}`)).catch((e) => { picate++; console.log(`  PICA ${nume}\n       ${String(e && e.stack || e).slice(0, 700)}`); }); }

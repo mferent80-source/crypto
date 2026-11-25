@@ -10,6 +10,7 @@
 //   G  („FA IDEI”, a doua oară) „Pe zero, din grile” lângă el; zero-ul pe poziția de acum și pe Drum; cuprinsul lipit sub bara de sus pe calculator.
 //   node scripts/proba-v100376.mjs
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -22,7 +23,7 @@ let teste = 0, picate = 0;
 async function test(nume, f) { teste++; await Promise.resolve().then(f).then(() => console.log(`  ok   ${nume}`)).catch((e) => { picate++; console.log(`  PICA ${nume}\n       ${e && e.message}`); }); }
 console.log("\nv100.376 · Tabloul botului: cifrele sub verdict și pe telefon, rândurile fără semn strânse, capul pe două coloane, tableta · proba\n");
 
-const HTML = citeste("public", "index.html"), CSS = citeste("public", "app.css"), APP = citeste("public", "app.js");
+const HTML = citeste("public", "index.html"), CSS = citeste("public", "app.css"), APP = cuTablou(citeste("public", "app.js"));
 const functie = (src, n) => { const i = src.search(new RegExp("function " + n + "\\(")); if (i < 0) throw new Error(n + "() lipsește"); let a = 0, j = src.indexOf("{", i); for (; j < src.length; j++) { if (src[j] === "{") a++; else if (src[j] === "}" && --a === 0) break; } return src.slice(i, j + 1); };
 const A0 = "/* v100.376 design: început */", A1 = "/* v100.376 design: sfârșit */";
 const BLOC = CSS.slice(CSS.indexOf(A0), CSS.indexOf(A1)), faraComentarii = BLOC.replace(/\/\*[\s\S]*?\*\//g, "");

@@ -5,12 +5,13 @@
 //     despre date vechi - și scria în istoric valorile ÎNGHEȚATE ale botului, la fiecare 8 s (felia 1).
 // Funcțiile se iau din public/app.js după text și rulează într-o lume dată de probă; numele nedate sunt cioturi (nu globalele Node).
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const APP = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8").replace(/\r\n/g, "\n");
+const APP = cuTablou(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8")).replace(/\r\n/g, "\n");
 const fnApp = (nume) => { const i = APP.search(new RegExp("\\n(async )?function " + nume + "\\(")); assert.ok(i >= 0, "lipsește " + nume); const j = APP.indexOf("\nfunction ", i + 10), k = APP.indexOf("\nasync function ", i + 10); const f = [j, k].filter((x) => x > 0); return APP.slice(i + 1, f.length ? Math.min(...f) : undefined); };
 let teste = 0, picate = 0;
 async function test(nume, f) {

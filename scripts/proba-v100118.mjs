@@ -2,6 +2,7 @@
 // pornirii botului (ms, b.pornitLa din Pionex createTime). PONS 06.10: botul pornit la 18:48, GRID-FISA v2.3 zicea „ÎNAINTE DE
 // PORNIRE” si toate alertele botului taceau, fiindca nimic din cod nu spunea ca botul ruleaza. Semnatura (alt grid) nu se schimba.
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -9,7 +10,7 @@ const RAD = process.env.RAD || path.resolve(new URL("..", import.meta.url).pathn
 const lib = (f) => fs.readFileSync(path.join(RAD, "public", "lib", f), "utf8");
 const G = new Function(`${lib("grid-calcul.js")}; return GridCalcul;`)();
 const TE = new Function("GridCalcul", `${lib("tablou-extra.js")}; return TabloExtra;`)(G);
-const app = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8");
+const app = cuTablou(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8"));
 
 let teste = 0, picate = 0;
 async function test(nume, fn) {

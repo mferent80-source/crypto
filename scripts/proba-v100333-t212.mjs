@@ -6,6 +6,7 @@
 //   R-b un stop cu trei zecimale nu mai e refuzat când lipsește prețul poziției.
 //   node scripts/proba-v100333-t212.mjs
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -23,7 +24,7 @@ async function test(nume, f) { teste++; await Promise.resolve().then(f).then(() 
 console.log("\nV100.333 · Trading 212, rămășițele auditului · proba\n");
 
 const ZI = 86400000, MIN = 60000;
-const T212 = lib("t212-ecran.js"), APP = citeste("public", "app.js");
+const T212 = lib("t212-ecran.js"), APP = cuTablou(citeste("public", "app.js"));
 const LIBS = ["grid-calcul.js", "calendar-bursa.js", "t212.js", "actiuni-semnale.js", "macro.js", "acasa.js", "consilier.js", "consiliu.js", "indicatori-bot.js", "tv-note.js"];
 const ziNY = (t) => new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date(t));
 function bareZi(n, ultZi, f, ora) {

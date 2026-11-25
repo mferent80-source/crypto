@@ -2,6 +2,7 @@
 // Simulator grid, pe orizontul ales; (2) butonul „⚄ Simulează” în Tablou deschide Simulatorul pe botul acela; (3) funding-ul REAL al monedei
 // (ratele Pionex) în loc de costul fix, cu semn (long plătește, short încasează); (4) pierderea maximă pe drum și planul în INTERIORUL barei.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -88,7 +89,7 @@ await test("(1b) pagina Simulator grid: după rezultat, secțiunea „Alte setă
 
 // ---------------- (2) „Simulează” din Tablou ----------------
 await test("(2a) Tabloul are butonul „⚄ Simulează” (vizibil când e un bot ales), iar gsDeschideBot deschide pagina pe botul acela și simulează", () => {
-  const html = citeste("public", "index.html"), app = citeste("public", "app.js");
+  const html = citeste("public", "index.html"), app = cuTablou(citeste("public", "app.js"));
   assert.match(html, /<button type="button" class="t212BtnLinie tbSimBtn" id="tbSimBtn" data-action-click="gsDeschideBot\(\)" hidden>⚄ Simulează<\/button>/);
   assert.match(functie(app, "tbDeseneazaTvCod"), /tbSimBtn/);
   const f = functie(E, "gsDeschideBot");

@@ -2,6 +2,7 @@
 // poate 2. îi numeri tu 3. pune 4. fă explicit, așa aflu dacă am un comportament greșit — pentru boți și pentru stock”).
 // Planul: docs/superpowers/plans/2026-10-06-riscul-botilor-si-actiunilor.md · etapa 1: RiscLuna (pur)
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -157,7 +158,7 @@ await test("(3b) concluziile: ce înseamnă pentru tine și ce aș face eu - din
   for (const x of c.boti.concat(c.actiuni)) assert.ok((x.titlu + (x.text || "") + (x.faCe || "")).length && !/NaN|undefined|null/.test(x.titlu + x.text + (x.faCe || "")), x.titlu);
 });
 await test("(3c) pagina din meniu: „Monte Carlo · riscul tău” - pagina nouă sus, vechiul Monte Carlo pe semnale pliat (nimic pierdut); modulele în pagină și în cache", () => {
-  const html = citeste("public", "index.html"), sw = citeste("public", "sw.js"), app = citeste("public", "app.js");
+  const html = citeste("public", "index.html"), sw = citeste("public", "sw.js"), app = cuTablou(citeste("public", "app.js"));
   const i = html.indexOf('<section class="panel" id="montecarlo">'), sec = html.slice(i, html.indexOf("</section>", i));
   assert.ok(sec.indexOf('id="rlPagina"') > 0 && sec.indexOf('id="rlPagina"') < sec.indexOf('<details class="rlVechi"'));
   for (const id of ["mcRuns", "mcTrades", "mcSource", "mcMethod", "mcBlock", "mcMedian", "mcP5", "mcP95", "mcDd", "mcLossProb", "mcNote"]) assert.ok(sec.includes('id="' + id + '"'), id);
@@ -180,7 +181,7 @@ await test("(3e) fără raport sau cu cererea picată: NU buclă de cereri (cart
   vm.runInContext("function tbRiscDeseneaza(){ rlPorneste(false); }", ctx);   // ca în Tablou: cartela cere raportul când lipsește
   await ctx.rlPorneste(false); await new Promise((r) => setTimeout(r, 50));
   assert.equal(cereri, 1, "o singură cerere, nu buclă"); await ctx.rlPorneste(false); assert.equal(cereri, 1, "a doua chemare imediată nu cere din nou");
-  const app = citeste("public", "app.js"), f = app.slice(app.indexOf("async function tbRiscAduCor("), app.indexOf("\nfunction ", app.indexOf("async function tbRiscAduCor(")));
+  const app = cuTablou(citeste("public", "app.js")), f = app.slice(app.indexOf("async function tbRiscAduCor("), app.indexOf("\nfunction ", app.indexOf("async function tbRiscAduCor(")));
   assert.match(f, /tbRiscCor\.inLucru=true;tbRiscCor\.cheie=cheie;tbRiscCor\.la=Date\.now\(\);/, "corelația: încercarea se notează înainte de cereri (altfel eroarea ar relua la nesfârșit)");
 });
 // ---------------- etapa 4 și 5: Tabloul și T212 ----------------
@@ -195,7 +196,7 @@ await test("(4b) textCorelatie: perechile care se mișcă împreună (≥ 0,5) s
   assert.equal(RL.textCorelatie({ monede: ["HYPE", "AAVE", "CRV"], M: [[1, 0.39, 0.43], [0.39, 1, 0.53], [0.43, 0.53, 1]], bare: 499 }), "Se mișcă împreună: AAVE–CRV 0,53 - pentru risc sunt ca un singur bot mai mare.");
 });
 await test("(4c) Tabloul: cartela „Riscul tău” după probabilitățile din istoric; raportul de noapte + toți boții + corelația (lumânări 1 h, la 30 min)", () => {
-  const html = citeste("public", "index.html"), app = citeste("public", "app.js");
+  const html = citeste("public", "index.html"), app = cuTablou(citeste("public", "app.js"));
   assert.ok(html.indexOf('id="tbPl-risc"') > html.indexOf('id="tbPl-prob"') && html.indexOf('id="tbPl-risc"') < html.indexOf('id="tbPl-plan"')); assert.match(html, /<div id="tbRisc">/);
   const f = app.slice(app.indexOf("function tbRiscDeseneaza("), app.indexOf("\nfunction ", app.indexOf("function tbRiscDeseneaza(") + 10));
   assert.match(f, /RiscLuna\.textBot\(rp\.boti\.supravietuire,/); assert.match(f, /RiscLuna\.textLuna\(rp\.boti\.mc\[0\],"USDT"\)/); assert.match(f, /RiscLuna\.textTotiBotii\(/); assert.match(f, /RiscLuna\.textCorelatie\(/); assert.match(f, /rlPorneste\(false\)/);
@@ -241,7 +242,7 @@ await test("(R6) toți boții: stopul pe plus nu e „pierzi”; stopul pus dar 
 });
 await test("(R7) corelația: doi boți pe aceeași monedă = un singur pariu; lista schimbată ⇒ nu se arată corelația veche", () => {
   assert.equal(RL.textCorelatie({ monede: ["ZAMA"], M: [[1]], bare: 0 }, [{ m: "ZAMA", n: 2 }]), "2 boți pe aceeași monedă (ZAMA): pentru risc sunt un singur pariu mai mare.");
-  const app = citeste("public", "app.js"), f = app.slice(app.indexOf("async function tbRiscAduCor("), app.indexOf("\nfunction ", app.indexOf("async function tbRiscAduCor(")));
+  const app = cuTablou(citeste("public", "app.js")), f = app.slice(app.indexOf("async function tbRiscAduCor("), app.indexOf("\nfunction ", app.indexOf("async function tbRiscAduCor(")));
   assert.match(f, /if\(tbRiscCor\.cheie!==cheie\)tbRiscCor\.c=null;/); assert.match(f, /try\{var k=await getJSON/, "o monedă care pică nu le oprește pe celelalte");
 });
 await test("(R8) colectorul nu trimite un raport ciuntit: arhiva sau istoricul T212 picate ⇒ reîncerc peste o oră, ziua nemarcată", () => {

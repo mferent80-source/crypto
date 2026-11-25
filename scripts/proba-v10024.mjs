@@ -1,6 +1,7 @@
 // Proba v100.24 (30.09, el: „FA IDEILE” - ideea 1 din trei): statistica trade-urilor pe PERIOADA aleasa - ultima luna,
 // ultimele 3 luni sau tot - pe fiecare fila a Jurnalului, ca sa vada daca se imbunatateste.
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 
 const lib = (f) => fs.readFileSync(new URL(`../public/lib/${f}`, import.meta.url), "utf8");
@@ -45,7 +46,7 @@ await test("fara actiunePerioada (demo vechi / alte locuri) -> fara butoane, ca 
 });
 
 await test("pagina: perioada tinuta pe fiecare fila, in cheia calculului, cu actiunea jtStatPerioada", () => {
-  const app = fs.readFileSync(new URL("../public/app.js", import.meta.url), "utf8");
+  const app = cuTablou(fs.readFileSync(new URL("../public/app.js", import.meta.url), "utf8"));
   assert.match(app, /function jtStatPerioada\(/);
   assert.match(app, /perioada:\{crypto:"tot",actiuni:"tot",tot:"tot"\}/);
   assert.match(app, /StatisticaTrade\.dinPerioada\(/);

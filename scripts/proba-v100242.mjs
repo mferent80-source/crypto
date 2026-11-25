@@ -3,6 +3,7 @@
 // (și pe telefon, unde citirea stă desfășurată). Drumul nu își schimbă rândurile
 // când lățimea se mișcă cât o bară de derulare.
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
@@ -38,7 +39,7 @@ await test("drumul ține lățimea când bara de derulare ia 15 px; lățimea ne
 });
 
 await test("scheletul citirii ignoră cifrele și fraza scurtă; un rând nou nu e același schelet", () => {
-  const app = citeste("public", "app.js");
+  const app = cuTablou(citeste("public", "app.js"));
   const i = app.indexOf("function tbCitireSchelet(");
   assert.ok(i >= 0, "tbCitireSchelet");
   const src = app.slice(i, app.indexOf("function tbCitirePeLoc("));
@@ -51,7 +52,7 @@ await test("scheletul citirii ignoră cifrele și fraza scurtă; un rând nou nu
 });
 
 await test("la același schelet scrierea schimbă cifrele pe loc, înainte de innerHTML, și pe copia de telefon", () => {
-  const app = citeste("public", "app.js");
+  const app = cuTablou(citeste("public", "app.js"));
   const c = app.slice(app.indexOf("function tbDeseneazaCitire("), app.indexOf("function tbVociBilant("));
   const scrie = c.slice(c.indexOf("var scrie=function"));
   const pe = scrie.indexOf("tbCitirePeLoc");

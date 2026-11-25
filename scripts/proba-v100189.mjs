@@ -2,6 +2,7 @@
 // 2) bilanțul judecă fiecare episod (și martorul) și la 24 h, nu doar la 72 h; verdictul rămâne pe 72 h
 // 1) lista episoadelor pe pagina Alerts (cele mai noi 30, fără martori): botul, alerta, când, rezultatul la 24 h și la 72 h, cu O zecimală
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
@@ -54,12 +55,12 @@ await test("serverul (ruta paza): ține episoadele (≤ 30, tipuri știute, nume
   await post({ la: ACUM, boti: {} }); const g2 = (await get()).paza; assert.equal(g2.episoade, null); assert.equal(g2.martori, null);
 });
 await test("pagina Alerts: blocul #alEpisoade sub centrul de alerte; desenat la intrarea pe pagină", () => {
-  const html = citeste("public", "index.html"), app = citeste("public", "app.js");
+  const html = citeste("public", "index.html"), app = cuTablou(citeste("public", "app.js"));
   assert.match(html, /<div class="alCentru" id="alCentru">[\s\S]*?<\/div>\n<div class="tbBloc alEpisoade" id="alEpisoade" hidden><\/div>/);
   assert.match(app, /if\(id==="alerts"\)\{renderAlerts\(\);if\(typeof alCentruPorneste==="function"\)alCentruPorneste\(true\);if\(typeof alEpisoadeDeseneaza==="function"\)alEpisoadeDeseneaza\(\)\}/);
 });
 await test("alEpisoadeHtml: rândurile cu o zecimală, culoarea pe 72 h (altfel 24 h), „în curs”; gol ⇒ textul de așteptare; escapat", () => {
-  const app = citeste("public", "app.js"), i = app.indexOf("function alEpisoadeHtml("), j = app.indexOf("\n", i);
+  const app = cuTablou(citeste("public", "app.js")), i = app.indexOf("function alEpisoadeHtml("), j = app.indexOf("\n", i);
   assert.ok(i > 0, "alEpisoadeHtml lipsește");
   const c = { escapeHtml: (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"), Date, String, Math, Number, isFinite, TextRo: globalThis.TextRo };
   vm.createContext(c); vm.runInContext(app.slice(i, j), c);

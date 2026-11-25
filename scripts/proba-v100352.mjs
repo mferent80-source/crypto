@@ -3,6 +3,7 @@
 //   · prețurile cu precizia gridului · judecata fără găuri · nota = ce s-a afișat · … (pe valuri, în același fișier)
 //   node scripts/proba-v100352.mjs
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -176,7 +177,7 @@ await test("E14 (auditul) „95,000” cu virgulă se citește după preț ca �
   });
 }
 await test("E18 (auditul) Tabloul: rândul 🧭 cu ora de la care ține, schimbarea care așteaptă a doua socotire și ce înseamnă „îl țin” (rulat)", () => {
-  const A = citeste("public", "app.js"), f = new Function("escapeHtml", `${A.match(/function tbHotHtml\(h\)\{[^\n]*\}/)[0]}; return tbHotHtml;`)((s) => String(s));
+  const A = cuTablou(citeste("public", "app.js")), f = new Function("escapeHtml", `${A.match(/function tbHotHtml\(h\)\{[^\n]*\}/)[0]}; return tbHotHtml;`)((s) => String(s));
   const t = f({ cheie: "tine", nume: "îl țin așa", la: Date.UTC(2026, 10, 17, 8, 30), ultima: Date.now(), candidat: "inchide", candNume: "îl închid acum" });
   // v100.358: proba scrisă pe 17.11; din altă zi rândul pune corect și data („de la 17.11, 10:30”)
   assert.ok(/\(de la (17\.11, )?10:30\)/.test(t) && /se poate schimba în «îl închid acum» \(aștept a doua socotire\)/.test(t) && /nu înseamnă că stopul e bine pus/.test(t), t);
@@ -209,7 +210,7 @@ await test("RV11 (revizia) jurnalul hotărârilor stricat (și .bak) nu se supra
   const C = citeste("scripts", "colector.mjs"); assert.ok(/if \(s === hotJurnalScris \|\| hotJurnalBlocat\) return;/.test(C) && /raportHotarari\(jh, GridSim\.VERS_HOT\)/.test(C));
   assert.ok(/raportSim\(Object\.values\(st\.judecate\), d\.GridSim && d\.GridSim\.VERS_SIM \|\| VERS_SIM\)/.test(citeste("scripts", "lib", "tura-sim-urmarire.mjs")));
   assert.equal(TSU.raportSim([{ sim: "A", z: "1", t: 1, v: 3, p: 0.5, val: 1 }], 3).n, 1);
-  const A = citeste("public", "app.js"), f = new Function("escapeHtml", `${A.match(/function tbHotHtml\(h\)\{[^\n]*\}/)[0]}; return tbHotHtml;`)((s) => String(s));
+  const A = cuTablou(citeste("public", "app.js")), f = new Function("escapeHtml", `${A.match(/function tbHotHtml\(h\)\{[^\n]*\}/)[0]}; return tbHotHtml;`)((s) => String(s));
   assert.ok(/\(de la \d\d\.\d\d\.?\d*,? \d\d:\d\d\)/.test(f({ cheie: "tine", la: Date.now() - 3 * 86400000, ultima: Date.now() })), f({ cheie: "tine", la: Date.now() - 3 * 86400000, ultima: Date.now() }));
 });
 

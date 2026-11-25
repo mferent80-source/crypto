@@ -4,6 +4,7 @@
 // net + Wilson · (7) „dovedit” pe un prag de număr · (8) reveniri „mai bine / mai slab” cu eroarea standard · (9) gridul îngust = un singur
 // bloc · (10) reparațiile mici. Depozit PUBLIC ⇒ cifre construite (forma botului TAKE din proba-v100101).
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -118,7 +119,7 @@ await test("(2) cu levierul ales peste cel sigur: cea mai proastă fereastră ș
   void sts;
 });
 await test("(2) „Cât investesc?” spune la ce levier e cifra (și suma scade la levier mai mare)", () => {
-  const src = citeste("public", "app.js"), i = src.indexOf("function grRandSumaMaxima("), cod = src.slice(i, src.indexOf("\n// =====", i));
+  const src = cuTablou(citeste("public", "app.js")), i = src.indexOf("function grRandSumaMaxima("), cod = src.slice(i, src.indexOf("\n// =====", i));
   const rand = (et, val) => et + ": " + val;
   const fn = new Function("$", "grSoldCitit", "grNumar", "grRand", "GridProba", "GridCalcul", "TextRo", cod + "; return grRandSumaMaxima;")(
     (id) => ({ grSold: { value: "1000" }, grPierdere: { value: "5" } })[id], () => ({ sold: 1000 }), Number, rand, GP, G, globalThis.TextRo);
@@ -130,7 +131,7 @@ await test("(2) „Cât investesc?” spune la ce levier e cifra (și suma scade
   assert.ok(suma(t) < suma(t0), t + " | " + t0);
 });
 await test("(2, 3) pagina spune pe față că tabelul probei e la levierul sigur, iar verdictul pe setarea de copiat", () => {
-  assert.match(citeste("public", "app.js"), /Tabelul e la levierul sigur, pe toate grilele pasului; verdictul și „Cât investesc\?” sunt pe setarea de copiat/);
+  assert.match(cuTablou(citeste("public", "app.js")), /Tabelul e la levierul sigur, pe toate grilele pasului; verdictul și „Cât investesc\?” sunt pe setarea de copiat/);
 });
 await test("(3) grilele reduse la minimul pe ordin: verdictul și mediana vin de la setarea cu grilele reduse", () => {
   const f = FISA({ minNotional: 100, suma: 50 });   // 3 grile × 83 USDT < 100 ⇒ 2 grile
@@ -263,7 +264,7 @@ await test("(7) Scenariul: ≥ 30 de ferestre ⇒ „destule”, nu „dovedit�
 });
 await test("(7) Tabloul botului (frecvențele): ≥ 60 de intrări / ≥ 2 h ⇒ „destule”; pagina scrie „destule date”, nu „dovedit”", () => {
   assert.ok(!/stare: [^,]*"dovedit"/.test(lib("tablou-bot.js")), "tablou-bot.js mai scrie „dovedit” pe un prag");
-  assert.ok(!/x\.stare==="dovedit"\?"dovedit"/.test(citeste("public", "app.js")), "app.js afișează „dovedit”");
+  assert.ok(!/x\.stare==="dovedit"\?"dovedit"/.test(cuTablou(citeste("public", "app.js"))), "app.js afișează „dovedit”");
 });
 await test("(7) Trendul pe TF-uri: titlul spune „destule cazuri”, nu „dovedit” (și pe starea veche din istoric)", () => {
   const sem = [{ tf: "15M", et: "15 min", dir: "coboara", ton: "rau" }];
@@ -309,7 +310,7 @@ await test("(9) rândul ideilor și pagina spun că testul e un singur bloc de ~
   assert.match(GP.notaBloc({ zile: 30 }), /~10 zile/, "fără blocZile: o treime din zile");
   const ri = GP.ingust(B15, { dir: "long", pret: 1, suma: 100 });
   assert.ok(ri.blocZile > 0 || ri.propus === false, JSON.stringify(ri.blocZile));
-  assert.match(citeste("public", "app.js"), /GridProba\.notaBloc\(r\)/);
+  assert.match(cuTablou(citeste("public", "app.js")), /GridProba\.notaBloc\(r\)/);
 });
 
 // ---------- (10) reparațiile mici ----------

@@ -4,6 +4,7 @@
 //     verdict abia de la 30 de zile, cu limita de detecție spusă - protocolul scris ÎNAINTE de date (ipoteza: „înghesuit” ⇒ 24 h mai slabe)
 //  F8 tabelul futures pe monedele tale (cele 20 măsurate + boții), din aceleași reguli.
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -158,7 +159,7 @@ await test("F8 tabelul: un rând pe monedă din răspunsul serverului, sortat du
   assert.equal((h.match(/<tr>/g) || []).length, 4);
 });
 await test("F8 + F7 pe pagină: tabelul și proba (cartela) stau în #deriv; butonul cheamă futuresTabel(); deschiderea paginii citește proba", () => {
-  const html = citeste("public", "index.html"), app = citeste("public", "app.js");
+  const html = citeste("public", "index.html"), app = cuTablou(citeste("public", "app.js"));
   const d = html.slice(html.indexOf('id="deriv"'), html.indexOf('id="edgepro"'));
   for (const id of ["fTabel", "fProba"]) assert.match(d, new RegExp('id="' + id + '"'), id);
   assert.match(d, /data-action-click="futuresTabel\(\)"/);

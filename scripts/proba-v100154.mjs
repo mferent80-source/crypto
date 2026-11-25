@@ -4,6 +4,7 @@
 // (4) „botul pornit” lângă marginea dreaptă se scrie spre stânga · (5) Jurnal pe Acțiuni / Tot + Sugestii cu eroarea + aria-controls
 // Poza la 390 px (0 suprapuneri, 0 texte ieșite) se face în browser; aici gărzile pe SVG și pe cititori.
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import { pandaInainteaCozii } from "./lib/panda-ultima.mjs";
 import fs from "node:fs";
 import path from "node:path";
@@ -116,7 +117,7 @@ await test("(10) v100.162: contrastul - roșul de TEXT trece de 4,5 pe fondurile
 });
 
 await test("(11) revizia a patra: ORICE pagină care desenează graficul pune și fâșia valorilor (C1: T212 / Salt nu o puneau - ținta, prețul mediu, stopurile dispăruseră); „POC” în dreapta, „🧪 stop de probă” după eticheta prețului; rândul „acum” în fâșie", () => {
-  const surse = fs.readdirSync(path.join(RAD, "public", "lib")).map((f) => ["lib/" + f, citeste("public", "lib", f)]).concat([["app.js", citeste("public", "app.js")]]);
+  const surse = fs.readdirSync(path.join(RAD, "public", "lib")).map((f) => ["lib/" + f, citeste("public", "lib", f)]).concat([["app.js", cuTablou(citeste("public", "app.js"))]]);
   const chemari = surse.filter(([, s]) => /GraficBot\.desen\(/.test(s));
   assert.ok(chemari.length >= 2, "cine desenează: " + chemari.map((x) => x[0]));
   for (const [f, s] of chemari) assert.match(s, /d\.valori\s*\|\|\s*''/, f + " desenează graficul dar nu pune fâșia valorilor");

@@ -3,6 +3,7 @@
 //    o dată pe episod, cel mult una pe bot la 24 h; lățimea veche / lipsă / bot neutru ⇒ nu atinge starea; tace cât vocile sunt anunțate
 // 2) Acasă: semnul pândei pe cartela fiecărui bot (prag atins / CONTRA)
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
@@ -93,7 +94,7 @@ await test("Acasă (acPandaLin): CONTRA ⇒ roșu; prag atins ⇒ galben; nimic 
   c.tbLatimeKv.d = null; assert.equal(c.acPandaLin(bot()), "");
 });
 await test("sosirea lățimii redesenează și Acasă, când e pe ecran", () => {
-  assert.match(citeste("public", "app.js"), /tbDeseneazaCitire\(tbStare\.citireO,tbStare\.bot\);var ac=\$\("dash"\);if\(ac&&ac\.classList\.contains\("on"\)&&typeof acasaDeseneaza==="function"\)acasaDeseneaza\(\)\}\)\}/);
+  assert.match(cuTablou(citeste("public", "app.js")), /tbDeseneazaCitire\(tbStare\.citireO,tbStare\.bot\);var ac=\$\("dash"\);if\(ac&&ac\.classList\.contains\("on"\)&&typeof acasaDeseneaza==="function"\)acasaDeseneaza\(\)\}\)\}/);
 });
 
 console.log(`\n${teste - picate}/${teste} trecute\n`);

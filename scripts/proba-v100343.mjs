@@ -4,6 +4,7 @@
 //   I-885  banda contului de pe Tablou se reîmprospătează singură, la 5 minute, cât pagina e la vedere
 //   I-887  perpetuele noi care nu sunt crypto (acțiuni tokenizate, metale) ies din clasament; regula de formă le prinde pe cele viitoare
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
@@ -19,7 +20,7 @@ const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8").replace(
 let teste = 0, picate = 0;
 async function test(nume, f) { teste++; await Promise.resolve().then(f).then(() => console.log(`  ok   ${nume}`)).catch((e) => { picate++; console.log(`  PICA ${nume}\n       ${String(e && e.stack || e).slice(0, 900)}`); }); }
 console.log("\nV100.343 · ideile I-883..I-887 · proba\n");
-const APP = citeste("public", "app.js"), T212 = citeste("public", "lib", "t212-ecran.js"), COL = citeste("scripts", "colector.mjs");
+const APP = cuTablou(citeste("public", "app.js")), T212 = citeste("public", "lib", "t212-ecran.js"), COL = citeste("scripts", "colector.mjs");
 const fnApp = (nume) => { const s = taie(APP, nume); assert.ok(s, "nu găsesc funcția " + nume + " în app.js"); return s; }, fnT = (nume) => { const s = taie(T212, nume); assert.ok(s, "nu găsesc funcția " + nume + " în t212-ecran.js"); return s; };
 function mulberry32(a) { return function () { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const text = (h) => String(h).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();

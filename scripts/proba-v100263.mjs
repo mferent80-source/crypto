@@ -5,6 +5,7 @@
 //   P3  moneda de rezervă a simbolului din bursa lui (colector); #parola= diferită întreabă înainte să înlocuiască (app.js).
 // Fără rețea. Nu cheamă alte probe.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -92,7 +93,7 @@ await test("P3 · moneda de rezervă a simbolului vine din bursa lui: .SW nu mai
   assert.match(col, /import \{[^}]*monedaBursa[^}]*\} from "\.\/lib\/poza\.mjs"/);
 });
 await test("P3 · app.js: #parola= DIFERITĂ de cea ținută pe dispozitiv întreabă (confirm) înainte s-o înlocuiască; aceeași sau prima nu întreabă", () => {
-  const app = citeste("public", "app.js"), i = app.indexOf("const L=crLegaturaDin(location.hash);"), bloc = app.slice(i, i + 700);
+  const app = cuTablou(citeste("public", "app.js")), i = app.indexOf("const L=crLegaturaDin(location.hash);"), bloc = app.slice(i, i + 700);
   assert.ok(i > 0);
   assert.match(bloc, /if\(L\.parola\)\{const tinuta=/); assert.match(bloc, /tinuta===L\.parola\|\|confirm\("Linkul vine cu altă parolă a Radarului/); assert.match(bloc, /localStorage\.setItem\(APP_API_TOKEN_SESSION_KEY,L\.parola\)/);
   assert.doesNotMatch(bloc, /if\(L\.parola\)localStorage\.setItem/);

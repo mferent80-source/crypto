@@ -6,6 +6,7 @@
 //   O monedă în AMBELE liste ⇒ „aș sări peste ea”. Tabloul și Discord rămân cum a hotărât el pe 02.11 (fără ele).
 //   node scripts/proba-v100330-monede.mjs
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -54,7 +55,7 @@ await test("fiecare listă de monede: numele în bold, fiecare duce la fișa mon
   assert.ok(text(col[1]).includes(URM_R), "urmărirea pe revenire la vedere: " + text(col[1]));
   assert.ok(col[2].includes('data-action-click="gridDeschideMonedaDir(&#39;SUI&#39;,&#39;short&#39;)"'), col[2]);
   assert.match(text(col[2]), /^Monede pentru short DOGE , SUI sau APT/);
-  assert.match(citeste("public", "app.js"), /var ACTIUNI_PERMISE=new Set\("[^"]* gridDeschideMonedaDir[ "]/, "butonul e pe lista acțiunilor permise");
+  assert.match(cuTablou(citeste("public", "app.js")), /var ACTIUNI_PERMISE=new Set\("[^"]* gridDeschideMonedaDir[ "]/, "butonul e pe lista acțiunilor permise");
   assert.ok(text(col[2]).includes(URM_S));
   assert.ok(col[3].includes("<b>CRBP, CWD</b>") && col[3].includes("(n-am aflat)"), "acțiunile rămân ca înainte");
 });

@@ -2,6 +2,7 @@
 // gura spune 4% ca tripwire-ul, sub 10 netul tace, lista goală ține boții,
 // prețul 0 și barele din viitor nu intră. Pragurile rămân. Nu cheamă alte probe.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -38,7 +39,7 @@ const ae = citeste("public", "lib", "acasa-ecran.js");
 const scan = citeste("public", "lib", "scan-ecran.js");
 const cont = citeste("public", "lib", "cont-ecran.js");
 const sezon = citeste("public", "lib", "scor-sezon.js");
-const app = citeste("public", "app.js");
+const app = cuTablou(citeste("public", "app.js"));
 const col = citeste("scripts", "colector.mjs");
 const idx = citeste("public", "index.html");
 const gc = citeste("public", "lib", "grid-calcul.js");

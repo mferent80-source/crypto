@@ -2,6 +2,7 @@
 // specul docs/superpowers/specs/2026-10-06-carnetul-fisei-design.md, planul docs/superpowers/plans/2026-10-06-carnetul-fisei.md
 // (1) re-jocul fără privit în viitor · (2) întrebările cu regula RiscLuna · (3) ofertele înainte · (4) colectorul + serverul · (5) pagina
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -116,14 +117,14 @@ await test("(3d) oferta fișei (KV ferestre) ⇒ forma carnetului: „stop” r�
   assert.equal(CN.dinFisa({ simbol: "X", t: T0, dir: "neutru" }), null); assert.equal(CN.dinFisa({ simbol: "X", t: T0, dir: "long", rec: "asteapta", ta: nou.ta }).asteapta, true);
 });
 await test("(3e) fișa salvează în ofertă și grilele, prețurile stopului și alegerea (cine / egale), fără să schimbe „stop” (numărul probei)", () => {
-  const a = citeste("public", "app.js"), f = a.slice(a.indexOf("function grFerestreTine("), a.indexOf("\nfunction ", a.indexOf("function grFerestreTine(") + 10));
+  const a = cuTablou(citeste("public", "app.js")), f = a.slice(a.indexOf("function grFerestreTine("), a.indexOf("\nfunction ", a.indexOf("function grFerestreTine(") + 10));
   assert.match(f, /stop:p\?p\.stop:null,n:p\?p\.n:null,oreTipic:p\?p\.oreTipic:null,grile:x\.grile,stopJos:x\.stop&&x\.stop\.jos,stopSus:x\.stop&&x\.stop\.sus/);
   assert.match(f, /cine:rec\?rec\.cine:null,egale:!!\(v\.mea&&v\.mea\.egalaCuTa\)/);
   assert.match(citeste("scripts", "colector.mjs"), /\.map\(Carnet\.dinFisa\)/);
 });
 // ---------------- revizia Opus (C1, C2, I1–I4, M1–M7) ----------------
 await test("(R-C1) fișa: oferta nouă intră în listă (l.push(o) nu e înghițit de comentariu)", () => {
-  const a = citeste("public", "app.js"), lin = a.split("\n").find((l) => l.includes("egale:!!(v.mea&&v.mea.egalaCuTa)"));
+  const a = cuTablou(citeste("public", "app.js")), lin = a.split("\n").find((l) => l.includes("egale:!!(v.mea&&v.mea.egalaCuTa)"));
   assert.ok(lin, "rândul ofertei"); assert.ok(lin.split("//")[0].includes("l.push(o);"), "l.push(o) e în comentariu: " + lin.slice(-160));
 });
 // nul cu factor comun de piață: alegerea și „aștept” urmează un semnal zilnic comun; rezultatul (LARG − ÎNGUST) urmează alt semnal comun, cu ferestre de 3 zile suprapuse
@@ -239,7 +240,7 @@ await test("(4d) colectorul: Carnet încărcat după RiscLuna, ofertele în data
 });
 // ---------------- (5) pagina, rândul de sub fișă, meniul ----------------
 vm.runInThisContext(citeste("public", "lib", "carnet-ecran.js"), { filename: "carnet-ecran.js" });
-const html = citeste("public", "index.html"), app = citeste("public", "app.js");
+const html = citeste("public", "index.html"), app = cuTablou(citeste("public", "app.js"));
 await test("(5a) carnetHtml: fără raport ⇒ se spune că se face noaptea; cu raport ⇒ cele 3 întrebări, calibrarea pe 3 rânduri, „de acum înainte”, regula; vechi ⇒ vârsta", () => {
   assert.match(globalThis.carnetHtml(null, T0), /noaptea/);
   const cz = cazuriSint(7, true), of = cz.slice(0, 40).map((c, i) => Object.assign({ sursa: "fisa", verdict: i % 2 ? "porneste" : "asteapta", r: { ta: c.ta, mea: c.mea } }, c));

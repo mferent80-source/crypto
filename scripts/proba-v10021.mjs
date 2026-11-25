@@ -2,6 +2,7 @@
 //   1) arata si CEA MAI PROASTA pornire (riscul, nu doar media) - si in blocul de pe pagina Grid / Tablou;
 //   2) laboratorul pe DOUA LUNI (60 de zile de 15M, 12 pagini), ca o moneda sa nu fie judecata dupa o singura luna.
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import { turaLaborator } from "./lib/tura-laborator.mjs";
 
@@ -74,7 +75,7 @@ await test("serverul pastreaza ceaMaiProastaUsdt si zile", async () => {
 });
 
 await test("colectorul cere doua luni (pagini: 12, zile: 60); pagina arata coloana „cea mai proastă” si zilele din date", () => {
-  const src = fs.readFileSync(new URL("./colector.mjs", import.meta.url), "utf8"), app = fs.readFileSync(new URL("../public/app.js", import.meta.url), "utf8");
+  const src = fs.readFileSync(new URL("./colector.mjs", import.meta.url), "utf8"), app = cuTablou(fs.readFileSync(new URL("../public/app.js", import.meta.url), "utf8"));
   assert.match(src, /turaLaboratorModul\(\{[^}]*pagini: 12[^}]*zile: 60[^}]*\}/);
   const i = app.indexOf("function grLabPlanHtml("), corp = app.slice(i, app.indexOf("\nfunction ", i + 10));
   assert.match(corp, /cea mai proastă/); assert.match(corp, /ceaMaiProastaUsdt/); assert.match(corp, /pm\.zile/);

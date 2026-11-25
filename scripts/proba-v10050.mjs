@@ -2,6 +2,7 @@
 // I-479 motivele de acelasi nivel dupa banii MASURATI; I-473 de ce s-a schimbat verdictul; I-474 Consilierul in colector (poza, alerta,
 // KV cons); I-472 jurnalul deciziilor.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -107,7 +108,7 @@ await test("server: o decizie pe verdict (a doua o inlocuieste), socoteala deciz
   assert.equal(g.decizii.length, 1); assert.equal(g.decizii[0].urmat, false);
   assert.equal((await mod.onRequestPost({ request: cer("POST", "action=deciziiSocoteala", { la: 1, urmat: { n: 3, median: 1 }, neurmat: { n: 2, median: -1 }, text: "x" }), env })).status, 200);
   assert.equal((await (await mod.onRequestGet({ request: cer("GET", "action=deciziiSocoteala"), env })).json()).socoteala.urmat.n, 3);
-  const app = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8"), col = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8");
+  const app = cuTablou(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8")), col = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8");
   assert.match(app, /tbConsDeCe/); assert.match(app, /tbDecizie\(true\)/); assert.match(app, /tbDecizie\(false\)/); assert.match(app, /action=cons&bot=/);
   assert.match(col, /Consiliu\.judecaDecizii\(/); assert.match(col, /action=deciziiSocoteala/);
 });
@@ -147,7 +148,7 @@ await test("I2: sfaturile se fac din ACELEASI intrari pe Tablou si in colector (
   const sf = SF.sfaturi(x); assert.ok(sf.some((s) => s.cod === "funding" && s.ton === "atentie"), JSON.stringify(sf.map((s) => s.cod + ":" + s.ton)));
   const c = CS.alcatuieste({ sm: { nivel: "tine", cod: "tine", motiv: "nimic", faCe: "", componente: [] }, sfaturi: sf });
   assert.equal(c.nivel, "atentie");
-  const col = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8"), app = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8");
+  const col = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8"), app = cuTablou(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8"));
   assert.match(col, /new Function\("Alerte", "Scenariu", "TabloExtra"[^\n]*sfaturi\.js/, "colectorul incarca Sfaturi cu Alerte (altfel „pericol” dispare tacut)");
   assert.match(col, /Sfaturi\.sfaturi\(Sfaturi\.intrare\(/); assert.match(col, /sfaturi: x\.sfaturi/); assert.match(col, /opreste: TabloBot\.opreste\(/);
   assert.match(app, /Sfaturi\.sfaturi\(Sfaturi\.intrare\(/);
@@ -163,7 +164,7 @@ await test("I2: cand vocea colectorului (Discord, pagina alerts) difera de Tablo
   assert.match(CS.altaVoce({ acum: { nivel: "tine", eticheta: "🟢 Ține" } }, { nivel: "atentie" }), /Pe Discord și pe pagina alerts: 🟢 Ține/);
   assert.equal(CS.altaVoce({ acum: { nivel: "atentie" } }, { nivel: "atentie" }), null);
   assert.equal(CS.altaVoce(null, { nivel: "atentie" }), null);
-  assert.match(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8"), /Consiliu\.altaVoce\(/);
+  assert.match(cuTablou(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8")), /Consiliu\.altaVoce\(/);
 });
 await test("I3: cheia deciziei nu se schimba cand titlul are cifre vii (12,3% -> 12,1%) - doar nivelul si motivele", () => {
   assert.ok(typeof CS.cheieDecizie === "function", "lipseste Consiliu.cheieDecizie");
@@ -171,7 +172,7 @@ await test("I3: cheia deciziei nu se schimba cand titlul are cifre vii (12,3% ->
   const b = { nivel: "atentie", titlu: "Lichidarea s-a apropiat la 12.1%", motive: [{ cod: "trend", c: "g" }, { cod: "lichidare", c: "g" }, { cod: "liniste", c: "v" }] };
   assert.equal(CS.cheieDecizie(a), CS.cheieDecizie(b));
   assert.notEqual(CS.cheieDecizie(a), CS.cheieDecizie({ nivel: "atentie", titlu: "x", motive: [{ cod: "stop", c: "g" }] }));
-  assert.match(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8"), /function tbConsCheie\(c\)\{return Consiliu\.cheieDecizie\(c\)\}/);
+  assert.match(cuTablou(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8")), /function tbConsCheie\(c\)\{return Consiliu\.cheieDecizie\(c\)\}/);
 });
 await test("I4: ordinea e TOTALA - aceleasi trei motive in orice ordine de intrare dau aceeasi ordine si acelasi „Ce aș face eu”", () => {
   const k = [comp("costuri", "atentie", "costurile"), comp("muta", "atentie", "mută gridul"), comp("trend", "atentie", "trendul")];

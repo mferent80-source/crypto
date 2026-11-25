@@ -7,6 +7,7 @@
 //   4. lista de alerte din Radar e plafonata la 100 (istoric-bot.js) - eticheta spune „ultimele 100", nu doar „ultimele 7 zile"
 // Rulare: node scripts/proba-v991.mjs
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -45,7 +46,7 @@ await test("1b. alertele planului T212 (stop, trail, tinta) scriu preturile cu 2
   assert.match(ti.titlu, /\(\$31,22\)/, ti.titlu);
 });
 await test("2. functiile nechemate au disparut din app.js si fisierul ramane JS valid (node --check il inghite)", async () => {
-  const app = citeste("../public/app.js");
+  const app = cuTablou(citeste("../public/app.js"));
   for (const f of ["awaitPionexReady", "markAlertsRead", "marketLabelSymbol", "paperEntryFillFraction", "paperExit", "portfolioReturnsSeries", "safeUiToken", "trainRegimeModels", "v65BiasScore", "v66Pf"])
     assert.ok(!new RegExp("^(async )?function " + f + "\\(", "m").test(app), f + " e inca definita");
   // revizie: tbCadentaMs NU e moarta - o cheama proba de ecran (scripts/proba-ecran-tablou.mjs, testul 10) ca sa masoare cadenta colectorului

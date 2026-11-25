@@ -6,6 +6,7 @@
 //   C. legăturile: modulul e încărcat (index.html, sw.js), Tabloul are blocul #tbMiscare, T212 are celula c-misc și rândul contului
 // Rulare: node scripts/proba-v100378.mjs
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 
 const citeste = (f) => fs.existsSync(new URL(f, import.meta.url)) ? fs.readFileSync(new URL(f, import.meta.url), "utf8") : "";
@@ -13,7 +14,7 @@ const SRC = citeste("../public/lib/miscare.js");
 const M = SRC ? new Function(`${SRC}; return Miscare;`)() : null;
 const TEXT = citeste("../public/lib/text-ro.js"), ACASA = citeste("../public/lib/acasa.js");
 const A = ACASA && TEXT ? new Function(`${TEXT}; ${ACASA}; return Acasa;`)() : null;
-const APP = citeste("../public/app.js"), HTML = citeste("../public/index.html"), CSS = citeste("../public/app.css"), SW = citeste("../public/sw.js");
+const APP = cuTablou(citeste("../public/app.js")), HTML = citeste("../public/index.html"), CSS = citeste("../public/app.css"), SW = citeste("../public/sw.js");
 const T212E = citeste("../public/lib/t212-ecran.js"), ACE = citeste("../public/lib/acasa-ecran.js");
 
 let teste = 0, picate = 0;

@@ -7,6 +7,7 @@
 //   5. legăturile: meniu, paletă, lista albă, SW, colector, versiuni, CSS.
 //   node scripts/proba-v100312.mjs
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
@@ -266,7 +267,7 @@ await test("🔑 I-842: Tablou „Pe 7 zile” - gridul față de mișcarea obi�
   assert.equal(G.textSaptamana({ latime: 0.2, miscare7: 0.13 }, null), "Pe 7 zile, fără tendință: gridul are 20,0% lățime (±10,0% de la mijloc), iar o săptămână obișnuită mișcă moneda cu ±13,0% (mai mult decât jumătatea gridului)");   /* jumătatea, nu toată lățimea (revizia 🔵6) */
   assert.equal(G.textSaptamana({ latime: 0.2, miscare7: 0.1, pIesire: 0.004, pStop: 0.001 }, -5), "Pe 7 zile, fără tendință: gridul are 20,0% lățime (±10,0% de la mijloc), iar o săptămână obișnuită mișcă moneda cu ±10,0% · prețul iese din grid în sub 1% din drumuri");
   assert.equal(G.riscSaptamana({ orizonturi: [] }, [], {}), null);
-  const A = citeste("public", "app.js");
+  const A = cuTablou(citeste("public", "app.js"));
   assert.match(A, /tbMc\.rand\.sapt=typeof tbMcSapt==="function"\?tbMcSapt\(rez,tbMc\.b15,b\):null;/); assert.match(A, /sapt:tbMc\.rand\.sapt\|\|null/);
   // și când verdictul vine de la colector (pagina nu mai simulează cât KV-ul e proaspăt): colectorul îl socotește cu același GridSim
   assert.match(A, /scurt:v\.scurt\|\|null,sapt:v\.sapt\|\|null(?:,hot:v\.hot\|\|null)?\};/);   /* v100.351: + hot (Ce fac cu botul ăsta?) */
@@ -333,7 +334,7 @@ await test("stadiul probei A: zilele, semnalele, mediile pe trade (ca rândul de
 
 // ── 5. legăturile ──
 await test("🔑 legăturile paginii: meniul (Zilnic, după Sugestii) + meniul de pe telefon + panoul + scripturile + SW + app.js (navTo, lista albă, paleta, pagina nouă)", () => {
-  const H = citeste("public", "index.html"), A = citeste("public", "app.js"), W = citeste("public", "sw.js");
+  const H = citeste("public", "index.html"), A = cuTablou(citeste("public", "app.js")), W = citeste("public", "sw.js");
   assert.match(H, /data-nav="sugestii"><span class="sideIcon">💡<\/span>Sugestii<\/button>\n<button class="sideBtn" data-action-click="navTo\('probe',true\)" data-nav="probe"><span class="sideIcon">🧪<\/span>Probe<\/button>/);
   assert.match(H, /<b>💡<\/b>Sugestii<\/button>\n<button class="moreBtn" data-action-click="moreNav\('probe',true\)"><b>🧪<\/b>Probe<\/button>/);
   assert.match(H, /<script src="\/lib\/sugestii-ecran\.js"><\/script><script src="\/lib\/caiet\.js"><\/script><script src="\/lib\/probe-ecran\.js"><\/script>/);

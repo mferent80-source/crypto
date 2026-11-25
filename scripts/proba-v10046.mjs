@@ -2,6 +2,7 @@
 // docs/superpowers/plans/2026-10-01-pachetul-2a-probabilitati-calibrate.md). Frecvente din trecut pe barele de 1 h, conditionate pe
 // starea fisei, cu cazuri independente si IC; jurnalul, judecata si calibrarea; rutele; colectorul; Tabloul.
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -140,7 +141,7 @@ await test("colector: o data pe ora pe bot, jurnalul la 4 h, judecata dupa orizo
 });
 
 await test("Tablou: sectiunea probabilitatilor (ascunsa fara server) cu banda IC, adusa din prob + calibrare, randul in Consilier", () => {
-  const app = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8"), html = fs.readFileSync(path.join(RAD, "public", "index.html"), "utf8"), sw = fs.readFileSync(path.join(RAD, "public", "sw.js"), "utf8"), css = fs.readFileSync(path.join(RAD, "public", "app.css"), "utf8");
+  const app = cuTablou(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8")), html = fs.readFileSync(path.join(RAD, "public", "index.html"), "utf8"), sw = fs.readFileSync(path.join(RAD, "public", "sw.js"), "utf8"), css = fs.readFileSync(path.join(RAD, "public", "app.css"), "utf8");
   assert.match(html, /<details class="tbPl" id="tbPl-prob"( open)? hidden>/); assert.match(html, /<div id="tbProb"><\/div>/);
   assert.match(html, /<script src="\/lib\/probabilitati\.js"><\/script>/); assert.match(sw, /"\/lib\/probabilitati\.js"/);
   assert.match(app, /action=prob&bot=/); assert.match(app, /action=calibrare/); assert.match(app, /Probabilitati\.randuri\(/); assert.match(app, /Probabilitati\.rand\(/);
@@ -202,7 +203,7 @@ await test("M4 (Important): tura orara nu re-descarca de la zero o moneda mai no
   cereri = 0; await TP.aduOre("NOU_USDT_PERP", vechi, { ...d, umple: true }); assert.equal(cereri, 1, "goala la prima pagina -> gata");
 });
 await test("I4/I5/M3: Tabloul arata vechimea (peste 3 h) si ascunde randul; nu deseneaza datele altui bot; mesajul „gol” nu promite noaptea", () => {
-  const app = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8"), tp = fs.readFileSync(path.join(RAD, "scripts", "lib", "tura-probabilitati.mjs"), "utf8");
+  const app = cuTablou(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8")), tp = fs.readFileSync(path.join(RAD, "scripts", "lib", "tura-probabilitati.mjs"), "utf8");
   assert.match(app, /tbProbVechi\(/); assert.match(app, /tbStare\.bot&&tbStare\.bot\.id===b\.id/); assert.match(app, /\$\("tbPl-prob"\)\.hidden=true/);
   assert.ok(!/le aduce noaptea/.test(app)); assert.ok(!/puțin istoric de 1 h pe moneda asta/.test(tp));
 });

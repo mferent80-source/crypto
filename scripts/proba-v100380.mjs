@@ -6,6 +6,7 @@
 //   C. legăturile: Tabloul în felul „semnal”, Piața azi, banda de sus, colectorul, politica de noapte
 // Rulare: node scripts/proba-v100380.mjs
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import "./lib/text-ro-global.mjs";
 import { normalizeaza } from "../functions/api/bot-orders.js";
@@ -13,7 +14,7 @@ import { normalizeaza } from "../functions/api/bot-orders.js";
 const citeste = (f) => fs.existsSync(new URL(f, import.meta.url)) ? fs.readFileSync(new URL(f, import.meta.url), "utf8") : "";
 const BSS = citeste("../public/lib/bot-semnal.js");
 const BS = BSS ? new Function(`${BSS}; return BotSemnal;`)() : null;
-const APP = citeste("../public/app.js"), HTML = citeste("../public/index.html"), CSS = citeste("../public/app.css"), SW = citeste("../public/sw.js");
+const APP = cuTablou(citeste("../public/app.js")), HTML = citeste("../public/index.html"), CSS = citeste("../public/app.css"), SW = citeste("../public/sw.js");
 const ACE = citeste("../public/lib/acasa-ecran.js"), PVS = citeste("../public/lib/pret-viu.js"), COL = citeste("./colector.mjs"), POL = citeste("./lib/politica-alerte.mjs");
 
 let teste = 0, picate = 0;

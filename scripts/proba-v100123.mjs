@@ -5,6 +5,7 @@
 // Ideea (1) - banda pe UN rând cu LIVE + versiunea - NU s-a făcut: măsurat la 390 px, banda ar avea 205 px pentru 418 de text
 // ⇒ „total” (banii) ieșea tăiat; v74.6 a cerut banii la vedere.
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
@@ -16,7 +17,7 @@ let teste = 0, picate = 0;
 async function test(nume, f) { teste++; await Promise.resolve().then(f).then(() => console.log(`  ok   ${nume}`)).catch((e) => { picate++; console.log(`  PICA ${nume}\n       ${String(e && e.stack || e).slice(0, 600)}`); }); }
 console.log("\nV100.123 · Telefonul: tot rândul botului la apăsare lungă, bara paginilor vechi pliată · proba\n");
 
-const css = citeste("public", "app.css"), app = citeste("public", "app.js"), html = citeste("public", "index.html");
+const css = citeste("public", "app.css"), app = cuTablou(citeste("public", "app.js")), html = citeste("public", "index.html");
 function functia(nume) {
   const i = app.indexOf("function " + nume + "("); assert.ok(i >= 0, nume + "() lipsește din app.js");
   let ad = 0, j = app.indexOf("{", i);

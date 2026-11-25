@@ -4,6 +4,7 @@
 // pagină, la mișcare: „pe date noi: dovedit / pe dos / n-am aflat” în eticheta botului și în nota rândului din fișă - nu la „prea puține”;
 // (4) rândul de dimineață „🧭 Busola, pe 4h: …”, cu vârsta rezumatului când e vechi, tăiat la 160 cu tot cu prefix, o singură cerere bot-orders.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -58,7 +59,7 @@ await test("(2) Busola.nuRaspunde(): false la început; true după o încărcare
   B._reset();
 });
 await test("(2) cartela botului: fără rezumat ⇒ „aștept rezumatul…”, iar după o încărcare picată ⇒ „Busola nu răspunde”", () => {
-  const a = citeste("public", "app.js"), f = a.slice(a.indexOf("function tbBusolaLinie(b){"), a.indexOf("\nfunction tbDeseneazaExtra("));
+  const a = cuTablou(citeste("public", "app.js")), f = a.slice(a.indexOf("function tbBusolaLinie(b){"), a.indexOf("\nfunction tbDeseneazaExtra("));
   assert.ok(f.includes('Busola.nuRaspunde()?"Busola nu răspunde":"aștept rezumatul…"'), "tbBusolaLinie nu deosebește eșecul de așteptare");
 });
 

@@ -3,6 +3,7 @@
 // Node pur: citește app.js / index.html / app.css / lib-urile ca text și rulează în vm bucățile care se pot rula singure.
 //   node scripts/proba-v100196-pagina.mjs   -> exit 1 la orice picare
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import { pandaInainteaCozii } from "./lib/panda-ultima.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -17,7 +18,7 @@ let teste = 0, picate = 0;
 async function test(nume, f) { teste++; await Promise.resolve().then(f).then(() => console.log(`  ok   ${nume}`)).catch((e) => { picate++; console.log(`  PICA ${nume}\n       ${String(e && e.message).slice(0, 1500)}`); }); }
 console.log("\nv100.196 · zona pagina (învelișul + interfața) · proba\n");
 
-const APP = citeste("public", "app.js"), IDX = citeste("public", "index.html"), CSS = citeste("public", "app.css");
+const APP = cuTablou(citeste("public", "app.js")), IDX = citeste("public", "index.html"), CSS = citeste("public", "app.css");
 // sursa unei funcții de nivel 1 din app.js: de la „function nume(” rând cu rând, până se compilează
 function fnSursa(text, nume) {
   const re = new RegExp("(^|\\n|[;}])((?:async )?function " + nume.replace(/\$/g, "\\$") + "\\()");

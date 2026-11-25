@@ -2,6 +2,7 @@
 // gridul dupa plan, stopul la o grila) - boti Pionex porniti inainte vs dupa 30.09 05:10 ora Romaniei, pe aceleasi masuri, cu
 // verdict doar cand ambele parti au macar 10 trade-uri (regula lui: sub 10 nu se trag concluzii).
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 
 const lib = (f) => fs.readFileSync(new URL(`../public/lib/${f}`, import.meta.url), "utf8");
@@ -71,7 +72,7 @@ await test("html: tabelul Înainte / După cu verdictul scris (nu doar culoare) 
 });
 
 await test("pagina: comparatia doar pe fila Pionex, din lista perioadei alese, cu ora regulilor din modul", () => {
-  const app = fs.readFileSync(new URL("../public/app.js", import.meta.url), "utf8");
+  const app = cuTablou(fs.readFileSync(new URL("../public/app.js", import.meta.url), "utf8"));
   const i = app.indexOf("function jtStatDate("), corp = app.slice(i, app.indexOf("\n}", i));
   assert.match(corp, /StatisticaTrade\.compara\(tr,StatisticaTrade\.REGULI_NOI\.de\)/); assert.match(corp, /piata==="crypto"/);
   const j = app.indexOf("function jtStatRender("), r = app.slice(j, app.indexOf("\n}", j));

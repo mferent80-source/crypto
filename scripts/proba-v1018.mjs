@@ -4,6 +4,7 @@
 //   3) tinta din Pionex fata de planul pe plus (la LIGHTER: 5,112, peste grid; planul +5,5 atins la 02:07, neincasat)
 //   4) gridul fata de plan si fata de miscarea obisnuita a monedei, cu levierul care se potriveste
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 
@@ -213,7 +214,7 @@ await test("2 · fara stop, cu plan -> „fara protectie” si pretul planului",
 });
 
 await test("Tabloul da planul cartelei (app.js: acumConcret primeste plan)", () => {
-  const app = fs.readFileSync(new URL("../public/app.js", import.meta.url), "utf8");
+  const app = cuTablou(fs.readFileSync(new URL("../public/app.js", import.meta.url), "utf8"));
   assert.match(app, /SemnaleBot\.acumConcret\(\{[^}]*plan:plan[^}]*\}\)/);
 });
 

@@ -3,6 +3,7 @@
 // implicit NESCHIMBAT; (b) GridSim: codul GRID-FISA dus-întors, setările din botul Pionex; (c) GridSim.simuleaza pe 1 / 3 / 7 / 14 zile,
 // planul, botul care rulează reluat pe barele reale; (d) verdictul regulă cu regulă; (e) ecranul; (f) pagina + versiunea.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -223,7 +224,7 @@ await test("(e7) gsHtml: stările (calculez / eroare / fără rezultat / cu rezu
 
 // ---------------- (f) pagina ----------------
 await test("(f1) pagina gridsim: meniul, panelul cu #gsPagina, script-urile după tablou-extra, show() ⇒ gsPorneste, SW-ul, CSS-ul", () => {
-  const html = citeste("public", "index.html"), app = citeste("public", "app.js"), sw = citeste("public", "sw.js"), css = citeste("public", "app.css");
+  const html = citeste("public", "index.html"), app = cuTablou(citeste("public", "app.js")), sw = citeste("public", "sw.js"), css = citeste("public", "app.css");
   assert.match(html, /<button class="sideBtn" data-action-click="navTo\('gridsim',true\)" data-nav="gridsim"><span class="sideIcon">⚄<\/span>Simulator grid<\/button>/);
   assert.match(html, /<section class="panel" id="gridsim">[\s\S]*?<div class="card full" id="gsPagina">/);
   const sc = [...html.matchAll(/<script src="\/lib\/([a-z0-9-]+)\.js"><\/script>/g)].map((m) => m[1]);

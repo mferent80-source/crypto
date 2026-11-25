@@ -3,6 +3,7 @@
 // de pe GitHub (pages.yml → market-breadth/data/latest.json); Radarul doar le CITEȘTE și le arată:
 // un rând în „Ce spune piața acum” și un bloc sus în pagina de acțiuni.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -124,7 +125,7 @@ await test("htmlBloc: fără date ⇒ un mesaj scurt cu ce să faci, nu un bloc 
 });
 
 // ── legătura în pagină ───────────────────────────────────────────────────────
-const app = citeste("public", "app.js"), idx = citeste("public", "index.html"), sw = citeste("public", "sw.js"), css = citeste("public", "app.css");
+const app = cuTablou(citeste("public", "app.js")), idx = citeste("public", "index.html"), sw = citeste("public", "sw.js"), css = citeste("public", "app.css");
 await test("index.html încarcă lib/latime-us.js și are locul blocului sus în pagina de acțiuni", () => {
   assert.match(idx, /<script src="\/lib\/latime-us\.js"><\/script>/);
   const s = idx.indexOf('id="stocks"'), b = idx.indexOf('id="latimeUsBloc"'), ctxUs = idx.indexOf("Sesiunea US");   /* v100.214: titlul tradus */

@@ -1,6 +1,7 @@
 // Proba v100.240 (22.10, el: „poți trece la treabă”): așezarea Tabloului.
 // Nimic nu cade din pagină. Calculul, pragul 55, textele și culorile lumânărilor rămân.
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -13,7 +14,7 @@ console.log("\nV100.240 · AȘEZ · proba\n");
 
 const idx = citeste("public", "index.html");
 const css = citeste("public", "app.css");
-const app = citeste("public", "app.js");
+const app = cuTablou(citeste("public", "app.js"));
 const paz = citeste("public", "lib", "asezare-paznic.js");
 const grafic = citeste("public", "lib", "grafic-bot.js");
 

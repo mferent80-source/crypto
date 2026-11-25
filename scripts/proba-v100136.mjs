@@ -2,6 +2,7 @@
 // (pozițiile deschise), celelalte variante ca bot pornit acum (= dacă l-ai opri și ai porni varianta); (2) funding-ul real Pionex și pe
 // pagina Monte Carlo; (3) funding-ul monedei în Tablou, lângă „din grid”; (4) „Compară” ține minte orizontul și se reface la schimbarea lui.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -13,7 +14,7 @@ const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8").replace(
 for (const f of ["grid-calcul.js", "grid-proba.js", "tablou-extra.js", "actiuni-semnale.js", "risc-luna.js", "t212.js", "monte-simbol.js"]) vm.runInThisContext(citeste("public", "lib", f), { filename: f });
 globalThis.escapeHtml = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 for (const f of ["monte-simbol-ecran.js", "grid-sim.js", "grid-sim-ecran.js"]) vm.runInThisContext(citeste("public", "lib", f), { filename: f });
-const G = globalThis, GP = G.GridProba, M = G.MonteSimbol, GS = G.GridSim, TE = G.TabloExtra, E = citeste("public", "lib", "grid-sim-ecran.js"), MSE = citeste("public", "lib", "monte-simbol-ecran.js"), APP = citeste("public", "app.js");
+const G = globalThis, GP = G.GridProba, M = G.MonteSimbol, GS = G.GridSim, TE = G.TabloExtra, E = citeste("public", "lib", "grid-sim-ecran.js"), MSE = citeste("public", "lib", "monte-simbol-ecran.js"), APP = cuTablou(citeste("public", "app.js"));
 const functie = (src, n) => { const i = src.search(new RegExp("(async )?function " + n + "\\(")); if (i < 0) throw new Error(n + "() lipsește"); let a = 0, j = src.indexOf("{", i); for (; j < src.length; j++) { if (src[j] === "{") a++; else if (src[j] === "}" && --a === 0) break; } return src.slice(i, j + 1); };
 let teste = 0, picate = 0;
 async function test(nume, f) { teste++; await Promise.resolve().then(f).then(() => console.log(`  ok   ${nume}`)).catch((e) => { picate++; console.log(`  PICA ${nume}\n       ${String(e && e.stack || e).slice(0, 700)}`); }); }

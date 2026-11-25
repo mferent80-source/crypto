@@ -5,6 +5,7 @@
 // curba stopului rămâne scrisă dedesubt, ca reper, cu ce măsoară ea. Fără take-profit nu se schimbă nimic (îndreptarea 1 din v100.374).
 // Rulare: node scripts/proba-v100381.mjs
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import vm from "node:vm";
 import "./lib/text-ro-global.mjs";
@@ -83,7 +84,7 @@ await test("B3 fără stop: nicio bară a stopului, take-profit-ul rămâne", ()
 });
 
 console.log("\nD. Drumul botului (stopul și take-profit-ul stau tot unul lângă altul)");
-const APP = citeste("../public/app.js");
+const APP = cuTablou(citeste("../public/app.js"));
 const functie = (src, n) => { const i = src.search(new RegExp("function " + n + "\\(")); if (i < 0) throw new Error(n + "() lipsește"); let a = 0, j = src.indexOf("{", i); for (; j < src.length; j++) { if (src[j] === "{") a++; else if (src[j] === "}" && --a === 0) break; } return src.slice(i, j + 1); };
 function lumeBot() { const w = vm.createContext({ console, Math, Date, JSON, Number, String, Array, Object, isFinite, parseFloat, parseInt, TextRo: globalThis.TextRo }); w.globalThis = w; w.window = w; for (const f of ["grid-calcul.js", "tablou-extra.js", "grafic-bot.js"]) vm.runInContext(LIBF(f), w, { filename: f }); return w; }
 /* botul auditului din 14.10 (proba v100.196 / v100.376): long 5×, 100 USDT, grid 0,9–1,1, prețul 0,93; aici cu stop ca preț (0,88) și take-profit +3% */

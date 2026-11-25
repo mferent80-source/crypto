@@ -2,6 +2,7 @@
 // Butonul copiază procentul. Pe grafic, ATR-ul își spune Wilder. Pe Discord, moneda instrumentului rămâne.
 // Ziua deschisă nu intră în ATR-ul din Scan. Pragurile rămân. Nu cheamă alte probe.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -122,7 +123,7 @@ await test("stopul în procente are buton pe procent; prețul mare rămâne", ()
   assert.match(card.mic, /^stop −5% · procentul se copiază · /);
   const pret = SB.acumConcret({ bot: { ...b, opritorPierdereTip: "pret", opritorPierdereRaport: null, opritorPierdere: 0.38 } }).find((c) => c.cod === "stop");
   assert.equal(pret.copie, undefined);
-  const app = citeste("public", "app.js");
+  const app = cuTablou(citeste("public", "app.js"));
   assert.match(app, /x\.copie\?'<button type="button" class="actionGhost tbTvBtn"/);
   assert.match(app, /data-action-click="gridCopiaza\(this\.value\)"/);
   assert.match(app, /ATR \$\{num\(q\.atr\)\} · Wilder/);
@@ -158,7 +159,7 @@ await test("Discord scrie moneda instrumentului; INTC rămâne $, Scan rămâne 
   assert.match(ecran, /media a 14 intervale adevărate/);
   assert.match(citeste("public", "lib", "scan.js"), /atrPct: r2\(tr \/ n \/ u \* 100\)/);
   assert.match(citeste("scripts", "lib", "tura-scan.mjs"), /const z = Scan\.rezumat\(inchise\)/);
-  assert.match(citeste("public", "app.js"), /laSus:TabloExtra\.totalCuGridLa\(b,botiNr\(b\.gridSus\)\)/);
+  assert.match(cuTablou(citeste("public", "app.js")), /laSus:TabloExtra\.totalCuGridLa\(b,botiNr\(b\.gridSus\)\)/);
   assert.match(citeste("scripts", "colector.mjs"), /laSus: TabloExtra\.totalCuGridLa\(b, Number\(b\.gridSus\)\)/);
 });
 

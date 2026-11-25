@@ -5,6 +5,7 @@
 // de acum (bot-orders.js pretDinRaport); aceeași cifră pe linia „stopul tău” a graficului.
 // Rulare: node scripts/proba-v100216.mjs
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
@@ -53,7 +54,7 @@ await test("cartela și toți boții folosesc același preț viu și pierderea d
   assert.equal(card.mare, SB.acumConcret({ bot: Object.assign({}, b, { opritorPierdere: live }) }).find((c) => c.cod === "stop").mare);
   assert.match(card.mic, /^stop −5% · /);
   assert.ok(Math.abs(T.totalLaOpritor(b) - (-5)) < 1e-9, "toți boții, stop în procente: " + T.totalLaOpritor(b));
-  assert.match(citeste("public", "app.js"), /laStop:x\.opritorPierdereActiv\?TabloExtra\.totalLaOpritor\(x\):null/);
+  assert.match(cuTablou(citeste("public", "app.js")), /laStop:x\.opritorPierdereActiv\?TabloExtra\.totalLaOpritor\(x\):null/);
 });
 
 // ---- drumul botului: doar gridul, stopul și prețul de acum ----

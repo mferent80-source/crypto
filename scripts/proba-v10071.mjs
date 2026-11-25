@@ -4,6 +4,7 @@
 //   node scripts/proba-v10071.mjs
 import "./lib/text-ro-global.mjs";   // RF4 (v100.61): TextRo inaintea semnale-bot.js / consiliu.js
 import fs from "node:fs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import vm from "node:vm";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -60,7 +61,7 @@ await test("I2. avertizarea comună rămâne undeva pe ecran: legenda sub poarta
   assert.match(corp(s, "t212IdeiRender"), /LEGENDA_(ACTIUNI|COMUNA)/, "ideile T212 fără legendă");
   assert.match(corp(s, "grBiletTu"), /LEGENDA_COMUNA/, "biletul botului fără legendă");
   assert.equal(typeof CO.LEGENDA_COMUNA, "string"); assert.match(CO.LEGENDA_COMUNA, /un semn, nu o regulă/);
-  const app = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8");
+  const app = cuTablou(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8"));
   assert.ok((app.match(/tbProbNota">[^<]*un semn, nu o regulă/g) || []).length >= 2, "notele 🎲 (fișa + Tabloul) nu spun „un semn, nu o regulă”");
 });
 

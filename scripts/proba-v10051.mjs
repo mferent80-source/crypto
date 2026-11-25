@@ -2,6 +2,7 @@
 // I-470 zona de valoare + pivotii confirmati (+ intrebarea din laborator); I-476 ziua obisnuita + liniile Consilierului pe grafic;
 // I-477 perechile reale vs estimarea fisei + factorul pe moneda; I-478 autopsia sfaturilor gresite.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -73,7 +74,7 @@ await test("I-476/I-470 desen: banda zilei, zona de valoare, POC, pivotii DOAR c
   assert.match(cu, /class="gbStopPlan/); assert.match(fara, /class="gbStopPlan/, "stopul planului e linie de Consilier, nu indicator");
 });
 await test("Tabloul: comutatoarele „Ziua obișnuită” si „Zona de valoare” in sistemul existent (aria-pressed, TB_IND_KEY)", () => {
-  const html = fs.readFileSync(path.join(RAD, "public", "index.html"), "utf8"), app = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8");
+  const html = fs.readFileSync(path.join(RAD, "public", "index.html"), "utf8"), app = cuTablou(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8"));
   assert.match(html, /id="tbInd-zi"[^>]*aria-pressed/); assert.match(html, /id="tbInd-val"[^>]*aria-pressed/);
   assert.match(app, /var d=\{bb:true,ema:true,rsi:true,vp:true,zi:true,val:true(?:,adx:true)?\}/);   /* v100.98: + ADX 14 (comutatorul nou) */ assert.match(app, /profil:tbProfilPt\(b\)/);   /* v100.99 (I-532): ziua obișnuită o socotește intrarea pură - se verifică ce întoarce */ if (GB) { const zp = { z24: { jos: Array(21).fill(0.01), sus: Array(21).fill(0.02) }, zile: 10 }, zo = GB.intrareBot({ bot: { id: "z" }, bare: [{ t: 0, o: 1, h: 1, l: 1, c: 1, v: 1 }, { t: 60000, o: 1, h: 1, l: 1, c: 1, v: 1 }], profil: zp, pretViu: 2, acum: 70000, W: 900, TabloExtra: null }); assert.ok(zo.zi && Math.abs(zo.zi.p50Jos - 1.98) < 1e-12 && Math.abs(zo.zi.p50Sus - 2.04) < 1e-12, "ziua obișnuită de la prețul live"); } assert.match(app, /Valoare\.zona\(/);
   assert.match(app, /tbStare\.consLinii=/); assert.match(app, /Valoare\.fataDeGrid\(/);
@@ -119,7 +120,7 @@ await test("I-477 rutele: estimarile pe bot si corectia pe moneda in KV; colecto
   assert.equal((await (await mod.onRequestGet({ request: cer("GET", "action=perechiEst"), env })).json()).est["2394"].peZi, 4);
   assert.equal((await mod.onRequestPost({ request: cer("POST", "action=perechiCorectie", { corectie: { CRV_USDT_PERP: { factor: 0.65, n: 10 } } }), env })).status, 200);
   assert.equal((await (await mod.onRequestGet({ request: cer("GET", "action=perechiCorectie"), env })).json()).corectie.CRV_USDT_PERP.factor, 0.65);
-  const col = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8"), app = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8");
+  const col = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8"), app = cuTablou(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8"));
   assert.match(col, /async function turaPerechi/); assert.match(col, /perechi: Perechi\.raport\(/); assert.match(app, /action=perechiCorectie/); assert.match(app, /perechi:tbPerechiPt\(b\)/);
   assert.equal(JT.din([{ strategyId: "9", base: "CRV", createTime: 1, closeTime: 2, buOrderType: "futures_grid", buOrderData: { exchangeOrderPairedCount: 7, totalRealizedProfit: 1 } }])[0]?.perechi ?? "fara-trade", 7);
 });

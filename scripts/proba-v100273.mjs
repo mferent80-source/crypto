@@ -3,6 +3,7 @@
 // model, neluată); lângă cifră scrie „prin construcție”, cu explicația, ca rândul „Risk / reward” din v100.272. O hartă construită altfel
 // (raportul ≠ tm.rr2) ⇒ cifra simplă, ca înainte.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -10,7 +11,7 @@ import vm from "node:vm";
 import { fileURLToPath } from "node:url";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const APP = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8").replace(/\r\n/g, "\n");
+const APP = cuTablou(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8")).replace(/\r\n/g, "\n");
 const fnApp = (nume) => {
   const i = APP.indexOf("\nfunction " + nume + "("); assert.ok(i >= 0, "lipsește " + nume + " în app.js");
   const j = APP.slice(i + 10).search(/\n(async )?function /); return APP.slice(i + 1, j < 0 ? undefined : i + 10 + j);

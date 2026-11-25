@@ -14,6 +14,7 @@
 //   9. legarea: rfCauta / rfCautaScrie în lista albă, CSS (rând care se rupe pe telefon, căsuța, culorile casei), versiunile v100.302.
 //   node scripts/proba-v100302.mjs
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
@@ -144,7 +145,7 @@ await test("6. cache-ul ține până la închiderea barei; lumânările pe (mone
 });
 
 await test("7. Tabloul: refuzul se reîncearcă după 1 min, „puține cazuri”, CONTRA = info, citirea ținută minte", async () => {
-  const A = citeste("public", "app.js");
+  const A = cuTablou(citeste("public", "app.js"));
   const i0 = A.indexOf("var tbRfStare={"), i1 = A.indexOf("function tbCitireExtra(b,o){");
   let n = 0, raspuns = null;
   const c2 = { console, Math, Number, String, Object, Array, isFinite, JSON, Date, Promise, TabloBot: { simboluri: (baza) => ({ pionex: baza + "_USDT", moneda: baza }) }, getJSON: async () => { n++; if (!raspuns) throw new Error("HTTP 500"); return raspuns; }, tbPanouVizibil: () => false, tbStare: {} };
@@ -180,7 +181,7 @@ await test("8. redesenarea pe zone (intro-ul și căsuța nu se refac), butoanel
 });
 
 await test("9. legarea: rfCauta / rfCautaScrie în lista albă; CSS (rând care se rupe, căsuța, culorile casei); versiunile v100.302", () => {
-  const A = citeste("public", "app.js"), C = citeste("public", "app.css"), Hh = citeste("public", "index.html");
+  const A = cuTablou(citeste("public", "app.js")), C = citeste("public", "app.css"), Hh = citeste("public", "index.html");
   const lista = A.match(/var ACTIUNI_PERMISE=new Set\("([^"]*)"/)[1].split(/\s+/);
   for (const n of ["rfCauta", "rfCautaScrie", "rfFiltru", "rfAdanc", "rfPorneste", "rfTf", "rfLaGrid"]) assert.ok(lista.includes(n), "lipsește: " + n);
   assert.match(C, /#rangefilter \.rfDr\{[^}]*flex-wrap:wrap/); assert.match(C, /#rangefilter \.rfCauta\{/); assert.match(C, /#rangefilter \.rfTon-sus\{color:var\(--pzSus/);
@@ -226,7 +227,7 @@ await test("11. revizia: monedă listată de curând ≠ cădere; corecția DOVE
   vm.runInContext("var _nCauta = 0, _cautaOrig = rfCauta; rfCauta = function (r) { _nCauta++; return _cautaOrig(r); };", c);
   await vm.runInContext("rfAdanc()", c);
   assert.equal(vm.runInContext("_nCauta", c), 1, "DOVADA pe 1.000 reface căutarea o singură dată");
-  assert.match(citeste("public", "app.js"), /trece pe o singură monedă, necorectat/, "Tabloul nu mai scrie „dovedit” fără corecție");
+  assert.match(cuTablou(citeste("public", "app.js")), /trece pe o singură monedă, necorectat/, "Tabloul nu mai scrie „dovedit” fără corecție");
 });
 
 console.log(`\n${teste - picate} / ${teste} teste trecute${picate ? " — PICATE: " + picate : ""}\n`);

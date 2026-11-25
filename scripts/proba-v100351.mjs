@@ -5,6 +5,7 @@
 //   + ideile 1 / 3 și măruntele rămase (pe valuri, în același fișier).
 //   node scripts/proba-v100351.mjs
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -216,7 +217,7 @@ await test("RV4 (🟡4) Discord: întoarcerea la recomandarea de dinainte, în 6
   let t = t0 + 36e5; const pasi = []; for (let k = 1; k <= 4; k++) { t += 18e5; const x = TMC.pasHotarare(h, hFals("tine"), t, "P"); pasi.push(!!x.anunt); h = x.anunt ? x.dupaAnunt : x.hot; if (x.anunt) break; }
   assert.deepEqual(pasi, [false, false, false, true], "abia la a 4-a: " + pasi);
 });
-await test("RV5 (🟡5) Tabloul nu arată o hotărâre veche când cea nouă a picat", () => { assert.ok(/function tbHotHtml\(h\)\{if\(!h\|\|!h\.cheie\|\|h\.eroare\|\|/.test(citeste("public", "app.js"))); });
+await test("RV5 (🟡5) Tabloul nu arată o hotărâre veche când cea nouă a picat", () => { assert.ok(/function tbHotHtml\(h\)\{if\(!h\|\|!h\.cheie\|\|h\.eroare\|\|/.test(cuTablou(citeste("public", "app.js")))); });
 await test("RV6 (🟡6) „îl închid și pornesc”: botul nou fără corecția de mărime a celui vechi; (🔵9) la neutru se mută ambele părți ale stopului", () => {
   const S = lib("grid-sim.js"); assert.ok(!/cuK\(a\.nou\)|cuK\(a2\.nou\)/.test(S) && /a\.r = a\.nou \? simuleazaBaza\(b15, stA, \{/.test(S));
   const neu = { jos: P * 0.95, sus: P * 1.05, grile: 14, levier: 2, dir: "neutru", suma: 80, stop: { jos: P * 0.9, sus: P * 1.1 }, tp: null, tip: "aritmetic", fundingZi: 0, fundingCost: false };

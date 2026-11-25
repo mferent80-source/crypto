@@ -7,6 +7,7 @@
 //  · serverul cere cele 5 date Binance deodată, găsește singur 1000PEPE / 1000000MOG / 1MBABYDOGE, spune „fără contract”;
 //  · pagina spune moneda, ora, cine plătește, cât pe zi, OI în USD, și o frază din cifre, în română.
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -15,7 +16,7 @@ import "./lib/text-ro-global.mjs";   // proba v100.61 (RF4): orice probă care �
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8").replace(/\r\n/g, "\n");
-const APP = citeste("public", "app.js");
+const APP = cuTablou(citeste("public", "app.js"));
 const fnApp = (nume) => { const i = APP.indexOf("function " + nume + "("); assert.ok(i >= 0, "lipsește " + nume + " în app.js"); const j = APP.indexOf("\nfunction ", i + 10); return APP.slice(i, j < 0 ? undefined : j); };
 let teste = 0, picate = 0;
 async function test(nume, f) {

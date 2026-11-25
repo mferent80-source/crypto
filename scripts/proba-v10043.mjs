@@ -6,6 +6,7 @@
 //       netul inchisilor + pierderea celor deschisi; avertizeaza (alerta o data pe zi + rand in poarta), nu blocheaza.
 // I-467 „ce as face eu” cu banii pe masa: cartelele Stopul / Gridul primesc cel mai rau caz in USDT si ce cedezi.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -21,7 +22,7 @@ const AL = new Function(`${lib("alerte.js")}; return Alerte;`)();
 const OB = new Function("GridCalcul", "GridProba", "JurnalTrade", `${lib("obiceiuri.js")}; return Obiceiuri;`)(G, GP, JT);
 const colector = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8");
 const server = fs.readFileSync(path.join(RAD, "functions", "api", "istoric-bot.js"), "utf8");
-const app = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8");
+const app = cuTablou(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8"));
 
 let teste = 0, picate = 0;
 async function test(nume, fn) {

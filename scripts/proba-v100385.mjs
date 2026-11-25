@@ -7,12 +7,13 @@
 //   V  versiunea v100.385, proba în lanț după v100.384
 // Rulare: node scripts/proba-v100385.mjs
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
 
 const citeste = (f) => fs.existsSync(new URL(f, import.meta.url)) ? fs.readFileSync(new URL(f, import.meta.url), "utf8").replace(/\r\n/g, "\n") : "";
-const LIBF = (f) => citeste("../public/lib/" + f), APP = citeste("../public/app.js");
+const LIBF = (f) => citeste("../public/lib/" + f), APP = cuTablou(citeste("../public/app.js"));
 let teste = 0, picate = 0;
 async function test(nume, fn) { teste++; try { await fn(); console.log(`  ok   ${nume}`); } catch (e) { picate++; console.log(`  PICA ${nume}\n       ${String(e.message).split("\n")[0]}`); } }
 const J = (x) => JSON.parse(JSON.stringify(x));

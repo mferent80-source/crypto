@@ -2,13 +2,14 @@
 // antetului (banda botului + Alerts + WS + LIVE DATA + versiunea) centrat în spațiul liber, nu lipit de marginea dreaptă; pe telefon banda
 // botului cu textul centrat, rândul de cipuri centrat. Așezarea reală (pixeli) o măsoară proba de ecran (CDP) înainte de „gata”.
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8").replace(/\r\n/g, "\n");
-const CSS = citeste("public", "app.css"), HTML = citeste("public", "index.html"), APP = citeste("public", "app.js");
+const CSS = citeste("public", "app.css"), HTML = citeste("public", "index.html"), APP = cuTablou(citeste("public", "app.js"));
 let teste = 0, picate = 0;
 async function test(nume, f) { teste++; await Promise.resolve().then(f).then(() => console.log(`  ok   ${nume}`)).catch((e) => { picate++; console.log(`  PICA ${nume}\n       ${String(e && e.stack || e).slice(0, 600)}`); }); }
 console.log("\nV100.142 · antetul: grupul din dreapta centrat · proba\n");

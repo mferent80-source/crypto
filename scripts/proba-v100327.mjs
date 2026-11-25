@@ -4,6 +4,7 @@
 //   direcția botului, iar sub istorie: ce e, de unde până unde și încotro merge, ce sunt liniile punctate.
 //   node scripts/proba-v100327.mjs
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -90,7 +91,7 @@ await test("stilul: coloana cifrei încape cuvântul; capetele, legenda, titlul 
   assert.ok(CSS.includes(":is(#tabloubot,#t212,#sugestii,#probe) .ibZbun{background:color-mix(in srgb,var(--pzSus) 45%,transparent)}") && CSS.includes(":is(#tabloubot,#t212,#sugestii,#probe) .ibZrau{background:color-mix(in srgb,var(--pzJos) 35%,transparent)}"));
 });
 
-const APP = citeste("public", "app.js");
+const APP = cuTablou(citeste("public", "app.js"));
 await test("încadrare (el: „încadrează frumos”): rigla și istoria în DOUĂ cartele egale, pe rândul lor sub bandă (ibGrafice); înguste ⇒ una sub alta, după lățimea rândului (container), nu a ecranului", () => {
   assert.match(APP, /var gr=IndicatoriBot\.riglaHtml\(bd,b\.directie,escapeHtml\)\+\(ist\?IndicatoriBot\.sparkHtml\(ist,b\.directie,escapeHtml\):""\),hs=IndicatoriBot\.bandaHtml\(bd,tvb,sch,b\.directie,escapeHtml\)\+\(gr\?'<span class="ibGrafice">'\+gr\+'<\/span>':""\);/);
   const C2 = citeste("public", "app.css"), i = C2.indexOf("/* v100.327 · rigla și istoria scorului spuse în cuvinte"), B = C2.slice(i, C2.indexOf("/* v100.327: sfârșitul riglei spuse în cuvinte */"));

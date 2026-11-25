@@ -9,6 +9,7 @@
 //  6. jtPorneste secvențial ⇒ cererile spre serverul de acasă în paralel; grAduLumanari refolosește barele de 15 minute aduse deja pe moneda
 //     aceea (o singură pagină nouă în loc de 6).
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -22,7 +23,7 @@ for (const f of ["grid-calcul.js", "grid-proba.js", "grid-plan.js", "monte-simbo
 globalThis.escapeHtml = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 vm.runInThisContext(citeste("public", "lib", "monte-simbol-ecran.js"), { filename: "monte-simbol-ecran.js" });
 const G = globalThis, M = G.MonteSimbol, ST = G.StatisticaTrade, SC = G.ScorSezon;
-const APP = citeste("public", "app.js");
+const APP = cuTablou(citeste("public", "app.js"));
 /* de la „function nume(” la început de rând până la următorul „\nfunction ” sau „\nasync function ” (un comentariu cu același text nu păcălește) */
 const fnApp = (nume) => {
   const m = new RegExp("\\n(async )?function " + nume + "\\(").exec(APP); assert.ok(m, "lipsește " + nume + " în app.js");
@@ -341,7 +342,7 @@ await test("6g jtPorneste: boții Pionex, arhiva, contrafactualul, raportul și 
     if (/botiInchisi/.test(url)) return setTimeout(() => res({ boti: [{ strategyId: "2" }], la: "L", complet: true }), 1);
     rej(new Error("neașteptat " + url)); }); };
   const box = { getJSON, $: () => null, jtStare: { boti: null, la: 0, inLucru: false, eroare: null }, jtArhiva: { la: null, boti: null, complet: false, sursa: null }, jtRender: () => { asteapta.render = true; }, jtNoteSync: () => {}, grTextEroare: (e) => String(e && e.message), console };
-  vm.createContext(box); vm.runInContext(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8").replace(/\r\n/g, "\n").match(/var ARH_BOTI=\{[^\n]*\n/)[0] + ["arhivaBotiAdu", "jtAduBoti", "jtPorneste"].map(fnApp).join("\n"), box);   // v100.359: arhiva comună
+  vm.createContext(box); vm.runInContext(cuTablou(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8")).replace(/\r\n/g, "\n").match(/var ARH_BOTI=\{[^\n]*\n/)[0] + ["arhivaBotiAdu", "jtAduBoti", "jtPorneste"].map(fnApp).join("\n"), box);   // v100.359: arhiva comună
   const p = box.jtPorneste(true);
   await new Promise((r) => setTimeout(r, 20));
   assert.equal(pornite.length, 5, "toate cinci în zbor cât boții Pionex încă nu au venit: " + pornite.join(" | "));

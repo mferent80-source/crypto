@@ -3,6 +3,7 @@
 // inchisi din 12.2025 pana la 30.09.2026, nu „doar ultimii 10” cum scria pagina (v100.23). Arhiva compacta sta in KV-ul
 // de acasa; Jurnalul, statistica si Declaratia Unica o citesc; pe pagina publicata (fara KV) raman pe prima pagina, spus pe fata.
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import vm from "node:vm";
 import "./lib/text-ro-global.mjs";   // v100.74: jtNotaPionex scrie „2200 de boți” prin TextRo.cate, ca în pagină
@@ -169,7 +170,7 @@ await test("colectorul: tura arhivei porneste din bucla, singura (nu se suprapun
 });
 
 // ---- pagina ----
-const app = fs.readFileSync(new URL("../public/app.js", import.meta.url), "utf8"), t2 = fs.readFileSync(new URL("../public/lib/t212-ecran.js", import.meta.url), "utf8");
+const app = cuTablou(fs.readFileSync(new URL("../public/app.js", import.meta.url), "utf8")), t2 = fs.readFileSync(new URL("../public/lib/t212-ecran.js", import.meta.url), "utf8");
 function functia(src, nume) { let i = src.indexOf("function " + nume + "("); assert.ok(i >= 0, "lipseste " + nume); const inceput = src.slice(i - 6, i) === "async " ? i - 6 : i; let a = src.indexOf("{", i), k = 0, j = a; for (; j < src.length; j++) { if (src[j] === "{") k++; else if (src[j] === "}" && --k === 0) break; } return src.slice(inceput, j + 1); }
 
 await test("pagina: botii inchisi = prima pagina Pionex (cei mai noi) + arhiva de acasa, fara dubluri; Jurnalul si Cont total le iau de acolo", async () => {

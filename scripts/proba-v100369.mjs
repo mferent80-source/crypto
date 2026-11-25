@@ -8,6 +8,7 @@
 //      cheile traduse, căderile rutelor spuse, nimic pierdut (titlurile vechi), 4 grafice; tema; versiunile
 //   node scripts/proba-v100369.mjs
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -224,7 +225,7 @@ await test("C13 rândurile pliate (CI_RANDURI): fapta la vedere (banii, riscul, 
   assert.deepEqual(Object.keys(ctx.CI_RANDURI), ["ciSBani", "ciSRisc", "ciSStres", "ciSZile", "ciSDisc", "ciSCorel", "ciSExp", "ciSBrokeri", "ciSFactori", "ciSVerd"]);
   for (const id of Object.keys(ctx.CI_RANDURI)) assert.equal((H.match(new RegExp('id="' + id + '"', "g")) || []).length, 1, id);
   const ce = citeste("public", "lib", "cont-ecran.js"); assert.match(ce, /var CI_RAND_DESCHIS = \{ ciSBani: 1, ciSRisc: 1, ciSStres: 1, ciSZile: 1, ciSDisc: 1 \};/); assert.match(ce, /id === "ciSBrokeri" && abatere/);
-  assert.match(citeste("public", "app.js"), /if\(typeof CI_RANDURI!=="undefined"&&Object\.prototype\.hasOwnProperty\.call\(CI_RANDURI,id\)\)return ciRandComuta\(id,deschis\);/);
+  assert.match(cuTablou(citeste("public", "app.js")), /if\(typeof CI_RANDURI!=="undefined"&&Object\.prototype\.hasOwnProperty\.call\(CI_RANDURI,id\)\)return ciRandComuta\(id,deschis\);/);
   assert.ok(H.indexOf('id="ciFraza"') < H.indexOf('id="ciSBani"') && H.indexOf('id="ciSStres"') < H.indexOf('id="ciSZile"'), "răspunsul întâi; zilele după crize (telefonul)");
 });
 await test("C14 graficele: patru noi (riscul pe zile, banii boților, pariurile, scăderea cărții) + linia zilelor + histograma; culorile doar prin clase", () => {

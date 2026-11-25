@@ -2,6 +2,7 @@
 // https://claude.ai/artifact/LBAQV8R6oHipZgjrHnMRSh): modulul pur MonteSimbol (prețul fără tendința perioadei, botul grid cu
 // GridProba.simuleaza, istoria lui) și caseta din pagina Monte Carlo (monte-simbol-ecran.js).
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -179,7 +180,7 @@ await test("(R5) mijlocul −0,0004 (afișat 0,0%) nu e colorat roșu: culoarea 
   assert.doesNotMatch(h, /bad[^>]*>0,0%/);
 });
 await test("(10) pagina: caseta deasupra „riscului tău”, scripturile după risc-ecran și în cache, navTo o desenează", () => {
-  const html = citeste("public", "index.html"), app = citeste("public", "app.js"), sw = citeste("public", "sw.js");
+  const html = citeste("public", "index.html"), app = cuTablou(citeste("public", "app.js")), sw = citeste("public", "sw.js");
   const i = html.indexOf('id="mcsPagina"'), j = html.indexOf('id="rlPagina"'); assert.ok(i > 0 && i < j, "deasupra raportului de risc");
   const a = html.indexOf('src="/lib/risc-ecran.js"'), b1 = html.indexOf('src="/lib/monte-simbol.js"'), b2 = html.indexOf('src="/lib/monte-simbol-ecran.js"'); assert.ok(a > 0 && b1 > a && b2 > b1);
   for (const f of ["/lib/monte-simbol.js", "/lib/monte-simbol-ecran.js"]) assert.ok(sw.includes('"' + f + '"'), f);

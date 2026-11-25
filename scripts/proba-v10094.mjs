@@ -3,6 +3,7 @@
 // rândurile din barele zilnice și din trade-urile lui, amândoi antrenorii pe țintele T212, colectorul (barele strânse noaptea, bugetul), pagina
 // T212 (poziții, poartă, idei), garda, versiunile; + ideea 3 (legenda benzii).
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
@@ -16,7 +17,7 @@ const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const lib = (f) => fs.readFileSync(path.join(RAD, "public", "lib", f), "utf8");
 const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8");
 const fnDin = (f, nume) => { const s = lib(f), i = s.indexOf("function " + nume + "("); assert.ok(i >= 0, "lipsește " + nume + " în " + f); const j = s.indexOf("\nfunction ", i + 10); return s.slice(i, j < 0 ? undefined : j); };
-const fnApp = (nume) => { const s = citeste("public", "app.js"), i = s.indexOf("function " + nume + "("); assert.ok(i >= 0, "lipsește " + nume + " în app.js"); return s.slice(i, s.indexOf("\nfunction ", i + 10)); };
+const fnApp = (nume) => { const s = cuTablou(citeste("public", "app.js")), i = s.indexOf("function " + nume + "("); assert.ok(i >= 0, "lipsește " + nume + " în app.js"); return s.slice(i, s.indexOf("\nfunction ", i + 10)); };
 // modulele paginii, încărcate ca în retea/date.mjs (aceeași ordine, aceleași globale)
 const B = new Function(`${lib("busola.js")}; return Busola;`)();
 globalThis.GridCalcul = globalThis.GridCalcul || new Function(`${lib("grid-calcul.js")}; return GridCalcul;`)();
@@ -205,7 +206,7 @@ await test("(R5) 🔵8: „Cum s-a verificat” pe piața paginii - pe crypto do
   const sC = R.subsol(mix(R.VERSIUNE), mix("a1")), sA = R.subsol(mix(R.VERSIUNE), mix("a1"), { actiuni: true });
   assert.equal(sC.length, 14, "crypto: " + sC.join(" | ")); assert.ok(sC.every((x) => !/stopul mâine|trade ca ăsta|5 zile|sare peste|deschidă sub stop/i.test(x)), sC.join("\n"));
   assert.equal(sA.length, 10, "acțiuni: " + sA.join(" | ")); assert.ok(sA.every((x) => /stopul mâine|trade ca ăsta|5 zile|sare peste|deschidă sub stop/i.test(x)), sA.join("\n"));
-  assert.ok(/Retea\.subsol\(m,aM,(o|\{actiuni:!!\(o&&o\.actiuni\),busola:reteaM\.b,acum:Date\.now\(\)\})\)/.test(citeste("public", "app.js")), "reteaHtml nu dă o (actiuni) subsolului; v100.95: și bilanțul Busolei"); assert.ok(/actiuni:\s*true/.test(citeste("public", "lib", "t212-ecran.js")), "T212 nu cere subsolul pe acțiuni");
+  assert.ok(/Retea\.subsol\(m,aM,(o|\{actiuni:!!\(o&&o\.actiuni\),busola:reteaM\.b,acum:Date\.now\(\)\})\)/.test(cuTablou(citeste("public", "app.js"))), "reteaHtml nu dă o (actiuni) subsolului; v100.95: și bilanțul Busolei"); assert.ok(/actiuni:\s*true/.test(citeste("public", "lib", "t212-ecran.js")), "T212 nu cere subsolul pe acțiuni");
 });
 await test("(R6) 🔵9/🔵10/🔵11: poarta judecă pe barele ÎNCHISE (bareBursa, nu bare care aruncă mereu ultima); QQQ se readuce la „Reîncarcă”; pauza vine și după un ticker picat", () => {
   const e = citeste("public", "lib", "t212-ecran.js"), tr = citeste("scripts", "lib", "tura-retea.mjs");

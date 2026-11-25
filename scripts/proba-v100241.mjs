@@ -2,6 +2,7 @@
 // rândurile citirii se rescriu la prețul viu. Plierea trebuie să fie gata în aceeași clipă,
 // nu la tura de 1,5 s — altfel cardul se înalță și coboară, și graficul de lângă sare.
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
@@ -114,7 +115,7 @@ await test("versiunea de la v100.241 în sus, colectorul rămâne v101.136", () 
 });
 
 await test("scrierea citirii pliază înainte să se întoarcă, nu lasă rândurile înalte până la tura de 1,5 s", () => {
-  const app = citeste("public", "app.js");
+  const app = cuTablou(citeste("public", "app.js"));
   const c = app.slice(app.indexOf("function tbDeseneazaCitire("), app.indexOf("function tbVociBilant("));
   const scrie = c.slice(c.indexOf("var scrie=function"));
   const html = scrie.indexOf("el.innerHTML=");

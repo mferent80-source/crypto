@@ -3,6 +3,7 @@
 // (banda cat o zi obisnuita a monedei, levierul la care marginea costa cel mult planul) - cu stopul si tinta LA MARGINI
 // (cel mult 1/2 pas dincolo) si cu proba pe ultimele 30 de zile: de cate ori ar fi iesit pe stop, pe tinta, sau ar fi ramas.
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 
 const lib = (f) => fs.readFileSync(new URL(`../public/lib/${f}`, import.meta.url), "utf8");
@@ -129,7 +130,7 @@ await test("minimul Pionex pe ordin: prea multe grile pentru suma -> mai putine 
 });
 
 await test("pagina: grid-plan.js se incarca inainte de app.js, e in APP_SHELL; Grid si Tablou deseneaza blocul", () => {
-  const html = fs.readFileSync(new URL("../public/index.html", import.meta.url), "utf8"), sw = fs.readFileSync(new URL("../public/sw.js", import.meta.url), "utf8"), app = fs.readFileSync(new URL("../public/app.js", import.meta.url), "utf8");
+  const html = fs.readFileSync(new URL("../public/index.html", import.meta.url), "utf8"), sw = fs.readFileSync(new URL("../public/sw.js", import.meta.url), "utf8"), app = cuTablou(fs.readFileSync(new URL("../public/app.js", import.meta.url), "utf8"));
   const iPlan = html.indexOf('src="/lib/grid-plan.js"'), iApp = html.indexOf('src="/app.js"'), iProba = html.indexOf('src="/lib/grid-proba.js"');
   assert.ok(iPlan > iProba && iPlan < iApp, `ordinea scripturilor: proba ${iProba}, plan ${iPlan}, app ${iApp}`);
   assert.match(sw, /"\/lib\/grid-plan\.js"/);

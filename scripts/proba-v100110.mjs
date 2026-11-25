@@ -4,6 +4,7 @@
 // I-546 T212 coloana TREND spune și becul 1z când diferă · I-547 T212 Discord când becul 1z trece împotriva poziției
 // I-548 becurile pe rând + cererea picată reluată în 30 s · bug: barele zilnice Twelve Data la ora deschiderii New York.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -14,7 +15,7 @@ const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8");
 for (const f of ["grid-calcul.js", "tablou-extra.js", "alerte.js", "scenariu.js", "directie.js", "sfaturi.js", "semnale-bot.js", "consiliu.js", "probabilitati.js", "grafic-bot.js", "actiuni-semnale.js", "consilier.js", "asemanatoare.js"]) vm.runInThisContext(citeste("public", "lib", f), { filename: f });
 const { GraficBot: GB, Directie: DR, TabloExtra: TE, Asemanatoare: AS } = globalThis;
-const app = citeste("public", "app.js"), ecran = citeste("public", "lib", "t212-ecran.js"), col = citeste("scripts", "colector.mjs");
+const app = cuTablou(citeste("public", "app.js")), ecran = citeste("public", "lib", "t212-ecran.js"), col = citeste("scripts", "colector.mjs");
 const fn = (src, nume) => { const i = src.indexOf("function " + nume + "("); assert.ok(i >= 0, "lipsește " + nume); return src.slice(i, src.indexOf("\nfunction ", i + 10)); };
 let teste = 0, picate = 0;
 async function test(nume, f) { teste++; await Promise.resolve().then(f).then(() => console.log(`  ok   ${nume}`)).catch((e) => { picate++; console.log(`  PICA ${nume}\n       ${String(e.message).slice(0, 500)}`); }); }

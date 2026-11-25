@@ -9,6 +9,7 @@
 //   5. versiunile v100.300 peste tot.
 //   node scripts/proba-v100300.mjs
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
@@ -89,7 +90,7 @@ await test("2b. revizia Opus: refuzul Pionex vine ca 200 {result:false, retryAft
 });
 
 await test("3. rândul din Tablou (tbRangeFilterRand din app.js) pe aceleași bare: direcția, DOVADA, CONTRA botului, drumul spre pagină", () => {
-  const A = citeste("public", "app.js");
+  const A = cuTablou(citeste("public", "app.js"));
   const i0 = A.indexOf("var tbRfStare={"), i1 = A.indexOf("function tbCitireExtra(b,o){");
   assert.ok(i0 > 0 && i1 > i0 && A.indexOf("function tbRangeFilterRand(b){") > i0, "tbRfStare + tbRangeFilterRand înaintea lui tbCitireExtra");
   const c2 = Object.assign({}, ctx); c2.TabloBot = { simboluri: (baza) => ({ pionex: baza + "_USDT_PERP", moneda: baza }) };
@@ -114,7 +115,7 @@ await test("3. rândul din Tablou (tbRangeFilterRand din app.js) pe aceleași ba
 });
 
 await test("4. legarea în aplicație: meniu, secțiune, „mai multe”, navTo, pagină zilnică, lista albă, paleta, NAV_CU_LOAD, scripturi, sw, CSS", () => {
-  const H = citeste("public", "index.html"), A = citeste("public", "app.js"), C = citeste("public", "app.css"), SW = citeste("public", "sw.js");
+  const H = citeste("public", "index.html"), A = cuTablou(citeste("public", "app.js")), C = citeste("public", "app.css"), SW = citeste("public", "sw.js");
   assert.match(H, /data-action-click="navTo\('rangefilter',true\)" data-nav="rangefilter"/);
   assert.match(H, /<section class="panel" id="rangefilter">/); assert.match(H, /id="rfPagina"/);
   assert.match(H, /moreNav\('rangefilter',true\)/);

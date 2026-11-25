@@ -2,6 +2,7 @@
 // planul docs/superpowers/plans/2026-10-04-arbori-l0-l1.md): L0 - ideile A1–A4 din raportul v100.92; L1 - arborii pe boți (inferența ES5,
 // producătorul comun de intrări, antrenorul de noapte, ruta, colectorul, pagina, garda, versiunile). Algoritmul în sine: scripts/proba-arbori.mjs.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
@@ -15,7 +16,7 @@ const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const lib = (f) => fs.readFileSync(path.join(RAD, "public", "lib", f), "utf8");
 const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8");
 const fnDin = (f, nume) => { const s = lib(f), i = s.indexOf("function " + nume + "("); assert.ok(i >= 0, "lipsește " + nume + " în " + f); const j = s.indexOf("\nfunction ", i + 10); return s.slice(i, j < 0 ? undefined : j); };
-const fnApp = (nume) => { const s = citeste("public", "app.js"), i = s.indexOf("function " + nume + "("); assert.ok(i >= 0, "lipsește " + nume + " în app.js"); return s.slice(i, s.indexOf("\nfunction ", i + 10)); };
+const fnApp = (nume) => { const s = cuTablou(citeste("public", "app.js")), i = s.indexOf("function " + nume + "("); assert.ok(i >= 0, "lipsește " + nume + " în app.js"); return s.slice(i, s.indexOf("\nfunction ", i + 10)); };
 // modulele paginii, încărcate ca în retea/date.mjs (aceeași ordine, aceleași globale)
 const B = new Function(`${lib("busola.js")}; return Busola;`)();
 globalThis.GridCalcul = globalThis.GridCalcul || new Function(`${lib("grid-calcul.js")}; return GridCalcul;`)();
@@ -35,7 +36,7 @@ const BZ = (stare, verdict, dif, monede) => ({ stare: stare, bilant: verdict ? {
 
 // ======== L0: ideile A1–A4 ========
 await test("(A1) plierea: cheia secțiunii = titlul fără cifre; capul are aria-expanded; Enter/Space pliază (keydown delegat); săgețile/cursorul doar sub 600 px; --grSus se remăsoară la resize", () => {
-  const a = citeste("public", "app.js"), css = citeste("public", "app.css");
+  const a = cuTablou(citeste("public", "app.js")), css = citeste("public", "app.css");
   const ctx = {}; vm.createContext(ctx); vm.runInContext(fnApp("grCheieSectiune") + "\n;this.f=grCheieSectiune;", ctx);
   assert.equal(ctx.f("Proba pe ultimele 31 de zile"), "Proba pe ultimele zile"); assert.equal(ctx.f("Proba pe ultimele 19 zile"), ctx.f("Proba pe ultimele 20 de zile"), "cheia se schimbă la pragul „de” (revizia 🔵11)"); assert.equal(ctx.f("🚦 Poarta de pornire"), "Poarta de pornire"); assert.equal(ctx.f("Varianta ta · 5×"), "Varianta ta · ×");
   const pl = fnApp("grPliazaPeTelefon"); assert.ok(pl.includes("grCheieSectiune(t.textContent)") && pl.includes('cap.setAttribute("aria-expanded",'), "cheia stabilă / aria-expanded");
@@ -64,7 +65,7 @@ await test("(A3) pentru-busola: `retea` = forma contractului Busolei §5 {simbol
   const col = citeste("scripts", "colector.mjs"); assert.ok(/const reteaUltim = \{\};/.test(col) && col.includes("noteazaRetea: (b, rt) =>") && col.includes("retea: Object.values(reteaUltim).flat()"), "colectorul: reteaUltim / fișierul");
 });
 await test("(A4) pe telefon, după ce derulezi de verdict, caseta ține doar eticheta (grMic); o atingere o deschide; pe PC nimic", () => {
-  const a = citeste("public", "app.js"), css = citeste("public", "app.css");
+  const a = cuTablou(citeste("public", "app.js")), css = citeste("public", "app.css");
   assert.ok(/^function grVerdictComuta\(\)\{/m.test(a) && /data-action-click="grVerdictComuta\(\)"/.test(fnApp("renderGrid")), "caseta nu se comută la atingere");
   assert.ok(/addEventListener\("scroll",grVerdictScroll/.test(a) && /^function grVerdictScroll\(\)\{[^\n]*matchMedia\("\(max-width:600px\)"\)/m.test(a), "scroll-ul nu compactează doar pe telefon");
   assert.ok(/@media \(max-width:600px\)\{[^\n]*#gridset \.grVerdict\.grMic \.grVMotiv,#gridset \.grVerdict\.grMic \.grLista\{display:none\}/.test(css), "CSS grMic");
@@ -161,7 +162,7 @@ await test("(10) Retea.randuri cu ambele familii: „🧠 61% · 🌳 58% · �
   assert.equal(R.textPornire({ p: 0.41, rata: 0.524 }, vd), "Un bot ca ăsta ar ieși pe plus: 41% · rata ta: 52% · dovedită pe 274 de zile independente.");
 });
 await test("(10) pagina: reteaM.a din action=arbori; Tablou (rez.arbori), fișa (Arbori.pentruBot) și poarta (Arbori.pentruPornire) dau arborii lui reteaHtml / textPornire; al doilea marker pe bandă (CSS)", () => {
-  const a = citeste("public", "app.js"), css = citeste("public", "app.css");
+  const a = cuTablou(citeste("public", "app.js")), css = citeste("public", "app.css");
   assert.ok(a.includes('getJSON("/api/istoric-bot?action=arbori")') && /reteaM\.a=d&&d\.arbori&&typeof Arbori!=="undefined"&&d\.arbori\.versiune===Arbori\.VERSIUNE\?d\.arbori\.modele:null/.test(a), "reteaM.a");
   assert.ok(/^function reteaHtml\(rt,zar,o,ra\)\{/m.test(a) && a.includes("var aM=ra&&reteaM.a?reteaM.a:null") && a.includes("Retea.randuri(m,rt,zar,o,aM?{modele:aM,rt:ra}:null)") && a.includes("Retea.antet(m,o&&o.acum||Date.now(),aM)") && /Retea\.subsol\(m,aM,(o|\{actiuni:!!\(o&&o\.actiuni\),busola:reteaM\.b,acum:Date\.now\(\)\})\)/.test(a), "reteaHtml cu arbori (v100.95: subsolul primește și bilanțul Busolei)");
   assert.ok(a.includes("rtA=reteaM.a&&grProb.bare?Arbori.pentruBot(reteaM.a,grProb.bare,grProb.o,grRetea.btc):null") && a.includes("reteaHtml(rt,zar,{acum:Date.now()},rtA)"), "fișa");
@@ -209,7 +210,7 @@ await test("(R2) 🟡4: rândul cu amândouă familiile are cifrele pe un rând 
   const rz = l.find((x) => x.cod === "rezultat"); assert.ok(rz, "fără rândul rezultat: " + JSON.stringify(l));
   assert.equal(rz.text, "🧠 41% · 🌳 39% · rata ta: 52%\n🧠 nedovedită: nu bate rata pe monedă (Brier 0,239 față de 0,232) · 🌳 nedovedită: nu bate rata pe monedă (Brier 0,239 față de 0,232)");
   assert.ok(rz.text.replace("\n", " · ").length > 160 && rz.text.split("\n").every((x) => x.length <= 160), rz.text.split("\n").map((x) => x.length).join(","));
-  assert.ok(citeste("public", "app.js").includes(`+String(x.text).split("\\n").map(function(l){return '<p class="tbSub">'+escapeHtml(l)+'</p>'}).join("")+'</div>'`), "tbProbRandHtml nu desparte rândurile");
+  assert.ok(cuTablou(citeste("public", "app.js")).includes(`+String(x.text).split("\\n").map(function(l){return '<p class="tbSub">'+escapeHtml(l)+'</p>'}).join("")+'</div>'`), "tbProbRandHtml nu desparte rândurile");
 });
 await test("(R3) 🔵5 (specul): cu amândouă, cifra mare și semnul plin stau pe familia DOVEDITĂ când e una singură (🌳 dovedită, 🧠 nu ⇒ p = 🌳, p2 = 🧠, familia 🌳); amândouă ⇒ 🧠; doar 🌳 ⇒ fără familia; cifra mare poartă emoji-ul familiei, aria-label numește cealaltă familie și n-are „null–null”", () => {
   const MOD = (ver, v) => Object.fromEntries(Object.keys(R.TINTE).map((t) => [t, { tinta: t, versiune: ver, la: ACUM - 3600000, verificare: v }]));
@@ -220,12 +221,12 @@ await test("(R3) 🔵5 (specul): cu amândouă, cifra mare și semnul plin stau 
   const nici = R.randuri(MOD(R.VERSIUNE, vRau), rt, zar, { acum: ACUM }, { modele: MOD("a1", vRau), rt: ra })[0]; assert.equal(nici.p, 0.61); assert.equal(nici.familia, "🧠");
   const doarArb = R.randuri(null, null, zar, { acum: ACUM }, { modele: MOD("a1", vBun), rt: ra })[0]; assert.equal(doarArb.p, 0.58); assert.equal(doarArb.p2, undefined); assert.equal(doarArb.familia, undefined);
   assert.equal(R.randuri(MOD(R.VERSIUNE, vBun), rt, zar, { acum: ACUM })[0].familia, undefined, "fără arbori nu există familia");
-  const a = citeste("public", "app.js");
+  const a = cuTablou(citeste("public", "app.js"));
   assert.ok(a.includes(`'</span><b class="tbProbP">'+(x.familia?x.familia+' ':'')+(x.scurt?escapeHtml(x.scurt):P(x.p)+'%')+'</b>'`), "cifra mare cu emoji-ul familiei (v100.196: „sub X%” când e câmpul scurt)");
   assert.ok(a.includes(`aria-label="'+(x.familia?x.familia+' ':'')+(x.scurt?escapeHtml(x.scurt):P(x.p)+'%')+(lo!==null?', interval de încredere '+lo+'–'+hi+'%':'')+(x.p2!=null?', '+(x.familia==="🌳"?'rețeaua':'arborii')+' '+P(x.p2)+'%':'')+'">'`), "aria-label");
 });
 await test("(R4) 🔵6/🔵7/🔵8 + ruling 13: după redesen caseta se recompactează (grVerdictScroll după grPliazaPeTelefon); capul și subsolul primesc arborii doar cu ra (aM); grReteaBtc aduce BTC și doar cu arborii; Arbori.verdict deleagă la Retea.verdictArbori", () => {
-  const a = citeste("public", "app.js"), ar = citeste("public", "lib", "arbori.js");
+  const a = cuTablou(citeste("public", "app.js")), ar = citeste("public", "lib", "arbori.js");
   assert.ok(a.includes("box.innerHTML=h;grPliazaPeTelefon(box);grVerdictScroll();"), "🔵6: caseta rămâne lărgită după redesen");
   assert.ok(a.includes("var aM=ra&&reteaM.a?reteaM.a:null") && a.includes("Retea.antet(m,o&&o.acum||Date.now(),aM)") && /Retea\.subsol\(m,aM,(o|\{actiuni:!!\(o&&o\.actiuni\),busola:reteaM\.b,acum:Date\.now\(\)\})\)/.test(a) && !a.includes("Retea.subsol(m,reteaM.a)"), "🔵7 (v100.95: subsolul cu bilanțul Busolei)");
   assert.ok(/^function grReteaBtc\(\)\{if\(typeof Retea==="undefined"\|\|!\(reteaM\.m\|\|reteaM\.a\)\|\|/m.test(a), "🔵8");

@@ -6,12 +6,13 @@
 //   - CSS: banda nu mai e tăiată la 520 px
 // Rulare: node scripts/proba-pret-viu.mjs
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 
 const citeste = (f) => fs.existsSync(new URL(f, import.meta.url)) ? fs.readFileSync(new URL(f, import.meta.url), "utf8") : "";
 const SRC = citeste("../public/lib/pret-viu.js");
 const PV = SRC ? new Function(`${SRC}; return PretViu;`)() : null;
-const APP = citeste("../public/app.js"), HTML = citeste("../public/index.html"), CSS = citeste("../public/app.css"), SW = citeste("../public/sw.js"), HDR = citeste("../public/_headers");
+const APP = cuTablou(citeste("../public/app.js")), HTML = citeste("../public/index.html"), CSS = citeste("../public/app.css"), SW = citeste("../public/sw.js"), HDR = citeste("../public/_headers");
 
 let teste = 0, picate = 0;
 function test(nume, fn) { teste++; try { fn(); console.log(`  ok   ${nume}`); } catch (e) { picate++; console.log(`  PICA ${nume}\n       ${String(e.message).split("\n")[0]}`); } }

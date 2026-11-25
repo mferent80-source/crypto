@@ -8,6 +8,7 @@
 //     în Scan și în Tabloul fără bot (înainte Scan / Tabloul spuneau „Aș porni boți…” când pagina spunea frâna).
 //   Pragurile nu se schimbă. node scripts/proba-v100329.mjs
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -173,7 +174,7 @@ await test("acVremeAsigura: aduce DOAR ce lipsește sau e mai vechi de 10 minute
 });
 
 await test("Piața azi, Scan și Tabloul fără bot cheamă funcțiile comune (nicio vreme socotită separat, nicio frână uitată)", () => {
-  const AE = LIB("acasa-ecran.js"), SC = LIB("scan-ecran.js"), APP = citeste("public", "app.js");
+  const AE = LIB("acasa-ecran.js"), SC = LIB("scan-ecran.js"), APP = cuTablou(citeste("public", "app.js"));
   const des = fn(AE, "acasaDeseneaza");
   assert.match(des, /acVremeCrypto\(d\)/); assert.match(des, /acVremeBursa\(d\)/);
   assert.doesNotMatch(des, /Acasa\.vreme\(|Acasa\.vremeBursa\(/, "pagina nu mai socotește separat");
@@ -198,7 +199,7 @@ await test("cardurile simetrice: „ce aș face” pe AMESTECAT galben ca LATERA
 
 // ---------------------------------------------------------------- partea B: Piața azi ca Tabloul ----------------------------------------------------------------
 await test("tema Tabloului și pe Piața azi: rădăcina #dash în generator, stratul la zi, comutatorul pune tbZi pe #dash, butonul „Temă închisă” în antetul paginii", async () => {
-  const GEN = citeste("scripts", "face-tema-tablou.mjs"), CSS = citeste("public", "app.css"), APP = citeste("public", "app.js"), HTML = citeste("public", "index.html");
+  const GEN = citeste("scripts", "face-tema-tablou.mjs"), CSS = citeste("public", "app.css"), APP = cuTablou(citeste("public", "app.js")), HTML = citeste("public", "index.html");
   assert.match(GEN, /export const RADACINI = \["tabloubot", "t212", "dash", "rangefilter", "sugestii", "probe", "gridset", "gridsim", "montecarlo", "jurnaltrade", "comportament", "tradezilei", "carnet", "scan", "salt", "alerts", "contintreg"\];/);
   assert.ok(CSS.includes(":is(#tabloubot,#t212,#dash,#rangefilter,#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade,#comportament,#tradezilei,#carnet,#scan,#salt,#alerts,#contintreg).tbZi{"), "variabilele de zi pe toate trei rădăcinile");
   const { spawnSync } = await import("node:child_process");
@@ -294,7 +295,7 @@ await test("revizia: Scan ia cifrele și eticheta din ACEEAȘI sursă; datele vr
   assert.match(ctxS, /var cl = acClasamentSumar\(ad\.clasament\)/); assert.match(ctxS, /ndxL = ad\.ndx && Array\.isArray\(ad\.ndx\.actiuni\)/);
   assert.doesNotMatch(por, /pas\("vreme"/, "nu mai e în Promise.all");
   assert.match(por, /acVremeAsigura\(\)\.then\(function \(\) \{ scanDeseneaza\(\); \}/, "vremea vine în paralel și redesenează");
-  const APP = citeste("public", "app.js"), adu = APP.slice(APP.indexOf("async function tbPregatireAdu("), APP.indexOf("function tbPregatire("));
+  const APP = cuTablou(citeste("public", "app.js")), adu = APP.slice(APP.indexOf("async function tbPregatireAdu("), APP.indexOf("function tbPregatire("));
   assert.ok(adu.indexOf("acVremeAsigura") > adu.indexOf("tbPreg.grid="), "candidații grid nu mai așteaptă vremea");
   assert.match(fn(LIB("acasa-ecran.js"), "acVremeAsigura"), /!scStare\.la \|\| !scStare\.la\.pionex/, "configurația sezonului cerută o dată (după ora cererii, nu după cfg, care poate rămâne null)");
 });

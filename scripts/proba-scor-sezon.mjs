@@ -5,6 +5,7 @@
 // 🔑 Pe toată istoria lui rata e 56 % din 2.307 boți, dar netul −6.033 USDT ⇒ rata singură minte; netul stă lângă ea.
 // Rulare: node scripts/proba-scor-sezon.mjs
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
@@ -278,13 +279,13 @@ await test("ideea 2 - mesajele colectorului (scorPauza / scorTinta) + legarea î
   assert.ok(C.includes("async function turaScor()") && C.includes(".then(() => turaScor())"), "tura după arhivă");
   assert.ok(/stareAlerte\[k\]|stareAlerte\._scor/.test(C) && C.includes('"_scor"') && C.includes("ScorSezon.alerte(s, st)"), "starea în alerte-stare.json");   // v101.128: pe cheie (_scor / _scorT212)
   assert.ok(G.includes("MC.scorPauza(") && G.includes('MC.scorTinta(SC, "net")'), "garda textelor știe mesajele");
-  const APP = citeste("public", "app.js");
+  const APP = cuTablou(citeste("public", "app.js"));
   assert.ok(/ScorSezon\.htmlIstoric\(ScorSezon\.sezoane\(tr,scStare\.cfg(\[piata\])?,(Date\.now\(\)|acum)(,piata)?\)(,piata)?\)/.test(APP), "istoricul sub cardul din Jurnal");   // v100.220: pe piață
 });
 
 // ── v100.219: „am apăsat pe Obiectiv dar nu se întâmplă nimic” - garda de redesenare ține DOAR pentru un INPUT din formular, nu pentru butonul apăsat
 await test("v100.219: scDeseneaza nu sare redesenarea când elementul activ e butonul „Obiectiv ✎” (doar un INPUT din card o oprește)", () => {
-  const APP = citeste("public", "app.js"), f = APP.slice(APP.indexOf("function scDeseneaza()"), APP.indexOf("async function scPorneste()"));
+  const APP = cuTablou(citeste("public", "app.js")), f = APP.slice(APP.indexOf("function scDeseneaza()"), APP.indexOf("async function scPorneste()"));
   assert.ok(/activ\.tagName==="INPUT"&&el\.contains\(activ\)/.test(f), "garda pe INPUT: " + f.slice(0, 600));
   assert.ok(!/el\.contains\(document\.activeElement\)\)return/.test(f), "garda veche (orice element activ) scoasă");
 });
@@ -371,7 +372,7 @@ await test("mesajele + colectorul pentru T212: „Scorul Trading 212”, lei, tr
 });
 
 await test("legarea v100.220: #acScorT212 pe Acasă (order 12), #jtScorT212 pe fila Acțiuni, scorOpreste în app.js, cardurile pe piețe", () => {
-  const IDX = citeste("public", "index.html"), APP = citeste("public", "app.js"), CSS = citeste("public", "app.css"), TE = citeste("public", "lib", "t212-ecran.js");
+  const IDX = citeste("public", "index.html"), APP = cuTablou(citeste("public", "app.js")), CSS = citeste("public", "app.css"), TE = citeste("public", "lib", "t212-ecran.js");
   assert.ok(IDX.includes('<div class="acScorBloc" id="acScor"></div><div class="acScorBloc" id="acScorT212"></div>'), "al doilea card pe Acasă");
   assert.ok(CSS.includes(".pzDemo #acasa>#acScorT212{order:12}") && CSS.includes(".scOprit{"), "ordinea + banda de oprire");
   assert.ok(TE.includes('<div id="jtScorT212"></div><div id="jtStatActiuni"></div>') && /box\.innerHTML = h;[^\n]*\n\s*if \(typeof scDeseneaza === "function"\) scDeseneaza\(\);/.test(TE), "cardul T212 sus pe fila Acțiuni, desenat după rescrierea filei");
@@ -442,7 +443,7 @@ await test("🟡 7/9/11/🔵b - html: valorile tastate rămân în formular; not
 });
 
 await test("🟡 3/4/8/12/14 + 🔵c/e - legarea: Acasă citește arhiva KV (nu Pionex), ține minte trade-urile, formularul pe input, GET-ul în zbor nu suprascrie POST-ul; colectorul la 10 min; sw.js are lib-ul", () => {
-  const APP = citeste("public", "app.js"), C = citeste("scripts", "colector.mjs"), SW = citeste("public", "sw.js");
+  const APP = cuTablou(citeste("public", "app.js")), C = citeste("scripts", "colector.mjs"), SW = citeste("public", "sw.js");
   const bloc = APP.slice(APP.indexOf("var SC_PIETE="), APP.indexOf("var jtMemo=") > 0 ? APP.indexOf("var jtMemo=") : APP.indexOf("function jtRender(){"));   // v100.358: desenul nou al Jurnalului (jtReincearca ⇒ jtPorneste) stă după scor
   assert.ok(!/jtPorneste\(/.test(bloc), "scPorneste nu mai cheamă jtPorneste (cererea Pionex)");
   assert.ok(bloc.includes('/api/istoric-bot?action=botiInchisi'), "arhiva KV pe Acasă");
@@ -467,7 +468,7 @@ await test("v100.217: versiunea ≥ 217 peste tot, lib-ul în index.html, cardul
   assert.ok(/<\/div><div class="acScorBloc" id="acScor"><\/div>(<div class="acScorBloc" id="acScorT212"><\/div>)?<div class="acLegatura" id="acLegatura">/.test(IDX) && IDX.indexOf('id="acCumpar"') > IDX.indexOf('id="acScor"'), "cardul pe Acasă între verdicte și „ce aș cumpăra”");   // v100.220: + T212
   assert.ok(IDX.indexOf('<div id="jtScor"></div>') > IDX.indexOf('<div id="jtCrypto">') && IDX.indexOf('<div id="jtScor"></div>') < IDX.indexOf('<div id="jtStatCrypto"></div>'), "cardul sus în Jurnal");   // v100.358: sub cifrele mari, deasupra statisticii
   assert.ok(P.scripts["test:scorsezon"] && P.scripts.test.includes("npm run test:scorsezon"), "proba în lanț");
-  const APP = citeste("public", "app.js"), AC = citeste("public", "lib", "acasa-ecran.js"), CSS = citeste("public", "app.css");
+  const APP = cuTablou(citeste("public", "app.js")), AC = citeste("public", "lib", "acasa-ecran.js"), CSS = citeste("public", "app.css");
   for (const f of ["function scDeseneaza()", "async function scPorneste()", "function scorFormular(id)", "async function scorSalveaza(id)", "async function scorSezonNou(id)"]) assert.ok(APP.includes(f), f);
   assert.ok(/function jtRender\(\)\{\s*var box=[^\n]*\n\s*if\(typeof scDeseneaza==="function"\)scDeseneaza\(\);/.test(APP), "jtRender desenează scorul");
   assert.ok(AC.includes('pas("scor", function () { return typeof scPorneste === "function" ? scPorneste() : null; })'), "Acasă îl pornește");

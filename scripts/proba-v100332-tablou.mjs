@@ -8,6 +8,7 @@
 //   scenarii; optimizarea: lumânările de 5 min ale măsurilor nu se mai cer la fiecare 8 s.
 //   node scripts/proba-v100332-tablou.mjs
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -17,7 +18,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8").replace(/\r\n/g, "\n");
 const lib = (f) => citeste("public", "lib", f);
-const APP = citeste("public", "app.js");
+const APP = cuTablou(citeste("public", "app.js"));
 // o funcție de la nivelul modulului din app.js (cu „async” dacă îl are), până la următoarea declarație de la capăt de rând
 const fnDin = (src, nume) => {
   let i = src.indexOf("\nasync function " + nume + "("); if (i < 0) i = src.indexOf("\nfunction " + nume + "(");

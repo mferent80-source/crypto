@@ -8,6 +8,7 @@
 // Totul din ce e deja calculat (zero cereri noi); culorile raportate la direcția botului (la short, „coboară” e cu botul).
 //   node scripts/proba-v100324.mjs
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -102,7 +103,7 @@ await test("I-858 rigla: pe 1h, 4h, 1z, cu pragul ADEVĂRAT al intervalului (q.p
   assert.match(fp, /<b class="ibRsemn" style="left:30%"><\/b>/);
 });
 await test("I-858: calc întoarce pragul cu care a hotărât verdictul (prag: threshold), ca rigla să nu-l scrie a doua oară", () => {
-  const APP = citeste("public", "app.js");
+  const APP = cuTablou(citeste("public", "app.js"));
   assert.match(APP, /ver,prag:threshold,regimProfil:regimP,breakout:bo/);   /* v100.339: și regimul profilului (histerezis) */
   assert.match(APP, /let threshold=p\.signal,ver=score>=threshold\?"BULLISH":score<=100-threshold\?"BEARISH":"NEUTRAL"/);
 });
@@ -157,7 +158,7 @@ await test("I-861 desenul: linia scorului, pragurile ca linii, punctul de acum, 
 await test("pagina: rândul închis are locul lui (#tbIndSumar în <summary>, ascuns cititorului de ecran — tabelul rămâne sursa), textul vechi rămâne; renderTabloIndicatori îl umple doar când se schimbă și îl golește fără bot / fără lumânări", () => {
   const HTML = citeste("public", "index.html");
   assert.match(HTML, /<details class="tbTrendDet" id="tbTrendDet"><summary>Detaliile indicatorilor · ca „Analizează piața”, pe bare închise \(medii, Supertrend, MACD, Stochastic, Bollinger, MFI, estimarea și predicția\)<span class="tbIndSumar" id="tbIndSumar" aria-hidden="true" hidden><\/span><\/summary>/);
-  const APP = citeste("public", "app.js");
+  const APP = cuTablou(citeste("public", "app.js"));
   const i = APP.indexOf("function renderTabloIndicatori("), f = APP.slice(i, APP.indexOf("\nfunction ", i + 10));
   assert.match(f, /var gr=IndicatoriBot\.riglaHtml\(bd,b\.directie,escapeHtml\)/); assert.match(f, /hs=IndicatoriBot\.bandaHtml\(bd,tvb,sch,b\.directie,escapeHtml\)\+\(gr\?'<span class="ibGrafice">'/);   // v100.327: rigla și istoria în cartele
   assert.match(f, /if\(tbStare\.indSumarHtml!==hs\)\{sm\.innerHTML=hs;tbStare\.indSumarHtml=hs\}/);
@@ -167,7 +168,7 @@ await test("pagina: rândul închis are locul lui (#tbIndSumar în <summary>, as
 });
 // revizia: 24 de calcule × ~16 ms blocau pagina la fiecare încărcare și schimbare de bot ⇒ istoria se ține pe monedă și pe bară (în afara lui d),
 // se socotesc doar barele noi (de obicei una), în bucăți de câte 4, DUPĂ desen, apoi un redesen
-const IST = (() => { const APP = citeste("public", "app.js"); const ia = (n) => { const a = APP.indexOf("function " + n + "("); let p = 0, z = APP.indexOf("{", a); for (; z < APP.length; z++) { if (APP[z] === "{") p++; else if (APP[z] === "}" && --p === 0) break; } return APP.slice(a, z + 1); };
+const IST = (() => { const APP = cuTablou(citeste("public", "app.js")); const ia = (n) => { const a = APP.indexOf("function " + n + "("); let p = 0, z = APP.indexOf("{", a); for (; z < APP.length; z++) { if (APP[z] === "{") p++; else if (APP[z] === "}" && --p === 0) break; } return APP.slice(a, z + 1); };
   const decl = /var tbIst4h=\{[^;]*\};/.exec(APP); assert.ok(decl, "lipsește var tbIst4h");
   return decl[0] + "\n" + ia("tbIstoric4h") + "\n" + ia("tbIstoric4hGata"); })();
 function istoric() {
@@ -197,19 +198,19 @@ await test("revizia I-861: aceleași bare ⇒ niciun calcul; o bară nouă ⇒ u
   ctx.ist(BARE(201), "BTC|long"); ruleaza(); assert.equal(n(), 49);
 });
 await test("revizia I-861: tbCalculeazaIndicatorii cere istoria într-un try SEPARAT (o eroare a ei nu anulează indicatorul de 4 ore)", () => {
-  const APP = citeste("public", "app.js");
+  const APP = cuTablou(citeste("public", "app.js"));
   const i = APP.indexOf("function tbCalculeazaIndicatorii("), f = APP.slice(i, APP.indexOf("\nfunction ", i + 10));
   assert.match(f, /if\(x\.tf==="4H"&&q\)\{try\{tbIstoric4h\(j,d\.simbol\)\}catch\(e2\)\{\}\}/);
   assert.doesNotMatch(f, /d\.istoric4h/);
 });
 await test("pagina: „ultima ta privire” la indicatori se ține în browser (indVazut:<bot>) și se reia după ≥ 30 min cu pagina ascunsă, ca la Contează acum", () => {
-  const APP = citeste("public", "app.js");
+  const APP = cuTablou(citeste("public", "app.js"));
   assert.match(APP, /function tbVazutAscultator\(\)\{if\(tbVazutAscultator\.pus\|\|typeof document==="undefined"\|\|!document\.addEventListener\)return;tbVazutAscultator\.pus=1;document\.addEventListener\("visibilitychange",function\(\)\{if\(document\.hidden\)\{tbStare\.ctAscunsLa=Date\.now\(\);return\}if\(tbStare\.ctAscunsLa&&Date\.now\(\)-tbStare\.ctAscunsLa>=1800000\)\{tbStare\.ctMem=null;tbStare\.ctHtml=null;tbStare\.indMem=null;tbStare\.indSumarHtml=null\}tbStare\.ctAscunsLa=0\}\)\}/);
   assert.match(APP, /function tbIndSchimbari\(b,bd,vaz\)\{/);   // v100.328: „vaz” - fișa T212 își trimite „se vede”
   assert.match(APP, /"indVazut:"\+b\.id/);
 });
 await test("revizia: „ultima privire” se scrie doar cât VEZI Tabloul (nu cât ești pe altă pagină) și păstrează intervalele care lipsesc la un desen", () => {
-  const APP = citeste("public", "app.js");
+  const APP = cuTablou(citeste("public", "app.js"));
   assert.match(APP, /function tbVazAcum\(\)\{return \(typeof tbPanouVizibil!=="function"\|\|tbPanouVizibil\(\)\)&&!\(typeof document!=="undefined"&&document\.hidden\)\}/);
   const i = APP.indexOf("function tbIndSchimbari("), f = APP.slice(i, APP.indexOf("\nfunction ", i + 10));
   assert.match(f, /var tot=Object\.assign\(\{\},o\.stocat\|\|\{\},acum\),sv=JSON\.stringify\(tot\);if\(o\.scris!==sv&&\(vaz\|\|tbVazAcum\)\(\)\)/);

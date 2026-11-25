@@ -4,6 +4,7 @@
 // când au loc. O singură culoare (fără verde / roșu: listele n-au avantaj dovedit); textele în cerneala textului, nu în culoarea barei.
 //   node scripts/proba-v100335-grafic.mjs
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -62,7 +63,7 @@ await test("6 · CSS: cartela în rama casei, scara în coloana ei; rândurile l
 });
 
 await test("7 · fără listele de azi (înainte de tura de la 8:00 sau ruta căzută) graficul pe zile tot se vede - datele lui sunt în sugestii", () => {
-  const A = citeste("public", "app.js"), i = A.indexOf("function tbListeRadarHtml("), j = A.indexOf("\nfunction ", i + 10), src = A.slice(i, j);
+  const A = cuTablou(citeste("public", "app.js")), i = A.indexOf("function tbListeRadarHtml("), j = A.indexOf("\nfunction ", i + 10), src = A.slice(i, j);
   const ram = (/if\(!I\|\|!cl\)\{([\s\S]*?)\}\s*\/\*/.exec(src) || [])[1] || "";
   assert.ok(ram, "ramura „fără listele de azi” nu mai e un bloc"); assert.match(ram, /IndicatoriBot\.listeGraficHtml/, "ramura fără liste nu desenează graficul");
   assert.match(ram, /tbListe\.la>0\?"listele de azi nu sunt disponibile aici"/, "mesajul de acum rămâne");

@@ -4,6 +4,7 @@
 // histerezis anti-zbatere), un card pe Dashboard, un rând în „Ce spune piața acum”, alerta pe Discord la schimbarea REALĂ
 // a regimului și alerta cu ~30 de minute înainte de evenimentele mari din SUA (calendarul faireconomy).
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -125,7 +126,7 @@ await test("v100.172 ruta piata (istoric-bot): colectorul salvează regimul țin
   await post({ la: ACUM, macro: { cod: "<b>", scor: 2 } }); assert.equal((await get()).macro.cod, "inclinat", "cod necunoscut ignorat");
 });
 await test("v100.172 Dashboard și „Ce spune piața acum” trimit regimul ținut (piataCol.macro) în card / rând", () => {
-  const ae = citeste("public", "lib", "acasa-ecran.js"), app = citeste("public", "app.js");
+  const ae = citeste("public", "lib", "acasa-ecran.js"), app = cuTablou(citeste("public", "app.js"));
   assert.match(ae, /Macro\.htmlCard\(Macro\.scor\(\{[^}]*\}, Date\.now\(\)\), d\.piataCol && d\.piataCol\.macro \? Object\.assign\(\{ la: d\.piataCol\.la \}, d\.piataCol\.macro\) : null, d\.piataLa \|\| d\.btc1dLa \|\| null, calReg\)/);   /* v100.224: ora citirii; v100.229: rândul de calibrare */
   assert.match(app, /getJSON\("\/api\/istoric-bot\?action=piata"\)/); assert.ok(app.includes("Date.now()),macroStare.tinut)"), "macroCitire fără regimul ținut");
 });
@@ -163,7 +164,7 @@ await test("evenimente: doar SUA, impact mare, în următoarele 35 de minute; me
 });
 
 // ── legăturile din pagină ──
-const idx = citeste("public", "index.html"), sw = citeste("public", "sw.js"), app = citeste("public", "app.js"), ae = citeste("public", "lib", "acasa-ecran.js"), css = citeste("public", "app.css");
+const idx = citeste("public", "index.html"), sw = citeste("public", "sw.js"), app = cuTablou(citeste("public", "app.js")), ae = citeste("public", "lib", "acasa-ecran.js"), css = citeste("public", "app.css");
 await test("index.html: cardul #acRegim imediat după „Dobânzi, dolar, aur”; scriptul lib/macro.js; sw.js îl are în APP_SHELL", () => {
   /* v100.330 (el, 12.11: „fa tot acum” - golurile): coloanele bursei echilibrate; pe telefon aceeași ordine (proba v100330-design) */ assert.match(idx, /<div class="acCol"><div class="acBloc" id="acMacro"><\/div><div class="acBloc" id="acRegim"><\/div><\/div>/);   /* v100.193: același rând, coloana a doua (demo aprobat) */
   assert.match(idx, /<script src="\/lib\/macro\.js"><\/script>/); assert.match(sw, /"\/lib\/macro\.js"/);

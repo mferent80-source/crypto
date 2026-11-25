@@ -4,6 +4,7 @@
 //    (quoteTotalInvestment; usdtInvestment e doar pornirea: la un bot ETH 54,43 fata de 104,43 dupa o adaugare de 50)
 //  - smart copy: campul profit = suma de acum − suma pusa, la 23 din 23
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import vm from "node:vm";
 import "./lib/text-ro-global.mjs";   // v100.74: jtNotaPionex scrie „2253 de boți” prin TextRo.cate, ca în pagină
@@ -80,7 +81,7 @@ await test("arhiva forma 3: pastreaza si campurile spot / smart copy (altfel aca
   assert.deepEqual(f(compactBot(copy(1, {}))), f(copy(1, {})));
 });
 
-const app = fs.readFileSync(new URL("../public/app.js", import.meta.url), "utf8"), t2 = fs.readFileSync(new URL("../public/lib/t212-ecran.js", import.meta.url), "utf8");
+const app = cuTablou(fs.readFileSync(new URL("../public/app.js", import.meta.url), "utf8")), t2 = fs.readFileSync(new URL("../public/lib/t212-ecran.js", import.meta.url), "utf8");
 function functia(src, nume) { let i = src.indexOf("function " + nume + "("); assert.ok(i >= 0, "lipseste " + nume); const inceput = src.slice(i - 6, i) === "async " ? i - 6 : i; let a = src.indexOf("{", i), k = 0, j = a; for (; j < src.length; j++) { if (src[j] === "{") k++; else if (src[j] === "}" && --k === 0) break; } return src.slice(inceput, j + 1); }
 
 await test("pagina: statistica Pionex (si Tot) ia si spot/copy; nota spune cati sunt INCLUSI; Declaratia ii numara", () => {

@@ -6,6 +6,7 @@
 //   4. golul rămas: „Sugestii de acțiuni · Trend 12 luni” în dreapta, sub „Ce aș cumpăra azi” (lipite, ca până acum), „Boții tăi” pe trei rânduri.
 //   node scripts/proba-v100331.mjs
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -93,7 +94,7 @@ await test("1c. bot long pe o monedă din lista de short ⇒ „contra botului�
   assert.match(LR({ fata: null })[1].text, /vine la tura de dimineață/);
 });
 await test("1c. Tabloul desenează blocul după tabelul indicatorilor și își cere datele (clasament + sugestii scurte)", () => {
-  const A = citeste("public", "app.js");
+  const A = cuTablou(citeste("public", "app.js"));
   assert.match(fnDin(A, "renderTabloIndicatori"), /el\.innerHTML=tbIndTabelHtml\(l,b\.directie\)\+tbListeRadarHtml\(b\);/);
   assert.match(fnDin(A, "tbListeRadarHtml"), /IndicatoriBot\.listeRadar\(/);
   assert.match(fnDin(A, "tbListeAsigura"), /getJSON\("\/api\/istoric-bot\?action=sugestii&scurt=1"\)/);
@@ -105,7 +106,7 @@ function lumeFisa() {
   const ls = new Map();
   const ctx = { Date, JSON, localStorage: { getItem: (k) => (ls.has(k) ? ls.get(k) : null), setItem: (k, v) => ls.set(k, String(v)), removeItem: (k) => ls.delete(k) }, ls };
   vm.createContext(ctx);
-  const A = citeste("public", "app.js");
+  const A = cuTablou(citeste("public", "app.js"));
   vm.runInContext("var tbFisa={botId:null,la:0,inLucru:false,fisa:null,eroare:null};\n" + fnDin(A, "tbFisaTine") + "\n" + fnDin(A, "tbFisaRestaureaza") + "\nthis.tine=tbFisaTine;this.rest=tbFisaRestaureaza;this.stare=function(){return tbFisa};this.pune=function(x){tbFisa=x};", ctx);
   return ctx;
 }
@@ -125,7 +126,7 @@ await test("2. peste 2 ore, alt bot sau o fișă deja în lucru pentru același 
   c.pune({ botId: "2638", la: acum, inLucru: false, fisa: { proaspata: 1 }, eroare: null }); c.rest({ id: "2638" }); assert.equal(c.stare().veche, undefined, "nu peste fișa de acum");
 });
 await test("2. fișa nouă se ține minte la calcul, se restaurează înainte de desen; verdictul și cartela spun „pe fișa de la HH:MM”", () => {
-  const A = citeste("public", "app.js");
+  const A = cuTablou(citeste("public", "app.js"));
   assert.match(fnDin(A, "tbAduFisaBot"), /if\(tbFisa\.fisa\)tbFisaTine\(tbFisa\);/);
   assert.match(A, /tbFisaRestaureaza\(b\);tbDeseneazaExtra\(b\);tbAduFisaBot\(b\);/);
   assert.match(A, /tbFisa\.veche\?'<p class="tbSub">pe fișa de la '\+/);
@@ -166,7 +167,7 @@ await test("revizia 🔵4: tura sugestiilor citește barele o singură dată pen
   assert.equal((S.match(/bare1h: d\.bare1h,/g) || []).length, 0, "toate trei folosesc bare1hO");
 });
 await test("revizia 🔵9: fără liste (pagina publicată fără KV) spune asta, nu „aștept” la nesfârșit", () => {
-  assert.match(fnDin(citeste("public", "app.js"), "tbListeRadarHtml"), /tbListe\.la>0\?"listele de azi nu sunt disponibile aici"/);
+  assert.match(fnDin(cuTablou(citeste("public", "app.js")), "tbListeRadarHtml"), /tbListe\.la>0\?"listele de azi nu sunt disponibile aici"/);
 });
 
 // ───────────── 4. golul rămas ─────────────

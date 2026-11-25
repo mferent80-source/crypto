@@ -3,6 +3,7 @@
 //    martorul = o zi în care botul nu e în NICIUN episod (cel mult una la 24 h)
 // 1) bilanțul și pe Tablou: colectorul îl trimite cu starea pazei, serverul îl ține, citirea îl arată sub „În pândă”
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -70,7 +71,7 @@ await test("serverul (ruta paza): ține bilanțul (cel mult 6 rânduri, 400 de s
   assert.equal((await get()).paza.bilant, null);
 });
 await test("Tabloul: citirea pune rândurile bilanțului după „În pândă” (ce = partea dinaintea „: ”)", () => {
-  const app = citeste("public", "app.js");
+  const app = cuTablou(citeste("public", "app.js"));
   assert.match(app, /tbPazaKv\.bilant=d&&d\.paza&&Array\.isArray\(d\.paza\.bilant\)\?d\.paza\.bilant:null;/);
   assert.match(app, /out\.bilant=\(tbPazaKv\.bilant\|\|\[\]\)\.map\(function\(l\)\{var i=String\(l\)\.indexOf\(": "\);return i>0\?\{ce:String\(l\)\.slice\(0,i\),stare:"info",text:String\(l\)\.slice\(i\+2\)\}:null\}\)\.filter\(Boolean\);/);
   assert.match(app, /if\(ex\.latimeMoneda\)out\.push\(rd\(ex\.latimeMoneda\)\);if\(ex\.bilant\)ex\.bilant\.forEach\(function\(x\)\{out\.push\(rd\(x\)\)\}\);/);

@@ -1,5 +1,6 @@
 // Probele v100.175 (13.10.2026, el: „fă reparațiile”) — minorele rămase din auditul Opus (server, colector, interfață) și din revizia lui.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import { pandaInainteaCozii } from "./lib/panda-ultima.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -164,7 +165,7 @@ await test("„Raportează în 7 zile”: zilele după ora României (la 01:30 p
   const src = citeste("public", "lib", "rezultate.js"); assert.match(src, /timeZone: "Europe\/Bucharest" \}\)\.format\(new Date\(t\)\), azi = zR\(acum\), pana = zR\(acum \+ 7 \* ZI\)/);
 });
 await test("Monte Carlo vechi: sămânța din date și mulberry32 (aceleași cifre la reîncărcare), fără Math.random în simulare", () => {
-  const a = citeste("public", "app.js"), i = a.indexOf("async function runMonteCarlo"), f = a.slice(i, a.indexOf("\n", a.indexOf("if(!result)", i)));
+  const a = cuTablou(citeste("public", "app.js")), i = a.indexOf("async function runMonteCarlo"), f = a.slice(i, a.indexOf("\n", a.indexOf("if(!result)", i)));
   assert.match(f, /seed:mcSamanta\(vals\)/); assert.match(f, /const rnd=mcMulberry\(mcSamanta\(vals\)\)/); assert.ok(!/Math\.random/.test(f));
 });
 await test("raportul de risc mai vechi de 36 de ore se spune pe față", () => {
@@ -176,7 +177,7 @@ await test("telefon: țintele de atingere de 44 px pe ecran tactil (înaintea re
   const css = citeste("public", "app.css"); assert.match(css, /@media \(pointer:coarse\)\{[^}]*\.t212BtnLinie[^}]*min-height:44px/);
   assert.equal(pandaInainteaCozii(css), "");   // v100.258: pânda după orice regulă de tabel, înaintea blocului v100.224
 });
-await test("fila „Tot”: nota spune ce curs folosește (BNR din ziua X, același pentru toți boții)", () => { assert.match(citeste("public", "app.js"), /"cursul BNR din "\+t212\.bnr\.zi\.slice\(8\)/); });
+await test("fila „Tot”: nota spune ce curs folosește (BNR din ziua X, același pentru toți boții)", () => { assert.match(cuTablou(citeste("public", "app.js")), /"cursul BNR din "\+t212\.bnr\.zi\.slice\(8\)/); });
 
 console.log(`\n${teste - picate}/${teste} ${picate ? "PICĂ" : "trec"}`);
 process.exit(picate ? 1 : 0);

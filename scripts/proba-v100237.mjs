@@ -1,6 +1,7 @@
 // Proba v100.237 (21.10, el: „e ok continua”): ordinea fișei după calcul.
 // Nimic nu cade. Calculul, pragurile și textele rămân.
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -11,7 +12,7 @@ let teste = 0, picate = 0;
 async function test(nume, f) { teste++; await Promise.resolve().then(f).then(() => console.log(`  ok   ${nume}`)).catch((e) => { picate++; console.log(`  PICA ${nume}\n       ${String(e && e.stack || e).slice(0, 900)}`); }); }
 console.log("\nV100.237 · ORDINE · proba\n");
 
-const app = citeste("public", "app.js");
+const app = cuTablou(citeste("public", "app.js"));
 const idx = citeste("public", "index.html");
 const css = citeste("public", "app.css");
 const r = app.slice(app.indexOf("function renderGrid("), app.indexOf("function tbPanouVizibil("));

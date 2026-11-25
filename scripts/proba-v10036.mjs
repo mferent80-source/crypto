@@ -4,10 +4,11 @@
 // 0,3822–0,4307, 5 grile) nu e gridul botului - si nu spunea TIPUL, iar GRID-FISA v2.0 il lua atunci din setarea indicatorului
 // (daca acolo e „Aritmetic”, liniile ies altfel decat le socoteste fisa, care e GEOMETRICA). Acum codul fisei spune „geometric”.
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import vm from "node:vm";
 
-const app = fs.readFileSync(new URL("../public/app.js", import.meta.url), "utf8");
+const app = cuTablou(fs.readFileSync(new URL("../public/app.js", import.meta.url), "utf8"));
 // 06.10 (v100.117): v2.0 a fost șters de pe disc (au venit v2.1…v2.4) ⇒ se citește CEA MAI NOUĂ Grid_Fisa_v2_N.pine, nu un nume fix
 const DIR_GF = "C:/Users/Cimin/pine-scripts/GRID-FISA", ultimGF = fs.existsSync(DIR_GF) ? fs.readdirSync(DIR_GF).map((f) => /^Grid_Fisa_v2_(\d+)\.pine$/.exec(f)).filter(Boolean).sort((a, b) => Number(b[1]) - Number(a[1]))[0] : null;
 const pine = ultimGF ? fs.readFileSync(DIR_GF + "/" + ultimGF[0], "utf8") : null;

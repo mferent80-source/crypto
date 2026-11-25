@@ -2,6 +2,7 @@
 // (1) 🔵10 tura de noapte numără doar scrierile reușite; (2) 🔵11 dimineața nu se scrie bara în curs; (3) 🔵12/ideea 3 hash-ul codului fără texte;
 // (4) ideea 2 pragul „dovedită” pe bloc; (5) ideea 4 costul porții în plaja perechilor lui; (6) 🔵7/ideea 1 rândul Busolei cu monede și așteptare; (E) versiunile.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -12,7 +13,7 @@ const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const lib = (f) => fs.readFileSync(path.join(RAD, "public", "lib", f), "utf8");
 const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8");
 const fnDin = (f, nume) => { const s = lib(f), i = s.indexOf("function " + nume + "("); assert.ok(i >= 0, "lipsește " + nume + " în " + f); const j = s.indexOf("\nfunction ", i + 10); return s.slice(i, j < 0 ? undefined : j); };
-const fnApp = (nume) => { const s = citeste("public", "app.js"), i = s.indexOf("function " + nume + "("); assert.ok(i >= 0, "lipsește " + nume + " în app.js"); return s.slice(i, s.indexOf("\nfunction ", i + 10)); };
+const fnApp = (nume) => { const s = cuTablou(citeste("public", "app.js")), i = s.indexOf("function " + nume + "("); assert.ok(i >= 0, "lipsește " + nume + " în app.js"); return s.slice(i, s.indexOf("\nfunction ", i + 10)); };
 const fnColector = (nume) => { const s = citeste("scripts", "colector.mjs"), i = s.search(new RegExp("^(async )?function " + nume + "\\(", "m")); assert.ok(i >= 0, "lipsește " + nume + " în colector.mjs"); const k = s.indexOf("\n}\n", i); return s.slice(i, k < 0 ? undefined : k + 2); };
 globalThis.GridCalcul = globalThis.GridCalcul || new Function(`${lib("grid-calcul.js")}; return GridCalcul;`)();
 const G = globalThis.GridCalcul, AS = new Function("GridCalcul", `${lib("actiuni-semnale.js")}; return ActiuniSemnale;`)(G);
@@ -164,7 +165,7 @@ await test("(7) Retea.rezumat: un rând cu ținta care contează (marginea împo
   assert.equal(R.rezumat(mN, RT, null, { acum: ACUM, cod: "directie5", scurt: true }, { modele: aN, rt: RA }), "🧠 52% · 🌳 48% (nedovedite)", "T212, scurt");
   assert.equal(R.rezumat(mD, { ...RT, v: "r0" }, ZAR, { acum: ACUM, dir: "long" }, null), null, "altă versiune a trăsăturilor ⇒ nimic");
   [R.rezumat(mD, RT, ZAR, { acum: ACUM, dir: "long" }, { modele: aD, rt: RA }), R.rezumat(mN, RT, ZAR, { acum: ACUM, dir: "short" }, { modele: aN, rt: RA })].forEach(oPropozitie);
-  const app = citeste("public", "app.js"); assert.ok(/function tbRezumatHtml\(t\)/.test(app) && /cons\.rezumat=tbProb&&tbProb\.rezumat\|\|null/.test(app) && /<\/h3>'\+tbRezumatHtml\(c\.rezumat\)/.test(app), "Tabloul: rândul sub eticheta verdictului (tbConsHtml)"); assert.ok(/tbProb\.rezumat=.*Retea\.rezumat\(reteaM\.m,rez\.retea\|\|null,l,\{acum:Date\.now\(\),dir:b\.directie\}/.test(app), "Tabloul: Retea.rezumat pe cifrele colectorului");
+  const app = cuTablou(citeste("public", "app.js")); assert.ok(/function tbRezumatHtml\(t\)/.test(app) && /cons\.rezumat=tbProb&&tbProb\.rezumat\|\|null/.test(app) && /<\/h3>'\+tbRezumatHtml\(c\.rezumat\)/.test(app), "Tabloul: rândul sub eticheta verdictului (tbConsHtml)"); assert.ok(/tbProb\.rezumat=.*Retea\.rezumat\(reteaM\.m,rez\.retea\|\|null,l,\{acum:Date\.now\(\),dir:b\.directie\}/.test(app), "Tabloul: Retea.rezumat pe cifrele colectorului");
   assert.ok(/id="grRezumat"/.test(app) && /rz\.textContent=tz\|\|""/.test(app), "fișa: rândul sub verdict"); assert.ok(/<details class="tbPl" id="tbPl-prob" open hidden>/.test(citeste("public", "index.html")), "cartela 🎲 deschisă implicit");
   const e = citeste("public", "lib", "t212-ecran.js"); assert.ok(/function t212ModeleRand\(p\)/.test(e) && /cod: "directie5", scurt: true/.test(e), "T212: pe rândul poziției");
   /* v100.320: între rândul modelelor și sfârșitul celulei are voie DOAR linia TradingView „TV 1D” (tot în prima celulă, pentru telefon) */

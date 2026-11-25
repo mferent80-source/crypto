@@ -3,6 +3,7 @@
 // la închiderea botului, cu totalul final) vede dacă botul chiar a câștigat de atunci. Raportul: câte verdicte judecate, pe câte zile, scorul
 // Brier față de „aruncarea de ban”, și cutiile (sub 40 % / 40–60 % / peste 60 %). Sub 30 de verdicte judecate ⇒ „puține”, fără verdict.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -62,7 +63,7 @@ await test("pagina: textul calibrării (GridSim.textCalibrareMc) — puține ⇒
   assert.equal(c.GridSim.textCalibrareMc(null), "");
 });
 await test("legarea: colectorul notează / judecă / trimite raportul; serverul îl păstrează (`calibrare`); Tabloul îl pune în nota Monte Carlo", () => {
-  const col = citeste("scripts", "colector.mjs"), srv = citeste("functions", "api", "istoric-bot.js"), app = citeste("public", "app.js");
+  const col = citeste("scripts", "colector.mjs"), srv = citeste("functions", "api", "istoric-bot.js"), app = cuTablou(citeste("public", "app.js"));
   assert.match(col, /noteazaMc\(/); assert.match(col, /judecaMc\(/); assert.match(col, /judecaMcLaInchidere\(/); assert.match(col, /tineRitm\("mcCalibrare"/);
   assert.match(col, /action=mcVerdict", \{ la: Date\.now\(\), boti: st\.boti, calibrare: /);
   assert.match(srv, /calibrare:/); assert.match(app, /GridSim\.textCalibrareMc\(/);

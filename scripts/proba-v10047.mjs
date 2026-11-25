@@ -2,6 +2,7 @@
 // Starea rafinata (regim + directie, 6 stari, cadere in trepte), indicatorii cu dovada (I-471, Bonferroni), situatiile asemanatoare
 // pe botii lui (I-469), probabilitatile pe gridul propus din fisa Grid.
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -80,7 +81,7 @@ await test("putine bare de 4 h -> null; neutru -> dovezi pe ambele margini", () 
   assert.ok(d && d.randuri.some((x) => x.ev === "jos") && d.randuri.some((x) => x.ev === "sus"), JSON.stringify(d && d.randuri.map((x) => x.ev)));
 });
 await test("pagina + colector: blocul indicatorilor in sectiune (cu semn la vedere, fara semn pliat), scriptul incarcat, colectorul il socoteste", () => {
-  const app = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8"), html = fs.readFileSync(path.join(RAD, "public", "index.html"), "utf8"), sw = fs.readFileSync(path.join(RAD, "public", "sw.js"), "utf8");
+  const app = cuTablou(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8")), html = fs.readFileSync(path.join(RAD, "public", "index.html"), "utf8"), sw = fs.readFileSync(path.join(RAD, "public", "sw.js"), "utf8");
   const tp = fs.readFileSync(path.join(RAD, "scripts", "lib", "tura-probabilitati.mjs"), "utf8"), col = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8");
   assert.match(app, /rez\.indicatori/); assert.match(app, /tbProbFara/); assert.match(html, /<script src="\/lib\/dovada\.js"><\/script>/); assert.match(sw, /"\/lib\/dovada\.js"/);
   assert.match(tp, /Dovada\.peBot\(/); assert.match(col, /dovada\.js/);
@@ -111,7 +112,7 @@ await test("server + pagina: cazurile in KV (pana la 384 KB), Tabloul si poarta 
   const cz = Array.from({ length: 2300 }, (_, i) => ({ id: "c" + i, moneda: "XYZ", dir: "long", lev: 3, lat: 0.1234, pas: 0.0041, ora: 10, stare: "liniste-lateral", pct: -0.0123, ore: 12.5 }));
   const r = await mod.onRequestPost({ request: cer("POST", "action=cazuri", { la: 1, cazuri: cz }), env }); assert.equal(r.status, 200, await r.clone().text());
   assert.equal((await (await mod.onRequestGet({ request: cer("GET", "action=cazuri"), env })).json()).cazuri.cazuri.length, 2300);
-  const app = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8"); assert.match(app, /Asemanatoare\.vecini\(/); assert.match(app, /asemanatoare:/);
+  const app = cuTablou(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8")); assert.match(app, /Asemanatoare\.vecini\(/); assert.match(app, /asemanatoare:/);
   const ob = fs.readFileSync(path.join(RAD, "public", "lib", "obiceiuri.js"), "utf8"); assert.match(ob, /o\.asemanatoare/);
 });
 
@@ -134,7 +135,7 @@ await test("server: ore:<SIMBOL> pana la 512 KB; pagina: fisa cere ore si arata 
   assert.equal(r.status, 200, await r.clone().text()); assert.ok(kv.has("ore:CRV_USDT_PERP"));
   const g = await (await mod.onRequestGet({ request: new Request("http://127.0.0.1:8788/api/istoric-bot?action=ore&simbol=CRV_USDT_PERP", { headers: { authorization: "Bearer t" } }), env })).json();
   assert.equal(g.ore.b.length, 4440);
-  const app = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8"); assert.match(app, /action=ore&simbol=/); assert.match(app, /id="grProb"/); assert.match(app, /Probabilitati\.imbina\(/);
+  const app = cuTablou(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8")); assert.match(app, /action=ore&simbol=/); assert.match(app, /id="grProb"/); assert.match(app, /Probabilitati\.imbina\(/);
   assert.match(fs.readFileSync(path.join(RAD, "scripts", "lib", "tura-profil.mjs"), "utf8"), /d\.trimiteOre/); assert.match(fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8"), /action=ore/);
 });
 
@@ -155,7 +156,7 @@ await test("I4: „piață la fel” doar cu acoperire - spune la cati din N vec
   assert.equal(v.laFel, 9); assert.match(v.text, /piață la fel la 9 din 30/); assert.ok(!/, piață la fel\)/.test(v.text));
 });
 await test("I3/I5/I6/I7: cheia fisei cuprinde lichidarea si stopurile; cazurile cu amanare si limita; poarta ia starea din blocul 🎲; titlul cursei cu preturile fisei", () => {
-  const app = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8"), col = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8"), srv = fs.readFileSync(path.join(RAD, "functions", "api", "istoric-bot.js"), "utf8");
+  const app = cuTablou(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8")), col = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8"), srv = fs.readFileSync(path.join(RAD, "functions", "api", "istoric-bot.js"), "utf8");
   assert.match(app, /ch=\[f\.simbol,grStare\.la,dir,st\.jos,st\.sus,JSON\.stringify\(st\.lichidare\|\|null\),JSON\.stringify\(st\.stop\|\|null\)\]/);
   assert.match(col, /cazuriEsec/); assert.match(col, /profilStare\.lista/); assert.match(srv, /citesteCorp\(request,plafonIstoricBot\(action\)\)/); assert.match(fs.readFileSync(new URL("../functions/_shared/plafon-corp.js", import.meta.url), "utf8"), /cazuri: 1048576/);   /* v100.276: limita în tabelul comun */
   assert.match(app, /grProb\.rez&&grProb\.simbol===f\.simbol\?grProb\.rez\.stare:Probabilitati\.stareDinRegim\(f\.regim\)/);

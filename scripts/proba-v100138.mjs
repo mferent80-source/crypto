@@ -3,6 +3,7 @@
 // (a) GraficBot.citire cu doarPiata: fără banii botului; (b) rândurile noi: Indicatorii pe interval, Estimarea pe 16 ore, Busola pe 4h;
 // (c) LIVE: recitire la fiecare tic de preț (cel mult o dată pe secundă) + ceas și preț în antet; (d) fără „Stop de probă”.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -13,7 +14,7 @@ const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8").replace(/\r\n/g, "\n");
 const functie = (src, n) => { const i = src.search(new RegExp("(async )?function " + n + "\\(")); if (i < 0) throw new Error(n + "() lipsește"); let a = 0, j = src.indexOf("{", i); for (; j < src.length; j++) { if (src[j] === "{") a++; else if (src[j] === "}" && --a === 0) break; } return src.slice(i, j + 1); };
 for (const f of ["grid-calcul.js", "tablou-extra.js", "grafic-bot.js", "indicatori-bot.js"]) vm.runInThisContext(citeste("public", "lib", f), { filename: f });
-const GB = globalThis.GraficBot, IB = globalThis.IndicatoriBot, HTML = citeste("public", "index.html"), APP = citeste("public", "app.js"), CSS = citeste("public", "app.css");
+const GB = globalThis.GraficBot, IB = globalThis.IndicatoriBot, HTML = citeste("public", "index.html"), APP = cuTablou(citeste("public", "app.js")), CSS = citeste("public", "app.css");
 const rows = (n, pas, t0) => Array.from({ length: n }, (_, i) => { const t = (t0 || Date.UTC(2026, 9, 1)) + i * pas, p = 0.4 + 0.004 * Math.sin(i / 9) + 0.0003 * i; return [t, p, p * 1.003, p * 0.997, p * (1 + 0.0006 * ((i % 3) - 1)), 1000 + (i % 5) * 100]; });
 let teste = 0, picate = 0;
 async function test(nume, f) { teste++; await Promise.resolve().then(f).then(() => console.log(`  ok   ${nume}`)).catch((e) => { picate++; console.log(`  PICA ${nume}\n       ${String(e && e.stack || e).slice(0, 700)}`); }); }

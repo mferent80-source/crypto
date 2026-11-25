@@ -6,6 +6,7 @@
 //   - Directia pietei sub „Ce spun indicatorii"
 // Rulare: node scripts/proba-v100.mjs
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 
@@ -131,7 +132,7 @@ await test("pagina: verdict scurt + #tbMotive + #tbConcret dupa randul de sus; D
   assert.match(citeste("../public/sw.js"), /"\/lib\/grafic-bot\.js"/, "in precache");
 });
 await test("app.js: graficul deseneaza cu GraficBot si DOAR alertele botului (TabloExtra.alerteleBotului), nu tot contul; verdictul nu mai contine „Acum, concret”", () => {
-  const a = citeste("../public/app.js"), i = a.indexOf("function renderTabloGrafic("), corp = a.slice(i, a.indexOf("\nfunction ", i + 10));
+  const a = cuTablou(citeste("../public/app.js")), i = a.indexOf("function renderTabloGrafic("), corp = a.slice(i, a.indexOf("\nfunction ", i + 10));
   assert.ok(i > 0); assert.match(corp, /GraficBot\.desen\(/);
   // v100.99 (I-532): filtrul pe bot e în intrarea PURĂ (GraficBot.intrareBot, cu TabloExtra.alerteleBotului) - se verifică ce întoarce
   assert.match(corp, /GraficBot\.intrareBot\(\{bot:b,/);
@@ -184,7 +185,7 @@ await test("revizie: botul NEUTRU (zero-ul nu se socoteste niciodata) -> „repe
   assert.doesNotMatch(afara.act, /[Gg]ridul lucrează/); assert.match(afara.act, /afara gridului|afara intervalului|în afara gridului/);
 });
 await test("revizie: aplicatia - #tbConcret ascuns chiar ascunde (CSS); fara bot se golesc cartelele, motivele si socoteala; graficul nu deseneaza lumanarile altei monede/perioade; „ia profit” nu se dubleaza; ultimele alerte si ca text; test:v100 e in npm test", () => {
-  const css = citeste("../public/app.css"), a = citeste("../public/app.js"), pkg = JSON.parse(citeste("../package.json"));
+  const css = citeste("../public/app.css"), a = cuTablou(citeste("../public/app.js")), pkg = JSON.parse(citeste("../package.json"));
   assert.match(css, /#tabloubot \.tbConcret\[hidden\]\{display:none\}/);
   assert.doesNotMatch(css, /#tabloubot \.tbConcret p\{/, "regula veche din v99 bate actiunea din cartele");
   const i = a.indexOf("function tbDeseneazaBanii("), ban = a.slice(i, a.indexOf("\n", a.indexOf("if(!b)", i)));
@@ -262,7 +263,7 @@ await test("v100.4: colectorul pune profitul pe grila in poza (TabloExtra.profit
   assert.match(citeste("./colector.mjs"), /grila: TabloExtra\.profitPeGrila\(b\)/);
 });
 await test("v100.4: Tabloul - profitul DOAR din grid la vedere: sub „Rezultat total” (tbKpiGrid) si in Banii botului ca rand colorat, plus „Pe grilă, după comision”", () => {
-  const html = citeste("../public/index.html"), app = citeste("../public/app.js");
+  const html = citeste("../public/index.html"), app = cuTablou(citeste("../public/app.js"));
   assert.match(html, /id="tbKpiTotal"[^>]*>[^<]*<\/b><span id="tbKpiGrid" class="tbKpiGrid">/, "randul din grid imediat sub rezultatul total");
   assert.match(app, /pune\("tbKpiGrid",/);
   assert.match(app, /rand\("Profit doar din grid",botiBan\(b\.gridProfitBrut\),botiClasa\(b\.gridProfitBrut\)/, "rand normal, colorat - nu gri");
@@ -308,7 +309,7 @@ await test("v100.5: TabloExtra.oraSfat - „HH:MM · acum N min”, ieri cu „i
   assert.equal(TE.oraSfat(null, ACUM), null);
 });
 await test("v100.5: Tabloul scrie ora pe fiecare rand din „Ce ai de făcut acum” (dateLa = ultima citire a botului; consilierul ia aceeasi ora)", () => {
-  const app = citeste("../public/app.js");
+  const app = cuTablou(citeste("../public/app.js"));
   assert.match(app, /tbStare\.botLa=Date\.now\(\)/, "ora citirii botului tinuta la citirea reusita");
   assert.match(app, /ceAiDeFacut\(\{acum:Date\.now\(\),dateLa:tbStare\.botLa/);
   assert.match(app, /TabloExtra\.oraSfat\(x\.la,Date\.now\(\)\)/);

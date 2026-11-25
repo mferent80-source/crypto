@@ -7,6 +7,7 @@
 // Arătat ca INFORMAȚIE: nu intră în verdictul botului și nici în semaforul pozițiilor (nedovedit pe boții / trade-urile lui).
 // Fără rețea: ruta se importă cu fetch simulat; biblioteca paginii rulează în vm.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
@@ -140,7 +141,7 @@ await test("biblioteca: tabelul (6 intervale × rezumat / medii / oscilatoare), 
 });
 
 // ---- Tabloul botului
-const APP = citeste("public", "app.js"), HTML = citeste("public", "index.html"), SW = citeste("public", "sw.js"), T212 = citeste("public", "lib", "t212-ecran.js"), CSS = citeste("public", "app.css");
+const APP = cuTablou(citeste("public", "app.js")), HTML = citeste("public", "index.html"), SW = citeste("public", "sw.js"), T212 = citeste("public", "lib", "t212-ecran.js"), CSS = citeste("public", "app.css");
 await test("Tabloul: cererea vine cu lumânările direcției (același ritm, simbolul Pionex al botului), nota se ține pe moneda botului și se desenează în cardul „Trendul pe TF-uri”", () => {
   const f = APP.slice(APP.indexOf("async function tbAduDirectie(){"), APP.indexOf("function tbCalculeazaIndicatorii(d){"));
   // v100.339 (auditul din 13.11): cererea pleacă din tbAduDirectie FĂRĂ await, prin tbAduTv (nu ține în loc direcția), iar nota poartă cheia monedei ei

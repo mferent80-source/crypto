@@ -2,6 +2,7 @@
 // 1) fișa botului (Tablou, „Ce spune piața acum”): rândul „În pândă, PLUME” — moneda botului în tabelul celor 150
 // 2) pânda din Sugestii (și pliată): o propoziție când un bot al lui e CONTRA direcției monedei lui
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
@@ -66,7 +67,7 @@ await test("pânda (pliată și desfăcută): propoziția despre boții contra, 
   }
 });
 await test("Tabloul: rândul vine în citire după lățimea pieței, cu moneda botului (baza)", () => {
-  const app = citeste("public", "app.js");
+  const app = cuTablou(citeste("public", "app.js"));
   assert.match(app, /out\.latimeMoneda=typeof Latime!=="undefined"&&typeof tbLatimeKv!=="undefined"&&Latime\.textMoneda\?Latime\.textMoneda\(tbLatimeKv\.d,b\.baza,b\.directie,Date\.now\(\)\):null;/);
   assert.match(app, /if\(ex\.latime\)out\.push\(rd\(ex\.latime\)\);if\(ex\.latimeMoneda\)out\.push\(rd\(ex\.latimeMoneda\)\);/);
 });

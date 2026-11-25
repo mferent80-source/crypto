@@ -3,6 +3,7 @@
 // |t_J| ≥ 2,5, urmarea „au pierdut”); (3) I-889 - regula de formă a acțiunilor tokenizate și pe pagină + în colector la pornire.
 //   node scripts/proba-v100355.mjs
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -106,7 +107,7 @@ await test("R4 (revizia 🔵) t pe pagină cu O zecimală și „−”; „n-am
   assert.equal(TMC.textVerdictBilant({ stare: "n-am-aflat", n: 60, privire: 2, t: 1.2, final: true }), " · verdict (la 60 de zile): n-am aflat - |t| sub 2,6 (rămâne așa)");
 });
 await test("R5 (revizia 🟡) lista PERP venită goală (Pionex a refuzat) nu se ține minte: următoarea cerere reîncearcă", async () => {
-  const A = citeste("public", "app.js"), s = A.slice(A.indexOf("var grSimbPerpP=null;"), A.indexOf("var nuCryptoNoi=[];")); let cereri = 0;
+  const A = cuTablou(citeste("public", "app.js")), s = A.slice(A.indexOf("var grSimbPerpP=null;"), A.indexOf("var nuCryptoNoi=[];")); let cereri = 0;
   const ctx = { getJSON: async () => { cereri++; return { data: { symbols: [] } }; } }; vm.createContext(ctx); vm.runInContext(s + "; this.g = grSimbPerp;", ctx);
   await ctx.g(); await ctx.g(); assert.equal(cereri, 2);
 });
@@ -117,7 +118,7 @@ await test("R6 (revizia 🔵) „Ce fac”: cifra pe 7 zile spusă „măsurată
 
 // ── (3) I-889 ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 await test("🔑 I1 pagina: lista simbolurilor PERP o dată ⇒ formele de acțiune noi scoase (eCrypto) și Acasă redesenată; o monedă cu X și preț la 4 zecimale rămâne", async () => {
-  const A = citeste("public", "app.js"), s = A.slice(A.indexOf("var grSimbPerpP=null;"), A.indexOf('if(typeof window!=="undefined")window.addEventListener("DOMContentLoaded",function(){setTimeout(nuCryptoInvataPagina,1500)});'));
+  const A = cuTablou(citeste("public", "app.js")), s = A.slice(A.indexOf("var grSimbPerpP=null;"), A.indexOf('if(typeof window!=="undefined")window.addEventListener("DOMContentLoaded",function(){setTimeout(nuCryptoInvataPagina,1500)});'));
   let cereri = 0, desenat = 0; const ctx = { GridCalcul: GC, acasa: { d: { tickers: [] } }, acasaDeseneaza: () => { desenat++; }, getJSON: async () => { cereri++; return { data: { symbols: [{ symbol: "NOUAX_USDT_PERP", quotePrecision: 2 }, { symbol: "MONEDAX_USDT_PERP", quotePrecision: 4 }, { symbol: "BTC_USDT_PERP", quotePrecision: 1 }] } }; } };
   vm.createContext(ctx); vm.runInContext(s + "; this.f = nuCryptoInvataPagina; this.g = grSimbPerp; this.noi = () => nuCryptoNoi;", ctx);
   assert.equal(GC.eCrypto("NOUAX_USDT_PERP"), true, "înainte");
@@ -171,7 +172,7 @@ await test("🔑 A5 pe pagină: „Ce fac” spune înclinarea spre închidere �
   const t = c.f({ st: { suma: 50 } }, { oriz: [1, 7] }); assert.ok(/^Partea nevăzută: pe lumânări de 15 minute .*„îl țin” și setările care lasă botul pornit sunt socotite deci prea jos față de „îl închid acum” \(care nu trece prin lumânări\) - pe 7 zile, la suma ta, de ordinul a 0,4 USDT \(cifra pe 7 zile e măsurată pe doar 4 săptămâni, fără verdict\): tabelul înclină puțin spre închidere\./.test(t), t);
   assert.match(E, /gsHotNevazut\(s, h\),/); assert.match(E, /if \(typeof GridProba !== "undefined" && GridProba\.nevazutText\) surse\.push\(GridProba\.nevazutText\("15m"\) \+ "\."\);/);
   assert.match(lib("monte-simbol-ecran.js"), /GridProba\.nevazutText\("15m"\)\.replace\(\/\^\.\/, function \(c\) \{ return c\.toUpperCase\(\); \}\)/);
-  assert.match(citeste("public", "app.js"), /escapeHtml\(GridProba\.nevazutText\(f\.proba&&f\.proba\.barePeZi===24\?"1h":"15m"\)\)\+'\. Deci un minus pe istoric nu e o dovadă, iar „media pe test peste zero” e o ștachetă mai înaltă decât pare\./);
+  assert.match(cuTablou(citeste("public", "app.js")), /escapeHtml\(GridProba\.nevazutText\(f\.proba&&f\.proba\.barePeZi===24\?"1h":"15m"\)\)\+'\. Deci un minus pe istoric nu e o dovadă, iar „media pe test peste zero” e o ștachetă mai înaltă decât pare\./);
 });
 await test("V versiunile de la v100.355 încolo (index, sw, versiune.js, package + lanț, BUILD_INFO) + colector ≥ v101.193; VERS_HOT ≥ 3, același în motor și în bilanț", () => {
   const nr = (t) => Number((String(t).match(/100[.-](\d{3})/) || [])[1]);   // v100.356: versiunea curentă o verifică proba ei

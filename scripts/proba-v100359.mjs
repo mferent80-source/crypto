@@ -7,6 +7,7 @@
 //   (4) −15% al stopului care urcă = plasă de siguranță, nu „măsurat pe trade-urile tale”.
 //   node scripts/proba-v100359.mjs
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -16,7 +17,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8").replace(/\r\n/g, "\n");
 const lib = (f) => citeste("public", "lib", f);
-const A = citeste("public", "app.js"), H = citeste("public", "index.html"), TE = lib("t212-ecran.js"), COL = citeste("scripts", "colector.mjs");
+const A = cuTablou(citeste("public", "app.js")), H = citeste("public", "index.html"), TE = lib("t212-ecran.js"), COL = citeste("scripts", "colector.mjs");
 const fn = (src, nume) => { const i = src.indexOf("function " + nume + "("); assert.ok(i >= 0, "lipsește " + nume); const inc = src.slice(i - 6, i) === "async " ? i - 6 : i; let a = src.indexOf("{", i), k = 0, j = a; for (; j < src.length; j++) { if (src[j] === "{") k++; else if (src[j] === "}" && --k === 0) break; } return src.slice(inc, j + 1); };
 let teste = 0, picate = 0;
 async function test(nume, f) { teste++; await Promise.resolve().then(f).then(() => console.log(`  ok   ${nume}`)).catch((e) => { picate++; console.log(`  PICA ${nume}\n       ${String(e && e.stack || e).split("\n").slice(0, 4).join(" | ")}`); }); }

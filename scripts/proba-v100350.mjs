@@ -8,6 +8,7 @@
 //   B. pagina „Simulator grid” (după audit) - testele ei vin în același fișier, pe valuri.
 //   node scripts/proba-v100350.mjs
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -30,19 +31,19 @@ await test("🔑 A2 calibrarea vede și boții pe ÎNGUST / LARG: mediana probei
   const f = { simbol: "X_USDT_PERP", dir: "long", H: 2, pret: 1, verdict: { nivel: "asteapta" }, setare: { suma: 100 } };
   const fe = { eticheta: "ingust", setare: { dir: "long", jos: 0.9, sus: 1.1, grile: 20, levier: 3, suma: 100 }, stat: { antren: { mediana: 0.012, ceaMaiProasta: -0.05 }, test: { mediana: 0.004 } } };
   const e = GJ.adauga([], f, 1000, fe).pop(); assert.equal(e.mediana, 0.012); assert.equal(e.medianaNevazut, 0.004); assert.equal(e.fereastra, "ingust");
-  const a = citeste("public", "app.js"), g = a.slice(a.indexOf("function grFereastraAleasa("), a.indexOf("function grRecomandatAcum("));
+  const a = cuTablou(citeste("public", "app.js")), g = a.slice(a.indexOf("function grFereastraAleasa("), a.indexOf("function grRecomandatAcum("));
   assert.match(g, /stat:/);
 });
 // A3 (laboratorul pe lista paginii) a fost scos după revizia independentă: lista e aleasă pe rezultat ⇒ vezi R5
 await test("🔑 A4 pe telefon tabelele late devin rânduri-cartelă (numele coloanei pe fiecare celulă)", () => {
-  const a = citeste("public", "app.js"); assert.match(a, /function grTabelCartele\(/); assert.ok((a.match(/grTabelCartele\(/g) || []).length >= 3, "jurnalul + planul + definiția");
+  const a = cuTablou(citeste("public", "app.js")); assert.match(a, /function grTabelCartele\(/); assert.ok((a.match(/grTabelCartele\(/g) || []).length >= 3, "jurnalul + planul + definiția");
   assert.match(citeste("public", "app.css"), /@media \(max-width:600px\)\{#gridset \.grTabelCard thead\{display:none\}/);
 });
 await test("A5 nota planului spune de când e planul botului", () => {
   const TE = new Function(`${lib("tablou-extra.js")}; return TabloExtra;`)();
   const p = TE.propunePlan({ plus: 1.4, minus: 2.8, investit: 78.6, nume: "HYPE", la: Date.UTC(2026, 10, 10, 12) }, 100, null);
   assert.match(p.nota, /botul tău HYPE \(planul din 10\.11\)/);
-  assert.match(citeste("public", "app.js"), /ult=\{plus:u\.plan\.plus,minus:u\.plan\.minus,afaraOre:u\.plan\.afaraOre,la:u\.plan\.la\}/);
+  assert.match(cuTablou(citeste("public", "app.js")), /ult=\{plus:u\.plan\.plus,minus:u\.plan\.minus,afaraOre:u\.plan\.afaraOre,la:u\.plan\.la\}/);
 });
 
 // ---------------- B1: motorul și verdictul Simulatorului (alegerile LUI, 16.11) ----------------
@@ -144,7 +145,7 @@ await test("🔑 B10 Pe durate: verdictul pe fiecare orizont, Câștigă colorat
 });
 await test("🔑 B11 temă zi / noapte ca paginile refăcute: #gridsim în RADACINI, tema devreme, tbTemaAplica + butonul din antet; listele temei scrise de mână au și #gridsim", () => {
   assert.match(citeste("scripts", "face-tema-tablou.mjs"), /"gridset", "gridsim", "montecarlo", "jurnaltrade", "comportament", "tradezilei", "carnet", "scan", "salt", "alerts", "contintreg"\]/); assert.match(citeste("public", "lib", "tema-devreme.js"), /"gridset", "gridsim", "montecarlo", "jurnaltrade", "comportament", "tradezilei", "carnet", "scan", "salt", "alerts", "contintreg"\]/);
-  const a = citeste("public", "app.js"); assert.match(a, /"probe","gridset","gridsim","montecarlo","jurnaltrade","comportament","tradezilei","carnet","scan","salt","alerts","contintreg"\]\.forEach/); assert.match(a, /"grTemaBtn","gsTemaBtn","mcTemaBtn","jtTemaBtn","coTemaBtn","tzTemaBtn","cnTemaBtn","scTemaBtn","slTemaBtn","alTemaBtn","ciTemaBtn"\]/);
+  const a = cuTablou(citeste("public", "app.js")); assert.match(a, /"probe","gridset","gridsim","montecarlo","jurnaltrade","comportament","tradezilei","carnet","scan","salt","alerts","contintreg"\]\.forEach/); assert.match(a, /"grTemaBtn","gsTemaBtn","mcTemaBtn","jtTemaBtn","coTemaBtn","tzTemaBtn","cnTemaBtn","scTemaBtn","slTemaBtn","alTemaBtn","ciTemaBtn"\]/);
   assert.match(citeste("public", "index.html"), /id="gridsim"><div class="sectionHead"><h3>🎰 Simulator grid<\/h3>[\s\S]{0,200}id="gsTemaBtn"/);
   const css = citeste("public", "app.css"); assert.equal((css.match(/:is\([^)]*#gridset[^)]*\)/g) || []).filter((x) => !x.includes("#gridsim")).length, 0); assert.match(css, /:is\(#gridsim,#montecarlo,#jurnaltrade,#comportament,#tradezilei,#carnet,#scan,#salt,#alerts,#contintreg\)\.tbZi input/); assert.doesNotMatch(css, /\.pzDemo #gsPagina:has/);
 });
@@ -196,12 +197,12 @@ await test("🔑 R4 planul deja atins schimbă eticheta: pe minus IEȘI (roșu),
 });
 await test("🔑 R5 laboratorul rămâne pe top 20 după volum: lista paginii e aleasă după cum a mers gridul în aceleași zile (dovada ar fi umflată)", () => {
   const t = citeste("scripts", "lib", "tura-laborator.mjs"); assert.doesNotMatch(t, /d\.propuse/); assert.match(t, /topDupaVolum\(/);
-  assert.doesNotMatch(citeste("scripts", "colector.mjs"), /turaLaboratorModul\(\{ propuse/); assert.match(citeste("public", "app.js"), /top 20 după volum/);
+  assert.doesNotMatch(citeste("scripts", "colector.mjs"), /turaLaboratorModul\(\{ propuse/); assert.match(cuTablou(citeste("public", "app.js")), /top 20 după volum/);
 });
 await test("R6 mărunte: „sub 1%” și în fraza mare; numerele cu TextRo.cate în jurnal; planul păstrat exact cât textul nu s-a schimbat", () => {
   const v = GS.verdict({ orizonturi: [oriz({ pStop: 0.45, pTp: 0.5, pLich: 0.003, terminari: [{ fel: "stop", p: 0.45, p25: -9, p50: -9, p75: -9 }, { fel: "lich", p: 0.003, p25: -80, p50: -80, p75: -80 }, { fel: "tp", p: 0.5, p25: 8, p50: 9, p75: 10 }, { fel: "ruleaza", p: 0.047, p25: 1, p50: 2, p75: 3 }] })], acum: null }, { dir: "short" }, null, 0, null);
   assert.match(v.cum, /sub 1% lichidare/); assert.doesNotMatch(v.cum, /(^|· )0% /);
-  const a = citeste("public", "app.js"); assert.match(a, /TextRo\.cate\(x\.legate,"bot închis","boți închiși"\)/); assert.match(a, /TextRo\.cate\(x\.deschise,"bot care încă rulează","boți care încă rulează"\)/);
+  const a = cuTablou(citeste("public", "app.js")); assert.match(a, /TextRo\.cate\(x\.legate,"bot închis","boți închiși"\)/); assert.match(a, /TextRo\.cate\(x\.deschise,"bot care încă rulează","boți care încă rulează"\)/);
   assert.match(citeste("public", "lib", "grid-sim-ecran.js"), /pm = cp\("gsPlanMinus", gsStare\.plan && gsStare\.plan\.minus, f2\)/);
 });
 
@@ -250,7 +251,7 @@ await test("🔑 M7 riscul tău: „1 din 100” spune din câte luni reale; not
   assert.match(RL, /var v1 = function \(x\) \{ var p = Math\.abs\(Math\.round\(x \* 10\) \/ 10\)\.toFixed\(1\)/);
 });
 await test("M8 laboratorul vechi: în română, doar tranzacțiile închise cu risc cunoscut (aceeași unitate, R)", () => {
-  const a = citeste("public", "app.js"), f = functie(a, "runMonteCarlo"), h = citeste("public", "index.html");
+  const a = cuTablou(citeste("public", "app.js")), f = functie(a, "runMonteCarlo"), h = citeste("public", "index.html");
   assert.match(f, /paperTerminalStatus\(x\)\|\|x\.status==="CLOSED"/); assert.match(f, /\+x\.riskUsd>0/); assert.doesNotMatch(f, /\/100\)/); assert.doesNotMatch(f, /Need at least/);
   assert.doesNotMatch(h, /Median ending R|5th percentile|Signal Journal|Rulează simularea<\/button>\s*<\/div>\s*<div class="mcGrid"[^>]*>\s*<div class="mcBox"><span class="label">Median/);
 });
@@ -290,7 +291,7 @@ await test("🔑 MR revizia MC: colspan în fișe; prețul acțiunii pe toate ba
   const r = Gl.mcsSetariDinCampuri({ jos: "1", sus: "1,2", linii: "11", levier: "2", dir: "long", suma: "50", stop: "0,9", tp: Gl.mcsCampPret(0.95) }, vechi, 1.1); assert.equal(r.st, vechi, "neschimbat ⇒ același bot (nu „setări de probă”)");
   const b = [{ t: 0, o: 1, h: 1.001, l: 0.999, c: 1 }, { t: 1, o: 1.1, h: 1.11, l: 0.9, c: 0.95 }];
   const g = GridProba.simuleaza(b, 0, 2, { jos: 0.95, sus: 1.05, grile: 10, levier: 1, dir: "long", stop: { jos: 0.94, sus: 1.08 }, tip: "aritmetic" }); assert.equal(g.iesit, "sus", "deschisă peste TP ⇒ TP");
-  assert.match(functie(citeste("public", "app.js"), "runMonteCarlo"), /\+x\.qtyFilled>0/); assert.match(citeste("public", "lib", "risc-ecran.js"), /rar, dar se întâmplă; din puține luni reale/);
+  assert.match(functie(cuTablou(citeste("public", "app.js")), "runMonteCarlo"), /\+x\.qtyFilled>0/); assert.match(citeste("public", "lib", "risc-ecran.js"), /rar, dar se întâmplă; din puține luni reale/);
 });
 
 console.log(`\n${teste - picate}/${teste} trec${picate ? ` · ${picate} PICĂ` : ""}\n`);

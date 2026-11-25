@@ -6,6 +6,7 @@
 // (8) livreaza: o cale `main` schimbată în radar-local.toml OPREA serverul la aducerea principalului (wrangler urmărește configul;
 //     18.10 21:19:58, 1,5 min) ⇒ dacă toml-ul e atins, worker-ul se construiește la calea nouă ÎNAINTE de aducere.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -81,7 +82,7 @@ await test("livreaza: toml atins ⇒ worker-ul se construiește la calea nouă �
 });
 
 // (1)–(6) ecranele: meniurile, subsolul, banda pliată, traducerile
-const IDX = citeste("public", "index.html"), APP = citeste("public", "app.js"), CSS = citeste("public", "app.css");
+const IDX = citeste("public", "index.html"), APP = cuTablou(citeste("public", "app.js")), CSS = citeste("public", "app.css");
 const intre = (s, a, b) => { const i = s.indexOf(a); return i < 0 ? "" : s.slice(i, s.indexOf(b, i + a.length)); };
 await test("(1)(5) meniul lateral: Piața pe monede și Monitorul din cloud stau în Laboratorul vechi, nu în Unelte", () => {
   const unelte = intre(IDX, 'id="sideUnelte"', "</div>"), vechi = intre(IDX, 'id="sideVechi"', "</details>");

@@ -3,6 +3,7 @@
 // · (3) graficul: perechile închise jos, nu inele pe lumânări · (4) așezarea (lib/asezare-paznic.js) și capcanele prinse pe demo · (5) versiunile.
 // Inventarul „nimic pierdut” (51 de pagini × 1920/390, foaia veche vs nouă în aceeași clipă) se rulează în browser, nu aici - vezi memoria.
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import { pandaInainteaCozii } from "./lib/panda-ultima.mjs";
 import fs from "node:fs";
 import path from "node:path";
@@ -11,7 +12,7 @@ import { fileURLToPath } from "node:url";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8").replace(/\r\n/g, "\n");
-const CSS = citeste("public", "app.css"), HTML = citeste("public", "index.html"), SW = citeste("public", "sw.js"), APP = citeste("public", "app.js");
+const CSS = citeste("public", "app.css"), HTML = citeste("public", "index.html"), SW = citeste("public", "sw.js"), APP = cuTablou(citeste("public", "app.js"));
 const AS = citeste("public", "lib", "asezare-paznic.js");
 const G = new Function(`${citeste("public", "lib", "grafic-bot.js")}; return GraficBot;`)();
 let teste = 0, picate = 0;

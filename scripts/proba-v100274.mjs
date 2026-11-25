@@ -6,6 +6,7 @@
 //  3. „Regulile tale” (acțiuni): grupa după ora cumpărării se judecă pe ora bursei (corect din v100.272), dar eticheta „după 18” / „16:30”
 //     e ora de la noi doar în săptămânile obișnuite; în cele cu decalaj de oră (bursa deschide la 15:30 la noi) pragul e 17 ⇒ textul spune ambele.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -14,7 +15,7 @@ import { fileURLToPath } from "node:url";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8").replace(/\r\n/g, "\n");
-const APP = citeste("public", "app.js");
+const APP = cuTablou(citeste("public", "app.js"));
 const fnApp = (nume) => {
   let i = APP.indexOf("\nfunction " + nume + "("); if (i < 0) i = APP.indexOf("\nasync function " + nume + "(");
   assert.ok(i >= 0, "lipsește " + nume + " în app.js");

@@ -5,6 +5,7 @@
 // 30 de judecate pe cel puțin 10 zile. Protocolul e scris în scripts/lib/tura-monte-carlo-bot.mjs (înainte de date).
 //   node scripts/proba-v100271-j.mjs
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
@@ -217,7 +218,7 @@ await test("14 serverul (istoric-bot?action=mcVerdict) păstrează raportul risc
 });
 
 // ---------------------------------------------------------------- pagina botului
-const APP = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8").replace(/\r\n/g, "\n");
+const APP = cuTablou(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8")).replace(/\r\n/g, "\n");
 const fnApp = (nume) => { const i = APP.indexOf("\nfunction " + nume + "("); assert.ok(i >= 0, "lipsește " + nume + " în app.js"); const j = APP.indexOf("\nfunction ", i + 10); return APP.slice(i + 1, j < 0 ? undefined : j); };
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const verif = () => { const box = { TextRo: globalThis.TextRo, escapeHtml: esc }; vm.createContext(box); vm.runInContext(fnApp("tbMcScurtVerifHtml"), box); return box.tbMcScurtVerifHtml; };

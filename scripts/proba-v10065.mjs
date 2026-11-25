@@ -2,6 +2,7 @@
 // verdele fals „Piața e cu botul” (a), „stopul la zero” pe minus (b), intervalul funding-ului si botul neutru, preturile monedelor mici,
 // minorele amanate (pachetul 2: M3, M4; pachetul 1: M3, M4, M7). Planul: docs/superpowers/plans/2026-10-02-sfaturi-pachetul-2b-restul.md
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -103,8 +104,8 @@ await test("funding la botul NEUTRU: cine plătește rata, fără „îl plăte�
   assert.equal(cod(sfaturi(CRV({ directie: "no_trend" }), { funding: -0.0008 }), "funding").titlu, "Funding-ul: −0,080% la 8 ore, îl plătesc short-urile");
 });
 await test("funding: pagina (Tabloul) și colectorul trimit istoria ratelor în Sfaturi.intrare", () => {
-  assert.match(citeste("public", "app.js"), /Sfaturi\.intrare\(\{bot:b,[^\n]*fundingHist:e\.fundingHist/);
-  assert.match(citeste("public", "app.js"), /e\.fundingHist=fu&&Array\.isArray\(fu\.fundingHist\)\?fu\.fundingHist:null/);
+  assert.match(cuTablou(citeste("public", "app.js")), /Sfaturi\.intrare\(\{bot:b,[^\n]*fundingHist:e\.fundingHist/);
+  assert.match(cuTablou(citeste("public", "app.js")), /e\.fundingHist=fu&&Array\.isArray\(fu\.fundingHist\)\?fu\.fundingHist:null/);
   assert.match(citeste("scripts", "colector.mjs"), /Sfaturi\.intrare\(\{ bot: b,[^\n]*fundingHist: fut && Array\.isArray\(fut\.fundingHist\) \? fut\.fundingHist : null/);
 });
 

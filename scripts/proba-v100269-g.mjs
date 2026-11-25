@@ -8,6 +8,7 @@
 //     drumului, pe care drumurile o scot oricum). Semințele 12…20 o mută cu cel mult ~3 puncte; Tabloul (500) și Simulatorul (2000) se potrivesc.
 // Bare SINTETICE (mulberry32); nicio cerere la Pionex.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -175,7 +176,7 @@ await test("1j contrafactualul: barele de 1 h de pe disc ajung ⇒ nicio cerere 
 });
 
 // ---------- 1k pagina și colectorul dau barele de 1 h fișei ----------
-const APP = citeste("public", "app.js"), COL = citeste("scripts", "colector.mjs");
+const APP = cuTablou(citeste("public", "app.js")), COL = citeste("scripts", "colector.mjs");
 const fnApp = (nume) => { const i = APP.indexOf("\nfunction " + nume + "(") >= 0 ? APP.indexOf("\nfunction " + nume + "(") : APP.indexOf("\nasync function " + nume + "("); assert.ok(i >= 0, "lipsește " + nume + " în app.js"); const j = APP.slice(i + 10).search(/\n(async )?function /); return APP.slice(i + 1, j < 0 ? undefined : i + 10 + j); };
 await test("1k app.js: ambele GridProba.fisa( primesc b1h la H ≥ 2 (grOreFisa); colectorul (semnale) ia barele de 1 h de pe disc", () => {
   const apeluri = APP.split("GridProba.fisa(").slice(1).map((x) => x.slice(0, 600));

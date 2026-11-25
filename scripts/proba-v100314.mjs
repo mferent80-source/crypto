@@ -7,6 +7,7 @@
 // Rămân la ban, cu intenție: suma investită, minimul Pionex pe ordin, „pe fiecare ordin” (se tastează în Pionex), exportul T212 (Excel).
 //   node scripts/proba-v100314.mjs
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -49,7 +50,7 @@ await test("pagina: alertele (lista de pe Alerte) și jurnalul trec textul SALVA
   const AE = citeste("public", "lib", "alerte-ecran.js");
   assert.match(AE, /escapeHtml\(TextRo\.cifreNoi\(x\.titlu\)\)/, "titlul alertei"); assert.match(AE, /escapeHtml\(TextRo\.cifreNoi\(x\.mesaj\)\)/, "mesajul alertei");
   // Jurnalul: motivele SALVATE de colector la „Dacă ascultai de Radar” („media e pe minus (−1,73%)”, din codul vechi)
-  assert.match(citeste("public", "app.js"), /escapeHtml\(TextRo\.cifreNoi\(cfm\[t\.id\]\.motive\.join\("; "\)\)\)/, "motivele contrafactualului");
+  assert.match(cuTablou(citeste("public", "app.js")), /escapeHtml\(TextRo\.cifreNoi\(cfm\[t\.id\]\.motive\.join\("; "\)\)\)/, "motivele contrafactualului");
 });
 
 // ───────────── 2. zecMici ─────────────
@@ -84,7 +85,7 @@ await test("alerta „pereche încheiată” (Alerte): 0,0999 USDT iese „+0,1�
   assert.equal((AL.match(/TextRo\.usdt\(v, TextRo\.zecMici\(v\)\)/g) || []).length, 2, "ambele U din alerte.js prin TextRo.zecMici");
 });
 await test("pagina: tabelul semnalelor („Pe bani, urmat” +2,95 ⇒ +3,0), profitul net pe zi, măsurile botului în % (14,08% ⇒ 14,1%; sub 1% rămân 2)", () => {
-  const APP = citeste("public", "app.js");
+  const APP = cuTablou(citeste("public", "app.js"));
   assert.doesNotMatch(APP, /U2=function\(v\)\{return \(v>=0\?"\+":"−"\)\+Math\.abs\(v\)\.toFixed\(2\)/); assert.match(APP, /U2=function\(v\)\{return TextRo\.usdt\(v,TextRo\.zecMici\(v\)\)\}/);
   assert.doesNotMatch(APP, /botiBan\(x\.valoare,2\)/); assert.match(APP, /botiBan\(x\.valoare,TextRo\.zecMici\(x\.valoare\)\)/);
   assert.match(APP, /tbFormateazaSemn\(\+r\[1\]\.valoare,Math\.abs\(\+r\[1\]\.valoare\)>=1\?1:2\)/, "măsurile: o zecimală de la 1 în sus");

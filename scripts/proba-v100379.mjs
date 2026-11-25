@@ -5,10 +5,11 @@
 // vechi (deschiderea zilei) rămân.
 // Rulare: node scripts/proba-v100379.mjs
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 
 const citeste = (f) => fs.existsSync(new URL(f, import.meta.url)) ? fs.readFileSync(new URL(f, import.meta.url), "utf8") : "";
-const PVS = citeste("../public/lib/pret-viu.js"), MS = citeste("../public/lib/miscare.js"), APP = citeste("../public/app.js"), HTML = citeste("../public/index.html"), SW = citeste("../public/sw.js");
+const PVS = citeste("../public/lib/pret-viu.js"), MS = citeste("../public/lib/miscare.js"), APP = cuTablou(citeste("../public/app.js")), HTML = citeste("../public/index.html"), SW = citeste("../public/sw.js");
 const PV = new Function(`${PVS}; return PretViu;`)(), M = new Function(`${MS}; return Miscare;`)();
 
 let teste = 0, picate = 0;

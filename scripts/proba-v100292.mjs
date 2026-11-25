@@ -11,6 +11,7 @@
 //   8.   ruta /api/istoric-bot?action=sugestii primește lista „porn” și urmarire.porn; 9. așezarea (CSS) + stratul PAZNIC; 10. versiunile.
 //   node scripts/proba-v100292.mjs
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -172,7 +173,7 @@ await test("9. CSS: lista + fișa de la 900 px (container), fișa sub rând mai 
   assert.match(C, /\.sugLista2 #sugFisa\{grid-column:2;grid-row:1\/-1/); assert.doesNotMatch(C, /\.sugSectGrid\{/); assert.doesNotMatch(C, /\.sugTrendLista/); assert.doesNotMatch(C, /\.sugCartela\{/);
   const P = citeste("public", "lib", "asezare-paznic.js");
   assert.match(P, /#sugPagina \.sugRand\[data-grup="porn"\]/); assert.doesNotMatch(P, /Pe ce aș porni un bot\/\.test\(tx\("h4", c\)\)/);
-  const A = citeste("public", "app.js").match(/ACTIUNI_PERMISE=new Set\("([^"]+)"/)[1].split(" "); for (const n of ["sugAlege", "sugAlegeTf"]) assert.ok(A.includes(n), n);
+  const A = cuTablou(citeste("public", "app.js")).match(/ACTIUNI_PERMISE=new Set\("([^"]+)"/)[1].split(" "); for (const n of ["sugAlege", "sugAlegeTf"]) assert.ok(A.includes(n), n);
 });
 
 // ================================================================ 10. versiunile

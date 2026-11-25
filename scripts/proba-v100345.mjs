@@ -4,6 +4,7 @@
 //   2. cod mort: sugestiiIntraday (pre-market / gap) nu mai are chemător din v100.344 - scos din tura acțiunilor.
 //   node scripts/proba-v100345.mjs
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -43,7 +44,7 @@ await test("🔑 ruta ingustUrmarire păstrează reg 2 (și nimic altceva nou)",
 });
 await test("Tabloul și pagina Grid folosesc socoteala pe reguli", () => {
   assert.match(citeste("public", "lib", "t212-ecran.js"), /GridProba\.socotealaUrmarirePeReguli\(tbUrm\.v\)\.text/);
-  assert.match(citeste("public", "app.js"), /GridProba\.socotealaUrmarirePeReguli\(grUrm\.v\)\.text/);
+  assert.match(cuTablou(citeste("public", "app.js")), /GridProba\.socotealaUrmarirePeReguli\(grUrm\.v\)\.text/);
 });
 await test("cod mort: sugestiiIntraday scos din tura acțiunilor (fără chemător din v100.344)", () => {
   assert.doesNotMatch(citeste("scripts", "lib", "tura-sugestii-actiuni.mjs"), /export async function sugestiiIntraday/);

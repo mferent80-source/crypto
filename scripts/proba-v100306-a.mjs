@@ -8,6 +8,7 @@
 //   mărunte: țintele de atingere pe telefon, cele două „Profile” din sertar.
 //   node scripts/proba-v100306-a.mjs
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -17,7 +18,7 @@ import { fileURLToPath } from "node:url";
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8").replace(/\r\n/g, "\n");
 const lib = (f) => citeste("public", "lib", f);
-const APP = citeste("public", "app.js"), CSS = citeste("public", "app.css"), IDX = citeste("public", "index.html");
+const APP = cuTablou(citeste("public", "app.js")), CSS = citeste("public", "app.css"), IDX = citeste("public", "index.html");
 const taie = (s, nume, f) => { const i = s.indexOf("function " + nume + "("); assert.ok(i >= 0, "lipsește " + nume + " în " + f); const j = s.indexOf("\nfunction ", i + 10); const k = s.indexOf("\nasync function ", i + 10); const capat = [j, k].filter((x) => x > 0); return s.slice(i, capat.length ? Math.min(...capat) : undefined); };
 const fnDin = (f, nume) => taie(lib(f), nume, f);
 const fnApp = (nume) => taie(APP, nume, "app.js");

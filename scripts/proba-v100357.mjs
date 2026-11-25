@@ -1,6 +1,7 @@
 // Proba v100.357 (17.11.2026, el: „mai departe?” ⇒ „fa tot si livreaza”): I-896 (fișa fără barele de o oră ⇒ cel mult AȘTEAPTĂ; notele țin barele)
 // + alerta dublă pe Discord (pusă la coadă = plecată).   node scripts/proba-v100357.mjs
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -43,7 +44,7 @@ await test("🔑 S3 (I-896) pe 12 monede de mers aleator (pași de 1 minut, făr
   assert.ok(ok >= 10, "fișe socotite: " + ok); assert.equal(porn, 0); assert.ok(cuMotiv >= 1, "cel puțin o fișă ar fi zis PORNEȘTE pe 15 minute (sub H0 ~20%): " + cuMotiv);
 });
 await test("S4 (I-896) notele fișelor țin pe ce bare s-a probat (24 = o oră, 96 = 15 minute; altceva ⇒ null)", () => {
-  assert.match(citeste("public", "app.js"), /pr:pr,bare:f\.proba&&f\.proba\.barePeZi\|\|null/);
+  assert.match(cuTablou(citeste("public", "app.js")), /pr:pr,bare:f\.proba&&f\.proba\.barePeZi\|\|null/);
   const R = citeste("functions", "api", "istoric-bot.js"); assert.match(R, /bare:\[24,96\]\.includes\(nr\(n\.bare\)\)\?nr\(n\.bare\):null/);
 });
 await test("🔑 S5 (revizia 🔵7) alerta refuzată de Discord, pusă la coadă, e „plecată” pentru chemător (nu se mai pune încă o dată la tura următoare); ntfy neatins", () => {

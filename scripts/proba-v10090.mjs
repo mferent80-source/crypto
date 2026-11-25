@@ -6,6 +6,7 @@
 // Revizia Opus (04.10): cheia Busolei vine din tickerul Pionex (LIGHTER.PERP ⇒ LIT), nu din numele botului; pnlPct din NET; „de” doar
 // când starea din KV e aceeași cu cea de pe pagină; „de” necunoscut la prima vedere; garda cu futures chiar produce text.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -172,7 +173,7 @@ await test("(4) pentru-busola: deschiși (cheia din simbolPionex: LIGHTER ⇒ LI
 
 // ---- legarea ----
 await test("(5) pagina: rândul Busolei sub „Număr de grile” în fișă (grBusolaFisaHtml); eticheta în „Acum” cu cheia din tickerul Pionex și KV-ul întreg (starea + de); portofoliul cu „de” doar pe aceeași stare", () => {
-  const a = citeste("public", "app.js");
+  const a = cuTablou(citeste("public", "app.js"));
   assert.ok(/^function grBusolaFisaHtml\(f,i\)\{/m.test(a), "lipsește grBusolaFisaHtml"); assert.ok(/\+grBusolaFisaHtml\(f,i\)\s*\n\s*\+grRand\("Levier"/.test(a), "rândul nu e sub „Număr de grile”");
   assert.ok(/^function tbCheieBusola\(b\)\{return b\.simbolPionex\|\|TabloBot\.simboluri\(b\.baza,b\.quote\)\.pionex\}/m.test(a), "lipsește tbCheieBusola (tickerul Pionex, nu numele botului)");
   assert.ok(/^function tbBusolaLinie\(b\)\{/m.test(a) && /^function tbPazaAdu\(\)\{/m.test(a) && a.includes('getJSON("/api/istoric-bot?action=paza")'), "lipsește tbBusolaLinie / tbPazaAdu");

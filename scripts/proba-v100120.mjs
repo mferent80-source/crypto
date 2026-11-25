@@ -1,6 +1,7 @@
 // Proba v100.120 / colector v101.82 (06.10, el: „creează și o pagină Salt cu acțiunile din listă și le analizezi ca pe cele din Trading 212”):
 // specul docs/superpowers/specs/2026-10-06-pagina-salt-design.md · ales: lista + pozițiile mele · acțiuni + ETF-uri · pozițiile le scrie el pe pagină
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -147,7 +148,7 @@ await test("(4b) pagina fără nimic: spune ce așteaptă (tura de la 8:00, pozi
   assert.ok(f.includes(">BBB<") && !f.includes(">AAA<"));
 });
 await test("(4c) pagina în aplicație: #salt în Zilnic după Trading 212, scripturile după Consilier și în cache (cu universul), navTo o pornește, sertarul „More”", () => {
-  const html = citeste("public", "index.html"), app = citeste("public", "app.js"), sw = citeste("public", "sw.js");
+  const html = citeste("public", "index.html"), app = cuTablou(citeste("public", "app.js")), sw = citeste("public", "sw.js");
   assert.match(html, /<section class="panel" id="salt">/); assert.match(html, /id="saltPagina"/);
   const z = html.slice(html.indexOf('id="sideZilnic"'), html.indexOf('id="sideUnelte"')); assert.ok(z.indexOf('data-nav="salt"') > z.indexOf('data-nav="t212"') && z.indexOf('data-nav="salt"') < z.indexOf('data-nav="scan"'));
   const i1 = html.indexOf('src="/lib/salt.js"'), i2 = html.indexOf('src="/lib/salt-ecran.js"'); assert.ok(i1 > html.indexOf('src="/lib/consilier.js"') && i2 > i1);

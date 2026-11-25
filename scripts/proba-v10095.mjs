@@ -2,6 +2,7 @@
 // (1) „încă ~N luni” la „prea puține cazuri”; (2) suma propusă a porții la „un trade ca ăsta”; (3) barele din tura ideilor în data/retea/zile;
 // (4) bilanțul Busolei despre predicțiile 🧠 (modulul, ruta, pagina, colectorul, garda); (E) versiunile.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
@@ -13,7 +14,7 @@ const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const lib = (f) => fs.readFileSync(path.join(RAD, "public", "lib", f), "utf8");
 const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8").replace(/\r\n/g, "\n");   // 06.10: CRLF ⇒ LF (checkout curat cu autocrlf: „\n}\n” nu se găsea)
 const fnDin = (f, nume) => { const s = lib(f), i = s.indexOf("function " + nume + "("); assert.ok(i >= 0, "lipsește " + nume + " în " + f); const j = s.indexOf("\nfunction ", i + 10); return s.slice(i, j < 0 ? undefined : j); };
-const fnApp = (nume) => { const s = citeste("public", "app.js"), i = s.indexOf("function " + nume + "("); assert.ok(i >= 0, "lipsește " + nume + " în app.js"); return s.slice(i, s.indexOf("\nfunction ", i + 10)); };
+const fnApp = (nume) => { const s = cuTablou(citeste("public", "app.js")), i = s.indexOf("function " + nume + "("); assert.ok(i >= 0, "lipsește " + nume + " în app.js"); return s.slice(i, s.indexOf("\nfunction ", i + 10)); };
 const fnColector = (nume) => { const s = citeste("scripts", "colector.mjs"), i = s.search(new RegExp("^(async )?function " + nume + "\\(", "m")); assert.ok(i >= 0, "lipsește " + nume + " în colector.mjs"); const k = s.indexOf("\n}\n", i); return s.slice(i, k < 0 ? undefined : k + 2); };
 // modulele paginii, încărcate ca în retea/date.mjs (aceeași ordine, aceleași globale)
 globalThis.GridCalcul = globalThis.GridCalcul || new Function(`${lib("grid-calcul.js")}; return GridCalcul;`)();
@@ -140,7 +141,7 @@ await test("(4d) scripts/lib/din-busola.mjs: bilantDinBusola(j, trimise) curăț
   assert.ok(/turaBilantBusola\(\)\.catch/.test(fnColector("bucla")), "în bucla"); assert.ok(/import \{ bilantDinBusola \} from "\.\/lib\/din-busola\.mjs"/.test(col), "importul");
 });
 await test("(4e) pagina: reteaAdu cere și busolaRetea (reteaM.b), reteaHtml îl dă subsolului cu actiuni din o; garda are situațiile Busolei în grupul retea, fără abateri", () => {
-  assert.ok(/var reteaM=\{la:0,m:null,a:null,b:null/.test(citeste("public", "app.js")), "reteaM.b");
+  assert.ok(/var reteaM=\{la:0,m:null,a:null,b:null/.test(cuTablou(citeste("public", "app.js"))), "reteaM.b");
   const adu = fnApp("reteaAdu"); assert.ok(/action=busolaRetea/.test(adu) && /reteaM\.b=/.test(adu), "a treia cerere"); assert.ok(/catch\(function\(\)\{reteaM\.b=null\}\)/.test(adu), "picată ⇒ null, pagina merge");
   const h = fnApp("reteaHtml"); assert.ok(/Retea\.subsol\(m,aM,\{actiuni:!!\(o&&o\.actiuni\),busola:reteaM\.b,acum:Date\.now\(\)\}\)/.test(h), "subsol cu busola");
   const s = situatii().filter((x) => x.mod === "retea" && /^busola:/.test(x.sit)); assert.ok(s.length >= 5, "situații: " + s.length);

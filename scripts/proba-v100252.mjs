@@ -1,6 +1,7 @@
 // Proba v100.252 (22.10, el: fă ideile, verifică că nu se pierde nimic, aplică în app).
 // Nu cheamă alte probe.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -101,7 +102,7 @@ await test("„aproape” e în rând, nu doar în CSS, iar „acum” rămâne 
 await test("jgheabul arată prețul, șirurile vechi rămân, ultima linie CSS rămâne", () => {
   const g = citeste("public", "lib", "grafic-bot.js");
   for (const s of ["plotW - w", "Math.abs(y - yAcum) < 13", "yAcum + 14", "var scara = ingust ? 0 : 52", "o.scara === false", "var cmp = true", "Math.max(1, Math.min(11, cw * 0.72))", "ingust ? 34 : 54", "plotW - 6", "gbAxaAcum", "gbCrucePret"]) assert.ok(g.includes(s), "lipsește " + s);
-  const app = citeste("public", "app.js");
+  const app = cuTablou(citeste("public", "app.js"));
   assert.match(app, /inJgheab/);
   assert.match(app, /GraficBot\.fmtP\(pY\)/);
   assert.match(app, /tbPretScurt\(pY\)/);

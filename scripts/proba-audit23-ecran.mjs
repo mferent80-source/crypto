@@ -1,6 +1,7 @@
 // Probele auditului sever din 23.10.2026, felia ECRANULUI (layout, UX, texte, formatare, accesibilitate).
 // Fiecare test numește punctul din listă (1..26). Gărzile sunt pe desen (modulele pure) unde se poate, textuale unde nu.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -9,7 +10,7 @@ import { fileURLToPath } from "node:url";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8").replace(/\r\n/g, "\n");
-const APP = citeste("public", "app.js"), IDX = citeste("public", "index.html"), CSS = citeste("public", "app.css");
+const APP = cuTablou(citeste("public", "app.js")), IDX = citeste("public", "index.html"), CSS = citeste("public", "app.css");
 const LIB = (f) => citeste("public", "lib", f);
 const fnApp = (nume) => { const i = APP.indexOf("function " + nume + "("); assert.ok(i >= 0, "lipsește " + nume + " în app.js"); const j = APP.indexOf("\nfunction ", i + 10); return APP.slice(i, j < 0 ? undefined : j); };
 const TR = globalThis.TextRo;

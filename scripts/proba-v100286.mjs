@@ -4,6 +4,7 @@
 // desenează (public/lib/comportament-ecran.js). Evaluările se țin de acum cu textul de pe Discord; oglinda pe Discord cu punct la mii.
 //   node scripts/proba-v100286.mjs
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -296,7 +297,7 @@ await test("pagina: numerele din KV nu intră nescăpate; o singură evaluare se
   assert.match(cutie.coHtml(r3, { acum: ACUM }), /canalul evaluărilor nu e legat/);
 });
 await test("legătura paginii: meniul (după Jurnal de trade), telefonul, paleta, navTo, banda de sus, lista albă, cache-ul, stilul înaintea cozii păzite", () => {
-  const H = citeste("public", "index.html"), A = citeste("public", "app.js"), S = citeste("public", "sw.js"), C = citeste("public", "app.css");
+  const H = citeste("public", "index.html"), A = cuTablou(citeste("public", "app.js")), S = citeste("public", "sw.js"), C = citeste("public", "app.css");
   assert.match(H, /data-nav="jurnaltrade"><span class="sideIcon">📓<\/span>Jurnal de trade<\/button>\n<button class="sideBtn" data-action-click="navTo\('comportament',true\)" data-nav="comportament">/);
   assert.match(H, /<section class="panel" id="comportament">[\s\S]{0,400}id="coPagina"/);
   assert.match(H, /moreNav\('jurnaltrade',true\)"><b>📓<\/b>Jurnal de trade<\/button>\n<button class="moreBtn" data-action-click="moreNav\('comportament',true\)">/);

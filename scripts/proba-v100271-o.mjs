@@ -7,6 +7,7 @@
 // (4) fraza adevărată: „șanse pe drumuri trase din ultima lună de prețuri, nu o predicție” (3000 de bare de 15 minute ≈ 31 de zile).
 // Fără rețea: Pionex e simulat (getJSON), ceasul e simulat. Rulare: node scripts/proba-v100271-o.mjs
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -22,7 +23,7 @@ const GridCalcul = new Function(lib("grid-calcul.js") + "; return GridCalcul;")(
 const GridProba = new Function("GridCalcul", lib("grid-proba.js") + "; return GridProba;")(GridCalcul);
 const MonteSimbol = new Function(lib("monte-simbol.js") + "; return MonteSimbol;")();
 const GS = gridSimDinPagina(lib("grid-sim.js"), GridCalcul, GridProba, MonteSimbol);
-const APP = citeste("public", "app.js"), MSE = lib("monte-simbol-ecran.js"), TMC = citeste("scripts", "lib", "tura-monte-carlo-bot.mjs"), COL = citeste("scripts", "colector.mjs");
+const APP = cuTablou(citeste("public", "app.js")), MSE = lib("monte-simbol-ecran.js"), TMC = citeste("scripts", "lib", "tura-monte-carlo-bot.mjs"), COL = citeste("scripts", "colector.mjs");
 let teste = 0, picate = 0;
 async function test(nume, f) { teste++; try { await f(); console.log(`  ok   ${nume}`); } catch (e) { picate++; console.log(`  PICA ${nume}\n       ${String(e && e.stack || e).slice(0, 900)}`); } }
 console.log("\nV100.271-o · Monte Carlo mai repede, cu mai puține cereri, aceleași cifre · proba\n");

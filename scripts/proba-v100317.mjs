@@ -3,6 +3,7 @@
 // Nimic nu se mută și nimic nu se șterge: starea e atributul data-rand pe rădăcina secțiunii, restul îl face foaia de stil.
 // Proba rulează codul ADEVĂRAT (tăiat din public/app.js) pe un DOM fals.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
@@ -15,7 +16,7 @@ const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8");
 let trecute = 0, picate = 0;
 const test = async (nume, f) => { try { await f(); trecute++; console.log("  ✓ " + nume); } catch (e) { picate++; console.log("  ✗ " + nume + "\n      " + String(e && e.message || e).split("\n").join("\n      ")); } };
-const CSS = citeste("public", "app.css"), HTML = citeste("public", "index.html"), APP = citeste("public", "app.js");
+const CSS = citeste("public", "app.css"), HTML = citeste("public", "index.html"), APP = cuTablou(citeste("public", "app.js"));
 
 // nod fals: destul cât să meargă tbRandRezumat (firstChild / nextSibling / nodeType) și atributele
 function text(v) { return { nodeType: 3, nodeValue: v, nextSibling: null }; }

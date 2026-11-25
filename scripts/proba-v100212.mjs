@@ -7,6 +7,7 @@
 //  3. navTo alege clasa ÎNAINTE de show(id), oricum ar fi deschisă pagina (meniu, reîncărcare, link)
 //  4. numele noi sunt `var` / function (fără TDZ la pornire) și nu există de două ori în app.js
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
@@ -18,7 +19,7 @@ let teste = 0, picate = 0;
 async function test(nume, f) { teste++; await Promise.resolve().then(f).then(() => console.log(`  ok   ${nume}`)).catch((e) => { picate++; console.log(`  PICA ${nume}\n       ${e && e.message}`); }); }
 console.log("\nv100.212 · paginile crypto nu mai rămân goale după Nasdaq · proba\n");
 
-const app = citeste("public", "app.js"), html = citeste("public", "index.html");
+const app = cuTablou(citeste("public", "app.js")), html = citeste("public", "index.html");
 const decl = (app.match(/var PAGINI_CLASA=\{[^}]*\};/) || [])[0], fn = (app.match(/function clasaPentruPagina\(id\)\{[^}]*\}/) || [])[0];
 const cx = {};
 vm.createContext(cx);

@@ -2,6 +2,7 @@
 // specul docs/superpowers/specs/2026-10-06-pagina-sugestii-design.md, planul docs/superpowers/plans/2026-10-06-pagina-sugestii.md
 // (1) regulile noi (început de urcare, revers timpuriu, gap) + istoricul fără privit în viitor · (2) pre-market US / gap EU pe rânduri intraday
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -237,7 +238,7 @@ await test("(5b) fără date: fiecare secțiune spune ce așteaptă (tura de la 
   const h = globalThis.sugHtml({}, T0); assert.match(h, /8:00/); assert.doesNotMatch(h, /undefined|NaN/);
 });
 await test("(5c) pagina în aplicație: secțiunea #sugestii, butonul în Zilnic după „Tabloul botului”, scripturile în ordine și în cache, navTo o pornește, butonul de pe Acasă, sertarul „More”", () => {
-  const html = citeste("public", "index.html"), app = citeste("public", "app.js"), sw = citeste("public", "sw.js"), ac = citeste("public", "lib", "acasa-ecran.js");
+  const html = citeste("public", "index.html"), app = cuTablou(citeste("public", "app.js")), sw = citeste("public", "sw.js"), ac = citeste("public", "lib", "acasa-ecran.js");
   assert.match(html, /<section class="panel" id="sugestii">/); assert.match(html, /id="sugPagina"/);
   const z = html.slice(html.indexOf('id="sideZilnic"'), html.indexOf('id="sideUnelte"')); assert.ok(z.indexOf('data-nav="sugestii"') > z.indexOf('data-nav="tabloubot"') && z.indexOf('data-nav="sugestii"') < z.indexOf('data-nav="gridset"'));
   const i1 = html.indexOf('src="/lib/sugestii-actiuni.js"'), i2 = html.indexOf('src="/lib/sugestii-ecran.js"'); assert.ok(i1 > 0 && i2 > i1 && i1 > html.indexOf('src="/lib/carnet.js"') && i2 > html.indexOf('src="/lib/idei.js"'));

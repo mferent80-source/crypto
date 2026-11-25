@@ -4,6 +4,7 @@
 // (1) cazurile primesc ADX la pornire, fără privit în viitor · (2) bilantAdx pe cazuri cu răspuns cunoscut · (3) textul · (4) citirea + pagina
 // (5) colectorul · (E) versiunile. Depozitul e PUBLIC ⇒ cazuri construite.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -12,7 +13,7 @@ import { fileURLToPath } from "node:url";
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const lib = (f) => fs.readFileSync(path.join(RAD, "public", "lib", f), "utf8");
 const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8");
-const fnApp = (nume) => { const s = citeste("public", "app.js"), i = s.indexOf("function " + nume + "("); assert.ok(i >= 0, "lipsește " + nume + " în app.js"); return s.slice(i, s.indexOf("\nfunction ", i + 10)); };
+const fnApp = (nume) => { const s = cuTablou(citeste("public", "app.js")), i = s.indexOf("function " + nume + "("); assert.ok(i >= 0, "lipsește " + nume + " în app.js"); return s.slice(i, s.indexOf("\nfunction ", i + 10)); };
 globalThis.GridCalcul = new Function(`${lib("grid-calcul.js")}; return GridCalcul;`)();
 const AS = new Function("GridCalcul", `${lib("actiuni-semnale.js")}; return ActiuniSemnale;`)(globalThis.GridCalcul);
 const P = new Function("GridCalcul", "ActiuniSemnale", `${lib("probabilitati.js")}; return Probabilitati;`)(globalThis.GridCalcul, AS);

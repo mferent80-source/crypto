@@ -5,6 +5,7 @@
 // (4) cardul macro spune ora doar cu al treilea argument; poarta citește ștampila din macro.la și, dacă e veche, citirea de acum.
 // Pragurile 1 % / 20 % / 55 % și cele 30 de minute după o citire reușită nu se mută.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -25,7 +26,7 @@ const ae = citeste("public", "lib", "acasa-ecran.js");
 const verd = ae.slice(ae.indexOf("function acasaVerd"), ae.indexOf("function acCadran"));
 const css = citeste("public", "app.css");
 const paz = citeste("public", "lib", "asezare-paznic.js");
-const app = citeste("public", "app.js");
+const app = cuTablou(citeste("public", "app.js"));
 const idx = citeste("public", "index.html");
 const t212 = citeste("public", "lib", "t212-ecran.js");
 const scan = citeste("public", "lib", "scan-ecran.js");

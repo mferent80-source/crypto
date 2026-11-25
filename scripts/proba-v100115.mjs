@@ -2,6 +2,7 @@
 // I-563 Discord „botul stă de 24 h și e pe minus” cu cifrele lui (RiscLuna.textBot) · I-565 frâna T212 „cumpărat în jos” cu cifra lui
 // I-554 meniul în 3 grupe (Zilnic / Unelte / Laborator vechi pliat, nimic șters) · I-555 bara de jos pe telefon: Tablou · Grid · T212 · Alerte · ⋯
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -13,7 +14,7 @@ const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8");
 for (const f of ["grid-calcul.js", "actiuni-semnale.js", "risc-luna.js"]) vm.runInThisContext(citeste("public", "lib", f), { filename: f });
 const { ActiuniSemnale: AS, RiscLuna: RL } = globalThis;
 const MC = await import(pathToFileURL(path.join(RAD, "scripts", "lib", "mesaje-colector.mjs")).href);
-const col = citeste("scripts", "colector.mjs"), html = citeste("public", "index.html"), app = citeste("public", "app.js"), css = citeste("public", "app.css");
+const col = citeste("scripts", "colector.mjs"), html = citeste("public", "index.html"), app = cuTablou(citeste("public", "app.js")), css = citeste("public", "app.css");
 let teste = 0, picate = 0;
 async function test(nume, f) { teste++; await Promise.resolve().then(f).then(() => console.log(`  ok   ${nume}`)).catch((e) => { picate++; console.log(`  PICA ${nume}\n       ${String(e.message).slice(0, 500)}`); }); }
 console.log("\nV100.115 · 24 h pe minus + frâna cu cifra ta + meniul în 3 grupe + bara de jos · proba\n");

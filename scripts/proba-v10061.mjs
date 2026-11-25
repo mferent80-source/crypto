@@ -3,6 +3,7 @@
 // (scripts/garda-texte.mjs) si Consilierul botilor rescris - titlul ≤ 60 cu cifra, „Ce aș face eu” ≤ 110 la persoana I, „de ce” separat.
 // Sectiunile („sarcina N”) intra in fisier pe rand, fiecare inaintea codului ei (planul 2026-10-02-sfaturi-pachetul-1-consilier-boti.md).
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -102,7 +103,7 @@ await test("LIGHTER (stopul peste plan): cartela Stopul spune actiunea si costul
   assert.equal(st.deCe, "Atins acum, stopul te costă ≈ 63,5 USDT, nu 15,7; planul cade în grid (4.2601), unde ar tăia 4 din 15 grile."); assert.equal(st.atins < -60, true);
 });
 await test("pagina: cartela Stopul arata „de ce” si sursa stopului propus, fiecare pe randul lui", () => {
-  const app = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8");
+  const app = cuTablou(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8"));
   assert.match(app, /x\.deCe\?'<p class="tbSub tbCcDeCe">'/); assert.match(app, /x\.sursa\?'<p class="tbSub tbCcSursa">'/);
 });
 
@@ -130,7 +131,7 @@ await test("RF5: Discord - titlul ≤ 60 si cu o moneda lunga si un titlu lung (
   assert.ok(al.mesaj.split("\n").length <= 2, al.mesaj); assert.match(al.mesaj, /^👉 N-aș mări poziția\./);
 });
 await test("pagina: „de ce” sub „Ce aș face eu”, legenda comuna (avertizarile, o data) sub Consilier; pachetul 1 e strict intreg", () => {
-  const app = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8");
+  const app = cuTablou(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8"));
   assert.match(app, /c\.explica\?'<p class="tbSub tbConsExplica">'/); assert.match(app, /Consiliu\.LEGENDA\?'<p class="tbSub tbConsLeg">'/);
   assert.match(C.LEGENDA, /nu sunt promisiuni/); assert.match(C.LEGENDA, /puține cazuri/); assert.match(C.LEGENDA, /cumpără înapoi la fiecare grilă/);
   for (const m of ["semafor", "cartele", "consiliu"]) assert.ok(G.STRICT.has(m), "nestrict: " + m);
@@ -222,10 +223,10 @@ await test("F2 (proba de ecran, piata in miscare): varianta ingusta respinsa dev
   assert.equal(GP.ingust(bare(30), { miscare: true, dir: "long" }).zile, 30);
   assert.equal(GP.ingust(bare(30), { dir: "nicio" }).zile, 30);
   assert.equal(GP.ingust(bare(5), { dir: "long" }).zile, 5);
-  assert.match(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8"), /r\.zile\?"pe "\+TextRo\.cate\(r\.zile,"zi","zile"\)\+" — mai puține ferestre"/);   /* v100.73: „de” doar de la 20 (TextRo.cate) */
+  assert.match(cuTablou(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8")), /r\.zile\?"pe "\+TextRo\.cate\(r\.zile,"zi","zile"\)\+" — mai puține ferestre"/);   /* v100.73: „de” doar de la 20 (TextRo.cate) */
 });
 await test("F3 (proba de ecran pe telefon, CRV iesit din grid): botul fara pozitie - calculatorul de marja spune asta, nu „Scrie o sumă mai mare ca 0.”", () => {
-  assert.match(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8"), /!\(grNumar\(v\)>0\)\?"Scrie o sumă mai mare ca 0\.":"Acum botul n-are poziție/);
+  assert.match(cuTablou(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8")), /!\(grNumar\(v\)>0\)\?"Scrie o sumă mai mare ca 0\.":"Acum botul n-are poziție/);
   assert.match(fs.readFileSync(path.join(RAD, "scripts", "proba-ecran-grid.mjs"), "utf8"), /Cu \\\+20 USDT marjă\|n-are poziție/);
 });
 

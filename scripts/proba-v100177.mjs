@@ -1,6 +1,7 @@
 // Probele v100.177 (13.10.2026, el: „din a doua recomandare 1–4 plus jurnalul verdictelor”) — jurnalul verdictelor și calibrarea lor,
 // corecția pentru teste multiple (Benjamini–Hochberg pe tot registrul), profitul așteptat și corelația cu ce ai deja, la Poartă.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -99,7 +100,7 @@ await test("serverul: verdictele (unul sau mai multe), un verdict pe (sursă, si
 
 // pagina: Porțile
 await test("Porțile trimit verdictul în jurnal (o dată pe simbol pe zi, fără să blocheze); gridul și cu banda gridului", () => {
-  const app = citeste("public", "app.js"), t = citeste("public", "lib", "t212-ecran.js");
+  const app = cuTablou(citeste("public", "app.js")), t = citeste("public", "lib", "t212-ecran.js");
   assert.match(app, /function verdictTrimite\(v\)\{/); assert.match(app, /verdictTrimite\(\{s:"poarta-grid",k:f\.simbol,n:f\.verdict\.nivel,p:f\.pret,j:stV&&stV\.jos,u:stV&&stV\.sus(,d:stV&&stV\.dir,g:stV&&stV\.grile,l:stV&&stV\.levier)?\}\)/);
   assert.match(t, /verdictTrimite\(\{ s: "poarta-t212", k: tk, n: v\.nivel, p: st\.pret \}\)/);
 });
@@ -127,7 +128,7 @@ await test("Poarta T212: „se mișcă la fel cu ce ai deja” (ρ ≥ 0,6 pe zi
   const m = /Riscul pe o zi al contului \(ziua proastă, 1 din 20\): ~([\d.]+) lei → ~([\d.]+) lei/.exec(h); assert.ok(m, h); assert.ok(Number(m[2].replace(/\./g, "")) > Number(m[1].replace(/\./g, "")), "o poziție corelată CREȘTE riscul contului");
 });
 await test("Poarta gridului: profitul așteptat din boții tăi asemănători, tras spre zero după câți sunt", () => {
-  const app = citeste("public", "app.js"), i = app.indexOf("function grAsteptatHtml("), f = app.slice(i, app.indexOf("\nfunction ", i + 10));
+  const app = cuTablou(citeste("public", "app.js")), i = app.indexOf("function grAsteptatHtml("), f = app.slice(i, app.indexOf("\nfunction ", i + 10));
   const c2 = { TextRo: globalThis.TextRo, escapeHtml: (s) => String(s) }; vm.createContext(c2); vm.runInContext(f, c2);
   assert.match(c2.grAsteptatHtml({ asG: { n: 20, medianaPct: 0.04 } }), /📈 <b>Profit așteptat<\/b> pe boții tăi asemănători: \+2,0% din sumă \(mediana lor \+4,0%, trasă spre zero: 20 de cazuri\)/);
   assert.match(c2.grAsteptatHtml({ asG: { n: 8, medianaPct: -0.02 } }), /Fără avantaj măsurat/); assert.equal(c2.grAsteptatHtml({ asG: null }), "");

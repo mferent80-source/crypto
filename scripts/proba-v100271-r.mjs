@@ -12,6 +12,7 @@
 // Funcțiile din public/app.js se iau după text și rulează cu dependențele injectate (ca proba-v100267-b); bibliotecile din public/lib cu vm.
 // PROBA_RAD = alt dosar cu public/ + functions/ (mutațiile); DATE_1H = dosarul cu barele de 1 h ale colectorului (doar citire) pentru rata reală.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -23,7 +24,7 @@ const RADS = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const RAD = process.env.PROBA_RAD ? path.resolve(process.env.PROBA_RAD) : RADS;
 const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8").replace(/\r\n/g, "\n");
 const lib = (f) => citeste("public", "lib", f);
-const APP = citeste("public", "app.js");
+const APP = cuTablou(citeste("public", "app.js"));
 /* de la „function nume(” (sau „async function nume(”) la început de rând până la următoarea funcție de la început de rând */
 const areFn = (nume) => APP.indexOf("\nfunction " + nume + "(") >= 0 || APP.indexOf("\nasync function " + nume + "(") >= 0;
 const fnApp = (nume) => {

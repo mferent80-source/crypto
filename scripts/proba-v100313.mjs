@@ -7,6 +7,7 @@
 //   node scripts/proba-v100313.mjs
 import "./lib/text-ro-global.mjs";   // garda din proba v10062: o probă care pomenește sfaturi.js încarcă întâi TextRo
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
@@ -229,7 +230,7 @@ await test("colector: tura probabilităților pune atr1h (CurbaStop.atr14 pe bar
 });
 
 // ───────────── 4. pagina ─────────────
-const APP = citeste("public", "app.js"), HTML = citeste("public", "index.html"), CSS = citeste("public", "app.css");
+const APP = cuTablou(citeste("public", "app.js")), HTML = citeste("public", "index.html"), CSS = citeste("public", "app.css");
 const functie = (src, n) => { const i = src.search(new RegExp("(async )?function " + n + "\\(")); if (i < 0) throw new Error(n + "() lipsește"); let a = 0, j = src.indexOf("{", i); for (; j < src.length; j++) { if (src[j] === "{") a++; else if (src[j] === "}" && --a === 0) break; } return src.slice(i, j + 1); };
 function pagina(o) {
   const el = { innerHTML: "", hidden: true, scrieri: 0 }, apeluri = { prob: 0, todo: 0 };

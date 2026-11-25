@@ -2,6 +2,7 @@
 // lotul A - I-518 cartela Busola unică (un singur producător: starea, intervalul, rândul scurt), I-524 distanța propunerii față de intervalul
 // Busolei, I-517 blocul „Pe zi, la închidere, ce știm” în 3 grupuri, I-519 fișa cu verdict lipicios și secțiuni pliate pe telefon.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -13,7 +14,7 @@ const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const lib = (f) => fs.readFileSync(path.join(RAD, "public", "lib", f), "utf8");
 const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8");
 const fnDin = (f, nume) => { const s = lib(f), i = s.indexOf("function " + nume + "("); assert.ok(i >= 0, "lipsește " + nume + " în " + f); const j = s.indexOf("\nfunction ", i + 10); return s.slice(i, j < 0 ? undefined : j); };
-const fnApp = (nume) => { const s = citeste("public", "app.js"), i = s.indexOf("function " + nume + "("); assert.ok(i >= 0, "lipsește " + nume + " în app.js"); return s.slice(i, s.indexOf("\nfunction ", i + 10)); };
+const fnApp = (nume) => { const s = cuTablou(citeste("public", "app.js")), i = s.indexOf("function " + nume + "("); assert.ok(i >= 0, "lipsește " + nume + " în app.js"); return s.slice(i, s.indexOf("\nfunction ", i + 10)); };
 const B = new Function(`${lib("busola.js")}; return Busola;`)();
 const esc = (x) => String(x).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const text = (h) => String(h).replace(/<[^>]+>/g, " ").replace(/&amp;/g, "&").replace(/\s+/g, " ").trim();
@@ -63,7 +64,7 @@ await test("(A) I-518 htmlCartela: rândurile în forma Tabloului (tbLinie) - st
 });
 // ---- lotul A: I-517 grupurile ----
 await test("(A) I-517 Tabloul: blocul „Pe zi, la închidere, ce știm” în 3 grupuri - Azi / Dacă închizi acum / Contextul, Busola (cartela) în Contextul; tbGrup + CSS", () => {
-  const ex = fnApp("tbDeseneazaExtra"), a = citeste("public", "app.js");
+  const ex = fnApp("tbDeseneazaExtra"), a = cuTablou(citeste("public", "app.js"));
   const i1 = ex.indexOf('tbGrup("Azi")'), i2 = ex.indexOf('tbGrup("Dacă închizi acum")'), i3 = ex.indexOf('tbGrup("Contextul")'), ib = ex.indexOf("h+=tbBusolaLinie(b);"), ig = ex.indexOf('linie("Grile, ultimele 24 h"'), ii = ex.indexOf("Dacă îl închizi acum, iei");
   assert.ok(i1 >= 0 && i2 > i1 && i3 > i2, "cele 3 grupuri, în ordine"); assert.ok(i1 < ig && ig < i2 && i2 < ii && ii < i3 && i3 < ib, "grilele sub „Azi”, „iei” sub „Dacă închizi”, Busola sub „Contextul”");
   assert.ok(/^function tbGrup\(t\)\{/m.test(a) && /#tabloubot \.tbGrup\{/.test(citeste("public", "app.css")), "tbGrup + CSS");
@@ -71,7 +72,7 @@ await test("(A) I-517 Tabloul: blocul „Pe zi, la închidere, ce știm” în 3
 });
 // ---- lotul A: I-519 fișa ----
 await test("(A) I-519 fișa: grPliabil - toate secțiunile se pliază pe telefon în afară de „Setările de pus în Pionex”; grPliazaPeTelefon după desen; verdictul lipicios", () => {
-  const a = citeste("public", "app.js"), ctx = {}; vm.createContext(ctx); vm.runInContext(fnApp("grPliabil") + "\n;this.f=grPliabil;", ctx);
+  const a = cuTablou(citeste("public", "app.js")), ctx = {}; vm.createContext(ctx); vm.runInContext(fnApp("grPliabil") + "\n;this.f=grPliabil;", ctx);
   assert.equal(ctx.f("Setările de pus în Pionex"), false); assert.equal(ctx.f("Poarta de pornire"), false);   /* revizia Opus: Poarta e faptă, rămâne deschisă */ assert.equal(ctx.f("Ce spune istoricul tău"), true); assert.equal(ctx.f(""), false);
   assert.ok(/^function grPliazaPeTelefon\(box\)\{/m.test(a), "lipsește grPliazaPeTelefon");
   const rg = fnApp("renderGrid"); assert.ok(/box\.innerHTML=h;grPliazaPeTelefon\(box\)/.test(rg), "plierea nu se cheamă imediat după desen");
@@ -166,7 +167,7 @@ await test("(C) I-522 Consiliul: un rând doar când Radarul (regimul fișei) ș
   assert.equal(x({ stare: "miscare" }, { miscare: false }).nivel, x(null, null).nivel, "verdictul neatins");
 });
 await test("(C) pagina + colectorul: semaforul și Consiliul primesc Busola (pentruVerdict) și regimul fișei; Consiliul desenează rândul 🧭; cheiaBot importată în colector", () => {
-  const a = citeste("public", "app.js"), col = citeste("scripts", "colector.mjs");
+  const a = cuTablou(citeste("public", "app.js")), col = citeste("scripts", "colector.mjs");
   assert.ok(/^function tbBusolaVerdict\(b\)\{/m.test(a) && a.includes("Busola.pentruVerdict(Busola.rezumat(),tbCheieBusola(b),Date.now())"), "tbBusolaVerdict");
   assert.ok(/var sm=SemnaleBot\.semafor\(\{bot:b,fisa:f,[^\n]*busola:tbBusolaVerdict\(b\)/.test(a), "semaforul paginii fără Busola");
   assert.ok(/var cons=Consiliu\.alcatuieste\(\{sm:sm,concret:conc,[^\n]*busola:tbBusolaVerdict\(b\),regim:f&&f\.regim\?\{miscare:!!f\.regim\.miscare\}:null/.test(a), "Consiliul paginii fără Busola/regim");

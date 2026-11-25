@@ -1,6 +1,7 @@
 // Probele v100.178 (13.10.2026, el: „fă 1, 2, 3, 4, 5 și vreau exemple de top stocks pe sectoare în pagina Sugestii”) — factorii și
 // sectoarele, atribuirea, MAE / MFE, ținta de volatilitate, mișcarea așteptată de opțiuni față de grid, topul pe sectoare.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -126,7 +127,7 @@ await test("Poarta T212: mărimea „cu risc egal” (ținta de 15 % pe an împ�
   assert.match(h, /🧩 <b>Concentrare:<\/b> cu ea, Tehnologie ar fi 85% din acțiunile tale/);
 });
 await test("Poarta gridului: ce așteaptă opțiunile față de banda gridului (DVOL × raportul volatilităților)", () => {
-  const app = citeste("public", "app.js"), i = app.indexOf("var grDvol="), f = app.slice(i, app.indexOf("function grAsteptatHtml(", i));
+  const app = cuTablou(citeste("public", "app.js")), i = app.indexOf("var grDvol="), f = app.slice(i, app.indexOf("function grAsteptatHtml(", i));
   const c4 = { TextRo: globalThis.TextRo, Factori: F, escapeHtml: (s) => String(s), getJSON: () => new Promise(() => {}), renderGrid: () => {}, GridCalcul: { bare: (k) => k }, Promise, Date };
   vm.createContext(c4); vm.runInContext(f, c4);
   c4.grDvol.v = { btc: 52 }; c4.grDvol.la = Date.now(); c4.grDvol.rv.SOL_USDT_PERP = 1.5;

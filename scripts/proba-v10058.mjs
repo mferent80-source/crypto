@@ -1,5 +1,6 @@
 // Proba v100.58 (01.10, el: „griduri înguste cu profit rapid pe coinuri sugerate pe direcție”).
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -86,7 +87,7 @@ await test("pagina: rândul ⚡ în idei, blocul „Varianta îngustă” în fi
   assert.equal(GP.varstaIngust({ la: 0 }, 13 * H).vechi, true); assert.match(GP.varstaIngust({ la: 0 }, 13 * H).text, /vechi/);
   const e = fs.readFileSync(path.join(RAD, "public", "lib", "t212-ecran.js"), "utf8");
   assert.match(e, /function tbIngustPt\(/); assert.match(e, /GridProba\.rezumatIngust\(/); assert.match(e, /action=ingustLista&simboluri=/);
-  const a = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8");
+  const a = cuTablou(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8"));
   assert.match(a, /function grIngustHtml\(/); assert.match(a, /h\+=grIngustHtml\(f\)/); assert.match(a, /ingustLocal=GridProba\.ingust\(/);
   assert.match(a, /Varianta îngustă/);
   assert.ok(a.includes('/rămâ/i.test(r.motiv'), "poza: fara „gridul lat rămâne mai bun. Aș rămâne la setările de mai sus” (dublat)"); assert.match(a, /L-aș închide după/);   /* v100.72: /rămâi/ → /rămâ/ (motivul nou „rămâne”); „Închide-l după” → „L-aș închide după” */ assert.match(a, /TextRo\.cate\(r\.zile,"zi","zile"\)\+" — mai puține ferestre"/);   /* v100.73: „pe 12 zile” / „pe 31 de zile” prin TextRo.cate (era „de zile” mereu) */
@@ -119,7 +120,7 @@ await test("I2: verdictul cere si MEDIA pe plus (gridul castiga des putin si pie
   assert.ok(typeof r.test.medie === "number"); assert.match(GP.rezumatIngust(r), /medie/);
 });
 await test("I3 + mici: fisa foloseste rezultatul colectorului doar proaspat, pe aceeasi directie, fara miscare; KV expira; o eroare nu strica fisa/ideile; 0 monede = reincercare; zilele reale in eticheta", () => {
-  const a = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8");
+  const a = cuTablou(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8"));
   assert.ok(a.includes("!vg.vechi&&g0.dir===f.dir&&!(f.regim&&f.regim.miscare)"), "colectorul doar daca se potriveste");
   assert.ok(a.includes("try{h+=grIngustHtml(f)}catch(e){}"), "o eroare nu strica fisa");
   assert.ok(a.includes('"pe "+TextRo.cate(r.zile,"zi","zile")+" — mai puține ferestre"'), "zilele reale");   /* v100.73: zilele reale, cu „de” doar de la 20 */

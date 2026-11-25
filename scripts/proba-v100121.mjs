@@ -3,6 +3,7 @@
 // (2) tabelele `.rlTab` (Salt, Carnet) derulau doar pe #montecarlo ⇒ pe Salt pagina avea 527 px pe 390 (se mișca în lateral), pe Carnet coloana 4 tăiată;
 // (3) `.sectionHead .small` nu se rupea ⇒ subtitlul paginii Salt ieșea din ecran.
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
@@ -14,7 +15,7 @@ let teste = 0, picate = 0;
 async function test(nume, f) { teste++; await Promise.resolve().then(f).then(() => console.log(`  ok   ${nume}`)).catch((e) => { picate++; console.log(`  PICA ${nume}\n       ${String(e && e.stack || e).slice(0, 600)}`); }); }
 console.log("\nV100.121 · Paginile noi pe telefon (antetul vechi, tabelele, subtitlul) · proba\n");
 
-const css = citeste("public", "app.css"), app = citeste("public", "app.js");
+const css = citeste("public", "app.css"), app = cuTablou(citeste("public", "app.js"));
 // regulile CSS ca perechi {selectori, corp, media}: media = condiția @media din jur ('' în afara ei)
 function reguli(text) {
   const out = []; let media = "", adanc = 0, i = 0, start = 0;

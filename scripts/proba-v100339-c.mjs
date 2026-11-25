@@ -1,6 +1,7 @@
 // Proba v100.339-c (auditul Tabloului botului din 13.11, valul C: detaliile botului). Botul de probă trece prin normalizarea adevărată a
 // serverului (scripts/lib/bot-de-proba.mjs), iar textele vin din modulele paginii.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -15,7 +16,7 @@ const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8").replace(
 globalThis.escapeHtml = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 for (const f of ["grid-calcul.js", "scenariu.js", "tablou-extra.js", "alerte.js", "semnale-bot.js", "sfaturi.js", "conteaza.js", "consiliu.js", "tablou-bot.js"]) vm.runInThisContext(citeste("public", "lib", f), { filename: f });
 const G = globalThis, TE = G.TabloExtra, SB = G.SemnaleBot, Sfaturi = G.Sfaturi, Consiliu = G.Consiliu, Alerte = G.Alerte, Conteaza = G.Conteaza;
-const ACUM = Date.UTC(2026, 10, 13, 12), ORA = 3600000, APP = citeste("public", "app.js");
+const ACUM = Date.UTC(2026, 10, 13, 12), ORA = 3600000, APP = cuTablou(citeste("public", "app.js"));
 let teste = 0, picate = 0;
 async function test(nume, f) { teste++; await Promise.resolve().then(f).then(() => console.log(`  ok   ${nume}`)).catch((e) => { picate++; console.log(`  PICA ${nume}\n       ${String(e && e.stack || e).slice(0, 900)}`); }); }
 console.log("\nV100.339-c · auditul Tabloului: detaliile botului · proba\n");

@@ -10,6 +10,7 @@
 // Funcțiile se iau din public/app.js după text și rulează cu dependențele injectate (ca proba-v100267-b).
 // `node scripts/proba-v100269-v.mjs --instantaneu` tipărește tabelul situațiilor pe codul de acum.
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
@@ -19,7 +20,7 @@ import "./lib/text-ro-global.mjs";
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8").replace(/\r\n/g, "\n");
 /* PROBA_APP_JS = o copie mutată a lui app.js (pentru mutații: scoți reparația și vezi că proba o prinde) */
-const APP = process.env.PROBA_APP_JS ? fs.readFileSync(process.env.PROBA_APP_JS, "utf8").replace(/\r\n/g, "\n") : citeste("public", "app.js");
+const APP = process.env.PROBA_APP_JS ? fs.readFileSync(process.env.PROBA_APP_JS, "utf8").replace(/\r\n/g, "\n") : cuTablou(citeste("public", "app.js"));
 /* de la „function nume(” la început de rând până la următorul „\nfunction ” / „\nasync function ” */
 const fnApp = (nume) => {
   const i = APP.search(new RegExp("\\n(async )?function " + nume + "\\(")); assert.ok(i >= 0, "lipsește " + nume + " în app.js");

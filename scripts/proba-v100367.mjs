@@ -6,6 +6,7 @@
 //  C - mesajele: „intrarea sugerată” fără „+X % pe trade” promis ⇒ cifra de pe viu; „gridul prea larg” ⇒ nedovedit pe boții lui
 //   node scripts/proba-v100367.mjs
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -159,7 +160,7 @@ await test("E pagina: fraza cinstită + De unde știu, 3 cifre, dovada cu 4 graf
   assert.match(c2.alDovadaHtml(), /„Ieși” \(Consilier\)<\/td><td>3<\/td><td>1<\/td><td>\+2,0 %<\/td><td>se adună/);
   const ix = citeste("public", "index.html"); for (const id of ["alSus", "alSCentru", "alCentru", "alEpisoade", "alSDovada", "alDovada", "alSVechi", "alertSrRule", "alertList", "alTemaBtn"]) assert.match(ix, new RegExp('id="' + id + '"'), id);
   assert.match(ix, /<script defer="" src="\/lib\/alerte-registru\.js"><\/script><script defer="" src="\/lib\/alerte-dovezi\.js"><\/script><script defer="" src="\/lib\/alerte-grafice\.js"><\/script><script defer="" src="\/lib\/alerte-ecran\.js"><\/script>/);
-  const ap = citeste("public", "app.js"); assert.match(ap, /return alRandComuta\(id,deschis\);/); assert.match(ap, /"salt","alerts","contintreg"\]\.forEach/); assert.match(ap, /"slTemaBtn","alTemaBtn","ciTemaBtn"\]/);
+  const ap = cuTablou(citeste("public", "app.js")); assert.match(ap, /return alRandComuta\(id,deschis\);/); assert.match(ap, /"salt","alerts","contintreg"\]\.forEach/); assert.match(ap, /"slTemaBtn","alTemaBtn","ciTemaBtn"\]/);
   assert.match(citeste("scripts", "face-tema-tablou.mjs"), /"salt", "alerts", "contintreg"\]/); assert.match(citeste("public", "sw.js"), /"\/lib\/alerte-grafice\.js"/);
 });
 await test("V versiunile v100.367 (index ×4, sw, versiune.js, package + lanț, BUILD_INFO) și colectorul v101.204", () => {

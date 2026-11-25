@@ -5,6 +5,7 @@
 //  2. o altă eroare (rețea, 500) sau datele venite NU înseamnă „fără parolă”
 //  3. cardurile Crypto și Nasdaq spun „FĂRĂ PAROLĂ”, ce ai de făcut și butonul spre Setări (mergiLaParola)
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
@@ -16,7 +17,7 @@ let teste = 0, picate = 0;
 async function test(nume, f) { teste++; await Promise.resolve().then(f).then(() => console.log(`  ok   ${nume}`)).catch((e) => { picate++; console.log(`  PICA ${nume}\n       ${e && e.message}`); }); }
 console.log("\nv100.199 · piața fără parolă, spus pe față · proba\n");
 
-const app = citeste("public", "app.js");
+const app = cuTablou(citeste("public", "app.js"));
 const regula = (app.match(/function eroareDeParola\(mesaj,status\)\{[^}]*\}/) || [])[0];
 const cx = { setInterval: () => 0, console, document: { hidden: false, addEventListener: () => {} }, window: { addEventListener: () => {} } };
 vm.createContext(cx);

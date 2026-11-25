@@ -14,6 +14,7 @@
 //   H  pagina (Tablou, Simulator) și colectorul dau totalPionex; versiunea
 // Rulare: node scripts/proba-v100383.mjs
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -127,7 +128,7 @@ await test("G  „Ce fac cu botul ăsta?” pornește și ea din banii din Pione
 });
 
 await test("H  Tabloul, Simulatorul și colectorul dau totalPionex; versiunea v100.383, colectorul v101.212, proba în lanț după v100.382", () => {
-  const APP = citeste("public", "app.js"), SIM = citeste("public", "lib", "grid-sim-ecran.js"), COL = citeste("scripts", "lib", "tura-monte-carlo-bot.mjs");
+  const APP = cuTablou(citeste("public", "app.js")), SIM = citeste("public", "lib", "grid-sim-ecran.js"), COL = citeste("scripts", "lib", "tura-monte-carlo-bot.mjs");
   assert.match(APP, /pozitiePionex:pornitLa\?d\.pozitie:null,totalPionex:totalPx,/); assert.match(APP, /GridSim\.notaAncorare\(rez\)/);
   assert.equal((SIM.match(/totalPionex: /g) || []).length, 4, "Simulatorul: 4 apeluri"); assert.equal((COL.match(/totalPionex: totalPx/g) || []).length, 3, "colectorul: 3 apeluri");
   const pk = JSON.parse(citeste("package.json")), bi = JSON.parse(citeste("BUILD_INFO.json")), HTML = citeste("public", "index.html");

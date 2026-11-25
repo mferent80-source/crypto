@@ -4,6 +4,7 @@
 // Comportament, Discordul, tema, versiunile.
 //   node scripts/proba-v100361.mjs
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -120,7 +121,7 @@ await test("K2 Discord: prețul 1–10 USDT cu 3 zecimale, mediana mișcării, s
   const dim = liniiTradeZilei([{ simbol: "BTC", fel: "piata", d: aziLa(7, 0.01) }], TZ); assert.match(dim[dim.length - 1], /„azi ~”, gridul și stopul = din prognoza de la 00:00 UTC/);
 });
 await test("T tema și legăturile: RADACINI, tbTemaAplica + tzTemaBtn, tema devreme, tbRandComuta ⇒ tzRandComuta, generatorul la zi, scripturile în ordine, cache-ul, CSS-ul (și ziua butonului)", () => {
-  assert.match(citeste("scripts", "face-tema-tablou.mjs"), /"comportament", "tradezilei", "carnet", "scan", "salt", "alerts", "contintreg"\]/); const A = citeste("public", "app.js");
+  assert.match(citeste("scripts", "face-tema-tablou.mjs"), /"comportament", "tradezilei", "carnet", "scan", "salt", "alerts", "contintreg"\]/); const A = cuTablou(citeste("public", "app.js"));
   assert.match(A, /"comportament","tradezilei","carnet","scan","salt","alerts","contintreg"\]\.forEach\(function\(id\)\{var p=document\.getElementById\(id\);if\(p\)p\.classList\.toggle\("tbZi",zi\)\}\)/); assert.match(A, /"coTemaBtn","tzTemaBtn","cnTemaBtn","scTemaBtn","slTemaBtn","alTemaBtn","ciTemaBtn"\]/);
   assert.match(A, /return tzRandComuta\(id,deschis\)/); assert.match(citeste("public", "lib", "tema-devreme.js"), /"comportament", "tradezilei", "carnet", "scan", "salt", "alerts", "contintreg"\]/);
   execFileSync(process.execPath, [path.join(RAD, "scripts", "face-tema-tablou.mjs"), "--check"], { stdio: "pipe" });

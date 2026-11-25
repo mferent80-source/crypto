@@ -8,6 +8,7 @@
 //   6. legarea: rfFiltru / rfAdanc în lista albă; versiunile v100.301.
 //   node scripts/proba-v100301.mjs
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
@@ -100,7 +101,7 @@ await test("4. rezumatul: „Contra boților tăi” din direcția botului faț�
 });
 
 await test("5. rândul din Tablou: stopul (filtru) la X % și NU TRECE sub 2× cost; Trade-ul zilei citește refuzul Pionex din răspuns", async () => {
-  const A = citeste("public", "app.js");
+  const A = cuTablou(citeste("public", "app.js"));
   const i0 = A.indexOf("var tbRfStare={"), i1 = A.indexOf("function tbCitireExtra(b,o){");
   const c2 = { console, Math, Number, String, Object, Array, isFinite, JSON, Date, TabloBot: { simboluri: (baza) => ({ pionex: baza + "_USDT_PERP", moneda: baza }) } };
   vm.createContext(c2);
@@ -122,7 +123,7 @@ await test("5. rândul din Tablou: stopul (filtru) la X % și NU TRECE sub 2× c
 });
 
 await test("6. legarea: rfFiltru / rfAdanc în lista albă (cuvinte separate); CSS-ul filtrelor; versiunile v100.301 peste tot", () => {
-  const A = citeste("public", "app.js"), C = citeste("public", "app.css"), H = citeste("public", "index.html");
+  const A = cuTablou(citeste("public", "app.js")), C = citeste("public", "app.css"), H = citeste("public", "index.html");
   const lista = A.match(/var ACTIUNI_PERMISE=new Set\("([^"]*)"/)[1].split(/\s+/);
   for (const n of ["rfFiltru", "rfAdanc", "rfPorneste", "rfTf", "rfLaGrid", "tzLaGrid", "acasaDeschideAnaliza"]) assert.ok(lista.includes(n), "lipsește: " + n);
   assert.match(C, /#rangefilter \.rfFiltre\{/); assert.match(C, /details\.rfIntro summary/);

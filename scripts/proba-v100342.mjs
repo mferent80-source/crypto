@@ -5,6 +5,7 @@
 //   I-882  Tabloul fără bot, deschis direct: banda contului, „Piața azi” și „Pe ce aș porni” se desenează (nu rămân benzi goale), iar grila
 //          botului nu mai apare cu „—” când rândurile sunt pliate
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
@@ -21,7 +22,7 @@ const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8").replace(
 let teste = 0, picate = 0;
 async function test(nume, f) { teste++; await Promise.resolve().then(f).then(() => console.log(`  ok   ${nume}`)).catch((e) => { picate++; console.log(`  PICA ${nume}\n       ${String(e && e.stack || e).slice(0, 900)}`); }); }
 console.log("\nV100.342 · ideile I-880..I-882 · proba\n");
-const APP = citeste("public", "app.js"), CSS = citeste("public", "app.css"), fnApp = (nume) => { const s = taie(APP, nume); assert.ok(s, "nu găsesc funcția " + nume + " în app.js"); return s; };
+const APP = cuTablou(citeste("public", "app.js")), CSS = citeste("public", "app.css"), fnApp = (nume) => { const s = taie(APP, nume); assert.ok(s, "nu găsesc funcția " + nume + " în app.js"); return s; };
 function mulberry32(a) { return function () { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const ZI = 86400000, H4 = 14400000, M15 = 900000;
 

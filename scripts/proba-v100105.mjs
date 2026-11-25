@@ -3,6 +3,7 @@
 // fișierul cu CRLF în depozit (7.012 rânduri „schimbate”, diff-uri ilizibile). (1) fiecare fișier al paginii are UN SINGUR fel de capăt de
 // rând (fără CR singur, fără LF singur în fișierele CRLF) · (E) versiunile.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import vm from "node:vm";
 import fs from "node:fs";
@@ -12,7 +13,7 @@ import { fileURLToPath } from "node:url";
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8");
 const lib = (f) => fs.readFileSync(path.join(RAD, "public", "lib", f), "utf8");
-const fnApp = (nume) => { const s = citeste("public", "app.js"), i = s.indexOf("function " + nume + "("); assert.ok(i >= 0, "lipsește " + nume + " în app.js"); return s.slice(i, s.indexOf("\nfunction ", i + 10)); };
+const fnApp = (nume) => { const s = cuTablou(citeste("public", "app.js")), i = s.indexOf("function " + nume + "("); assert.ok(i >= 0, "lipsește " + nume + " în app.js"); return s.slice(i, s.indexOf("\nfunction ", i + 10)); };
 globalThis.GridCalcul = new Function(`${lib("grid-calcul.js")}; return GridCalcul;`)();
 globalThis.GridProba = new Function(`${lib("grid-proba.js")}; return GridProba;`)();
 const GP = new Function(`${lib("grid-plan.js")}; return GridPlan;`)();
@@ -41,7 +42,7 @@ await test("(R1/R6) colectorul: fără ofertă (încă) nu marchează botul pent
 await test("(R2) fișa neutră: oferta și rândul din jurnal poartă direcția ferestrelor (long), nu „neutru”", () => {
   const f = { simbol: "ABC_USDT_PERP", dir: "neutru", verdict: { nivel: "asteapta" }, setare: { suma: 100 } };
   assert.equal(GJ.adauga([], f, 1, { eticheta: "larg", setare: GP.setareFereastra({ dir: "long", jos: 1, sus: 2, grile: 3, levier: 1, suma: 100, stop: null }) })[0].dir, "long");
-  assert.match(citeste("public", "app.js"), /grFerestreTine\(f,vG,dirG\)/); assert.match(fnApp("grFerestreTine"), /^function grFerestreTine\(f,v,dir\)\{/);
+  assert.match(cuTablou(citeste("public", "app.js")), /grFerestreTine\(f,vG,dirG\)/); assert.match(fnApp("grFerestreTine"), /^function grFerestreTine\(f,v,dir\)\{/);
 });
 await test("(R3) un rând recunoscut șters de el nu revine (boții ignorați)", () => {
   assert.equal(GJ.recunoaste([], [BOT], [OF], 9000, ["9"]).length, 0); assert.equal(GJ.recunoaste([], [BOT], [OF], 9000, []).length, 1);
@@ -78,7 +79,7 @@ await test("(R10) motivele fără probă (monedă nouă, < 30 de zile): nimic �
   for (const k of ["ta", "mea"]) { const m = GP.motive(v, k, 0.1); assert.ok(!JSON.stringify(m).includes("undefined"), k + ": " + JSON.stringify(m)); assert.ok(m.da.length && m.nu.length); }
 });
 await test("(R+) oferta se ține doar dacă variantele memorate sunt ale monedei de acum", () => {
-  assert.match(citeste("public", "app.js"), /try\{var vG=grPlanMemo\.grid&&grPlanMemo\.grid\.cheie&&grPlanMemo\.grid\.cheie\.indexOf\(f\.simbol\+"\|"\)===0\?grPlanMemo\.grid\.v:null;/);
+  assert.match(cuTablou(citeste("public", "app.js")), /try\{var vG=grPlanMemo\.grid&&grPlanMemo\.grid\.cheie&&grPlanMemo\.grid\.cheie\.indexOf\(f\.simbol\+"\|"\)===0\?grPlanMemo\.grid\.v:null;/);
 });
 await test("(E) versiunile v100.105", () => {
   const bi = JSON.parse(citeste("BUILD_INFO.json")); assert.match(bi.version, /^v100\.(?:1(0[5-9]|[1-9]\d)|[2-9]\d\d)$/); const V2 = bi.version; assert.ok(bi.badge.startsWith(V2 + " · "));

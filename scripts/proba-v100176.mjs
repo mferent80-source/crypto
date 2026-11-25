@@ -1,6 +1,7 @@
 // Probele v100.176 (13.10.2026, el: „din prima recomandare 1–6”) — contul întreg: expunerea, riscul pe o zi (VaR / ES), corelațiile,
 // stres-testele pe crizele reale, reconcilierea cu brokerii, randamentul ponderat în timp (TWR) față de BTC și S&P.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -206,7 +207,7 @@ await test("serverul: raportul (cu „la”) și valoarea zilei (o intrare pe zi
   const z = (await get("contZile")).zile; assert.equal(z.length, 1); assert.equal(z[0].valoare, 28200);
 });
 await test("legarea paginii: meniul din stânga, sertarul „More” de pe telefon, secțiunea, scripturile, cache-ul aplicației, navTo", () => {
-  const html = citeste("public", "index.html"), sw = citeste("public", "sw.js"), app = citeste("public", "app.js");
+  const html = citeste("public", "index.html"), sw = citeste("public", "sw.js"), app = cuTablou(citeste("public", "app.js"));
   assert.match(html, /data-nav="contintreg"><span class="sideIcon">Σ<\/span>Contul întreg<\/button>/); assert.match(html, /moreNav\('contintreg',true\)"><b>Σ<\/b>Contul întreg<\/button>/);
   assert.match(html, /<section class="panel" id="contintreg">/); assert.match(html, /<div id="ciPagina">/);   /* v100.369: capul ca paginile refăcute */
   assert.match(html, /<script src="\/lib\/cont-intreg\.js"><\/script>(<script src="\/lib\/[a-z-]+\.js"><\/script>)*<script src="\/lib\/cont-ecran\.js"><\/script>/); assert.match(sw, /"\/lib\/cont-intreg\.js",("\/lib\/[a-z-]+\.js",)*"\/lib\/cont-ecran\.js"/);

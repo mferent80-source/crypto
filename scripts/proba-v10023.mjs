@@ -2,6 +2,7 @@
 // Dovada pentru banii Pionex (toti cei 10 boti reali, la cent): banii primiti inapoi = investit + realizat + comisioane + funding
 // => realizatul (totalRealizedProfit) e FARA costuri; pozitia = realizat - grile; NET-ul = realizat + comisioane + funding.
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 
 const lib = (f) => fs.readFileSync(new URL(`../public/lib/${f}`, import.meta.url), "utf8");
@@ -82,7 +83,7 @@ await test("mici · un trade pe zero rupe seria; trade-urile fara suma pusa sunt
 await test("7 · pagina spune de unde vin botii Pionex (nota statisticii Pionex si Tot)", () => {
   // v100.25: „doar ultimii” era o premisa gresita (Pionex da istoria pe pagini de cate 10); textul sta acum in jtNotaPionex si
   // apare doar cand chiar lipseste istoria (pagina publicata) - cazurile sunt probate in proba-v10025
-  const app = fs.readFileSync(new URL("../public/app.js", import.meta.url), "utf8");
+  const app = cuTablou(fs.readFileSync(new URL("../public/app.js", import.meta.url), "utf8"));
   const i = app.indexOf("function jtStatNota("), corp = app.slice(i, app.indexOf("\n", i));
   assert.match(corp, /jtNotaPionex\(\)/); assert.match(corp, /Pionex/);
   const j = app.indexOf("function jtNotaPionex("); assert.ok(j >= 0); assert.match(app.slice(j, j + 900), /ultimii/);

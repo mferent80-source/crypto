@@ -5,6 +5,7 @@
 // Rulează legăturile ADEVĂRATE din renderTabloGrafic (bucata de după desen, tăiată din public/app.js) pe un DOM fals:
 // mută pointerul, apasă, atinge cu degetul, dă focus pe un punct - și se uită ce s-a întâmplat cu eticheta, crucea și prețul din scară.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import assert from "node:assert/strict";
@@ -15,7 +16,7 @@ const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8");
 let trecute = 0, picate = 0;
 const test = async (nume, f) => { try { await f(); trecute++; console.log("  ✓ " + nume); } catch (e) { picate++; console.log("  ✗ " + nume + "\n      " + String(e && e.message || e).split("\n").join("\n      ")); } };
 
-const APP = citeste("public", "app.js");
+const APP = cuTablou(citeste("public", "app.js"));
 const iStart = APP.indexOf('var zona=el.querySelector(".gbZona")'), iEnd = APP.indexOf("function renderTabloDovada(){");
 assert.ok(iStart > 0 && iEnd > iStart, "nu găsesc legăturile graficului în app.js");
 const LEG = APP.slice(iStart, APP.lastIndexOf("}", iEnd));   // corpul, fără acolada care închide renderTabloGrafic

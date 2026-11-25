@@ -4,6 +4,7 @@
 //   Frânele unei singure piețe rămân pe cardul ei (pauza sezonului și funding-ul la Crypto, exportul T212 nepotrivit la Nasdaq).
 //   Colectorul / Discord neschimbat (franaVerb fără „faraCont” dă exact ce dădea).  node scripts/proba-v100330.mjs
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -99,7 +100,7 @@ await test("Scan și Tabloul fără bot: aceeași frână a contului, o singură
   const SC = LIB("scan-ecran.js"), ctxS = fn(SC, "scanContext");
   assert.equal(ctxS.split("acFranaContText()").length - 1, 1, "o singură dată în Scan");
   assert.match(ctxS, /scFrana/);
-  const APP = citeste("public", "app.js"), preg = APP.slice(APP.indexOf("function tbPregatire("), APP.indexOf("function tbPregatire(") + 3000);
+  const APP = cuTablou(citeste("public", "app.js")), preg = APP.slice(APP.indexOf("function tbPregatire("), APP.indexOf("function tbPregatire(") + 3000);
   assert.match(preg, /acFranaContText\(\)/, "Tabloul fără bot: linia frânei contului lângă vremea crypto");
 });
 

@@ -6,6 +6,7 @@
 //   V  versiunea v100.387, proba în lanț după v100.386
 // Rulare: node scripts/proba-v100387.mjs
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
@@ -38,14 +39,14 @@ await test("C  areInLista(): lista din new Set(\"…\") are cuvintele, în orice
 
 await test("D  probele mutate folosesc unealta și ar PICA pe codul fără câmpul cerut", () => {
   for (const f of ["proba-v100139.mjs", "proba-v100140.mjs", "proba-v100145.mjs", "proba-v100316.mjs", "proba-v100317.mjs", "proba-v100354.mjs"]) assert.match(citeste("./" + f), /from "\.\/lib\/cod-are\.mjs"/, f);
-  const APP = citeste("../public/app.js"), i = APP.indexOf("function tbMcPorneste("), p = APP.slice(i, APP.indexOf("\n}\n", i) + 2);
+  const APP = cuTablou(citeste("../public/app.js")), i = APP.indexOf("function tbMcPorneste("), p = APP.slice(i, APP.indexOf("\n}\n", i) + 2);
   const cerute = ["tbMc.b15,st,{", "plan:plan", "pornitLa:pornitLa", "stPrefix:pornitLa?st:null", "botRuleaza:!!pornitLa", "pozitiePionex:pornitLa?d.pozitie:null", "n:500", "seed:12", "orizonturi:[1/24,4/24,1,7]", "zile:7"];
   asertApel(p, "tbMcSimuleaza", cerute);
   assert.throws(() => asertApel(p.replace("pozitiePionex:pornitLa?d.pozitie:null,", ""), "tbMcSimuleaza", cerute), /n-are: pozitiePionex/);
 });
 
 // ── I-939 (filele) și locul rândurilor fluxului ──
-const APPs = citeste("../public/app.js"), CSSs = citeste("../public/app.css");
+const APPs = cuTablou(citeste("../public/app.js")), CSSs = citeste("../public/app.css");
 const fn = (n) => { const i = APPs.search(new RegExp("function " + n + "\\(")); let a = 0, j = APPs.indexOf("{", i); for (; j < APPs.length; j++) { if (APPs[j] === "{") a++; else if (APPs[j] === "}" && --a === 0) break; } return APPs.slice(i, j + 1); };
 const tbFile = () => { const i = APPs.indexOf("var TB_FILE="), j = APPs.indexOf("};", i); return APPs.slice(i, j + 2); };
 
@@ -91,9 +92,10 @@ await test("G  locul rândurilor fluxului: order 323 (!important, după „Stopu
 
 await test("V  versiunea v100.387 (index ×4, sw, versiune.js, package + lanț, BUILD_INFO)", () => {
   const pk = JSON.parse(citeste("../package.json")), bi = JSON.parse(citeste("../BUILD_INFO.json")), HTML = citeste("../public/index.html");
-  assert.equal(pk.version, "100.387.0"); assert.equal(bi.version, "v100.387"); assert.ok(bi.li387 && bi.li387.length > 100, "BUILD_INFO.li387");
-  assert.ok((HTML.match(/v100\.387/g) || []).length >= 4); assert.match(citeste("../public/sw.js"), /crypto-radar-v100-387/); assert.match(citeste("../functions/_shared/versiune.js"), /"v100\.387"/);
-  assert.match(pk.scripts.test, /npm run test:v100386 && npm run test:v100387 && node scripts\/mutatii\.mjs --doar-tiparele/); assert.equal(pk.scripts["test:v100387"], "node scripts/proba-v100387.mjs");
+  /* v100.388: „de la 387 încolo” (versiunea merge mai departe; după ea în lanț vine proba v100.388) */
+  assert.ok(+(/^100\.(\d+)\.0$/.exec(pk.version) || [])[1] >= 387); assert.ok(+(/^v100\.(\d+)$/.exec(bi.version) || [])[1] >= 387); assert.ok(bi.li387 && bi.li387.length > 100, "BUILD_INFO.li387");
+  assert.ok((HTML.match(/v100\.(\d+)/g) || []).filter((v) => +v.slice(5) >= 387).length >= 4); assert.ok(+(/crypto-radar-v100-(\d+)/.exec(citeste("../public/sw.js")) || [])[1] >= 387); assert.ok(+(/"v100\.(\d+)"/.exec(citeste("../functions/_shared/versiune.js")) || [])[1] >= 387);
+  assert.match(pk.scripts.test, /npm run test:v100386 && npm run test:v100387/); assert.equal(pk.scripts["test:v100387"], "node scripts/proba-v100387.mjs");
 });
 
 console.log(`\n${teste - picate}/${teste} trecute` + (picate ? ` · ${picate} PICATE` : ""));

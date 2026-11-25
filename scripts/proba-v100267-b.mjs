@@ -10,6 +10,7 @@
 //     (KPI „Piața”, rezumatul direcției, banda, Sfaturile, pivoții de 4 h) până sosea tura nouă (5–20 s).
 // Funcțiile se iau din public/app.js după text și se rulează cu dependențele injectate (ca proba-v100264 / proba-audit23-ecran).
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
@@ -18,7 +19,7 @@ import "./lib/text-ro-global.mjs";   // TextRo ca global (tbDeseneazaKpi îl fol
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8").replace(/\r\n/g, "\n");
-const APP = citeste("public", "app.js");
+const APP = cuTablou(citeste("public", "app.js"));
 /* de la „function nume(” la început de rând până la următorul „\nfunction ” (un comentariu cu același text nu păcălește) */
 const fnApp = (nume) => { const i = APP.indexOf("\nfunction " + nume + "("); assert.ok(i >= 0, "lipsește " + nume + " în app.js"); const j = APP.indexOf("\nfunction ", i + 10); return APP.slice(i + 1, j < 0 ? undefined : j); };
 let teste = 0, picate = 0;

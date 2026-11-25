@@ -1,6 +1,7 @@
 // Probele v100.180 (13.10.2026, el: „poți face așa”) — Busola rămâne separată; Radarul are drumul scurt spre ea:
 // „🧭 Busola ↗” în meniu (moneda botului din Tablou sau moneda din Radar, pe intervalul tău) + rândul din fișa botului.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -40,7 +41,7 @@ await test("telefon: sertarul „⋯ More” are și el „🧭 Busola ↗”, i
   assert.match(html, /<button class="moreBtn" data-action-click="moreNav\('tabloubot',true\)"><b>◉<\/b>Tablou bot<\/button>\s*<button class="moreBtn" data-action-click="closeMoreDrawer\(\);deschideBusola\(\)"><b>🧭<\/b>Busola ↗<\/button>/);
 });
 await test("deschideBusola(): cu un bot citit ⇒ moneda botului pe intervalul graficului lui, de pe ORICE pagină (v100.377, el 22.11); fără bot ⇒ moneda și intervalul din Radar; fereastră nouă, noopener", () => {
-  const src = citeste("public", "app.js"), i = src.indexOf("function deschideBusola(");
+  const src = cuTablou(citeste("public", "app.js")), i = src.indexOf("function deschideBusola(");
   assert.ok(i > 0, "deschideBusola există"); const f = src.slice(i, src.indexOf("\n", i));
   const deschise = [], el = { symbol: { value: "ETH" }, tf: { value: "1h" } };
   const c = { Busola: B, deschise, tbStare: { bot: { simbolPionex: "TAKE_USDT_PERP" } }, paginaActiva: "tabloubot", tbTf: () => "4H", tbCheieBusola: (b) => b.simbolPionex,
@@ -55,7 +56,7 @@ await test("deschideBusola(): cu un bot citit ⇒ moneda botului pe intervalul g
   c.assetClass = () => "STOCKS"; c.paginaActiva = "dash"; c.deschideBusola(); assert.equal(deschise.pop()[0], URL0, "pe acțiuni: capul Busolei");
 });
 await test("fișa botului: rândul „🧭 deschide în Busola ↗” pe moneda botului și intervalul graficului, link extern sigur", () => {
-  const src = citeste("public", "app.js"), i = src.indexOf("function tbBusolaLinie("), corp = src.slice(i, src.indexOf("\nfunction ", i + 10));
+  const src = cuTablou(citeste("public", "app.js")), i = src.indexOf("function tbBusolaLinie("), corp = src.slice(i, src.indexOf("\nfunction ", i + 10));
   assert.match(corp, /Busola\.adresaBusola\(\{bot:tbCheieBusola\(b\),tfBot:tbTf\(\)\}\)/);
   assert.match(corp, /target="_blank" rel="noopener"/); assert.match(corp, /🧭 deschide în Busola ↗/);
 });

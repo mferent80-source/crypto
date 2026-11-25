@@ -10,6 +10,7 @@
 //   🟡 o reîmprospătare picată ștergea fișa ⇒ fișa veche rămâne, cu ora; 🟡 fișa goală deși câmpul are moneda ⇒ calculul pornește singur.
 //   node scripts/proba-v100349.mjs
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -58,19 +59,19 @@ await test("🟡 ÎNGUST / LARG: minimul pe ordin cu minSizeLimit, funding-ul re
   assert.ok(a.mediaUsdt < b.mediaUsdt, "funding-ul real (0,3%/zi) costă: " + a.mediaUsdt + " vs " + b.mediaUsdt);
 });
 await test("🔑 pagina: verdictul de sus e al ferestrei pornite, spune pe ce judecă, avertismentul probei; „aș alege-o acum” doar fără NU PORNI", () => {
-  const a = citeste("public", "app.js");
+  const a = cuTablou(citeste("public", "app.js"));
   assert.match(a, /function grVerdictePlan\(/); assert.match(a, /GridPlan\.verdictFereastra\(/);
   assert.match(a, /f\.verdictDes/); assert.match(a, /class="grVPe/); assert.match(a, /simulatorul probei iese mai rău decât realitatea/);
   assert.match(a, /vd&&vd\.nivel==="nu"/); assert.match(a, /aș aștepta/);
   assert.match(a, /fundingZi:dG\.fundingZi/); assert.match(a, /fereastraZile:f\.H/); assert.match(a, /minSize:i&&Number\(i\.minSizeLimit\)/);
 });
 await test("🟡 textele: fără „ce s-a dovedit e să nu-l pornești”; motivul mișcării spune că e nedovedit", () => {
-  const a = citeste("public", "app.js"); assert.doesNotMatch(a, /ce s-a dovedit e să nu-l pornești/);
+  const a = cuTablou(citeste("public", "app.js")); assert.doesNotMatch(a, /ce s-a dovedit e să nu-l pornești/);
   const v = GridCalcul.verdict({ regim: { miscare: true, r24h: 1.6 }, stat: { antren: { mediana: 0.01, lichidari: 0 }, test: { mediana: 0.01, medie: 0.01, lichidari: 0 } }, zile: 30 });
   assert.match(v.motive[0], /neprobat/);
 });
 await test("🟡 fișa rămâne la o reîmprospătare picată (cu ora), iar calculul pornește singur când câmpul are moneda", () => {
-  const a = citeste("public", "app.js");
+  const a = cuTablou(citeste("public", "app.js"));
   assert.match(a, /grStare\.eroareRefacere/); assert.match(a, /n-am putut reface fișa/);
   const p = a.slice(a.indexOf("function porneGrid(){"), a.indexOf("function grPauza("));
   assert.match(p, /gridCalculeaza\(\)/);
@@ -129,7 +130,7 @@ await test("ruta: fisaNota (curățată, una pe monedă / zi / fereastră), fise
   r = await mod.onRequestGet({ request: cer("fiseUrmarire", null, "GET"), env }); assert.equal((await r.json()).urmarire.rezumat.nu.n, 3);
 });
 await test("🔑 pagina: fișa se notează (o dată pe monedă / zi / fereastră) și rândul „Cum au ieșit fișele” e sub verdict; colectorul rulează tura", () => {
-  const a = citeste("public", "app.js");
+  const a = cuTablou(citeste("public", "app.js"));
   assert.match(a, /function grFisaNoteaza\(/); assert.match(a, /action=fisaNota/); assert.match(a, /action=fiseUrmarire/); assert.match(a, /Cum au ieșit fișele/);
   const c = citeste("scripts", "colector.mjs"); assert.match(c, /turaFiseColector/); assert.match(c, /fise-urmarire-stare\.json/); assert.match(c, /registru: registruVf/);
 });
@@ -144,7 +145,7 @@ await test("🔑 Idei.ideiBotiInfo dă și toți lichizii ordonați (pentru list
   assert.ok(inf.toti.every((x) => Number.isFinite(x.net7)));
 });
 await test("🔑 pagina: clasamentul e lista din Sugestii (primele 5 la vedere, restul pliat cu numărul lor; sub 1 M și de evitat separat), fără tăietura la 60", () => {
-  const a = citeste("public", "app.js"), f = a.slice(a.indexOf("function renderGridClasament(){"), a.indexOf("function grLinisteTine("));
+  const a = cuTablou(citeste("public", "app.js")), f = a.slice(a.indexOf("function renderGridClasament(){"), a.indexOf("function grLinisteTine("));
   assert.match(f, /Idei\.ideiBotiInfo\(/); assert.doesNotMatch(f, /slice\(0,60\)/);
   assert.match(f, /class="grClasPli"/); assert.match(f, /sub 1 M USDT\/zi/); assert.match(f, /de evitat acum/); assert.match(f, /G1/);
   assert.match(f, /sugSparkHtml/); assert.match(f, /class="sugRand/);
@@ -177,7 +178,7 @@ await test("🔑 corecția BH: ruta laboratorului păstrează netul și blocuril
   const c = citeste("scripts", "colector.mjs"); assert.match(c, /GridLaborator\.ingheata\(registruVf\.citeste\("labBlocuri"\)/);
 });
 await test("🔑 pagina: laboratorul fără eticheta zilnică DOVEDIT - „dovedit în k din N blocuri” sau când se judecă primul; pliat într-un rând; Tabloul la fel", () => {
-  const a = citeste("public", "app.js"), f = a.slice(a.indexOf("function renderGridLaborator(){"), a.indexOf("function gridClasamentAlege("));
+  const a = cuTablou(citeste("public", "app.js")), f = a.slice(a.indexOf("function renderGridLaborator(){"), a.indexOf("function gridClasamentAlege("));
   assert.doesNotMatch(f, /✅ DOVEDIT/); assert.match(f, /GridLaborator\.bilantBlocuri\(/); assert.match(f, /din \"\+|blocuri de 60 de zile/); assert.match(f, /class="grLabPli"/);
   assert.doesNotMatch(a, /qm\.verdict==="dovedit"\?"good"/);
 });
@@ -208,7 +209,7 @@ await test("ruta gridJurnal: unește ce trimite aparatul cu ce e pe server și �
   r = await mod.onRequestPost({ request: cer({ jurnal: "rău" }), env }); assert.equal(r.status, 400);
 });
 await test("🔑 pagina: jurnalul și hârtia se sincronizează cu serverul; ștergerea cere confirmare; hârtia își aduce lumânările de la pornire (pagini) și funding-ul; fără tăietura tăcută la 20", () => {
-  const a = citeste("public", "app.js");
+  const a = cuTablou(citeste("public", "app.js"));
   assert.match(a, /function grSyncJurnal\(/); assert.match(a, /action=gridJurnal/); assert.match(a, /function grHartieBare\(/); assert.match(a, /endTime=/);
   const st = a.slice(a.indexOf("function gridJurnalSterge("), a.indexOf("async function gridJurnalActualizeaza("));
   assert.match(st, /confirm\(/); assert.match(a.slice(a.indexOf("function gridHartieSterge("), a.indexOf("var grHartieCache")), /confirm\(/);
@@ -218,7 +219,7 @@ await test("🔑 pagina: jurnalul și hârtia se sincronizează cu serverul; șt
 // ---- Valul 6 - ASPECTUL „ca paginile refăcute” + mărunțișurile ----
 await test("🔑 tema: Grid intră în paginile refăcute (rădăcina în generator, comutatorul, butonul din antet, rama comună); stratul generat e la zi", async () => {
   assert.match(citeste("scripts", "face-tema-tablou.mjs"), /RADACINI = \[[^\]]*"gridset"/);
-  const a = citeste("public", "app.js"), ap = a.slice(a.indexOf("function tbTemaAplica(){"), a.indexOf("function tbTemaAplica(){") + 700);
+  const a = cuTablou(citeste("public", "app.js")), ap = a.slice(a.indexOf("function tbTemaAplica(){"), a.indexOf("function tbTemaAplica(){") + 700);
   assert.match(ap, /"gridset"/); assert.match(ap, /"grTemaBtn"/);
   assert.match(citeste("public", "index.html"), /id="grTemaBtn"[^>]*data-action-click="tbTemaComuta\(\)"/);
   assert.match(citeste("public", "app.css"), /html:has\(:is\(#tabloubot,#t212,#dash,#rangefilter,#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade,#comportament,#tradezilei,#carnet,#scan,#salt,#alerts,#contintreg\)\.on\.tbZi\) body/);
@@ -226,12 +227,12 @@ await test("🔑 tema: Grid intră în paginile refăcute (rădăcina în genera
 });
 await test("🔑 sus: fraza mare + „De unde știu”; pe ecran lat lista și fișa alături (lista lipită, cu derulare proprie)", () => {
   assert.match(citeste("public", "index.html"), /id="grFrazaBox"/);
-  const a = citeste("public", "app.js"); assert.match(a, /function renderGridFraza\(/); assert.match(a.slice(a.indexOf("function renderGridFraza(")), /De unde știu/);
+  const a = cuTablou(citeste("public", "app.js")); assert.match(a, /function renderGridFraza\(/); assert.match(a.slice(a.indexOf("function renderGridFraza(")), /De unde știu/);
   const c = citeste("public", "app.css"); assert.match(c, /@media \(min-width:1280px\)\{\.pzDemo #gridset\.on\{display:grid/); assert.match(c, /\.pzDemo #gridset\.on>#grClasamentCard\{grid-column:1/);
   assert.match(c, /\.pzDemo #gridset\.on>#grFrazaBox\{order:5\}/);
 });
 await test("mărunțișuri: tabelul planului pe direcția botului tău; sumele cu o zecimală; textele numesc butoanele cum se văd; pragul calibrării spus la fel", () => {
-  const a = citeste("public", "app.js"), x = citeste("public", "index.html");
+  const a = cuTablou(citeste("public", "app.js")), x = citeste("public", "index.html");
   assert.match(a, /var grLabDir=null;/); assert.match(a, /function grLabDirBot\(/);
   assert.doesNotMatch(a, /\+s\.suma\+" USDT · pornit "/); assert.doesNotMatch(a, /\(e\.suma!=null\?e\.suma:"\?"\)\+" USDT"/);
   assert.doesNotMatch(x + a, /apasă „Pornește pe hârtie”/); assert.doesNotMatch(x, /apasă „am pornit botul”/);

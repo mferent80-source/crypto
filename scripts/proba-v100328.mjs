@@ -4,6 +4,7 @@
 //   orizonturile și istoria pe 4 ore în ședințe (la bursă o zi are 2 bare de 4 ore). Pe Tablou nimic nu se schimbă.
 //   node scripts/proba-v100328.mjs
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -15,7 +16,7 @@ const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8").replace(
 let teste = 0, picate = 0;
 async function test(nume, f) { teste++; await Promise.resolve().then(f).then(() => console.log(`  ok   ${nume}`)).catch((e) => { picate++; console.log(`  PICA ${nume}\n       ${String(e && e.stack || e).split("\n").slice(0, 3).join("\n       ")}`); }); }
 console.log("\nV100.328 · detaliile indicatorilor și în fișa Trading 212 · proba\n");
-const APP = citeste("public", "app.js"), T212 = citeste("public", "lib", "t212-ecran.js"), CSS = citeste("public", "app.css");
+const APP = cuTablou(citeste("public", "app.js")), T212 = citeste("public", "lib", "t212-ecran.js"), CSS = citeste("public", "app.css");
 // funcția întreagă (scrisă pe mai multe rânduri, se închide cu „}” la început de rând)
 const fn = (src, nume) => { const i = src.indexOf("function " + nume + "("); assert.ok(i >= 0, "lipsește funcția " + nume); const j = src.indexOf("\n}\n", i); assert.ok(j > i, "funcția " + nume + " nu se închide cu } la început de rând"); return src.slice(i, j + 2); };
 const esc = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");

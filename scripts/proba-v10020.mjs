@@ -2,6 +2,7 @@
 //   A) are si moneda BOTULUI CARE RULEAZA (chiar daca nu e in top 20), primul rand, marcat „botul tău” (+ cat are acum botul);
 //   B) are si SHORT langa long (comutator Long / Short).
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import { turaLaborator } from "./lib/tura-laborator.mjs";
 
@@ -81,7 +82,7 @@ await test("colectorul da laboratorului monedele botilor care ruleaza (extraSimb
 });
 
 await test("pagina: comutator Long / Short, randul botului primul si marcat „botul tău”", () => {
-  const app = fs.readFileSync(new URL("../public/app.js", import.meta.url), "utf8");
+  const app = cuTablou(fs.readFileSync(new URL("../public/app.js", import.meta.url), "utf8"));
   assert.match(app, /function grLabPlanDir\(/);
   assert.match(app, /data-action-click="grLabPlanDir\(\\'short\\'\)"|grLabPlanDir\(\\\x27short\\\x27\)/);
   assert.match(app, /botul tău/);

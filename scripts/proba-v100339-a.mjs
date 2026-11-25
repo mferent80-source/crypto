@@ -2,6 +2,7 @@
 // (A1) Monte Carlo pe botul care RULEAZĂ, dar pe care reluarea îl oprește pe stop / țintă: pragurile se socotesc de aici încolo, iar
 //      „Reluarea arată…” (lichidat pe drumul real) nu mai e voce „contra botului”.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -142,7 +143,7 @@ await test("(A2d) rândul de acțiune al stopului când prețul a trecut de marg
 });
 
 // ---------------- (A5) rândul Range Filter din Tablou ----------------
-const APP = citeste("public", "app.js");
+const APP = cuTablou(citeste("public", "app.js"));
 function randRf(citire, dirBot) {
   const i0 = APP.indexOf("var tbRfStare={"), i1 = APP.indexOf("function tbCitireExtra(b,o){"); assert.ok(i0 > 0 && i1 > i0);
   const c = { TextRo: G.TextRo, Date, Math, String, Number, console, TabloBot: { simboluri: (baza) => ({ pionex: baza + "_USDT_PERP", moneda: baza }) }, RangeFilter: { MIN_EP: 20, citire: () => citire } };

@@ -2,6 +2,7 @@
 // gridului, nu la doua. Masurat inainte pe 12 monede (aceleasi lumanari, mediana pe monede): 2 grile tipic +2,5% / cea mai proasta
 // −19,6% / nevazute +5,9%; 1 grila +1,8% / −16,3% / +5,1%; 1/2 grila +1,7% / −14,4% / +2,4%. Gridul dupa plan ramane la 1/2 pas.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 
@@ -44,7 +45,7 @@ await test("cartela Stopul: protectia de rezerva (fara fisa) la o grila sub grid
   const g = SemnaleBot.pasBot(bot).pas, asteptat = 4.085 * (1 - g);
   assert.ok(s.act.includes(asteptat.toFixed(4)), `act: ${s.act} (astept ${asteptat.toFixed(4)})`);
   for (const f of ["semnale-bot.js"]) assert.doesNotMatch(lib(f), /două grile|doua grile/, `${f} mai spune „două grile”`);
-  assert.doesNotMatch(fs.readFileSync(new URL("../public/app.js", import.meta.url), "utf8"), /la două grile dincolo/);
+  assert.doesNotMatch(cuTablou(fs.readFileSync(new URL("../public/app.js", import.meta.url), "utf8")), /la două grile dincolo/);
 });
 
 console.log(`\n${teste - picate}/${teste} trec`);

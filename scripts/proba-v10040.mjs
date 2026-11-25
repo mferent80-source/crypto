@@ -9,6 +9,7 @@
 //    includea ziua cumpararii · contrafactualul cerea lumanari pe tickerul gresit (LIGHTER_USDT_PERP) din ora in ora.
 // LIB=<dosar> / RAD=<dosar> ruleaza proba pe alt cod (versiunea veche scoasa din git) - asa s-a vazut picand.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -215,7 +216,7 @@ await test("🟡 Yahoo: la 401 crumb-ul se reface pe loc; simbolul inexistent (4
 });
 
 // ---------------- pachetul PAGINA + igiena ----------------
-const app = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8"), css = fs.readFileSync(path.join(RAD, "public", "app.css"), "utf8");
+const app = cuTablou(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8")), css = fs.readFileSync(path.join(RAD, "public", "app.css"), "utf8");
 function functia(src, nume) { const i = src.indexOf("function " + nume + "("); assert.ok(i >= 0, "lipseste " + nume); let a = src.indexOf("{", i), k = 0, j = a; for (; j < src.length; j++) { if (src[j] === "{") k++; else if (src[j] === "}" && --k === 0) break; } return src.slice(i, j + 1); }
 
 await test("🟡 pagina: nicio cerere fara timeout (60 s, cu mesaj pe romaneste); o valoare stricata in localStorage nu opreste pornirea", () => {

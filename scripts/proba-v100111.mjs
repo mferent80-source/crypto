@@ -2,6 +2,7 @@
 // I-549 fereastra fișei cu stopul în peste jumătate din porniri ⇒ „aș sări peste ea” (NIL: ÎNGUST 77 din 109, pornit totuși)
 // I-550 Tabloul spune ce fereastră ai pornit și ce recomanda fișa (din oferta salvată) · I-542 UN tabel „Trendul pe TF-uri” (demo aprobat)
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -12,7 +13,7 @@ const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8");
 for (const f of ["grid-calcul.js", "grid-proba.js", "grid-plan.js", "tablou-extra.js", "directie.js", "grafic-bot.js"]) vm.runInThisContext(citeste("public", "lib", f), { filename: f });
 const { GraficBot: GB, GridPlan: GP } = globalThis;
-const app = citeste("public", "app.js"), html = citeste("public", "index.html"), css = citeste("public", "app.css");
+const app = cuTablou(citeste("public", "app.js")), html = citeste("public", "index.html"), css = citeste("public", "app.css");
 const fn = (src, nume) => { const i = src.indexOf("function " + nume + "("); assert.ok(i >= 0, "lipsește " + nume); return src.slice(i, src.indexOf("\nfunction ", i + 10)); };
 let teste = 0, picate = 0;
 async function test(nume, f) { teste++; await Promise.resolve().then(f).then(() => console.log(`  ok   ${nume}`)).catch((e) => { picate++; console.log(`  PICA ${nume}\n       ${String(e.message).slice(0, 500)}`); }); }

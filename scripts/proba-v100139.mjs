@@ -3,6 +3,7 @@
 // în „Ce spune piața acum”, cu „socotit hh:mm · următorul hh:mm”, „șanse … nu o predicție” și clic spre Simulator; (c) comportamentul cu
 // funcțiile adevărate (GridSim real, lumânări sintetice, mcsAduCoin stub).
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -14,7 +15,7 @@ const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8").replace(/\r\n/g, "\n");
 const functie = (src, n) => { const i = src.search(new RegExp("(async )?function " + n + "\\(")); if (i < 0) throw new Error(n + "() lipsește"); let a = 0, j = src.indexOf("{", i); for (; j < src.length; j++) { if (src[j] === "{") a++; else if (src[j] === "}" && --a === 0) break; } return src.slice(i, j + 1); };
 for (const f of ["grid-calcul.js", "grid-proba.js", "tablou-extra.js", "actiuni-semnale.js", "risc-luna.js", "t212.js", "monte-simbol.js", "grid-sim.js"]) vm.runInThisContext(citeste("public", "lib", f), { filename: f });
-const G = globalThis, GS = G.GridSim, M = G.MonteSimbol, APP = citeste("public", "app.js"), HTML = citeste("public", "index.html"), CSS = citeste("public", "app.css");
+const G = globalThis, GS = G.GridSim, M = G.MonteSimbol, APP = cuTablou(citeste("public", "app.js")), HTML = citeste("public", "index.html"), CSS = citeste("public", "app.css");
 let teste = 0, picate = 0;
 async function test(nume, f) { teste++; await Promise.resolve().then(f).then(() => console.log(`  ok   ${nume}`)).catch((e) => { picate++; console.log(`  PICA ${nume}\n       ${String(e && e.stack || e).slice(0, 700)}`); }); }
 console.log("\nV100.139 · Monte Carlo în „Ce spune piața acum”, la 15 minute · proba\n");

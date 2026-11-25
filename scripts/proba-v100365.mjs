@@ -7,6 +7,7 @@
 //  C  - tura colectorului: poza zilnică, urmărirea și dovada pe aceeași zi în raport; ideile NU mai sunt ordonate / tăiate după scor
 //   node scripts/proba-v100365.mjs
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -181,7 +182,7 @@ await test("P cu poziții: pozițiile întâi; poziția fără dată ⇒ roșu �
   assert.doesNotMatch(h, /<details class="saltForm" id="saltFormDet" open>/, "cu poziții formularul e pliat");
 });
 await test("P legăturile: rândurile SL_RANDURI în comutatorul comun, tema (RADACINI / app.js / tema devreme / butonul), scripturile noi în index + SW; asezare-paznic citește aceleași id-uri", () => {
-  const ap = citeste("public", "app.js"), ix = citeste("public", "index.html");
+  const ap = cuTablou(citeste("public", "app.js")), ix = citeste("public", "index.html");
   assert.match(ap, /return slRandComuta\(id,deschis\);/); assert.match(ap, /"scan","salt"(,"[a-z]+")*\]\.forEach/); assert.match(ap, /"scTemaBtn","slTemaBtn"(,"[A-Za-z]+")*\]/);
   assert.match(citeste("public", "lib", "tema-devreme.js"), /"scan", "salt"(, "[a-z]+")*\]/); assert.match(citeste("scripts", "face-tema-tablou.mjs"), /"scan", "salt"(, "[a-z]+")*\]/);
   assert.match(ix, /id="slTemaBtn"/); assert.match(ix, /<script src="\/lib\/salt-dovezi\.js"><\/script><script src="\/lib\/salt-grafice\.js"><\/script>/);

@@ -4,6 +4,7 @@
 //   I-905 „Vremea” într-un rând, I-898 drumul botului în arhivă, I-908 proba marginii (pre-înregistrată).
 //   node scripts/proba-v100374.mjs
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -231,7 +232,7 @@ await test("G2 fraza: cu botul / laterale / împing gridul la plural potrivit; f
   assert.equal(V({ sem: SEM(["l"]), tv: { iv: { "4h": { all: null } } }, tvClasa: c.TvNote.clasa, busola: "inclinat-short" }).text, "Vremea monedei: din 1 interval: 1 lateral · Busola înclină short — informație, nedovedită pe boții tăi");
 });
 await test("G3 pagina: rândul Vremii stă deasupra, tabelul intervalelor, TradingView și indicatorii în pliul „pe larg” (nimic scos), care își ține minte starea", () => {
-  const h = citeste("public", "index.html"), a = citeste("public", "app.js"), i = h.indexOf('id="tbVremeaLarg"'), j = h.indexOf("</details></div></div></div><section class=\"tbCons\" id=\"tbSemaforCard\"");
+  const h = citeste("public", "index.html"), a = cuTablou(citeste("public", "app.js")), i = h.indexOf('id="tbVremeaLarg"'), j = h.indexOf("</details></div></div></div><section class=\"tbCons\" id=\"tbSemaforCard\"");
   assert.ok(h.indexOf('id="tbVremea"') > 0 && h.indexOf('id="tbVremea"') < i && i < j, "ordinea: rândul, apoi pliul");
   const pliu = h.slice(i, j); for (const id of ["tbDirectieRezumat", "tbIndicatoriRezumat", "tbTrend", "tbTrendBoti", "tbTvNote", "tbTrendDet", "tbIndicatori", "tbTrendMediu"]) assert.ok(pliu.includes('id="' + id + '"'), id + " trebuie să fie în pliu");
   assert.match(pliu, /Becul hotărăște/); assert.match(h, /<script src="\/lib\/vremea-bot\.js"><\/script>/); assert.match(citeste("public", "sw.js"), /"\/lib\/vremea-bot\.js"/);
@@ -426,7 +427,7 @@ await test("L2 rândul apare doar afară din grid contra botului și doar cu dur
   const c = module_("text-ro.js", "cap-margine.js");
   assert.equal(c.CapMargine.textAfara(c.CapMargine.alcatuieste({ ...BAZA, afaraOre: 6, banda: BANDA })), "", "în grid nu se scrie");
   assert.equal(c.CapMargine.textAfara(c.CapMargine.alcatuieste({ ...AFARA, afaraOre: null, banda: BANDA })), ""); assert.equal(c.CapMargine.textAfara(c.CapMargine.alcatuieste({ ...AFARA, afaraOre: 0, banda: BANDA })), "");
-  const a = citeste("public", "app.js"), pz = citeste("public", "lib", "asezare-paznic.js");
+  const a = cuTablou(citeste("public", "app.js")), pz = citeste("public", "lib", "asezare-paznic.js");
   assert.match(a, /afO=acA&&botiNr\(acA\.afaraOre\)>0\?botiNr\(acA\.afaraOre\)\+\(Date\.now\(\)-acA\.la\)\/3600000:null/, "durata e adusă la zi cu ceasul"); assert.match(a, /afaraOre:afO,banda:tbBandaPt\(\)/); assert.match(pz, /class="pzMargAfara"/);
 });
 
@@ -562,7 +563,7 @@ await test("O3 blocul apare doar afară din grid contra botului, pe minus și cu
   const fs0 = T({ stop: null, stopActiv: false, laStop: null, stopDrum: null });
   assert.equal(fs0.randuri[0], "Dacă rămâi: fără stop pus · la marginea de jos (60.0000, +6,5%): −7,5 USDT · pe zero la 62.1806 (+10,4%)"); assert.doesNotMatch(fs0.randuri.join(" "), /Riști încă/);
   assert.match(T({ laStop: null, stopDrum: null }).randuri[0], /^Dacă rămâi: la stopul tău \(54\.0000\): totalul nu se poate socoti · /, "(revizia a doua) stop cu preț, fără total: nu „fără stop pus”");
-  const a = citeste("public", "app.js"), pz = citeste("public", "lib", "asezare-paznic.js");
+  const a = cuTablou(citeste("public", "app.js")), pz = citeste("public", "lib", "asezare-paznic.js");
   assert.match(a, /mut:\(function\(\)\{try\{var q=TabloExtra\.dacaInchizi\(b\)/); assert.match(a, /oreInGrid:pl0>0\?Math\.max\(0,\(Date\.now\(\)-pl0\)\/3600000-\(afO\|\|0\)\):null/);
   assert.match(pz, /<details class="pzMut"/); assert.match(pz, /localStorage\.getItem\("pzMutDeschis"\) !== "0"/); assert.match(pz, /localStorage\.setItem\("pzMutDeschis", t\.open \? "1" : "0"\)/);
 });
@@ -643,7 +644,7 @@ await test("Q4 I-912 „ai mutat gridul”: ultima schimbare a marginilor din dr
   assert.equal(c.CapMargine.textMutare(c.CapMargine.alcatuieste({ ...MUTAT })), "");
 });
 await test("Q5 legarea: pagina dă capului zero-ul, pasul gridului și mutarea; rândurile noi se desenează", () => {
-  const a = citeste("public", "app.js"), pz = citeste("public", "lib", "asezare-paznic.js");
+  const a = cuTablou(citeste("public", "app.js")), pz = citeste("public", "lib", "asezare-paznic.js");
   assert.match(a, /zero:\(function\(\)\{try\{var q=TabloExtra\.dacaInchizi\(b\);return q\?\{pret:q\.pretZero,neatins:q\.zeroNeatins===true(?:,pretPoz:q\.pretZeroPozitie)?(?:,grile:tbZeroGrile\(b\))?\}:null\}/); assert.match(a, /SemnaleBot\.pasBot\(b\)/);
   assert.match(a, /CapMargine\.mutareDin\(s\.intrari,Date\.now\(\)\)/); assert.match(a, /String\(s\.bot\)===String\(b\.id\)/);
   for (const k of ["pzMargZero", "pzMargStopM", "pzMargMut"]) assert.ok(pz.includes(k), k);   /* v100.374 design: clasele stau acum lângă cele ale benzii */
@@ -679,7 +680,7 @@ await test("R2 alerta „ai mutat gridul”: ce era, cât pierzi acum la margine
   assert.match(M.gridMutat({ nume: "X", jos0: 1, sus0: 2, jos: 1.5, sus: 2.5, parte: "jos", laMargine: 3.2 }).mesaj, /^Era 1–2\. La marginea de jos rămâi cu \+3,2 USDT\./, "(revizia a doua) pe plus nu „pierzi”");
 });
 await test("R3 colectorul: ține minte gridul fiecărui bot și trimite alerta o dată, la mutare; pagina dă blocului fișa botului", () => {
-  const c = citeste("scripts", "colector.mjs"), a = citeste("public", "app.js");
+  const c = citeste("scripts", "colector.mjs"), a = cuTablou(citeste("public", "app.js"));
   assert.match(c, /if \(st\._grid && st\._grid !== gA\) \{ try \{ const mg = gridMutatDinBot\(b, st\._grid\); if \(mg\) await trimiteAlerta\(mg, b\.id, "grid-mutat-" \+ gA\.replace\(\/\[\^0-9\.\]\+\/g, "-"\)\); \}/, "(revizia a doua) cheia poartă gridul nou");
   assert.match(c, /Math\.abs\(s - niv\) \/ niv <= 0\.002,/); assert.match(c, /st\._grid = gA;/);
   assert.match(c, /MesajeColector\.gridMutat\(\{/); assert.match(c, /TabloExtra\.dacaInchizi\(b\)/);
@@ -742,7 +743,7 @@ await test("S5 pagina: capul desenează banda și barele (cu <progress>, fără 
 
 // ---------- K. legarea în pagină + versiunea ----------
 await test("K1 pagina: capul primește expunerea, totalul și cifra Drumului; Consilierul - „afară din grid”, dovada și cifra capului; „Contează acum” - marginea din cap", () => {
-  const a = citeste("public", "app.js"), p = citeste("public", "lib", "asezare-paznic.js");
+  const a = cuTablou(citeste("public", "app.js")), p = citeste("public", "lib", "asezare-paznic.js");
   assert.match(a, /expunere:\{pozitie:botiNr\(b\.pozitie\),investit:botiNr\(b\.investit\),grile:botiNr\(b\.gridProfitBrut\),perechi:botiNr\(b\.ordinePerechi\),varstaOre:/); assert.match(a, /total:botiNr\(b\.profitTotal\),stopDrum:sd0&&isFinite\(sd0\.p24\)\?sd0\.p24:null/);
   assert.match(a, /afaraContra:tbAfaraContra\(b\),total:botiNr\(b\.profitTotal\),dovadaFaraStop:tbDovadaFaraStop\(\),sanseMargine:tbSanseMargine\(b\)/);
   assert.match(a, /q\.ore===24&&!q\.vechi/, "titlul Consilierului nu ia o cifră „de refăcut”"); assert.match(a, /l=b\?tbConteazaLista\(b,typeof tbCapParte==="function"\?tbCapParte\(b\):null\):\[\]/);

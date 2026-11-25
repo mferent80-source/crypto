@@ -2,6 +2,7 @@
 //  „Grid: ce setez acum?” aduce în plus 5 min și 1 oră; sub „Direcția” stă „Trendul pe intervale”: pe fiecare interval urcă / coboară /
 //  lateral, de cât timp, și față de gridul ales — aceeași regulă ca „Trendul pe TF-uri” din Tabloul botului (Directie.analizeaza)
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
@@ -49,7 +50,7 @@ await test("interval fără lumânări / prea puține ⇒ rândul spune de ce, n
   assert.equal(r[1].dir, null); assert.match(r[1].motiv, /fără lumânări/);
 });
 
-const app = citeste("public", "app.js");
+const app = cuTablou(citeste("public", "app.js"));
 await test("pagina aduce în plus 5 min și 1 oră (500 de bare), cu pauza între cereri (Pionex numără)", () => {
   /* v100.272: aducerea e pe două fire - grAdu15 (15 min, cu memoria pe monedă) și grAduRest (4 h, 1 zi, 5 min, 1 h, funding); grAduLumanari le adună */
   const f = app.slice(app.indexOf("var grLum15="), app.indexOf("function grTextEroare("));

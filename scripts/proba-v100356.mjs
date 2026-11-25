@@ -2,6 +2,7 @@
 // bilanțului pe Discord, o dată), I-893 (calibrarea tabelului „Ce fac”), I-895 (partea nevăzută re-măsurată lunar), I-890, I-891.
 //   node scripts/proba-v100356.mjs
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -176,7 +177,7 @@ await test("N3 (I-895) ruta ține în KV doar cifrele plauzibile (rulată); cole
   assert.deepEqual(f({ nevazut: bun }, nr), { la: "17.12.2026", monede: 38, m15: { zi1: 0.3, zi3: 0.1, zi7: 0.1, pasMic: 0.6 }, h1: { zi1: 0.7, zi3: 0.3, zi7: 0.2, pasMic: 1.1 } });
   assert.equal(f({ nevazut: Object.assign({}, bun, { la: "<script>" }) }, nr), null); assert.equal(f({ nevazut: Object.assign({}, bun, { h1: { zi1: 99 } }) }, nr), null); assert.equal(f({}, nr), null);
   assert.match(src, /put\("mc-verdict",JSON\.stringify\(\{la,boti,calibrare,calibrareScurt,hotarari,nevazut\}\)\)/);
-  const C = citeste("scripts", "colector.mjs"), A = citeste("public", "app.js");
+  const C = citeste("scripts", "colector.mjs"), A = cuTablou(citeste("public", "app.js"));
   assert.match(C, /hotarari: hotarari, nevazut: citesteNevazut\(\)/);
   assert.match(A, /GridProba\.puneNevazut\(r\.mcVerdict\.nevazut\)/); assert.match(A, /setTimeout\(function\(\)\{try\{tbMcDinKv\(\)\}catch\(e\)\{\}\},2500\)/);
 });
@@ -238,7 +239,7 @@ await test("Z4 (revizia 🟡3) re-măsurarea lunară: un singur dosar (reluarea 
   assert.match(S, /CE === "lunar" \? "radar-nevazut-lunar" :/); assert.match(S, /if \(u0\.deLa !== F\.deLa \|\| u0\.pana !== F\.pana\) \{ fs\.rmSync\(CACHE, \{ recursive: true, force: true \}\);/);
 });
 await test("🔑 R3 (I-891 PICAT la poartă) fișa rămâne cum era: verdictul pe rezultatele adevărate (media pe test peste zero), nicio „față de reper”; grid-calcul neatins; nota fișei de azi", () => {
-  const P = citeste("public", "lib", "grid-proba.js"), A = citeste("public", "app.js"), C = citeste("public", "lib", "grid-calcul.js");
+  const P = citeste("public", "lib", "grid-proba.js"), A = cuTablou(citeste("public", "app.js")), C = citeste("public", "lib", "grid-calcul.js");
   assert.match(P, /var v = G\.verdict\(\{ regim: rg, stat: statAles, zile: pr\.zile,/); assert.match(P, /f\.verdict = G\.verdict\(\{ regim: rg, stat: f\.stat, zile: pr\.zile,/);
   assert.ok(!/reperTest\(bP|fataDeReper|statVD|reperTest: rep &&/.test(P), "fișa nu cheamă reperul"); assert.ok(!/fataDeReper|reperul fără direcție/.test(C)); assert.ok(!/f\.reperTest/.test(A));
   assert.match(A, /\+'\. Deci un minus pe istoric nu e o dovadă, iar „media pe test peste zero” e o ștachetă mai înaltă decât pare\./);

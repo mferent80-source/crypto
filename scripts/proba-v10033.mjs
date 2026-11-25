@@ -2,6 +2,7 @@
 // fereastra Grid pe moneda aceea si ruleaza singur poarta de pornire (…/#ecran=gridset&moneda=LIT). Tickerul din simbolPionex
 // (botul „LIGHTER” -> LIT_USDT_PERP -> LIT), adresa = adresa fixa a Radarului (Tailscale / tunel), ceruta doar cand e o alerta.
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import vm from "node:vm";
 
@@ -11,7 +12,7 @@ const GP = new Function("GridCalcul", `${lib("grid-proba.js")}; return GridProba
 const JT = new Function("GridCalcul", `${lib("jurnal-trade.js")}; return JurnalTrade;`)(G);
 const OB = new Function("GridCalcul", "GridProba", "JurnalTrade", `${lib("obiceiuri.js")}; return Obiceiuri;`)(G, GP, JT);
 const { avertizariPornire } = await import("./lib/tura-pornire.mjs");
-const app = fs.readFileSync(new URL("../public/app.js", import.meta.url), "utf8");
+const app = cuTablou(fs.readFileSync(new URL("../public/app.js", import.meta.url), "utf8"));
 
 let teste = 0, picate = 0;
 async function test(nume, fn) {

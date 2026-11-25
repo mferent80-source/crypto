@@ -3,6 +3,7 @@
 // Tablou (fără modele - nimic), retea.js încărcat și pus în cache, garda STRICTĂ „retea” fără abateri.
 //   node scripts/proba-v10080-ecran.mjs
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
@@ -12,7 +13,7 @@ import { situatii, verifica, STRICT } from "./garda-texte.mjs";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const { Retea: R } = globalThis;
-const app = () => fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8");
+const app = () => cuTablou(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8"));
 const fn = (nume) => { const s = app(), i = s.indexOf("function " + nume + "("); assert.ok(i >= 0, "lipsește " + nume); return s.slice(i, s.indexOf("\nfunction ", i + 10)); };
 let ok = 0, pica = 0;
 async function test(nume, f) { try { await f(); ok++; console.log("  ✓ " + nume); } catch (e) { pica++; console.log("  ✗ " + nume + "\n      " + String(e && e.message || e).split("\n").join("\n      ")); } }

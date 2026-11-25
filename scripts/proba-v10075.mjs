@@ -4,6 +4,7 @@
 //   node scripts/proba-v10075.mjs
 import "./lib/text-ro-global.mjs";   // RF4 (v100.61): TextRo inaintea modulelor
 import fs from "node:fs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import path from "node:path";
 import vm from "node:vm";
 import { fileURLToPath } from "node:url";
@@ -13,7 +14,7 @@ import { situatii, verifica } from "./garda-texte.mjs";   // incarca modulele (A
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const { Acasa: AC, Obiceiuri: OB, JurnalTrade: JT } = globalThis;
 const lib = (f) => fs.readFileSync(path.join(RAD, "public", "lib", f), "utf8");
-const app = () => fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8");
+const app = () => cuTablou(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8"));
 const PV = new Function(`${lib("pret-viu.js")}; return PretViu;`)();
 let ok = 0, pica = 0;
 async function test(nume, fn) { try { await fn(); ok++; console.log("  ✓ " + nume); } catch (e) { pica++; console.log("  ✗ " + nume + "\n      " + String(e && e.message || e).split("\n").join("\n      ")); } }

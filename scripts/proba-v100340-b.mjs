@@ -1,6 +1,7 @@
 // Proba v100.340-b (restul auditului Tabloului botului, „repară tot și fă ideile”, 14.11.2026): reparațiile lăsate la v100.339.
 // Modulele paginii și ale serverului sunt rulate așa cum sunt (fără copii ale formulelor).
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -17,7 +18,7 @@ globalThis.escapeHtml = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c
 let teste = 0, picate = 0;
 async function test(nume, f) { teste++; await Promise.resolve().then(f).then(() => console.log(`  ok   ${nume}`)).catch((e) => { picate++; console.log(`  PICA ${nume}\n       ${String(e && e.stack || e).slice(0, 900)}`); }); }
 console.log("\nV100.340-b · restul auditului Tabloului · proba\n");
-const APP = citeste("public", "app.js"), HTML = citeste("public", "index.html"), CSS = citeste("public", "app.css");
+const APP = cuTablou(citeste("public", "app.js")), HTML = citeste("public", "index.html"), CSS = citeste("public", "app.css");
 
 // ---------------- (F1) simbolurile LSE de două litere ----------------
 // rândul scannerului TradingView pentru un simbol întreg („LSE:BP.”), cu aceeași notă pe toate intervalele

@@ -2,6 +2,7 @@
 // „SUS de N zile” (I-585), monedele boților CU / CONTRA (I-586). Formulele = PAZNIC-CRYPTO/decizie.mjs (percentila :389, ema :397,
 // atrSerie :405, directia :591, permisiune :598, latimea :1641, regimPietei :2710, verdictPiata :2718).
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -189,7 +190,7 @@ await test("(B) fără jeton ⇒ 401; cu jeton și alt Origin ⇒ 403", async ()
 });
 
 // ---- C. Tabloul: rândul lățimii în „Ce spune piața acum” ----
-const APP = citeste("public", "app.js"), HTML = citeste("public", "index.html");
+const APP = cuTablou(citeste("public", "app.js")), HTML = citeste("public", "index.html");
 const functie = (src, n) => { const i = src.search(new RegExp("(async )?function " + n + "\\(")); if (i < 0) throw new Error(n + "() lipsește"); let a = 0, j = src.indexOf("{", i); for (; j < src.length; j++) { if (src[j] === "{") a++; else if (src[j] === "}" && !--a) break; } return src.slice(i, j + 1); };
 await test("(C) tbCitireExtra dă out.latime din Latime.textCitire(tbLatimeKv.d, b, Date.now())", () => {
   const f = functie(APP, "tbCitireExtra"); assert.match(f, /latime:null/); assert.match(f, /out\.latime=typeof Latime!=="undefined"&&typeof tbLatimeKv!=="undefined"\?Latime\.textCitire\(tbLatimeKv\.d,b,Date\.now\(\)\):null/);

@@ -7,6 +7,7 @@
 //     sfatul e galben după cât de des coboară moneda atât într-o zi (≥ 20%), nu după cât de aproape e. Plus el: „toată exprimarea e
 //     ambiguă, fă explicit” - fiecare rând al cardului spune acum ce, cât și față de ce.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -17,7 +18,7 @@ const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8");
 for (const f of ["grid-calcul.js", "tablou-extra.js", "alerte.js", "scenariu.js", "directie.js", "sfaturi.js", "semnale-bot.js", "consiliu.js", "probabilitati.js", "grafic-bot.js"]) vm.runInThisContext(citeste("public", "lib", f), { filename: f });
 const { Sfaturi: SF, SemnaleBot: S, Consiliu: C, TabloExtra: T, Probabilitati: P, GraficBot: GB, Directie: DR } = globalThis;
-const app = citeste("public", "app.js"), html = citeste("public", "index.html");
+const app = cuTablou(citeste("public", "app.js")), html = citeste("public", "index.html");
 const fnApp = (nume) => { const i = app.indexOf("function " + nume + "("); assert.ok(i >= 0, "lipsește " + nume + " în app.js"); return app.slice(i, app.indexOf("\nfunction ", i + 10)); };
 let teste = 0, picate = 0;
 async function test(nume, fn) { teste++; await Promise.resolve().then(fn).then(() => console.log(`  ok   ${nume}`)).catch((e) => { picate++; console.log(`  PICA ${nume}\n       ${String(e.message).slice(0, 600)}`); }); }

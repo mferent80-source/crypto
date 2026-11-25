@@ -12,6 +12,7 @@
 //   6. versiunile v100.304, lumanari.js înaintea ecranelor și în shell-ul SW, proba în lanțul npm test.
 //   node scripts/proba-v100304.mjs
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
@@ -154,7 +155,7 @@ await test("3. I-808: un singur cache de lumânări - Trade-ul zilei după Range
   assert.ok(L.ia("BTC_USDT_PERP", "60M"), "cache-ul proaspăt se folosește");
   assert.equal(L.ia("BTC_USDT_PERP", "4H"), null, "intervalul face parte din cheie");
   assert.doesNotMatch(citeste("public", "lib", "range-filter-ecran.js"), /var rfBareCache/, "nu mai e un al doilea cache în pagina Range Filter");
-  const A = citeste("public", "app.js"), tb = A.slice(A.indexOf("function tbRangeFilterAdu"), A.indexOf("function tbRangeFilterAdu") + 1200);
+  const A = cuTablou(citeste("public", "app.js")), tb = A.slice(A.indexOf("function tbRangeFilterAdu"), A.indexOf("function tbRangeFilterAdu") + 1200);
   assert.match(tb, /Lumanari\.ia\(k,"60M"\)/, "Tabloul citește din cache-ul comun");
   assert.match(tb, /Lumanari\.pune\(k,"60M",rd\)/, "Tabloul pune în cache-ul comun");
 });
@@ -195,7 +196,7 @@ await test("4. I-807: sugestiile din listele Pionex, „n-are” fără cereri d
   assert.doesNotMatch(c4.rfHtmlCautaRez(c4.rfStare) + c4.rfHtmlCorp(c4.rfStare), /rfCautaDin/, "zonele rescrise la fiecare monedă n-au butoanele");
   const c5 = context(server(), { localStorage: { getItem: () => { throw new Error("blocat"); }, setItem: () => { throw new Error("blocat"); } } });
   assert.doesNotThrow(() => c5.rfHtml(c5.rfStare), "stocarea blocată nu strică pagina");
-  assert.match(citeste("public", "app.js"), /ACTIUNI_PERMISE=new Set\("[^"]*\brfCautaDin\b/, "rfCautaDin în lista albă");
+  assert.match(cuTablou(citeste("public", "app.js")), /ACTIUNI_PERMISE=new Set\("[^"]*\brfCautaDin\b/, "rfCautaDin în lista albă");
   // revizia Opus: sugestiile ajung în pagină prin <datalist> (căsuța nu se redesenează)
   const dl = { innerHTML: "" }, c6 = context(server(), { localStorage: stocare(), document: { getElementById: (id) => (id === "rfMonede" ? dl : null) } });
   await c6.rfSimboluriPionex();

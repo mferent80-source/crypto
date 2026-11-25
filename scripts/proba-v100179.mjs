@@ -1,5 +1,6 @@
 // Probele v100.179 (13.10.2026, el: „fă 1, 2, 3, 4”) — ieșirea botului din bandă după istoria lui, gărzile lui, lecția săptămânii, teza la intrare.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -100,7 +101,7 @@ await test("legarea: disciplina.js în pagină și în cache; colectorul: statis
   assert.match(citeste("public", "index.html"), /<script src="\/lib\/disciplina\.js"><\/script>/); assert.match(citeste("public", "sw.js"), /"\/lib\/disciplina\.js"/);
   const c = citeste("scripts", "colector.mjs"); assert.match(c, /const Disciplina = incarca\("disciplina\.js", "Disciplina"\)/); assert.match(c, /turaDisciplinaBanda\(\)\.catch/); assert.match(c, /turaBandaLive\(\)\.catch/);
   const tc = citeste("scripts", "lib", "tura-cont.mjs"); assert.match(tc, /d\.Disciplina\.garzi\(/); assert.match(tc, /d\.Disciplina\.lectia\(/); assert.match(tc, /lectiaSaptamanii\(lectieR, ver\)/);
-  assert.match(citeste("public", "app.js"), /function grBandaRegulaHtml\(\)/);
+  assert.match(cuTablou(citeste("public", "app.js")), /function grBandaRegulaHtml\(\)/);
 });
 
 console.log(`\n${teste - picate}/${teste} ${picate ? "PICĂ" : "trec"}`);

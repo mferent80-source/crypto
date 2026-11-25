@@ -2,6 +2,7 @@
 // docs/cercetare/2026-11-13-tablou-acuratete.md (M5) ÎNAINTE de măsurătoare. Același modul (public/lib/regim-grid.js) e folosit de pagină și de
 // scriptul de măsurare; aici se ține: pragurile, lipsa datelor, „fără privit înainte” și măsurile de pe următoarele bare.
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
@@ -68,7 +69,7 @@ await test("vorbele: regimul spus pentru grid, fără culoare; ce urmează se sp
 });
 
 // ---------------- pagina: perechile din drum și regimul, sub „Cele șapte măsuri” ----------------
-const APP = citeste("public", "app.js"), HTML = citeste("public", "index.html"), SW = citeste("public", "sw.js");
+const APP = cuTablou(citeste("public", "app.js")), HTML = citeste("public", "index.html"), SW = citeste("public", "sw.js");
 for (const f of ["grid-calcul.js", "tablou-extra.js", "tablou-bot.js"]) vm.runInThisContext(citeste("public", "lib", f), { filename: f });
 const TB = globalThis.TabloBot, ACUM = Date.UTC(2026, 10, 14, 9), MIN5 = 5 * 60000;
 await test("perechile din drum se numără pe liniile gridului botului: zigzag pe o treaptă = o pereche la fiecare dus-întors; oscilația sub o treaptă și drumul din afara gridului = nicio pereche; ultima oră se numără și separat", () => {

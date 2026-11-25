@@ -8,6 +8,7 @@
 //   5. versiunile v100.298 (index, meta, BUILD_INFO + feature, versiune.js, sw, package, lanțul), CSS-ul nou înaintea pândei.
 //   node scripts/proba-v100298.mjs
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
@@ -93,7 +94,7 @@ await test("2b. cartela: gridul / stopul / butonul „Grid: ce setez?”; rezuma
   // v100.306 (I-825): garda fixa fraza („zece grile … cuprinde ziua în trei din patru cazuri”), falsă - acum garda e pe adevărul ei (adevarBanda)
   assert.doesNotMatch(h, /\d\.\d+ %/); assert.match(h, /cinci grile pe parte · cuprinde restul zilei UTC cam în șapte zile din zece/, "numerele mici din textul fix, în litere (garda v100.75)");
   adevarBanda([0, 7, 12, 18]);
-  assert.match(citeste("public", "app.js"), /var ACTIUNI_PERMISE=new Set\("[^"]*\btzLaGrid\b/, "tzLaGrid lipsește din lista albă");
+  assert.match(cuTablou(citeste("public", "app.js")), /var ACTIUNI_PERMISE=new Set\("[^"]*\btzLaGrid\b/, "tzLaGrid lipsește din lista albă");
   let ales = null; ctx.navTo = () => {}; ctx.gridClasamentAlege = (s) => { ales = s; };
   ctx.tzLaGrid("DOGE_USDT"); return new Promise((r, rej) => setTimeout(() => { try { assert.equal(ales, "DOGE_USDT_PERP"); r(); } catch (e) { rej(e); } }, 500));
 });

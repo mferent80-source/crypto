@@ -5,6 +5,7 @@
 //      niciun rând nu dispare din pagină (doar se pliază), --n numără doar ce se vede (altfel rândurile goale ale grilei lasă gaură).
 //   node scripts/proba-v100310.mjs
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
@@ -17,7 +18,7 @@ let teste = 0, picate = 0;
 async function test(nume, f) { teste++; await Promise.resolve().then(f).then(() => console.log(`  ok   ${nume}`)).catch((e) => { picate++; console.log(`  PICA ${nume}\n       ${String(e && e.stack || e).split("\n").slice(0, 4).join(" | ")}`); }); }
 console.log("\nV100.310 · Sugestii: fișa rămâne lângă tine, listele arată primele 5 · proba\n");
 
-const CSS = citeste("public", "app.css"), APP = citeste("public", "app.js"), SUG = citeste("public", "lib", "sugestii-ecran.js");
+const CSS = citeste("public", "app.css"), APP = cuTablou(citeste("public", "app.js")), SUG = citeste("public", "lib", "sugestii-ecran.js");
 const J = (x) => JSON.parse(JSON.stringify(x));
 function pagina(ls) {
   const ctx = { console, Intl, Date, Math, JSON, isFinite, Number, String, Array, Object, RegExp, setTimeout, document: undefined };

@@ -4,6 +4,7 @@
 // I-552 dimineața pe Discord: becurile 4 h / 1 zi pe fiecare bot și poziție + ce s-a schimbat peste noapte
 // I-553 starea semaforului din Tablou (tura, reluarea, opțiunile becurilor) într-un modul pur, cu probe pe comportament
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -16,7 +17,7 @@ const exista = (...p) => fs.existsSync(path.join(RAD, ...p));
 for (const f of ["grid-calcul.js", "tablou-extra.js", "alerte.js", "scenariu.js", "directie.js", "sfaturi.js", "semnale-bot.js", "grafic-bot.js"]) vm.runInThisContext(citeste("public", "lib", f), { filename: f });
 if (exista("public", "lib", "tablou-trend.js")) vm.runInThisContext(citeste("public", "lib", "tablou-trend.js"), { filename: "tablou-trend.js" });
 const { Sfaturi: SF, TabloExtra: TE, GraficBot: GB } = globalThis;
-const app = citeste("public", "app.js"), html = citeste("public", "index.html"), css = citeste("public", "app.css"), col = citeste("scripts", "colector.mjs");
+const app = cuTablou(citeste("public", "app.js")), html = citeste("public", "index.html"), css = citeste("public", "app.css"), col = citeste("scripts", "colector.mjs");
 const fn = (src, nume) => { const i = src.indexOf("function " + nume + "("); assert.ok(i >= 0, "lipsește " + nume); return src.slice(i, src.indexOf("\nfunction ", i + 10)); };
 let teste = 0, picate = 0;
 async function test(nume, f) { teste++; await Promise.resolve().then(f).then(() => console.log(`  ok   ${nume}`)).catch((e) => { picate++; console.log(`  PICA ${nume}\n       ${String(e.message).slice(0, 500)}`); }); }

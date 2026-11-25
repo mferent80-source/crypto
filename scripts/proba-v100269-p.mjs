@@ -10,6 +10,7 @@
 // Bare sintetice deterministe (mulberry32), aceleași bare înainte și după; cifrele „înainte” se socotesc din valorile neschimbate
 // (ER, ATR/treaptă, ATR%, r4h/r24h) cu pragurile vechi.
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
@@ -18,7 +19,7 @@ import "./lib/text-ro-global.mjs";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8").replace(/\r\n/g, "\n");
-const APP = citeste("public", "app.js");
+const APP = cuTablou(citeste("public", "app.js"));
 /* de la „function nume(” la început de rând până la următorul „\nfunction ” (un comentariu cu același text nu păcălește) */
 const fnApp = (nume) => { const i = APP.indexOf("\nfunction " + nume + "("); assert.ok(i >= 0, "lipsește " + nume + " în app.js"); const j = APP.indexOf("\nfunction ", i + 10); return APP.slice(i + 1, j < 0 ? undefined : j); };
 for (const f of ["grid-calcul.js", "tablou-extra.js", "alerte.js", "semnale-bot.js", "actiuni-semnale.js", "tablou-bot.js", "indicatori-bot.js"]) vm.runInThisContext(citeste("public", "lib", f), { filename: f });

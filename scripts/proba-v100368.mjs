@@ -5,6 +5,7 @@
 //  V - versiunile
 //   node scripts/proba-v100368.mjs
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -32,7 +33,7 @@ await test("T cu verdicte: cine a avut dreptate, cine a greșit", () => {
   assert.match(t, /; au avut dreptate: consilier-iesi; au greșit: intrare\.$/); assert.doesNotMatch(t, /încă niciun verdict/);
 });
 await test("A Tabloul aduce registrul (action=alerteRegistru) și nu mai arată „prețul a scăzut în X din N”", () => {
-  const APP = citeste("public", "app.js");
+  const APP = cuTablou(citeste("public", "app.js"));
   assert.match(APP, /getJSON\("\/api\/istoric-bot\?action=alerteRegistru"\);tbStare\.alerteRegistru=arg&&arg\.registru\|\|null\}catch\(x3\)\{tbStare\.alerteRegistru=null\}/);
   const i = APP.indexOf("function renderTabloAlerte"), f = APP.slice(i, APP.indexOf("\nfunction ", i + 10));
   assert.match(f, /TabloExtra\.textRegistruAlerte\(tbStare\.alerteRegistru\)/); assert.doesNotMatch(f, /bilantAlerte\(/); assert.match(f, /Alerte › „Au avut dreptate\?”/);

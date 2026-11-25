@@ -3,6 +3,7 @@
 // VIX, ce a urcat / scăzut, boții + acțiunile deschise, calendarul, rezultatele). Lipseau: lățimea pieței (crypto + US) în raport
 // și „Săptămâna pieței” în Radar (era doar pe Discord). Tura pieței e probată în tura-piata-v94, ruta în colector-v77; aici Jurnalul.
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -12,7 +13,7 @@ const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8").replace(
 let teste = 0, picate = 0;
 async function test(nume, f) { teste++; await Promise.resolve().then(f).then(() => console.log(`  ok   ${nume}`)).catch((e) => { picate++; console.log(`  PICA ${nume}\n       ${e && e.message}`); }); }
 console.log("\nV100.166 · „Săptămâna pieței” în Jurnalul de trade · proba\n");
-const app = citeste("public", "app.js"), acasa = citeste("public", "lib", "acasa.js");
+const app = cuTablou(citeste("public", "app.js")), acasa = citeste("public", "lib", "acasa.js");
 
 await test("Jurnalul aduce „Săptămâna pieței” de acasă (action=raportPiata), lângă raportul de duminică", () => {
   /* v100.272: cererea pleacă odată cu boții, prin luat() = getJSON cu eroarea prinsă (null la eroare, ca înainte) */

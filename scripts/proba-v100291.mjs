@@ -16,6 +16,7 @@
 //   12.  pagina pornește recitirea și scrie „Ce ai de făcut acum” în locul lui; 13. versiunile.
 //   node scripts/proba-v100291.mjs
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -154,7 +155,7 @@ await test("9. graficul fișei are butoanele 5m · 15m · 30m · 1h · 4h · 1z 
   assert.match(graf.innerHTML, /aria-pressed="true"[^>]*data-action-click="t212AlegeTf\('MU_US_EQ','1h'\)"/);
   assert.match(graf.innerHTML, /lumânările de 1 oră/, "fără lumânări încă ⇒ spune că le aduce");
   U.t212AlegeTf("MU_US_EQ", "2h"); assert.equal(U.t212.tf.MU_US_EQ, "1h", "intervalul necunoscut se ignoră");
-  const A = citeste("public", "app.js"); assert.match(A.match(/ACTIUNI_PERMISE=new Set\("([^"]+)"/)[1], /(^| )t212AlegeTf( |$)/, "butonul e permis");
+  const A = cuTablou(citeste("public", "app.js")); assert.match(A.match(/ACTIUNI_PERMISE=new Set\("([^"]+)"/)[1], /(^| )t212AlegeTf( |$)/, "butonul e permis");
   const S = lib("t212-ecran.js"), GB = lib("grafic-bot.js");
   assert.match(S, /ActiuniSemnale\.unitateBare\(GridCalcul\.bareToate\(rw\), p\.pret\)/, "lumânările intraday în unitatea prețului T212 (pence / lire), ca barele zilnice");
   assert.match(S, /oreAxa: !zi/); assert.match(GB, /doarZi = \(o\.actiune && !o\.oreAxa\) \|\| o\.per === "200z"/, "intraday: axa cu ore, nu doar ziua");

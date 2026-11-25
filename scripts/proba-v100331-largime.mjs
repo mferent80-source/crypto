@@ -3,6 +3,7 @@
 //   ACELEAȘI formule și ACELAȘI univers ca pagina (paritatea de mai jos), o pune în KV, iar pagina o citește (sub 90 de minute); altfel ca înainte.
 //   node scripts/proba-v100331-largime.mjs
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -11,7 +12,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8").replace(/\r\n/g, "\n");
-const APP = citeste("public", "app.js");
+const APP = cuTablou(citeste("public", "app.js"));
 const fnApp = (nume) => { const i = APP.indexOf("\nfunction " + nume + "("); assert.ok(i >= 0, "lipsește " + nume); const j = APP.indexOf("\nfunction ", i + 10), k = APP.indexOf("\nasync function ", i + 10); const e = [j, k].filter((x) => x > 0); return APP.slice(i + 1, e.length ? Math.min(...e) : undefined); };
 let teste = 0, picate = 0;
 async function test(nume, f) { teste++; await Promise.resolve().then(f).then(() => console.log(`  ok   ${nume}`)).catch((e) => { picate++; console.log(`  PICA ${nume}\n       ${String(e && e.stack || e).split("\n").slice(0, 3).join(" | ").slice(0, 600)}`); }); }

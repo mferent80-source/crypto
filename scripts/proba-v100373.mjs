@@ -4,6 +4,7 @@
 // gridul propus când fișa oprește, comisionul perechilor scăzut de două ori.
 //   node scripts/proba-v100373.mjs
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -231,13 +232,13 @@ await test("F6 Monte Carlo: „aruncarea de ban” își păstrează motivul în
   const re = /^([^:]+): (?:câștigă|pierde) în .*?, dar ([^;]+);/, m = re.exec("O aruncare de ban de aici încolo: câștigă în 64% din drumuri, dar marja pe zile coboară sub 50%; deocamdată nu zic «Aș ține». Ține-l doar cu planul tău pus.");
   assert.equal(m[1] + ": " + m[2], "O aruncare de ban de aici încolo: marja pe zile coboară sub 50%");
   assert.match(re.exec("O aruncare de ban: pierde în 58% din drumuri, în medie −1,2 USDT, dar incertitudinea reală e ±12 puncte (din ~9 zile distincte), deci poate fi și peste 50%; n-am aflat că pierde")[2], /^incertitudinea reală e ±12 puncte/);
-  const app = citeste("public", "app.js"); assert.match(app, /\(h\.motiv\?escapeHtml\(h\.motiv\):"nicio schimbare nu iese sigur mai bună pe bani"\)/, "motivul hotărârii se arată și la „îl țin”");
+  const app = cuTablou(citeste("public", "app.js")); assert.match(app, /\(h\.motiv\?escapeHtml\(h\.motiv\):"nicio schimbare nu iese sigur mai bună pe bani"\)/, "motivul hotărârii se arată și la „îl țin”");
   assert.match(app, /nu la 7 zile: scorul nu confirmă și nu infirmă verdictul pe 7 zile/);
 });
 
 // ---------- G. legarea în pagină ----------
 await test("G1 capul: stratul cere marginea (tbCapMargine) și păstrează forma veche când lipsesc cifrele; siguranța o dă Consiliu.FIX", () => {
-  const p = citeste("public", "lib", "asezare-paznic.js"), app = citeste("public", "app.js"), c = CONS();
+  const p = citeste("public", "lib", "asezare-paznic.js"), app = cuTablou(citeste("public", "app.js")), c = CONS();
   assert.match(p, /cap = !dinSalvat && typeof tbCapMargine === "function" && typeof CapMargine !== "undefined" \? tbCapMargine\(b\) : null/, "cât Consilierul socotește, capul e verdictul salvat");
   assert.match(p, /\{ dinSalvat = true; verb = salvat\.verb; tonV = salvat\.ton;/);
   assert.match(p, /if \(cap\) \{/); assert.match(p, /class="pzVerbTxt pzMarg"/); assert.match(p, /\+ corpV \+ surseTablou\(\) \+ '<\/div>'/);
@@ -258,10 +259,10 @@ await test("G3 Probabilitățile: rândurile de 1 h și 4 h înaintea celor de 2
   assert.ok(cod.indexOf("iese-jos-1") >= 0 && cod.indexOf("iese-jos-1") < cod.indexOf("iese-jos-4") && cod.indexOf("iese-jos-4") < cod.indexOf("iese-jos-24"), cod.join(" "));
   assert.deepEqual(l.filter((x) => x.lung).map((x) => x.cod).sort(), ["iese-jos-72", "iese-sus-72"]); assert.ok(cod.includes("lichidare") && !l.find((x) => x.cod === "lichidare").lung, "lichidarea rămâne la vedere");
   assert.ok(l.filter((x) => /-(1|4|24)$/.test(x.cod)).every((x) => !x.lung));
-  const app = citeste("public", "app.js"); assert.match(app, /function tbProbRanduriHtml\(l\)\{/); assert.match(app, /class="tbProbFara tbProbLung"><summary>Pe 3 zile · /);
+  const app = cuTablou(citeste("public", "app.js")); assert.match(app, /function tbProbRanduriHtml\(l\)\{/); assert.match(app, /class="tbProbFara tbProbLung"><summary>Pe 3 zile · /);
 });
 await test("G4 rândul de cost, alerta de zero, „Deschide tot”, etichetele: legate în pagină", () => {
-  const app = citeste("public", "app.js"), html = citeste("public", "index.html"), p = citeste("public", "lib", "asezare-paznic.js");
+  const app = cuTablou(citeste("public", "app.js")), html = citeste("public", "index.html"), p = citeste("public", "lib", "asezare-paznic.js");
   assert.ok(html.includes('<span id="tbKpiGrid" class="tbKpiGrid">—</span><div id="tbKpiCost" class="tbKpiCost" hidden></div>'));
   assert.match(app, /if\(typeof tbCostDeseneaza==="function"\)tbCostDeseneaza\(b\);/); assert.match(app, /pornire:tx,inchidere:/);
   assert.match(app, /Alerte\.reguli\(b,\{plan:plA\|\|null,pretZero:zrA\},\{"p-zero":\{nivel:"atentie"\}\}\)/, "pagina judecă banda de ieșire a alertei, nu intrarea în ea"); assert.match(app, /if\(typeof pzFoldToate==="function"\)pzFoldToate\(!!deschis\)/); assert.match(p, /window\.pzFoldToate = function \(deschis\)/);
@@ -302,14 +303,14 @@ await test("H3 capul: aceeași cifră ca în cardul Probabilităților („sub N
   const c = module_("text-ro.js", "cap-margine.js");
   assert.equal(c.CapMargine.textSansa({ p: 0, scurt: "sub 5%" }), "sub 5 din 100"); assert.equal(c.CapMargine.textSansa({ p: 0 }), "sub 1 din 100"); assert.equal(c.CapMargine.textSansa({ p: 1 }), "peste 99 din 100"); assert.equal(c.CapMargine.textSansa({ p: 0.724, scurt: "72%" }), "72 din 100");
   const k = c.CapMargine.alcatuieste({ dir: "long", pret: 100, jos: 95, sus: 110 }); assert.match(k.titlu, /e la 5,0% sub preț$/, k.titlu);
-  const app = citeste("public", "app.js"); assert.match(app, /Probabilitati\.randuri\(rz,tp\.cal\)\.forEach\(function\(r\)\{R\[r\.cod\]=r\}\)/, "capul ia rândurile cardului, cu calibrarea");
+  const app = cuTablou(citeste("public", "app.js")); assert.match(app, /Probabilitati\.randuri\(rz,tp\.cal\)\.forEach\(function\(r\)\{R\[r\.cod\]=r\}\)/, "capul ia rândurile cardului, cu calibrarea");
   assert.match(app, /sansePret:rz\?botiNr\(rz\.pret\):null,sanseOra:ora/);
 });
 await test("H4 stopul: în procente și fără preț (botul neutru) nu e „fără stop pus”; stopul scurt din Monte Carlo nu se arată când reluarea nu e a botului", () => {
   const c = module_("text-ro.js", "cap-margine.js"), b = { dir: "", pret: 61, jos: 60, sus: 66, laMargine: -3, laStop: null, stop: null };
   assert.equal(c.CapMargine.textBani(c.CapMargine.alcatuieste({ ...b, stopActiv: true, stopEticheta: "stop −10%" })), "la margine: −3,0 USDT · stopul tău: stop −10% (fără preț socotit)");
   assert.equal(c.CapMargine.textBani(c.CapMargine.alcatuieste({ ...b, stopActiv: false })), "la margine: −3,0 USDT · fără stop pus");
-  const app = citeste("public", "app.js"); assert.match(app, /stopActiv:!!b\.opritorPierdereActiv/); assert.match(app, /!\/Reluarea arată botul\/\.test\(String\(mr\.text\|\|""\)\+" "\+String\(mr\.faCe\|\|""\)\)\?mr\.scurt:null/); assert.match(app, /tbMc\.rand&&!tbMc\.eroare\?tbMc\.rand:null/);
+  const app = cuTablou(citeste("public", "app.js")); assert.match(app, /stopActiv:!!b\.opritorPierdereActiv/); assert.match(app, /!\/Reluarea arată botul\/\.test\(String\(mr\.text\|\|""\)\+" "\+String\(mr\.faCe\|\|""\)\)\?mr\.scurt:null/); assert.match(app, /tbMc\.rand&&!tbMc\.eroare\?tbMc\.rand:null/);
 });
 await test("H5 prețul trecut de marginea CEALALTĂ (long peste cea de sus): capul rămâne al Consilierului, nu vorbește despre o margine aflată la 9% în spate", () => {
   const c = module_("text-ro.js", "cap-margine.js");

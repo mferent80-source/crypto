@@ -1,5 +1,6 @@
 // Proba v100.59 (01.10, el „da”: I-481 ceasul gridului ingust + I-480 gridul ingust urmarit INAINTE).
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -37,7 +38,7 @@ await test("colectorul: ceasul pe fiecare bot activ, un singur mesaj la H ore; b
   const MC = await import(pathToFileURL(path.join(RAD, "scripts", "lib", "mesaje-colector.mjs")).href);
   assert.ok(col.includes("GridProba.potrivireIngust(") && col.includes("MesajeColector.ceasIngust(") && col.includes("st._ceasTrimis"), "colector");
   assert.match(MC.ceasIngust("CRV", 6, "14:30", false).titlu, /6 h/);
-  const a = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8");
+  const a = cuTablou(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8"));
   assert.ok(a.includes("action=ingustCeas&bot=") && a.includes("închide-l la "), "banda Tabloului (din ceasul colectorului)");
 });
 
@@ -82,7 +83,7 @@ await test("tura: noteaza fiecare moneda si judeca notele vechi (si pe monedele 
   assert.equal(g.lista.length, 4, "nota invalida aruncata"); assert.ok(g.lista.find((x) => x.r));
 });
 await test("pagina: randul „urmărit înainte” in idei si in fisa (o singura cerere, cu cache)", () => {
-  const e = fs.readFileSync(path.join(RAD, "public", "lib", "t212-ecran.js"), "utf8"), a = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8");
+  const e = fs.readFileSync(path.join(RAD, "public", "lib", "t212-ecran.js"), "utf8"), a = cuTablou(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8"));
   assert.ok(/GridProba\.socotealaUrmarire(PeReguli)?\(/.test(e) && e.includes("action=ingustUrmarire"), "idei");   /* v100.345: pe reguli (regula nouă / cea veche) */
   assert.ok(/GridProba\.socotealaUrmarire(PeReguli)?\(/.test(a), "fisa");
 });
@@ -127,7 +128,7 @@ await test("I6 + mici: banda Tabloului citeste ceasul tinut minte de colector (n
   const cer = (m, q, corp) => new Request("http://127.0.0.1:8788/api/istoric-bot?" + q, { method: m, headers: { authorization: "Bearer t", "content-type": "application/json", origin: "http://127.0.0.1:8788" }, body: corp ? JSON.stringify(corp) : undefined });
   assert.equal((await mod.onRequestPost({ request: cer("POST", "action=ingustCeas", { bot: "123", ceas: { ingust: true, ore: 6, inchideLa: 5 } }), env })).status, 200);
   assert.equal((await (await mod.onRequestGet({ request: cer("GET", "action=ingustCeas&bot=123"), env })).json()).ceas.inchideLa, 5);
-  const a = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8"), col = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8");
+  const a = cuTablou(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8")), col = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8");
   assert.ok(a.includes("action=ingustCeas&bot=") && !a.includes("GridProba.potrivireIngust("), "banda citeste ceasul colectorului");
   assert.ok(col.includes('trimite("/api/istoric-bot?action=ingustCeas"') && col.includes("st._ceasTrimis = true; scrieStare();"), "colectorul publica ceasul si scrie starea imediat");
   /* v100.66: mesajul vine din scripts/lib/mesaje-colector.mjs */

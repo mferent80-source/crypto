@@ -9,6 +9,7 @@
 //   (5) rezumatele rândurilor (v100.317) lipeau textul tabelelor: „alt preț Dacă prețul ajunge la Poziția Totalul ar fi 0.3262 +5% 660…”.
 // Proba rulează codul ADEVĂRAT (tăiat din fișiere) în vm, cu un DOM / o rețea falsă.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
@@ -20,7 +21,7 @@ const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8").replace(/\r\n/g, "\n");   /* fișierele sunt CRLF */
 let trecute = 0, picate = 0;
 const test = async (nume, f) => { try { await f(); trecute++; console.log("  ✓ " + nume); } catch (e) { picate++; console.log("  ✗ " + nume + "\n      " + String(e && e.message || e).split("\n").join("\n      ")); } };
-const APP = citeste("public", "app.js"), T212 = citeste("public", "lib", "t212-ecran.js"), GB = citeste("public", "lib", "grafic-bot.js"), CSS = citeste("public", "app.css"), HTML = citeste("public", "index.html");
+const APP = cuTablou(citeste("public", "app.js")), T212 = citeste("public", "lib", "t212-ecran.js"), GB = citeste("public", "lib", "grafic-bot.js"), CSS = citeste("public", "app.css"), HTML = citeste("public", "index.html");
 const taie = (src, de, pana) => { const i = src.indexOf(de), j = src.indexOf(pana, i + de.length); assert.ok(i >= 0 && j > i, "nu găsesc bucata „" + de.slice(0, 50) + "”"); return src.slice(i, j); };
 const asteapta = (ms) => new Promise((r) => setTimeout(r, ms));
 

@@ -3,6 +3,7 @@
 // revenire și short, câte un grafic mic, aceeași scară; linia 0 = piața; o singură culoare (listele n-au avantaj dovedit ⇒ fără verde / roșu).
 //   node scripts/proba-v100333-grafic.mjs
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -62,7 +63,7 @@ await test("4 · fără zile judecate / fără tură: un rând care spune de ce,
 /* v100.335 (el, 13.11: „fă ultimul grafic mai explicit în stilul nostru”): blocul stă acum în coloana dreaptă a detaliilor deschise pe toată lățimea -
    rândurile sus, cartelele graficului dedesubt (una lângă alta când au loc); proba acestei așezări: proba-v100335-grafic.mjs (testul 6). */
 await test("5 · Tabloul: „Listele Radarului” - rândurile sus, graficul dedesubt (v100.335; înainte: două coloane)", () => {
-  const A = citeste("public", "app.js"), src = fnDin(A, "tbListeRadarHtml");
+  const A = cuTablou(citeste("public", "app.js")), src = fnDin(A, "tbListeRadarHtml");
   assert.match(src, /IndicatoriBot\.listeGraficHtml\(\{revenire:um\.revenireFata\|\|null,short:um\.shortFata\|\|null\},escapeHtml\)/);
   assert.match(src, /<div class="tbListeTxt">/); assert.match(src, /<div class="tbListeGr">/);
   const C = citeste("public", "app.css");

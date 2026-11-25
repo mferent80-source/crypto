@@ -1,6 +1,7 @@
 // Proba v100.236 (21.10, el: „fa ideile”): cele două sume ale frânei, ora primei poze,
 // finanțarea boților deschiși și felia de funding din rândul scurt. Fără prag nou.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -23,7 +24,7 @@ console.log("\nV100.236 · SUMĂ · proba\n");
 const acasa = citeste("public", "lib", "acasa.js");
 const ae = citeste("public", "lib", "acasa-ecran.js");
 const idx = citeste("public", "index.html");
-const app = citeste("public", "app.js");
+const app = cuTablou(citeste("public", "app.js"));
 const gs = citeste("public", "lib", "grid-sim.js");
 const bo = citeste("functions", "api", "bot-orders.js");
 const col = citeste("scripts", "colector.mjs");

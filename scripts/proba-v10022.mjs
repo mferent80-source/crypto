@@ -3,6 +3,7 @@
 // Modulul StatisticaTrade: acelasi calcul pentru boti Pionex (USDT) si trade-uri Trading 212 (lei). Date INVENTATE: repo-ul
 // e public, trade-urile lui reale nu intra aici (cifrele reale se verifica local).
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 
 const lib = (f) => fs.readFileSync(new URL(`../public/lib/${f}`, import.meta.url), "utf8");
@@ -141,7 +142,7 @@ await test("CSV: un rand pe trade, antet, zecimale cu VIRGULA (Excel romanesc, v
 
 await test("pagina: statistica sus pe fiecare fila (Crypto, Actiuni, Tot), scriptul inaintea app.js, in APP_SHELL", () => {
   const html = fs.readFileSync(new URL("../public/index.html", import.meta.url), "utf8"), sw = fs.readFileSync(new URL("../public/sw.js", import.meta.url), "utf8");
-  const app = fs.readFileSync(new URL("../public/app.js", import.meta.url), "utf8"), t2 = fs.readFileSync(new URL("../public/lib/t212-ecran.js", import.meta.url), "utf8");
+  const app = cuTablou(fs.readFileSync(new URL("../public/app.js", import.meta.url), "utf8")), t2 = fs.readFileSync(new URL("../public/lib/t212-ecran.js", import.meta.url), "utf8");
   assert.ok(html.indexOf('id="jtStatCrypto"') > html.indexOf('id="jtCrypto"'), "jtStatCrypto in fila Crypto");
   assert.ok(html.indexOf('id="jtStatTot"') > 0 && html.indexOf('id="jtStatTot"') < html.indexOf('id="jtActiuni"'), "jtStatTot deasupra filelor");
   const iS = html.indexOf('src="/lib/statistica-trade.js"'), iA = html.indexOf('src="/app.js"');

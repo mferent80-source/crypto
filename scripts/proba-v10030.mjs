@@ -3,6 +3,7 @@
 // Poarta cauta istoricul si reintrarea dupa numele BOTULUI (baseCurrency din lista oficiala Pionex), nu dupa ticker - altfel la
 // LIT scria „n-ai mai avut boti”, desi pe LIGHTER ai 5 boti cu net pe minus.
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 
 const lib = (f) => fs.readFileSync(new URL(`../public/lib/${f}`, import.meta.url), "utf8");
@@ -36,7 +37,7 @@ await test("fara numele botului (sau acelasi nume): ca inainte - dupa ticker, fa
   assert.equal(r2.reguli.find((x) => x.cod === "moneda").nota, null);   /* v100.76 (revizia ideilor, M6): același nume ⇒ fără notă (vechiul /se numește/ nu mai putea pica) */
 });
 await test("pagina: poarta primeste numele botului din lista oficiala Pionex (baseCurrency), pentru moneda aleasa", () => {
-  const app = fs.readFileSync(new URL("../public/app.js", import.meta.url), "utf8");
+  const app = cuTablou(fs.readFileSync(new URL("../public/app.js", import.meta.url), "utf8"));
   const i = app.indexOf("async function gridPoarta("), corp = app.slice(i, app.indexOf("\n}", i));
   assert.match(corp, /numeBot:grStare\.monede&&grStare\.monede\[f\.simbol\]&&grStare\.monede\[f\.simbol\]\.baseCurrency/);
 });

@@ -1,6 +1,7 @@
 // Proba v100.238 (21.10, el: „fa tot,demo,idei tot”): bara, ora pozei, zilele liniștite,
 // finanțarea sub botul deschis, la pe cont:zile. Fără prag nou. Fără rută de ordin.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -19,7 +20,7 @@ let teste = 0, picate = 0;
 async function test(nume, f) { teste++; await Promise.resolve().then(f).then(() => console.log(`  ok   ${nume}`)).catch((e) => { picate++; console.log(`  PICA ${nume}\n       ${String(e && e.stack || e).slice(0, 900)}`); }); }
 console.log("\nV100.238 · BARĂ · proba\n");
 
-const app = citeste("public", "app.js");
+const app = cuTablou(citeste("public", "app.js"));
 const css = citeste("public", "app.css");
 const idx = citeste("public", "index.html");
 const acasa = citeste("public", "lib", "acasa.js");

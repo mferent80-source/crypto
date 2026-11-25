@@ -2,6 +2,7 @@
 // ora colectorului se aducea la 5 minute, dar Tabloul și banda de sus o comparau la fiecare redesenare cu ora de ACUM (prag 3 min) ⇒
 // cu colectorul viu, ~2 minute din fiecare 5 scria „oprit de 4–5 min”; F5 aducea ora proaspătă. Acum se judecă la momentul aducerii.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -33,7 +34,7 @@ await test("colectorul chiar tăcea la aducere (semn cu 10 min înainte) ⇒ „
   assert.equal(A.colectorDin(null, T, T), null);
 });
 await test("Tabloul și banda de sus folosesc aceeași regulă, cu ora aducerii; tbAduExtra ține minte când a sosit ora", () => {
-  const app = citeste("public", "app.js"), ap = citeste("public", "lib", "asezare-paznic.js");
+  const app = cuTablou(citeste("public", "app.js")), ap = citeste("public", "lib", "asezare-paznic.js");
   assert.match(app, /config:ist\.config\|\|null,adusLa:Date\.now\(\)\}/);
   assert.match(app, /if\(!s\)\{el\.innerHTML='<p class="tbSub">Aștept datele serverului Radarului/, "datele încă nesosite nu mai înseamnă „colectorul n-a pornit”");
   assert.match(app, /AsezarePaznic\.colectorDin\(c,Date\.now\(\),s\.adusLa\)/);

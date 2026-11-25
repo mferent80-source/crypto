@@ -3,6 +3,7 @@
 // (4) I-529 stopul de probă · (5) I-531 citirea sub grafic pe telefon · (E) versiunile.
 // Depozitul e PUBLIC ⇒ un bot construit, nu al lui.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -11,7 +12,7 @@ import { fileURLToPath } from "node:url";
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const lib = (f) => fs.readFileSync(path.join(RAD, "public", "lib", f), "utf8");
 const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8");
-const fnApp = (nume) => { const s = citeste("public", "app.js"), i = s.indexOf("function " + nume + "("); assert.ok(i >= 0, "lipsește " + nume + " în app.js"); return s.slice(i, s.indexOf("\nfunction ", i + 10)); };
+const fnApp = (nume) => { const s = cuTablou(citeste("public", "app.js")), i = s.indexOf("function " + nume + "("); assert.ok(i >= 0, "lipsește " + nume + " în app.js"); return s.slice(i, s.indexOf("\nfunction ", i + 10)); };
 const G = new Function(`${lib("grafic-bot.js")}; return GraficBot;`)();
 let ok = 0, pica = 0;
 async function test(nume, f) { try { await f(); ok++; console.log("  ✓ " + nume); } catch (e) { pica++; console.log("  ✗ " + nume + "\n      " + String(e && e.message || e).split("\n").join("\n      ")); } }
@@ -82,7 +83,7 @@ await test("(4) I-529 stopul de probă: textul spune pierderea cu gridul față 
   assert.ok(/<g class="gbProba"><line [^>]*\/><\/g>/.test(tel) && !tel.includes("🧪"), "pe telefon doar linia - textul e în citirea de sub grafic"); assert.match(pr.scurt, /^[\d.]+ · −3,0 USDT$/);
   // audit 19.10: legătura din pagină (tbProbaPt / tbProbaStop / tbProbaCopiaza) e scoasă - butonul ei a ieșit din citire în v100.138, deci
   // nu mai putea fi pornită; GraficBot.stopProba și desenul liniei (mai sus) rămân păzite, iar pagina nu mai cere stopul de probă
-  assert.ok(!/tbProbaStop|function tbProbaPt\(|function tbProbaCopiaza\(/.test(citeste("public", "app.js")), "legătura stopului de probă a rămas în pagină");
+  assert.ok(!/tbProbaStop|function tbProbaPt\(|function tbProbaCopiaza\(/.test(cuTablou(citeste("public", "app.js"))), "legătura stopului de probă a rămas în pagină");
   assert.doesNotMatch(fnApp("tbDeseneazaCitire"), /tbProbaComuta/);   // v100.138 (el): „Stop de probă” scos din citire
 });
 await test("(1) renderTabloGrafic cheamă intrarea pură o singură dată, cu planul, șansele, stopul de probă, funding-ul și modul", () => {

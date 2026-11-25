@@ -2,6 +2,7 @@
 // CRV long, 16:50 -> 18:09 UTC: distanta pana la lichidare 11,2 % -> 12,4 % (pretul urca), iar Consilierul scria
 // „Lichidarea s-a apropiat la 12.5%, iar lichidarea la 12.5%” + „N-aș mai lăsa poziția să crească”.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -44,7 +45,7 @@ await test("Consilierul: lichidarea apare O SINGURA DATA in titlu (semaforul + s
   assert.match(fs.readFileSync(path.join(RAD, "public", "lib", "sfaturi.js"), "utf8"), /cod: "pericol", tip: k,/);
 });
 await test("colectorul si pagina dau semaforului distanta de acum o ora", () => {
-  const col = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8"), a = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8");
+  const col = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8"), a = cuTablou(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8"));
   assert.ok(col.includes("distInainte: SemnaleBot.distantaLaOra(") && col.includes("st._distIst"), "colector");
   assert.ok(a.includes("distInainte:") && a.includes("SemnaleBot.distantaLaOra("), "pagina");
 });

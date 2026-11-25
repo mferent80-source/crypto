@@ -3,6 +3,7 @@
 // iar fisa zicea „trend long, tare” langa „Direcția pieței: laterală”. Consiliu.alcatuieste aduna TOATE sursele intr-un verdict,
 // o actiune cu bani, 3 motive dupa banii in joc (cu increderea masurata) si restul pliat - fara sa se piarda vreun sfat.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -13,7 +14,7 @@ const G = new Function(`${lib("grid-calcul.js")}; return GridCalcul;`)(); global
 const SB = new Function(`${lib("semnale-bot.js")}; return SemnaleBot;`)(); globalThis.SemnaleBot = SB;
 let CS = null; try { CS = new Function(`${lib("consiliu.js")}; return Consiliu;`)(); } catch (e) { CS = null; }
 const FX = JSON.parse(fs.readFileSync(new URL("./fixturi/consilier-crv-2026-09-30.json", import.meta.url), "utf8"));
-const app = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8"), html = fs.readFileSync(path.join(RAD, "public", "index.html"), "utf8");
+const app = cuTablou(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8")), html = fs.readFileSync(path.join(RAD, "public", "index.html"), "utf8");
 
 let teste = 0, picate = 0;
 async function test(nume, fn) {

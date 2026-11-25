@@ -5,6 +5,7 @@
 //      IBM Plex ca pe celelalte trei.
 //   node scripts/proba-v100338-rf.mjs
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -30,7 +31,7 @@ await test("A tema: rădăcina #rangefilter în generator, stratul la zi, variab
 });
 
 await test("A un singur comutator: tbTemaAplica și tema-devreme pun tbZi și pe #rangefilter; butonul rfTemaBtn în antetul paginii", () => {
-  const APP = citeste("public", "app.js"), DEV = citeste("public", "lib", "tema-devreme.js"), RF = citeste("public", "lib", "range-filter-ecran.js");
+  const APP = cuTablou(citeste("public", "app.js")), DEV = citeste("public", "lib", "tema-devreme.js"), RF = citeste("public", "lib", "range-filter-ecran.js");
   const ap = APP.slice(APP.indexOf("function tbTemaAplica("), APP.indexOf("function tbTemaComuta("));
   assert.match(ap, /\["tabloubot","t212","dash","rangefilter","sugestii","probe","gridset","gridsim","montecarlo","jurnaltrade","comportament","tradezilei","carnet","scan","salt","alerts","contintreg"\]/); assert.match(ap, /"rfTemaBtn"/);
   assert.match(DEV, /\["tabloubot", "t212", "dash", "rangefilter", "sugestii", "probe", "gridset", "gridsim", "montecarlo", "jurnaltrade", "comportament", "tradezilei", "carnet", "scan", "salt", "alerts", "contintreg"\]/);
@@ -125,7 +126,7 @@ await test("B fișele deschise rămân deschise la redesenare (cartelele vin una
   assert.match(c.rfHtmlFiltre(st), /data-action-click="rfToate\(false\)">Închide toate fișele</);
   c.rfToate(false); h = c.rfHtmlCorp(st);
   assert.equal(h.split('<details class="rfFisa" open>').length - 1, 0);
-  const APP = citeste("public", "app.js"); assert.match(APP, /ACTIUNI_PERMISE=new Set\("[^"]*\brfToate\b/, "acțiunea e permisă");
+  const APP = cuTablou(citeste("public", "app.js")); assert.match(APP, /ACTIUNI_PERMISE=new Set\("[^"]*\brfToate\b/, "acțiunea e permisă");
   assert.match(citeste("public", "lib", "range-filter-ecran.js"), /addEventListener\("toggle", function \(e\) \{[^}]*rfFisa/, "clicul pe rând ține minte starea");
 });
 

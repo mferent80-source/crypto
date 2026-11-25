@@ -4,6 +4,7 @@
 // (1) GridPlan.potrivire (fișa, poarta) · (2) GridPlan.alege · (3) GridPlan.motive · (4) TabloExtra.gridVsPlan (botul care rulează)
 // (5) mesajul de Discord · (6) pagina: capul fișei, poarta, Tabloul · (7) colectorul · (E) versiunile. Depozit PUBLIC ⇒ cifre construite.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -12,7 +13,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const lib = (f) => fs.readFileSync(path.join(RAD, "public", "lib", f), "utf8");
 const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8");
-const fnApp = (nume) => { const s = citeste("public", "app.js"), i = s.indexOf("function " + nume + "("); assert.ok(i >= 0, "lipsește " + nume + " în app.js"); return s.slice(i, s.indexOf("\nfunction ", i + 10)); };
+const fnApp = (nume) => { const s = cuTablou(citeste("public", "app.js")), i = s.indexOf("function " + nume + "("); assert.ok(i >= 0, "lipsește " + nume + " în app.js"); return s.slice(i, s.indexOf("\nfunction ", i + 10)); };
 globalThis.GridCalcul = new Function(`${lib("grid-calcul.js")}; return GridCalcul;`)();
 globalThis.GridProba = new Function(`${lib("grid-proba.js")}; return GridProba;`)();
 const GP = new Function(`${lib("grid-plan.js")}; return GridPlan;`)();

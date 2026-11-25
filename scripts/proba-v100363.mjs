@@ -3,6 +3,7 @@
 // eticheta cinstită când istoricul e vechi), colectorul (răcirea alertelor, prețul în Discord, poza zilnică), ruta, pagina (nimic pierdut), tema, versiunile.
 //   node scripts/proba-v100363.mjs
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -93,7 +94,7 @@ await test("P pagina: capul cu vechimea pe piețe și tema, fraza + De unde ști
 });
 await test("T tema și legăturile: RADACINI cu scan, tbTemaAplica + scTemaBtn, tema devreme, tbRandComuta ⇒ scRandComuta, generatorul la zi", () => {
   assert.match(citeste("scripts", "face-tema-tablou.mjs"), /export const RADACINI = \[[^\]]*"carnet", "scan"(, "[a-z]+")*\]/);
-  const A = citeste("public", "app.js"); assert.match(A, /"tradezilei","carnet","scan","salt","alerts","contintreg"\]\.forEach/); assert.match(A, /"tzTemaBtn","cnTemaBtn","scTemaBtn","slTemaBtn","alTemaBtn","ciTemaBtn"\]/); assert.match(A, /return scRandComuta\(id,deschis\);/);
+  const A = cuTablou(citeste("public", "app.js")); assert.match(A, /"tradezilei","carnet","scan","salt","alerts","contintreg"\]\.forEach/); assert.match(A, /"tzTemaBtn","cnTemaBtn","scTemaBtn","slTemaBtn","alTemaBtn","ciTemaBtn"\]/); assert.match(A, /return scRandComuta\(id,deschis\);/);
   assert.match(citeste("public", "lib", "tema-devreme.js"), /"tradezilei", "carnet", "scan", "salt", "alerts", "contintreg"\]/);
   assert.match(citeste("public", "app.css"), /#tradezilei,#carnet,#scan,#salt,#alerts,#contintreg\)/);
 });

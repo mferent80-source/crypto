@@ -1,6 +1,7 @@
 // Proba v100.145 (08.10, el: „fa idei” după v100.144): (1) rândul cu bilanțul umplerilor (perechile deduse · deschise, lângă cifrele REALE
 // Pionex, fără înmulțiri); (2) săgeata deschisă de peste o oră e galbenă (unde a rămas botul „agățat”); (3) alegerea „24 h” pe bot, nu globală.
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
@@ -10,7 +11,7 @@ import { asertApel, areInLista } from "./lib/cod-are.mjs";   /* v100.387 (I-941)
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8").replace(/\r\n/g, "\n");
 const G = new Function(`${citeste("public", "lib", "grafic-bot.js")}; return GraficBot;`)();
-const HTML = citeste("public", "index.html"), APP = citeste("public", "app.js"), CSS = citeste("public", "app.css");
+const HTML = citeste("public", "index.html"), APP = cuTablou(citeste("public", "app.js")), CSS = citeste("public", "app.css");
 const functie = (src, n) => { const i = src.search(new RegExp("(async )?function " + n + "\\(")); if (i < 0) throw new Error(n + "() lipsește"); let a = 0, j = src.indexOf("{", i); for (; j < src.length; j++) { if (src[j] === "{") a++; else if (src[j] === "}" && --a === 0) break; } return src.slice(i, j + 1); };
 let teste = 0, picate = 0;
 async function test(nume, f) { teste++; await Promise.resolve().then(f).then(() => console.log(`  ok   ${nume}`)).catch((e) => { picate++; console.log(`  PICA ${nume}\n       ${String(e && e.stack || e).slice(0, 700)}`); }); }

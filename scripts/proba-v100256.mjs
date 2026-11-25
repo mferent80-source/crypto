@@ -2,6 +2,7 @@
 // ATR-ul de pe Scan își spune media; la stopul în procente se copiază procentul.
 // Pragurile și cifrele rămân. Nu cheamă alte probe.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -59,7 +60,7 @@ await test("Scan își numește media; formula, stopul de acțiuni și Wilder r�
   assert.match(scan, /atrPct: r2\(tr \/ n \/ u \* 100\)/);
   assert.doesNotMatch(scan.slice(scan.indexOf("function rezumat"), scan.indexOf("function fata")), /\(o\[i - 1\] \* \(n - 1\)/);
   assert.match(citeste("public", "lib", "t212-ecran.js"), /ATR, media simplă pe 14 zile/);
-  assert.match(citeste("public", "app.js"), /\(o\[i-1\]\*\(n-1\)\+tr\[i\]\)\/n/);
+  assert.match(cuTablou(citeste("public", "app.js")), /\(o\[i-1\]\*\(n-1\)\+tr\[i\]\)\/n/);
 });
 
 await test("stopul în procente: se copiază procentul, prețul mare rămâne cifra vie", () => {

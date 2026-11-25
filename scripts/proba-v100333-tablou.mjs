@@ -8,6 +8,7 @@
 //       planul n-a putut fi citit · (b) „pe grilă ≈ … USDT” cu o zecimală (două / trei doar când suma e sub 0,095 / 0,0095).
 //   node scripts/proba-v100333-tablou.mjs
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -17,7 +18,7 @@ import { fileURLToPath } from "node:url";
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8").replace(/\r\n/g, "\n");
 const lib = (f) => citeste("public", "lib", f);
-const APP = citeste("public", "app.js");
+const APP = cuTablou(citeste("public", "app.js"));
 const fnDin = (src, nume) => {
   let i = src.indexOf("\nasync function " + nume + "("); if (i < 0) i = src.indexOf("\nfunction " + nume + "(");
   assert.ok(i >= 0, "lipsește funcția " + nume); i++;

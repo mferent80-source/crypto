@@ -4,6 +4,7 @@
 //   node scripts/proba-v10072.mjs
 import "./lib/text-ro-global.mjs";   // RF4 (v100.61): TextRo inaintea semnale-bot.js / consiliu.js
 import fs from "node:fs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
@@ -17,7 +18,7 @@ async function test(nume, fn) { try { await fn(); ok++; console.log("  ✓ " + n
 const T0 = Date.UTC(2026, 9, 4, 18, 0), ZI = 86400000, ORA = 3600000;
 const PERS = /^(Aș|N-aș|L-aș|Le-aș|O-aș|M-aș|Nu m-aș)\s/;
 const faraAb = (t, tip, cine) => { const ab = verifica(t, tip); assert.deepEqual(ab, [], (cine || "") + ": " + ab.join("; ") + " — " + t); };
-const app = () => fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8");
+const app = () => cuTablou(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8"));
 const tr = (m, rez, o) => Object.assign({ id: "x" + Math.random(), moneda: m, rezultat: rez, net: rez, inchis: T0 - 5 * ZI, pornit: T0 - 6 * ZI, durataOre: 30, comisioane: -0.2, funding: 0, dir: "long", greseli: [] }, o || {});
 
 console.log("Proba v100.72 · sfaturile concise, pachetul 5 (Acasă, rapoartele, fișa)");

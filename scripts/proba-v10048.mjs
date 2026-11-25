@@ -2,6 +2,7 @@
 // primeste campurile 15-18 pentru GRID-FISA v2.2 (verdictul fisei, momentul generarii, pragurile marginii din profilul monedei),
 // fara sa schimbe semnatura (alt grid) si fara sa strice codul vechi (v2.0/v2.1 citesc 9-14 campuri).
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -37,7 +38,7 @@ await test("botul fara tip si fara plan: pozitiile 11-14 se completeaza (tip gol
   assert.equal(p[10], ""); assert.deepEqual(p.slice(11, 14), ["0", "0", "0"]); assert.deepEqual(p.slice(16, 18), ["0", "0"]);
 });
 await test("pagina: fisa trimite verdictul ei + momentul + marginea; nota langa cod cand fisa nu zice PORNESTE; textele spun GRID-FISA v2.2", () => {
-  const app = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8");
+  const app = cuTablou(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8"));
   assert.match(app, /function grCodTV\(st,info,extra\)/); assert.match(app, /grCodTV\(st,i,\{verdict:/);
   assert.match(app, /TabloExtra\.codTVBot\(b,tbPlan\.botId===b\.id\?tbPlan\.plan:null,\{copiatLa:/);
   assert.match(app, /grTvNotaVerdict/); assert.ok(!/GRID-FISA v2\.0 →/.test(app)); assert.match(app, /GRID-FISA v2\.2/);

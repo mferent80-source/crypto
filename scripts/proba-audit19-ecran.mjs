@@ -10,6 +10,7 @@
 //  8. codul mort scos (funcții nechemate, CSS fără țintă); ce păzesc probele vechi „la dubiu rămâne” rămâne.
 //  9. ?panel= acceptă doar un element cu clasa panel.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -18,7 +19,7 @@ import { fileURLToPath } from "node:url";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8").replace(/\r\n/g, "\n");
-const APP = citeste("public", "app.js"), IDX = citeste("public", "index.html"), CSS = citeste("public", "app.css");
+const APP = cuTablou(citeste("public", "app.js")), IDX = citeste("public", "index.html"), CSS = citeste("public", "app.css");
 const LIB = (f) => citeste("public", "lib", f);
 const fnApp = (nume) => { const i = APP.indexOf("function " + nume + "("); assert.ok(i >= 0, "lipsește " + nume + " în app.js"); const j = APP.indexOf("\nfunction ", i + 10); return APP.slice(i, j < 0 ? undefined : j); };
 const TR = globalThis.TextRo;

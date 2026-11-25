@@ -4,6 +4,7 @@
 //   node scripts/proba-v10073.mjs
 import "./lib/text-ro-global.mjs";   // RF4 (v100.61): TextRo inaintea modulelor
 import fs from "node:fs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import assert from "node:assert/strict";
@@ -19,7 +20,7 @@ const REALE = JT.din(JSON.parse(fs.readFileSync(path.join(RAD, "scripts", "fixtu
 let nId = 0;
 const tr = (m, rez, o) => Object.assign({}, TPL, { id: "p" + (++nId), moneda: m, rezultat: rez, net: rez, inchis: T0 - 5 * ZI, pornit: T0 - 6 * ZI, durataOre: 30, comisioane: -0.2, funding: 0, dir: "long", greseli: [] }, o || {});
 const num = (s) => Number(String(s).replace(/\./g, "").replace(",", ".").replace("−", "-"));
-const app = () => fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8");
+const app = () => cuTablou(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8"));
 
 console.log("Proba v100.73 · revizia Opus a pachetului 5 (Acasă, rapoartele, fișa)");
 

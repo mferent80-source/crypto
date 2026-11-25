@@ -4,6 +4,7 @@
 //  6. cipul de sus: „fără analiză” în loc de „date: —” (părea o eroare), cu explicația la trecerea mouse-ului
 //  2. pentru-busola.json: prețul de acum al fiecărui bot deschis (proba în proba-v10090 (4))
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
@@ -15,7 +16,7 @@ let teste = 0, picate = 0;
 async function test(nume, f) { teste++; await Promise.resolve().then(f).then(() => console.log(`  ok   ${nume}`)).catch((e) => { picate++; console.log(`  PICA ${nume}\n       ${e && e.message}`); }); }
 console.log("\nv100.202 · piața spune când serverul tace · proba\n");
 
-const app = citeste("public", "app.js");
+const app = cuTablou(citeste("public", "app.js"));
 const regula = (app.match(/function eroareDeParola\(mesaj,status\)\{[^}]*\}/) || [])[0];
 const cx = { setInterval: () => 0, console, document: { hidden: false, addEventListener: () => {} }, window: { addEventListener: () => {} } };
 vm.createContext(cx);

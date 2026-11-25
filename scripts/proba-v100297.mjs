@@ -7,6 +7,7 @@
 //   4. legarea: meniul, secțiunea, butonul „mai multe”, navTo, pagina zilnică, scripturile, CSS; versiunile v100.297 peste tot.
 //   node scripts/proba-v100297.mjs
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
@@ -113,7 +114,7 @@ await test("3. ecranul în vm: cartela cu cifrele, trade-ul cinstit, stările, l
 });
 
 await test("4. legarea în aplicație: meniu, secțiune, „mai multe”, navTo, pagină zilnică, scripturi, CSS", () => {
-  const H = citeste("public", "index.html"), A = citeste("public", "app.js"), C = citeste("public", "app.css");
+  const H = citeste("public", "index.html"), A = cuTablou(citeste("public", "app.js")), C = citeste("public", "app.css");
   assert.match(H, /data-action-click="navTo\('tradezilei',true\)" data-nav="tradezilei"/);
   assert.match(H, /<section class="panel" id="tradezilei">/); assert.match(H, /id="tzPagina"/);
   assert.match(H, /moreNav\('tradezilei',true\)/);

@@ -2,6 +2,7 @@
 // moneda aceea RULEAZA un bot cu alt grid (cazul CRV: fisa propunea 0,3822–0,4307 / 5 grile, botul avea 0,3755–0,423 / 8 grile) -
 // „liniile din TV nu vor fi ale botului” + butonul cu codul BOTULUI; cand gridul e acelasi, o spune.
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import vm from "node:vm";
 import "./lib/text-ro-global.mjs";   // v100.76: fișa scrie grilele prin TextRo.cate („8 grile”, „47 de grile”), ca în pagină
@@ -9,7 +10,7 @@ import "./lib/text-ro-global.mjs";   // v100.76: fișa scrie grilele prin TextRo
 const lib = (f) => fs.readFileSync(new URL(`../public/lib/${f}`, import.meta.url), "utf8");
 const G = new Function(`${lib("grid-calcul.js")}; return GridCalcul;`)();
 const TE = new Function("GridCalcul", `${lib("tablou-extra.js")}; return TabloExtra;`)(G);
-const app = fs.readFileSync(new URL("../public/app.js", import.meta.url), "utf8");
+const app = cuTablou(fs.readFileSync(new URL("../public/app.js", import.meta.url), "utf8"));
 
 let teste = 0, picate = 0;
 async function test(nume, fn) {

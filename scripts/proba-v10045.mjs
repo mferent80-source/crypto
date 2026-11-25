@@ -1,6 +1,7 @@
 // Proba v100.45 (01.10, el: „sfaturile să fie adaptate și personalizate pentru fiecare monedă” + specul aprobat
 // docs/superpowers/specs/2026-10-01-consiliere-personalizata-design.md, pachetul 1: profilul monedei + planul potrivit monedei).
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -167,7 +168,7 @@ await test("poarta: planul atins de o zi obisnuita in peste jumatate din zile ->
   assert.ok(!r2.reguli.some((x) => x.cod === "plan-moneda"), "fara profil: regula nu apare");
 });
 await test("app: Tabloul cere profilul si il da la margine, stop si plan; poarta il foloseste; modulul e incarcat si pus in cache", () => {
-  const app = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8"), html = fs.readFileSync(path.join(RAD, "public", "index.html"), "utf8"), sw = fs.readFileSync(path.join(RAD, "public", "sw.js"), "utf8");
+  const app = cuTablou(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8")), html = fs.readFileSync(path.join(RAD, "public", "index.html"), "utf8"), sw = fs.readFileSync(path.join(RAD, "public", "sw.js"), "utf8");
   assert.match(app, /action=profil&simbol=/); assert.match(app, /SemnaleBot\.mutaGridul\(b,f,ac\?ac\.afaraOre:0,pmT\)/);
   assert.match(app, /pragMargine:pmT,pragStop:psT/); assert.match(app, /ProfilMoneda\.planPeMoneda\(/); assert.match(app, /planMoneda:pmG/);
   assert.match(html, /<script src="\/lib\/profil-moneda\.js"><\/script>/); assert.match(sw, /"\/lib\/profil-moneda\.js"/);
@@ -220,7 +221,7 @@ await test("R6: fara fisa si fara geometrie, stopul din profil NU se pune in int
   const st = c.find((x) => x.cod === "stop"); assert.ok(st.pretPropus === null || st.pretPropus < 0.40, "0,432 e in grid: " + st.pretPropus);
 });
 await test("R7/R9/R10: poarta verifica moneda+directia+levierul variantei; pe pagina fara server randul nu promite nimic; colectorul porneste cu profilele de ieri", () => {
-  const app = fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8"), col = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8");
+  const app = cuTablou(fs.readFileSync(path.join(RAD, "public", "app.js"), "utf8")), col = fs.readFileSync(path.join(RAD, "scripts", "colector.mjs"), "utf8");
   assert.match(app, /grPlanMemo\.grid\.cheie\.indexOf\(f\.simbol\+"\|"\)===0/); assert.match(app, /taG\.dir===f\.dir/);
   assert.match(app, /tbProfil\.faraServer/);
   assert.match(col, /profilStare\.facute[\s\S]{0,200}profileMoneda\.set/);

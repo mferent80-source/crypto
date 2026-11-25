@@ -2,6 +2,7 @@
 // „fă și ideile” -> garda cu sfaturile REALE, verdictul vechi al Tabloului in inventar). Specul docs/superpowers/specs/2026-10-02-sfaturi-concise-design.md.
 // Sectiunile („sarcina N”) intra in fisier pe rand, fiecare inaintea codului ei (planul 2026-10-02-sfaturi-pachetul-2-sfaturile-botilor.md).
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
@@ -148,7 +149,7 @@ await test("fiecare probă care încarcă sfaturi.js încarcă întâi TextRo (a
   assert.deepEqual(faraTextRo(/sfaturi\.js/), [], "probe fără TextRo");
 });
 await test("cardul ascuns al sfaturilor (app.js) arată sursa, nu „deCe”; garda e strictă pe „sfaturi”", async () => {
-  assert.ok(citeste("public", "app.js").includes(`(s.sursa?'<p class="tbSub">'+escapeHtml(s.sursa)+'</p>':'')`));
+  assert.ok(cuTablou(citeste("public", "app.js")).includes(`(s.sursa?'<p class="tbSub">'+escapeHtml(s.sursa)+'</p>':'')`));
   assert.ok((await modul("scripts", "garda-texte.mjs")).STRICT.has("sfaturi"));
 });
 
@@ -190,7 +191,7 @@ await test("fiecare probă care cheamă ritmRecuperare încarcă întâi TextRo"
   assert.deepEqual(faraTextRo(/ritmRecuperare\(/), [], "probe fără TextRo");
 });
 await test("panoul planului și portofoliul (app.js): „închide botul”, o acțiune la persoana I, cifre cu virgulă; mesajele pe două rânduri rămân pe două rânduri", async () => {
-  const app = citeste("public", "app.js"), css = citeste("public", "app.css");
+  const app = cuTablou(citeste("public", "app.js")), css = citeste("public", "app.css");
   // v100.332 (auditul 12.11, 🟡1): pe plus, cartela „Planul tău” ia fraza semaforului (SemnaleBot.planPeCartela), nu mai scrie fix „atinsă: închide botul”
   for (const s of ['"atins: închide botul"', "Niciun plan încă: scrie-l acum, la rece, nu când prețul fuge.",
     "N-aș mai porni unul pe partea asta, ci unul neutru sau pe partea cealaltă.", "var U=function(v){return TextRo.usdt(v)}"]) assert.ok(app.includes(s), "lipsește: " + s);

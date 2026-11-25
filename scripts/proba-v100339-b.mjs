@@ -1,5 +1,6 @@
 // Proba v100.339-b (auditul Tabloului botului din 13.11, valul B: indicatorii și textele lor). Rulează modulele reale ale paginii.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -154,7 +155,7 @@ await test("(B9) graficul mic: fiecare bară își ține verdictul de atunci, ia
   const j = bareDin(SERIE); assert.ok(IB.istoricScor(j, 3, calc).every((x) => typeof x.ver === "string"));
 });
 await test("(B4 + B10 + B11) tabelul din pagină: culoarea e față de bot (la short „↓” e verde), cu legendă; explicația se poate atinge; „ADX · RSI (cu bara de acum)”", () => {
-  const APP = citeste("public", "app.js"), src = taie(APP, "tbIndTabelHtml"); assert.ok(src, "tbIndTabelHtml");
+  const APP = cuTablou(citeste("public", "app.js")), src = taie(APP, "tbIndTabelHtml"); assert.ok(src, "tbIndTabelHtml");
   const c = { IndicatoriBot: IB, escapeHtml: G.escapeHtml, TextRo: G.TextRo }; vm.createContext(c); vm.runInContext(src, c);
   const q = { ver: "BEARISH", score: 30, prag: 66, supertrend: "BEAR", macd: false, rsi: 40 }, l = [{ eticheta: "4 ore", q, hp: null }];
   const sh = c.tbIndTabelHtml(l, "short"), lg = c.tbIndTabelHtml(l, "long"), fara = c.tbIndTabelHtml(l, null);
@@ -172,7 +173,7 @@ await test("(B12a) rândul ADX din citire: „piața stă pe loc (vremea gridulu
   assert.match(r.text, /piața stă pe loc/, "premisa: ADX sub 20 · " + r.text); assert.equal(r.stare, "info");
 });
 await test("(B12b) regimul macro în citirea botului: informație (e măsurat pe S&P, nu pe moneda botului), oricare ar fi treapta", () => {
-  const APP = citeste("public", "app.js"), src = taie(APP, "tbMacroRand"); assert.ok(src, "tbMacroRand");
+  const APP = cuTablou(citeste("public", "app.js")), src = taie(APP, "tbMacroRand"); assert.ok(src, "tbMacroRand");
   for (const st of ["bine", "atentie", "info"]) {
     const c = { macroCitire: () => ({ ce: "Regim macro", stare: st, text: "risk-on (scor +2)" }), Object }; vm.createContext(c); vm.runInContext(src, c);
     const r = c.tbMacroRand(); assert.equal(r.stare, "info"); assert.match(r.text, /^risk-on \(scor \+2\) · nemăsurat pe crypto/); assert.equal(r.actiune, "navTo('dash',true)");
@@ -201,7 +202,7 @@ await test("(D1b) calc folosește regimul cu histerezis în modul „auto” și
 await test("(D3) rezumatul indicatorilor nu mai dă roșu / verde (direcția lui e nedovedită); nota de sub tabel și nota TradingView spun cât de des a fost nimerită direcția", () => {
   assert.equal(IB.rezumat(R("NEUTRAL", "NEUTRAL", "BULLISH", "BULLISH"), "short").ton, "atentie"); assert.equal(IB.rezumat(R("BEARISH", "BEARISH", "BEARISH", "BEARISH"), "short").ton, "neutru");
   assert.match(IB.MASURAT_DIRECTIE, /nimerită după 4 bare în \d+–\d+ din 100 de cazuri \(măsurat 13\.11\.2026, 21 de monede\): nedovedit/);
-  const APP = citeste("public", "app.js"), src = taie(APP, "tbIndTabelHtml"), c = { IndicatoriBot: IB, escapeHtml: G.escapeHtml, TextRo: G.TextRo }; vm.createContext(c); vm.runInContext(src, c);
+  const APP = cuTablou(citeste("public", "app.js")), src = taie(APP, "tbIndTabelHtml"), c = { IndicatoriBot: IB, escapeHtml: G.escapeHtml, TextRo: G.TextRo }; vm.createContext(c); vm.runInContext(src, c);
   assert.ok(c.tbIndTabelHtml([{ eticheta: "4 ore", q: { ver: "BEARISH", score: 30, prag: 66 }, hp: null }], "short").includes(G.escapeHtml(IB.MASURAT_DIRECTIE)));
   assert.match(TvNote.tabel({ tv: "X", iv: IV(0.2) }, {}), /direcția lui, măsurată cu formula ei refăcută, pe bare închise \(crypto\): 48–49 din 100 \(nedovedit\)/);
 });
@@ -217,7 +218,7 @@ await test("(D1c) confirmarea: verdictul se schimbă abia când două bare înch
   const b = IB.banda([{ eticheta: "4 ore", q: { ver: "NEUTRAL", verBrut: "BULLISH", neconfirmat: "BULLISH", score: 70, prag: 66 } }], "long")[0]; assert.equal(b.neconfirmat, "BULLISH"); assert.match(IB.bandaHtml([b], null, null, "long"), /<span class="ibVer">↔ 70⏳<\/span>/);
 });
 await test("(D1d) pagina: barele dinainte se socotesc o singură dată pe bară închisă, după desen; apoi verdictul arătat e cel confirmat", () => {
-  const APP = citeste("public", "app.js"), src = taie(APP, "tbVerdictConfirmat"); assert.ok(src, "tbVerdictConfirmat");
+  const APP = cuTablou(citeste("public", "app.js")), src = taie(APP, "tbVerdictConfirmat"); assert.ok(src, "tbVerdictConfirmat");
   let chemari = 0; const amanate = [], c = { IndicatoriBot: IB, tbVerAnt: { simbol: null, pe: {} }, tbStare: { directie: null }, calc: (j) => { chemari++; return { ver: j.length >= 99 ? "NEUTRAL" : "BULLISH", trendScore: 50, momScore: 40, volScore: 50, structureScore: 50 }; }, setTimeout: (f) => amanate.push(f), renderTabloDirectia() {}, renderTabloIndicatori() {}, Object, Math };
   vm.createContext(c); vm.runInContext("var tbVerAnt={simbol:null,pe:{}};" + src, c);
   const j = Array.from({ length: 100 }, (_, i) => [i * 3600000]), q = { ver: "BULLISH", score: 70, prag: 66, trendScore: 50, momScore: 60, volScore: 50, structureScore: 50 };
@@ -238,7 +239,7 @@ await test("(E1) calc dă aceleași cifre ca referința scrisă de la zero (defi
 });
 
 await test("(D1e) „ține de N bare”: pe 4 ore, câte bare închise la rând au același verdict ca ultima (din istoria scorului); fără istorie nu inventează", () => {
-  const APP = citeste("public", "app.js"), src = taie(APP, "tbTineDe"); assert.ok(src, "tbTineDe");
+  const APP = cuTablou(citeste("public", "app.js")), src = taie(APP, "tbTineDe"); assert.ok(src, "tbTineDe");
   const c = { tbIstoric4hGata: () => [{ ver: "NEUTRAL" }, { ver: "BEARISH" }, { ver: "BEARISH" }, { ver: "BEARISH" }], Array }; vm.createContext(c); vm.runInContext(src, c);
   const q = { ver: "BEARISH" }; c.tbTineDe({ simbol: "X|short", indicatori: [{ tf: "60M", q: { ver: "BEARISH" } }, { tf: "4H", q }] }); assert.equal(q.tineDe, 3);
   const q2 = { ver: "NEUTRAL", verBrut: "BULLISH" }; c.tbTineDe({ simbol: "X|short", indicatori: [{ tf: "4H", q: q2 }] }); assert.equal(q2.tineDe, undefined, "bara de acum zice altceva decât istoria: nu se numără");
@@ -289,10 +290,10 @@ await test("(A6k) nota TradingView: culoarea în oglindă la long; prețul lips�
   assert.match(act, /direcția lui: pe acțiuni nemăsurată \(pe crypto, cu formula ei refăcută pe bare închise: 48–49 din 100, nedovedit\)/); assert.doesNotMatch(act, /măsurată cu formula ei refăcută, pe bare închise \(crypto\)/);
   const T2 = citeste("public", "lib", "t212-ecran.js"); assert.match(T2, /TvNote\.tabel\(t212NotaTv\(p\), \{ directie: "long", cu: "poziția", actiuni: true, la:/);
   assert.match(IndicatoriBot.MASURAT_DIRECTIE, /nota TradingView \(formula ei, refăcută pe bare închise\)/); assert.match(IndicatoriBot.MASURAT_DIRECTIE_ACT, /pe acțiuni n-a fost măsurată; pe crypto/);
-  assert.match(citeste("public", "app.js"), /escapeHtml\(\(opt\.vorbe\?IndicatoriBot\.MASURAT_DIRECTIE_ACT:IndicatoriBot\.MASURAT_DIRECTIE\)\|\|""\)/, "fișa acțiunii poartă varianta ei");
+  assert.match(cuTablou(citeste("public", "app.js")), /escapeHtml\(\(opt\.vorbe\?IndicatoriBot\.MASURAT_DIRECTIE_ACT:IndicatoriBot\.MASURAT_DIRECTIE\)\|\|""\)/, "fișa acțiunii poartă varianta ei");
 });
 await test("(A6l) răspunsul întârziat al monedei de dinainte nu mai suprascrie nota monedei de acum", async () => {
-  const APP = citeste("public", "app.js"), src = taie(APP, "tbAduTv"); assert.ok(src, "tbAduTv");
+  const APP = cuTablou(citeste("public", "app.js")), src = taie(APP, "tbAduTv"); assert.ok(src, "tbAduTv");
   const cereri = [], d = { simbol: "A|short" }, c = { tbStare: { directie: d }, renderTabloTv() {}, renderTabloIndicatori() {}, textEroare: String, encodeURIComponent, Number, Date,
     getJSON: (u) => new Promise((ok) => cereri.push({ u, ok })) }; vm.createContext(c); vm.runInContext(src, c);
   c.tbAduTv(d, "A_USDT_PERP", "A|short"); d.simbol = "B|short"; c.tbAduTv(d, "B_USDT_PERP", "B|short");

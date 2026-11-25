@@ -2,6 +2,7 @@
 //  I-632  …#ecran=tabloubot&bot=<id> (butonul „Deschide botul în Radar ↗” din Busola) ⇒ botul ales în Tablou
 //  I-636  colectorul trimite boții DIRECT în worker-ul Busolei (POST /api/boti, cheia în antet), doar deschișii + închișii din 2 h
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
@@ -14,7 +15,7 @@ let teste = 0, picate = 0;
 async function test(nume, f) { teste++; await Promise.resolve().then(f).then(() => console.log(`  ok   ${nume}`)).catch((e) => { picate++; console.log(`  PICA ${nume}\n       ${e && e.message}`); }); }
 console.log("\nv100.203 · boții direct în Busola · proba\n");
 
-const app = citeste("public", "app.js");
+const app = cuTablou(citeste("public", "app.js"));
 function functia(src, nume) { let i = src.indexOf("function " + nume + "("); assert.ok(i >= 0, "lipseste " + nume); let a = src.indexOf("{", i), k = 0, j = a; for (; j < src.length; j++) { if (src[j] === "{") k++; else if (src[j] === "}" && --k === 0) break; } return src.slice(i, j + 1); }
 const ctx = {}; vm.createContext(ctx); vm.runInContext(functia(app, "crLegaturaDin") + ";this.f=crLegaturaDin;", ctx);
 

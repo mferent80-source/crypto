@@ -8,12 +8,13 @@
 //   V  versiunea v100.384, colectorul v101.213, proba în lanț după v100.383
 // Rulare: node scripts/proba-v100384.mjs
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
 
 const citeste = (f) => fs.existsSync(new URL(f, import.meta.url)) ? fs.readFileSync(new URL(f, import.meta.url), "utf8").replace(/\r\n/g, "\n") : "";
-const LIBF = (f) => citeste("../public/lib/" + f), APP = citeste("../public/app.js");
+const LIBF = (f) => citeste("../public/lib/" + f), APP = cuTablou(citeste("../public/app.js"));
 let teste = 0, picate = 0;
 async function test(nume, fn) { teste++; try { await fn(); console.log(`  ok   ${nume}`); } catch (e) { picate++; console.log(`  PICA ${nume}\n       ${String(e.message).split("\n")[0]}`); } }
 const functie = (src, n) => { const i = src.search(new RegExp("(async )?function " + n + "\\(")); if (i < 0) throw new Error(n + "() lipsește"); let a = 0, j = src.indexOf("{", i); for (; j < src.length; j++) { if (src[j] === "{") a++; else if (src[j] === "}" && --a === 0) break; } return src.slice(i, j + 1); };

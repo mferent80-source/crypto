@@ -1,6 +1,7 @@
 // Proba v100.210 (17.10.2026, colaborarea cu Busola, ideea 2): decizia de pornire în fișa de grid — șansa ca prețul să atingă
 // lichidarea setării în 24 h (din tabelul Busolei) și ce zic opțiunile pe 4h.
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -20,7 +21,7 @@ test("lichidarea dincolo de 30% ⇒ „sub 1%”", () => { const d = B.randDeciz
 test("neutru: ambele părți la un loc (cel mult)", () => { const d = B.randDecizie(REZ, "SOL_USDT_PERP", ACUM, { pret: 100, lichJos: 90, lichSus: 110 }); assert.match(d.linii[0].text, /~13%/); });
 test("opțiunile: „pe BTC”, PLECAT, intră în verdict când Busola tace", () => { const d = B.randDecizie(REZ, "SOL_USDT_PERP", ACUM, null); assert.equal(d.linii.length, 1); assert.match(d.linii[0].text, /Opțiunile pe BTC \(4h\).*PLECAT.*când ea tace/); });
 test("opțiunile fără semn ⇒ niciun rând; monedă necunoscută ⇒ null", () => { assert.equal(B.randDecizie(REZ, "XRP_USDT_PERP", ACUM, null), null); assert.equal(B.randDecizie(REZ, "ZZZ_USDT_PERP", ACUM, {}), null); assert.equal(B.randDecizie(null, "SOL", ACUM, {}), null); });
-test("fișa de grid arată rândurile (grBusolaFisaHtml cheamă randDecizie cu lichidarea setării)", () => { const a = citeste("public", "app.js"); assert.match(a, /Busola\.randDecizie\(Busola\.rezumat\(\),f\.simbol,Date\.now\(\),\{pret:f\.pret,lichJos:lq\?lq\.jos:null,lichSus:lq\?lq\.sus:null\}\)/); assert.match(a, /grBusolaDecizie/); });
+test("fișa de grid arată rândurile (grBusolaFisaHtml cheamă randDecizie cu lichidarea setării)", () => { const a = cuTablou(citeste("public", "app.js")); assert.match(a, /Busola\.randDecizie\(Busola\.rezumat\(\),f\.simbol,Date\.now\(\),\{pret:f\.pret,lichJos:lq\?lq\.jos:null,lichSus:lq\?lq\.sus:null\}\)/); assert.match(a, /grBusolaDecizie/); });
 test("versiunea v100.210 peste tot", () => { const ver = Number(JSON.parse(citeste("package.json")).version.split(".")[1]); assert.ok(ver >= 210);   /* v100.211: ≥, nu egal */ assert.match(citeste("public", "index.html"), new RegExp("v100\\." + ver)); assert.match(citeste("public", "sw.js"), new RegExp("crypto-radar-v100-" + ver)); assert.match(citeste("functions", "_shared", "versiune.js"), new RegExp("v100\\." + ver)); });
 console.log(`\n${teste - picate}/${teste} ${picate ? "— PICATE" : "ok"}`);
 process.exit(picate ? 1 : 0);

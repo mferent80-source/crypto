@@ -9,6 +9,7 @@
 //   node scripts/proba-v100322.mjs
 import "./lib/text-ro-global.mjs";   // garda din proba v10062: o probă care pomenește sfaturi.js încarcă întâi TextRo
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
@@ -116,7 +117,7 @@ await test("Sfaturi: zero-ul se mișcă la fiecare umplere ⇒ sub 0,1 USDT de z
 
 // ───────────── 4. „Dacă prețul ajunge la…” ─────────────
 await test("scenariile: take-profit-ul pus e un rând („take-profit-ul”), lângă opritor", () => {
-  const APP = citeste("public", "app.js");
+  const APP = cuTablou(citeste("public", "app.js"));
   const i = APP.indexOf("function tbTinteScenariu("); assert.ok(i > 0);
   const corp = APP.slice(i, APP.indexOf("\n}\n", i) + 2);
   const ctx = { botiNr: (v) => { const x = Number(v); return v === null || v === undefined || v === "" || !Number.isFinite(x) ? null : x; }, tbStare: { scenariuPropriu: null } };
@@ -128,7 +129,7 @@ await test("scenariile: take-profit-ul pus e un rând („take-profit-ul”), l�
 
 // ───────────── 5. „Contează acum” îmbogățit (el: „îmbunătățește Contează acum”, ales tot) ─────────────
 // (codul s-a scris în demo, înaintea acestor teste; ele fixează ce a aprobat el în demo-ul v5)
-const APP = citeste("public", "app.js"), CSS = citeste("public", "app.css"), HTML = citeste("public", "index.html");
+const APP = cuTablou(citeste("public", "app.js")), CSS = citeste("public", "app.css"), HTML = citeste("public", "index.html");
 const functie = (src, n) => { const i = src.search(new RegExp("function " + n + "\\(")); if (i < 0) throw new Error(n + "() lipsește"); let a = 0, j = src.indexOf("{", i); for (; j < src.length; j++) { if (src[j] === "{") a++; else if (src[j] === "}" && --a === 0) break; } return src.slice(i, j + 1); };
 const BRUT = { buOrderData: { bottom: "0.29", top: "0.325", row: "12", perVolume: "60", position: "-690", positionOpenPrice: "0.3109", marginBalance: "70.1", trend: "short", gridType: "arithmetic" } };
 function imbogatire(o = {}) {

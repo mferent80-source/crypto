@@ -154,7 +154,7 @@
   },
   {
    "nume": "Monte Carlo scurt: „100,0%” la botul OPRIT",
-   "fisier": "public/app.js",
+   "fisier": "public/lib/tablou-mc.js",
    "cauta": "if(oprit)par.push(\"reluarea nu se potrivește",
    "pune": "if(false)par.push(\"reluarea nu se potrivește"
   },
@@ -256,13 +256,13 @@
   },
   {
    "nume": "revizia 🟡3: „lichidat” spus „oprit”",
-   "fisier": "public/app.js",
+   "fisier": "public/lib/tablou-mc.js",
    "cauta": "(oprit===\"LICHIDAT\"?\"lichidat\":\"oprit\")",
    "pune": "\"oprit\""
   },
   {
    "nume": "revizia 🟡3: trimite la rândul stopului și fără cifră",
-   "fisier": "public/app.js",
+   "fisier": "public/lib/tablou-mc.js",
    "cauta": "+(areCifra?\" — șansa",
    "pune": "+(true?\" — șansa"
   },

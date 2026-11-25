@@ -4,6 +4,7 @@
 // (raportul colectorului: proba-v100360-comportament.mjs; proba „3 la rând”: proba-v100360-trei.mjs)
 //   node scripts/proba-v100360.mjs
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -94,7 +95,7 @@ await test("P5 raportul vechi: peste 30 de minute ⇒ „colectorul n-a mai scri
 });
 await test("P6 tema și rândurile: comportament în generator, în tema devreme, în tbTemaAplica + butonul; rândurile pliate au cheie, titlu, cele două deschise implicit; tbRandComuta le dă paginii", () => {
   assert.match(citeste("scripts", "face-tema-tablou.mjs"), /"jurnaltrade", "comportament", "tradezilei", "carnet", "scan", "salt", "alerts", "contintreg"\]/);
-  assert.match(lib("tema-devreme.js"), /"comportament"/); const A = citeste("public", "app.js");
+  assert.match(lib("tema-devreme.js"), /"comportament"/); const A = cuTablou(citeste("public", "app.js"));
   assert.match(A, /"coTemaBtn"/); assert.match(A, /return coRandComuta\(id,deschis\)/);
   const E = lib("comportament-ecran.js");
   for (const id of ["coSDovezi", "coSGrafice", "coSEv", "coSReg", "coSSapt", "coSOg", "coSProfit"]) { assert.match(E, new RegExp(id + ': "')); assert.match(E, new RegExp('id="' + id + '"|id=\\\\"' + id)); }

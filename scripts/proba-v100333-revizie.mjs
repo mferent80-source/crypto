@@ -6,6 +6,7 @@
 //   🔵8 cont T212 în altă monedă: mesajul spunea „nici BNR, nici istoricul T212 n-au venit”.
 //   node scripts/proba-v100333-revizie.mjs
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -37,7 +38,7 @@ await test("🔵3 lunea, ultima zi închisă e vineri: textul spune „ultima î
   assert.doesNotMatch(lib("acasa.js"), /închiderea de ieri/); assert.match(lib("acasa.js"), /trendul e judecat pe ultima închidere/);
 });
 await test("🔵5 funding: cu rata veche nu se mai scrie „media pe 7 zile … plătești / încasezi”", () => {
-  const ctx = vm.createContext({ TextRo: globalThis.TextRo }); vm.runInContext(fnDin(citeste("public", "app.js"), "tbFundingMediu"), ctx);
+  const ctx = vm.createContext({ TextRo: globalThis.TextRo }); vm.runInContext(fnDin(cuTablou(citeste("public", "app.js")), "tbFundingMediu"), ctx);
   const m = { k: "funding", text: "−0,010% la 8 h", botPlateste: false };
   const viu = vm.runInContext("tbFundingMediu", ctx)([m], { rataZi: 0.0006 }, "long")[0];
   assert.match(viu.text, /media pe 7 zile/, "premisa: cu rata vie, media apare");

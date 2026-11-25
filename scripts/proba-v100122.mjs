@@ -5,6 +5,7 @@
 // (3) proba de ecran pe TOATE paginile din meniu la 390 px (scripts/proba-ecran-telefon.mjs, npm run test:ecran-telefon);
 // (4) găsit de (3): pagina „Local data” arunca TypeError - rândurile localLiveV68/V69 scoase demult din pagină, codul încă le scria.
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
@@ -16,7 +17,7 @@ let teste = 0, picate = 0;
 async function test(nume, f) { teste++; await Promise.resolve().then(f).then(() => console.log(`  ok   ${nume}`)).catch((e) => { picate++; console.log(`  PICA ${nume}\n       ${String(e && e.stack || e).slice(0, 600)}`); }); }
 console.log("\nV100.122 · Telefonul: cardul de instalare, banda de sus, proba pe toate paginile · proba\n");
 
-const css = citeste("public", "app.css"), app = citeste("public", "app.js"), html = citeste("public", "index.html");
+const css = citeste("public", "app.css"), app = cuTablou(citeste("public", "app.js")), html = citeste("public", "index.html");
 function functia(nume) {
   const i = app.indexOf("function " + nume + "("); assert.ok(i >= 0, nume + "() lipsește din app.js");
   let ad = 0, j = app.indexOf("{", i);

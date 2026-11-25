@@ -8,6 +8,7 @@
 //  5. „Mișcare mare” are o definiție (GridCalcul.miscareMare, cifra pe 24 h): Acasă, cartela „Mișcarea”, BTC, clasamentul și Scan-ul o urmează.
 //  6. Basis-ul amestecă bursele (perp Pionex, spot Binance) - se spune pe ecran; comisionul pe zi cuprindea taxa de intrare - separat.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -16,7 +17,7 @@ import { fileURLToPath } from "node:url";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8").replace(/\r\n/g, "\n");
-const APP = citeste("public", "app.js");
+const APP = cuTablou(citeste("public", "app.js"));
 const lib = (f) => citeste("public", "lib", f);
 /* de la „function nume(” la început de rând până la următorul „\nfunction ” (un comentariu cu același text nu păcălește) */
 const fnApp = (nume) => { const i = APP.indexOf("\nfunction " + nume + "("); assert.ok(i >= 0, "lipsește " + nume + " în app.js"); const j = APP.indexOf("\nfunction ", i + 10); return APP.slice(i + 1, j < 0 ? undefined : j); };

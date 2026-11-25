@@ -4,6 +4,7 @@
 // de acasă (KV), nu în browser; ⭐ se pune singură pe ce deține (T212, Salt) și ce urmărește; fără anunț (colectorul îl
 // trimite pe Discord) și fără AI.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -249,7 +250,7 @@ await test("(B) simboluri: lista urmărită din workerul paznic-radar, cu tokenu
 globalThis.fetch = fetchOrig;
 
 // ── C. legătura în pagină ────────────────────────────────────────────────────
-const app = citeste("public", "app.js"), idx = citeste("public", "index.html"), sw = citeste("public", "sw.js"), css = citeste("public", "app.css");
+const app = cuTablou(citeste("public", "app.js")), idx = citeste("public", "index.html"), sw = citeste("public", "sw.js"), css = citeste("public", "app.css");
 await test("index.html: scriptul lib/rezultate.js, secțiunea #rezultate cu #rzPagina, locul rândului în #stocks", () => {
   assert.match(idx, /<script src="\/lib\/rezultate\.js"><\/script>/);
   assert.match(idx, /<section class="panel" id="rezultate">[\s\S]{0,300}id="rzPagina"/);

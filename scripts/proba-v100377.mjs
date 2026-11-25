@@ -5,6 +5,7 @@
 //      probele de după publicare nu se mai rulează a doua oară când ștampila copiei le acoperă; comanda `functions`.
 //   node scripts/proba-v100377.mjs        (B2 cere serverul local pe 8788, ca ceilalți pași de rută din lanț)
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
@@ -18,7 +19,7 @@ let teste = 0, picate = 0;
 async function test(nume, f) { teste++; await Promise.resolve().then(f).then(() => console.log(`  ok   ${nume}`)).catch((e) => { picate++; console.log(`  PICA ${nume}\n       ${e && e.message}`); }); }
 console.log("\nv100.377 · OI cu o zecimală, poarta de dinaintea împingerii, livrarea spusă limpede · proba\n");
 
-const APP = citeste("public", "app.js");
+const APP = cuTablou(citeste("public", "app.js"));
 const rand = (n) => { const m = new RegExp("^function " + n + "\\([^\\n]*$", "m").exec(APP); if (!m) throw new Error(n + "() lipsește"); return m[0]; };
 
 /* ---------- A: schimbarea OI pe ecran ---------- */

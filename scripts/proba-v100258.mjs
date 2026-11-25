@@ -3,6 +3,7 @@
 // (2) PORNEȘTE cere și media pe zilele nevăzute peste zero, nu doar mediana (pe mers aleator fișa zicea PORNEȘTE în 27–35% din cazuri).
 // (3) Drumul botului scrie prețurile mici cu cifre semnificative (PEPE ieșea „0.00000”), ca graficul.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
@@ -64,7 +65,7 @@ await test("(1) „Grid mai des” tace când fișa zice NU", () => {
   assert.equal(SB.gridMaiDes(larg, fisa(NU)), null);
 });
 await test("(1) Tabloul ia setarea doar când „mută” are una", () => {
-  assert.match(citeste("public", "app.js"), /var prop=muta&&muta\.setare\?\{setare:muta\.setare/);
+  assert.match(cuTablou(citeste("public", "app.js")), /var prop=muta&&muta\.setare\?\{setare:muta\.setare/);
 });
 
 // ---- (2) PORNEȘTE cere media pe test peste zero ----

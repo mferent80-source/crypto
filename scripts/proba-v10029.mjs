@@ -3,6 +3,7 @@
 // + sfatul „închiderile din prima oră” (pe istoria lui: 1469 de boti, net −2.065 USDT) si alerta colectorului cand porneste
 // din Pionex un bot nou pe o asemenea moneda.
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import vm from "node:vm";
 
@@ -83,7 +84,7 @@ await test("colectorul: tura legata in bucla principala, inainte ca botii sa fie
   assert.match(c, /const VERSIUNE_COLECTOR = "v(?:101\.(?:1[6-9]|[2-9]\d|\d{3,})|10[2-9]\.\d+|1[1-9]\d\.\d+)";/, "cel putin v101.16");
 });
 await test("pagina: poarta arata sfaturile (sub reguli)", () => {
-  const app = fs.readFileSync(new URL("../public/app.js", import.meta.url), "utf8");
+  const app = cuTablou(fs.readFileSync(new URL("../public/app.js", import.meta.url), "utf8"));
   const i = app.indexOf("function grPoartaHtml("), corp = app.slice(i, app.indexOf("\nfunction ", i + 10));
   assert.match(corp, /p\.rez\.sfaturi/);
   // si chiar il deseneaza (nu doar il pomeneste)

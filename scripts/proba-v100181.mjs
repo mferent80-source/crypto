@@ -1,6 +1,7 @@
 // Probele v100.181 (13.10.2026, el: „fă idei” după v100.180) — ideile 1 și 2: 🧭 spre Busola pe fiecare monedă din
 // cartelele de boți ale paginii Sugestii (pe 4h, intervalul clasamentului) și „Busola” în paleta de comenzi.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -29,7 +30,7 @@ await test("v100.292: fișa unei monede are 🧭 spre Busola pe 4h (link extern 
   assert.match(c2.sugListaHtml(d, Date.now()), /<b>BTC<\/b>/); assert.ok(!c2.sugFisa(c2.sugRanduri(d, Date.now())[0], d, Date.now()).actiuni.some((a) => a.href), "fără Busola: doar Fișa gridului");
 });
 await test("paleta de comenzi: „🧭 Busola ↗” cheamă deschideBusola() (nu navTo), iar celelalte comenzi rămân pe navTo", () => {
-  const app = citeste("public", "app.js"), i = app.indexOf("const COMMANDS=["), lista = app.slice(i, app.indexOf("];", i));
+  const app = cuTablou(citeste("public", "app.js")), i = app.indexOf("const COMMANDS=["), lista = app.slice(i, app.indexOf("];", i));
   assert.match(lista, /\["🧭 Busola ↗ \(moneda ta\)","busola","deschideBusola\(\)"\]/);
   const r = app.slice(app.indexOf("function renderCommandPalette("), app.indexOf("\n", app.indexOf("function renderCommandPalette(")));
   /* v100.272: renderCommandPalette pune și aria-activedescendant pe câmp (paleta din tastatură) ⇒ câmpul-stub are setAttribute / removeAttribute */

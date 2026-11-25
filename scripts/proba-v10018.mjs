@@ -2,6 +2,7 @@
 // zile de 15M pe moneda, deja aduse) ruleaza si „gridul dupa planul tau” pe fiecare moneda - long, cu planul lui cel mai nou, suma si
 // levierul botului acela - iar pagina Grid arata tabelul: pe care monede a ta / a mea a iesit pe plus luna asta.
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import { turaLaborator } from "./lib/tura-laborator.mjs";
 
@@ -85,7 +86,7 @@ await test("colectorul incarca grid-plan.js si da laboratorului GridPlan + planu
 });
 
 await test("pagina Grid arata tabelul in laborator (clic pe moneda = fisa ei)", () => {
-  const app = fs.readFileSync(new URL("../public/app.js", import.meta.url), "utf8");
+  const app = cuTablou(fs.readFileSync(new URL("../public/app.js", import.meta.url), "utf8"));
   assert.match(app, /function grLabPlanHtml\(/);
   assert.match(app, /grLabPlanHtml\(L\.planMonede\)/);
   assert.match(app, /Gridul după planul tău, pe cele/);

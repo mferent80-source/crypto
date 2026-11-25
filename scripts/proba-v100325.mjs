@@ -6,6 +6,7 @@
 //   3. meniul ca pagina botului: cât ești pe Tablou, meniul din stânga (și bara de jos pe telefon) ia tema Tabloului.
 //   node scripts/proba-v100325.mjs
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -86,7 +87,7 @@ await test("graficul umple locul de lângă coloana din dreapta (o.inaltLoc), f�
   assert.equal(desen({ inaltMax: h0.H + 200, inaltLoc: h0.H + 400 }).H, h0.H + 200, "…doar cât încape încă la deschidere");
   assert.equal(desen({ inaltMax: h0.H + 200, inaltLoc: h0.H - 300 }).H, h0.H, "coloana mai scurtă ⇒ graficul nu scade sub înălțimea lui");
 });
-const APP = citeste("public", "app.js");
+const APP = cuTablou(citeste("public", "app.js"));
 const functie = (src, n) => { const i = src.search(new RegExp("function " + n + "\\(")); if (i < 0) throw new Error(n + "() lipsește"); let a = 0, j = src.indexOf("{", i); for (; j < src.length; j++) { if (src[j] === "{") a++; else if (src[j] === "}" && --a === 0) break; } return src.slice(i, j + 1); };
 await test("Tabloul dă graficului locul de pe un ecran și înălțimea coloanei din dreapta (din înălțimile bucăților, nu din poziții) și redesenează O dată când coloana se schimbă", () => {
   const e = functie(APP, "tbInaltEcranGrafic");

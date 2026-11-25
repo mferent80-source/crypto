@@ -4,6 +4,7 @@
 // Logica = pagina veche: Δ pe 1/5/21/63 de ședințe, RS-Ratio pe 21 + momentum pe 5 (RRG), regim = media ciclicelor − media
 // defensivelor pe o săptămână, prag ±0,6 pp, XLRE în afara regimului; bara de azi intră doar după închiderea bursei.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -131,7 +132,7 @@ await test("v100.170 fără Market Breadth (sau sector lipsă) ⇒ coloana arat�
   assert.equal(SC.calculeaza(serii(), INCHIS, { sources: {} }).latime, null);
 });
 await test("v100.170 app.js dă blocului și rândului din citire și Market Breadth (latimeUsStare.j)", () => {
-  const a = citeste("public", "app.js");
+  const a = cuTablou(citeste("public", "app.js"));
   assert.match(a, /Sectoare\.calculeaza\(sectoareStare\.j\.serii,Date\.now\(\),latimeUsStare\.j\)/);
   assert.match(a, /if\(latimeUsStare\.j&&sectoareStare\.la&&typeof sectoareDeseneaza==="function"\)sectoareDeseneaza\(\)\}/, "sosirea Market Breadth redesenează sectoarele");
   assert.match(a, /if\(latimeUsStare\.inLucru\)\{if\(typeof dupa==="function"\)latimeUsStare\.inLucru\.then\(dupa\);return latimeUsStare\.inLucru\}/, "o cerere deja pornită își cheamă și ea „dupa”");
@@ -180,7 +181,7 @@ await test("(B) Yahoo cade pe tot ⇒ 502 cu motivul (nu serii goale tăcute)", 
 globalThis.fetch = fetchOrig;
 
 // ── C. legăturile din pagină ──
-const idx = citeste("public", "index.html"), sw = citeste("public", "sw.js"), app = citeste("public", "app.js"), css = citeste("public", "app.css");
+const idx = citeste("public", "index.html"), sw = citeste("public", "sw.js"), app = cuTablou(citeste("public", "app.js")), css = citeste("public", "app.css");
 await test("index.html: blocul #sectoareBloc imediat după lățimea US, în #stocks; scriptul lib/sectoare.js", () => {
   assert.match(idx, /<div id="latimeUsBloc" class="latimeUsBloc"><\/div><div id="sectoareBloc" class="sectoareBloc"><\/div>/);
   assert.match(idx, /<script src="\/lib\/sectoare\.js"><\/script>/);

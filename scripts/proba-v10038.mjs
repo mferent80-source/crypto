@@ -6,6 +6,7 @@
 // Radarul si GRID-FISA tratau numarul ca intervale -> o linie in plus, toate decalate. Conventia de acum: in calculele Radarului N =
 // intervale; in Pionex se scrie N + 1; „row” citit din Pionex = linii.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
@@ -16,7 +17,7 @@ const GB = new Function(`${lib("grafic-bot.js")}; return GraficBot;`)();
 const TE = new Function("GridCalcul", `${lib("tablou-extra.js")}; return TabloExtra;`)(G);
 const JT = new Function("GridCalcul", `${lib("jurnal-trade.js")}; return JurnalTrade;`)(G);
 const SB = new Function("GridCalcul", `${lib("semnale-bot.js")}; return SemnaleBot;`)(G);
-const app = fs.readFileSync(new URL("../public/app.js", import.meta.url), "utf8");
+const app = cuTablou(fs.readFileSync(new URL("../public/app.js", import.meta.url), "utf8"));
 
 let teste = 0, picate = 0;
 async function test(nume, fn) {

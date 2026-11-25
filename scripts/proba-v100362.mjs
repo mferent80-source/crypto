@@ -4,6 +4,7 @@
 // doar tură întreagă), graficele, pagina (nimic pierdut, raportul vechi încă desenat), tema, versiunile.
 //   node scripts/proba-v100362.mjs
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -108,7 +109,7 @@ await test("P pagina: capul cu tema, fraza cinstită („nu bate «mereu LARG»�
   assert.match(globalThis.carnetHtml(null), /Carnetul se face noaptea/); assert.match(globalThis.carnetHtml(r, r.la + 40 * 3600000), /vechi \(de acum 40 de ore\)/);
 });
 await test("T tema și legăturile: RADACINI, tbTemaAplica + cnTemaBtn, tema devreme, tbRandComuta ⇒ cnRandComuta, generatorul, index (capul în pagină, scriptul graficelor), cache-ul, CSS-ul", () => {
-  assert.match(citeste("scripts", "face-tema-tablou.mjs"), /"tradezilei", "carnet", "scan", "salt", "alerts", "contintreg"\]/); const A2 = citeste("public", "app.js");
+  assert.match(citeste("scripts", "face-tema-tablou.mjs"), /"tradezilei", "carnet", "scan", "salt", "alerts", "contintreg"\]/); const A2 = cuTablou(citeste("public", "app.js"));
   assert.match(A2, /"tradezilei","carnet","scan","salt","alerts","contintreg"\]\.forEach\(function\(id\)\{var p=document\.getElementById\(id\);if\(p\)p\.classList\.toggle\("tbZi",zi\)\}\)/); assert.match(A2, /"tzTemaBtn","cnTemaBtn","scTemaBtn","slTemaBtn","alTemaBtn","ciTemaBtn"\]/);
   assert.match(A2, /return cnRandComuta\(id,deschis\)/); assert.match(A2, /var ACTIUNI_PERMISE=new Set\("[^"]*\bcarnetPorneste\b/, "butonul „Reîmprospătează” din capul paginii (lista albă a dispecerului)"); assert.match(citeste("public", "lib", "tema-devreme.js"), /"tradezilei", "carnet", "scan", "salt", "alerts", "contintreg"\]/);
   execFileSync(process.execPath, [path.join(RAD, "scripts", "face-tema-tablou.mjs"), "--check"], { stdio: "pipe" });

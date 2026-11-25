@@ -4,6 +4,7 @@
 // (3) „Grilele au prins / poziția a dat” pe 7 zile în „Boții tăi”.
 //   node scripts/proba-v100280.mjs
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -86,7 +87,7 @@ await test("(1) mesajul de pe Discord spune pragul de boți; ruta păstrează `b
 });
 
 await test("(1) Poarta din Grid: câmpul „boți pe zi” și salvarea lui; Acasă citește pragurile", () => {
-  const app = citeste("public", "app.js"), ae = lib("acasa-ecran.js");
+  const app = cuTablou(citeste("public", "app.js")), ae = lib("acasa-ecran.js");
   assert.match(app, /<label><span class="tbEt2">boți pe zi<\/span><input id="grFranaBoti" inputmode="numeric" value="'\+fp\.boti\+'"><\/label>/);
   assert.match(app, /rand:Math\.round\(v\("grFranaRand"\)\),boti:Math\.round\(v\("grFranaBoti"\)\)\};/);
   assert.match(app, /if\(!\(p\.zi>0&&p\.sapt>0&&p\.rand>0&&p\.boti>0\)\)/);

@@ -3,6 +3,7 @@
 // Ce ține proba: generatorul (parserul pe acolade, selectorii, paleta), blocul generat la zi, stratul scris de mână la locul lui,
 // tema comutată din buton și ținută minte, graficul pe paleta temei, nimic scos din pagină (doar Monte Carlo o singură dată), versiunile.
 import "./lib/text-ro-global.mjs";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
@@ -16,7 +17,7 @@ const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8");
 let trecute = 0, picate = 0;
 const test = async (nume, f) => { try { await f(); trecute++; console.log("  ✓ " + nume); } catch (e) { picate++; console.log("  ✗ " + nume + "\n      " + String(e && e.message || e).split("\n").join("\n      ")); } };
-const CSS = citeste("public", "app.css"), HTML = citeste("public", "index.html"), APP = citeste("public", "app.js"), GB = citeste("public", "lib", "grafic-bot.js");
+const CSS = citeste("public", "app.css"), HTML = citeste("public", "index.html"), APP = cuTablou(citeste("public", "app.js")), GB = citeste("public", "lib", "grafic-bot.js");
 
 console.log("Proba v100.316 - desenul nou al Tabloului botului");
 

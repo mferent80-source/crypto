@@ -11,6 +11,7 @@
 // despărțitoare (`#tbKpi`), ca perechea de verdicte de pe Piața azi.
 //   node scripts/proba-v100289.mjs
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
@@ -69,7 +70,7 @@ await test("„Ce spune piața acum”: un rând pliat (34 px, rând de LISTĂ: 
   assert.equal(a.eCard("DIV", STIL, true), true, "cu cererea grilei: rândul de listă trece");
 });
 await test("„Ce spune piața acum” pe loc (tbCitirePeLoc, în fiecare secundă): rândul întins nu se mai rescrie doar pentru `randPlin` (ca pzFold / pzFoldOk); tonul nou se scrie, iar marcajul rămâne", () => {
-  const A = citeste("public", "app.js"), i = A.indexOf("function tbCitirePeLoc("), j = A.indexOf("function tbDeseneazaCitire(");
+  const A = cuTablou(citeste("public", "app.js")), i = A.indexOf("function tbCitirePeLoc("), j = A.indexOf("function tbDeseneazaCitire(");
   assert.ok(i > 0 && j > i, "tbCitirePeLoc");
   // pagina de probă: rândurile din pagină și cele din desenul nou (innerHTML nu se parsează - se dau direct rândurile noi)
   const rand = (cls) => { const r = { scrieri: 0, _c: cls }; Object.defineProperty(r, "className", { get: () => r._c, set: (v) => { r.scrieri++; r._c = v; } }); r.classList = { contains: (x) => r._c.split(/\s+/).includes(x) }; r.querySelector = () => null; return r; };

@@ -3,6 +3,7 @@
 // pe lumanarile de 15M de atunci pana acum - pe ce parte ar fi iesit, cand si cu cat, sau cat ar avea acum.
 // Pe noaptea REALA a botului LIGHTER (29.09, lumanarile Pionex salvate): ambele ieseau pe stop pe la 23:15 UTC, cu ≈ −13..−15 USDT.
 import assert from "node:assert/strict";
+import { cuTablou } from "./lib/sursa-app.mjs";
 import fs from "node:fs";
 
 const lib = (f) => fs.readFileSync(new URL(`../public/lib/${f}`, import.meta.url), "utf8");
@@ -56,7 +57,7 @@ await test("directie neutra / fara plan -> eroarea variantelor, nu o simulare", 
 });
 
 await test("Tabloul arata randul „De la pornirea botului” in blocul gridului dupa plan", () => {
-  const app = fs.readFileSync(new URL("../public/app.js", import.meta.url), "utf8");
+  const app = cuTablou(fs.readFileSync(new URL("../public/app.js", import.meta.url), "utf8"));
   assert.match(app, /GridPlan\.dePornire\(/);
   assert.match(app, /De la pornirea botului/);
 });
