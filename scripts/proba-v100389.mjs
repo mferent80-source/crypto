@@ -93,9 +93,10 @@ await test("M  motorul probelor (scripts/lib/motor-pagina.mjs) vede funcțiile m
 
 await test("V  versiunea v100.389 (index ×4, sw, versiune.js, package + lanț, BUILD_INFO)", () => {
   const pk = JSON.parse(citeste("package.json")), bi = JSON.parse(citeste("BUILD_INFO.json"));
-  assert.equal(pk.version, "100.389.0"); assert.equal(bi.version, "v100.389"); assert.ok(bi.li389 && bi.li389.length > 100, "BUILD_INFO.li389");
-  assert.ok((HTML.match(/v100\.389/g) || []).length >= 4); assert.match(SW, /crypto-radar-v100-389/); assert.match(citeste("functions", "_shared", "versiune.js"), /"v100\.389"/);
-  assert.match(pk.scripts.test, /npm run test:v100388 && npm run test:v100389 && node scripts\/mutatii\.mjs --doar-tiparele/); assert.equal(pk.scripts["test:v100389"], "node scripts/proba-v100389.mjs");
+  /* v100.390: „de la 389 încolo” (versiunea merge mai departe; după ea în lanț vine proba v100.390) */
+  assert.ok(+(/^100\.(\d+)\.0$/.exec(pk.version) || [])[1] >= 389); assert.ok(+(/^v100\.(\d+)$/.exec(bi.version) || [])[1] >= 389); assert.ok(bi.li389 && bi.li389.length > 100, "BUILD_INFO.li389");
+  assert.ok((HTML.match(/v100\.(\d+)/g) || []).filter((v) => +v.slice(5) >= 389).length >= 4); assert.ok(+(/crypto-radar-v100-(\d+)/.exec(SW) || [])[1] >= 389); assert.ok(+(/"v100\.(\d+)"/.exec(citeste("functions", "_shared", "versiune.js")) || [])[1] >= 389);
+  assert.match(pk.scripts.test, /npm run test:v100388 && npm run test:v100389/); assert.equal(pk.scripts["test:v100389"], "node scripts/proba-v100389.mjs");
 });
 
 console.log(`\n${teste - picate}/${teste} trecute` + (picate ? ` · ${picate} PICATE` : ""));

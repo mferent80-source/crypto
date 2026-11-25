@@ -22,11 +22,14 @@ import vm from "node:vm";
 import { fileURLToPath } from "node:url";
 import "./lib/text-ro-global.mjs";
 import { pandaInainteaCozii } from "./lib/panda-ultima.mjs";
+import { cuTablou, MODULE_TABLOU } from "./lib/sursa-app.mjs";
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8").replace(/\r\n/g, "\n");
 const dinEnv = (v, ...p) => (process.env[v] ? fs.readFileSync(process.env[v], "utf8").replace(/\r\n/g, "\n") : citeste(...p));
-const APP = dinEnv("PROBA_APP_JS", "public", "app.js");
+/* v100.390 (I-940): app.js lipit de modulele Tabloului (funcțiile-acțiuni, tbConteazaImbogateste și atributele data-action din ele
+   se verifică tot ca parte din app.js); modulele NU se mai citesc a doua oară în LIB (vezi TOATE_JS) */
+const APP = cuTablou(dinEnv("PROBA_APP_JS", "public", "app.js"));
 const HTML = dinEnv("PROBA_INDEX_HTML", "public", "index.html");
 const CSS = dinEnv("PROBA_APP_CSS", "public", "app.css");
 const LIB = fs.readdirSync(path.join(RAD, "public", "lib")).filter((f) => f.endsWith(".js")).sort().map((f) => ["public/lib/" + f, citeste("public", "lib", f)]);
@@ -300,7 +303,7 @@ function numeDinExpresie(expr, unde) {
   }
   return out;
 }
-const TOATE_JS = [["public/app.js", APP], ...LIB];
+const TOATE_JS = [["public/app.js", APP], ...LIB.filter(([f]) => !MODULE_TABLOU.includes(f.replace("public/lib/", "")))];
 const culege = (re, surse = TOATE_JS) => { const o = []; for (const [, t] of surse) for (const m of t.matchAll(re)) o.push(m[1]); return o; };
 /* locurile unde numele acțiunii vine dintr-o variabilă: de unde iau valorile (fiecare trebuie să dea măcar un nume - altfel codul s-a schimbat) */
 const DINAMICE = [

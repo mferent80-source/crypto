@@ -124,19 +124,19 @@
   },
   {
    "nume": "pagina: blocul se rescrie la fiecare desen (pierde clicul)",
-   "fisier": "public/app.js",
+   "fisier": "public/lib/tablou-citire.js",
    "cauta": "if(tbStare.ctHtml!==h){el.innerHTML=h;tbStare.ctHtml=h}",
    "pune": "{el.innerHTML=h;tbStare.ctHtml=h}"
   },
   {
    "nume": "pagina: rândul stop-24 lipsește din șanse",
-   "fisier": "public/app.js",
+   "fisier": "public/lib/tablou-citire.js",
    "cauta": "return s&&Array.isArray(l)?l.concat(",
    "pune": "return false&&Array.isArray(l)?l.concat("
   },
   {
    "nume": "pagina: stopul inactiv tot primește cifră",
-   "fisier": "public/app.js",
+   "fisier": "public/lib/tablou-citire.js",
    "cauta": "function tbStopSansa(b){if(!b||typeof CurbaStop===\"undefined\"||!b.opritorPierdereActiv)return null;",
    "pune": "function tbStopSansa(b){if(!b||typeof CurbaStop===\"undefined\")return null;"
   },
@@ -166,7 +166,7 @@
   },
   {
    "nume": "revizia 🔴: alt bot cere iar cifrele lui (cererile se calcă pe telefon)",
-   "fisier": "public/app.js",
+   "fisier": "public/lib/tablou-citire.js",
    "cauta": "t=tbStare.bot&&tbStare.bot.id===b.id?tbProbPt(b):(tbProb.botId===b.id?tbProb:null)",
    "pune": "t=tbProbPt(b)"
   },
@@ -178,25 +178,25 @@
   },
   {
    "nume": "revizia: stopul dincolo de lichidare tot primește cifră",
-   "fisier": "public/app.js",
+   "fisier": "public/lib/tablou-citire.js",
    "cauta": "if(TE&&TE.stopDincoloDeLichidare&&TE.stopDincoloDeLichidare(b))return null;",
    "pune": ""
   },
   {
    "nume": "revizia: fără plafonul marginii",
-   "fisier": "public/app.js",
+   "fisier": "public/lib/tablou-citire.js",
    "cauta": "if(pm!==null&&s.p24>pm){s.p24=pm;s.plafon=parte}",
    "pune": ""
   },
   {
    "nume": "revizia: plafonul pe partea greșită a marginii",
-   "fisier": "public/app.js",
+   "fisier": "public/lib/tablou-citire.js",
    "cauta": "parte=dir===\"long\"&&gj>0&&s.stop<=gj?\"jos\"",
    "pune": "parte=dir===\"long\"&&gj>0&&s.stop>gj?\"jos\""
   },
   {
    "nume": "revizia: mutarea în procente fără împărțirea la investiție",
-   "fisier": "public/app.js",
+   "fisier": "public/lib/tablou-citire.js",
    "cauta": "s.mutRaport=tm!==null&&isFinite(tm)?tm/inv:null",
    "pune": "s.mutRaport=tm!==null&&isFinite(tm)?tm:null"
   },
@@ -238,7 +238,7 @@
   },
   {
    "nume": "revizia 🟡7: lista nu se redesenează când se schimbă blocul",
-   "fisier": "public/app.js",
+   "fisier": "public/lib/tablou-citire.js",
    "cauta": "if(!dinTodo&&vechi!==sus.join(\"\\n\")&&typeof tbRenderTodo===\"function\")tbRenderTodo();",
    "pune": ""
   },
@@ -274,7 +274,7 @@
   },
   {
    "nume": "revizia: drumul „~1%” în loc de „< 1%”",
-   "fisier": "public/app.js",
+   "fisier": "public/lib/tablou-citire.js",
    "cauta": "(k<1?\"< 1%\":k>99?\"> 99%\":\"~\"+k+\"%\")",
    "pune": "\"~\"+Math.max(1,Math.min(99,k))+\"%\""
   },
@@ -292,7 +292,7 @@
   },
   {
    "nume": "revizia: cădere de rețea aruncă curba bună",
-   "fisier": "public/app.js",
+   "fisier": "public/lib/tablou-citire.js",
    "cauta": "tbCurba.c=r&&r.curbaStop||null}).catch(function(){})",
    "pune": "tbCurba.c=r&&r.curbaStop||null}).catch(function(){tbCurba.c=null})"
   },
