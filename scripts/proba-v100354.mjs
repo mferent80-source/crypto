@@ -8,6 +8,7 @@ import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
 import { fileURLToPath } from "node:url";
+import { asertApel, areInLista } from "./lib/cod-are.mjs";   /* v100.387 (I-941) */
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8").replace(/\r\n/g, "\n");
@@ -54,7 +55,7 @@ await test("L4 setariDinBot ia lichidarea din bot-orders (pretLichidare + partea
   assert.deepEqual(GS.setariDinBot(b).lich, { jos: 0.8, sus: null }); assert.deepEqual(GS.setariDinBot(Object.assign({}, b, { lichidarePartea: "sus", directie: "short" })).lich, { jos: null, sus: 0.8 });
   assert.equal(GS.setariDinBot(Object.assign({}, b, { pretLichidare: null })).lich, null);
   assert.match(lib("grid-sim-ecran.js"), /lich: gsLichBot\(st\),/); assert.match(lib("grid-sim-ecran.js"), /h\.avertLich \? '<p class="tbWarn gsNota">⚠ ' \+ mcsEsc\(h\.avertLich\)/);
-  assert.match(citeste("scripts", "lib", "tura-monte-carlo-bot.mjs"), /pozitiePionex: s\.pozitie, (?:totalPionex: totalPx, )?lich: s\.lich,/);   /* v100.383: și banii din Pionex (totalPionex) */
+  asertApel(citeste("scripts", "lib", "tura-monte-carlo-bot.mjs"), "calc", ["\"hotarare\"", "pozitiePionex: s.pozitie", "lich: s.lich"], "colectorul: hotărârea primește lichidarea");   /* v100.387 (I-941) */   /* v100.383: și banii din Pionex (totalPionex) */
 });
 await test("🔑 N1 H0 noaptea (o celulă din rularea întreagă): piața agitată acum (×2,89), short 2×, 60 de trageri - „Aș încerca” fals cel mult 3 (5%)", () => {
   const b = bare(911, 31, (z) => (z >= 29 ? 3 : 1)), Pn = b[b.length - 1].c, rnd = M.generator(988), NB = 2000;

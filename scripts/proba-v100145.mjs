@@ -5,6 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
 import { fileURLToPath } from "node:url";
+import { asertApel, areInLista } from "./lib/cod-are.mjs";   /* v100.387 (I-941) */
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8").replace(/\r\n/g, "\n");
@@ -35,7 +36,7 @@ await test("(1) bilantUmpleri pe umpleri REALE: perechile deduse (închise = U.p
   // revizia Opus (5): umplerile din afara cadrului graficului (nu se desenează) se spun, nu se ascund
   assert.match(G.bilantUmpleri(mic, { ordinePerechi: 1, gridProfitBrut: 0.1 }, { eticheta: "5m", pornitInFereastra: true, lo: 0.515, hi: 0.535 }).text, /1 pereche închisă · 1 deschisă \(2 în afara graficului\) · ultima pereche la \d\d:\d\d · Pionex:/);
   assert.equal(G.bilantUmpleri({ umpleri: [], perechi: 0 }, {}, IN), null); assert.equal(G.bilantUmpleri(null, {}, IN), null);
-  const r = functie(APP, "renderTabloGrafic"); assert.match(r, /var bl=GraficBot\.bilantUmpleri\(oG\.umpleri,b,\{eticheta:oG\.umpleriEticheta\|\|TB_PERIOADE\[tbTf\(\)\]\.eticheta,pornitInFereastra:oG\.pornitInFereastra,lo:d\.harta\.lo,hi:d\.harta\.hi,pas:oG\.umpleriPas\|\|\(bare\.length>1\?bare\[1\]\.t-bare\[0\]\.t:0\),acum:Date\.now\(\)\}\)/); /* v100.146: eticheta „1 min” când umplerile vin de acolo; pasul și ceasul pentru „ultima pereche” */ assert.match(r, /<\/div>'\+\(d\.valori\|\|''\)\+\(bl\?'<p class="tbSub gbBilant"><b>▲▼ umpleri:<\/b> '\+escapeHtml\(bl\.text\)\+'<\/p>':''\)\+ultHtml/, "primul rând sub grafic");
+  const r = functie(APP, "renderTabloGrafic"); asertApel(r, "GraficBot.bilantUmpleri", ["oG.umpleri,b,{", "eticheta:oG.umpleriEticheta||TB_PERIOADE[tbTf()].eticheta", "pornitInFereastra:oG.pornitInFereastra", "lo:d.harta.lo", "hi:d.harta.hi", "pas:oG.umpleriPas||(bare.length>1?bare[1].t-bare[0].t:0)", "acum:Date.now()"], "renderTabloGrafic");   /* v100.387 (I-941) */ /* v100.146: eticheta „1 min” când umplerile vin de acolo; pasul și ceasul pentru „ultima pereche” */ assert.match(r, /<\/div>'\+\(d\.valori\|\|''\)\+\(bl\?'<p class="tbSub gbBilant"><b>▲▼ umpleri:<\/b> '\+escapeHtml\(bl\.text\)\+'<\/p>':''\)\+ultHtml/, "primul rând sub grafic");
   assert.match(CSS, /#tabloubot \.gbBilant\{[^}]*font-size:12\.5px/, "aceeași literă ca vecinii");
 });
 await test("(R2) revizia Opus 🟡: botul mai vechi decât fereastra ⇒ starea grilei pornește de la deschiderea primei bare (nu de la prețul de pornire) - fără umpleri fantomă pe prima bară; intrareBot spune pornitInFereastra", () => {

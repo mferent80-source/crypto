@@ -8,6 +8,7 @@ import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
 import { fileURLToPath } from "node:url";
+import { asertApel, areInLista } from "./lib/cod-are.mjs";   /* v100.387 (I-941) */
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8").replace(/\r\n/g, "\n");
@@ -38,7 +39,7 @@ await test("(b) app: tbMc la 15 min (TB_MC_MS), pornit la tic și la alt bot; Gr
   /* v100.269 (auditul MC): + 1 h și 4 h (riscul pe termen scurt); 1 și 7 zile rămân */
   /* v100.271 (ideile auditului 29.10): mcsAduCoin(sim, {fara1D, vechi}) - barele lipite, fără 1D; drumuri de 7 zile (cel mai lung orizont citit) */
   /* v100.383: apelul primește și totalPionex (Monte Carlo pornește din banii din Pionex) - aserția îl acceptă */
-  const p = functie(APP, "tbMcPorneste"); assert.match(p, /mcsAduCoin\(sim[,)]/); assert.match(p, /GridSim\.setariDinBot\(b\)/); assert.match(p, /await tbMcSimuleaza\(tbMc\.b15,st,\{plan:plan,pornitLa:pornitLa,stPrefix:pornitLa\?st:null,botRuleaza:!!pornitLa,pozitiePionex:pornitLa\?d\.pozitie:null,(?:totalPionex:totalPx,)?n:500,seed:12,orizonturi:\[1\/24,4\/24,1,7\],zile:7\}\)/); assert.match(p, /GridSim\.verdictScurt\(/); assert.match(p, /fundingZi:fi\?fi\.rataZi:0\.0003,fundingCost:!fi/);
+  const p = functie(APP, "tbMcPorneste"); assert.match(p, /mcsAduCoin\(sim[,)]/); assert.match(p, /GridSim\.setariDinBot\(b\)/); asertApel(p, "tbMcSimuleaza", ["tbMc.b15,st,{", "plan:plan", "pornitLa:pornitLa", "stPrefix:pornitLa?st:null", "botRuleaza:!!pornitLa", "pozitiePionex:pornitLa?d.pozitie:null", "n:500", "seed:12", "orizonturi:[1/24,4/24,1,7]", "zile:7"], "tbMcPorneste");   /* v100.387 (I-941): câmpurile cerute, oricâte în plus (24.11 a primit totalPionex) */ assert.match(p, /GridSim\.verdictScurt\(/); assert.match(p, /fundingZi:fi\?fi\.rataZi:0\.0003,fundingCost:!fi/);
   const t = functie(APP, "tbMcTick"); assert.match(t, /Date\.now\(\)-tbMc\.la<TB_MC_MS/); assert.match(t, /tbPanouVizibil\(\)/);
   const c = functie(APP, "tbDeseneazaCitire"); assert.match(c, /tbMcRand\(b\)/); assert.match(c, /out\.unshift\(/); assert.match(c, /data-action-click="gsDeschideBot\(\)">'\+escapeHtml\(mc\.buton\)\+'<\/button>/);   // v100.141: eticheta butonului după fel
   /* v100.271 (ideile auditului 29.10): fraza adevărată - drumurile se trag din ~31 de zile de bare, nu „ca ultimele 14” */

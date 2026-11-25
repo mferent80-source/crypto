@@ -10,6 +10,7 @@ import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 import { pandaInainteaCozii } from "./lib/panda-ultima.mjs";
 import { reguli, imparte, fararaComentarii, culoareNoua, selectorSub, genereaza, faraBloc, blocDin, INCEPUT, SFARSIT, PALETA } from "./face-tema-tablou.mjs";
+import { asertApel, areInLista } from "./lib/cod-are.mjs";   /* v100.387 (I-941) */
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8");
@@ -83,7 +84,7 @@ await test("stratul scris de mână stă DUPĂ blocul generat și ÎNAINTEA pân
 await test("tema: implicit deschisă, butonul o comută și se ține minte; clasa tbZi pe #tabloubot; graficul primește paleta ei", () => {
   assert.ok(HTML.includes('<button type="button" class="actionGhost" id="tbTemaBtn" aria-pressed="false" data-action-click="tbTemaComuta()">Temă închisă</button>'));   /* v100.317: înaintea lui stau „Deschide tot” / „Strânge tot” */
   assert.ok(HTML.includes('<section class="panel" id="tabloubot">'), "eticheta panoului rămâne cum o citesc probele vechi");
-  assert.match(APP, /var ACTIUNI_PERMISE=new Set\("(?:tbRandToate )?tbTemaComuta /);
+  assert.ok(areInLista(APP, "ACTIUNI_PERMISE", ["tbTemaComuta"]), "tbTemaComuta e acțiune permisă");   /* v100.387 (I-941): în listă, oriunde */
   const i = APP.indexOf('var TB_TEMA_KEY="tbTema";'), j = APP.indexOf("function tbComutaInd(k){"); assert.ok(i > 0 && j > i);
   const cod = APP.slice(i, j).replace(/if\(typeof window!=="undefined"\)window\.addEventListener\("DOMContentLoaded"[^\n]*/, "");
   const mem = {}, clase = new Set(), buton = { textContent: "", attrs: {}, setAttribute(k, v) { this.attrs[k] = v; } }; let temaGrafic = null, desene = 0, vizibil = true;

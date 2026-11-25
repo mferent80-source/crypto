@@ -6,6 +6,7 @@ import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
 import { fileURLToPath } from "node:url";
+import { asertApel, areInLista } from "./lib/cod-are.mjs";   /* v100.387 (I-941) */
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8").replace(/\r\n/g, "\n");
@@ -62,7 +63,7 @@ await test("(1a) lib/grid-sim-worker.js: rulează în afara paginii (fără wind
 await test("(1b) tbMcSimuleaza: cu Worker ⇒ rezultatul vine din worker (pagina nu socotește); fără Worker / worker picat ⇒ pe fir, același rezultat; tbMcPorneste îl folosește", async () => {
   /* v100.269 (auditul MC): + 1 h și 4 h (riscul pe termen scurt); 1 și 7 zile rămân */
   /* v100.383: apelul primește și totalPionex (Monte Carlo pornește din banii din Pionex) - aserția îl acceptă */
-  assert.match(functie(APP, "tbMcPorneste"), /await tbMcSimuleaza\(tbMc\.b15,st,\{plan:plan,pornitLa:pornitLa,stPrefix:pornitLa\?st:null,botRuleaza:!!pornitLa,pozitiePionex:pornitLa\?d\.pozitie:null,(?:totalPionex:totalPx,)?n:500,seed:12,orizonturi:\[1\/24,4\/24,1,7\],zile:7\}\)/);
+  asertApel(functie(APP, "tbMcPorneste"), "tbMcSimuleaza", ["tbMc.b15,st,{", "plan:plan", "pornitLa:pornitLa", "stPrefix:pornitLa?st:null", "botRuleaza:!!pornitLa", "pozitiePionex:pornitLa?d.pozitie:null", "n:500", "seed:12", "orizonturi:[1/24,4/24,1,7]", "zile:7"], "tbMcPorneste");   /* v100.387 (I-941): câmpurile cerute, oricâte în plus (24.11 a primit totalPionex) */
   const src = APP.match(/var tbMcWorker=null[^\n]*\n/)[0] + functie(APP, "tbMcWorkerAsteptare") + "\n" + functie(APP, "tbMcSimuleaza");
   const fa = (Worker) => { const ctx = { console, Date, Math, Object, Array, String, Number, JSON, isFinite, Promise, setTimeout, clearTimeout, GridSim: GS }; if (Worker) ctx.Worker = Worker; vm.createContext(ctx); vm.runInContext(src, ctx); return ctx; };
   const o = { plan: null, n: 20, seed: 12, orizonturi: [7], zile: 14 }, peFir = GS.simuleaza(B, ST, o);

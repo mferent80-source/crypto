@@ -71,10 +71,11 @@ await test("D  I-932 pagina: zoom pe monedă + interval, butoanele permise, Ctrl
 
 await test("V  versiunea v100.386 (index ×4, sw, versiune.js, package + lanț, BUILD_INFO), colectorul neatins", () => {
   const pk = JSON.parse(citeste("../package.json")), bi = JSON.parse(citeste("../BUILD_INFO.json")), HTML = citeste("../public/index.html");
-  assert.equal(pk.version, "100.386.0"); assert.equal(bi.version, "v100.386"); assert.ok(bi.li386 && bi.li386.length > 150, "BUILD_INFO.li386");
-  assert.ok((HTML.match(/v100\.386/g) || []).length >= 4); assert.match(citeste("../public/sw.js"), /crypto-radar-v100-386/); assert.match(citeste("../functions/_shared/versiune.js"), /"v100\.386"/);
-  assert.match(citeste("./colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.213";/);
-  assert.match(pk.scripts.test, /npm run test:v100385 && npm run test:v100386 && node scripts\/mutatii\.mjs --doar-tiparele/); assert.equal(pk.scripts["test:v100386"], "node scripts/proba-v100386.mjs");
+  /* v100.387: „de la 386 încolo” (versiunea merge mai departe; după ea în lanț vine proba v100.387) */
+  assert.ok(+(/^100\.(\d+)\.0$/.exec(pk.version) || [])[1] >= 386); assert.ok(+(/^v100\.(\d+)$/.exec(bi.version) || [])[1] >= 386); assert.ok(bi.li386 && bi.li386.length > 150, "BUILD_INFO.li386");
+  assert.ok((HTML.match(/v100\.(\d+)/g) || []).filter((v) => +v.slice(5) >= 386).length >= 4); assert.ok(+(/crypto-radar-v100-(\d+)/.exec(citeste("../public/sw.js")) || [])[1] >= 386); assert.ok(+(/"v100\.(\d+)"/.exec(citeste("../functions/_shared/versiune.js")) || [])[1] >= 386);
+  assert.ok(+(/const VERSIUNE_COLECTOR = "v101\.(\d+)";/.exec(citeste("./colector.mjs")) || [])[1] >= 213);
+  assert.match(pk.scripts.test, /npm run test:v100385 && npm run test:v100386/); assert.equal(pk.scripts["test:v100386"], "node scripts/proba-v100386.mjs");
 });
 
 console.log(`\n${teste - picate}/${teste} trecute` + (picate ? ` · ${picate} PICATE` : ""));

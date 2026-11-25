@@ -9,6 +9,7 @@ import vm from "node:vm";
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 import { pandaInainteaCozii } from "./lib/panda-ultima.mjs";
+import { asertApel, areInLista } from "./lib/cod-are.mjs";   /* v100.387 (I-941) */
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const citeste = (...p) => fs.readFileSync(path.join(RAD, ...p), "utf8");
@@ -97,7 +98,7 @@ await test("foaia de stil: rândul pliat nu-și desenează copiii (rămân în p
 });
 await test("pagina: butoanele „Deschide tot” și „Strânge tot” în antet, acțiunea permisă, codul pornește la DOMContentLoaded și se reîmprospătează doar pe Tablou", () => {
   assert.ok(HTML.includes('id="tbRandDeschide" data-action-click="tbRandToate(true)"') && HTML.includes('id="tbRandStrange" data-action-click="tbRandToate(false)"'));
-  assert.match(APP, /var ACTIUNI_PERMISE=new Set\("tbRandToate tbTemaComuta /);
+  assert.ok(areInLista(APP, "ACTIUNI_PERMISE", ["tbRandToate", "tbTemaComuta"]), "tbRandToate / tbTemaComuta permise");   /* v100.387 (I-941): în listă, oriunde */
   assert.ok(APP.includes('document.addEventListener("click",tbRandClic);document.addEventListener("keydown",tbRandTasta);setInterval(function(){var p=document.getElementById("tabloubot");if(p&&p.classList.contains("on")&&!document.hidden)tbRandAplica()},4000)'));
 });
 await test("versiunile: pagina (de exact 4 ori), SW, serverul, BUILD_INFO, package.json", () => {
