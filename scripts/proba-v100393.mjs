@@ -48,9 +48,10 @@ await test("C  pagina și colectorul: SHORT în banda de sus; fără poziție �
 
 await test("V  versiunea v100.393 (index ×4, sw, versiune.js, package + lanț, BUILD_INFO)", () => {
   const pk = JSON.parse(citeste("../package.json")), bi = JSON.parse(citeste("../BUILD_INFO.json")), HTML = citeste("../public/index.html");
-  assert.equal(pk.version, "100.393.0"); assert.equal(bi.version, "v100.393"); assert.ok(bi.li393 && bi.li393.length > 100, "BUILD_INFO.li393");
-  assert.ok((HTML.match(/v100\.393/g) || []).length >= 4); assert.match(citeste("../public/sw.js"), /crypto-radar-v100-393/); assert.match(citeste("../functions/_shared/versiune.js"), /"v100\.393"/);
-  assert.match(pk.scripts.test, /npm run test:v100392 && npm run test:v100393 && node scripts\/mutatii\.mjs --doar-tiparele/); assert.equal(pk.scripts["test:v100393"], "node scripts/proba-v100393.mjs");
+  /* v100.394: „de la 393 încolo” (versiunea merge mai departe; după ea în lanț vine proba v100.394) */
+  assert.ok(+(/^100\.(\d+)\.0$/.exec(pk.version) || [])[1] >= 393); assert.ok(+(/^v100\.(\d+)$/.exec(bi.version) || [])[1] >= 393); assert.ok(bi.li393 && bi.li393.length > 100, "BUILD_INFO.li393");
+  assert.ok((HTML.match(/v100\.(\d+)/g) || []).filter((v) => +v.slice(5) >= 393).length >= 4); assert.ok(+(/crypto-radar-v100-(\d+)/.exec(citeste("../public/sw.js")) || [])[1] >= 393); assert.ok(+(/"v100\.(\d+)"/.exec(citeste("../functions/_shared/versiune.js")) || [])[1] >= 393);
+  assert.match(pk.scripts.test, /npm run test:v100392 && npm run test:v100393/); assert.equal(pk.scripts["test:v100393"], "node scripts/proba-v100393.mjs");
 });
 
 console.log(`\n${teste - picate}/${teste} trecute` + (picate ? ` · ${picate} PICATE` : ""));

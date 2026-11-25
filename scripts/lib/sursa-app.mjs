@@ -8,7 +8,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 const RAD = process.env.RAD || path.resolve(new URL("../..", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1"));
-export const MODULE_TABLOU = ["tablou-mc.js", "tablou-kpi.js", "tablou-citire.js", "tablou-consilier.js"];
+export const MODULE_TABLOU = ["tablou-mc.js", "tablou-kpi.js", "tablou-citire.js", "tablou-consilier.js", "tablou-banii.js"];
 
 export function moduleTablou(rad = RAD) {
   return MODULE_TABLOU.map((f) => ({ f, text: fs.readFileSync(path.join(rad, "public", "lib", f), "utf8") }));
