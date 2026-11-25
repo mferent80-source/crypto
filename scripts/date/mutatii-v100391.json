@@ -1,0 +1,42 @@
+{
+ "_nota": "v100.391 (25.11.2026): fila „Riscul” pe botul de semnal. Fiecare greșeală plantată trebuie PRINSĂ de proba listei (ieșire ≠ 0).",
+ "proba": "scripts/proba-v100391.mjs",
+ "mutatii": [
+  {
+   "nume": "fila ținută minte nu se mai citește ca „Toate” pe semnal",
+   "fisier": "public/lib/tablou-citire.js",
+   "cauta": "if(k!==\"toate\"&&tbFilaLipsa(k))k=\"toate\";",
+   "pune": ""
+  },
+  {
+   "nume": "niciun capitol nu lipsește vreodată",
+   "fisier": "public/lib/tablou-citire.js",
+   "cauta": "return !!(p&&p.classList&&p.classList.contains(\"tbSemnal\")&&(c===\"decizia\"||c===\"risc\"))",
+   "pune": "return false"
+  },
+  {
+   "nume": "Decizia uitată dintre capitolele care lipsesc",
+   "fisier": "public/lib/tablou-citire.js",
+   "cauta": "(c===\"decizia\"||c===\"risc\"))}",
+   "pune": "(c===\"risc\"))}"
+  },
+  {
+   "nume": "legătura spre Riscul tot schimbă fila pe semnal",
+   "fisier": "public/lib/tablou-citire.js",
+   "cauta": "&&TB_FILE[k]&&!tbFilaLipsa(k))",
+   "pune": "&&TB_FILE[k])"
+  },
+  {
+   "nume": "regula CSS nu prinde butonul-filă Riscul",
+   "fisier": "public/app.css",
+   "cauta": ",html #tabloubot#tabloubot#tabloubot#tabloubot.tbSemnal #tbCuprins [data-action-click=\"tbFilaAlege('risc')\"]",
+   "pune": ""
+  },
+  {
+   "nume": "fila nu se potrivește pe loc la schimbarea botului",
+   "fisier": "public/app.js",
+   "cauta": "  if(typeof tbFilaAplica===\"function\")try{tbFilaAplica()}catch(e){}   /* v100.391",
+   "pune": "  /* v100.391"
+  }
+ ]
+}

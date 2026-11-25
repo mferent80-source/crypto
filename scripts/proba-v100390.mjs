@@ -40,7 +40,9 @@ await test("A  tablou-citire.js: în MODULE_TABLOU, în index.html înaintea lui
 await test("C  tablou-citire.js se încarcă singur (doar definiții) și face cele 72 de nume", () => {
   assert.equal(NUME.length, 72);
   const c = {}; vm.createContext(c); vm.runInContext(MOD, c);
-  assert.deepEqual(Object.keys(c).sort(), NUME.slice().sort());
+  /* v100.391: modulul crește după mutare — numele adăugate de atunci, cu versiunea lor */
+  const ADAUGATE = ["tbFilaLipsa" /* v100.391: capitolele care lipsesc pe botul de semnal */];
+  assert.deepEqual(Object.keys(c).sort(), NUME.concat(ADAUGATE).sort());
 });
 
 await test("D  niciun nume definit de două ori în app.js + module", () => {
@@ -51,10 +53,11 @@ await test("D  niciun nume definit de două ori în app.js + module", () => {
 });
 
 await test("E  mutat NESCHIMBAT: corpul modulului = rândurile 7858–8197 din app.js la v100.389 (d9a366d6)", () => {
-  let vechi; try { vechi = execFileSync("git", ["show", "d9a366d6:public/app.js"], { cwd: RAD, encoding: "utf8", maxBuffer: 64 << 20 }); } catch (e) { console.log("       (fără git aici — sar comparația la literă)"); return; }
+  /* v100.391: modulul s-a schimbat după mutare ⇒ comparația e ISTORICĂ: modulul din commitul mutării (bb61e9b4) față de app.js de dinainte (d9a366d6) */
+  let vechi, laMutare; try { const g = (r) => execFileSync("git", ["show", r], { cwd: RAD, encoding: "utf8", maxBuffer: 64 << 20 }); vechi = g("d9a366d6:public/app.js"); laMutare = g("bb61e9b4:public/lib/tablou-citire.js"); } catch (e) { console.log("       (fără git aici — sar comparația la literă)"); return; }
   /* git ține fișierul cu LF, copia de lucru cu CRLF ⇒ comparația pe LF */
   const bloc = vechi.replace(/\r\n/g, "\n").split("\n").slice(7857, 8197).join("\n");
-  const corp = MOD.replace(/\r\n/g, "\n"), corpFaraCap = corp.slice(corp.indexOf("*/") + 3).replace(/\n$/, "");
+  const corp = laMutare.replace(/\r\n/g, "\n"), corpFaraCap = corp.slice(corp.indexOf("*/") + 3).replace(/\n$/, "");
   assert.equal(corpFaraCap, bloc);
   assert.match(APP, /\/\/ v100\.390 \(I-940\): citirea de sus[^\n]*mutat în public\/lib\/tablou-citire\.js/);
 });
@@ -93,9 +96,10 @@ await test("F  modulul lucrează singur, fără app.js (prețul scurt, cheia „
 
 await test("V  versiunea v100.390 (index ×4, sw, versiune.js, package + lanț, BUILD_INFO)", () => {
   const pk = JSON.parse(citeste("package.json")), bi = JSON.parse(citeste("BUILD_INFO.json"));
-  assert.equal(pk.version, "100.390.0"); assert.equal(bi.version, "v100.390"); assert.ok(bi.li390 && bi.li390.length > 100, "BUILD_INFO.li390");
-  assert.ok((HTML.match(/v100\.390/g) || []).length >= 4); assert.match(SW, /crypto-radar-v100-390/); assert.match(citeste("functions", "_shared", "versiune.js"), /"v100\.390"/);
-  assert.match(pk.scripts.test, /npm run test:v100389 && npm run test:v100390 && node scripts\/mutatii\.mjs --doar-tiparele/); assert.equal(pk.scripts["test:v100390"], "node scripts/proba-v100390.mjs");
+  /* v100.391: „de la 390 încolo” (versiunea merge mai departe; după ea în lanț vine proba v100.391) */
+  assert.ok(+(/^100\.(\d+)\.0$/.exec(pk.version) || [])[1] >= 390); assert.ok(+(/^v100\.(\d+)$/.exec(bi.version) || [])[1] >= 390); assert.ok(bi.li390 && bi.li390.length > 100, "BUILD_INFO.li390");
+  assert.ok((HTML.match(/v100\.(\d+)/g) || []).filter((v) => +v.slice(5) >= 390).length >= 4); assert.ok(+(/crypto-radar-v100-(\d+)/.exec(SW) || [])[1] >= 390); assert.ok(+(/"v100\.(\d+)"/.exec(citeste("functions", "_shared", "versiune.js")) || [])[1] >= 390);
+  assert.match(pk.scripts.test, /npm run test:v100389 && npm run test:v100390/); assert.equal(pk.scripts["test:v100390"], "node scripts/proba-v100390.mjs");
 });
 
 console.log(`\n${teste - picate}/${teste} trecute` + (picate ? ` · ${picate} PICATE` : ""));

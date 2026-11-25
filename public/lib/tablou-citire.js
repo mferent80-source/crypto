@@ -257,7 +257,11 @@ var TB_FILE={decizia:["#tbCap-decizia","#tbTodo","#tbSemaforCard","#tbMotive","#
   bani:["#tbCap-bani","#tbBaniCard","#tbAcumCard","#tbPl-sapt","#tbPl-fisa","#tbPl-port","#tabloubot .tbCadru>.contTot"],piata:["#tbCap-piata","#tbCitireCard","#tbCitireMobil","#tabloubot .tbCadru>.piataAzi","#tbIdei","#tbGridNou"],
   jurnal:["#tbCap-jurnal","#tbPl-alerte","#tbPl-avert","#tbPl-socoteala"]};
 function tbFilaAcum(){var k=null;try{k=localStorage.getItem("tbFila")}catch(e){}return k&&TB_FILE[k]?k:"toate"}
-function tbFilaAplica(){var k=tbFilaAcum(),nav=$("tbCuprins");
+/* v100.391 (scăparea din v100.387, găsită pe viu 25.11): pe botul de SEMNAL capitolele Decizia și Riscul nu există (app.css, regula v100.380
+   „.tbSemnal”) ⇒ fila lor nu se arată, iar fila ținută minte (aleasă pe un bot de grid) se citește ca „Toate” — altfel pagina ieșea GOALĂ.
+   Alegerea rămâne în localStorage: înapoi pe botul de grid, fila revine. */
+function tbFilaLipsa(c){var p=$("tabloubot");return !!(p&&p.classList&&p.classList.contains("tbSemnal")&&(c==="decizia"||c==="risc"))}
+function tbFilaAplica(){var k=tbFilaAcum(),nav=$("tbCuprins");if(k!=="toate"&&tbFilaLipsa(k))k="toate";
   if(!$("tbFilaStil")){var st=document.createElement("style");st.id="tbFilaStil";st.textContent='html #tabloubot#tabloubot#tabloubot#tabloubot#tabloubot#tabloubot [data-fila-ascuns="1"][data-fila-ascuns="1"]{display:none!important}';   /* peste regulile paginii (până la 4 id-uri, cu !important) */document.head.appendChild(st)}
   Object.keys(TB_FILE).forEach(function(c){TB_FILE[c].forEach(function(sel){[].forEach.call(document.querySelectorAll(sel),function(e){var asc=k!=="toate"&&c!==k;if(asc){if(e.getAttribute("data-fila-ascuns")!=="1")e.setAttribute("data-fila-ascuns","1")}else if(e.hasAttribute("data-fila-ascuns"))e.removeAttribute("data-fila-ascuns")})})});
   if(nav){if(!nav.querySelector(".tbFilaToate")){var bt=document.createElement("button");bt.type="button";bt.className="tbFilaToate";bt.textContent="Toate";bt.setAttribute("data-action-click","tbFilaAlege('toate')");var sp=nav.querySelector("span");nav.insertBefore(bt,sp?sp.nextSibling:nav.firstChild)}
@@ -265,7 +269,7 @@ function tbFilaAplica(){var k=tbFilaAcum(),nav=$("tbCuprins");
     [].forEach.call(nav.querySelectorAll("button"),function(b){var a0=b.getAttribute("data-action-click")||"";if(/^tbSariLa\('\w+'\)$/.test(a0))b.setAttribute("data-action-click",a0.replace("tbSariLa","tbFilaAlege"));});   /* butoanele rândului = filele */
     [].forEach.call(nav.querySelectorAll("button"),function(b){var m=/tbSariLa\('(\w+)'\)|tbFilaAlege\('(\w+)'\)/.exec(b.getAttribute("data-action-click")||""),c=m?(m[1]||m[2]):null;if(c)b.setAttribute("aria-pressed",String(c===k))})}}
 function tbFilaAlege(k){try{localStorage.setItem("tbFila",TB_FILE[k]?k:"toate")}catch(e){}tbFilaAplica();if(TB_FILE[k]){var e=$("tbCap-"+k);if(e)try{e.scrollIntoView({block:"start"})}catch(x){}}}
-function tbSariLa(k,rand){if(typeof tbFilaAcum==="function"){var fa=tbFilaAcum();if(fa!=="toate"&&fa!==k&&TB_FILE[k]){try{localStorage.setItem("tbFila",k)}catch(e){}tbFilaAplica()}}   /* v100.387 (I-939): pe o filă, legătura spre alt capitol îl arată; pe „Toate” rămân toate */
+function tbSariLa(k,rand){if(typeof tbFilaAcum==="function"){var fa=tbFilaAcum();if(fa!=="toate"&&fa!==k&&TB_FILE[k]&&!tbFilaLipsa(k)){try{localStorage.setItem("tbFila",k)}catch(e){}tbFilaAplica()}}   /* v100.387 (I-939): pe o filă, legătura spre alt capitol îl arată; pe „Toate” rămân toate */
   /* v100.377 (auditul 22.11): cu al doilea argument, rândul acela al capitolului se deschide întâi (altfel butonul ducea la un rând pliat) */
   if(rand&&typeof TB_RANDURI!=="undefined"&&Object.prototype.hasOwnProperty.call(TB_RANDURI,rand)&&typeof tbRandComuta==="function"){try{tbRandComuta(rand,true)}catch(x){}}
   var e=$("tbCap-"+k);if(!e)return;var lin=typeof matchMedia==="function"&&matchMedia("(prefers-reduced-motion: reduce)").matches;try{e.scrollIntoView({behavior:lin?"auto":"smooth",block:"start"})}catch(x){e.scrollIntoView()}}

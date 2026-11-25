@@ -8572,6 +8572,7 @@ function renderTabloBot(){
   /* v100.380 (el, 23.11.2026: „vede radarul botul meu spot?” ⇒ botul de SEMNAL, Pionex „smart_copy”): în locul verdictului și al cifrelor de grid,
      cardul lui (poziția, rezultatul, intrările, de când merge); ce ține de grid se ascunde din CSS (#tabloubot.tbSemnal), restul rămâne */
   var semnalTb=!!(b&&b.tip==="semnal"&&typeof BotSemnal!=="undefined");if(pnl&&pnl.classList)pnl.classList.toggle("tbSemnal",semnalTb);
+  if(typeof tbFilaAplica==="function")try{tbFilaAplica()}catch(e){}   /* v100.391: fila se potrivește pe loc când botul trece pe semnal / grid (nu abia la tbCapAzi) */
   var csm=$("tbSemnalCard");if(csm){if(csm.hidden!==!semnalTb)csm.hidden=!semnalTb;if(semnalTb){var hsm=BotSemnal.cardHtml(b,escapeHtml,{acum:Date.now()});if(csm._h!==hsm){csm._h=hsm;csm.innerHTML=hsm}}}
   var m=TabloBot.masoara({bot:brut,klinePerp:klinePentruMasura,
     pretSpot:pretSpotPentruMasura,istoric:ist,acum:Date.now(),

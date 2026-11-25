@@ -70,7 +70,8 @@ await test("F  I-939 tbFilaAplica: „Toate” (implicit) nu ascunde nimic; o fi
   const doc = { head: { appendChild() {} }, getElementById: (i) => (i === "tbCuprins" ? nav : i === "tbFilaStil" ? doc._st : E[i] || null), querySelectorAll: (s) => { const m = /^#([\w-]+)$/.exec(s); return m && E[m[1]] ? [E[m[1]]] : []; },
     createElement: (t) => (t === "style" ? (doc._st = { id: "tbFilaStil" }) : { tag: t, a: {}, setAttribute(k, v) { this.a[k] = v; }, getAttribute(k) { return this.a[k] || null; } }) };
   const ctx = { document: doc, localStorage: { getItem: (k) => ls[k] || null, setItem: (k, v) => { ls[k] = v; } }, $: (i) => doc.getElementById(i), String, Object };
-  vm.createContext(ctx); vm.runInContext(tbFile() + fn("tbFilaAcum") + fn("tbFilaAplica") + fn("tbFilaAlege"), ctx);
+  /* v100.391: tbFilaAplica întreabă tbFilaLipsa (capitolele care lipsesc pe botul de semnal); aici panoul nu e de semnal ⇒ nimic lipsă */
+  vm.createContext(ctx); vm.runInContext(tbFile() + (fn("tbFilaLipsa") || "") + fn("tbFilaAcum") + fn("tbFilaAplica") + fn("tbFilaAlege"), ctx);
   vm.runInContext("tbFilaAplica()", ctx);
   assert.equal(Object.values(E).filter((e) => e.a["data-fila-ascuns"]).length, 0, "„Toate”: nimic ascuns");
   assert.equal(nav.kids[1].textContent, "Toate"); assert.equal(nav.kids[0].textContent, "Arată"); assert.equal(butoane[1].a["data-action-click"], "tbFilaAlege('risc')");
@@ -79,7 +80,7 @@ await test("F  I-939 tbFilaAplica: „Toate” (implicit) nu ascunde nimic; o fi
   assert.equal(E.tbTodo.a["data-fila-ascuns"], "1"); assert.equal(E.tbBaniCard.a["data-fila-ascuns"], "1"); assert.equal(E["tbPl-alerte"].a["data-fila-ascuns"], "1");
   assert.equal(butoane[1].a["aria-pressed"], "true"); assert.equal(butoane[0].a["aria-pressed"], "false");
   vm.runInContext("tbFilaAlege('toate')", ctx); assert.equal(Object.values(E).filter((e) => e.a["data-fila-ascuns"]).length, 0);
-  assert.match(fn("tbSariLa"), /if\(fa!=="toate"&&fa!==k&&TB_FILE\[k\]\)/, "pe „Toate” o legătură spre capitol nu ascunde nimic");
+  assert.match(fn("tbSariLa"), /if\(fa!=="toate"&&fa!==k&&TB_FILE\[k\](&&!tbFilaLipsa\(k\))?\)/, /* v100.391: + capitolul lipsă pe semnal */"pe „Toate” o legătură spre capitol nu ascunde nimic");
   assert.match(fn("tbCapAzi"), /tbFilaAplica\(\)/, "reaplicată la 4 s (rândurile create din cod)");
   assert.ok(areInLista(APPs, "ACTIUNI_PERMISE", ["tbFilaAlege"]));
 });
