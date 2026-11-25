@@ -76,9 +76,10 @@ await test("F  modulul lucrează singur, fără app.js (rândul pe termen scurt,
 
 await test("V  versiunea v100.388 (index ×4, sw, versiune.js, package + lanț, BUILD_INFO)", () => {
   const pk = JSON.parse(citeste("package.json")), bi = JSON.parse(citeste("BUILD_INFO.json"));
-  assert.equal(pk.version, "100.388.0"); assert.equal(bi.version, "v100.388"); assert.ok(bi.li388 && bi.li388.length > 100, "BUILD_INFO.li388");
-  assert.ok((HTML.match(/v100\.388/g) || []).length >= 4); assert.match(SW, /crypto-radar-v100-388/); assert.match(citeste("functions", "_shared", "versiune.js"), /"v100\.388"/);
-  assert.match(pk.scripts.test, /npm run test:v100387 && npm run test:v100388 && node scripts\/mutatii\.mjs --doar-tiparele/); assert.equal(pk.scripts["test:v100388"], "node scripts/proba-v100388.mjs");
+  /* v100.389: „de la 388 încolo” (versiunea merge mai departe; după ea în lanț vine proba v100.389) */
+  assert.ok(+(/^100\.(\d+)\.0$/.exec(pk.version) || [])[1] >= 388); assert.ok(+(/^v100\.(\d+)$/.exec(bi.version) || [])[1] >= 388); assert.ok(bi.li388 && bi.li388.length > 100, "BUILD_INFO.li388");
+  assert.ok((HTML.match(/v100\.(\d+)/g) || []).filter((v) => +v.slice(5) >= 388).length >= 4); assert.ok(+(/crypto-radar-v100-(\d+)/.exec(SW) || [])[1] >= 388); assert.ok(+(/"v100\.(\d+)"/.exec(citeste("functions", "_shared", "versiune.js")) || [])[1] >= 388);
+  assert.match(pk.scripts.test, /npm run test:v100387 && npm run test:v100388/); assert.equal(pk.scripts["test:v100388"], "node scripts/proba-v100388.mjs");
 });
 
 console.log(`\n${teste - picate}/${teste} trecute` + (picate ? ` · ${picate} PICATE` : ""));

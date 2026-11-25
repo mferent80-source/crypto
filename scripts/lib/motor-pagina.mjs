@@ -5,6 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
 import { fileURLToPath } from "node:url";
+import { cuTablou } from "./sursa-app.mjs";
 
 const RAD_IMPLICIT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const citeste = (rad, ...p) => fs.readFileSync(path.join(rad, ...p), "utf8").replace(/\r\n/g, "\n");
@@ -20,7 +21,8 @@ export function serieDeProba(n = 320) {
 }
 // { c: contextul (c.calc, c.historicalProbability, c.bareInchise…), functii: [numele încărcate] }; extra = alte funcții de nivel înalt de încărcat
 export function incarcaMotor(o = {}) {
-  const rad = o.rad || process.env.RAD_PROBA || RAD_IMPLICIT, APP = citeste(rad, "public", "app.js");
+  /* v100.389 (I-940): app.js lipit de modulele Tabloului (tbCalculeazaIndicatorii stă acum în lib/tablou-kpi.js) */
+  const rad = o.rad || process.env.RAD_PROBA || RAD_IMPLICIT, APP = cuTablou(citeste(rad, "public", "app.js"), rad);
   const c = Object.assign({ Math, Number, String, Array, Object, JSON, Date, isFinite, isNaN, parseFloat, parseInt, console, Map, Set, Intl, RegExp }, o.global || {});
   c.window = c; c.globalThis = c; vm.createContext(c);
   const avem = new Set();

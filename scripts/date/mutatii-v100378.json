@@ -184,7 +184,7 @@
   },
   {
    "nume": "revizia: BTC vechi folosit ca proaspăt",
-   "fisier": "public/app.js",
+   "fisier": "public/lib/tablou-kpi.js",
    "cauta": "proaspat=laB>0&&acum-laB<TB_MI_BTC_VECHI_MS,lb=bp&&proaspat?bp[f.tf]:null",
    "pune": "proaspat=true,lb=bp?bp[f.tf]:null"
   }
