@@ -73,12 +73,12 @@ function sugSim(x) { return x.simbol || String(x.ticker || x.simbolTicker || "")
 // stă lângă titlu; cifrele auditului din 01.11 sunt scrise cu data lor. sugRanduri / sugGrupuri / sugFisa sunt fără DOM (proba le rulează în vm).
 // v100.308 (07.11, el: „ok fă așa dar fă și sugestie de coinuri”, după proba pre-înregistrată din 07.11 - A / B / C = n-am aflat): grupul „cad”,
 // căderile de ieri pe monedele Pionex, cu fapte și urmărirea înainte; ÎN PROBĂ - fără Poartă, fără sumă (colectorul: scripts/lib/tura-caderi.mjs)
-var SUG_GRUPURI = [["porn", "🤖 Boți · 💡 Pe ce aș porni un bot"], ["cad", "📉 Monede Pionex · după o cădere mare (în probă)"], ["dir", "🎯 Monede Pionex · direcția pe 7 zile (în probă)"], ["osc", "🔁 Monede Pionex · Oscilo, canal de ±5–10% (în probă)"],["revUS", "📈 Acțiuni US · 🔁 Pe revenire"], ["revEU", "📈 Acțiuni EU (DAX, CAC, AEX + ale tale) · 🔁 Pe revenire"], ["sect", "🏆 Cele mai tari pe sectoare (acțiuni mari din SUA)"], ["trend", "📈 Trend 12 luni (în probă)"]];   /* titlurile vechilor secțiuni rămân în titlul grupului */
-var SUG_VERDICT = { porn: ["N-AM AFLAT", "v"], cad: ["ÎN PROBĂ", "p"], dir: ["ÎN PROBĂ", "p"], osc: ["ÎN PROBĂ", "p"], revUS: ["N-AM AFLAT", "v"], revEU: ["N-AM AFLAT", "v"], sect: ["N-AM AFLAT", "v"], trend: ["ÎN PROBĂ", "p"] };
+var SUG_GRUPURI = [["porn", "🤖 Boți · 💡 Pe ce aș porni un bot"], ["mbot", "🎯 Monede de bot · direcție, revenire, range (agitate, cu volum real)"],["cad", "📉 Monede Pionex · după o cădere mare (în probă)"], ["dir", "🎯 Monede Pionex · direcția pe 7 zile (în probă)"], ["osc", "🔁 Monede Pionex · Oscilo, canal de ±5–10% (în probă)"],["revUS", "📈 Acțiuni US · 🔁 Pe revenire"], ["revEU", "📈 Acțiuni EU (DAX, CAC, AEX + ale tale) · 🔁 Pe revenire"], ["sect", "🏆 Cele mai tari pe sectoare (acțiuni mari din SUA)"], ["trend", "📈 Trend 12 luni (în probă)"]];   /* titlurile vechilor secțiuni rămân în titlul grupului */
+var SUG_VERDICT = { porn: ["N-AM AFLAT", "v"], mbot: ["FILTRU · ÎN URMĂRIRE", "p"],cad: ["ÎN PROBĂ", "p"], dir: ["ÎN PROBĂ", "p"], osc: ["ÎN PROBĂ", "p"], revUS: ["N-AM AFLAT", "v"], revEU: ["N-AM AFLAT", "v"], sect: ["N-AM AFLAT", "v"], trend: ["ÎN PROBĂ", "p"] };
 // v100.312 (el, 07.11: „pune tot ce am făcut azi pe o pagină separată” ⇒ pagina „Probe”, lib/probe-ecran.js): listele ÎN PROBĂ pe monede
 // (căderi, direcție) au plecat din Sugestii pe pagina lor, cu ACELAȘI motor (listă + fișă + grafic). O singură stare, două vederi: vederea
 // dă rădăcina și grupurile. Trend 12 luni rămâne în Sugestii (acolo e lista de acțiuni); pe Probe apare în „Unde e fiecare probă”.
-var SUG_VEDERI = { sugestii: { el: "sugPagina", grupuri: ["porn", "revUS", "revEU", "sect", "trend"] }, probe: { el: "prPagina", grupuri: ["cad", "dir", "osc"] } };
+var SUG_VEDERI = { sugestii: { el: "sugPagina", grupuri: ["porn", "mbot", "revUS", "revEU", "sect", "trend"] }, probe: { el: "prPagina", grupuri: ["cad", "dir", "osc"] } };
 sugStare.vedere = sugStare.vedere || "sugestii";
 function sugVedere(v) { return Object.prototype.hasOwnProperty.call(SUG_VEDERI, v) ? v : "sugestii"; }
 function sugInVedere(grup, v) { return SUG_VEDERI[sugVedere(v)].grupuri.indexOf(grup) >= 0; }
@@ -184,6 +184,40 @@ function sugInLista(d, s, acum) {
   var n = 0; for (k = 0; k < zile.length; k++) if (pe[zile[k]][s]) n++;
   return !pe[zile[zile.length - 1]][s] ? "nou față de ieri" + (n ? " (a mai fost " + n + " din " + sugCate(zile.length, "zi", "zile") + ")" : "") + " · " : "în listă " + n + " din ultimele " + sugCate(zile.length, "zi", "zile") + " · ";
 }
+// v100.395 (el, 26.11: „caută automat mereu genul ăsta de monede … verifică să fie mereu conectat la realitate și live”): monedele de bot direcțional,
+// refăcute de colector o dată pe oră (lib/monede-bot.js + scripts/lib/tura-monede-bot.mjs). Vârsta listei e mereu pe rândul de sub titlu; peste 90 de
+// minute: VECHE, cu roșu. Boții tăi pe monede junk stau tot acolo. Un filtru (volum real, agitată, merge drept), nu o predicție.
+function sugMbotKv(d) { return d && d.monedeBot && Array.isArray(d.monedeBot.monede) ? d.monedeBot : null; }
+function sugMbotUrm(u, n) {
+  var f = function (k, nume) { var x = u && u[k]; return x && x.zile ? nume + ": " + sugCate(x.zile, "zi judecată", "zile judecate") + ", " + sugPctZ(x.medie) + " față de media monedelor citite, la 7 zile, pe plus în " + sugPc(x.pePlus) + " din zile" : nume + ": nicio zi judecată încă"; };
+  return "Urmărirea înainte (o dată pe zi UTC, primele 5 pe fiecare parte; la 7 zile, cât a mers moneda în partea ei față de media " + (n ? "celor " + sugCate(n, "monedă citită", "monede citite") : "monedelor citite") + " în aceeași zi, fără cost - costul e același): " + f("short", "Doar Short") + " · " + f("long", "Doar Long") + (u && u.inAsteptare ? " · " + sugCate(u.inAsteptare, "zi așteaptă", "zile așteaptă") + " cele 7 zile" : "") + ". Fără verdict sub 26 de zile judecate.";
+}
+function sugMbotSub(d, acum) {
+  var M = typeof MonedeBot !== "undefined" ? MonedeBot : null, kv = sugMbotKv(d); if (!M || !kv) return "aștept lista (colectorul o reface o dată pe oră, din Binance Futures, doar monedele care sunt și pe Pionex PERP)";
+  var v = M.vechime(kv, acum), pj = M.botiPeJunk(kv, d.botiToti || d.boti || []);
+  return (v.veche ? "LISTĂ VECHE: colectorul n-a mai reușit din " + sugOra(kv.la, acum) + " (" + M.ore(v.min) + ") - nu porni după ea · " : "tura de la " + sugOra(kv.la, acum) + " (acum " + v.min + " min) · ")
+    + sugCate(kv.n || kv.monede.length, "monedă citită", "monede citite") + " pe Binance Futures (≥ 50 M USDT/zi + monedele boților tăi) · direcție " + (kv.short.length + kv.long.length) + " (" + kv.short.length + " ↓, " + kv.long.length + " ↑) · revenire " + (kv.revenire || []).length + " · range " + (kv.range || []).length
+    + (pj.length ? " · ⚠ boții tăi pe monede junk: " + pj.map(function (b) { return b.s; }).join(", ") : "") + " · un filtru (volum real, agitată, merge drept), nu o predicție";
+}
+function sugMbotGol(d, acum) { var kv = sugMbotKv(d); return kv ? "Acum nicio monedă nu trece toate filtrele (fără junk, cel puțin 8% pe zi, pe Pionex)." : "aștept tura (o dată pe oră)"; }
+// el, 26.11: „grupați doar pe direcție, range și revenire” - `fel` = short / long (direcție), revenire, range (MonedeBot.liste)
+function sugMbotRand(d, m, fel, loc, acum) {
+  var M = MonedeBot, s = m.s, av = [], parte = fel === "short" || fel === "long" ? fel : null, sh = parte === "short", lb = (d.botiToti || d.boti || []).filter(function (b) { return M.cheie(b.s) === s; });
+  if (fel === "revenire") av.push("Pe 14 zile " + (m.parte === "short" ? "↓ JOS" : "↑ SUS") + " (" + M.pct(m.r14) + "), pe ultimele 3 zile revine " + M.pct(m.r3) + ": un bot pe direcția mare (" + (m.parte === "short" ? "Doar Short" : "Doar Long") + ") poate prinde întâi revenirea, unul pe revenire merge contra trendului mare. Nedovedit în care parte iese.");
+  if (fel === "range") av.push("Fără direcție pe 14 zile (ER " + M.zec(m.er14, 2) + "), dar se mișcă " + M.pr(m.amp) + " pe zi: pentru grid neutru, nu pentru Doar Short / Doar Long. Nu e un canal verificat: poate ieși în orice parte.");
+  if (parte && m.ppst1h && m.ppstCuParte === false) av.push("PPST pe 1 h e " + m.ppst1h.dir + " de " + sugCate(m.ppst1h.bare, "oră", "ore") + ": o alertă " + (sh ? "Doar Short așteaptă primul SELL" : "Doar Long așteaptă primul BUY") + (M.linia(m.ppst1h) ? " (" + M.linia(m.ppst1h) + ")" : "") + ".");
+  if (parte && m.fund != null && isFinite(m.fund) && (sh ? m.fund < 0 : m.fund > 0)) av.push("Funding " + sugPctZ(m.fund, 3) + " pe decontare: pe partea asta TU plătești funding-ul (pe Pionex rata diferă puțin).");
+  lb.forEach(function (b) { if (b.dir !== "long" && b.dir !== "short") av.push("Ai deja un bot pe " + s + " (fără poziție acum): încă unul pe aceeași monedă e același pariu."); else av.push(!m.parte || b.dir === m.parte ? "Ai deja un bot " + b.dir.toUpperCase() + " pe " + s + ": încă unul pe aceeași monedă e același pariu, nu diversificare." : "Botul tău pe " + s + " e " + b.dir.toUpperCase() + ": contra direcției pe 14 zile."); });
+  av.push("Lista alege moneda (volum real, agitată, fără junk); nu spune că botul câștigă pe ea. Pe 1 minut comisionul rămâne problema, oricare ar fi moneda (probele PPST din 26.11).");
+  var dirC = parte || (fel === "revenire" ? (m.parte === "short" ? "long" : "short") : "neutru");
+  return { k: "mbot:" + fel + ":" + s, grup: "mbot", tip: "moneda", s: s, tk: s + "_USDT_PERP", nume: "", dir: M.eticheta(fel, m) + " #" + loc, dirC: dirC, pret: sugPandaPret(m.pret), avert: av, x: m, parte: parte, fel: fel, loc: loc,
+    sub: M.acum(m) + " · " + (M.probabil(m) ? M.probabil(m).scurt + " · " : "") + "ER 14 z " + M.zec(m.er14, 2) + " · " + M.pr(m.amp) + "/zi · vol " + M.mil(m.vol) + " · OI " + M.mil(m.oi) };
+}
+function sugMbotRanduri(d, acum) {
+  var kv = sugMbotKv(d), l = []; if (typeof MonedeBot === "undefined" || !kv) return l;
+  ["short", "long", "revenire", "range"].forEach(function (p) { (kv[p] || []).forEach(function (s, i) { var m = MonedeBot.gaseste(kv, s); if (m) l.push(sugMbotRand(d, m, p, i + 1, acum)); }); });
+  return l;
+}
 // grupurile paginii (titlul, verdictul, rândul de sub titlu) - sub „azi nu” titlul pornirii pierde tonul de sfat și spune de ce
 function sugGrupuri(d, acum, vedere) {   // v100.312: cu `vedere`, doar grupurile ei; fără, toate (probele vechi)
   d = d || {}; var an = sugAziNu(), porn = typeof Idei !== "undefined" && d.clasament ? Idei.ideiBoti(d.clasament, [], 5) : [], pi = typeof Idei !== "undefined" && Idei.ideiBotiInfo && d.clasament ? Idei.ideiBotiInfo(d.clasament, 5) : null;
@@ -202,6 +236,7 @@ function sugGrupuri(d, acum, vedere) {   // v100.312: cu `vedere`, doar grupuril
   var gol = { cad: d.caderi && d.caderi.zi ? (d.caderi.pionexLipsa ? "Lista Pionex n-a venit la tura de azi: căderile de pe Binance sunt numărate mai sus, dar nu știu care sunt și pe Pionex." : "În ziua UTC " + sugCadZi(d.caderi.zi) + " nicio monedă de pe Pionex n-a trecut pentru prima dată de −25% sub maximul pe 30 de zile.") : "aștept tura de la 8:00",
     osc: d.oscilo && d.oscilo.zi ? "În ziua UTC " + sugCadZi(d.oscilo.zi) + " nicio monedă din primele 100 Pionex n-a stat 14 zile într-un canal de ±5–10% cu cel puțin 6 treceri prin centru." : "aștept tura de după 00:30 UTC (02:30 iarna / 03:30 vara, ora României)",   // v100.353
     dir: d.directie && d.directie.zi ? (d.directie.pionexLipsa ? "Lista Pionex n-a venit la tura de azi: nu știu care monede sunt și pe Pionex." : "În ziua UTC " + sugCadZi(d.directie.zi) + " nicio monedă Pionex n-a avut toate datele (bare, volum, funding).") : "aștept tura de la 8:00" };   // v100.308; v100.311 dir
+  sub.mbot = sugMbotSub(d, acum); gol.mbot = sugMbotGol(d, acum);   /* v100.395 */
   return SUG_GRUPURI.filter(function (g) { return vedere == null || sugInVedere(g[0], vedere); }).map(function (g) { var V = sugVerdictEt(g[0], d); return { k: g[0], titlu: titlu[g[0]] || g[1], verdict: V[0], verdictC: "sugVerdict-" + V[1], sub: sub[g[0]], subHtml: g[0] === "trend" && trendV ? trendV + sugEsc(sub[g[0]]) : "", gol: gol[g[0]] || "" }; });
 }
 // v100.312: locul = poziția în lista robotului (ordonată), nu `rang` - acela e procentilul din ~600 (0,0017 ⇒ pagina scria „locul 1.0017064846416381 din 20”)
@@ -259,6 +294,7 @@ function sugRanduri(d, acum, vedere) {   // v100.312: cu `vedere`, doar rânduri
     l.push({ k: "porn:" + s, grup: "porn", tip: "moneda", aziNu: !!an.nu, s: s, tk: s + "_USDT_PERP", nume: "", dir: D ? "4h+1z " + SUG_DIR[D] + (SUG_TARIE[x.tarie] ? " · " + SUG_TARIE[x.tarie] : "") : "", dirC: D || "", pret: sugPandaPret(x.pret), avert: av, x: x, pd: pd,
       sub: (x.net7 != null ? "7 z ~" + sugPctZ(x.net7) + (x.fNecerut ? " (funding necerut încă)" : x.fNecitit ? " (funding necitit)" : " (funding " + sugPctZ(x.f7, 2) + ")") + " · " : "") + sugInLista(d, s, acum) + "interval " + sugPr(x.latime) + (sugIntervalPret(x) ? " (" + sugIntervalPret(x) + ")" : "") + " · " + sugPr(x.profitGrila, 2) + " net pe grilă · ~" + Math.round(x.traversariZi || 0) + " treceri pe zi · " + sugMil(x.volum) + (pd ? " · 84 z " + pd.dir : "") });
   });
+  l = l.concat(sugMbotRanduri(d, acum));   /* v100.395: monedele de bot direcțional */
   // v100.308: căderile de ieri pe monedele Pionex (în probă) - faptele pe rând, avertismentele în „Înainte să intri”
   var cd = d.caderi;
   (cd && Array.isArray(cd.lista) ? cd.lista : []).forEach(function (x) {
@@ -345,6 +381,25 @@ function sugFisa(r, d, acum) {
       (R && R.TEXT_SUPRAVIETUITORI_MONEDE ? R.TEXT_SUPRAVIETUITORI_MONEDE : "Doar monedele care sunt azi pe Pionex: cifra iese mai bună decât a fost în realitate.")]);
     f.actiuni = [{ et: "Fișa gridului", c: "sugBtnPlin", act: "gridDeschideMonedaDir('" + sugCurat(r.s) + "','" + (SUG_DIR[x.dir] ? x.dir : "") + "')" }].concat(bz ? [{ et: "🧭 Busola, 4h", c: "", href: bz }] : []);
     f.actNota = "Fișa dă setările și proba pe moneda ta; Busola, imaginea pe 4h.";
+  } else if (r.grup === "mbot") {   // v100.395: monedele de bot - direcție / revenire / range
+    var M = MonedeBot, kv = sugMbotKv(d) || {}, P = M.PRAGURI, fl = r.fel || r.parte, et = M.eticheta(fl, x), vo = x.oi > 0 ? x.vol / x.oi : null, pb = M.probabil(x);
+    var acumV = !x.parte ? "→ RANGE" : (x.parte === "short" ? "↓ JOS" : "↑ SUS") + (fl === "revenire" ? " · revine " + (x.parte === "short" ? "↑" : "↓") : "");
+    f.pretNota = "ultimul preț pe Binance Futures, la tura de la " + sugOra(kv.la, acum);
+    f.cele = [{ et: "Direcția acum", v: acumV, sub: M.acum(x).replace(/^Acum [^:]*: /, "") },
+      { et: "Direcția probabilă, 7 z", v: pb ? (pb.invers ? "se întoarce " : "continuă ") + Math.round(pb.p * 100) + "%" : "—", sub: pb ? (pb.verdict === "nedovedit" ? "NEDOVEDIT (cam cât aruncatul banului)" : pb.verdict) + " · câștig mediu " + M.pct(pb.medie) + " · " + sugCate(pb.n, "caz", "cazuri") + " pe istoric" : "fără direcție pe 14 zile: studiul nu se aplică" },
+      { et: "14 zile", v: M.pct(x.r14), sub: "cât de drept: ER " + M.zec(x.er14, 2) + " (0 = zig-zag, 1 = linie dreaptă), pe bare de 4 h" }, { et: "3 zile", v: M.pct(x.r3), sub: "ER " + M.zec(x.er3, 2) + (x.revine ? " · revine contra" : " · în aceeași parte") },
+      { et: "Pe zi", v: M.pr(x.amp), sub: "amplitudinea medie (maxim − minim pe 24 h), 7 zile" }, { et: "Volum 24 h", v: M.mil(x.vol), sub: "Binance Futures" }, { et: "Open interest", v: M.mil(x.oi), sub: "volumul = " + M.zec(vo) + "× OI (junk peste " + P.volOiMax + "×)" },
+      { et: "Funding", v: x.fund == null ? "—" : sugPctZ(x.fund, 3), sub: "pe decontare; plus = long-urile plătesc" }, { et: "PPST 1h", v: x.ppst1h ? x.ppst1h.dir : "—", sub: x.ppst1h ? "de " + sugCate(x.ppst1h.bare, "oră", "ore") + (M.linia(x.ppst1h) ? " · " + M.linia(x.ppst1h) : "") : "" },
+      { et: "Spread", v: x.sprBp == null ? "—" : M.zec(x.sprBp) + " bp", sub: "listată de " + (x.zile ? sugCate(Math.round(x.zile), "zi", "zile") : "—") }];
+    f.motiv = et + " #" + r.loc + ": pe 14 zile " + M.pct(x.r14) + " cu ER " + M.zec(x.er14, 2) + ", pe 3 zile " + M.pct(x.r3) + ", se mișcă " + M.pr(x.amp) + " pe zi, cu " + M.mil(x.vol) + " volum și " + M.mil(x.oi) + " OI - trece toate filtrele de monedă reală"
+      + (fl === "range" ? "; fără direcție pe 14 zile ⇒ range (grid neutru)." : fl === "revenire" ? "; pe 14 zile merge drept, dar pe 3 zile s-a întors ⇒ revenire." : "; drept pe 14 zile și în aceeași parte pe 3 zile ⇒ direcție.");
+    f.regula = "Regula (fixată 26.11, înainte de urmărire): contractele USDT perpetue de pe Binance Futures care sunt și pe Pionex PERP. Fără junk: volum ≥ " + M.mil(P.volMin) + " pe 24 h, OI ≥ " + M.mil(P.oiMin) + ", volumul cel mult " + P.volOiMax + "× OI-ul, listată de cel puțin un an, spread ≤ " + P.sprMaxBp + " bp. Agitată: cel puțin " + Math.round(P.ampMin * 100) + "% pe zi. Trei feluri: DIRECȚIE = |ER pe 14 zile| ≥ " + M.zec(P.erMin, 2) + " și pe 3 zile în aceeași parte (ordinea: |ER 14 z| + ER 3 z); REVENIRE = |ER 14 z| ≥ " + M.zec(P.erMin, 2) + ", dar pe 3 zile înapoi (ordinea: cât de drept revine); RANGE = |ER 14 z| sub " + M.zec(P.erMin, 2) + " (ordinea: amplitudinea). Cel mult " + P.nLista + " pe fiecare. Refăcută o dată pe oră.";
+    f.dovada = [pb ? "Direcția probabilă: " + pb.text + "." : "Direcția probabilă: moneda n-are o celulă în studiu (fără parte pe 14 zile).",
+      "Studiul direcției probabile (scripts/studiu-v100395-directie-probabila.mjs, regulile scrise înainte de rulare, 26.11.2026): " + M.rezumatStudiu() + ". Cele delistate lipsesc: la short cifra iese mai proastă decât a fost, la long mai bună.",
+      sugMbotUrm(kv.urmarire, kv.n), "Pe 26.11 (ziua în care a fost făcută lista), pe ultimele 24 h, cu regula ta Doar Short + stop 60% pe 1 minut, toate monedele lichide ieșeau pe minus după comision - și cele din listă. Lista alege moneda; câștigul botului îl decide intervalul și costul.",
+      "Prețurile și volumele sunt ale Binance Futures (reperul pieței); pe Pionex prețul, funding-ul și lichiditatea diferă puțin."];
+    f.actiuni = [{ et: "Fișa monedei", c: "sugBtnPlin", act: "gridDeschideMonedaDir('" + sugCurat(r.s) + "','" + (fl === "short" || fl === "long" ? fl : "") + "')" }].concat(bz ? [{ et: "🧭 Busola, 4h", c: "", href: bz }] : []);
+    f.actNota = "Lista nu duce la Poartă și nu dă o sumă: alegi moneda, apoi botul îl pui tu în Pionex.";
   } else if (r.grup === "cad") {   // v100.308: căderile de ieri (în probă)
     var cd = d.caderi || {}, bsP = x.bs != null && isFinite(x.bs) ? Math.max(0, Math.min(1, 1 - x.bs)) : null;
     f.pretNota = "închiderea zilei UTC " + sugCadZi(cd.zi) + " pe Binance (00:00 UTC)" + (x.mult > 1 ? ", împărțită la " + (x.mult === 1000 ? "1.000" : "1.000.000") + " (contractul " + (x.b || "") + ")" : "");
@@ -864,9 +919,11 @@ async function sugPorneste(fortat) {
   try {
     await Promise.all([
       pas("latime", function () { return getJSON("/api/istoric-bot?action=latime&scurt=1").then(function (r) { return r && r.latime || null; }); }),   /* v100.150 (I-584): lățimea pieței + pânda */
-      pas("boti", function () { return getJSON("/api/bot-orders").then(function (r) { return r && Array.isArray(r.bots) ? r.bots.filter(function (b) { return b && b.activ !== false; }).map(function (b) { return { s: String(b.baza || "").replace(/\.PERP$/, "").toUpperCase(), dir: String(b.directie || "").toLowerCase() }; }) : []; }); }),
+      pas("boti", function () { return getJSON("/api/bot-orders").then(function (r) { d.botiToti = r && Array.isArray(r.bots) ? r.bots.filter(function (b) { return b && (b.activ !== false || b.ruleaza === true); }).map(function (b) { return { s: String(b.baza || "").replace(/\.PERP$/, "").toUpperCase(), dir: String(b.directie || "").toLowerCase() }; }) : [];   /* v100.395: și boții de semnal pornit (activ:false, ruleaza:true), doar pentru monedele de bot */
+        return r && Array.isArray(r.bots) ? r.bots.filter(function (b) { return b && b.activ !== false; }).map(function (b) { return { s: String(b.baza || "").replace(/\.PERP$/, "").toUpperCase(), dir: String(b.directie || "").toLowerCase() }; }) : []; }); }),
       pas("cont", async function () { if (typeof contTotAsigura === "function") await contTotAsigura(); return true; }),   /* v100.306 (I-824): boții închiși, pentru frâna din regula „azi nu” */
       pas("clasament", async function () { var c = await getJSON("/api/istoric-bot?action=clasament"); return c && c.clasament || null; }),
+      pas("monedeBot", function () { return getJSON("/api/istoric-bot?action=monedeBot").then(function (r) { return r && r.monedeBot || null; }); }),   /* v100.395: monedele de bot direcțional */
       pas("sugMonede", function () { return getJSON("/api/istoric-bot?action=sugestii&porn=1"); }),   /* v100.344: istoricul doar cu notările „Pe ce aș porni” din 14 zile */
       pas("idei", function () { return getJSON("/api/t212?action=idei"); }),
       pas("sugActiuni", function () { return getJSON("/api/t212?action=sugestii"); }),

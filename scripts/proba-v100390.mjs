@@ -41,7 +41,7 @@ await test("C  tablou-citire.js se încarcă singur (doar definiții) și face c
   assert.equal(NUME.length, 72);
   const c = {}; vm.createContext(c); vm.runInContext(MOD, c);
   /* v100.391: modulul crește după mutare — numele adăugate de atunci, cu versiunea lor */
-  const ADAUGATE = ["tbFilaLipsa" /* v100.391: capitolele care lipsesc pe botul de semnal */];
+  const ADAUGATE = ["tbFilaLipsa" /* v100.391: capitolele care lipsesc pe botul de semnal */, "tbMonedeBotKv", "tbMonedeBotDinKv" /* v100.395: monedele de bot direcțional din KV */];
   assert.deepEqual(Object.keys(c).sort(), NUME.concat(ADAUGATE).sort());
 });
 

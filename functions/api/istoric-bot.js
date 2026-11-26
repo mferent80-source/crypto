@@ -161,7 +161,8 @@ async function istoricGet(request,env){
   if(action==="probaA"){let v=null;try{v=JSON.parse(await env.ISTORIC.get("sugestii:probaA")||"null")}catch{v=null}return json({probaA:v})}
   // v100.313: curba stopului (colectorul, la 6 h) - cât de des un stop la d × ATR(1h) e atins în 24 / 72 h, pe 21 de perechi, ultimele 30 de zile
   if(action==="curbaStop"){let v=null;try{v=JSON.parse(await env.ISTORIC.get("curbaStop")||"null")}catch{v=null}return json({curbaStop:v})}
-  if(action==="largimeCrypto"){let v=null;try{v=JSON.parse(await env.ISTORIC.get("largime-crypto")||"null")}catch{v=null}return json({largime:v&&v.largime||null,la:v&&v.la||null})}   /* v100.331: lărgimea crypto de la colector */
+  if(action==="largimeCrypto"){let v=null;try{v=JSON.parse(await env.ISTORIC.get("largime-crypto")||"null")}catch{v=null}return json({largime:v&&v.largime||null,la:v&&v.la||null})}
+  if(action==="monedeBot"){let v=null;try{v=JSON.parse(await env.ISTORIC.get("monede-bot")||"null")}catch{v=null}return json({monedeBot:v})}   /* v100.395: monedele de bot direcțional, de la colector (o dată pe oră) */   /* v100.331: lărgimea crypto de la colector */
   if(action==="universSua"){let v=null;try{v=JSON.parse(await env.ISTORIC.get("univers:sua")||"null")}catch{v=null}return json({la:v&&v.la||null,harta:v&&v.harta||{}})}
   if(action==="sector"){const s=String(u.searchParams.get("s")||"").toUpperCase().replace(/[^A-Z0-9.-]/g,"").slice(0,12);let v=null;try{v=JSON.parse(await env.ISTORIC.get("univers:sua")||"null")}catch{v=null}const h=v&&v.harta&&v.harta[s];return json({s,sector:h?h[0]:null,industrie:h?h[1]:null})}
   // v100.179 (disciplina): tezele, statisticile ieșirii din bandă, lecțiile săptămânii
@@ -510,6 +511,17 @@ export async function onRequestPost({request,env}){
     for(const k of ["score","participation","trend","above20","above50","above200","momentum","volume","highs","lows","highLow","coverage","n","total","altParticipation","benchmarkReturn","ts"])o[k]=nr(L[k]);
     for(const k of ["depth","market","source","universe"])o[k]=typeof L[k]==="string"?L[k].slice(0,60):null;
     await env.ISTORIC.put("largime-crypto",JSON.stringify({la,largime:o}));return json({ok:true})}
+  /* v100.395 (el, 26.11: „caută automat mereu genul ăsta de monede”): monedele de bot direcțional - curățate: simboluri, numere, motivele de junk ca text scurt */
+  if(action==="monedeBot"){const la=nr(corp&&corp.la),mo=corp&&corp.monede,SYM=/^[\p{Lu}\p{Lo}\p{N}]{1,30}USDT$/u,S=/^[\p{Lu}\p{Lo}\p{N}]{1,30}$/u,lst=a=>Array.isArray(a)&&a.length<=10&&a.every(x=>S.test(String(x)));
+    const opt=a=>a==null||lst(a);   /* el, 26.11: + revenire / range (lipsă = goale) */
+    if(!(la>0)||!Array.isArray(mo)||!mo.length||mo.length>300||!lst(corp.short)||!lst(corp.long)||!opt(corp.revenire)||!opt(corp.range))return json({error:"monedeBot: la + monede (1-300) + short / long / revenire / range (≤ 10)"},400);
+    const NUM=["pret","vol","oi","sprBp","zile","fund","r14","er14","r3","er3","r24","amp","taria"],monede=[];
+    for(const x of mo){if(!x||typeof x!=="object"||!SYM.test(String(x.sym||""))||!S.test(String(x.s||"")))return json({error:"monedeBot: moneda stricata"},400);
+      const m={sym:x.sym,s:x.s,pionex:x.pionex===true,agitata:x.agitata===true,revine:x.revine===true,parte:x.parte==="short"||x.parte==="long"?x.parte:null,ppstCuParte:typeof x.ppstCuParte==="boolean"?x.ppstCuParte:null,
+        junk:Array.isArray(x.junk)?x.junk.slice(0,6).map(t=>String(t).slice(0,120)):[]};for(const k of NUM)m[k]=nr(x[k]);
+      const p=x.ppst1h;m.ppst1h=p&&(p.dir==="SUS"||p.dir==="JOS")?{dir:p.dir,bare:nr(p.bare),dist:nr(p.dist),linia:nr(p.linia)}:null;monede.push(m)}
+    const U=corp.urmarire,up=k=>{const z=U&&U[k];return z?{zile:nr(z.zile)||0,medie:nr(z.medie),pePlus:nr(z.pePlus)}:{zile:0}};
+    await env.ISTORIC.put("monede-bot",JSON.stringify({la,n:nr(corp.n),nPionex:nr(corp.nPionex),monede,short:corp.short.map(String),long:corp.long.map(String),revenire:(corp.revenire||[]).map(String),range:(corp.range||[]).map(String),urmarire:{short:up("short"),long:up("long"),inAsteptare:nr(U&&U.inAsteptare)||0}}));return json({ok:true,monede:monede.length})}
   if(action==="probaA"){const zp=nr(corp&&corp.zile);if(!(nr(corp&&corp.la)>0)||zp===null||!(zp>=0))return json({error:"probaA: la + zile"},400);await env.ISTORIC.put("sugestii:probaA",JSON.stringify(corp));return json({ok:true})}
   // v100.344 (16.11): proba gridului - doar numere și zile curățate; rezumatul cu verdictul scris de colector (regulile din scripts/lib/proba-grid.mjs)
   // v100.349 (auditul Grid, el: „fiecare fișă calculată se notează și se judecă după cât o ții, pe bare de 1 minut”): una pe monedă, zi (UTC) și fereastră

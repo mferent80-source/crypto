@@ -321,7 +321,7 @@ function tbDeseneazaCitire(o,b){var loc=[$("tbCitire"),$("tbCitireMobil")].filte
   var vB=vP&&!vP.vechi?Busola.randDirectie(Busola.rezumat(),tbCheieBusola(b),Date.now(),{bot:b.directie}):null,vM=tbMcRand(b);
   var voci=typeof Busola!=="undefined"?Busola.concluzie({bot:b.directie,grafic:v4H?v4H.dir:null,busola:vB?vB.semn:null,mc:vM?vM.stare:null,mcAtins:!!(vM&&/planul atins/i.test(String(vM.text||"")))}):null;
   c.randuri.forEach(function(x){
-    if(x.tf){if(pus)return;pus=true;out.push(bloc);if(ex.latime)out.push(rd(ex.latime));if(ex.latimeMoneda)out.push(rd(ex.latimeMoneda));if(ex.bilant)ex.bilant.forEach(function(x){out.push(rd(x))});if(ex.latimeUs)out.push(rd(ex.latimeUs));if(ex.sectoare)out.push(rd(ex.sectoare));if(ex.macro)out.push(rd(ex.macro));if(ex.rangeFilter)out.push(rd(ex.rangeFilter));if(ex.indicatori&&!ind){ind=true;out.push(rd(ex.indicatori))}return}   /* v100.150 (I-583): lățimea pieței după trendul pe TF-uri, înaintea Indicatorilor */
+    if(x.tf){if(pus)return;pus=true;out.push(bloc);if(ex.latime)out.push(rd(ex.latime));if(ex.latimeMoneda)out.push(rd(ex.latimeMoneda));if(ex.monedeBot)out.push(rd(ex.monedeBot));if(ex.bilant)ex.bilant.forEach(function(x){out.push(rd(x))});if(ex.latimeUs)out.push(rd(ex.latimeUs));if(ex.sectoare)out.push(rd(ex.sectoare));if(ex.macro)out.push(rd(ex.macro));if(ex.rangeFilter)out.push(rd(ex.rangeFilter));if(ex.indicatori&&!ind){ind=true;out.push(rd(ex.indicatori))}return}   /* v100.150 (I-583): lățimea pieței după trendul pe TF-uri, înaintea Indicatorilor */
     if(x.ce==="Funding"){fund=true;if(ex.estimare)out.push(rd(ex.estimare));busolaRanduri()}
     out.push(rd(x));
     if(x.ce==="Direcția"&&ex.indicatori&&!ind){ind=true;out.push(rd(ex.indicatori))}});   /* revizia: fără semafor, Indicatorii stau după Direcția */
@@ -341,6 +341,11 @@ var tbVociKv={la:0,d:null,inLucru:null};
 function tbVociBilant(){
   if(Date.now()-tbVociKv.la>=10*60000&&!tbVociKv.inLucru){tbVociKv.inLucru=getJSON("/api/istoric-bot?action=voci").then(function(r){tbVociKv.d=r&&Array.isArray(r.voci)?r.voci:null},function(){tbVociKv.d=tbVociKv.d||null}).then(function(){tbVociKv.la=Date.now();tbVociKv.inLucru=null;if(tbPanouVizibil()&&tbStare.bot&&tbStare.citireO)tbDeseneazaCitire(tbStare.citireO,tbStare.bot)})}
   var b=typeof Busola!=="undefined"&&tbVociKv.d?Busola.bilantVoci(tbVociKv.d,Date.now()):null;return b?b.text:null}
+// v100.395: monedele de bot direcțional din KV (action=monedeBot), o dată la 10 minute; sosirea redesenează citirea o dată
+var tbMonedeBotKv={la:0,d:null,inLucru:null};
+function tbMonedeBotDinKv(){
+  if(Date.now()-tbMonedeBotKv.la<10*60000||tbMonedeBotKv.inLucru)return;
+  tbMonedeBotKv.inLucru=getJSON("/api/istoric-bot?action=monedeBot").then(function(r){tbMonedeBotKv.d=r&&r.monedeBot&&Array.isArray(r.monedeBot.monede)?r.monedeBot:null},function(){tbMonedeBotKv.d=tbMonedeBotKv.d||null}).then(function(){tbMonedeBotKv.la=Date.now();tbMonedeBotKv.inLucru=null;if(tbPanouVizibil()&&tbStare.bot&&tbStare.citireO)tbDeseneazaCitire(tbStare.citireO,tbStare.bot)})}
 // v100.150 (I-583): lățimea pieței din KV (action=latime), o dată la 10 minute; sosirea redesenează citirea o dată
 var tbLatimeKv={la:0,d:null,inLucru:null};
 function tbLatimeDinKv(){

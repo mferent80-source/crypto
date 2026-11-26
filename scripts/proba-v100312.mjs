@@ -90,9 +90,9 @@ await test("🔑 „MAMastercard”: după alinierea pe loc, textul dintre simbo
 // ── 2. pagina Probe ──
 await test("🔑 vederile: Sugestii = boți, revenire US/EU, sectoare, Trend; Probe = căderi + direcție; fără vedere, toate (probele vechi)", () => {
   const P = pagina(), d = DATE();
-  assert.deepEqual(J(P.sugGrupuri(d, ACUM, "sugestii").map((g) => g.k)), ["porn", "revUS", "revEU", "sect", "trend"]);
+  assert.deepEqual(J(P.sugGrupuri(d, ACUM, "sugestii").map((g) => g.k)), ["porn", "mbot", "revUS", "revEU", "sect", "trend"]);
   assert.deepEqual(J(P.sugGrupuri(d, ACUM, "probe").map((g) => g.k)), ["cad", "dir", "osc"]);   // v100.353: + Oscilo (în probă)
-  assert.deepEqual(J(P.sugGrupuri(d, ACUM).map((g) => g.k)), ["porn", "cad", "dir", "osc", "revUS", "revEU", "sect", "trend"]);   // v100.353
+  assert.deepEqual(J(P.sugGrupuri(d, ACUM).map((g) => g.k)), ["porn", "mbot", "cad", "dir", "osc", "revUS", "revEU", "sect", "trend"]);   // v100.353
   const toate = P.sugRanduri(d, ACUM), pr = P.sugRanduri(d, ACUM, "probe"), su = P.sugRanduri(d, ACUM, "sugestii");
   assert.equal(pr.length + su.length, toate.length, "fiecare rând într-o singură vedere");
   assert.ok(pr.length >= 12 && pr.every((r) => r.grup === "cad" || r.grup === "dir"));

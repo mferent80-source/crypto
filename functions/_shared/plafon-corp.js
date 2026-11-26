@@ -8,6 +8,7 @@ const ISTORIC_BOT = {
   sectoareTop: 262144, trend12: 262144, caderi: 131072, directie: 131072, disciplinaBanda: 524288, comportament: 524288,
   pareriJudecate: 786432,   /* v100.312 (I-843): până la 3.600 de judecăți × ~170 de semne */
   jtNote: 524288,   /* v100.358: notițele Jurnalului de trade - la prima urcare pleacă toate cele din browser */
+  monedeBot: 262144,   /* v100.395: ~40-80 de monede × ~600 de semne (motivele de junk, PPST 1h); 26.11: 24 KB cu 43 */
 };
 export const PLAFON_IMPLICIT = 65536;
 export const PLAFON_T212 = 262144;
