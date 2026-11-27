@@ -114,6 +114,8 @@ if (-not (asculta8788)) {
     try { mutaNou } catch { scrie "EROARE la mutarea worker-local-nou: $($_.Exception.Message)"; exit 1 }
   }
   if ($semn) { Set-Content -Path $semnFis -Value $semn -Encoding ascii }
+  # v100.396 (I-954): parola aplicației sub 24 de semne (sau lipsă) ⇒ una nouă de 40, ÎNAINTE ca serverul și colectorul să citească .dev.vars
+  try { $pn = (& node (Join-Path $rad 'scripts\parola-noua.mjs') (Join-Path $rad '.dev.vars') 2>&1 | Out-String).Trim(); if ($pn) { scrie $pn } } catch { scrie "parola aplicației: nu am putut verifica ($($_.Exception.Message))" }
   scrie ("Functions construite în worker-local (functions/ " + $(if ($semn) { $semn.Substring(0, [Math]::Min(12, $semn.Length)) } else { 'fără semnătură git' }) + ")")
   $arg = '/c npx --yes wrangler@4.137.0 dev --config radar-local.toml --env-file .dev.vars --no-bundle --port 8788 --ip 127.0.0.1 --persist-to "' + $rad + '\.wrangler\state" --compatibility-date=2026-01-01 >> "' + $wlog + '" 2>&1'
   $p = Start-Process -FilePath 'cmd.exe' -ArgumentList $arg -WorkingDirectory $rad -WindowStyle Hidden -PassThru

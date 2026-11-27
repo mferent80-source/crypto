@@ -99,7 +99,14 @@ var ScorSezon = (function () {
     var n = 0, fel = null;
     for (var i = sezon.length - 1; i >= 0; i--) { var f = sezon[i].rezultat > 0 ? "w" : sezon[i].rezultat < 0 ? "l" : null; if (!f) continue; if (!fel) fel = f; if (f !== fel) break; n++; }   // v100.221: zeroul e sărit, nu rupe seria
     s.serie = { n: n, fel: fel };
-    s.pauza = fel === "l" && n >= ob.serie;
+    // v100.396 (I-953, auditul 26.11): pauza are o ieșire clară - ține până la miezul nopții (ora României) de după pierderea care a făcut seria.
+    // Înainte se rupea doar printr-un bot pe plus, deci doar pornind unul contra sfatului (o pauză fără sfârșit ajunge ignorată). A doua zi seria
+    // rămâne numărată: încă o pierdere ⇒ pauza din nou, pe ziua aceea. `serieLunga` = seria a atins pragul (pauza de azi sau una încheiată).
+    var ultPierd = null; for (var j = sezon.length - 1; j >= 0; j--) if (sezon[j].rezultat < 0) { ultPierd = sezon[j].inchis; break; }
+    s.serieLunga = fel === "l" && n >= ob.serie;
+    s.pauza = s.serieLunga && ultPierd !== null && startulZilei(ultPierd) === startulZilei(t);
+    s.pauzaPana = s.pauza ? startulZilei(startulZilei(t) + 36 * 3600000) : null;
+    s.pauzaIncheiata = s.serieLunga && !s.pauza;
     s.suficient = s.n >= MIN;
     s.nivel = s.pauza ? "rau" : s.rata === null || !s.suficient ? "fara" : s.rata >= ob.rata && s.net !== null && !(s.net < 0) ? "bine" : s.rata >= ob.rata - 0.15 ? "atentie" : "rau";   // v100.222 (I-724): rata peste țintă cu net pe minus nu e verde
     s.start = c.start; s.obiectiv = ob; s.acum = t; s.oprit = c.oprit; s.dupaOprire = dupaOprire; s.piata = c.piata; s.moneda = P.moneda;
@@ -152,7 +159,7 @@ var ScorSezon = (function () {
     o = o || {}; var id = String(o.id || "scor"), ob = s.obiectiv, se = s.serie, P = PIETE[piataDin(s.piata)], M = P.moneda, fel = P.fel, Um = function (v) { return U(v, M); };
     var serieTxt = se.n === 0 ? "—" : se.n + (se.fel === "w" ? " pe plus" : " pe minus");
     var serieCls = se.fel === "w" ? "good" : s.pauza ? "bad" : se.fel === "l" ? "neutral" : "";
-    var serieSub = s.pauza ? "PAUZĂ: " + cate(ob.serie, "pierdere", "pierderi") + " la rând - nu porni alt " + fel[0] + " azi" : se.fel === "l" ? (ob.serie - se.n === 1 ? "încă una și e pauză" : "la " + ob.serie + " la rând e pauză") : se.fel === "w" ? "ține ritmul" : "primul " + P.felInchis[0] + " pornește seria";
+    var serieSub = s.pauza ? "PAUZĂ: " + cate(ob.serie, "pierdere", "pierderi") + " la rând - nu porni alt " + fel[0] + " azi (până la miezul nopții)" : s.pauzaIncheiata ? "pauza s-a încheiat la miezul nopții; încă o pierdere și e pauză din nou" : se.fel === "l" ? (ob.serie - se.n === 1 ? "încă una și e pauză" : "la " + ob.serie + " la rând e pauză") : se.fel === "w" ? "ține ritmul" : "primul " + P.felInchis[0] + " pornește seria";
     var subN = s.n === 0 ? "niciun " + P.felInchis[0] + " încă" : !s.suficient ? "sub 10: încă nu înseamnă nimic" : (s.piata === "t212" ? "destule ca să conteze" : "destui boți ca să conteze");
     // v100.306 (I-837): „Pe plus” / „Pe minus”, nu Win / Loss. (I-826) raport = câștigul mediu ÷ pierderea medie, deci o pierdere = 1 ÷ raport
     // câștiguri (până la v100.305 scria raportul însuși: „0,3” în loc de „3,0”)

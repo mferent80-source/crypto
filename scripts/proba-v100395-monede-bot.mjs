@@ -264,7 +264,7 @@ await test("3d. Sugestii: fișa unui rând „mbot” - celulele, regula cu prag
   assert.match(f.dovada[0], /^Direcția probabilă: pe istoric, în situația asta/); assert.match(f.dovada[1], /NEDOVEDITE/);
   assert.deepEqual(f.cele.map((x) => x.et), ["Direcția acum", "Direcția probabilă, 7 z", "14 zile", "3 zile", "Pe zi", "Volum 24 h", "Open interest", "Funding", "PPST 1h", "Spread"]);
   assert.match(f.regula, /volum ≥ 100 M \$/); assert.match(f.regula, /cel mult 5× OI-ul/); assert.match(f.regula, /cel puțin 8% pe zi/);
-  assert.match(f.dovada[2], /Doar Short: 3 zile judecate, \+1,2% față de media monedelor citite, la 7 zile, pe plus în 67% din zile/); assert.match(f.dovada[2], /Doar Long: nicio zi judecată încă/);
+  assert.match(f.dovada[2], /Doar Short: 3 zile judecate \(0 ferestre independente\), \+1,2% față de media monedelor citite, la 7 zile, pe plus în 67% din zile/);   /* v100.396: + ferestrele independente; revizia valului 4: fără „din 26” (urmărirea n-are verdict) */ assert.match(f.dovada[2], /Doar Long: nicio zi judecată încă/);
   assert.match(f.actNota, /nu duce la Poartă și nu dă o sumă/); assert.equal(f.actiuni[0].act, "gridDeschideMonedaDir('ZEC','short')");
 });
 await test("3e. pagina încarcă /lib/monede-bot.js (înaintea Sugestiilor și a app.js), sw.js îl ține; Sugestii cere action=monedeBot; Tabloul pune rândul după lățimea monedei", () => {
@@ -279,10 +279,11 @@ await test("3e. pagina încarcă /lib/monede-bot.js (înaintea Sugestiilor și a
 });
 await test("V. versiunea v100.395 (index ×4, sw, versiune.js, package + lanț după v100.394, BUILD_INFO), colectorul v101.214", () => {
   const pk = JSON.parse(citeste("package.json")), bi = JSON.parse(citeste("BUILD_INFO.json"));
-  assert.equal(pk.version, "100.395.0"); assert.equal(bi.version, "v100.395"); assert.ok(bi.li395 && bi.li395.length > 100);
-  assert.ok((citeste("public", "index.html").match(/v100\.395/g) || []).length >= 4); assert.match(citeste("public", "sw.js"), /crypto-radar-v100-395/); assert.match(citeste("functions", "_shared", "versiune.js"), /"v100\.395"/);
+  /* v100.396: „de la 395 încolo” (versiunea merge mai departe; după ea în lanț vine proba v100.396) */
+  assert.ok(+(/^100\.(\d+)\.0$/.exec(pk.version) || [])[1] >= 395); assert.ok(+(/^v100\.(\d+)$/.exec(bi.version) || [])[1] >= 395); assert.ok(bi.li395 && bi.li395.length > 100);
+  assert.ok((citeste("public", "index.html").match(/v100\.(\d+)/g) || []).filter((v) => +v.slice(5) >= 395).length >= 4); assert.ok(+(/crypto-radar-v100-(\d+)/.exec(citeste("public", "sw.js")) || [])[1] >= 395); assert.ok(+(/"v100\.(\d+)"/.exec(citeste("functions", "_shared", "versiune.js")) || [])[1] >= 395);
   assert.match(pk.scripts.test, /npm run test:v100394 && npm run test:v100395/); assert.equal(pk.scripts["test:v100395"], "node scripts/proba-v100395-monede-bot.mjs");
-  assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.214"/);
+  assert.ok(+(/const VERSIUNE_COLECTOR = "v101\.(\d+)"/.exec(citeste("scripts", "colector.mjs")) || [])[1] >= 214);
 });
 console.log(`\nproba v100.395 (monedele de bot direcțional): ${teste - picate} / ${teste}`);
 process.exit(picate ? 1 : 0);

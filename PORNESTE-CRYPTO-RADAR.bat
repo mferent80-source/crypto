@@ -224,6 +224,8 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+rem v100.396 (I-954): parola aplicatiei sub 24 de semne (sau lipsa) - una noua de 40, scrisa si in data\parola-noua.txt (o tastezi o data pe telefon si pe PC)
+call node scripts\parola-noua.mjs .dev.vars
 call npx --yes wrangler@4.137.0 dev --config radar-local.toml --env-file .dev.vars --no-bundle --port 8788 --ip 127.0.0.1 --persist-to "%CD%\.wrangler\state" --compatibility-date=2026-01-01
 
 echo.

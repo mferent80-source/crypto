@@ -44,8 +44,13 @@ var ContIntreg = (function () {
   }
   // un bot Pionex (forma din /api/bot-orders): expunerea = poziția REALĂ × prețul, cu semnul direcției; valoarea = suma pusă + profitul
   function dinBot(b, leiPe) {
-    if (!b || !b.activ) return null;
+    /* revizia 27.11 (🟠): și botul de SEMNAL pornit (activ:false, ruleaza:true) - banii lui stau în bot, nu în soldul liber; fără el, pornirea unui
+       bot de semnal ieșea „pierdere” în frâna pe tot contul (4 × 60 USDT ⇒ −1.056 lei „azi”), iar poziția lui lipsea din risc */
+    var semnal = !!(b && b.tip === "semnal" && b.ruleaza === true);
+    if (!b || !(b.activ || semnal)) return null;
     var pret = nr(b.pretCurent), poz = nr(b.pozitie), inv = nr(b.investit), pt = nr(b.profitTotal), dir = String(b.directie || "").toLowerCase();
+    /* profitul Pionex al botului de semnal e doar REALIZAT (văzut pe viu, 27.11) ⇒ + nerealizatul poziției: cantitate × (preț − intrare) × direcție */
+    if (semnal && pt !== null && poz && pret !== null && nr(b.pozitieBani) > 0) { var e0 = Math.abs(nr(b.pozitieBani) / poz); if (e0 > pret / 2 && e0 < pret * 2) pt += Math.abs(poz) * (pret - e0) * (dir === "short" ? -1 : 1); }
     var semn = dir === "short" ? -1 : dir === "long" ? 1 : (poz !== null && poz < 0 ? -1 : 1);
     var notUsd = pret !== null && poz !== null ? semn * Math.abs(poz) * pret : null;
     var baza = String(b.baza || "").replace(/\.PERP$/, "");
@@ -80,6 +85,12 @@ var ContIntreg = (function () {
     return { pionex: p, t212: t, salt: s, total: tot, complet: !partiLipsa.length, lipsa: partiLipsa };
   }
 
+  // v100.396 (I-945, auditul 26.11 🔴): riscul pe o zi după care se judecă frâna de 4% - ACELAȘI pe toate paginile (Acasă, Contul întreg, poza):
+  // cel pe agitația de acum (riscAcum), cel vechi (250 de zile egale) doar ca rezervă. Înainte Acasă citea cel vechi și Contul întreg pe cel de acum ⇒
+  // Acasă putea invita „aș porni” cât Contul întreg spunea „aș reduce”.
+  function riscZi(r) { var a = r && r.riscAcum && r.riscAcum.acum, rs = r && r.risc || {}; return a && a.var95 != null ? { var95: a.var95, es95: a.es95, var99: a.var99, es99: a.es99, acum: true } : { var95: rs.var95, es95: rs.es95, var99: rs.var99, es99: rs.es99, acum: false }; }
+  // părțile contului care LIPSESC din valoare (T212 / Pionex / Salt necitite la tură): cu ele lipsă, totalul e mai mic și riscul ÷ total ar ieși umflat
+  function lipsaValoare(r) { var v = r && r.valoare; return v && v.complet === false ? (Array.isArray(v.lipsa) && v.lipsa.length ? v.lipsa.slice(0, 4).map(String) : ["o parte a contului"]) : []; }
   // ---------------- 2. riscul pe o zi (simulare istorică) ----------------
   // randamentele zilnice dintr-o serie de bare [{t, c}] ⇒ { "AAAA-LL-ZZ": r }
   function randamente(bare) {
@@ -618,7 +629,110 @@ var ContIntreg = (function () {
   // v100.370 (ideea 2): proba riscului pe zilele REALE ale contului (cont:zile): pragul salvat în ziua t față de schimbarea valorii până la
   // citirea următoare. Regula, scrisă ÎNAINTE de date: verdictul (Kupiec) abia de la 250 de zile de bursă judecate - sub 60 de zile nici o rată
   // reală de două ori mai mare nu s-ar vedea; până atunci doar numărătoarea. Rândul scris la prima citire a zilei z (noaptea) ține închiderea
-  // de ieri, deci perechea rând(z) → rând(z+1) e ziua de bursă z: weekendurile nu se numără. Schimbarea include depunerile și retragerile.
+  // de ieri, deci perechea rând(z) → rând(z+1) e ziua de bursă z: weekendurile nu se numără. Schimbarea e fără depunerile T212 când ambele
+  // rânduri au ppl + result (v100.396, I-947); la rândurile vechi le include (s.faraDepuneri numără perechile curățate).
+  // v100.396 (I-947, auditul 26.11): depunerile / retragerile T212 scoase din schimbare. T212 dă `ppl` (nerealizat) și `result` (realizat):
+  // total − ppl − result = banii puși net (+ dividende, dobânda), deci fluxul dintre două citiri = Δtotal_T212 − Δ(ppl + result). Pe viu, 27.11:
+  // total 22.274 lei, ppl −9.294, result 11.371 ⇒ ~20.197 lei puși. Dividendele ies și ele din câștig (prudent, pentru frână). Rândurile vechi
+  // (fără t212Rez) ⇒ fluxul nu se știe ⇒ null (nu „fără depuneri” ghicit). a, b = { valoare, t212, t212Rez } (rânduri cont:zile sau valoarea de acum).
+  function fluxT212(a, b) { var t0 = nr(a && a.t212), t1 = nr(b && b.t212), r0 = nr(a && a.t212Rez), r1 = nr(b && b.t212Rez); return t0 === null || t1 === null || r0 === null || r1 === null ? null : (t1 - t0) - (r1 - r0); }
+  // v100.396 (I-959): fluxul dintre două citiri din ISTORICUL tranzacțiilor T212 (depuneri / retrageri / transferuri, colectorul o dată pe zi), pentru
+  // rândurile vechi fără ppl + result: suma lor cu ora în (t0, t1]. tr = { pana (cea mai veche oră acoperită), items: [{ t, s }] }; null = nu se știe
+  // (lista lipsă sau nu acoperă t0). Dividendele și dobânda NU intră aici (sunt câștig), spre deosebire de calea ppl + result (acolo ies din câștig).
+  /* revizia valului 4 (27.11, 🟠): acoperirea se cere la AMBELE capete - istoricul citit înaintea lui t1 (tr.la < t1) nu vede o retragere făcută după
+     ⇒ ar ieși pierdere și ar trage frâna pe 7 zile (o depunere ar ieși câștig și ar ascunde o pierdere) */
+  function fluxDinTranzactii(tr, t0, t1) {
+    if (!tr || !Array.isArray(tr.items) || !(nr(t0) > 0) || !(nr(t1) > nr(t0)) || !(nr(tr.pana) > 0) || nr(tr.pana) > nr(t0) || !(nr(tr.la) >= nr(t1))) return null;
+    var s = 0; tr.items.forEach(function (x) { var t = nr(x && x.t), v = nr(x && x.s); if (t !== null && v !== null && t > t0 && t <= t1) s += v; }); return s;
+  }
+  function oraRand(r) { return nr(r && (r.citit || r.la)); }
+  /* revizia valului 4 (27.11, I-969): istoricul tranzacțiilor ÎNTÂI, unde acoperă intervalul - el are doar banii mutați de-adevăratelea, deci comisionul
+     de conversie T212 (pe fiecare cumpărare / vânzare) rămâne pierdere; calea ppl + result îl lua drept „bani retrași” (result nu-l scade) ⇒ frâna nu-l
+     vedea. ppl + result rămâne rezerva (istoricul picat / necitit), cu `din` spus. Dividendele și dobânda sunt câștig pe calea istoricului. */
+  function schimbareFaraDepuneri(a, b, tr) {
+    var v0 = nr(a && a.valoare), v1 = nr(b && b.valoare), ft = tr ? fluxDinTranzactii(tr, oraRand(a), oraRand(b)) : null, f = ft, din = "tranzactii";
+    if (f === null) { f = fluxT212(a, b); din = "ppl+result"; }
+    return v0 === null || v1 === null || f === null ? null : { lei: v1 - v0 - f, flux: f, pct: v0 > 0 ? (v1 - v0 - f) / v0 : null, din: din };
+  }
+  // frâna pe tot contul: azi (față de rândul de la prima citire a zilei) și pe 7 zile (rândul de acum 7 zile, cel mult 10), fără depunerile T212.
+  // acum = { valoare, t212, t212Rez, complet }; zi = "AAAA-LL-ZZ" (ziua României a citirii). O bucată lipsă (complet false) ⇒ nu se judecă.
+  var PRAG_CONT = { zi: 0.03, sapt: 0.06 };   /* prag ALES (de prudență, scris înainte, ca 4% pe zi la risc): −3% într-o zi, −6% pe 7 zile */
+  function castigCont(zile, acum, zi, tr) {   /* tr (v100.396, I-959): istoricul tranzacțiilor T212 - rândurile vechi fără ppl + result se curăță cu el */
+    var l = (zile || []).filter(function (x) { return x && /^\d{4}-\d{2}-\d{2}$/.test(String(x.z)) && nr(x.valoare) > 0; }).sort(function (a, b) { return a.z < b.z ? -1 : 1; });
+    if (!acum || acum.complet === false || !(nr(acum.valoare) > 0) || !/^\d{4}-\d{2}-\d{2}$/.test(String(zi || ""))) return null;
+    var inapoi = function (k) { var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(zi); return new Date(Date.UTC(+m[1], +m[2] - 1, +m[3] - k)).toISOString().slice(0, 10); };
+    var unul = function (r) { if (!r || r.complet === false) return null; var s = schimbareFaraDepuneri(r, acum, tr); return s ? { lei: Math.round(s.lei * 100) / 100, pct: s.pct, flux: Math.round(s.flux * 100) / 100, de: r.z, citit: nr(r.citit), din: s.din } : { lei: null, de: r.z, motiv: "rândul de pornire n-are ppl + result, iar istoricul depunerilor T212 nu-l acoperă" }; };
+    var rZi = l.filter(function (x) { return x.z === zi; }).pop() || null, s7 = inapoi(7), s10 = inapoi(10), rS = l.filter(function (x) { return x.z <= s7 && x.z >= s10; }).pop() || null;
+    return { zi: unul(rZi), sapt: unul(rS), prag: PRAG_CONT };
+  }
+  // v100.396 (I-948, auditul 26.11): „cât risc mai încape” la pornirea unui bot - riscul pe o zi al contului CU botul candidat, pe aceeași metodă ca
+  // cifra de pe Contul întreg (riscAcum pe P&L-ul zilnic al pozițiilor de acum, rap.risc.pnl), cu P&L-ul candidatului adăugat zi de zi (direcție ×
+  // expunere × randamentul monedei), deci și corelația lui cu ce ai deja. Cifra de acum (riscZi) e scalată cu raportul „cu / fără” pe zilele comune.
+  // Expunerea = suma × levier (la maxim: gridul ține de obicei mai puțin, deci cifra e acoperitoare). Doar informație - nu împarte bani (nu e I-416).
+  // rc = { "AAAA-LL-ZZ": randamentul zilei } al monedei (ContIntreg.randamente pe barele de o zi); o = { expunereLei, dir, prag (0,04) }.
+  function riscCuCandidat(rap, rc, o) {
+    o = o || {}; var dir = o.dir === "short" ? -1 : o.dir === "long" ? 1 : 0, E = nr(o.expunereLei), tot = nr(rap && rap.valoare && rap.valoare.total), v0 = nr(riscZi(rap).var95), prag = nr(o.prag) > 0 ? nr(o.prag) : 0.04;
+    var P = rap && rap.risc && Array.isArray(rap.risc.pnl) ? rap.risc.pnl : [];
+    if (!dir || !(E > 0) || !(tot > 0) || !(v0 > 0) || !rc) return null;
+    /* ultimele 500 de zile comune: riscAcum cere ≥ 290 (250 + încălzirea), iar istoria de 10 ani ar face ~20 de socoteli prea lente pe telefon */
+    var z = P.filter(function (x) { return Array.isArray(x) && isFinite(x[1]) && x[1] !== null && isFinite(rc[x[0]]); }).slice(-500);
+    if (z.length < 60) return { n: z.length, putine: true };
+    var W = 250, risc = function (k) {
+      var ser = z.map(function (x) { return { z: x[0], pnl: x[1] + dir * k * rc[x[0]] }; });
+      var a = ser.length >= W + 40 ? riscAcum(ser, { B: 20 }) : null; if (a && a.acum && a.acum.var95 > 0) return a.acum.var95;
+      var h = varEs(ser.slice(-W), 0.95); return h ? h.var : null;
+    };
+    var r0 = risc(0); if (!(r0 > 0)) return { n: z.length, putine: true };
+    var lim = prag * tot, f = function (k) { var r = risc(k); return r > 0 ? v0 * r / r0 : Infinity; }, v1 = f(E), lo, hi, incape;
+    if (v1 <= lim) { lo = E; hi = 20 * E; if (f(hi) <= lim) incape = hi; }
+    else { lo = 0; hi = E; if (f(0) > lim) incape = 0; }
+    if (incape === undefined) { for (var i = 0; i < 18; i++) { var m = (lo + hi) / 2; if (f(m) <= lim) lo = m; else hi = m; } incape = lo; }
+    return { n: z.length, v0: v0, v1: v1, pct0: v0 / tot, pct1: v1 / tot, prag: prag, incapeLei: incape, pesteDeja: v0 > lim, metoda: z.length >= W + 40 ? "acum" : "istoric", putine: z.length < 120 };
+  }
+  // v100.396 (I-957, el 27.11: „fa tot plus idei”): „ce tai ca să cobori sub 4%” - DOAR informație (nu împarte și nu refuză; nu e I-416, respins).
+  // Pe zilele comune ale P&L-ului contului (rap.risc.pnl) și ale seriilor pozițiilor (rap.serii, ultimele ~120 de zile): P&L-ul fără o parte din
+  // poziția i = P&L − parte × lei_i × randamentul ei; riscul pe o zi (simulare istorică, 95%) scalat la cifra de acum (riscZi) cu raportul „după /
+  // înainte”, ca la riscCuCandidat. Pașii: câte o jumătate din poziția care scade riscul cel mai mult pe leu tăiat, până sub prag (cel mult 8 pași).
+  // { v0, pct0, prag, pasi: [{ cheie, nume, parte (0,5 / 1), lei, v, pct }], ajunge, n } | null (fără serii / zile prea puține)
+  function planSub4(rap, o) {
+    o = o || {}; var prag = nr(o.prag) > 0 ? nr(o.prag) : 0.04, tot = nr(rap && rap.valoare && rap.valoare.total), v0 = nr(riscZi(rap).var95);
+    /* revizia valului 4 (27.11): cu o parte a contului necitită, totalul e mai mic și procentul umflat ⇒ planul nu se socotește (ca frâna de pe Acasă) */
+    var lv = lipsaValoare(rap); if (lv.length) return { lipsa: lv };
+    var P = rap && rap.risc && Array.isArray(rap.risc.pnl) ? rap.risc.pnl : [], S = rap && rap.serii || {}, FX = rap && rap.fx || {};
+    /* revizia (🟠): doar pozițiile chiar adunate în riscul pe o zi (risc.folosite) și nescoase din cifra de acum - una scoasă (istorie scurtă) n-are ce
+       scădea din P&L, iar seria ei scurtă tăia zilele comune ale celorlalte (un bot pe o monedă nouă făcea să dispară planul) */
+    var fol = rap && rap.risc && Array.isArray(rap.risc.folosite) ? rap.risc.folosite : null, scA = {};
+    (rap && rap.riscAcum && Array.isArray(rap.riscAcum.scoase) ? rap.riscAcum.scoase : []).forEach(function (x) { if (x && x.nume) scA[x.nume] = 1; });
+    var E = (rap && Array.isArray(rap.expuneri) ? rap.expuneri : []).filter(function (x) { return x && x.cheie && nr(x.lei) && S[x.cheie] && (!fol || fol.indexOf(x.cheie) >= 0) && !scA[x.nume]; });
+    if (!(tot > 0) || !(v0 > 0) || !E.length) return null;
+    var Z = P.filter(function (x) { return Array.isArray(x) && isFinite(x[1]) && x[1] !== null && E.every(function (e) { return isFinite(S[e.cheie][x[0]]); }); });
+    if (Z.length < 60) return { n: Z.length, putine: true };
+    /* ce scoate tăierea întreagă a poziției din P&L-ul zilei, ca în pnlIstoric: (1) sâmbăta și duminica (boții) intră în lunea care urmează (revizia 🟠:
+       altfel după tăiere rămâneau weekendurile și planul spunea „nici tăind tot”); (2) acțiunea vândută lasă lei ⇒ pleacă și partea ei valutară,
+       (1 + r)(1 + rf) − 1; la crypto banii rămân în USDT ⇒ cursul rămâne (botul: doar marja lui îl avea oricum) */
+    var ziI = function (z, k) { return new Date(Date.parse(z + "T12:00:00Z") - k * 864e5).toISOString().slice(0, 10); };
+    var mon = function (e) { return e.moneda === "USDT" ? "USD" : e.moneda === "GBX" ? "GBP" : e.moneda; };
+    var inP = {}; P.forEach(function (x) { if (Array.isArray(x)) inP[x[0]] = 1; });   /* o zi de weekend deja în pnl se socotește acolo, nu a doua oară luni */
+    var C = E.map(function (e) {
+      var s = S[e.cheie], fx = FX[mon(e)] || {}, L = nr(e.lei), cr = e.clasa === "crypto" || e.tip === "bot";
+      var una = function (z) { var r = nr(s[z]); if (r === null) return 0; var rf = cr || e.moneda === "RON" ? 0 : nr(fx[z]) || 0; return e.tip === "bot" ? L * r : cr ? L * r * (1 + (nr(fx[z]) || 0)) : L * ((1 + r) * (1 + rf) - 1); };
+      return Z.map(function (x) { var t = una(x[0]); for (var k = 1; k <= 3; k++) { var zz = ziI(x[0], k), w = new Date(zz + "T12:00:00Z").getUTCDay(); if (w !== 0 && w !== 6) break; if (!inP[zz]) t += una(zz); } return t; });
+    });
+    var risc = function (f) { var ser = Z.map(function (x, j) { var s = x[1]; E.forEach(function (e, i) { if (f[i]) s -= f[i] * C[i][j]; }); return s; }), h = varEs(ser, 0.95); return h ? h.var : null; };
+    var f = E.map(function () { return 0; }), r0 = risc(f); if (!(r0 > 0)) return { n: Z.length, putine: true };
+    var lim = prag * tot, v = v0, pasi = [];
+    /* pe viu, 27.11: 8 poziții T212, 9,7% ⇒ după 8 jumătăți abia 5,4% ⇒ pașii merg până la toate pozițiile (2 jumătăți fiecare) */
+    for (var pas = 0; pas < 2 * E.length && v > lim; pas++) {
+      var best = null;
+      E.forEach(function (e, i) { if (f[i] >= 1) return; var g = f.slice(); g[i] = Math.min(1, f[i] + 0.5); var r = risc(g); if (r === null) return; var vv = v0 * r / r0, cat = (g[i] - f[i]) * Math.abs(nr(e.lei)), castig = (v - vv) / cat; if (vv < v && (!best || castig > best.castig)) best = { i: i, g: g, vv: vv, castig: castig, cat: cat }; });
+      if (!best) break;
+      f = best.g; v = best.vv; var e = E[best.i];
+      pasi.push({ cheie: e.cheie, nume: e.nume || e.cheie, parte: f[best.i], lei: best.cat, v: v, pct: v / tot });
+    }
+    // sumarul pe poziții, în ordinea primului pas: cât din poziție (jumătate / toată) și câți lei
+    var peP = []; pasi.forEach(function (p) { var x = peP.filter(function (y) { return y.cheie === p.cheie; })[0]; if (!x) peP.push(x = { cheie: p.cheie, nume: p.nume, parte: 0, lei: 0 }); x.parte = p.parte; x.lei += p.lei; });
+    return { v0: v0, pct0: v0 / tot, prag: prag, pasi: pasi, pePozitii: peP, ajunge: v <= lim, v: v, pct: v / tot, n: Z.length, toate: f.every(function (x) { return x >= 1; }) };
+  }
   function binomPeste(n, k, p) { if (k <= 0) return 1; var s = 0, c = 1; for (var i = 0; i < k; i++) { if (i) c = c * (n - i + 1) / i; s += c * Math.pow(p, i) * Math.pow(1 - p, n - i); } return Math.max(0, 1 - s); }
   function probaReala(zile, o) {
     o = o || {}; var minim = o.minim || 250, l = (zile || []).filter(function (x) { return x && /^\d{4}-\d{2}-\d{2}$/.test(String(x.z)) && nr(x.valoare) > 0; }).slice().sort(function (a, b) { return a.z < b.z ? -1 : a.z > b.z ? 1 : 0; });
@@ -629,7 +743,8 @@ var ContIntreg = (function () {
       // o sursă care se golește sau apare din zero (Salt vândut, bani mutați) e o mutare, nu o zi de piață: nu se judecă
       var mutat = ["pionex", "t212", "salt"].some(function (q) { var p0 = nr(a[q]), p1 = nr(b[q]); return p0 !== null && p1 !== null && ((p0 > 0 && p1 === 0) || (p0 === 0 && p1 > 0)); });
       if (a.complet === false || b.complet === false || mutat || !(v > 0) || (Date.parse(b.z) - Date.parse(a.z)) / ZI > 4) { s.sarite++; if (mutat) s.mutari++; continue; }
-      var d = b.valoare - a.valoare; s.n++; if (!s.de) s.de = a.z; s.pana = a.z;
+      /* v100.396 (I-947): fără depunerile T212 când ambele rânduri au ppl + result; altfel schimbarea întreagă, ca înainte (numărată) */
+      var sf = schimbareFaraDepuneri(a, b, o.tranzactii), d = sf ? sf.lei : b.valoare - a.valoare; if (sf) s.faraDepuneri = (s.faraDepuneri || 0) + 1; s.n++;   /* + istoricul T212 (I-959) */ if (!s.de) s.de = a.z; s.pana = a.z;
       if (d < -v) { s.x++; s.depasiri.push({ z: a.z, lei: d, prag: v }); }
       if (va > 0) { s.na++; if (d < -va) s.xa++; }
     }
@@ -658,7 +773,7 @@ var ContIntreg = (function () {
     return { expunere: expunere, acum: serie[serie.length - 1][1], max: cea, z5: rau(5), z20: rau(20), serie: serie.filter(function (x, i) { return i % (o.rar || 1) === 0 || i === serie.length - 1; }) };
   }
 
-  return { ZI: ZI, CRIZE: CRIZE, executie: executie, kupiec: kupiec, riscAcum: riscAcum, baniBoti: baniBoti, reperLei: reperLei, interval: interval, pariuriFerestre: pariuriFerestre, scadereCarte: scadereCarte, istoriaLunga: istoriaLunga, uneSerii: uneSerii, probaReala: probaReala, binomPeste: binomPeste, m32: m32, setMonede: setMonede, extremFereastra: extremFereastra, monedaTicker: monedaTicker, inLei: inLei, dinBot: dinBot, dinT212: dinT212, dinSalt: dinSalt, valoare: valoare,
+  return { riscZi: riscZi, lipsaValoare: lipsaValoare, fluxT212: fluxT212, fluxDinTranzactii: fluxDinTranzactii, schimbareFaraDepuneri: schimbareFaraDepuneri, castigCont: castigCont, PRAG_CONT: PRAG_CONT, riscCuCandidat: riscCuCandidat, planSub4: planSub4, ZI: ZI, CRIZE: CRIZE, executie: executie, kupiec: kupiec, riscAcum: riscAcum, baniBoti: baniBoti, reperLei: reperLei, interval: interval, pariuriFerestre: pariuriFerestre, scadereCarte: scadereCarte, istoriaLunga: istoriaLunga, uneSerii: uneSerii, probaReala: probaReala, binomPeste: binomPeste, m32: m32, setMonede: setMonede, extremFereastra: extremFereastra, monedaTicker: monedaTicker, inLei: inLei, dinBot: dinBot, dinT212: dinT212, dinSalt: dinSalt, valoare: valoare,
     randamente: randamente, pnlIstoric: pnlIstoric, varEs: varEs, ziuaCeaMaiRea: cuDatele, corel: corel, corelatii: corelatii, diversificare: diversificare,
     randFereastra: randFereastra, beta: beta, pnlBot: pnlBot, scenariu: scenariu, stres: stres,
     reconciliereT212: reconciliereT212, reconciliereArhiva: reconciliereArhiva, reconciliereUrmarire: reconciliereUrmarire,

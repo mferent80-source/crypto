@@ -196,10 +196,22 @@ var SemnaleBot = (function () {
         }
         // v100.339 (auditul din 13.11): protecția de partea greșită a prețului de ACUM (prețul a trecut deja de marginea de pierdere, iar fișa și
         // profilul monedei n-au sosit) s-ar declanșa pe loc ⇒ niciun preț propus și nicio cifră de bani pe el; se spune faptul
+        // v100.396 (I-942, auditul 26.11 🔴): protecția propusă (fișa / o grilă dincolo de margine / profilul monedei) NU trece de lichidare - aceeași
+        // gardă ca GridSim.dincoloLich (marja 2%): se strânge înaintea lichidării; dacă între margine și lichidare nu mai e loc, nu se propune niciun preț
+        // și se spune de ce (înainte cartela putea spune „aș pune stopul la X” cu X dincolo de lichidare: un stop care nu se declanșează niciodată)
+        var notaLich = "";
+        if (protectie !== null && protectie !== undefined && lqB !== null && lqB > 0 && p !== null) {
+          var LQM = typeof GridSim !== "undefined" && GridSim.LQ_MARJA > 0 ? GridSim.LQ_MARJA : 0.02, strans = dir === "short" ? lqB * (1 - LQM) : lqB * (1 + LQM);
+          if (dir === "short" ? protectie >= strans : protectie <= strans) {
+            var inGridS = dir === "short" ? sus !== null && strans <= sus : jos !== null && strans >= jos, deParteaBuna = dir === "short" ? strans > p : strans < p;
+            if (!inGridS && deParteaBuna) { protectie = strans; sursaStop = "strâns înaintea lichidării (" + fmtPret(lqB) + ", cu " + Math.round(LQM * 100) + "% marjă): dincolo de ea stopul nu s-ar mai declanșa"; }
+            else { protectie = null; sursaStop = null; notaLich = !deParteaBuna ? "Lichidarea (" + fmtPret(lqB) + ") e la mai puțin de " + Math.round(LQM * 100) + "% de prețul de acum: nu mai încape un stop înaintea ei. Aș adăuga marjă sau aș închide." : "Lichidarea (" + fmtPret(lqB) + ") e chiar lângă marginea gridului: între ele nu mai încape un stop. Aș adăuga marjă sau aș scădea levierul."; }   /* revizia 27.11: motivul real (prețul, nu marginea) */
+          }
+        }
         protDepasita = protectie !== null && protectie !== undefined && (dir === "short" ? protectie <= p : protectie >= p);
         if (protDepasita) { protectie = null; sursaStop = null; }
         pretStop = protectie;   // v100.43 (I-467)
-        out.push({ cod: "stop", titlu: "Stopul", text: "Stopul tău: " + opTxt + ". " + zeroTxt() + (pzN ? ". " : ": un stop acolo n-are sens cât ești pe minus. ") + (protDepasita ? "Prețul a trecut deja de marginea gridului (" + fmtPret(dir === "short" ? sus : jos) + "): o protecție se pune doar " + (dir === "short" ? "peste" : "sub") + " prețul de acum și se închide pe minus." : "Protecția ar fi " + (dir === "short" ? "peste gridul de sus, la " : "sub gridul de jos, la ") + (protectie !== null ? fmtPret(protectie) : "o grilă în afara marginii") + ", dar se închide pe minus.") });
+        out.push({ cod: "stop", titlu: "Stopul", text: "Stopul tău: " + opTxt + ". " + zeroTxt() + (pzN ? ". " : ": un stop acolo n-are sens cât ești pe minus. ") + (notaLich ? notaLich : protDepasita ? "Prețul a trecut deja de marginea gridului (" + fmtPret(dir === "short" ? sus : jos) + "): o protecție se pune doar " + (dir === "short" ? "peste" : "sub") + " prețul de acum și se închide pe minus." : "Protecția ar fi " + (dir === "short" ? "peste gridul de sus, la " : "sub gridul de jos, la ") + (protectie !== null ? fmtPret(protectie) : "o grilă în afara marginii") + ", dar se închide pe minus.") });
       }
     } else out.push({ cod: "stop", titlu: "Stopul", text: neutru ? "Stopul tău: " + opTxt + ". Botul neutru cumpără sub preț și vinde peste: n-are un zero pe o singură parte, deci protecția stă la o grilă în afara intervalului, pe ambele părți." : "Stopul tău: " + opTxt + (faraPozB ? ". Botul n-are poziție acum, deci n-are un zero de socotit." : ". Zero-ul botului nu se poate socoti încă (lipsesc umplerile sau prețul).") });
     // 2) gridul
@@ -466,8 +478,14 @@ var SemnaleBot = (function () {
     var b = x.bot || {}, f = x.fisa || null, c = [], dist = nr(b.distantaLichidarePct), dir = String(b.directie || "").toLowerCase();
     // v100.40 (audit 30.09): lichidarea DEPASITA (distanta negativa) e IESI oricat de departe ar fi trecut - |dist| o facea „ȚINE” peste 15%
     // v100.61 (specul „sfaturi concise”): motiv = faptul cu cifra (≤ 60), faCe = o actiune la persoana I (≤ 110), deCe = de ce (≤ 160)
+    // v100.396 (I-950, auditul 26.11): distanța până la lichidare spusă și în mișcarea MONEDEI - împărțită la coborârea pe care moneda o depășește
+    // într-o zi din 4 (ProfilMoneda.pragStop, P75 pe 24 h): 8% e o zi și ceva pe un alt agitat, trei pe BTC. Pragurile 8% / 15% RĂMÂN până la
+    // calibrare (regula scrisă înainte, din spec: „ieși” sub 1×, „atenție” sub 2×, puse doar dacă pe boții închiși dau mai puține lichidări la
+    // același număr de ieșiri; arhiva de azi nu ține drumul distanței, deci proba nu se poate face încă). Aici doar se spune.
+    var psZ = x.pragStop && nr(x.pragStop.dist) > 0 ? nr(x.pragStop.dist) : null, inZile = psZ !== null && dist !== null && dist > 0 ? dist / 100 / psZ : null;
+    var zileTxt = inZile !== null ? "e ~" + TextRo.num(inZile, 1) + "× ziua proastă a monedei (" + TextRo.pct(psZ * 100) + ", depășită într-o zi din 4)" : "";
     if (b.lichidareDepasita === true || (dist !== null && dist < 0)) c.push({ nivel: "iesi", cod: "lichidare", motiv: "lichidarea estimată e depășită" + (dist !== null ? " cu " + TextRo.pct(Math.abs(dist)) : ""), faCe: "Aș închide ce a rămas, după ce verific botul în Pionex.", deCe: "Poziția poate fi deja lichidată sau pe marginea ei." });
-    else if (dist !== null && Math.abs(dist) < 8) c.push({ nivel: "iesi", cod: "lichidare", motiv: "lichidarea la " + TextRo.pct(Math.abs(dist)), faCe: "Aș adăuga marjă sau aș închide botul acum.", deCe: "Sub 8% nu mai e loc de răbdare." });
+    else if (dist !== null && Math.abs(dist) < 8) c.push({ nivel: "iesi", cod: "lichidare", motiv: "lichidarea la " + TextRo.pct(Math.abs(dist)), faCe: "Aș adăuga marjă sau aș închide botul acum.", deCe: "Sub 8% nu mai e loc de răbdare" + (zileTxt ? ": " + zileTxt : "") + "." });
     else if (dist !== null && Math.abs(dist) < 15) {
       // v100.60 (el, 01.10: „botul e pe creștere de minute bune și uite ce spune”): directia distantei fata de acum ~o ora (x.distInainte).
       // Se indeparteaza (+0,5 puncte) -> spus pe fata, nimic de facut acum; se apropie -> „s-a apropiat”; fara istoric -> „e la”
@@ -477,7 +495,7 @@ var SemnaleBot = (function () {
         // revizia 01.10 (I2): cand se indeparteaza nu are actiune proprie - „Ce aș face eu” vine de la urmatorul motiv (ex. pretul sub grid);
         // textul linistitor (faCeSlab) doar cand nu exista altul
         faCe: dep ? "" : "N-aș mări poziția; dacă scade sub 8%, aș adăuga marjă.", faCeSlab: dep ? "N-aș face nimic acum, doar n-aș adăuga poziție până trece de 15%." : "",
-        deCe: dep ? "" : "Cât mută marja lichidarea arată calculatorul „Dacă adaug marjă”." });
+        deCe: dep ? "" : zileTxt ? "Lichidarea " + zileTxt + "; cât o mută marja arată calculatorul „Dacă adaug marjă”." : "Cât mută marja lichidarea arată calculatorul „Dacă adaug marjă”." });
     }
     var pl = x.plan;
     if (pl && Array.isArray(pl.atins)) {

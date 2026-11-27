@@ -79,9 +79,12 @@
     l.forEach(function (x) { if (!isFinite(x.x)) return; var k = Math.floor(x.t / BLOC), b = bl[k] || (bl[k] = { s: 0, n: 0, t: k * BLOC }); b.s += x.x; b.n++; s += x.x; n++; if (x.x > 0) pe++; });
     var K = Object.keys(bl).sort(function (a, b) { return a - b; }), G = K.length, serie = K.map(function (k) { var b = bl[k]; return { t: b.t, m: b.s / b.n, n: b.n }; });
     if (n < minN || G < minB) return { n: n, blocuri: G, medie: null, lo: null, hi: null, pePlus: n ? pe / n : null, verdict: "prea-putine", serie: serie };
-    var m = s / n, ss = 0; K.forEach(function (k) { var b = bl[k]; ss += Math.pow(b.s - m * b.n, 2); });
-    var se = Math.sqrt(ss * G / (G - 1)) / n, tc = tCrit(G - 1), lo = m - tc * se, hi = m + tc * se;
-    return { n: n, blocuri: G, medie: m, lo: lo, hi: hi, pePlus: pe / n, verdict: lo > 0 ? "peste" : hi < 0 ? "sub" : "n-am-aflat", serie: serie };
+    var m = s / n, ss = 0, s1 = 0; K.forEach(function (k, i) { var b = bl[k], e = b.s - m * b.n; ss += e * e; var u = K[i + 1] !== undefined && Number(K[i + 1]) === Number(k) + 1 ? bl[K[i + 1]] : null; if (u) s1 += e * (u.s - m * u.n); });
+    // v100.396 (auditul 26.11 🟡): orizontul de 20 de ședințe (~28 de zile) ține cât un bloc ⇒ cazurile din coada unui bloc își au fereastra în blocul
+    // următor ⇒ blocurile VECINE se mișcă împreună și intervalul ieșea prea îngust. Corecția Newey-West pe un decalaj (Bartlett ½: γ0 + γ1), luată doar
+    // dacă lărgește (o corelație negativă întâmplătoare nu strânge intervalul).
+    var se = Math.sqrt(Math.max(ss, ss + s1) * G / (G - 1)) / n, tc = tCrit(G - 1), lo = m - tc * se, hi = m + tc * se;
+    return { n: n, blocuri: G, medie: m, lo: lo, hi: hi, pePlus: pe / n, verdict: lo > 0 ? "peste" : hi < 0 ? "sub" : "n-am-aflat", serie: serie, vecini: ss > 0 ? s1 / ss : null };
   }
   // serii = [{ ticker, puncte: [{ t, r, semnal }] }] (SugestiiActiuni.puncte; la revenire r = f, semnal = revine): fiecare semnal minus media
   // celorlalte instrumente din ACEEAȘI zi calendaristică (bursele au ore diferite ale barei) - reperul „o zi oarecare” lăuda zilele bune ale pieței

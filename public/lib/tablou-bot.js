@@ -2,6 +2,8 @@
 // Fara DOM, fara retea, fara localStorage - ca sa poata fi probat in Node.
 var TabloBot = (function () {
   // v100.75 (ideea 3): „1 bot”, „20 de boți”, „101 cazuri” - TextRo.cate; rezerva știe aceeași regulă (contextele fără TextRo)
+  // v100.396 (auditul 26.11): o zecimală cu virgulă („2,3%”, nu „2.3%”) - TextRo.num, cu rezerva lui
+  function zec1(x) { return typeof TextRo !== "undefined" && TextRo.num ? TextRo.num(x, 1) : (Math.round(Number(x) * 10) / 10).toFixed(1).replace(".", ","); }
   function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
   // "COTI.PERP" + "USDT" -> Pionex "COTI_USDT_PERP", Binance "COTIUSDT"
   // v100.13 (29.09, botul PUMPFUN fara preturi): real = tickerul Pionex trimis de /api/bot-orders (simbolPionex, din lista oficiala) -
@@ -434,8 +436,8 @@ var TabloBot = (function () {
 
     if (m.lichidare.valoare !== null && m.lichidare.valoare < 8) {
       var txtLichidare = m.lichidare.valoare < 0
-        ? "Prețul a trecut deja de pragul de lichidare cu " + Math.abs(m.lichidare.valoare).toFixed(1) + "%."
-        : "Mai sunt " + m.lichidare.valoare.toFixed(1) + "% până la lichidare.";
+        ? "Prețul a trecut deja de pragul de lichidare cu " + zec1(Math.abs(m.lichidare.valoare)) + "%."
+        : "Mai sunt " + zec1(m.lichidare.valoare) + "% până la lichidare.";
       return { nivel: "OPRESTE", titlu: "Ieși",
         ceFac: txtLichidare,
         declansator: d("lichidare", m.lichidare.valoare, 8) };
@@ -447,7 +449,7 @@ var TabloBot = (function () {
     // avertismentul de lichidare de la 8-15%.
     if (m.lichidare.valoare !== null && m.lichidare.valoare < 15) {
       return { nivel: "PAZESTE", titlu: "Lichidarea e aproape",
-        ceFac: "Mai sunt " + m.lichidare.valoare.toFixed(1) + "% până acolo.",
+        ceFac: "Mai sunt " + zec1(m.lichidare.valoare) + "% până acolo.",
         declansator: d("lichidare", m.lichidare.valoare, 15) };
     }
 
@@ -516,7 +518,7 @@ var TabloBot = (function () {
     if (m.varstaBotMin < 120) {
       return { nivel: "NEDOVEDIT",
         titlu: "Nu știu încă",
-        ceFac: "Botul are " + Math.round(m.varstaBotMin) + " de minute. Ritmul are nevoie de vreo 2 ore ca să însemne ceva.",
+        ceFac: "Botul are " + cate(Math.round(m.varstaBotMin), "minut", "minute") + ". Ritmul are nevoie de vreo 2 ore ca să însemne ceva.",   /* v100.396 (auditul 26.11): „5 minute”, nu „5 de minute” */
         declansator: d("varstaBot", Math.round(m.varstaBotMin), 120) };
     }
     if (m.lumanari < 48) {

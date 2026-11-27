@@ -100,7 +100,7 @@ await test("M2: calendarul pune Paris / Amsterdam / Milano / Elveția (litera mi
 });
 await test("M4–M7, M10, M11, M13 în cod: pauza după eșec, valoarea zilei la reușită, loturile de verdicte, cursorul pe pagină, plauzibilitatea crypto, locul releului, semnul corelației", () => {
   const tc = citeste("scripts", "lib", "tura-cont.mjs"), tv = citeste("scripts", "lib", "tura-verdicte.mjs"), tt = citeste("scripts", "lib", "tura-t212.mjs"), pv = citeste("functions", "api", "pret-viu.js"), te = citeste("public", "lib", "t212-ecran.js");
-  assert.match(tc, /acum - \(st\.esecLa \|\| 0\) < ORA/); assert.match(tc, /if \(okZ\) st\.ziValoare = z;/); assert.match(tc, /Math\.abs\(bl\[bl\.length - 1\]\.c \/ x\.pret - 1\) > 0\.25/);
+  assert.match(tc, /acum - \(st\.esecLa \|\| 0\) < ORA/); assert.match(tc, /if \(okZ(?: && dz\.marcheazaDupa)?\) st\.ziValoare = z;/);   /* v100.396: ziua marcată doar după o scriere reușită (deciziaZilei, probată în v100396) */ assert.match(tc, /Math\.abs\(bl\[bl\.length - 1\]\.c \/ x\.pret - 1\) > 0\.25/);
   assert.match(tv, /for \(let i = 0; i < noi\.length; i \+= 400\)/); assert.match(tt, /if \(d\.salveazaStare\) d\.salveazaStare\(st\);/);
   // audit 19.10: legatura spre Pionex trece acum prin cuTermen(fetch(...), 8000) - locul tot se ia INAINTE de ea
   assert.ok(pv.indexOf("deschise++;let rezervat=true") > 0 && pv.indexOf("deschise++;let rezervat=true") < pv.indexOf("await cuTermen(fetch(\"https://ws.pionex.com"));

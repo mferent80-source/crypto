@@ -178,13 +178,20 @@ async function poza(d, st, acum) {
   if (r.min < 540 || st.pozaZi === r.zi || !st.ult) return;
   // v95: si botii (suma totalurilor) + contul T212 -> Home: "ziua ta" (castig / pierdere fata de ieri dimineata)
   const bo = await incearca(d, "boti poza", () => d.cere("/api/bot-orders")), co = await incearca(d, "cont poza", () => d.cere("/api/t212?action=cont"));
-  const act = (bo && Array.isArray(bo.bots) ? bo.bots : []).filter((b) => b && b.activ !== false && Number.isFinite(Number(b.profitTotal)));
+  // v100.396 (auditul 26.11 🟡): boții sau contul T212 necitiți ⇒ poza NU se scrie (se reîncearcă la tura următoare, ziua rămâne nefăcută).
+  // Înainte se scria cu botiPeId {} ⇒ a doua zi „față de ieri dimineață” lua TOT profitul fiecărui bot drept câștigul zilei.
+  // Până la 13:00 (ora României) se așteaptă citirea bună; după, poza pleacă fără partea necitită (lipsă, nu zero).
+  const boOk = !!(bo && Array.isArray(bo.bots)), coOk = !!(co && co.cash);
+  if ((!boOk || !coOk) && r.min < 780) { d.jurnal("poza zilei: " + (!boOk ? "boții" : "contul T212") + " n-au venit, reîncerc la tura următoare"); return; }
+  const act = (boOk ? bo.bots : []).filter((b) => b && b.activ !== false && Number.isFinite(Number(b.profitTotal)));
   const ca = co && co.cash, eu = { botiTotal: act.length ? Math.round(act.reduce((s, b) => s + Number(b.profitTotal), 0) * 100) / 100 : null, t212Total: ca && Number.isFinite(Number(ca.total)) ? Number(ca.total) : null, t212Ppl: ca && Number.isFinite(Number(ca.ppl)) ? Number(ca.ppl) : null,
-    botiPeId: Object.fromEntries(act.map((b) => [String(b.id), Math.round(Number(b.profitTotal) * 100) / 100])) };   // v100.40: pe bot, pentru „față de ieri dimineață”
+    t212Rez: ca && Number.isFinite(Number(ca.ppl)) && Number.isFinite(Number(ca.result)) ? Math.round((Number(ca.ppl) + Number(ca.result)) * 100) / 100 : null,   /* v100.396 (I-947): „față de ieri” fără depuneri */
+    botiPeId: boOk ? Object.fromEntries(act.map((b) => [String(b.id), Math.round(Number(b.profitTotal) * 100) / 100])) : undefined };   // v100.40: pe bot, pentru „față de ieri dimineață”; necitiți ⇒ lipsă (nu {})
   // v101.151: + `la` în poză - „față de ieri dimineață” adaugă boții închiși DUPĂ ea (până acum ora se ghicea: 9 dimineața)
   await d.trimite("/api/istoric-bot?action=piata", { la: acum, instantaneu: Object.assign({ zi: r.zi, fundingMed: st.funding ? st.funding.mediana : null }, st.ult, eu, { la: acum }) });
   st.pozaZi = r.zi;
 }
+export const pozaZilei = poza;   // v100.396: pentru probă
 
 // ---- 6. socoteala alertelor: pretul dupa 24 h si dupa 3 zile, apoi socoteala trimisa (Home + raport) ----
 async function socoteala(d, st, acum) {

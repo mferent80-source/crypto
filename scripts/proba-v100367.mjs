@@ -134,7 +134,9 @@ await test("D rezumat: pe fel, la orizontul de cap, media pe zile cu interval; s
   for (let k = 0; k < 70; k++) { const e = { t: T0 + k * 24 * HH, fel: "consilier-iesi", sens: -1, piata: "actiuni", cheie: "consilier-A" + k }; l.push(e); j[AR.cheie(e)] = { 5: { r: -0.02, rep: 0, x: 0.02 + 0.001 * Math.sin(k) } }; }
   l.push({ t: T0, fel: "intrare", sens: 1, piata: "actiuni", cheie: "sltp-intrare-X" });
   const r = AR.rezumat(l, j, T0 + 80 * 24 * HH), f = r.feluri.find((x) => x.fel === "consilier-iesi"), g = r.feluri.find((x) => x.fel === "intrare");
-  assert.equal(f.zile, 70); assert.equal(f.verdict, "peste"); assert.ok(f.lo > 0); assert.equal(f.h, 5); assert.equal(g.verdict, "se-aduna"); assert.equal(g.judecate, 0); assert.equal(r.total, 71);
+  /* v100.396 (I-946, auditul 26.11 🔴): regula nouă - verdict abia la 26 de ferestre care nu se suprapun (acțiuni: la ≥ 7 zile) ⇒ 70 de zile = 10 ferestre ⇒ „se adună”
+     (înainte: „peste” la 60 de zile, pe zile care își împărțeau 4/5 din orizont); verdictul pe 26 de ferestre îl probează v100396 F1–F3 */
+  assert.equal(f.zile, 70); assert.equal(f.ferestre, 10); assert.equal(f.verdict, "se-aduna"); assert.ok(f.lo > 0); assert.equal(f.h, 5); assert.equal(g.verdict, "se-aduna"); assert.equal(g.judecate, 0); assert.equal(r.total, 71);
 });
 await test("D colectorul: notează cazul nou la alertă (direcția botului), îl judecă o dată pe oră (Pionex 1 h / T212 zilnic, BTC / QQQ) și urcă rezumatul; ruta îl păstrează", async () => {
   const f = col.slice(col.indexOf("async function trimiteAlerta("), col.indexOf("async function trimiteAlerta(") + 7000);

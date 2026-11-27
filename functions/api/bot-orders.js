@@ -163,7 +163,9 @@ function normalizeazaSemnal(bot,preturi,harta){
   const pozitie=pozitieNeclara?null:directie==="long"?((qL||0)>0?qL:null):directie==="short"?((qS||0)>0?-qS:null):(areCant?0:null);
   const pozitieBani=directie==="long"?aL:directie==="short"?aS:null;
   /* revizia (🟡): „profit” de la Pionex; rezerva (suma de acum − suma pusă) doar FĂRĂ poziție - cu poziția deschisă suma de acum poate fi doar USDT-ul
-     rămas (restul stă în poziție) și ar ieși −50. Cu poziția deschisă nu se știe încă dacă „profit” o cuprinde ⇒ rezultatNeverificat. */
+     rămas (restul stă în poziție) și ar ieși −50. Cu poziția deschisă nu se știe încă dacă „profit” o cuprinde ⇒ rezultatNeverificat.
+     v100.396 (27.11): VERIFICAT pe viu - „profit” e doar încasatul (nu cuprinde poziția); ecranele, paza și Contul întreg adaugă poziția
+     (BotSemnal.rezultatCuPozitie). Câmpul rămâne (= în poziție), pagina nu-l mai citește. */
   const profitTotal=nr(x.profit)??(!inPozitie&&toate(sumaAcum,investit)?sumaAcum-investit:null);
   const stare=String(bot.status||"").toLowerCase();
   return {

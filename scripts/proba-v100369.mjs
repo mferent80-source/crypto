@@ -93,7 +93,7 @@ const TC = await import(pathToFileURL(path.join(RAD, "scripts", "lib", "tura-con
 await test("B1 ziua valorii: rândul se scrie o dată pe zi (frâna ține de ziua citirii) și duce ora citirii; pagina îl etichetează cu ziua pe care o ÎNCHIDE (00:11 pe 20.11 ⇒ 19.11; 08:00 ⇒ 20.11; fără oră ⇒ ziua lui)", () => {
   assert.equal(ctx.ciZiInchidere({ z: "2026-11-20", citit: Date.parse("2026-11-20T00:11:00+02:00") }), "2026-11-19"); assert.equal(ctx.ciZiInchidere({ z: "2026-11-20", la: Date.parse("2026-11-20T06:59:00+02:00") }), "2026-11-19");
   assert.equal(ctx.ciZiInchidere({ z: "2026-11-20", citit: Date.parse("2026-11-20T08:00:00+02:00") }), "2026-11-20"); assert.equal(ctx.ciZiInchidere({ z: "2026-10-15" }), "2026-10-15");
-  const src = citeste("scripts", "lib", "tura-cont.mjs"); assert.match(src, /citit: acum/); assert.match(src, /if \(st\.ziValoare !== z && val\.total > 0\)/); assert.match(src, /if \(okZ\) st\.ziValoare = z;/);
+  const src = citeste("scripts", "lib", "tura-cont.mjs"); assert.match(src, /citit: acum/); assert.match(src, /if \((?:st\.ziValoare !== z|dz\.scrie) && val\.total > 0\)/); assert.match(src, /if \(okZ(?: && dz\.marcheazaDupa)?\) st\.ziValoare = z;/);   /* v100.396: o dată pe zi prin deciziaZilei (probată în v100396) */
   const api = citeste("functions", "api", "istoric-bot.js"); assert.match(api, /const cit=nr\(corp\.citit\);if\(cit>0\)row\.citit=Math\.round\(cit\);/);
 });
 await test("B2 săptămâna lecției = luni 00:00 – duminică 24:00, ora României (7 zile, iarna +2, vara +3)", () => {
@@ -144,7 +144,8 @@ const ZILE = [{ z: "2026-11-18", valoare: 23542, complet: true, pionex: 390, t21
 const ST = { acum: RAP.la + 3600000, zile: ZILE, erori: {} };
 const H = ctx.ciHtml(RAP, ST);
 await test("C1 fraza cinstită: valoarea, câștigul NET pe un an în lei (boții după comisioane și funding, T212), riscul de acum; „De unde știu” și „Cum am socotit”", () => {
-  assert.match(H, /Contul tău: 23\.001 lei\. Pe ultimul an ai pierdut 28\.586 lei net: boții −30\.184 lei \(după comisioane și funding\), Trading 212 \+1\.598 lei\. Într-o zi proastă \(1 din 20\) pozițiile de acum pierd ~1\.619 lei \(7,0 % din cont\), pe agitația de acum\./);
+  /* v100.396 (auditul 26.11 🟡): fraza spune ce e realizat (boții închiși) și ce nu (T212 cu deschisele la prețul de azi) */
+  assert.match(H, /Contul tău: 23\.001 lei\. Pe ultimul an ai pierdut 28\.586 lei net: boții −30\.184 lei \(cei închiși, după comisioane și funding\), Trading 212 \+1\.598 lei \(închise și deschise, la prețul de azi\)\. Într-o zi proastă \(1 din 20\) pozițiile de acum pierd ~1\.619 lei \(7,0 % din cont\), pe agitația de acum\./);
   assert.match(H, /Pierderea boților nu e ghinion: pe 262 de zile de închidere, −1,6 % din suma pusă pe zi \(între −2,6 % și −0,7 %\); din întâmplare ar ieși așa în ~0,2 % din cazuri/);
   assert.match(H, /<summary>De unde știu<\/summary>/); assert.match(H, /<summary>Cum am socotit<\/summary>/);
   assert.doesNotMatch(H, /banii puși la lucru au făcut/); assert.doesNotMatch(H, /Boții Pionex<\/td><td class="num[^"]*">[−+]?\d/, "boții fără procent");

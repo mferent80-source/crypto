@@ -191,7 +191,8 @@ await test("🟡 perechile incheiate: in Radar fiecare, pe Discord un rezumat pe
 
 await test("🟡 starea alertelor scrisa ATOMIC; ritmurile scumpe (laborator, clasament) tinute minte peste reporniri", () => {
   assert.doesNotMatch(colector, /fs\.writeFileSync\(STARE_FIS, JSON\.stringify\(stareAlerte\)\)/);
-  assert.match(colector, /function scrieAtomic\(fis, obj\) \{ const tmp = fis \+ "\.tmp"; fs\.writeFileSync\(tmp, JSON\.stringify\(obj\)\); fs\.renameSync\(tmp, fis\); \}/);
+  /* v100.396 (colector v101.215, auditul 26.11 🟡): tot atomic (tmp + rename), acum și cu fsync înainte de redenumire */
+  assert.match(colector, /function scrieAtomic\(fis, obj\) \{ const tmp = fis \+ "\.tmp", fd = fs\.openSync\(tmp, "w"\); try \{ fs\.writeSync\(fd, JSON\.stringify\(obj\)\); fs\.fsyncSync\(fd\); \} finally \{ fs\.closeSync\(fd\); \} fs\.renameSync\(tmp, fis\); \}/);
   // v100.362 (colector v101.199): ritmul laboratorului ținut minte la fel, dar tura e la oră fixă (05:00–09:00 RO, ≥ 30 min după pornire)
   assert.match(colector, /let laboratorLa = Number\(ritm\.laborator\) \|\| 0/); assert.match(colector, /if \(acum - LAB_PORNIT < 30 \* 60000\) return false;/);
 });

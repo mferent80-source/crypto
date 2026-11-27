@@ -195,6 +195,10 @@ export function situatiiAlerte(pune) {
     for (let i = 0; i < n; i++) { const [t, k] = l[i % l.length]; POL.noteazaNoapte(st, { titlu: t.replace(/^(STX|WDC|ARIA)/, "$1" + (i >= l.length ? String.fromCharCode(65 + i % 26) : "")) }, k, Date.UTC(2026, 9, 1, 21, 0) + i * 60000); } return st; };
   co("🌙 rezumatul nopții, 3 alerte", "rezumatNoapte", POL.rezumatNoapte(noapteSt(3), Date.UTC(2026, 9, 2, 5, 30)));
   co("🌙 rezumatul nopții, 40 de alerte, 12 simboluri", "rezumatNoapte", POL.rezumatNoapte(noapteSt(40), Date.UTC(2026, 9, 2, 5, 30)));
+  // v100.396 (I-960): rezumatul informărilor dese de zi (pe viu 27.11: ~46 de trepte T212 pe zi)
+  { const z0 = Date.UTC(2026, 10, 27, 8, 0), sZ = {}, SIM = ["STX", "AVGO", "APLD", "WDC", "MU", "BE", "INTC", "NVDA", "HYPE", "BNB", "MMT", "VVV", "ZEC"];
+    for (let i = 0; i < 37; i++) POL.noteazaRezumat(sZ, { nivel: "info", titlu: (i % 9 === 8 ? "✅ " : "") + SIM[i % SIM.length] + ": −" + (i % 5 + 1) + "% azi" }, (i % 9 === 8 ? "perechi-ora-" : i % 7 === 6 ? "bot-pas-" : "t212-pas-") + i, z0 + i * 60000);
+    co("📋 rezumatul zilei, 37 de informări, 13 simboluri", "rezumatZi", POL.rezumatZi(sZ, z0 + 3 * 3600000 + 60000)); }
   // v101.127 (scorul sezonului): pauza la 3 pierderi la rând, rata și netul țintă atinse
   const SC = { start: Date.UTC(2026, 9, 18, 21), n: 12, win: 7, loss: 5, net: 53.4, rata: 7 / 12, suficient: true, serie: { n: 3, fel: "l" }, obiectiv: { rata: 0.55, serie: 3, net: 50, pana: null } };
   co("scorul sezonului: 3 pierderi la rând", "scorPauza", MC.scorPauza({ ...SC, net: -12.3, win: 2, loss: 3, n: 5 }));
@@ -203,6 +207,25 @@ export function situatiiAlerte(pune) {
   const SCT = { ...SC, piata: "t212", moneda: "lei", net: 212.5, obiectiv: { rata: 0.55, serie: 3, net: 200, pana: null } };   // v101.128: Trading 212
   co("scorul T212: 3 pierderi la rând", "scorPauzaT212", MC.scorPauza({ ...SCT, net: -140.2, win: 2, loss: 3, n: 5 }));
   co("scorul T212: netul țintă atins", "scorTintaNetT212", MC.scorTinta(SCT, "net"));
+  // v100.396 (I-947): frâna pe tot contul, fără depunerile T212 (azi cu o depunere scoasă; pe 7 zile)
+  co("frâna pe tot contul: azi, cu depunere", "franaContZi", MC.franaContTot("zi", { lei: -1487.5, pct: -0.035, flux: 2000 }, 0.03));
+  // v100.396 (I-958): verdictul boților de semnal pe viu (la 30 de tranzacții)
+  co("boții de semnal pierd pe viu", "verdictSemnale", MC.verdictSemnale({ n: 34, medie: -0.0031, lo: -0.0052, hi: -0.0010, sumaNet: -5.27, verdict: "opreste" }));
+  co("boții de semnal: n-am aflat", "verdictSemnaleNu", MC.verdictSemnale({ n: 30, medie: -0.0004, lo: -0.0031, hi: 0.0023, sumaNet: -0.61, verdict: "n-am-aflat" }));
+  // v100.396 (I-957): riscul peste buget, cu planul (pe viu 27.11: 9,7% ⇒ BE, WDC, STX, APLD, MU)
+  co("riscul contului peste buget: planul ajunge", "planRisc", MC.planRisc({ pct0: 0.097, prag: 0.04, ajunge: true, pct: 0.039, pePozitii: [{ nume: "BE", parte: 1, lei: 1041 }, { nume: "WDC", parte: 1, lei: 1538 }, { nume: "STX", parte: 1, lei: 809 }, { nume: "APLD", parte: 1, lei: 3422 }, { nume: "MU", parte: 0.5, lei: 2003 }] }));
+  co("riscul contului peste buget: nici tot nu ajunge", "planRiscNu", MC.planRisc({ pct0: 0.12, prag: 0.04, ajunge: false, pct: 0.052, pePozitii: [{ nume: "AVGO", parte: 1, lei: 4289 }] }));
+  co("frâna pe tot contul: pe 7 zile", "franaContSapt", MC.franaContTot("sapt", { lei: -12762.5, pct: -0.065, flux: 0 }, 0.06));
+  // v100.396 (I-944): paza boților de semnal - lichidarea (estimată), pierderea (−10% / −15%), poziția ținută peste 24 h
+  if (globalThis.BotSemnal && BotSemnal.paza) {
+    const sem = (o) => Object.assign({ tip: "semnal", id: "2692", baza: "1000PEPE.PERP", ruleaza: true, directie: "short", pozitie: -1000, pozitieBani: 300, pretCurent: 0.375, levier: 3, investit: 100, profitTotal: -2, pretLichidare: null }, o);
+    const pz = (b, st, t) => BotSemnal.paza(b, st, t || T0).alerte;
+    for (const a of pz(sem({ pretCurent: 0.36 }))) co("semnal: lichidarea aproape (estimată)", "semnalLichAtentie", a);
+    for (const a of pz(sem({}), { lich: 1 })) co("semnal: lichidarea foarte aproape (estimată)", "semnalLichCritic", a);
+    for (const a of pz(sem({ pretCurent: 0.3, profitTotal: -11.4 }))) co("semnal: −11,4% din suma pusă", "semnalPierdere", a);
+    for (const a of pz(sem({ pretCurent: 0.3, profitTotal: -16.2 }), { pierd: 1 })) co("semnal: peste regula de oprire", "semnalPierdereCritic", a);
+    for (const a of pz(sem({ pretCurent: 0.3 }), { deschisDe: T0 - 26 * ORA })) co("semnal: poziție ținută 26 h", "semnalVeche", a);
+  }
   co("colectorul citește din nou", "citireDinNou", MC.citireDinNou());
   co("serverul respinge parola colectorului", "authRespins", MC.authRespins(4, "AUTH_INVALID"));   // v101.116 (auditul sever, S1)
   co("Pionex dă lista boților goală", "botiNevazuti", MC.botiNevazuti(12, ["SOL", "CRV"]));   // v101.116 (C3)

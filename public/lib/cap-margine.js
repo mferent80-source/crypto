@@ -277,7 +277,9 @@ var CapMargine = (function () {
     var rez = { parte: parte, nivel: niv, dist: dist, afara: afara, titlu: sigur ? String(cons.titlu) : titlu, fapt: sigur ? titlu : "", sanse: afara ? [] : sanse,
       sanseVechi: vechi && sanse.length ? { fel: vechi, dist: d0 } : null, sanseDist: d0, sanseOra: x.sanseOra ? String(x.sanseOra) : "", stopScurt: stopS, stopDrum: sd,
       expunere: exp, intre: intre, afaraDe: afaraDe, zero: zeroI, stopMargine: stopM, mutare: mv, mut: mut, parteMargine: parte, copiaza: afara ? null : [{ ce: "marginea de " + parte, pret: pret(niv), exact: String(niv) }], faraStop: faraStop ? textFaraStop(x.dovada) : "",
-      bani: { margine: afara ? null : bM, stop: bS, stopPret: stop, stopActiv: !!x.stopActiv, stopEticheta: x.stopEticheta ? String(x.stopEticheta) : "" }, faCe: faCe, sigur: sigur,
+      bani: { margine: afara ? null : bM, stop: bS, stopPret: stop, stopActiv: !!x.stopActiv, stopEticheta: x.stopEticheta ? String(x.stopEticheta) : "",
+        /* v100.396 (I-942): totalul la margine / la stop e plafonat la −suma pusă când lichidarea vine întâi - se spune */
+        margineLichidata: typeof x.lichidLa === "function" && !afara && niv !== null ? !!x.lichidLa(niv) : false, stopLichidat: typeof x.lichidLa === "function" && stop !== null ? !!x.lichidLa(stop) : false }, faCe: faCe, sigur: sigur,
       cons: cons && !sigur && cons.titlu && cons.cod !== "margine" ? { titlu: String(cons.titlu), dovedit: !!cons.dovedit } : null, dovada: textDovada(x.dovada) };
     if (tpI) { rez.tp = tpI; rez.tpScurt = tpS; rez.tpVerif = Array.isArray(x.tpVerif) ? x.tpVerif : null; }
     if (mc24 && tpI) rez.stopImpreuna = true;   /* v100.381: stopul și take-profit-ul din aceeași simulare */
@@ -481,8 +483,8 @@ var CapMargine = (function () {
   function textBani(c) {
     if (!c) return "";
     var l = [];
-    if (c.bani.margine !== null) l.push("la margine: " + usdt(c.bani.margine));
-    if (c.bani.stop !== null && c.bani.stopPret !== null) l.push("la stopul tău (" + pret(c.bani.stopPret) + "): " + usdt(c.bani.stop));
+    if (c.bani.margine !== null) l.push("la margine: " + usdt(c.bani.margine) + (c.bani.margineLichidata ? " (lichidat înainte)" : ""));
+    if (c.bani.stop !== null && c.bani.stopPret !== null) l.push("la stopul tău (" + pret(c.bani.stopPret) + "): " + usdt(c.bani.stop) + (c.bani.stopLichidat ? " (lichidat înainte: stopul nu apucă)" : ""));
     /* stopul în procente e activ și când prețul lui nu se poate socoti (botul neutru) - „fără stop pus” doar când chiar nu e */
     else if (c.bani.stopPret === null) l.push(c.bani.stopActiv ? "stopul tău: " + (c.bani.stopEticheta || "pus în procente") + " (fără preț socotit)" : "fără stop pus");
     return l.join(" · ");

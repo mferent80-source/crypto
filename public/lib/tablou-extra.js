@@ -234,7 +234,26 @@ var TabloExtra = (function () {
   function pozitieCuGridLa(b, X) { var s = starePeNiveluri(b, X); return s ? s.pozitie : null; }
   // ce model dă acum totalul botului: „niveluri” (pe liniile gridului) sau „continuu” (aproximarea întinsă uniform); null fără total
   function modelTotal(b) { var p = nr(b && b.pretCurent); if (!(p > 0)) return null; return starePeNiveluri(b, p) ? "niveluri" : totalCuGridContinuu(b, p) !== null ? "continuu" : null; }
+  // v100.396 (I-942, auditul 26.11 🔴/🟡): UNA singură pază de lichidare pentru toate totalurile „dacă prețul ajunge la X” (capul, stopul propus, zero-ul,
+  // „Contează acum”, Consilierul, scenariile, indicația de sub cursor): marja e izolată ⇒ nu se pierde mai mult decât suma pusă, iar un X dincolo de
+  // lichidare (pe partea pe care pierde botul) înseamnă „lichidat înainte” ⇒ −investiția. Înainte capul putea scrie „la marginea de jos −160” pe 100 puși.
+  function lichidatLa(b, X) {
+    var x = nr(X), dir = String(b && b.directie || "").toLowerCase(), lq = nr(b && b.pretLichidare), lj = nr(b && b.lichidareJos), ls = nr(b && b.lichidareSus);
+    if (!(x > 0)) return null;
+    var jos = lj > 0 ? lj : dir === "long" && lq > 0 ? lq : null, sus = ls > 0 ? ls : dir === "short" && lq > 0 ? lq : null, pc = nr(b && b.pretCurent);
+    // o lichidare de partea GREȘITĂ a prețului de acum (date vechi / stricate: un short cu lichidarea sub preț ar fi deja lichidat) nu plafonează nimic
+    if (pc > 0) { if (jos !== null && jos >= pc) jos = null; if (sus !== null && sus <= pc) sus = null; }
+    if (dir === "long" || dir === "neutru" || dir === "") { if (jos !== null && x <= jos) return { parte: "jos", pret: jos }; }
+    if (dir === "short" || dir === "neutru" || dir === "") { if (sus !== null && x >= sus) return { parte: "sus", pret: sus }; }
+    return null;
+  }
   function totalCuGridLa(b, X, comision) {
+    var inv = nr(b && b.investit);
+    if (inv > 0 && lichidatLa(b, X)) return -inv;
+    var t = totalCuGridLaBrut(b, X, comision);
+    return t !== null && inv > 0 ? Math.max(t, -inv) : t;
+  }
+  function totalCuGridLaBrut(b, X, comision) {
     comision = comision == null ? C.COMISION : comision;
     var t = totalPeNiveluri(b, X, comision);
     return t !== null ? t : totalCuGridContinuu(b, X, comision);
@@ -520,7 +539,8 @@ var TabloExtra = (function () {
     var t0 = nr(b && b.pornitLa), t1 = nr(b && b.inchisLa), mot = String(b && b.motivInchidere || ""), lichidat = /liquid/i.test(mot);
     // v100.196 (auditul colectorului, 12): rezultatele cu o singura zecimala (regula lui); sub 0,1 USDT doua, ca suma sa nu devina „0,0”;
     // procentul stopului in procente ramane cum l-a scris el (P(…, 2))
-    var U = function (v) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(Math.abs(v) < 0.095 && v !== 0 ? 2 : 1).replace(".", ",") + " USDT"; }, P = function (v, z) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(z == null ? 1 : z).replace(".", ",") + "%"; };
+    /* v100.396 (proba de telefon 26.11): mii cu punct („−2.517,1 USDT”) - TextRo.num, cu rezerva veche */
+    var U = function (v) { var z = Math.abs(v) < 0.095 && v !== 0 ? 2 : 1; return (v >= 0 ? "+" : "−") + (typeof TextRo !== "undefined" && TextRo.num ? TextRo.num(Math.abs(v), z) : Math.abs(v).toFixed(z).replace(".", ",")) + " USDT"; }, P = function (v, z) { return (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(z == null ? 1 : z).replace(".", ",") + "%"; };
     var dur = t0 && t1 && t1 > t0 ? t1 - t0 : null, durTxt = dur === null ? "" : dur < 3600000 ? Math.round(dur / 60000) + " min" : dur < 48 * 3600000 ? Math.floor(dur / 3600000) + " h " + Math.round(dur % 3600000 / 60000) + " min" : (dur / 86400000).toFixed(1).replace(".", ",") + " zile";
     var pct = tot !== null && inv > 0 ? tot / inv * 100 : null;
     var titlu = "🔍 " + nume + " închis: " + (tot === null ? "rezultat necunoscut" : U(tot) + (pct !== null ? " (" + P(pct) + ")" : "")) + (durTxt ? " după " + durTxt : "");
@@ -537,7 +557,7 @@ var TabloExtra = (function () {
     // v100.68: doua randuri (fiecare ≤ 160) - comisioanele lui, apoi istoria ta
     if (dur !== null && dur < 3600000 && com !== null) {
       L.push("Închis în prima oră (" + durTxt + "): comisioanele lui " + U(-Math.abs(com)) + (grid !== null && grid > 0 ? ", " + Math.round(Math.abs(com) / grid * 100) + "% din ce au făcut grilele" : "") + ".");
-      if (so && nr(so.n)) L.push("Pe istoria ta: " + so.n + " de boți închiși în prima oră, net " + U(nr(so.net) || 0) + ", din care comisioane " + U(nr(so.comisioane) || 0) + ".");
+      if (so && nr(so.n)) L.push("Pe istoria ta: " + cate(nr(so.n), "bot închis", "boți închiși") + " în prima oră, net " + U(nr(so.net) || 0) + ", din care comisioane " + U(nr(so.comisioane) || 0) + ".");
     }
     // lectiile - doar din fapte
     var lec = [], atr = nr(o.atrPct), rap = nr(b.opritorPierdereRaport), lev = nr(b.levier) || 1;
@@ -598,7 +618,9 @@ var TabloExtra = (function () {
     var dir = String(b && b.directie || "").toLowerCase();
     if (inv === null || tot === null) return null;
     var poz = dir === "long" || dir === "short" ? (init > 0 && p > 0 && lev > 0 ? (dir === "long" ? 1 : -1) * inv * lev * (p - init) / init : null) : 0;
-    return { pozitieSimpla: poz, bot: tot, diferenta: poz === null ? null : tot - poz, pretPornire: init };
+    // v100.396 (auditul 26.11, 🟡): și poziția simplă are marja izolată - lichidată la −suma pusă, nu −125% la 5× și −25% (umfla „gridul a adus X față de ea”)
+    var lichidata = poz !== null && inv > 0 && poz <= -inv; if (lichidata) poz = -inv;
+    return { pozitieSimpla: poz, bot: tot, diferenta: poz === null ? null : tot - poz, pretPornire: init, pozitieLichidata: lichidata };
   }
 
   // v81 (3) Planul lui: {plus: USDT, minus: USDT, afaraOre: ore}. stare.afaraDe = de cand e
@@ -917,13 +939,13 @@ var TabloExtra = (function () {
   function textRegistruAlerte(rg) {
     var cate = TextRo.cate;   /* „de” de la 20 și singularul la 1 - ajutorul comun (proba 75) */
     var cap = "Au avut dreptate alertele? Pe 26 de zile măsurate, niciun fel nu s-a dovedit. ";
-    if (!rg || !(rg.total > 0)) return cap + "Registrul pe viu notează fiecare caz nou de la prima tură a colectorului; verdictul pe un fel după 60 de zile sau 30 de cazuri.";
+    if (!rg || !(rg.total > 0)) return cap + "Registrul pe viu notează fiecare caz nou de la prima tură a colectorului; verdictul pe un fel abia la 26 de ferestre care nu se suprapun, cu corecția pentru câte feluri, înghețat (v100.396).";
     var F = Array.isArray(rg.feluri) ? rg.feluri : [], jud = F.reduce(function (a, f) { return a + (f.judecate || 0); }, 0);
     var dov = F.filter(function (f) { return f.verdict === "peste"; }).map(function (f) { return f.fel; }), inv = F.filter(function (f) { return f.verdict === "sub"; }).map(function (f) { return f.fel; });
     var d = new Date(rg.deLa), zi = ("0" + d.getDate()).slice(-2) + "." + ("0" + (d.getMonth() + 1)).slice(-2);
     return cap + "Registrul pe viu: " + cate(rg.total, "caz", "cazuri") + " din " + zi + ", " + cate(jud, "judecat", "judecate") + " față de piață"
       + (dov.length ? "; au avut dreptate: " + dov.join(", ") : "") + (inv.length ? "; au greșit: " + inv.join(", ") : "")
-      + (dov.length || inv.length ? "" : "; încă niciun verdict (după 60 de zile sau 30 de cazuri pe fel)") + ".";
+      + (dov.length || inv.length ? "" : "; încă niciun verdict (abia la 26 de ferestre pe fel)") + ".";
   }
 
   // v100.385 (I-930, el: „fă tot” după auditul paginii): CURBA BOTULUI de la pornire, din istoria scrisă de colector cam o dată pe minut (istoric-bot?action=citeste):
@@ -1021,7 +1043,7 @@ var TabloExtra = (function () {
     p.push("pe ce preț declanșează Pionex stopul (mark sau ultimul) nu se vede din API");
     return "Riscul pieței monedei: " + p.join(" · ") + (r.semne.length ? " — atenție: " + r.semne.join("; ") : "");
   }
-  return { riscPiata: riscPiata, textRiscPiata: textRiscPiata, fluxBot: fluxBot, textFlux: textFlux, curbaBot: curbaBot, curbaBotHtml: curbaBotHtml, taxaIntrare: taxaIntrare, textRegistruAlerte: textRegistruAlerte, stopDincoloDeLichidare: stopDincoloDeLichidare, stopPropus: stopPropus, grileDincolo: grileDincolo, grileDincoloK: grileDincoloK, dupaAlerta: dupaAlerta, bilantAlerte: bilantAlerte, cifreActiuni: cifreActiuni, textBani: textBani, frecventaAtingere: frecventaAtingere, codTVBot: codTVBot, gridDiferitDeBot: gridDiferitDeBot, alertaRezolvata: alertaRezolvata, alerteleBotului: alerteleBotului, marcheazaDepasite: marcheazaDepasite, ritmRecuperare: ritmRecuperare, comisionDinUmplere: comisionDinUmplere, ceAiDeFacut: ceAiDeFacut, oraSfat: oraSfat, distanteGrid: distanteGrid, geometrieBot: geometrieBot, profitPeGrila: profitPeGrila, fundingBot: fundingBot, fundingPct: fundingPct, notaTotal: notaTotal, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, pretPentruTotal: pretPentruTotal, totalLaPret: totalLaPret, totalLaPretViu: totalLaPretViu, totalCuGridLa: totalCuGridLa, totalCuGridContinuu: totalCuGridContinuu, pozitieCuGridLa: pozitieCuGridLa, modelTotal: modelTotal, gridVsPlan: gridVsPlan, pragDinPlanuri: pragDinPlanuri, totalLaOpritor: totalLaOpritor, pretOpritorPentru: pretOpritorPentru, pretStopLive: pretStopLive, pretTpLive: pretTpLive, tpDinPret: tpDinPret, totalLaTinta: totalLaTinta, pretTintaPentru: pretTintaPentru, miscareZi: miscareZi, podeaUrca: podeaUrca, propunePlan: propunePlan, fisaInchidere: fisaInchidere, legaturaJurnal: legaturaJurnal,
+  return { riscPiata: riscPiata, textRiscPiata: textRiscPiata, fluxBot: fluxBot, textFlux: textFlux, curbaBot: curbaBot, curbaBotHtml: curbaBotHtml, taxaIntrare: taxaIntrare, textRegistruAlerte: textRegistruAlerte, stopDincoloDeLichidare: stopDincoloDeLichidare, stopPropus: stopPropus, grileDincolo: grileDincolo, grileDincoloK: grileDincoloK, dupaAlerta: dupaAlerta, bilantAlerte: bilantAlerte, cifreActiuni: cifreActiuni, textBani: textBani, frecventaAtingere: frecventaAtingere, codTVBot: codTVBot, gridDiferitDeBot: gridDiferitDeBot, alertaRezolvata: alertaRezolvata, alerteleBotului: alerteleBotului, marcheazaDepasite: marcheazaDepasite, ritmRecuperare: ritmRecuperare, comisionDinUmplere: comisionDinUmplere, ceAiDeFacut: ceAiDeFacut, oraSfat: oraSfat, distanteGrid: distanteGrid, geometrieBot: geometrieBot, profitPeGrila: profitPeGrila, fundingBot: fundingBot, fundingPct: fundingPct, notaTotal: notaTotal, comparaCuFisa: comparaCuFisa, grileVsCosturi: grileVsCosturi, dacaInchizi: dacaInchizi, pretPentruTotal: pretPentruTotal, totalLaPret: totalLaPret, totalLaPretViu: totalLaPretViu, totalCuGridLa: totalCuGridLa, totalCuGridLaBrut: totalCuGridLaBrut, lichidatLa: lichidatLa, totalCuGridContinuu: totalCuGridContinuu, pozitieCuGridLa: pozitieCuGridLa, modelTotal: modelTotal, gridVsPlan: gridVsPlan, pragDinPlanuri: pragDinPlanuri, totalLaOpritor: totalLaOpritor, pretOpritorPentru: pretOpritorPentru, pretStopLive: pretStopLive, pretTpLive: pretTpLive, tpDinPret: tpDinPret, totalLaTinta: totalLaTinta, pretTintaPentru: pretTintaPentru, miscareZi: miscareZi, podeaUrca: podeaUrca, propunePlan: propunePlan, fisaInchidere: fisaInchidere, legaturaJurnal: legaturaJurnal,
     peZile: peZile, marjaNoua: marjaNoua, vsPozitie: vsPozitie, planStare: planStare, evenimente: evenimente };
 })();
 if (typeof globalThis !== "undefined") globalThis.TabloExtra = TabloExtra;

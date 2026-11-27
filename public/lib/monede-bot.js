@@ -24,7 +24,11 @@ var MonedeBot = (function () {
   // ÎNGHEȚAT aici; cifra = jumătatea de TEST. Treptele |ER 14 z|: 0 = 0,10–0,15 · 1 = 0,15–0,25 · 2 = ≥ 0,25.
   var PROBABIL = {"studiu":"Binance Futures, 43 de monede (doar cele listate azi), 709 de zile; test de la 30.11.2025","trepte":["0,10–0,15","0,15–0,25","≥ 0,25"],"celule":{"short:0":{"p":0.5947,"n":417,"sapt":22,"medie":-0.0253,"fataPiata":0.6115,"verdict":"nedovedit","verdictPiata":"nedovedit","pExpl":0.6511,"nExpl":665},"short:1":{"p":0.5208,"n":576,"sapt":32,"medie":-0.0434,"fataPiata":0.5764,"verdict":"nedovedit","verdictPiata":"nedovedit","pExpl":0.4844,"nExpl":1028},"short:2":{"p":0.4289,"n":415,"sapt":20,"medie":-0.1281,"fataPiata":0.6241,"verdict":"nedovedit","verdictPiata":"nedovedit","pExpl":0.4978,"nExpl":225},"long:0":{"p":0.4905,"n":528,"sapt":29,"medie":0.0463,"fataPiata":0.4261,"verdict":"nedovedit","verdictPiata":"nedovedit","pExpl":0.3248,"nExpl":351},"long:1":{"p":0.4693,"n":635,"sapt":42,"medie":0.0393,"fataPiata":0.4378,"verdict":"nedovedit","verdictPiata":"nedovedit","pExpl":0.3798,"nExpl":387},"long:2":{"p":0.4325,"n":326,"sapt":22,"medie":0.0031,"fataPiata":0.411,"verdict":"nedovedit","verdictPiata":"nedovedit","pExpl":0.3672,"nExpl":177}}};
   function fin(x) { return typeof x === "number" && isFinite(x); }
-  function cheie(s) { return String(s || "").toUpperCase().replace(/\.PERP$/, "").replace(/_USDT(_PERP)?$/, "").replace(/USDT$/, "").replace(/^1000+/, ""); }
+  // v100.396 (auditul 26.11, 🔵): aceeași regulă ca tura-caderi.bazaBinance — 1000PEPE / 1000000MOG / 1MBABYDOGE ⇒ baza fără multiplicator (1MBABYDOGE ieșea tăcut)
+  // revizia 27.11: și „10000” (10000LADYS / 10000COQ pe Binance) - bazePionex taie orice „1000+”, deci fără el moneda ieșea „nu e pe Pionex”
+  function cheie(s) { return String(s || "").toUpperCase().replace(/\.PERP$/, "").replace(/_USDT(_PERP)?$/, "").replace(/USDT$/, "").replace(/^(1000000|10000|1000|1M)(?=[A-Z])/, ""); }
+  // multiplicatorul contractului Binance (= tura-caderi.multBinance): prețul afișat e al UNEI monede, ca pe Pionex (1000PEPE ⇒ ÷ 1.000)
+  function mult(sym) { var m = String(sym || "").toUpperCase().match(/^(1000000|10000|1000|1M)(?=[A-Z])/); return m ? (m[1] === "1000" ? 1000 : m[1] === "10000" ? 1e4 : 1e6) : 1; }
   // raportul de eficiență: (ultimul − primul) / suma pașilor absoluți; cu semn (minus = în jos)
   function er(c) { if (!c || c.length < 2) return null; var s = 0; for (var i = 1; i < c.length; i++) s += Math.abs(c[i] - c[i - 1]); return s > 0 ? (c[c.length - 1] - c[0]) / s : 0; }
   // Pivot Point SuperTrend (LonesomeTheBlue, 2 / 3 / 10) - același port ca ppst_motor.py (pine-scripts\PIVOT-SUPERTREND): pivotul barei j se află
@@ -112,7 +116,8 @@ var MonedeBot = (function () {
     if (!kv || !Array.isArray(kv.monede)) return { ce: ce, stare: "info", text: "aștept lista (colectorul o reface o dată pe oră)" };
     var m = gaseste(kv, simbol), k = cheie(simbol), timp = v.veche ? "VECHE, de " + ore(v.min) : "acum " + v.min + " min";
     if (!m) return { ce: ce, stare: v.veche ? "atentie" : "info", text: k + " n-a fost citită (sub " + mil(PRAGURI.preFiltruVol) + " pe zi sau lipsă la Binance) · " + timp };
-    var L = loc(kv, k), d = String(dirBot || "").toLowerCase(), contra = m.parte && (d === "long" || d === "short") && d !== m.parte, parti = [];
+    // auditul 26.11 (🟡): „contra” doar pe DIRECȚIE (pe Revenire un bot în partea revenirii e chiar ce sugerează lista)
+    var L = loc(kv, k), d = String(dirBot || "").toLowerCase(), contra = m.parte && !m.revine && (d === "long" || d === "short") && d !== m.parte, parti = [];
     if (m.junk.length) parti.push("JUNK: " + m.junk.join(", "));
     else if (L) parti.push("în listă: " + eticheta(L.fel, m) + " #" + L.loc);
     else parti.push("nu e în listă" + (!m.agitata ? " (prea liniștită: " + pr(m.amp) + " pe zi)" : !m.pionex ? " (nu e pe Pionex PERP)" : " (nu e în primele " + PRAGURI.nLista + " la " + eticheta(fel(m), m) + ")"));   /* revizia (🔵): motivul și pe locul 11+ */
@@ -144,7 +149,8 @@ var MonedeBot = (function () {
   function treapta(er) { var a = Math.abs(er); return !fin(er) || a < 0.10 ? -1 : a < 0.15 ? 0 : a < 0.25 ? 1 : 2; }
   function probabil(m) {
     // revizia (🟡2): studiul e pe monede agitate (≥ 8% pe zi); pe una liniștită sau JUNK cifra lui nu se aplică
-    if (!m || !m.parte || m.agitata !== true || (m.junk && m.junk.length)) return null; var k = treapta(m.er14), c = k >= 0 ? PROBABIL.celule[m.parte + ":" + k] : null; if (!c || !fin(c.p)) return null;
+    // auditul 26.11 (🟡): studiul n-a despărțit monedele care pe 3 zile s-au întors ⇒ pe Revenire cifra lui nu se aplică (un „continuă ↓ 52%” pe un rând „Revenire ↑” încurca)
+    if (!m || !m.parte || m.agitata !== true || m.revine || (m.junk && m.junk.length)) return null; var k = treapta(m.er14), c = k >= 0 ? PROBABIL.celule[m.parte + ":" + k] : null; if (!c || !fin(c.p)) return null;
     var jos = m.parte === "short", dovedit = c.verdict === "mai des decât 50%", invers = c.verdict === "mai rar decât 50%";
     // câștigul mediu în partea ta (s × randamentul pe 7 zile) stă MEREU lângă procent: „continuă mai des” nu înseamnă „câștigă” (short:0 pe 26.11: 59%, dar −2,5%)
     var contra = fin(c.medie) && c.medie < 0;
@@ -165,6 +171,6 @@ var MonedeBot = (function () {
   // numărătorile - „2 ore”, „21 de ore” (TextRo.cate; rezerva știe aceeași regulă, ca tura-largime-crypto)
   function cate(n, sg, pl) { if (typeof TextRo !== "undefined" && TextRo.cate) return TextRo.cate(n, sg, pl); var k = Math.round(Number(n)), r = Math.abs(k) % 100; return !isFinite(k) ? "— " + pl : k === 1 ? "1 " + sg : k + (r >= 20 || (r === 0 && Math.abs(k) >= 100) ? " de " : " ") + pl; }
   function ore(min) { return min >= 120 ? cate(Math.round(min / 60), "oră", "ore") : min + " min"; }
-  return { PRAGURI: PRAGURI, cheie: cheie, er: er, ppst: ppst, ppstAcum: ppstAcum, motiveJunk: motiveJunk, masoara: masoara, liste: liste, vechime: vechime, gaseste: gaseste, loc: loc, textMoneda: textMoneda, botiPeJunk: botiPeJunk, pct: pct, pr: pr, zec: zec, mil: mil, cate: cate, ore: ore, linia: linia, FEL: FEL, fel: fel, eticheta: eticheta, acum: directiaAcum, probabil: probabil, treapta: treapta, rezumatStudiu: rezumatStudiu, PROBABIL: PROBABIL };
+  return { PRAGURI: PRAGURI, cheie: cheie, er: er, ppst: ppst, ppstAcum: ppstAcum, motiveJunk: motiveJunk, masoara: masoara, liste: liste, vechime: vechime, gaseste: gaseste, loc: loc, textMoneda: textMoneda, botiPeJunk: botiPeJunk, pct: pct, pr: pr, zec: zec, mil: mil, cate: cate, ore: ore, linia: linia, FEL: FEL, fel: fel, eticheta: eticheta, mult: mult, acum: directiaAcum, probabil: probabil, treapta: treapta, rezumatStudiu: rezumatStudiu, PROBABIL: PROBABIL };
 })();
 if (typeof globalThis !== "undefined") globalThis.MonedeBot = MonedeBot;

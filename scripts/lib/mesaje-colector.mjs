@@ -231,6 +231,34 @@ const DEP = { zi: (f) => "azi " + U2(f.netZi) + " (pragul tău: −" + V(f.pragu
   boti: (f) => cate(f.pornitiAzi, "bot pornit", "boți porniți") + " azi (pragul: " + f.praguri.boti + ")" };   /* v100.280 */
 // v100.175 (revizia v100.173): arhiva boților nu vine de ore ⇒ frâna nu poate judeca; tăcerea ar părea „totul e bine”
 export const franaFaraArhiva = (ore) => ({ nivel: "atentie", titlu: "Frâna contului nu poate judeca", mesaj: msg("Arhiva boților închiși nu vine de " + cate(Math.max(1, Math.round(ore)), "oră", "ore") + ", deci nu știu cât ai pierdut azi și pe 7 zile.", "Până revine, aș număra singur pierderile de azi înainte să pornesc un bot nou.") });
+// v100.396 (I-947, auditul 26.11): frâna pe TOT contul (boți + T212 + Salt), în lei, fără depunerile T212 - o dată pe zi (cheia frana-cont-zi / -sapt).
+// x = ContIntreg.castigCont(...).zi / .sapt ({ lei, pct, flux }); p = pragul ales (0,03 / 0,06). Sumele cu O zecimală, mii cu punct (TextRo).
+const leiC = (v) => { const p = Math.abs(Number(v) || 0).toFixed(1).split("."); return p[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "," + p[1] + " lei"; };   /* v100.396: mia cu punct și fără TextRo (colectorul nu-l are mereu) - 8.813,0 lei */
+const pctC = (v) => (Math.abs(v) * 100).toFixed(1).replace(".", ",") + "%";
+export const franaContTot = (fel, x, p) => ({ nivel: "atentie", titlu: (fel === "sapt" ? "Frâna pe tot contul: −" + leiC(x.lei) + " pe 7 zile" : "Frâna pe tot contul: −" + leiC(x.lei) + " azi").slice(0, 60),
+  mesaj: msg("Contul întreg a pierdut " + leiC(x.lei) + " (−" + pctC(x.pct) + ") " + (fel === "sapt" ? "pe 7 zile" : "azi") + ", fără depunerile T212" + (Math.abs(Number(x.flux) || 0) >= 1 ? " (" + leiC(x.flux) + " " + (x.flux > 0 ? "depuse" : "retrase") + ", scoase)" : "") + "; pragul ales e −" + String(Math.round(p * 100)) + "% " + (fel === "sapt" ? "pe 7 zile" : "pe zi") + ".",
+    fel === "sapt" ? "N-aș porni nimic nou; aș căuta pe Contul întreg ce parte a tras în jos." : "N-aș porni nimic nou azi; mâine, cu capul limpede.") });
+// v100.396 (I-957): riscul pe o zi peste bugetul ales, cu planul „ce tai ca să cobori sub 4%” (ContIntreg.planSub4) - doar informație, o dată pe zi
+export const planRisc = (p) => {
+  const nm = (x) => x.nume + (x.parte >= 1 ? "" : " (jumătate)"), L = p.pePozitii || [], lei = L.reduce((a, x) => a + x.lei, 0), prag = String(Math.round((p.prag || 0.04) * 100)) + "%";
+  /* revizia valului 4 (27.11): cât încap în 60 de semne, „și încă N” doar când chiar au rămas nume (înainte: „și încă -1” cu 3 nume lungi) */
+  let k = L.length; while (k > 1 && L.slice(0, k).map(nm).join(", ").length > 60) k--;
+  const lista = L.slice(0, k).map(nm).join(", ") + (k < L.length ? " și încă " + (L.length - k) : "");
+  const fapt = !L.length ? "Riscul pe o zi e peste buget; ce să tai nu pot socoti acum (prea puține zile comune între poziții)."   /* alerta nu mai depinde de plan */
+    : p.ajunge ? "Sub " + prag + " cobori tăind " + lista + " (~" + leiC(lei) + "), cu riscul la ~" + pctC(p.pct) + "."
+    : p.toate === false ? "Pașii pe care-i pot socoti coboară riscul doar la ~" + pctC(p.pct) + "; sub " + prag + " nu-ți pot spune drumul."
+    : "Nici tăind tot ce are serie de prețuri nu cobori sub " + prag + ": cel mult ~" + pctC(p.pct) + ".";
+  return { nivel: "atentie", titlu: ("Contul: o zi proastă ~" + pctC(p.pct0) + " (bugetul " + prag + ")").slice(0, 60), mesaj: msg(fapt, "N-aș porni nimic nou; ce tai hotărăști la rece, pe Contul întreg.") };
+};
+// v100.396 (I-958): verdictul boților de semnal pe viu (regula scrisă înainte, la 30 de tranzacții, înghețat) - o dată
+// rz = BotSemnal.rezumatTranzactii(...) { n, medie, lo, hi, sumaNet, verdict }
+export const verdictSemnale = (rz) => {
+  const P = (x) => (x > 0 ? "+" : x < 0 ? "−" : "") + (Math.abs(x) * 100).toFixed(Math.abs(x) * 100 >= 0.095 ? 1 : 2).replace(".", ",") + "%";
+  const ce = rz.verdict === "opreste" ? "pierd" : rz.verdict === "castiga" ? "câștigă" : "n-am aflat";
+  return { nivel: rz.verdict === "opreste" ? "critic" : "atentie", titlu: ("Boții de semnal, " + cate(rz.n, "tranzacție", "tranzacții") + ": " + ce).slice(0, 60),
+    mesaj: msg("Media " + P(rz.medie) + " pe tranzacție din suma pusă (" + P(rz.lo) + " … " + P(rz.hi) + "), după comision; în total " + U2(rz.sumaNet) + ".",
+      rz.verdict === "opreste" ? "Aș opri boții de semnal: regula ta pierde pe viu, după comision." : rz.verdict === "castiga" ? "Aș lăsa boții să meargă, cu stopul pus, și aș urmări mai departe." : "Aș ține suma mică: încă nu se vede nici câștig, nici pierdere.") };
+};
 // v100.176 (contul întreg, reconcilierea cu brokerii): abaterile dintre ce știe Radarul și ce raportează T212 / Pionex
 const nrBuc = (x) => (Math.abs(x) >= 100 ? Math.round(x).toLocaleString("ro-RO") : String(Math.round(x * 1000) / 1000).replace(".", ","));
 export const reconciliereT212 = (a) => ({ nivel: "atentie", titlu: ("Trading 212 ≠ jurnalul Radarului: " + String(a.ticker).replace(/_US_EQ$|_EQ$/, "")).slice(0, 60),
@@ -262,15 +290,16 @@ const scPc = (x) => (Math.round(Number(x) * 1000) / 10).toFixed(1).replace(".", 
 const scM = (s) => (s.moneda || "USDT"), scU =(v, s) => U2(v).replace(/ USDT$/, " " + scM(s)), scNume = (s) => (s.piata === "t212" ? "Trading 212" : "Pionex"), scFel = (s) => (s.piata === "t212" ? ["trade", "trade-uri"] : ["bot", "boți"]);
 export const scorPauza = (s) => ({ nivel: "atentie", titlu: "Scorul " + scNume(s) + ": " + cate(s.serie.n, "pierdere", "pierderi") + " la rând - pauză",
   mesaj: msg("Sezonul din " + ziRo(s.start) + ": " + s.win + " win / " + s.loss + " loss, net " + scU(s.net, s) + " (ținta ta: cel mult " + s.obiectiv.serie + " la rând).",
-    "N-aș mai porni alt " + scFel(s)[0] + " azi; mâine, cu capul limpede, m-aș uita de ce au pierdut " + (s.piata === "t212" ? "ultimele " : "ultimii ") + s.serie.n + ".") });
+    "N-aș porni alt " + scFel(s)[0] + " până la miezul nopții; mâine, cu capul limpede, m-aș uita de ce au pierdut " + (s.piata === "t212" ? "ultimele " : "ultimii ") + s.serie.n + ".") });
 export const scorTinta = (s, fel) => ({ nivel: "info", titlu: "Scorul " + scNume(s) + ": " + (fel === "net" ? "netul țintă atins (" + scU(s.net, s) + ")" : "rata țintă atinsă (" + scPc(s.rata) + ")"),
   mesaj: msg("Sezonul din " + ziRo(s.start) + ": " + s.win + " win / " + s.loss + " loss din " + cate(s.n, scFel(s)[0], scFel(s)[1]) + ", net " + scU(s.net, s) + (fel === "net" ? " față de ținta +" + V(s.obiectiv.net) + " " + scM(s) + "." : " - rata " + scPc(s.rata) + " față de ținta " + scPc(s.obiectiv.rata) + "."),
     fel === "net" ? "Aș păstra ce am câștigat: aceleași sume, nu mai mari, și aș ridica ținta doar după încă 10 " + scFel(s)[1] + "." : "Aș urmări netul, nu rata: o pierdere mare șterge cinci câștiguri mici.") });
 const ziRo = (t) => { const d = new Date(t); return new Intl.DateTimeFormat("ro-RO", { timeZone: "Europe/Bucharest", day: "2-digit", month: "2-digit" }).format(d); };
 export const frana = (f) => {
   const parti = f && typeof f === "object" && Array.isArray(f.depasit) && f.praguri ? f.depasit.map((d) => (DEP[d.cod] ? DEP[d.cod](f) : d.text)).filter(Boolean) : [];
-  const fapt = parti.length ? parti.join(", ") : String(f && typeof f === "object" ? f.text || "" : f || "").replace(/^Frâna contului: gata pe azi\s*—\s*/, "").replace(/\s*N-aș mai porni boți azi;.*$/, "");
-  return { nivel: "critic", titlu: "🛑 Frâna contului: gata pe azi", mesaj: msg(fapt.charAt(0).toUpperCase() + fapt.slice(1).replace(/\.?\s*$/, "."), "N-aș mai porni boți azi (mâine, cu capul limpede); pragurile se schimbă în Radar → Grid → Poarta de pornire.") };
+  const fapt = parti.length ? parti.join(", ") : String(f && typeof f === "object" ? f.text || "" : f || "").replace(/^Frâna (contului|boților): gata pe azi\s*—\s*/, "").replace(/\s*N-aș mai porni boți azi;.*$/, "");
+  /* v100.396 (I-956): „Frâna boților” (pragurile tale în USDT); „Frâna pe tot contul” e cea în lei, pe tot contul */
+  return { nivel: "critic", titlu: "🛑 Frâna boților: gata pe azi", mesaj: msg(fapt.charAt(0).toUpperCase() + fapt.slice(1).replace(/\.?\s*$/, "."), "N-aș mai porni boți azi (mâine, cu capul limpede); pragurile se schimbă în Radar → Grid → Poarta de pornire.") };
 };
 
 // ---------------- v100.281 / colector v101.153 (el, 31.10): evaluarea fiecărui bot închis, în canalul LUI separat ----------------

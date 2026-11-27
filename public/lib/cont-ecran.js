@@ -47,7 +47,8 @@ function ciHisto(pnl, var95) {
     + '<text x="0" y="' + (H - 2) + '" class="ciAx">' + ciEsc(ciLei(lo)) + '</text><text x="' + W + '" y="' + (H - 2) + '" text-anchor="end" class="ciAx">' + ciEsc(ciLei(hi, true)) + "</text></svg>";
 }
 // riscul pe o zi pe care îl spune pagina: cel pe agitația de acum (v100.369) când există, altfel cel vechi (250 de zile egale)
-function ciRiscZi(r) { var a = r && r.riscAcum && r.riscAcum.acum, rs = r && r.risc || {}; return a && a.var95 != null ? { var95: a.var95, es95: a.es95, var99: a.var99, es99: a.es99, acum: true } : { var95: rs.var95, es95: rs.es95, var99: rs.var99, es99: rs.es99, acum: false }; }
+/* v100.396 (I-945): aceeași funcție ca ContIntreg.riscZi (frâna de pe Acasă o citește pe aceea); rămâne aici pentru probele vechi */
+function ciRiscZi(r) { if (typeof ContIntreg !== "undefined" && ContIntreg.riscZi) return ContIntreg.riscZi(r); var a = r && r.riscAcum && r.riscAcum.acum, rs = r && r.risc || {}; return a && a.var95 != null ? { var95: a.var95, es95: a.es95, var99: a.var99, es99: a.es99, acum: true } : { var95: rs.var95, es95: rs.es95, var99: rs.var99, es99: rs.es99, acum: false }; }
 // „ce aș face eu”: o singură acțiune, din ce strică cel mai tare. v100.369 (🟡5): ordinea - reconcilierea, gărzile încălcate (stopul întâi),
 // riscul pe zi peste 4 %, criza peste 35 %, perechea care se mișcă la fel (înainte perechea venea ÎNAINTEA riscului și gărzile lipseau)
 function ciFac(r) {
@@ -183,7 +184,7 @@ function ciSurse(r) {
 function ciFraza(r) {
   var v = r.valoare || {}, b = r.bani, rz = ciRiscZi(r), tot = v.total;
   var fr = "Contul tău: " + ciLei(tot) + (v.complet ? "" : " (fără " + (v.lipsa || []).join(", ") + ")") + ".";
-  if (b && b.tot != null) fr += " Pe ultimul an ai " + (b.tot < 0 ? "pierdut " + ciLei(-b.tot) : "câștigat " + ciLei(b.tot)) + " net: boții " + ciLei(b.boti && b.boti.net, true) + " (după comisioane și funding), Trading 212 " + ciLei(b.t212 && b.t212.pnl, true) + ".";
+  if (b && b.tot != null) fr += " Pe ultimul an ai " + (b.tot < 0 ? "pierdut " + ciLei(-b.tot) : "câștigat " + ciLei(b.tot)) + " net: boții " + ciLei(b.boti && b.boti.net, true) + " (cei închiși, după comisioane și funding), Trading 212 " + ciLei(b.t212 && b.t212.pnl, true) + " (închise și deschise, la prețul de azi).";   /* v100.396 (auditul 26.11 🟡): spus ce e realizat și ce nu */
   if (rz.var95 != null) fr += " Într-o zi proastă (1 din 20) pozițiile de acum pierd ~" + ciLei(rz.var95) + (tot > 0 ? " (" + ciPctF(rz.var95 / tot) + " din cont)" : "") + (rz.acum ? ", pe agitația de acum" : "") + ".";
   var sub = "";
   if (b && b.deschiseT212 && b.deschiseT212.lei != null) sub += "Pe pozițiile Trading 212 deschise stau acum " + ciLei(b.deschiseT212.lei, true) + " nerealizat (" + ciCate(b.deschiseT212.n, "poziție", "poziții") + "). ";
@@ -244,6 +245,21 @@ function ciBaniHtml(r) {
 }
 
 // ---------------- v100.369: riscul (cifra de acum + proba) ----------------
+// v100.396 (I-957, el 27.11: „fa tot plus idei”): „ce tai ca să cobori sub 4%” - din planul socotit de colector (raport.planRisc = ContIntreg.planSub4)
+// sau, la un raport vechi fără el, socotit aici din aceleași serii. Doar informație: nu împarte, nu refuză; hotărăști tu ce și când.
+function ciPlanHtml(r) {
+  var p = r.planRisc || (typeof ContIntreg !== "undefined" && ContIntreg.planSub4 ? ContIntreg.planSub4(r) : null);
+  /* revizia valului 4 (27.11): cu o parte a contului necitită procentul iese umflat ⇒ spus, nu socotit (ca frâna de pe Acasă) */
+  if (p && p.lipsa) return '<h4>Ce tai ca să cobori sub 4 % pe zi</h4><p class="tbSub">' + ciEsc("N-o pot judeca acum: lipsește " + p.lipsa.join(", ") + " din valoarea contului, deci procentul ar ieși umflat. Revine la tura următoare a colectorului.") + "</p>";
+  if (!p || p.putine || !(p.pct0 > 0)) return "";
+  var prag = ciPctF(p.prag, 0), nume = function (x) { return x.nume + (x.parte >= 1 ? "" : " (jumătate)"); };
+  if (p.pct0 <= p.prag) return '<p class="tbSub">' + ciEsc("Riscul pe o zi (" + ciPctF(p.pct0) + " din cont) e sub bugetul ales de " + prag + ": nu e nimic de tăiat.") + "</p>";
+  var L = p.pePozitii || [], lei = L.reduce(function (a, x) { return a + x.lei; }, 0);
+  var t = p.ajunge ? "Ca să cobori sub " + prag + " pe zi: " + L.map(nume).join(", ") + " (~" + ciLei(lei) + " din poziții) ⇒ ~" + ciPctF(p.pct) + "."
+    : p.toate === false ? "Pașii pe care-i pot socoti coboară riscul doar la ~" + ciPctF(p.pct) + " (" + L.map(nume).join(", ") + "); mai departe tăierile nu-l mai scad pe zilele comune - sub " + prag + " nu-ți pot spune drumul."   /* revizia: „nici tăind tot” doar când chiar s-a tăiat tot */
+    : "Nici tăind tot ce are serie de prețuri nu cobori sub " + prag + ": cel mult ~" + ciPctF(p.pct) + " (" + L.map(nume).join(", ") + ").";
+  return '<h4>Ce tai ca să cobori sub ' + ciEsc(prag) + ' pe zi</h4><p class="ciRasp">' + ciEsc(t) + '</p><p class="tbSub">' + ciEsc("Întâi pozițiile care scad riscul cel mai mult pe leu tăiat (cele agitate și cele care se mișcă împreună cu restul), câte o jumătate pe pas; pe ultimele " + ciCate(p.n, "zi de bursă comună", "zile de bursă comune") + ", cu corelațiile dintre ele. Doar informație, nu regulă: hotărăști tu ce și când (rezultatele financiare și planul fiecărei poziții contează și ele).") + "</p>";
+}
 function ciRiscHtml(r, st) {
   var rs = r.risc || {}, ra = r.riscAcum, tot = r.valoare && r.valoare.total, div = r.diversificare, h = "";
   var cel = function (et, cifra, sub, cls) { return '<div class="ciCifra"><span>' + ciEsc(et) + '</span><b class="' + (cls || "") + '">' + ciEsc(cifra) + "</b><small>" + ciEsc(sub) + "</small></div>"; };
@@ -255,6 +271,7 @@ function ciRiscHtml(r, st) {
     + cel("Cea mai rea zi din ultimul an", rs.ziRea ? ciLei(rs.ziRea.lei, true) : "—", rs.ziRea ? "pe " + ciZi(rs.ziRea.z) + ", cu pozițiile de acum" : "", "bad")
     + cel("Pariuri independente", div ? ciNr(div.pariuri, 1).replace(",0", "") : "—", div ? "din " + ciCate(div.pozitii, "poziție", "poziții") + ": restul se mișcă împreună" : "", "")
     + "</div>";
+  h += ciPlanHtml(r);   /* v100.396 (I-957) */
   if (A && V && PR) {
     var k = function (x) { return x ? x.x + " din " + ciCate(x.n, "zi", "zile") + " = " + ciPctF(x.rata) : "—"; };
     h += '<p class="ciRasp">' + ciEsc("Cifra veche (ultimele 250 de zile, egal: −" + ciMii(V.var95) + " lei) ar fi fost depășită în " + k(PR.vechi95) + ", nu în 5 %: din întâmplare ar ieși așa în " + ciSansa(PR.vechi95.p) + " din cazuri. Cea de acum (zilele trecute re-scalate cu agitația de acum) a fost depășită în " + k(PR.acum95) + (PR.acum95.p >= 0.05 ? ", cât se poate pune pe seama întâmplării" : "") + ".") + "</p>";
@@ -265,7 +282,7 @@ function ciRiscHtml(r, st) {
     if (ra.scoase && ra.scoase.length) h += '<p class="tbSub">' + ciEsc("Cifra de acum și proba sunt fără " + ra.scoase.map(function (x) { return x.nume + " (" + x.motiv + ")"; }).join(", ") + ".") + "</p>";
     h += '<p class="tbSub">' + ciEsc("Agitația: pe ultimele 20 de zile pozițiile au mișcat ~" + ciLei(ra.sigma20) + " pe zi (o abatere standard), pe 250 de zile ~" + ciLei(ra.sigmaFer) + "; pentru mâine ~" + ciLei(ra.sigma) + ".") + "</p>";
   }
-  h += ciProbaRealaHtml(st && st.zile);
+  h += ciProbaRealaHtml(st && st.zile, r && r.tranzT212);   /* v100.396 (I-959): + istoricul depunerilor T212 (rândurile vechi) */
   var G = typeof ContGrafice !== "undefined" ? ContGrafice : null, g = r.grafice || {};
   h += '<div class="cnGrGrila">';
   if (G && g.risc && g.risc.length) h += '<div class="cnGr"><h5>Riscul față de zilele reale</h5><p class="cnMut cnMic">bara = cât au făcut pozițiile de acum în ziua aceea (roșu = peste pragul vechi) · linia punctată = pragul vechi, linia galbenă = pragul de acum · ultimele ' + ciEsc(ciCate(Math.min(250, g.risc.length), "zi", "zile")) + " de bursă</p>" + G.riscZile(g.risc, { lat: ciLatJ(), ultime: 250 }) + "</div>";
@@ -278,9 +295,9 @@ function ciRiscHtml(r, st) {
 }
 // v100.370 (ideea 2): proba pe zilele REALE ale contului - pragul salvat în ziua aceea față de schimbarea valorii până a doua zi. Regula e
 // scrisă dinainte (ContIntreg.probaReala): verdict abia de la 250 de zile de bursă; până atunci numărătoarea și cât de puțin poate spune.
-function ciProbaRealaHtml(zile) {
+function ciProbaRealaHtml(zile, tr) {
   if (typeof ContIntreg === "undefined" || !ContIntreg.probaReala) return "";
-  var p = ContIntreg.probaReala(zile), h = "<h4>Proba pe zilele reale ale contului</h4>";
+  var p = ContIntreg.probaReala(zile, tr ? { tranzactii: tr } : undefined), h = "<h4>Proba pe zilele reale ale contului</h4>";
   if (!p.n) return h + '<p class="tbSub">Încă nu am nicio zi de bursă cu pragul salvat și cu a doua zi lângă ea: proba pornește singură, pe măsură ce colectorul ține valoarea contului.</p>';
   var t = "De când se ține valoarea contului (" + ciZi(p.de) + " – " + ciZi(p.pana) + "): " + ciCate(p.n, "zi de bursă judecată", "zile de bursă judecate") + ", contul a scăzut peste pragul zilei proaste în " + ciCate(p.x, "zi", "zile") + " (" + ciPctF(p.x / p.n) + "; promis 5 %, adică ~" + ciNr(p.asteptat) + ")";
   if (p.depasiri.length) t += ": " + p.depasiri.slice(-3).map(function (d) { return ciZi(d.z) + " " + ciLei(d.lei, true) + " față de −" + ciLei(d.prag); }).join("; ");
@@ -288,7 +305,9 @@ function ciProbaRealaHtml(zile) {
   if (p.destule && p.test) t += "Sunt destule zile pentru verdict: o asemenea rată ar ieși din întâmplare în " + ciSansa(p.test.p) + " din cazuri" + (p.test.p < 0.05 ? ", deci pragul vechi nu ține nici pe zilele reale." : ", deci pragul ține pe zilele reale.");
   else t += "N-am aflat încă: verdictul vine la " + ciCate(p.minim, "zi", "zile") + " (regula scrisă dinainte); la " + ciCate(p.n, "zi", "zile") + " ar trebui cel puțin " + ciCate(p.pragRespingere, "depășire", "depășiri") + " ca să spun că pragul e prea mic.";
   h += '<p class="ciRasp">' + ciEsc(t) + "</p>";
-  var nota = "Schimbarea de la o zi la alta include depunerile și retragerile (o retragere poate arăta ca o depășire); zilele parțiale, weekendurile și zilele în care o sursă s-a golit sau a apărut din zero (mutare de bani) nu se numără" + (p.sarite ? " (" + ciCate(p.sarite, "zi sărită", "zile sărite") + ")" : "") + ".";
+  /* v100.396 (I-947): depunerile T212 scoase acolo unde ambele rânduri au ppl + result (din v100.396) */
+  var fd = Number(p.faraDepuneri) || 0;
+  var nota = (fd >= p.n && p.n > 0 ? "Schimbarea de la o zi la alta e fără depunerile și retragerile Trading 212 (" + (tr ? "din istoricul lor, cu taxa cardului; unde istoricul nu ajunge, din ppl + result" : "din ppl + result") + ")" : fd > 0 ? "Schimbarea de la o zi la alta e fără depunerile Trading 212 la " + ciCate(fd, "zi", "zile") + " din " + p.n + (tr ? " (la celelalte nu ajunge nici istoricul depunerilor T212: o retragere poate arăta ca o depășire)" : " (rândurile de dinainte de v100.396 le includ: o retragere poate arăta ca o depășire)") : "Schimbarea de la o zi la alta include depunerile și retragerile (o retragere poate arăta ca o depășire; din v100.396 rândurile noi le scot pe cele Trading 212)") + "; zilele parțiale, weekendurile și zilele în care o sursă s-a golit sau a apărut din zero (mutare de bani) nu se numără" + (p.sarite ? " (" + ciCate(p.sarite, "zi sărită", "zile sărite") + ")" : "") + ".";
   if (p.na) nota += " Pragul „de acum” se ține pe rândul zilei din v100.370: " + ciCate(p.na, "zi", "zile") + " până acum, " + ciCate(p.xa, "depășire", "depășiri") + ".";
   else nota += " Pragul „de acum” se ține pe rândul zilei din v100.370; până atunci proba e pe pragul vechi.";
   return h + '<p class="tbSub">' + ciEsc(nota) + "</p>";

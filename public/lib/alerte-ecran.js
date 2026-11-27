@@ -136,6 +136,13 @@ document.addEventListener("click", function (e) {
 document.addEventListener("change", function (e) { if (e.target && e.target.id === "alImp") { alSt.imp = e.target.checked; alDeseneaza(); } });
 
 // ---- v100.367 (el 19.11: Alerte „ca Jurnalul”): fraza cinstită + „De unde știu”, 3 cifre, dovada (4 grafice + registrul), rândurile pliate ----
+/* v100.396 (I-961): puterea dinainte lângă „N din 26” - ce efect poate vedea proba la 26 de ferestre, cu abaterea de acum, față de efectul care ar conta pe bani */
+function alPutere(f) {
+  var p = f && f.putere; if (!p || !(p.mde > 0)) return "";
+  var a = function (v) { var x = Math.abs(v * 100); return x.toFixed(x < 0.095 ? 2 : 1).replace(".", ",") + " %"; };
+  var t = " · la " + (p.nT || 26) + " vede de la ~" + a(p.mde) + " (" + a(p.lo) + " … " + a(p.hi) + ")";
+  return t + (f.poate === "nu" ? "; efectul care ar conta (" + a(f.bani) + ") e sub el ⇒ așa nu poate răspunde: trebuie alt orizont sau mai multe ferestre" : f.poate === "da" ? "; prinde un efect de " + a(f.bani) : f.poate === "la-limita" ? "; la limită pentru un efect de " + a(f.bani) : "");
+}
 function alPct(v, z) { return v == null || !isFinite(v) ? "—" : (v > 0.0004 ? "+" : v < -0.0004 ? "−" : "") + Math.abs(v * 100).toFixed(z == null ? 1 : z).replace(".", ",") + " %"; }
 function alData(t) { var d = new Date(t); return String(d.getDate()).padStart(2, "0") + "." + String(d.getMonth() + 1).padStart(2, "0") + "." + d.getFullYear(); }
 function alCate(n, sg, pl) { return typeof TextRo !== "undefined" && TextRo.cate ? TextRo.cate(n, sg, pl) : n + " " + pl; }
@@ -149,7 +156,7 @@ function alSurse() {
     "„Ieși” pe acțiuni: 15 cazuri în doar 6 zile, toate din aceeași cădere a cipurilor - față de sector avantajul e mic (p 8–22 %).",
     "„Intrarea sugerată” promitea în medie +" + (D ? TextRo.num(D.promis, 1) : "2,4") + " % pe trade (din istoric); pe viu au venit −2,9 % în 5 ședințe, cu 1,7 puncte sub piață (38 de cazuri, p 8,8 %). Mesajul spune de acum cifra de pe viu.",
     "„Gridul e prea larg pentru levier”: pe boții tăi, cei 16 avertizați au ieșit în medie +3,0 %, niciunul pe minus - avertismentul e spus „nedovedit”.",
-    "Registrul (de acum): fiecare caz nou cu o recomandare e judecat după 1 / 5 / 10 ședințe (acțiuni, față de QQQ, în sensul alertei) sau după 1 / 24 / 72 h (boți, față de BTC, în direcția botului). Verdictul pe un fel abia după 60 de zile sau 30 de cazuri (pragul scris înainte).",
+    "Registrul (de acum): fiecare caz nou cu o recomandare e judecat după 1 / 5 / 10 ședințe (acțiuni, față de QQQ, în sensul alertei) sau după 1 / 24 / 72 h (boți, față de BTC, în direcția botului). Verdictul pe un fel abia la 26 de ferestre care nu se suprapun (boți: la 2 zile una de alta; acțiuni: la 7 zile), cu corecția pentru câte feluri se judecă, o singură dată, înghețat (regula scrisă înainte).",
     "Cât ar dura să se vadă ceva: intrarea 5 puncte ~1 lună; BTC în mișcare 3 puncte ~2 luni; „Ieși” 5 puncte 3–5 luni; o alertă de boți de 1 punct - ani."];
 }
 function alSusHtml() {
@@ -158,7 +165,7 @@ function alSusHtml() {
   var fr = "Alertele te țin la curent, dar pe " + (D ? D.zile : 26) + " de zile niciuna nu s-a dovedit că știe încotro merge prețul; „Ieși” a avut dreptate cât a căzut tot sectorul cipurilor, nu mai mult.";
   var sub = (D ? "Măsurat pe " + D.la + ": ~" + D.peZi + " de alerte pe zi (~" + D.peDiscord + " pe Discord), " + Math.round(D.repetari * 100) + " % repetau ceva din ultimele 24 h. " : "")
     + "De acum pe Discord pleacă doar cazurile noi și cele care cer o decizie. "
-    + (rg && rg.deLa ? "Registrul notează fiecare caz nou din " + alData(rg.deLa) + ": " + alCate(rg.total || 0, "caz", "cazuri") + "; verdictul pe un fel după 60 de zile sau 30 de cazuri." : "Registrul cazurilor noi pornește cu prima tură a colectorului; verdictul pe un fel după 60 de zile sau 30 de cazuri.");
+    + (rg && rg.deLa ? "Registrul notează fiecare caz nou din " + alData(rg.deLa) + ": " + alCate(rg.total || 0, "caz", "cazuri") + "; verdictul pe un fel abia la 26 de ferestre care nu se suprapun, cu corecția pentru câte feluri, înghețat." : "Registrul cazurilor noi pornește cu prima tură a colectorului; verdictul pe un fel abia la 26 de ferestre care nu se suprapun, cu corecția pentru câte feluri, înghețat.");
   var cel = function (et, cifra, s, ton) { return '<div class="cnCifra"><span class="cnEt">' + escapeHtml(et) + '</span><b class="cnMare' + (ton || "") + '">' + escapeHtml(cifra) + '</b><span class="cnMut cnMic">' + escapeHtml(s) + "</span></div>"; };
   var jud = rg && rg.feluri ? rg.feluri.reduce(function (a, f) { return a + (f.judecate || 0); }, 0) : 0;
   return '<div class="cnFrazaBox grFrazaBox" id="alFraza"><p class="grFraza">' + escapeHtml(fr) + '</p><p class="grFrazaSub">' + escapeHtml(sub) + '</p><details class="grSurse"' + sd + "><summary>De unde știu</summary><ul>"
@@ -180,9 +187,9 @@ function alDovadaHtml() {
     + A.linii([{ et: "acțiunea", cls: "jgLinie", v: ser(D.intrare, 1) }, { et: "QQQ / STOXX", cls: "jgLinie2", v: ser(D.intrare, 2) }], { lat: lat, promis: D.promis, eticheta: "Drumul prețului după intrarea sugerată" }) + "</div></div>";
   // registrul pe viu
   if (rg && rg.feluri && rg.feluri.length) {
-    h += '<div class="cnGr"><h5>Registrul, pe viu</h5><p class="cnMut cnMic">din ' + escapeHtml(alData(rg.deLa)) + ' · acțiunile după 5 ședințe față de QQQ, boții după 24 h față de BTC · „se adună” până la 60 de zile sau 30 de cazuri</p><div class="rlTab"><table class="cnTab"><thead><tr><th>Felul</th><th>Cazuri</th><th>Judecate</th><th>În sensul alertei</th><th>Verdict</th></tr></thead><tbody>'
+    h += '<div class="cnGr"><h5>Registrul, pe viu</h5><p class="cnMut cnMic">din ' + escapeHtml(alData(rg.deLa)) + ' · acțiunile după 5 ședințe față de QQQ, boții după 24 h față de BTC · „se adună” până la 26 de ferestre care nu se suprapun (boți: la 2 zile una de alta, ca 24 h să nu se suprapună; acțiuni: la 7 zile), apoi verdictul o singură dată, cu corecția pentru câte feluri se judecă, și înghețat</p><div class="rlTab"><table class="cnTab"><thead><tr><th>Felul</th><th>Cazuri</th><th>Judecate</th><th>În sensul alertei</th><th>Verdict</th></tr></thead><tbody>'
       + rg.feluri.map(function (f) { var V = { "se-aduna": "se adună", peste: "a avut dreptate", sub: "a greșit", "n-am-aflat": "n-am aflat" };
-        return "<tr><td>" + escapeHtml(AL_FEL[f.fel] || f.fel + (f.piata === "crypto" ? " (boți)" : "")) + "</td><td>" + (f.n || 0) + "</td><td>" + (f.judecate || 0) + "</td><td>" + escapeHtml(f.medie == null ? "—" : alPct(f.medie) + (f.lo != null ? " (" + alPct(f.lo) + " … " + alPct(f.hi) + ")" : "")) + "</td><td>" + escapeHtml(V[f.verdict] || "se adună") + "</td></tr>"; }).join("") + "</tbody></table></div></div>";
+        return "<tr><td>" + escapeHtml(AL_FEL[f.fel] || f.fel + (f.piata === "crypto" ? " (boți)" : "")) + "</td><td>" + (f.n || 0) + "</td><td>" + (f.judecate || 0) + "</td><td>" + escapeHtml(f.medie == null ? "—" : alPct(f.medie) + (f.lo != null ? " (" + alPct(f.lo) + " … " + alPct(f.hi) + ")" : "") + (f.inghetat && f.medieAcum != null ? " · acum " + alPct(f.medieAcum) : "")) + "</td><td>" + escapeHtml((V[f.verdict] || "se adună") + (f.verdict === "se-aduna" || !f.verdict ? (f.ferestre != null ? " · " + f.ferestre + " din " + TextRo.cate(f.nVerdict || 26, "fereastră", "ferestre") + alPutere(f) : "") : f.inghetat ? " · înghețat" : "")) + "</td></tr>"; }).join("") + "</tbody></table></div></div>";
   } else h += '<p class="cnRasp">Registrul pe viu se umple de la prima tură a colectorului (o dată pe oră): fiecare caz nou cu o recomandare, judecat după orizont.</p>';
   return h;
 }

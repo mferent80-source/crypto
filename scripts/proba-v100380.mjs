@@ -104,7 +104,7 @@ await test("cardul din Tablou: semnalul, poziția, rezultatul cu o zecimală (f�
   assert.match(h, /Botul de semnal · BTC/); assert.match(h, /TradingView „BTCUSDT\.P”/); assert.match(h, /fără poziție/); assert.match(h, />0,0</); assert.ok(!/−0,0/.test(h));
   assert.match(h, /pe plus 1 din 3/); assert.match(h, /acum 28 min/); assert.match(h, /BTC perpetual · levier 1× · prețul la pornire 61\.466,35/); assert.match(h, /Nu e un bot de grid/);
   assert.equal(BS.cardHtml({ activ: true }, String, {}), "", "botul de grid nu primește cardul");
-  const hp = BS.cardHtml(N({ qtyLong: "0.0006" }, { profit: "0.3" }), (x) => String(x), { acum: ACUM }); assert.match(hp, /cu poziția deschisă: neverificat dacă o cuprinde/);
+  const hp = BS.cardHtml(N({ qtyLong: "0.0006" }, { profit: "0.3" }), (x) => String(x), { acum: ACUM }); assert.match(hp, /Pionex dă doar încasatul; poziția o adaugă Radarul/);   /* v100.396 (revizia, I-967): verificat pe viu 27.11 - „profit” e doar încasatul */
   const hf = BS.cardHtml(N({}, { quoteTotalInvestment: null, quoteOriginalInvestment: null }), (x) => String(x), { acum: ACUM }); assert.ok(!/<span class="tbSub"> · /.test(hf), "rândul de sub cifră nu începe cu „ · ”");
 });
 await test("schimbările de poziție: prima citire doar fixează; intrat / ieșit / întors / mărit / micșorat; fără schimbare ⇒ nimic", () => {
@@ -168,7 +168,7 @@ await test("colectorul: tura boților de semnal (schimbările de poziție, poza 
   assert.ok(/async function turaSemnale\(/.test(COL)); assert.ok(/try \{ await turaSemnale\(boti, acum\); \}/.test(COL), "tura e chemată în tura colectorului");
   assert.ok(COL.includes('if (schimbat) { try { scrieStare(); }'), "starea se scrie la orice schimbare");
   const BO = citeste("../functions/api/bot-orders.js"); assert.ok(BO.includes('const grid=bots.filter(b=>b.tip!=="semnal");') && /grid\.some\(b=>b\[camp\]===null\)/.test(BO) && /grid\.reduce\(/.test(BO), "sumarul de grid fără botul de semnal"); assert.ok(/BotSemnal\.schimbare\(/.test(COL) && /BotSemnal\.mesaj\(/.test(COL) && /BotSemnal\.mesajInchis\(/.test(COL) && /BotSemnal\.poza\(/.test(COL)); assert.ok(/semnal-brut\.jsonl/.test(COL));
-  assert.ok(/\[\/\^semnal-\/, "semnal"\]/.test(POL)); assert.ok(/semnal: \["intrare \/ ieșire a botului de semnal"/.test(POL));
+  assert.ok(/\[\/\^semnal-(\(\?!oprit\))?\/, "semnal"\]/.test(POL));   /* v100.396 (I-943): „semnal-oprit” pleacă imediat - comportamentul îl probează proba v100396 C4 */ assert.ok(/semnal: \["intrare \/ ieșire a botului de semnal"/.test(POL));
   const t = COL.slice(COL.indexOf("async function turaSemnale("), COL.indexOf("async function turaSemnale(") + 3500);
   assert.ok(/vii\[b\.id\] = true;\s*\r?\n\s*if \(!b\.ruleaza\) continue;/.test(t), "botul prezent în listă (chiar oprit) nu se caută printre cei închiși"); assert.ok(/scrieStare\(\)/.test(t), "starea urmărită se scrie pe disc");
   /* revizia (🟡): pe calculator rândul de avertismente nu se mută în cifrele de grid ascunse */

@@ -41,7 +41,7 @@ function tbDeseneazaExtra(b){
   var bqm=qm&&typeof GridLaborator!=="undefined"&&GridLaborator.bilantBlocuri?GridLaborator.bilantBlocuri(lab.blocuri).miscare:null;
   if(qm)h+=linie("Laboratorul: după mișcare vs liniște",P(qm.A&&qm.A.pePlus)+" vs "+P(qm.B&&qm.B.pePlus)+" pe plus",bqm&&bqm.dovedit?"good":"tbSubVal",bqm&&bqm.n?"dovedit în "+bqm.dovedit+" din "+TextRo.cate(bqm.n,"bloc","blocuri"):"n-am aflat încă (neînghețat)");
   var vp=TabloExtra.vsPozitie(b);
-  if(vp&&vp.pozitieSimpla!=null)h+=linie(b.directie==="long"||b.directie==="short"?"Un "+b.directie+" simplu, aceeași sumă și levier":"Fără bot (neutru)",botiBan(vp.pozitieSimpla),botiClasa(vp.pozitieSimpla),vp.diferenta!=null?"gridul "+(vp.diferenta>=0?"a adus ":"a pierdut ")+TextRo.num(Math.abs(vp.diferenta),1)+" față de el":"");
+  if(vp&&vp.pozitieSimpla!=null)h+=linie(b.directie==="long"||b.directie==="short"?"Un "+b.directie+" simplu, aceeași sumă și levier":"Fără bot (neutru)",botiBan(vp.pozitieSimpla),botiClasa(vp.pozitieSimpla),(vp.diferenta!=null?"gridul "+(vp.diferenta>=0?"a adus ":"a pierdut ")+TextRo.num(Math.abs(vp.diferenta),1)+" față de el":"")+(vp.pozitieLichidata?" · poziția simplă ar fi fost lichidată (marja izolată: −suma pusă)":""));   /* v100.396 (auditul 26.11) */
   var j=TabloExtra.legaturaJurnal(grJurnalCitit(),b);
   h+=j?linie("Din jurnal","pornit la "+((GR_NIVEL[j.verdict]||["?"])[0])+", proba zicea mediana "+P(j.mediana),"","acum "+(botiNr(b.profitTotal)!=null&&botiNr(b.investit)?P(botiNr(b.profitTotal)/botiNr(b.investit)):"—")):linie("Din jurnal","nelegat","tbSubVal","n-ai notat fișa la pornire");
   h+='</div>';

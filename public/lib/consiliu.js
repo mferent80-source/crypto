@@ -126,9 +126,9 @@ var Consiliu = (function () {
          20.11.2026) toată pierderea stă în cei 33 închiși dincolo de margine (−3.342,0 USDT, cea mai mare −878,6; ceilalți 338: +689,8), iar cei
          ținuți peste o zi ÎN grid au ieșit pe plus (24 de boți, +72,8) - de aceea pragul e „afară din grid”, nu vârsta botului. E contabilitate cu
          selecție, deci acțiunea e protecția (un stop), nu o prognoză; dovada vine din pagină (x.dovadaFaraStop) și stă sub motiv. */
-      cand.push({ cod: "stop", nivel: rosuFS ? "iesi" : "atentie", c: "r", titlu: pp ? "Stopul e peste plan" + (cost !== null ? ": atins, ≈ −" + TextRo.num(Math.abs(cost), 1) + " USDT" : "") : rosuFS ? "Botul e afară din grid, pe minus și fără stop" : "Botul n-are stop activ în Pionex",
+      cand.push({ cod: "stop", nivel: rosuFS ? "iesi" : "atentie", c: "r", titlu: pp ? "Stopul e peste plan" + (cost !== null ? ": atins, ≈ −" + TextRo.num(Math.abs(cost), 1) + " USDT" : "") : rosuFS ? "Botul e afară din grid, pe minus și fără stop" : /lichidarea vine întâi/.test(cs.tag.t) ? "Stopul stă dincolo de lichidare: nu apucă să închidă" : "Botul n-are stop activ în Pionex",   /* v100.396 (auditul 26.11, 🟡): botul CU stop pus dincolo de lichidare nu mai e „n-are stop” */
         text: cs.deCe || cs.act || "", faCe: rosuFS ? "Aș pune acum un stop " + (x.afaraContra === "sus" ? "peste" : "sub") + " prețul de acum sau aș închide botul: fără el, pierderea n-are capăt până la lichidare." : cs.act || "",
-        scurt: pp ? "stopul costă peste plan" : rosuFS ? "afară din grid, pe minus și fără stop" : "botul n-are stop", cifre: cs.cifre || null, bani: cs.bani || null, extra: cs.tag.t === "fără protecție" && x.dovadaFaraStop ? String(x.dovadaFaraStop) : null });
+        scurt: pp ? "stopul costă peste plan" : rosuFS ? "afară din grid, pe minus și fără stop" : /lichidarea vine întâi/.test(cs.tag.t) ? "stopul e dincolo de lichidare" : "botul n-are stop", cifre: cs.cifre || null, bani: cs.bani || null, extra: cs.tag.t === "fără protecție" && x.dovadaFaraStop ? String(x.dovadaFaraStop) : null });
     }
     // revizia Opus a 2b (2): trendul pe medii (sfatul „trend”), cand nu e un avertisment, se spune LANGA directia pietei, ca „structura pe
     // medii” - nu ca sfat separat cu actiunea lui („L-aș lăsa să lucreze” sub „Piața merge împotriva botului” erau doua voci)

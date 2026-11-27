@@ -21,6 +21,8 @@ async function test(nume, fn) {
 const ORA = 3600000, ZI = 86400000;
 const START = Date.UTC(2026, 9, 18, 21, 0, 0);   // 19.10.2026 00:00 Europe/Bucharest
 const ACUM = START + 36 * ORA;                   // 20.10 12:00
+// v100.396 (I-953, auditul 26.11): pauza ține până la miezul nopții (ora României) de după a N-a pierdere ⇒ testele de pauză se uită în ziua pierderilor
+const ACUM_ZI = START + 20 * ORA;                // 19.10 20:00, aceeași zi cu pierderile de la START + câteva ore
 const t = (id, inchis, rezultat, et) => ({ id: String(id), eticheta: et || "ZRO", inchis, pornit: inchis - 5 * ORA, rezultat });
 // trecutul: 6 pe plus a câte +1, 4 pe minus a câte −5 (60 % rată, net −14), ultimii 3 pe minus
 const INAINTE = [t(1, START - 30 * ZI, 1), t(2, START - 29 * ZI, 1), t(3, START - 28 * ZI, -5), t(4, START - 27 * ZI, 1), t(5, START - 26 * ZI, 1), t(6, START - 25 * ZI, 1), t(7, START - 24 * ZI, 1), t(8, START - 3 * ZI, -5), t(9, START - 2 * ZI, -5), t(10, START - 1 * ZI, -5)];
@@ -52,8 +54,9 @@ await test("seria curentă: de la ultimul închis înapoi, se oprește la primul
   let s = S.calc(INAINTE.concat(w3), CFG, ACUM);
   assert.deepEqual(s.serie, { n: 3, fel: "w" }); assert.equal(s.pauza, false);
   const l3 = [t(11, START + ORA, 1), t(12, START + 2 * ORA, -1), t(13, START + 3 * ORA, -1), t(14, START + 4 * ORA, -1)];
-  s = S.calc(INAINTE.concat(l3), CFG, ACUM);
+  s = S.calc(INAINTE.concat(l3), CFG, ACUM_ZI);
   assert.deepEqual(s.serie, { n: 3, fel: "l" }); assert.equal(s.pauza, true); assert.equal(s.nivel, "rau");
+  s = S.calc(INAINTE.concat(l3), CFG, ACUM); assert.equal(s.pauza, false, "v100.396: a doua zi pauza s-a încheiat"); assert.equal(s.pauzaIncheiata, true); assert.deepEqual(s.serie, { n: 3, fel: "l" });
   // ordinea din listă nu contează - seria e pe ora închiderii
   s = S.calc(INAINTE.concat(l3.slice().reverse()), CFG, ACUM);
   assert.deepEqual(s.serie, { n: 3, fel: "l" });
@@ -61,16 +64,16 @@ await test("seria curentă: de la ultimul închis înapoi, se oprește la primul
 
 await test("nivelul după rată față de țintă: bine ≥ țintă, atenție în 15 pp sub, rău mai jos; sub 10 boți NU e „suficient”", () => {
   const mk = (w, l) => { const a = []; for (let i = 0; i < w; i++) a.push(t(100 + i, START + (i + 1) * ORA, 1)); for (let i = 0; i < l; i++) a.push(t(200 + i, START + (w + i + 1) * ORA, -1)); return a; };
-  let s = S.calc(mk(6, 4), CFG, ACUM);   // 60 % ≥ 55 %, dar ultimii 4 pe minus ⇒ pauză bate rata
+  let s = S.calc(mk(6, 4), CFG, ACUM_ZI);   // 60 % ≥ 55 %, dar ultimii 4 pe minus ⇒ pauză bate rata
   assert.equal(s.pauza, true); assert.equal(s.nivel, "rau"); assert.equal(s.suficient, true);
   const lw = []; for (let i = 0; i < 6; i++) lw.push(t(300 + i, START + (i + 1) * ORA, -1)); for (let i = 0; i < 4; i++) lw.push(t(400 + i, START + (7 + i) * ORA, 1));
   s = S.calc(lw, CFG, ACUM);   // 40 %: sub 55 cu 15 pp ⇒ atenție (ultimii închiși sunt win, deci fără pauză)
   assert.equal(s.nivel, "atentie"); assert.deepEqual(s.serie, { n: 4, fel: "w" });
-  s = S.calc(mk(2, 7), CFG, ACUM);   // 22 %, pauză
+  s = S.calc(mk(2, 7), CFG, ACUM_ZI);   // 22 %, pauză
   assert.equal(s.nivel, "rau"); assert.equal(s.suficient, false);
   s = S.calc([t(1, START + ORA, 1), t(2, START + 2 * ORA, 1)], CFG, ACUM);   // 100 % din 2
   assert.equal(s.nivel, "fara", "v100.221 (audit 10): sub 10 trade-uri culoarea e neutră"); assert.equal(s.suficient, false);
-  s = S.calc(mk(2, 7), CFG, ACUM);   // 22 % din 9, dar ultimii 7 pe minus ⇒ pauza rămâne roșie și sub 10
+  s = S.calc(mk(2, 7), CFG, ACUM_ZI);   // 22 % din 9, dar ultimii 7 pe minus ⇒ pauza rămâne roșie și sub 10
   assert.equal(s.nivel, "rau");
 });
 
@@ -240,10 +243,10 @@ await test("ideea 2 - alerte (pur): pauza o dată pe bot închis cât ești în 
   const st = {};
   let s = S.calc([t(1, START + ORA, -1), t(2, START + 2 * ORA, -1)], CFG, ACUM);
   assert.deepEqual(S.alerte(s, st).mesaje, [], "2 la rând: nimic");
-  s = S.calc([t(1, START + ORA, -1), t(2, START + 2 * ORA, -1), t(3, START + 3 * ORA, -1)], CFG, ACUM);
+  s = S.calc([t(1, START + ORA, -1), t(2, START + 2 * ORA, -1), t(3, START + 3 * ORA, -1)], CFG, ACUM_ZI);
   assert.deepEqual(S.alerte(s, st).mesaje, [{ fel: "pauza" }]); assert.equal(st.pauzaLa, "3");
   assert.deepEqual(S.alerte(s, st).mesaje, [], "același bot: nu repetă");
-  s = S.calc([t(1, START + ORA, -1), t(2, START + 2 * ORA, -1), t(3, START + 3 * ORA, -1), t(4, START + 4 * ORA, -1)], CFG, ACUM);
+  s = S.calc([t(1, START + ORA, -1), t(2, START + 2 * ORA, -1), t(3, START + 3 * ORA, -1), t(4, START + 4 * ORA, -1)], CFG, ACUM_ZI);
   assert.deepEqual(S.alerte(s, st).mesaje, [{ fel: "pauza" }], "a 4-a pierdere în pauză: iar");
   // rata ≥ țintă dar sub 10 boți ⇒ nimic; netul sub 10 nu se anunță
   s = S.calc([t(1, START + ORA, 60), t(2, START + 2 * ORA, 1)], CFG, ACUM);
@@ -296,7 +299,7 @@ await test("oprirea: fereastra e [start, oprit) - ce se închide după oprire nu
   const tr = [t(1, START + ORA, 2), t(2, START + 2 * ORA, -1), t(3, START + 6 * ORA, -1), t(4, START + 7 * ORA, -1), t(5, START + 8 * ORA, -1)];
   const s = S.calc(tr, { start: START, oprit: OPRIT, obiectiv: CFG.obiectiv }, ACUM);
   assert.equal(s.n, 2); assert.equal(s.win, 1); assert.equal(s.loss, 1); assert.equal(s.oprit, OPRIT); assert.equal(s.dupaOprire, 3);
-  assert.deepEqual(S.alerte(S.calc(tr, { start: START, obiectiv: CFG.obiectiv }, ACUM), {}).mesaje, [{ fel: "pauza" }], "fără oprire: 3 la rând ⇒ pauză");
+  assert.deepEqual(S.alerte(S.calc(tr, { start: START, obiectiv: CFG.obiectiv }, ACUM_ZI), {}).mesaje, [{ fel: "pauza" }], "fără oprire: 3 la rând ⇒ pauză");
   assert.deepEqual(S.alerte(s, {}).mesaje, [], "oprit: nimic");
   assert.equal(S.normalizeaza({ start: START, oprit: START - 1 }).oprit, null, "oprirea dinaintea startului nu e oprire");
   const z = S.sezoane(tr, { start: START, oprit: OPRIT, obiectiv: CFG.obiectiv }, ACUM);
@@ -359,12 +362,13 @@ await test("mesajele + colectorul pentru T212: „Scorul Trading 212”, lei, tr
   const T0 = S.PIETE.t212.start, tr = [t(1, T0 + ORA, -50.26), t(2, T0 + 2 * ORA, -30), t(3, T0 + 3 * ORA, -20)];
   const s = S.calc(tr, null, T0 + 4 * ORA, "t212"), p = MC.scorPauza(s);
   assert.ok(/^Scorul Trading 212: 3 pierderi la rând - pauză$/.test(p.titlu) && p.titlu.length <= 60, p.titlu);
-  assert.ok(/−100,3 lei/.test(p.mesaj) && /alt trade azi/.test(p.mesaj) && !/USDT/.test(p.mesaj), p.mesaj);
+  /* v100.396 (I-953): pauza ține până la miezul nopții ⇒ „alt trade până la miezul nopții” (era „alt trade azi”) */
+  assert.ok(/−100,3 lei/.test(p.mesaj) && /alt trade până la miezul nopții/.test(p.mesaj) && !/USDT/.test(p.mesaj), p.mesaj);
   const l = []; for (let i = 0; i < 12; i++) l.push(t(10 + i, T0 + (i + 1) * ORA, i < 7 ? 90 : -20, "X"));
   const n = MC.scorTinta(S.calc(l, null, T0 + 20 * ORA, "t212"), "net");
   assert.ok(/\+530,0 lei/.test(n.titlu) && /ținta \+200 lei/.test(n.mesaj) && /12 trade-uri/.test(n.mesaj) && /10 trade-uri/.test(n.mesaj), n.titlu + " | " + n.mesaj);
   const pp = MC.scorPauza(S.calc([t(1, START + ORA, -1), t(2, START + 2 * ORA, -1), t(3, START + 3 * ORA, -1)], CFG, ACUM));
-  assert.ok(/^Scorul Pionex: /.test(pp.titlu) && /USDT/.test(pp.mesaj) && /alt bot azi/.test(pp.mesaj), pp.titlu + " | " + pp.mesaj);
+  assert.ok(/^Scorul Pionex: /.test(pp.titlu) && /USDT/.test(pp.mesaj) && /alt bot până la miezul nopții/.test(pp.mesaj), pp.titlu + " | " + pp.mesaj);   /* v100.396 (I-953) */
   const C = citeste("scripts", "colector.mjs"), G = citeste("scripts", "lib", "garda-alerte.mjs");
   assert.ok(/VERSIUNE_COLECTOR = "v101\.(12[8-9]|1[3-9]\d|[2-9]\d\d)"/.test(C), "colectorul ≥ v101.128");
   assert.ok(C.includes('for (const piata of ["pionex", "t212"])') && C.includes("_scorT212") && C.includes("StatisticaTrade.dinT212(T212.perechi(u).inchise)") && C.includes('"/api/scor-sezon?piata=" + piata'), "tura pe două piețe");
@@ -423,7 +427,7 @@ await test("🟡 5 - ținta ridicată se anunță din nou (starea ține startul 
   assert.deepEqual(S.alerte(s, st).mesaje, [], "o dată");
   // zeroul: 3 pierderi, apoi un bot cu exact 0 - pauza rămâne
   const z = [t(1, START + ORA, -1), t(2, START + 2 * ORA, -1), t(3, START + 3 * ORA, -1), t(4, START + 4 * ORA, 0)];
-  const sz = S.calc(z, CFG, ACUM);
+  const sz = S.calc(z, CFG, ACUM_ZI);
   assert.deepEqual(sz.serie, { n: 3, fel: "l" }); assert.equal(sz.pauza, true);
 });
 

@@ -397,7 +397,9 @@ export function construiestePoza(i) {
   const t212Eroare = i.t212Eroare ? String(i.t212Eroare) : null;
   // v101.116 (auditul sever, C1): turaLa = ora ultimei ture a alertelor TERMINATE, imediat după `la` (paznicul o citește din capul textului):
   // pulsul dovedește bucla alertelor, nu doar ceasul pozei (care merge separat, la 10 s)
-  return { la: acum, turaLa: nr(i.turaLa), versiune: String(i.versiune || ""), colector: { pid: nr(i.pid), tura: nr(i.tura) }, radarUrl: i.radarUrl ? String(i.radarUrl) : null, t212, t212La: nr(i.t212La), t212Eroare, boti,
+  // v100.396 (I-951): starea Discordului colectorului, în primele 400 de caractere (paznicul o citește fără să parseze poza): "ok" / "esec:<ms>:<cod>:<coada>"
+  const dsc = typeof i.discord === "string" && /^(ok|esec:\d{10,}:[a-z0-9-]{0,24}:\d{1,6})$/.test(i.discord) ? { discord: i.discord } : {};
+  return { la: acum, turaLa: nr(i.turaLa), ...dsc, versiune: String(i.versiune || ""), colector: { pid: nr(i.pid), tura: nr(i.tura) }, radarUrl: i.radarUrl ? String(i.radarUrl) : null, t212, t212La: nr(i.t212La), t212Eroare, boti,
     simboluri: (i.simboluri || []).filter((x) => x && x.s).map((x) => simbolPoza(x, acum)),
     // v101.86 (pagina alerts în două): alertele de azi, pozițiile Salt și răspunsul la cererile Salt - doar când colectorul le are
     ...(Array.isArray(i.alerte) ? { alerte: i.alerte } : {}), ...(i.salt && Array.isArray(i.salt.randuri) ? { salt: { la: nr(i.salt.la), randuri: i.salt.randuri } } : {}),

@@ -3196,7 +3196,21 @@ const NAV_CU_LOAD=new Set(["contintreg","rezultate","mtf","dash","tabloubot","gr
 // `var`, nu const: navTo poate rula la pornire (pagina ținută minte) înainte ca un const de mai jos să existe.
 var PAGINI_CLASA={account:"CRYPTO",deriv:"CRYPTO",micro:"CRYPTO",stocks:"STOCKS"};
 function clasaPentruPagina(id){return Object.prototype.hasOwnProperty.call(PAGINI_CLASA,id)?PAGINI_CLASA[id]:null}
+/* v100.396 (I-955, pasul întâi - spec: „întâi un contor de deschideri pe 2 săptămâni”): câte deschideri are fiecare pagină, pe zi, local (14 zile),
+   urcat pe server o dată la 6 ore (action=deschideri, un rând pe aparat). Din el se hotărăște, cu „nimic pierdut”, ce pagini vechi se încarcă la cerere. */
+var DESCHIDERI_KEY="radarDeschideri";
+function deschideriNoteaza(id){
+ try{
+  var o=JSON.parse(localStorage.getItem(DESCHIDERI_KEY)||"{}");if(!o||typeof o!=="object")o={};var zile=o.zile&&typeof o.zile==="object"?o.zile:{},z=new Date().toISOString().slice(0,10),lim=new Date(Date.now()-14*864e5).toISOString().slice(0,10);
+  if(!/^[a-z0-9]{12}$/.test(String(o.aparat||"")))o.aparat=Math.random().toString(36).slice(2,8)+Date.now().toString(36).slice(-6).padStart(6,"0");
+  var k=String(id||"").slice(0,40);if(!/^[A-Za-z0-9_-]+$/.test(k))return;
+  zile[z]=zile[z]||{};zile[z][k]=(zile[z][k]||0)+1;Object.keys(zile).forEach(function(x){if(x<lim)delete zile[x]});o.zile=zile;
+  if(!(Date.now()-(Number(o.trimisLa)||0)<6*3600000)){o.trimisLa=Date.now();apiFetch("/api/istoric-bot?action=deschideri",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({aparat:o.aparat,zile:zile})}).catch(function(){})}
+  localStorage.setItem(DESCHIDERI_KEY,JSON.stringify(o));
+ }catch(e){}
+}
 function navTo(id,load=false){
+ deschideriNoteaza(id);
  {var clasaPg=clasaPentruPagina(id);if(clasaPg&&typeof assetClass==="function"&&assetClass()!==clasaPg)setAssetClass(clasaPg)}
  show(id);
  if(typeof liqUrmeazaPagina==="function")liqUrmeazaPagina();/* v100.269 (ideile auditului 29.10): fluxul de lichidări curge doar pe Context Intelligence / Decision Core */
@@ -5679,7 +5693,7 @@ function grPoartaHtml(f){
   h+='<div class="grPoartaForm"><label><span class="tbEt2">Ies pe plus la, USDT</span><input id="grPlanPlus" inputmode="decimal" placeholder="ex. 5"'+vv("plus")+'></label><label><span class="tbEt2">Ies dacă pierd, USDT</span><input id="grPlanMinus" inputmode="decimal" placeholder="ex. 10"'+vv("minus")+'></label><label><span class="tbEt2">Ies dacă stă afară, ore</span><input id="grPlanAfara" inputmode="decimal" placeholder="ex. 12"'+vv("afaraOre")+'></label>'
     +grPoartaGridForm(f)
     +'<button type="button" class="grCalc" data-action-click="gridPoarta()">Verifică poarta</button><button type="button" class="actionGhost" data-action-click="gridHartiePorneste()">🧾 Pornește pe hârtie</button></div>';
-  if(p){h+='<ul class="grPoartaReguli">'+p.rez.reguli.map(function(r){return '<li class="'+(r.ok?"good":"bad")+'">'+(r.ok?"✓ ":"✗ ")+(function(t,c){return c?escapeHtml(t.replace(/\.$/,""))+' <span class="tbSub">('+escapeHtml(c)+')</span>'+(/\.$/.test(t)?".":""):escapeHtml(t)})(String(r.text),!r.ok&&r.cost?r.cost:null)+(r.nota?'<br><span class="tbSub">'+escapeHtml(r.nota)+'</span>':'')+'</li>'}).join("")+'</ul>'
+  if(p){h+='<ul class="grPoartaReguli">'+p.rez.reguli.map(function(r){return '<li class="'+(r.necunoscut?"":r.ok?"good":"bad")+'">'+(r.necunoscut?"? ":r.ok?"✓ ":"✗ ")+(function(t,c){return c?escapeHtml(t.replace(/\.$/,""))+' <span class="tbSub">('+escapeHtml(c)+')</span>'+(/\.$/.test(t)?".":""):escapeHtml(t)})(String(r.text),!r.ok&&r.cost?r.cost:null)+(r.nota?'<br><span class="tbSub">'+escapeHtml(r.nota)+'</span>':'')+'</li>'}).join("")+'</ul>'
     // v100.80 (rețeaua neuronală): rândul gri 🧠, după regulile porții (poarta nu se schimbă)
     +grReteaPoartaHtml(f,p)
     // v100.177 (profitul așteptat): mediana boților tăi asemănători, trasă spre zero după câți sunt (puține cazuri ⇒ aproape zero)
@@ -5690,10 +5704,11 @@ function grPoartaHtml(f){
     +(p.rez.sfaturi&&p.rez.sfaturi.length?p.rez.sfaturi.map(function(x){return '<p class="tbSub">💡 '+escapeHtml(x)+'</p>'}).join(""):"")
     // v100.29: cand pica DOAR istoricul monedei, sfatul e suma mai mica si stopul la plan (avertizez, nu refuz)
     +(function(fp){return '<p class="tbFac">👉 <b>Ce aș face eu:</b> '+escapeHtml(fp.fac)+'</p>'+(fp.nota?'<p class="tbSub">'+escapeHtml(fp.nota)+'</p>':'')})(Obiceiuri.facPoarta(p.rez))   /* v100.72 (pachetul 5): acțiunea din Obiceiuri.facPoarta (păzită de gardă) */
+    +(typeof grRiscContHtml==="function"?grRiscContHtml(f):"")   /* v100.396 (I-948): cât risc mai încape în contul întreg */
     +'<button type="button" class="actionGhost" data-action-click="gridJurnalAdauga()">📒 Am pornit botul în Pionex (notează-l)</button>'}
   // v100.43 (I-468): pragurile franei contului, la vedere si schimbabile (o setare fara buton nu exista)
   var gfr=typeof grFrana!=="undefined"?grFrana:{},fp=gfr.praguri||(typeof Obiceiuri!=="undefined"?Obiceiuri.praguriFrana(null):{zi:20,sapt:60,rand:3,boti:7});
-  h+='<div class="grFrana"><span class="tbEt2">🛑 Frâna contului — sună când pierzi azi / pe 7 zile / boți pe minus la rând / prea mulți boți porniți azi</span><div class="grPoartaForm">'
+  h+='<div class="grFrana"><span class="tbEt2">🛑 Frâna boților — sună când boții pierd azi / pe 7 zile / pe minus la rând / prea mulți porniți azi</span><div class="grPoartaForm">'   /* v100.396 (revizia valului 4): „Frâna contului” e acum frâna pe TOT contul (riscul pe o zi, I-956); pragurile de aici sunt ale boților */
     +'<label><span class="tbEt2">pe zi, USDT</span><input id="grFranaZi" inputmode="decimal" value="'+fp.zi+'"></label><label><span class="tbEt2">pe 7 zile, USDT</span><input id="grFranaSapt" inputmode="decimal" value="'+fp.sapt+'"></label><label><span class="tbEt2">la rând</span><input id="grFranaRand" inputmode="numeric" value="'+fp.rand+'"></label><label><span class="tbEt2">boți pe zi</span><input id="grFranaBoti" inputmode="numeric" value="'+fp.boti+'"></label>'
     +'<button type="button" class="actionGhost" data-action-click="grFranaSalveaza()">Salvează pragurile</button></div>'
     +(gfr.istoric?'<p class="tbSub">'+escapeHtml(/^Pe istoria ta,/.test(gfr.istoric.text)?gfr.istoric.text.replace(/^Pe istoria ta,/,"Pe istoria ta din "+new Date().getUTCFullYear()+","):String(gfr.istoric.text).replace(/\.$/,"")+" (în "+new Date().getUTCFullYear()+").")+'</p>':'')+'</div>';
@@ -5995,12 +6010,51 @@ async function gridPoarta(){
   var asG=null;try{var dCz=await getJSON("/api/istoric-bot?action=cazuri"),stP=f.propusa==="deasa"&&f.deasa&&f.deasa.setare?f.deasa.setare:f.setare;
     if(dCz&&dCz.cazuri&&dCz.cazuri.cazuri&&stP&&f.pret>0)asG=Asemanatoare.vecini(dCz.cazuri.cazuri,{dir:f.dir,lev:Math.max(1,Math.floor(lev)),lat:(stP.sus-stP.jos)/f.pret,pas:stP.pas-2*GridCalcul.C.COMISION_GRILA,stare:grProb.rez&&grProb.simbol===f.simbol?grProb.rez.stare:Probabilitati.stareDinRegim(f.regim),investit:grNumar($("grSuma")&&$("grSuma").value)||stP.suma})}catch(e){asG=null}
   var sansaG=grProb.rez&&grProb.simbol===f.simbol?Probabilitati.rand(grProb.rez,grProb.cal,f.dir,{titluCursa:grTitluCursa(grProb.rez)}):null;   // v100.47
-  grPoartaRez={simbol:f.simbol,plan:plan,frana:fr,trades:trades,lev:lev,rez:Obiceiuri.poarta({gridPrag:grPoartaGridPrag(),planMoneda:pmG,asemanatoare:asG,sansa:sansaG,fisa:f,trades:trades,acum:Date.now(),dir:f.dir,levier:lev,plan:plan,frana:fr,numeBot:grStare.monede&&grStare.monede[f.simbol]&&grStare.monede[f.simbol].baseCurrency})};
+  var grFrCont=await grFranaContCiteste();   /* v100.396 (I-956): frâna CONTULUI întreg în poartă, aceeași frază ca pe Acasă */
+  grPoartaRez={simbol:f.simbol,plan:plan,frana:fr,trades:trades,lev:lev,rez:Obiceiuri.poarta({gridPrag:grPoartaGridPrag(),planMoneda:pmG,asemanatoare:asG,sansa:sansaG,fisa:f,trades:trades,acum:Date.now(),dir:f.dir,levier:lev,plan:plan,frana:fr,franaCont:grFrCont,numeBot:grStare.monede&&grStare.monede[f.simbol]&&grStare.monede[f.simbol].baseCurrency})};
   // v100.177: verdictul fișei intră în jurnal (cu banda gridului propus: „a stat prețul în bandă?” se judecă după 1 și 3 zile)
   try{var stV=f.propusa==="deasa"&&f.deasa&&f.deasa.setare?f.deasa.setare:f.setare;if(f.verdict&&f.verdict.nivel&&f.pret>0)verdictTrimite({s:"poarta-grid",k:f.simbol,n:f.verdict.nivel,p:f.pret,j:stV&&stV.jos,u:stV&&stV.sus,d:stV&&stV.dir,g:stV&&stV.grile,l:stV&&stV.levier})}catch(e){}
   grPoartaRez.asG=asG;
   renderGrid();
   [["grPlanPlus","plus"],["grPlanMinus","minus"],["grPlanAfara","afaraOre"]].forEach(function(x){if($(x[0])&&plan[x[1]]!=null)$(x[0]).value=String(plan[x[1]])});
+  grRiscContAdu(f,lev);   /* v100.396 (I-948): fără await - rândul vine după poartă */
+}
+/* v100.396 (I-956): frâna CONTULUI pentru poartă - aceeași funcție ca banda de pe Acasă (acFranaContText: raportul, riscul de 4%, frâna pe tot
+   contul, evenimentul de azi). Fără datele Acasă încă citite (pagina Grid deschisă direct), raportul contului se aduce aici, o dată. */
+async function grFranaContCiteste(){
+  /* revizia valului 4 (27.11, 🟠): raportul ȘI calendarul aduse proaspăt (acVremeAsigura: ce lipsește sau are peste 10 min, și reîncearcă o citire
+     picată) - înainte raportul de la pornire rămânea în memorie ore întregi pe Grid, iar calendarul neștiut dădea „✓ nu e trasă” într-o zi cu CPI;
+     „știut” și motivul vin din aceleași funcții ca pe Acasă (acFranaContStiut / acFranaContNec), deci poarta și banda spun același lucru */
+  try{if(typeof acVremeAsigura==="function")await acVremeAsigura()}catch(e){}
+  var t=typeof acFranaContText==="function"?acFranaContText():"",stiut=typeof acFranaContStiut==="function"?!!acFranaContStiut():false;
+  return {text:t||"",stiut:stiut,nec:!stiut&&typeof acFranaContNec==="function"?String(acFranaContNec()||""):""};
+}
+/* v100.396 (I-948, auditul 26.11): „cât risc mai încape azi” - riscul pe o zi al contului întreg CU botul ăsta (ContIntreg.riscCuCandidat, aceeași
+   metodă ca cifra de pe Contul întreg), lângă bugetul de 4%. Doar informație, sub poartă; nu împarte bani. */
+var grRiscCont={simbol:null,rez:null,inLucru:false};
+async function grRiscContAdu(f,lev){
+  if(!f||!(f.dir==="long"||f.dir==="short")||typeof ContIntreg==="undefined"||!ContIntreg.riscCuCandidat){grRiscCont={simbol:f&&f.simbol,rez:null,inLucru:false,neutru:!!f};return}
+  var su=Number(f.setare&&f.setare.suma),L=Math.max(1,Math.floor(Number(lev)||1));grRiscCont={simbol:f.simbol,rez:null,inLucru:true,suma:su,lev:L};
+  try{
+    var cr=typeof acasa!=="undefined"&&acasa.d&&acasa.d.contRaport?acasa.d.contRaport:await getJSON("/api/istoric-bot?action=cont"),rap=cr&&cr.cont?cr.cont:cr&&cr.la?cr:null;
+    var k=await getJSON("/api/market?type=pionex_klines&symbol="+encodeURIComponent(f.simbol)+"&interval=1D&limit=500"),b=(grRanduri(k)||[]).map(function(x){return {t:Number(x.time),c:Number(x.close)}}).filter(function(x){return x.t>0&&x.c>0});
+    var lu=rap&&rap.leiPe?Number(rap.leiPe.USD):null;grRiscCont.leiUsd=lu;
+    grRiscCont.rez=rap&&lu>0&&su>0?ContIntreg.riscCuCandidat(rap,ContIntreg.randamente(b),{expunereLei:su*L*lu,dir:f.dir}):null;
+    if(!grRiscCont.rez&&!rap)grRiscCont.eroare="raportul contului lipsește";
+  }catch(e){grRiscCont.eroare=String(e&&e.message||e).slice(0,80)}
+  grRiscCont.inLucru=false;if(grStare.fisa&&grStare.fisa.simbol===f.simbol)renderGrid();
+}
+function grRiscContHtml(f){
+  var s=grRiscCont;if(!f||s.simbol!==f.simbol)return "";
+  if(s.inLucru)return '<p class="tbSub">📊 Socotesc riscul pe o zi al contului întreg cu botul ăsta…</p>';
+  if(s.neutru)return '<p class="tbSub">📊 Riscul contului cu un grid neutru nu-l socotesc: expunerea lui își schimbă semnul cu prețul.</p>';
+  var r=s.rez;if(!r)return s.eroare?'<p class="tbSub">📊 Riscul contului cu botul ăsta: n-am putut aduce datele ('+escapeHtml(s.eroare)+').</p>':"";
+  if(r.putine&&r.v0==null)return '<p class="tbSub">📊 Riscul contului cu botul ăsta: prea puține zile comune ('+escapeHtml(String(r.n))+') ca să-l socotesc.</p>';
+  var L=function(x){return TextRo.num(x,1)+" lei"},P=function(x){return TextRo.num(x*100,1)+"%"},U=function(lei){return TextRo.num(lei/(s.lev*s.leiUsd),1)+" USDT"},nPrag=TextRo.num(r.prag*100,0)+"%";
+  var scade=r.v1<r.v0*0.995,t="📊 Riscul pe o zi al contului întreg: acum ~"+L(r.v0)+" ("+P(r.pct0)+"); cu botul ăsta ~"+L(r.v1)+" ("+P(r.pct1)+")"+(scade?", mai puțin: merge invers față de ce ai deja":"");
+  /* pe viu, 27.11: riscul de acum 9,7% din cont ⇒ peste buget; un short ZEC / BTC îl scade (9,3–9,4%) - nu e „nu încape”, ci „rămâne peste” */
+  t+=r.pct1<=r.prag?": încape în bugetul de "+nPrag+" (până la ~"+U(r.incapeLei)+" la "+s.lev+"×).":r.pesteDeja&&scade?"; contul rămâne peste bugetul de "+nPrag+".":r.pesteDeja&&!(r.incapeLei>0)?": contul e deja peste bugetul de "+nPrag+", deci nu încape nimic în plus.":": nu încape în bugetul de "+nPrag+"; cel mult ~"+U(r.incapeLei)+" la "+s.lev+"×.";
+  return '<p class="tbSub">'+escapeHtml(t)+'</p><p class="tbSub">'+escapeHtml("Pe "+TextRo.cate(r.n,"zi comună","zile comune")+(r.putine?" (puține: cifra e aproximativă)":"")+"; expunerea luată la maxim (suma × levier); corelația cu ce ai deja e inclusă. Doar informație, nu regulă.")+'</p>';
 }
 function grHartieCitit(){try{var v=JSON.parse(localStorage.getItem("grHartie")||"[]");return Array.isArray(v)?v.filter(function(x){return x&&x.id&&x.setare}):[]}catch(e){return []}}
 function grHartieScrie(l){try{localStorage.setItem("grHartie",JSON.stringify(grMarcheaza(l.slice(-100),"grHartie")))}catch(e){}grSyncJurnal()}   /* v100.349: 100, nu 20 tăcut; pe server */
@@ -7881,14 +7935,25 @@ function tbActualizeazaBanda(){
 // Merge pe orice ecran cat exista un bot (banda de sus e peste tot); PING/PONG cu Pionex le face releul.
 // Reconectare cu pauza crescanda (max 30 s); fara niciun mesaj 90 s = socket mort, il inchidem ca sa se reconecteze.
 var pvStare={ws:null,simbol:null,pret:null,timeout:null,incercari:0,ultimMesaj:0,zi:null,ziInLucru:false,grafLa:0};
+/* v100.396 (I-958): registrul boților de semnal pe viu (colectorul îl urcă la fiecare tranzacție închisă) - o dată la 5 minute, cât e deschisă cartela */
+var tbSemnaleReg={v:undefined,la:0,inLucru:false};
+function tbSemnaleRegAdu(){if(typeof tbSemnaleReg==="undefined"||!tbSemnaleReg||tbSemnaleReg.inLucru||Date.now()-tbSemnaleReg.la<5*60000)return;tbSemnaleReg.inLucru=true;getJSON("/api/istoric-bot?action=semnaleRegistru").then(function(j){tbSemnaleReg.v=j&&j.registru||null},function(){}).then(function(){tbSemnaleReg.la=Date.now();tbSemnaleReg.inLucru=false})}
 function pvOpreste(){
   if(pvStare.timeout){clearTimeout(pvStare.timeout);pvStare.timeout=null}
   var w=pvStare.ws;pvStare.ws=null;
   if(w){try{w.onopen=null;w.onmessage=null;w.onerror=null;w.onclose=null;w.close()}catch(e){}}
   pvStare.simbol=null;pvStare.pret=null;
 }
+/* v100.396 (I-955, auditul 26.11 🟡): cu fila ascunsă socketul se închide (baterie și date pe S24 - prețul tranzacție cu tranzacție nu-l vede nimeni);
+   la întoarcere pornește iar pe același simbol, iar până la primul mesaj banda arată prețul botului, cum face la orice reconectare */
+var pvAscunsSimbol=null;
+if(typeof document!=="undefined")document.addEventListener("visibilitychange",function(){
+  if(document.visibilityState==="hidden"){if(pvStare.simbol){pvAscunsSimbol=pvStare.simbol;pvOpreste()}}
+  else if(pvAscunsSimbol){var s=pvAscunsSimbol;pvAscunsSimbol=null;pvPorneste(s)}
+});
 function pvPorneste(simbol){
   if(typeof PretViu==="undefined"||typeof WebSocket==="undefined")return;
+  if(typeof document!=="undefined"&&document.visibilityState==="hidden"){pvAscunsSimbol=simbol;return}   /* ascunsă: doar ține minte simbolul */
   if(pvStare.simbol===simbol){
     if(pvStare.ws&&pvStare.ws.readyState===1&&pvStare.ultimMesaj&&Date.now()-pvStare.ultimMesaj>90000){try{pvStare.ws.close()}catch(e){}}
     if(pvStare.timeout||(pvStare.ws&&pvStare.ws.readyState<=1))return;
@@ -8066,7 +8131,7 @@ function renderTabloBot(){
      cardul lui (poziția, rezultatul, intrările, de când merge); ce ține de grid se ascunde din CSS (#tabloubot.tbSemnal), restul rămâne */
   var semnalTb=!!(b&&b.tip==="semnal"&&typeof BotSemnal!=="undefined");if(pnl&&pnl.classList)pnl.classList.toggle("tbSemnal",semnalTb);
   if(typeof tbFilaAplica==="function")try{tbFilaAplica()}catch(e){}   /* v100.391: fila se potrivește pe loc când botul trece pe semnal / grid (nu abia la tbCapAzi) */
-  var csm=$("tbSemnalCard");if(csm){if(csm.hidden!==!semnalTb)csm.hidden=!semnalTb;if(semnalTb){var hsm=BotSemnal.cardHtml(b,escapeHtml,{acum:Date.now()});if(csm._h!==hsm){csm._h=hsm;csm.innerHTML=hsm}}}
+  var csm=$("tbSemnalCard");if(csm){if(csm.hidden!==!semnalTb)csm.hidden=!semnalTb;if(semnalTb){tbSemnaleRegAdu();var hsm=BotSemnal.cardHtml(b,escapeHtml,{acum:Date.now(),registru:typeof tbSemnaleReg!=="undefined"&&tbSemnaleReg?tbSemnaleReg.v:undefined});if(csm._h!==hsm){csm._h=hsm;csm.innerHTML=hsm}}}
   var m=TabloBot.masoara({bot:brut,klinePerp:klinePentruMasura,
     pretSpot:pretSpotPentruMasura,istoric:ist,acum:Date.now(),
     pretPerpViu:(!eroareActiva&&b)?b.pretCurent:null});
@@ -8189,6 +8254,23 @@ document.addEventListener("keydown",e=>{
  else if(e.key.toLowerCase()==="s"&&peLaboratorVechi())navTo("scan",true);
 });
 if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").then(pwaHandleRegistration).catch(()=>{})}
+/* v100.396 (I-952, auditul 26.11): livrarea fără F5. O filă deschisă nu afla niciodată de o versiune nouă (browserul caută SW nou doar la navigare):
+   acum întreabă serverul de versiune (ruta publică health) la 10 min și când revii în filă; la diferență cere SW-ul nou (reg.update) și arată
+   bannerul cu versiunea - „Actualizează” trece la SW-ul nou (sau reîncarcă, dacă instalarea n-a apucat). Fila ascunsă nu întreabă. */
+var VERS_VERIF_MS=10*60000,versVerifLa=0,versServer=null;
+function versiuneNoua(srv,aici){const a=/^v(\d+)\.(\d+)$/.exec(String(srv||"")),b=/^v(\d+)\.(\d+)$/.exec(String(aici||""));return !!(a&&b)&&(+a[1]>+b[1]||(+a[1]===+b[1]&&+a[2]>+b[2]))}   /* doar serverul MAI NOU (în timpul livrării pagina poate fi înaintea lui) */
+async function verificaVersiuneaServerului(fortat){
+ if(typeof document!=="undefined"&&document.visibilityState==="hidden")return;
+ if(!fortat&&Date.now()-versVerifLa<VERS_VERIF_MS)return;versVerifLa=Date.now();
+ /* auditul 26.11 🟡: rândul „Engine READY” era verde fix; acum „Server” = ultimul răspuns real (versiunea lui / „nu răspunde”) */
+ const sv=function(t,c){const el=$("sideServer");if(el){el.textContent=t;el.className=c}};
+ let v=null;try{const r=await fetch("/api/market?type=health",{cache:"no-store"});if(r.ok){const j=await r.json();v=j&&j.version||null}}catch{sv("nu răspunde","bad");return}
+ sv(v?v:"nu răspunde",v?"good":"bad");
+ versServer=v;if(!versiuneNoua(v,APP_VERSION))return;
+ try{const reg=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration();if(reg){await reg.update().catch(()=>{});if(reg.waiting)pwaWaitingWorker=reg.waiting}}catch{}
+ const b=$("pwaUpdateBanner");if(b){const t=b.querySelector("b");if(t)t.textContent="Este disponibilă versiunea "+v+" (aici: "+APP_VERSION+")";b.classList.add("on")}
+}
+if(typeof document!=="undefined"){document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")verificaVersiuneaServerului(false)});setInterval(()=>verificaVersiuneaServerului(false),VERS_VERIF_MS);setTimeout(()=>verificaVersiuneaServerului(true),30000)}
 setTimeout(()=>{if(!isStandalonePwa())showPwaInstall();renderPwaHealth();pwaInitDeepLink()},900)
 
 

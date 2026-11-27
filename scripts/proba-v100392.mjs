@@ -55,7 +55,10 @@ await test("E  mutat NESCHIMBAT: corpul modulului = rândurile 7034–7404 din a
   /* git ține fișierul cu LF, copia de lucru cu CRLF ⇒ comparația pe LF. Dacă modulul se schimbă după mutare, comparația trece pe ISTORIC
      (modulul din commitul mutării), ca la proba v100390 */
   const bloc = vechi.replace(/\r\n/g, "\n").split("\n").slice(7033, 7404).join("\n");
-  const corp = MOD.replace(/\r\n/g, "\n"), corpFaraCap = corp.slice(corp.indexOf("*/") + 3).replace(/\n$/, "");
+  /* v100.396 (I-950): modulul s-a schimbat după mutare (semaforul primește pragStop) ⇒ comparația pe modulul din commitul mutării (d2ec034e), cum
+     spune regula de mai sus; schimbările de după le probează proba versiunii lor */
+  const MODm = execFileSync("git", ["show", "d2ec034e:public/lib/tablou-consilier.js"], { cwd: RAD, encoding: "utf8", maxBuffer: 64 << 20 });
+  const corp = MODm.replace(/\r\n/g, "\n"), corpFaraCap = corp.slice(corp.indexOf("*/") + 3).replace(/\n$/, "");
   assert.equal(corpFaraCap, bloc);
   assert.match(APP, /(?:\/\/|\/\*) v100\.392 \(I-940\): probabilitățile din istoric[^\n]*mutat în public\/lib\/tablou-consilier\.js/);
 });

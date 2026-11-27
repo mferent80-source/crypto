@@ -95,13 +95,13 @@
   {
    "nume": "mărirea pleacă pe Discord",
    "fisier": "public/lib/bot-semnal.js",
-   "cauta": "return { nivel: \"info\", cheie: cheie, doarRadar: true, titlu:",
-   "pune": "return { nivel: \"info\", cheie: cheie, titlu:"
+   "cauta": "cheie: cheie, doarRadar: true, titlu: m + \" semnal: \" + (r.ev === \"marit\"",
+   "pune": "cheie: cheie, titlu: m + \" semnal: \" + (r.ev === \"marit\""
   },
   {
    "nume": "rezultatul pe poziție față de pornire, nu față de intrare",
    "fisier": "public/lib/bot-semnal.js",
-   "cauta": "else if (ev === \"intrat\" || ev === \"intors\") { nou.pr0 = ref.pr; nou.p0 = nou.p; }",
+   "cauta": "else if (ev === \"intrat\") { nou.pr0 = ref.pr; nou.p0 = nou.p; }",
    "pune": ""
   },
   {
@@ -131,7 +131,7 @@
   {
    "nume": "noaptea intrările pleacă pe Discord",
    "fisier": "scripts/lib/politica-alerte.mjs",
-   "cauta": ", [/^semnal-/, \"semnal\"]",
+   "cauta": ", [/^semnal-(?!oprit)/, \"semnal\"]",
    "pune": ""
   },
   {
@@ -171,10 +171,10 @@
    "pune": ""
   },
   {
-   "nume": "revizia: cardul nu spune că rezultatul cu poziția e neverificat",
+   "nume": "revizia: cardul nu spune ce cuprinde rezultatul (Pionex = doar încasatul, verificat 27.11)",
    "fisier": "public/lib/bot-semnal.js",
-   "cauta": "b.rezultatNeverificat ? \"după Pionex; cu poziția deschisă: neverificat dacă o cuprinde\" : \"după Pionex\"",
-   "pune": "\"după Pionex\""
+   "cauta": "\"Pionex dă doar încasatul; poziția o adaugă Radarul\"",
+   "pune": "null"
   },
   {
    "nume": "revizia: botul oprit, încă în listă, căutat printre cei închiși la fiecare minut",

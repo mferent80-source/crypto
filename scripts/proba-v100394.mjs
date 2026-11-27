@@ -55,7 +55,9 @@ await test("E  mutat NESCHIMBAT: corpul modulului = rândurile 7058–7197 din a
   /* git ține fișierul cu LF, copia de lucru cu CRLF ⇒ comparația pe LF. Dacă modulul se schimbă după mutare, comparația trece pe ISTORIC
      (modulul din commitul mutării), ca la proba v100390 */
   const bloc = vechi.replace(/\r\n/g, "\n").split("\n").slice(7057, 7197).join("\n");
-  const corp = MOD.replace(/\r\n/g, "\n"), corpFaraCap = corp.slice(corp.indexOf("*/") + 3).replace(/\n$/, "");
+  /* v100.396 (I-942): modulul s-a schimbat după mutare (rândul „long simplu” spune lichidarea) ⇒ comparația pe modulul din commitul mutării (cf918856) */
+  let modMutare = MOD; try { modMutare = execFileSync("git", ["show", "cf918856:public/lib/tablou-banii.js"], { cwd: RAD, encoding: "utf8", maxBuffer: 64 << 20 }); } catch (e) { modMutare = MOD; }
+  const corp = modMutare.replace(/\r\n/g, "\n"), corpFaraCap = corp.slice(corp.indexOf("*/") + 3).replace(/\n$/, "");
   assert.equal(corpFaraCap, bloc);
   assert.match(APP, /(?:\/\/|\/\*) v100\.394 \(I-940\): banii botului[^\n]*mutat în public\/lib\/tablou-banii\.js/);
 });

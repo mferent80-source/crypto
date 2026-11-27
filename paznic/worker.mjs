@@ -202,6 +202,43 @@ export async function verificaStopuri(env, acum, f = fetch) {
   return { stare: ok ? "alarma" : "discord-picat", n: lista.length };
 }
 
+// v100.396 (I-951, auditul 26.11): Discordul COLECTORULUI mort (webhook șters / schimbat ⇒ 401 / 404, adresa lipsă) = tăcere totală: alertele
+// stau la coadă, colectorul doar scrie în jurnal, iar paznicul vedea colectorul viu („bate”) și tăcea. Colectorul pune în capul pozei câmpul scurt
+// "discord": "ok" sau "esec:<de când refuză, ms>:<codul>:<câte stau la coadă>"; cronul anunță de pe webhook-ul PAZNICULUI după 30 de minute de
+// refuz (amintire la 6 ore), apoi „a revenit”. O scriere KV doar la anunț / revenire. Colector vechi (fără câmp) sau poză veche ⇒ nimic (tăcerea
+// colectorului o spune verifica()).
+export const DISCORD_REFUZ_MS = 30 * 60000;
+export function discordDinText(text) {
+  const m = /"discord"\s*:\s*"(ok|esec:(\d{10,}):([a-z0-9-]{0,24}):(\d{1,6}))"/.exec(String(text || "").slice(0, 400));
+  return !m ? null : m[1] === "ok" ? { ok: true } : { ok: false, esecDe: Number(m[2]), cod: m[3], coada: Number(m[4]) };
+}
+function discordCauza(cod) {
+  if (/^(401|403|404)$/.test(cod)) return "Discord spune " + cod + ": webhook-ul colectorului pare șters sau schimbat. Aș pune adresa nouă în DISCORD_WEBHOOK din .dev.vars pe VPS și aș reporni colectorul (" + UNDE.repornire + ").";
+  if (cod === "webhook-lipsa") return "Adresa webhook-ului lipsește sau are forma greșită (DISCORD_WEBHOOK din .dev.vars pe VPS).";
+  if (cod === "429") return "Discord cere pauză (429) de prea mult timp; dacă ține, alertele vin cu întârziere.";
+  return "Cererile nu primesc răspuns (" + (cod || "rețea") + "): internetul VPS-ului sau Discordul au probleme.";
+}
+export async function verificaDiscord(env, acum, f = fetch) {
+  let text = null; try { text = await env.PAZNIC.get("poza"); } catch { text = null; }
+  const la = Number(laDinText(text)) || 0, d = discordDinText(text);
+  if (!la || acum - la > TACE_MS || !d) return { stare: "fara-semn" };
+  let s = {}; try { s = JSON.parse(await env.PAZNIC.get("discordStare") || "null") || {}; } catch { s = {}; }
+  if (d.ok) {
+    if (!s.anuntatLa) return { stare: "ok" };
+    const ok = await discord(env, "info", "Crypto Radar: alertele colectorului ajung iar pe Discord", "Discordul primește iar alertele colectorului (le refuza de la " + ora(Number(s.esecDe) || Number(s.anuntatLa)) + "). Cele rămase la coadă vin acum, cu „întârziat” în titlu.", f);
+    if (ok) await env.PAZNIC.put("discordStare", "{}");
+    return { stare: ok ? "revenit" : "discord-picat" };
+  }
+  const refuz = acum - d.esecDe;
+  if (refuz < DISCORD_REFUZ_MS) return { stare: "refuz-proaspat" };
+  if (s.anuntatLa && Number(s.esecDe) === d.esecDe && acum - s.anuntatLa < AMINTIRE_MS) return { stare: "anuntat" };
+  const prima = !(s.anuntatLa && Number(s.esecDe) === d.esecDe);
+  const ok = await discord(env, "critic", "Crypto Radar: Discordul refuză alertele colectorului de " + minute(refuz),
+    "Colectorul de pe " + UNDE.loc + " merge, dar alertele lui nu mai ajung aici din " + ora(d.esecDe) + "; " + (d.coada === 1 ? "una stă" : d.coada + " stau") + " la coadă. Cât ține, NU primești alertele botului (lichidare, grid, planul tău, podeaua). " + discordCauza(d.cod) + (prima ? "" : " Încă refuză."), f);
+  if (ok) await env.PAZNIC.put("discordStare", JSON.stringify({ anuntatLa: acum, esecDe: d.esecDe }));
+  return { stare: ok ? "anuntat" : "discord-picat" };
+}
+
 // bataia colectorului: tine minte cand a venit; daca paznicul anuntase tacerea, spune ca a revenit
 export async function bataie(env, corp, acum, f = fetch) {
   const s = await citeste(env), era = s.anuntatLa ? s.la : null;
@@ -292,7 +329,7 @@ export default {
   // v101.126: cronul la 5 minute — paznicul colectorului la 10 minute (ca înainte), alarma „fără stop” la :00 :15 :30 :45
   async scheduled(event, env, ctx) {
     const t = Number(event && event.scheduledTime) || Date.now(), mm = new Date(t).getUTCMinutes();
-    if (mm % 10 < 5) ctx.waitUntil(verifica(env, t));
+    if (mm % 10 < 5) { ctx.waitUntil(verifica(env, t)); ctx.waitUntil(verificaDiscord(env, t)); }   /* v100.396 (I-951): și Discordul colectorului */
     if (mm % 15 < 5) ctx.waitUntil(verificaStopuri(env, t));
   }
 };

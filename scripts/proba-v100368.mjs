@@ -20,7 +20,7 @@ console.log("V100.368 · registrul alertelor în Tablou\n");
 
 await test("T fără registru: spune ce s-a măsurat și când pornește registrul", () => {
   const t = TE.textRegistruAlerte(null);
-  assert.match(t, /^Au avut dreptate alertele\? Pe 26 de zile măsurate, niciun fel nu s-a dovedit\. /); assert.match(t, /60 de zile sau 30 de cazuri/);
+  assert.match(t, /^Au avut dreptate alertele\? Pe 26 de zile măsurate, niciun fel nu s-a dovedit\. /); assert.match(t, /26 de ferestre care nu se suprapun, cu corecția pentru câte feluri, înghețat/);   /* v100.396 (I-946): regula registrului s-a schimbat dinadins (înainte: 60 de zile sau 30 de cazuri) */
   assert.equal(TE.textRegistruAlerte({ total: 0, feluri: [] }), t);
 });
 await test("T cu registru: cazurile, data, câte judecate; fără verdict ⇒ „încă niciun verdict”", () => {

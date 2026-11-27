@@ -79,6 +79,14 @@ var Obiceiuri = (function () {
     R.push({ cod: "moneda", ok: !im.avertizare, text: im.text, nota: m !== tk ? tk + " = " + m + " la boții Pionex" : null });
     // v100.43 (I-468): frana contului - rand in poarta (avertizare, nu blocare: pornirea pe hartie ramane)
     if (o.frana) R.push({ cod: "frana", ok: !o.frana.activa, text: o.frana.text });
+    // v100.396 (I-956, pe viu 27.11: Poarta spunea „✓ Frâna contului: azi −0,6 USDT…” - frâna BOȚILOR - cât Acasă spunea „Aș reduce expunerea până
+    // sub 4%: ~9,7% din cont”): frâna CONTULUI întreg în poartă, cu aceeași frază ca pe Acasă (Acasa.franaCont); avertizare, nu blocare
+    if (o.franaCont) {
+      var fc = String(o.franaCont.text || "");
+      /* revizia valului 4 (27.11, 🟠): neștiută ⇒ nu „trece” (înainte ok:true ⇒ „Aș porni: toate regulile trec” cu frâna neștiută); motivul din Acasă */
+      var nec = String(o.franaCont.nec || "").replace(/[.\s]+$/, "");
+      R.push({ cod: "frana-cont", ok: !fc && !!o.franaCont.stiut, necunoscut: !fc && !o.franaCont.stiut, text: fc ? "Frâna contului: " + fc.charAt(0).toLowerCase() + fc.slice(1) : o.franaCont.stiut ? "Frâna contului nu e trasă (riscul pe o zi sub 4%, contul întreg citit)." : "Frâna contului: încă n-o știu" + (nec ? " (" + nec + ")" : "") + "." });
+    }
     // v100.45 (I-475): planul potrivit monedei - cat de des o zi obisnuita ajunge la stopul planului (din profilul monedei)
     if (o.planMoneda && o.planMoneda.text) R.push({ cod: "plan-moneda", ok: !o.planMoneda.avertizare, text: o.planMoneda.text });
     // v100.103 (I-534): gridul completat în poartă față de pragul de pierdere (GridPlan.potrivire) - în listă, nu doar un rând separat
@@ -135,7 +143,7 @@ var Obiceiuri = (function () {
     if (pornitiAzi >= P0.boti) dep.push({ cod: "boti", text: cate(pornitiAzi, "bot pornit", "boți porniți") + " azi (pragul: " + P0.boti + ")" });
     // v100.72: o fraza ≤ 160 cu actiunea o data („mâine, cu capul limpede” e in alerta de pe Discord, MesajeColector.frana)
     var text = dep.length ? "Frâna e trasă: " + dep.map(function (d) { return d.text; }).join(", ") + "; n-aș mai porni boți azi."
-      : "Frâna contului: azi " + U(netZi) + " din −" + P0.zi + ", pe 7 zile " + U(netSapt) + " din −" + P0.sapt + (rand ? ", " + rand + " pe minus la rând" : "") + ", " + pornitiAzi + " din " + cate(P0.boti, "bot pornit azi", "boți porniți azi") + ".";
+      : "Frâna boților: azi " + U(netZi) + " din −" + P0.zi   /* v100.396 (I-956): „boților” - „Frâna contului” e a contului întreg (Acasă, Poarta) */ + ", pe 7 zile " + U(netSapt) + " din −" + P0.sapt + (rand ? ", " + rand + " pe minus la rând" : "") + ", " + pornitiAzi + " din " + cate(P0.boti, "bot pornit azi", "boți porniți azi") + ".";
     return { netZi: netZi, netSapt: netSapt, deschis: deschis, inchiseAzi: nZi, rand: rand, pornitiAzi: pornitiAzi, depasit: dep, activa: dep.length > 0, praguri: P0, text: text };
   }
   // v100.281 (el, 31.10: evaluarea după fiecare bot închis): frâna în CLIPA pornirii lui t - doar ce se știa atunci: închișii de dinainte și
@@ -335,6 +343,8 @@ var Obiceiuri = (function () {
   function facPoarta(rez) {
     var r = rez || {}, rele = (Array.isArray(r.reguli) ? r.reguli : []).filter(function (x) { return x && !x.ok; });
     if (r.trecut) return { fac: "Aș porni: toate regulile trec, iar eu îl notez în jurnal cu planul tău.", nota: "" };
+    /* revizia valului 4: doar ce nu se știe încă (frâna contului) ⇒ aștept s-o știu, nu „regulile nu trec” */
+    if (rele.length && rele.every(function (x) { return x.necunoscut; })) return { fac: "Aș aștepta până știu frâna contului: fără ea nu pot spune că se poate porni.", nota: "Restul regulilor trec; reverific când vin raportul contului și calendarul." };
     if (rele.length && rele.every(function (x) { return x.cod === "grid-prag"; })) return { fac: "Aș porni ÎNGUST sau LARG din fișă: gridul ăsta nu încape în pragul tău de pierdere.", nota: "Restul regulilor trec; poarta doar avertizează." };
     if (rele.length && rele.every(function (x) { return x.cod === "moneda"; })) return { fac: "Aș porni cu o sumă mai mică și aș ține stopul la plan.", nota: "Fișa, planul și levierul sunt în regulă, dar pe moneda asta istoria ta e pe minus; îl notez în jurnal." };
     return { fac: "Aș aștepta până trec regulile de mai sus.", nota: "Dacă pornești totuși, îl notez în jurnal și socoteala va arăta cine a avut dreptate." };

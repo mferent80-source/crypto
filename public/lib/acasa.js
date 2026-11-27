@@ -386,7 +386,9 @@ var Acasa = (function () {
       boti = ok ? Math.round(s * 100) / 100 : null;
     } else if (azi.botiPeId && ier.botiPeId === undefined) boti = null;
     else boti = d("botiTotal");
-    var o = { boti: boti, t212: d("t212Total"), de: ier.zi, inchiseDupa: typeof nDupa === "number" ? nDupa : 0 };
+    // v100.396 (I-947, auditul 26.11): T212 fără depuneri - schimbarea lui ppl + result (câștigul pe poziții, deschise și închise) când ambele poze îl
+    // au; altfel totalul, ca înainte (o depunere de 2.000 lei ieșea „+2.000 lei” verde). t212FaraDepuneri spune care a fost.
+    var tRez = d("t212Rez"), o = { boti: boti, t212: tRez !== null ? tRez : d("t212Total"), t212FaraDepuneri: tRez !== null, de: ier.zi, inchiseDupa: typeof nDupa === "number" ? nDupa : 0 };
     return o.boti === null && o.t212 === null ? null : o;
   }
   // v100.378 (I-926; el, 23.11.2026: „cât a crescut astăzi sau scăzut, 3 zile, 5-7”): aceeași socoteală față de poza de acum `zile` zile (3, 7) -
@@ -623,6 +625,9 @@ var Acasa = (function () {
     return Array.isArray(ab) && ab.length > 0;
   }
   function pctCont(x) { var v = nr(x); if (v === null) return "—"; return Math.abs(v * 100).toFixed(1).replace(".", ",") + "%"; }
+  // v100.396 (I-945): = ContIntreg.riscZi / lipsaValoare (aici fără să depindă de ele: colectorul încarcă acasa.js și fără cont-intreg.js)
+  function riscZiRap(r) { if (typeof ContIntreg !== "undefined" && ContIntreg.riscZi) return ContIntreg.riscZi(r); var a = r && r.riscAcum && r.riscAcum.acum, rs = r && r.risc || {}; return a && a.var95 != null ? { var95: a.var95, acum: true } : { var95: rs.var95, acum: false }; }
+  function lipsaValoareRap(r) { var v = r && r.valoare; return v && v.complet === false ? (Array.isArray(v.lipsa) && v.lipsa.length ? v.lipsa.slice(0, 4).map(String) : ["o parte a contului"]) : []; }
   function frazaPauza(n) {
     var k = Math.round(Number(n)); if (!(k > 0)) k = 3;
     return "N-aș porni alt bot azi: " + cate(k, "pierdere", "pierderi") + " la rând.";
@@ -641,8 +646,18 @@ var Acasa = (function () {
       var ore = Math.round(Number(o.raportOre)); if (!(ore > 0)) ore = 12;
       return "N-aș porni nimic nou: raportul pe tot contul e vechi de " + cate(ore, "oră", "ore") + ".";
     }
-    var rap = o.raport, tot = rap && rap.valoare ? nr(rap.valoare.total) : null, va = rap && rap.risc ? nr(rap.risc.var95) : null;
+    // v100.396 (I-945): aceeași cifră ca pe Contul întreg (riscul pe agitația de acum, cel vechi doar rezervă) și „n-o pot judeca” cu o parte lipsă din cont
+    var rap = o.raport, tot = rap && rap.valoare ? nr(rap.valoare.total) : null, va = nr(riscZiRap(rap).var95), lpV = lipsaValoareRap(rap);
+    /* revizia 27.11 (🟠6): fraza ajunge și pe Discord (rândul „👉”, ≤ 110) ⇒ scurtă; mai multe părți lipsă ⇒ „o parte din cont” */
+    if (o.raportStare === "ok" && lpV.length) { var lpT = lpV.join(", "); if (lpT.length > 30) lpT = "o parte din cont"; return "N-aș porni nimic nou: lipsește " + lpT + ", deci riscul pe o zi nu se poate judeca."; }
     if (o.raportStare === "ok" && tot > 0 && va > 0.04 * tot) return "Aș reduce expunerea până sub 4% pe zi (prag ales, de prudență): o zi proastă îți ia ~" + pctCont(va / tot) + " din cont.";   /* v100.363: pragul e ales, ca 25 / 50 % */
+    // v100.396 (I-947, auditul 26.11): frâna pe TOT contul (boți + T212 + Salt), în lei, fără depunerile T212 - o zi de −2.000 lei pe T212 nu oprea nimic
+    var cc = rap && rap.castig, PR = cc && cc.prag && nr(cc.prag.zi) > 0 && nr(cc.prag.sapt) > 0 ? cc.prag : { zi: 0.03, sapt: 0.06 };
+    if (o.raportStare === "ok" && cc) {
+      var leiC = function (x) { return (typeof TextRo !== "undefined" && TextRo.num ? TextRo.num(Math.abs(x), 1) : Math.abs(x).toFixed(1).replace(".", ",")) + " lei"; };
+      if (cc.zi && nr(cc.zi.pct) !== null && nr(cc.zi.lei) !== null && cc.zi.pct <= -PR.zi) return "N-aș porni nimic nou azi: contul a pierdut " + leiC(cc.zi.lei) + " (−" + pctCont(cc.zi.pct) + ") fără depuneri; pragul ales e −" + pctCont(PR.zi).replace(",0%", "%") + ".";
+      if (cc.sapt && nr(cc.sapt.pct) !== null && nr(cc.sapt.lei) !== null && cc.sapt.pct <= -PR.sapt) return "N-aș porni nimic nou: pe 7 zile contul a pierdut " + leiC(cc.sapt.lei) + " (−" + pctCont(cc.sapt.pct) + ") fără depuneri; pragul ales e −" + pctCont(PR.sapt).replace(",0%", "%") + ".";
+    }
     var ev = o.eveniment ? String(o.eveniment).replace(/[.!?]+$/g, "").trim() : "";
     if (ev) {
       var prefix = "N-aș porni boți noi și n-aș cumpăra chiar înainte de ";
@@ -672,8 +687,8 @@ var Acasa = (function () {
   function riscNecunoscut(o) {
     o = o || {};
     if (o.raportStare !== "ok") return "";
-    var rap = o.raport || {}, tot = rap.valoare ? nr(rap.valoare.total) : null, va = rap.risc ? nr(rap.risc.var95) : null;
-    var lp = (Array.isArray(rap.lipsuri) ? rap.lipsuri : []).filter(function (x) { return typeof x === "string" && x; }).slice(0, 4);
+    var rap = o.raport || {}, tot = rap.valoare ? nr(rap.valoare.total) : null, va = nr(riscZiRap(rap).var95);
+    var lp = (Array.isArray(rap.lipsuri) ? rap.lipsuri : []).concat(lipsaValoareRap(rap)).filter(function (x, i, a) { return typeof x === "string" && x && a.indexOf(x) === i; }).slice(0, 4);   /* v100.396 (I-945): + părțile lipsă din valoare */
     if (!(tot > 0) || va === null) return "raportul contului n-are riscul pe o zi" + (lp.length ? " (lipsesc: " + lp.join(", ") + ")" : "");
     return lp.length ? "riscul pe o zi e socotit fără " + lp.join(", ") : "";
   }

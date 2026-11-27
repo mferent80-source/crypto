@@ -95,8 +95,8 @@
   {
    "nume": "pagina: Poartă în fișă",
    "fisier": "public/lib/sugestii-ecran.js",
-   "cauta": "f.actNota = \"În probă: fără Poartă și fără sumă. Fișa îți dă proba gridului pe monedă; Busola, imaginea pe 4h.\";\n  } else if (r.grup === \"revUS\"",
-   "pune": "f.actNota = \"În probă: fără Poartă și fără sumă. Fișa îți dă proba gridului pe monedă; Busola, imaginea pe 4h.\"; f.actiuni.push({ et: \"Poarta\", act: \"x()\" });\n  } else if (r.grup === \"revUS\""
+   "cauta": "f.actNota = \"În probă: fără Poartă și fără sumă. Fișa îți dă proba gridului pe monedă; Busola, imaginea pe 4h.\";\n  } else if (r.grup === \"osc\"",
+   "pune": "f.actNota = \"În probă: fără Poartă și fără sumă. Fișa îți dă proba gridului pe monedă; Busola, imaginea pe 4h.\"; f.actiuni.push({ et: \"Poarta\", act: \"x()\" });\n  } else if (r.grup === \"osc\""
   }
  ]
 }

@@ -42,6 +42,11 @@ export function situatiiAcasa(pune) {
   frana("bursă roșie cu raport lipsă", rosieF, { fel: "bursa", raportStare: "lipsa" });
   frana("bursă nu ia pauza", largaF, { fel: "bursa", pauza: true, pauzaN: 3 });
   frana("funding long pe liniște", linF, { fel: "crypto", raportStare: "ok", raport: rapMic, fundingAtentie: "long" });
+  // v100.396 (revizia 27.11, 🟠6): frazele noi ale frânei pe tot contul ajung și pe Discord (rândul „👉”, ≤ 110)
+  frana("cont: lipsește Trading 212", linF, { fel: "crypto", raportStare: "ok", raport: { valoare: { total: 2500, complet: false, lipsa: ["Trading 212"] }, risc: { var95: 1000 } } });
+  frana("cont: lipsesc trei părți", linF, { fel: "crypto", raportStare: "ok", raport: { valoare: { total: 2500, complet: false, lipsa: ["soldul liber Pionex", "Trading 212", "Salt"] }, risc: { var95: 1000 } } });
+  frana("cont: −3,5% azi fără depuneri", linF, { fel: "crypto", raportStare: "ok", raport: Object.assign({}, rapMic, { castig: { zi: { lei: -12487.5, pct: -0.035 }, sapt: null, prag: { zi: 0.03, sapt: 0.06 } } }) });
+  frana("cont: −6,5% pe 7 zile fără depuneri", linF, { fel: "crypto", raportStare: "ok", raport: Object.assign({}, rapMic, { castig: { zi: null, sapt: { lei: -112762.5, pct: -0.065 }, prag: { zi: 0.03, sapt: 0.06 } } }) });
   frana("funding short pe liniște", linF, { fel: "crypto", raportStare: "ok", raport: rapMic, fundingAtentie: "short" });
   // ---- frica/lacomia, latimea pietei, legatura BTC - bursa, calendarul, funding-ul pietei, socoteala alertelor
   for (const [sit, l] of [["lăcomie", Array.from({ length: 30 }, (_, i) => 50 + i)], ["frică", Array.from({ length: 30 }, (_, i) => 60 - i * 1.5)], ["la mijloc", Array.from({ length: 30 }, (_, i) => 40 + (i % 5))]])

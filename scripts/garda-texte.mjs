@@ -22,7 +22,7 @@ import { situatiiSugestiiAct } from "./lib/garda-sugestii-act.mjs";   // v100.11
 import { abateriUnde } from "./lib/unde-ruleaza.mjs";   // v100.306 (I-832): alertele nu trimit la „PC-ul de acasă” / .bat - Radarul rulează pe VPS
 
 const RAD = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-for (const f of ["text-ro.js", "grid-calcul.js", "tablou-extra.js", "alerte.js", "scenariu.js", "directie.js", "sfaturi.js", "semnale-bot.js", "consiliu.js", "actiuni-semnale.js", "consilier.js", "probabilitati.js", "retea.js", "obiceiuri.js", "acasa.js", "indicatori-bot.js", "profil-moneda.js", "jurnal-trade.js", "grid-proba.js", "reveniri.js", "busola.js", "grid-plan.js", "risc-luna.js", "carnet.js", "sugestii-actiuni.js"]) vm.runInThisContext(fs.readFileSync(path.join(RAD, "public", "lib", f), "utf8"), { filename: f });
+for (const f of ["text-ro.js", "grid-calcul.js", "tablou-extra.js", "alerte.js", "scenariu.js", "directie.js", "sfaturi.js", "semnale-bot.js", "consiliu.js", "actiuni-semnale.js", "consilier.js", "probabilitati.js", "retea.js", "obiceiuri.js", "acasa.js", "indicatori-bot.js", "profil-moneda.js", "jurnal-trade.js", "grid-proba.js", "reveniri.js", "busola.js", "grid-plan.js", "risc-luna.js", "carnet.js", "sugestii-actiuni.js", "bot-semnal.js"]) vm.runInThisContext(fs.readFileSync(path.join(RAD, "public", "lib", f), "utf8"), { filename: f });
 const { GridCalcul: G, SemnaleBot: S, TabloExtra: T, Consiliu: C, Sfaturi: SF, Directie: DR } = globalThis;
 
 // pachetele trecute pe „strict” - unul cate unul, la terminarea lui (semafor + cartele = semnale-bot.js, consiliu = consiliu.js;

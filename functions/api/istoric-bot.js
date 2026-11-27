@@ -143,6 +143,8 @@ async function istoricGet(request,env){
   // v100.311: „🎯 Direcția pe 7 zile (în probă)” — primele 10 monede Pionex cu direcția M1 / M2 și probabilitatea + urmărirea la 7 zile (tura-directie.mjs)
   if(action==="directie"){let v=null;try{v=JSON.parse(await env.ISTORIC.get("sugestii:directie")||"null")}catch{v=null}return json({directie:v})}
   if(action==="oscilo"){let v=null;try{v=JSON.parse(await env.ISTORIC.get("sugestii:oscilo")||"null")}catch{v=null}return json({oscilo:v})}   /* v100.353: Oscilo (în probă) */
+  if(action==="semnaleRegistru"){let v=null;try{v=JSON.parse(await env.ISTORIC.get("semnale:registru")||"null")}catch{v=null}return json({registru:v})}   /* v100.396 (I-958): boții de semnal pe viu */
+  if(action==="deschideri"){let v=null;try{v=JSON.parse(await env.ISTORIC.get("deschideri")||"null")}catch{v=null}return json({deschideri:v&&typeof v==="object"?v:{}})}   /* v100.396 (I-955): contorul de pagini, pe aparat */
   if(action==="alerteRegistru"){let v=null;try{v=JSON.parse(await env.ISTORIC.get("alerte:registru")||"null")}catch{v=null}return json({registru:v})}   /* v100.367: registrul alertelor (rezumatul colectorului) */
   /* v100.374 (I-898 + I-908): drumul botului - `brut` = lista `ist:<bot>` întreagă (rămâne în KV și după închidere; `citeste` o taie după timp),
      `rarit` = copia de păstrat (`drum:<bot>`, pusă de tura probei marginii); bilanțul probei marginii pentru pagina Probe */
@@ -274,7 +276,7 @@ export async function onRequestPost({request,env}){
     const z=corp&&corp.instantaneu;
     if(z&&typeof z==="object"&&/^\d{4}-\d{2}-\d{2}$/.test(String(z.zi))){
       let l=[];try{l=JSON.parse(await env.ISTORIC.get("piata:instantanee")||"[]")}catch{l=[]}if(!Array.isArray(l))l=[];
-      const o={zi:z.zi};["fg","inMiscare","vix","ndxE50","btc","largime","fundingMed","botiTotal","t212Total","t212Ppl","la"].forEach(k=>{const v=nr(z[k]);if(v!==null)o[k]=v});
+      const o={zi:z.zi};["fg","inMiscare","vix","ndxE50","btc","largime","fundingMed","botiTotal","t212Total","t212Ppl","t212Rez","la"].forEach(k=>{const v=nr(z[k]);if(v!==null)o[k]=v});
       // v100.40: totalul FIECARUI bot activ (id -> USDT) - „față de ieri dimineață” compara doar botii prezenti in ambele poze
       if(z.botiPeId&&typeof z.botiPeId==="object"){const m={};Object.keys(z.botiPeId).slice(0,30).forEach(k=>{const v=nr(z.botiPeId[k]);if(/^[\w-]{1,40}$/.test(k)&&v!==null)m[k]=v});o.botiPeId=m}
       l=l.filter(x=>x&&x.zi!==z.zi);l.push(o);l.sort((a,b)=>a.zi<b.zi?-1:1);
@@ -520,8 +522,12 @@ export async function onRequestPost({request,env}){
       const m={sym:x.sym,s:x.s,pionex:x.pionex===true,agitata:x.agitata===true,revine:x.revine===true,parte:x.parte==="short"||x.parte==="long"?x.parte:null,ppstCuParte:typeof x.ppstCuParte==="boolean"?x.ppstCuParte:null,
         junk:Array.isArray(x.junk)?x.junk.slice(0,6).map(t=>String(t).slice(0,120)):[]};for(const k of NUM)m[k]=nr(x[k]);
       const p=x.ppst1h;m.ppst1h=p&&(p.dir==="SUS"||p.dir==="JOS")?{dir:p.dir,bare:nr(p.bare),dist:nr(p.dist),linia:nr(p.linia)}:null;monede.push(m)}
-    const U=corp.urmarire,up=k=>{const z=U&&U[k];return z?{zile:nr(z.zile)||0,medie:nr(z.medie),pePlus:nr(z.pePlus)}:{zile:0}};
-    await env.ISTORIC.put("monede-bot",JSON.stringify({la,n:nr(corp.n),nPionex:nr(corp.nPionex),monede,short:corp.short.map(String),long:corp.long.map(String),revenire:(corp.revenire||[]).map(String),range:(corp.range||[]).map(String),urmarire:{short:up("short"),long:up("long"),inAsteptare:nr(U&&U.inAsteptare)||0}}));return json({ok:true,monede:monede.length})}
+    /* v100.396 (I-961): puterea dinainte (efectul minim detectabil la 26 de ferestre), curățată câmp cu câmp */
+    const PU=p=>p&&typeof p==="object"&&!Array.isArray(p)?{mde:nr(p.mde),lo:nr(p.lo),hi:nr(p.hi),n:nr(p.n),nT:nr(p.nT),bani:nr(p.bani),poate:["da","nu","la-limita"].includes(p.poate)?p.poate:null}:null;
+    const U=corp.urmarire,up=k=>{const z=U&&U[k];return z?{zile:nr(z.zile)||0,ferestre:nr(z.ferestre)||0,medie:nr(z.medie),pePlus:nr(z.pePlus),putere:PU(z.putere)}:{zile:0,ferestre:0}};   /* v100.396: + ferestrele independente */
+    await env.ISTORIC.put("monede-bot",JSON.stringify({la,n:nr(corp.n),nPionex:nr(corp.nPionex),monede,short:corp.short.map(String),long:corp.long.map(String),revenire:(corp.revenire||[]).map(String),range:(corp.range||[]).map(String),urmarire:{short:up("short"),long:up("long"),inAsteptare:nr(U&&U.inAsteptare)||0,nejudecate:nr(U&&U.nejudecate)||0},
+      /* v100.396 (I-949): proba listei cu regula lui (rezumatul colectorului, curățat câmp cu câmp) */
+      ...(corp.regula&&typeof corp.regula==="object"&&!Array.isArray(corp.regula)?{regula:(()=>{const R=corp.regula,VR=["se-aduna","merge","ajuta-dar-pierde","nu-ajuta","n-am-aflat"],pp=k=>{const z=R[k];return z&&typeof z==="object"?{ferestre:nr(z.ferestre)||0,tranzactiiLista:nr(z.tranzactiiLista)||0,tranzactiiMartor:nr(z.tranzactiiMartor)||0,lista:nr(z.lista),martor:nr(z.martor),dif:nr(z.dif),verdict:VR.includes(z.verdict)?z.verdict:"se-aduna",inghetat:nr(z.inghetat),putere:PU(z.putere)}:null};return {short:pp("short"),long:pp("long"),nVerdict:nr(R.nVerdict)||26,inAsteptare:nr(R.inAsteptare)||0,nejudecate:nr(R.nejudecate)||0}})()}:{})}));return json({ok:true,monede:monede.length})}
   if(action==="probaA"){const zp=nr(corp&&corp.zile);if(!(nr(corp&&corp.la)>0)||zp===null||!(zp>=0))return json({error:"probaA: la + zile"},400);await env.ISTORIC.put("sugestii:probaA",JSON.stringify(corp));return json({ok:true})}
   // v100.344 (16.11): proba gridului - doar numere și zile curățate; rezumatul cu verdictul scris de colector (regulile din scripts/lib/proba-grid.mjs)
   // v100.349 (auditul Grid, el: „fiecare fișă calculată se notează și se judecă după cât o ții, pe bare de 1 minut”): una pe monedă, zi (UTC) și fereastră
@@ -576,6 +582,7 @@ export async function onRequestPost({request,env}){
     return peCheie("kv:cont:zile",async()=>{   // v100.259 (auditul 23.10, punctul 7): pe rând
     let l=[];try{l=JSON.parse(await env.ISTORIC.get("cont:zile")||"[]")}catch{l=[]}if(!Array.isArray(l))l=[];
     const row={z,valoare:nr(corp.valoare),complet:corp.complet===true,pionex:nr(corp.pionex),t212:nr(corp.t212),salt:nr(corp.salt)};
+    const tRez=nr(corp.t212Rez);if(tRez!==null)row.t212Rez=tRez;   /* v100.396 (I-947): ppl + result T212 - fluxul de bani se scoate din schimbare */
     if(typeof corp.pauza==="boolean")row.pauza=corp.pauza;const pn=nr(corp.pauzaN);if(pn>0)row.pauzaN=Math.round(pn);
     if(corp.raportStare==="ok"||corp.raportStare==="vechi"||corp.raportStare==="lipsa")row.raportStare=corp.raportStare;
     if(typeof corp.eveniment==="string")row.eveniment=String(corp.eveniment).slice(0,160);
@@ -838,10 +845,27 @@ export async function onRequestPost({request,env}){
     return json({ok:true,intrebari:curate.length});
   }
   // v100.367 (el 19.11: dreptatea „spun cinstit + registru”): rezumatul registrului alertelor, curățat (≤ 40 de feluri, cifre, verdictul din listă)
+  // v100.396 (I-955): contorul de deschideri al paginilor (14 zile pe aparat, cel mult 6 aparate) - din el se hotărăște ce pagini vechi se încarcă la cerere
+  if(action==="deschideri"){
+    const ap=String(corp&&corp.aparat||""),Z=corp&&corp.zile;if(!/^[a-z0-9]{12}$/.test(ap)||!Z||typeof Z!=="object"||Array.isArray(Z))return json({error:"deschideri: aparat + zile"},400);
+    const zile={};for(const z of Object.keys(Z).filter(z=>/^\d{4}-\d{2}-\d{2}$/.test(z)).sort().slice(-15)){const p=Z[z];if(!p||typeof p!=="object")continue;const o={};for(const k of Object.keys(p).slice(0,120)){const n=nr(p[k]);if(/^[A-Za-z0-9_-]{1,40}$/.test(k)&&n!==null&&n>=0&&n<=100000)o[k]=Math.round(n)}zile[z]=o}
+    return peCheie("kv:deschideri",async()=>{let v={};try{v=JSON.parse(await env.ISTORIC.get("deschideri")||"{}")||{}}catch{v={}}if(typeof v!=="object"||Array.isArray(v))v={};
+      v[ap]={la:Date.now(),zile};const ap6=Object.keys(v).sort((a,b)=>(v[b].la||0)-(v[a].la||0)).slice(0,6),o={};for(const k of ap6)o[k]=v[k];
+      await env.ISTORIC.put("deschideri",JSON.stringify(o));return json({ok:true,aparate:ap6.length})});
+  }
+  // v100.396 (I-958): registrul boților de semnal pe viu - rezumatul colectorului (regula scrisă înainte, verdict la 30) + ultimele 20 de tranzacții
+  if(action==="semnaleRegistru"){
+    const r=corp&&corp.rezumat;if(!r||typeof r!=="object"||Array.isArray(r)||!(nr(r.la)>0))return json({error:"semnaleRegistru: rezumatul cu „la”"},400);
+    const VS=["se-aduna","opreste","castiga","n-am-aflat"],rz={la:nr(r.la),n:nr(r.n)||0,medie:nr(r.medie),lo:nr(r.lo),hi:nr(r.hi),sumaNet:nr(r.sumaNet),pePlus:nr(r.pePlus),nVerdict:nr(r.nVerdict)||30,reper:nr(r.reper),verdict:VS.includes(r.verdict)?r.verdict:"se-aduna",inghetat:nr(r.inghetat),
+      cifreInghetate:r.cifreInghetate&&typeof r.cifreInghetate==="object"?{n:nr(r.cifreInghetate.n),medie:nr(r.cifreInghetate.medie),lo:nr(r.cifreInghetate.lo),hi:nr(r.cifreInghetate.hi)}:null};   /* revizia: cifrele din clipa înghețării */
+    const ult=(Array.isArray(corp.ultime)?corp.ultime:[]).slice(-20).map(x=>x&&typeof x==="object"?{bot:String(x.bot||"").slice(0,40),moneda:String(x.moneda||"").slice(0,24),d:x.d==="long"||x.d==="short"?x.d:null,la:nr(x.la),net:nr(x.net),pus:nr(x.pus),pct:nr(x.pct)}:null).filter(Boolean);
+    await env.ISTORIC.put("semnale:registru",JSON.stringify({rezumat:rz,ultime:ult}));return json({ok:true,n:rz.n});
+  }
   if(action==="alerteRegistru"){
     const r=corp&&corp.rezumat;if(!r||typeof r!=="object"||Array.isArray(r)||!(nr(r.la)>0))return json({error:"alerteRegistru: rezumatul cu „la”"},400);
     const V=["se-aduna","peste","sub","n-am-aflat"],fel=(v)=>String(v||"").replace(/[^a-z0-9-]/gi,"").slice(0,32);
-    const o={la:nr(r.la),deLa:nr(r.deLa),total:nr(r.total),prag:{zile:nr(r.prag&&r.prag.zile),cazuri:nr(r.prag&&r.prag.cazuri)},feluri:(Array.isArray(r.feluri)?r.feluri:[]).slice(0,40).map((f)=>({fel:fel(f&&f.fel),piata:f&&f.piata==="crypto"?"crypto":"actiuni",h:nr(f&&f.h),n:nr(f&&f.n),judecate:nr(f&&f.judecate),zile:nr(f&&f.zile),medie:nr(f&&f.medie),lo:nr(f&&f.lo),hi:nr(f&&f.hi),pePlus:nr(f&&f.pePlus),verdict:V.includes(f&&f.verdict)?f.verdict:"se-aduna"})).filter((f)=>f.fel)};
+    const o={la:nr(r.la),deLa:nr(r.deLa),total:nr(r.total),prag:{zile:nr(r.prag&&r.prag.zile),cazuri:nr(r.prag&&r.prag.cazuri)},feluri:(Array.isArray(r.feluri)?r.feluri:[]).slice(0,40).map((f)=>({fel:fel(f&&f.fel),piata:f&&f.piata==="crypto"?"crypto":"actiuni",h:nr(f&&f.h),n:nr(f&&f.n),judecate:nr(f&&f.judecate),zile:nr(f&&f.zile),medie:nr(f&&f.medie),lo:nr(f&&f.lo),hi:nr(f&&f.hi),pePlus:nr(f&&f.pePlus),verdict:V.includes(f&&f.verdict)?f.verdict:"se-aduna",ferestre:nr(f&&f.ferestre),nVerdict:nr(f&&f.nVerdict),corectie:nr(f&&f.corectie),inghetat:!!(f&&f.inghetat===true),medieAcum:nr(f&&f.medieAcum),
+      /* v100.396 (I-961): puterea dinainte */ putere:f&&f.putere&&typeof f.putere==="object"?{mde:nr(f.putere.mde),lo:nr(f.putere.lo),hi:nr(f.putere.hi),n:nr(f.putere.n),nT:nr(f.putere.nT)}:null,bani:nr(f&&f.bani),poate:["da","nu","la-limita"].includes(f&&f.poate)?f.poate:null}   /* v100.396 (I-946) */)).filter((f)=>f.fel)};
     await env.ISTORIC.put("alerte:registru",JSON.stringify(o));return json({ok:true,feluri:o.feluri.length});
   }
   if(action==="alerte"){

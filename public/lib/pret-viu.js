@@ -96,7 +96,8 @@ var PretViu = (function () {
     var z24 = pa && typeof o.pct24 === "function" ? text24(o.pct24(pa.pret)) : null;
     if (z24) zt = z24;
     if (zt) parti.push({ k: "zi", t: zt.t, ton: zt.ton, title: z24 ? "Mișcarea prețului pe ultimele 24 de ore (din lumânările de 5 minute)" : "Mișcarea de azi, față de deschiderea zilei (00:00 UTC, lumânarea 1D Pionex)" });
-    var tot = nr(b.profitTotal);
+    var BS0 = b.tip === "semnal" && typeof BotSemnal !== "undefined" && BotSemnal.rezultatEcran ? BotSemnal.rezultatEcran(b) : null;
+    var tot = BS0 ? BS0.total : nr(b.profitTotal);   /* v100.396 (revizia, I-967): botul de semnal - cu poziția deschisă (Pionex dă doar încasatul), ca paza */
     var tr2 = tot === null ? null : Math.round(tot * 10) / 10;   // v100.196: rezultatul cu O zecimală
     var nN = notaNeutru(b);   /* v100.272 (ideile auditului 29.10): botul neutru - semnul poziției din total e nesigur, spus lângă cifră */
     parti.push({ k: "total", t: (tr2 === null ? "total —" : "total " + (tr2 > 0 ? "+" : tr2 < 0 ? "−" : "") + Math.abs(tr2).toFixed(1).replace(".", ",") + " USDT") + (nN ? " (semn nesigur)" : ""), title: nN ? "Totalul cuprinde poziția deschisă: " + nN : undefined });

@@ -17,7 +17,7 @@ import { peCheie } from "../_shared/serializare.js";   // v100.259 (auditul 23.1
 const H = { "content-type": "application/json", "cache-control": "no-store" };
 const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: H });
 const BAZA = "https://live.trading212.com/api/v0";
-const PERMISIUNE = { cont: "Account data", pozitii: "Portfolio", ordine: "History / Orders", dividende: "History / Dividends", ordineDeschise: "Orders (read)" };
+const PERMISIUNE = { cont: "Account data", pozitii: "Portfolio", ordine: "History / Orders", dividende: "History / Dividends", ordineDeschise: "Orders (read)", tranzactii: "History / Transactions" };   /* v100.396 (revizia): ruta istoricului depunerilor */
 // v101.130 (18.10, el: stopurile puse direct în Trading 212 să oprească alarma „fără stop”): din ordinele în așteptare — vânzările STOP / STOP_LIMIT
 // (cantitate negativă), cel mai sus stop pe ticker. Pur, testabil.
 export function stopuriDinOrdine(lista) {
@@ -470,6 +470,21 @@ export async function onRequestGet({ request, env }) {
           if (!m) break; cur = m[1];
         }
         return { items };
+      }));
+    }
+    // v100.396 (I-959): istoricul tranzacțiilor de bani (depuneri / retrageri / transferuri; dobânda zilnică și taxele ies aici) - O pagină pe cerere
+    // (T212: 6 cereri pe minut la ruta asta), colectorul le trece o dată pe zi, cu pauză. cursor = uuid + time (forma din nextPagePath, citită 27.11)
+    if (a === "tranzactii") {
+      const cur = u.searchParams.get("cursor"), tm = u.searchParams.get("time");
+      if ((cur !== null && !/^[0-9a-f-]{8,40}$/i.test(cur)) || (tm !== null && !/^\d{4}-\d{2}-\d{2}T[\d:.]{5,15}Z$/.test(tm))) return json({ error: "cursor / time invalid" }, 400);
+      return json(await prinCache("tr:" + (cur || "") + (tm || ""), 60, async () => {
+        const d = await t212(env, "/history/transactions?limit=50" + (cur ? "&cursor=" + encodeURIComponent(cur) + (tm ? "&time=" + encodeURIComponent(tm) : "") : ""), "tranzactii");
+        const l = Array.isArray(d && d.items) ? d.items : [], np = d && typeof d.nextPagePath === "string" ? d.nextPagePath : "";
+        const mc = np.startsWith("/api/v0/history/transactions?") ? np.match(/[?&]cursor=([0-9a-f-]{8,40})/i) : null, mt = mc ? np.match(/[?&]time=([0-9T:.\-]{10,30}Z)/) : null;
+        /* pe viu 27.11 (420 de zile): DEPOSIT 25, WITHDRAW 8, TRANSFER 6 (între conturile T212, cu semn), FEE 17 - taxa cardului lângă fiecare depunere
+           (2.014 depus, −14 taxă ⇒ 2.000 ajunși): intră în flux, altfel taxa ar arăta ca o pierdere pe piață. LENDING_INTEREST (dobânda) rămâne câștig. */
+        const bani = l.filter((x) => x && /^(DEPOSIT|WITHDRAW|TRANSFER|FEE)$/.test(String(x.type))).map((x) => { const v = nr(x.amount); return { t: Date.parse(x.dateTime) || null, tip: String(x.type), s: v === null ? null : x.type === "DEPOSIT" ? Math.abs(v) : x.type === "WITHDRAW" || x.type === "FEE" ? -Math.abs(v) : v, moneda: txt(x.currency, 3) || null }; }).filter((x) => x.t && x.s !== null);
+        return { bani, cele: l.length, celMaiVechi: l.length ? Date.parse(l[l.length - 1].dateTime) || null : null, cursor: mc ? mc[1] : null, time: mt ? mt[1] : null };
       }));
     }
     if (a === "ordine") {
