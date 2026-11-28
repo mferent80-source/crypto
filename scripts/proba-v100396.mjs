@@ -884,9 +884,9 @@ await test("P9 (revizia valului 4). planul sub 4%: weekendul boților intră în
 });
 await test("V. versiunea v100.396 (index ×4, sw, versiune.js, package + lanț după v100.395, BUILD_INFO), colectorul v101.215", () => {
   const pk = JSON.parse(citeste("package.json")), bi = JSON.parse(citeste("BUILD_INFO.json"));
-  assert.equal(pk.version, "100.396.0"); assert.equal(bi.version, "v100.396"); assert.ok(bi.li396 && bi.li396.length > 100); assert.equal(bi.badge, "v100.396 · REPARAȚIILE AUDITULUI");
-  assert.ok((citeste("public", "index.html").match(/v100\.396/g) || []).length >= 4); assert.match(citeste("public", "sw.js"), /crypto-radar-v100-396/); assert.match(citeste("functions", "_shared", "versiune.js"), /"v100\.396"/);
-  assert.match(pk.scripts.test, /npm run test:v100395 && npm run test:v100396 && node scripts\/mutatii\.mjs/); assert.equal(pk.scripts["test:v100396"], "node scripts/proba-v100396.mjs");
+  assert.ok(+pk.version.split(".")[1] >= 396); assert.ok(+(/^v100\.(\d+)$/.exec(bi.version) || [])[1] >= 396); assert.ok(bi.li396 && bi.li396.length > 100); assert.match(bi.badge, /^v100\.\d+ · /);   /* v100.397: „de la 396 în sus” */
+  assert.ok((citeste("public", "index.html").match(/v100\.(\d+)/g) || []).filter((v) => +v.slice(5) >= 396).length >= 4); assert.ok(+(/crypto-radar-v100-(\d+)/.exec(citeste("public", "sw.js")) || [])[1] >= 396); assert.ok(+(/"v100\.(\d+)"/.exec(citeste("functions", "_shared", "versiune.js")) || [])[1] >= 396);
+  assert.match(pk.scripts.test, /npm run test:v100395 && npm run test:v100396 && /); assert.equal(pk.scripts["test:v100396"], "node scripts/proba-v100396.mjs");
   assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.215"/);
 });
 

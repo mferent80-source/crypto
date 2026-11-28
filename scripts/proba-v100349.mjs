@@ -222,7 +222,7 @@ await test("🔑 tema: Grid intră în paginile refăcute (rădăcina în genera
   const a = cuTablou(citeste("public", "app.js")), ap = a.slice(a.indexOf("function tbTemaAplica(){"), a.indexOf("function tbTemaAplica(){") + 700);
   assert.match(ap, /"gridset"/); assert.match(ap, /"grTemaBtn"/);
   assert.match(citeste("public", "index.html"), /id="grTemaBtn"[^>]*data-action-click="tbTemaComuta\(\)"/);
-  assert.match(citeste("public", "app.css"), /html:has\(:is\(#tabloubot,#t212,#dash,#rangefilter,#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade,#comportament,#tradezilei,#carnet,#scan,#salt,#alerts,#contintreg\)\.on\.tbZi\) body/);
+  assert.match(citeste("public", "app.css"), /html:has\(:is\(#tabloubot,#t212,#dash,#rangefilter,#agitate,#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade,#comportament,#tradezilei,#carnet,#scan,#salt,#alerts,#contintreg\)\.on\.tbZi\) body/);
   const { execFileSync } = await import("node:child_process"); execFileSync(process.execPath, [path.join(RAD, "scripts", "face-tema-tablou.mjs"), "--check"], { stdio: "pipe" });
 });
 await test("🔑 sus: fraza mare + „De unde știu”; pe ecran lat lista și fișa alături (lista lipită, cu derulare proprie)", () => {

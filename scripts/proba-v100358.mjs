@@ -68,7 +68,7 @@ await test("așezarea: tema zi / noapte (RADACINI, tbTemaAplica, tema devreme, b
   for (const id of ["jtScor", "jtGraficeCard", "jtStatCrypto", "jtCireasaCard", "jtRapoarteCard", "jtReguliCard", "jtGreseliCard"]) { assert.match(A, new RegExp(id + ':"'), "JT_RANDURI " + id); assert.equal(H.split('id="' + id + '"').length, 2, "un singur " + id); }
   assert.match(A, /if\(typeof JT_RANDURI!=="undefined"&&Object\.prototype\.hasOwnProperty\.call\(JT_RANDURI,id\)\)return jtRandComuta\(id,deschis\);/);
   assert.match(CSS, /html\.pzDemo #jurnaltrade \[data-rand="pliat"\]>\*\{display:none!important\}/);
-  assert.match(CSS, /html:has\(:is\(#tabloubot,#t212,#dash,#rangefilter,#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade,#comportament,#tradezilei,#carnet,#scan,#salt,#alerts,#contintreg\)\.on\.tbZi\) body\{background:#F2F4F7!important\}/);
+  assert.match(CSS, /html:has\(:is\(#tabloubot,#t212,#dash,#rangefilter,#agitate,#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade,#comportament,#tradezilei,#carnet,#scan,#salt,#alerts,#contintreg\)\.on\.tbZi\) body\{background:#F2F4F7!important\}/);
   assert.match(citeste("public", "lib", "asezare-paznic.js"), /function pagJurnal\(\) \{ antet\("pzV-jt", null, null\); \}/);
   for (const a of ["jtListaOrdine", "jtRaportAlege", "jtRaportFel", "jtReincearca"]) assert.match(A, new RegExp(" " + a + " "), "lista albă: " + a);
 });

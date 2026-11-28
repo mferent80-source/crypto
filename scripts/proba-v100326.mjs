@@ -24,30 +24,30 @@ const functie = (src, n) => { const i = src.search(new RegExp("function " + n + 
 console.log("\nV100.326 · Trading 212 în aceleași condiții ca Tabloul botului · proba\n");
 
 // ───────────── 1. meniul ─────────────
-await test("meniul: „Trading 212” imediat sub „Tabloul botului”, în grupa Zilnic; toate cele 59 de butoane rămân, ordinea celorlalte la fel", () => {
+await test("meniul: „Trading 212” imediat sub „Tabloul botului”, în grupa Zilnic; toate cele 60 de butoane rămân, ordinea celorlalte la fel", () => {
   const i = HTML.indexOf('<div class="sideGrup" id="sideZilnic">'), k = HTML.indexOf("</div>", HTML.indexOf('class="sideGrupCap"', i) + 30);
   const urm = HTML.slice(i + 10).search(/<div class="sideGrup[" ]/), g = HTML.slice(i, i + 10 + urm);   // nu „sideGrupCap”
   const nav = [...g.matchAll(/data-action-click="([^"]+)"/g)].map((m) => m[1]);
   assert.deepEqual(nav.slice(0, 3), ["navTo('dash')", "navTo('tabloubot',true)", "deschideT212()"]);
   assert.equal(nav.filter((x) => x === "deschideT212()").length, 1, "o singură dată");
   const a = HTML.slice(HTML.indexOf('<aside class="sideNav">'), HTML.indexOf("</aside>", HTML.indexOf('<aside class="sideNav">')));
-  assert.equal((a.match(/class="sideBtn[" ]/g) || []).length, 59);
+  assert.equal((a.match(/class="sideBtn[" ]/g) || []).length, 60);
   assert.ok(k > i);
 });
 
 // ───────────── 2. generatorul cu două rădăcini ─────────────
 await test("generatorul: rădăcinile sunt Tabloul și T212; comunele sub :is(#tabloubot,#t212), ale fiecărei pagini sub ea, celelalte pagini se sar", () => {
-  assert.deepEqual(RADACINI, ["tabloubot", "t212", "dash", "rangefilter", "sugestii", "probe", "gridset", "gridsim", "montecarlo", "jurnaltrade", "comportament", "tradezilei", "carnet", "scan", "salt", "alerts", "contintreg"]);   // v100.329: și Piața azi
+  assert.deepEqual(RADACINI, ["tabloubot", "t212", "dash", "rangefilter", "agitate", "sugestii", "probe", "gridset", "gridsim", "montecarlo", "jurnaltrade", "comportament", "tradezilei", "carnet", "scan", "salt", "alerts", "contintreg"]);   // v100.329: și Piața azi
   const S = ["settings"];
-  assert.equal(selectorSub(".tbBloc", "#tabloubot.tbZi", S), ":is(#tabloubot,#t212,#dash,#rangefilter,#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade,#comportament,#tradezilei,#carnet,#scan,#salt,#alerts,#contintreg).tbZi .tbBloc");
+  assert.equal(selectorSub(".tbBloc", "#tabloubot.tbZi", S), ":is(#tabloubot,#t212,#dash,#rangefilter,#agitate,#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade,#comportament,#tradezilei,#carnet,#scan,#salt,#alerts,#contintreg).tbZi .tbBloc");
   assert.equal(selectorSub("#tabloubot .gbTip", "#tabloubot.tbZi", S), "#tabloubot.tbZi .gbTip");
   assert.equal(selectorSub("#t212 .t212Pill", "#tabloubot.tbZi", S), "#t212.tbZi .t212Pill");
-  assert.equal(selectorSub("#t212Continut tr.t212Rand", "#tabloubot.tbZi", S), ":is(#tabloubot,#t212,#dash,#rangefilter,#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade,#comportament,#tradezilei,#carnet,#scan,#salt,#alerts,#contintreg).tbZi #t212Continut tr.t212Rand", "#t212Continut nu e rădăcina");
-  assert.equal(selectorSub("html.pzDemo .pzCel", "#tabloubot", S), "html.pzDemo :is(#tabloubot,#t212,#dash,#rangefilter,#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade,#comportament,#tradezilei,#carnet,#scan,#salt,#alerts,#contintreg) .pzCel");
-  assert.equal(selectorSub("#settings .scNiv, .x", "#tabloubot.tbZi", S), ":is(#tabloubot,#t212,#dash,#rangefilter,#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade,#comportament,#tradezilei,#carnet,#scan,#salt,#alerts,#contintreg).tbZi .x");
+  assert.equal(selectorSub("#t212Continut tr.t212Rand", "#tabloubot.tbZi", S), ":is(#tabloubot,#t212,#dash,#rangefilter,#agitate,#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade,#comportament,#tradezilei,#carnet,#scan,#salt,#alerts,#contintreg).tbZi #t212Continut tr.t212Rand", "#t212Continut nu e rădăcina");
+  assert.equal(selectorSub("html.pzDemo .pzCel", "#tabloubot", S), "html.pzDemo :is(#tabloubot,#t212,#dash,#rangefilter,#agitate,#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade,#comportament,#tradezilei,#carnet,#scan,#salt,#alerts,#contintreg) .pzCel");
+  assert.equal(selectorSub("#settings .scNiv, .x", "#tabloubot.tbZi", S), ":is(#tabloubot,#t212,#dash,#rangefilter,#agitate,#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade,#comportament,#tradezilei,#carnet,#scan,#salt,#alerts,#contintreg).tbZi .x");
   const g = genereaza(":root{--pzF1:#141C24} .a{color:#E6EDF3;font-size:11px} #t212 .b{background:#141C24} #tabloubot .c{color:#E6EDF3} #settings .d{color:#E6EDF3}", '<section class="panel" id="settings"></section><section class="panel" id="tabloubot"></section><section class="panel" id="t212"></section>');
-  assert.ok(g.includes(":is(#tabloubot,#t212,#dash,#rangefilter,#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade,#comportament,#tradezilei,#carnet,#scan,#salt,#alerts,#contintreg).tbZi{--pzF1:#FFFFFF}"));
-  assert.ok(g.includes(":is(#tabloubot,#t212,#dash,#rangefilter,#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade,#comportament,#tradezilei,#carnet,#scan,#salt,#alerts,#contintreg).tbZi .a{color:#0E1A2B}") && g.includes(":is(#tabloubot,#t212,#dash,#rangefilter,#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade,#comportament,#tradezilei,#carnet,#scan,#salt,#alerts,#contintreg) .a{font-size:12px}"));
+  assert.ok(g.includes(":is(#tabloubot,#t212,#dash,#rangefilter,#agitate,#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade,#comportament,#tradezilei,#carnet,#scan,#salt,#alerts,#contintreg).tbZi{--pzF1:#FFFFFF}"));
+  assert.ok(g.includes(":is(#tabloubot,#t212,#dash,#rangefilter,#agitate,#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade,#comportament,#tradezilei,#carnet,#scan,#salt,#alerts,#contintreg).tbZi .a{color:#0E1A2B}") && g.includes(":is(#tabloubot,#t212,#dash,#rangefilter,#agitate,#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade,#comportament,#tradezilei,#carnet,#scan,#salt,#alerts,#contintreg) .a{font-size:12px}"));
   assert.ok(g.includes("#t212.tbZi .b{background:#FFFFFF}") && g.includes("#tabloubot.tbZi .c{color:#0E1A2B}"));
   assert.ok(!g.includes(".d{"), "Piața azi rămâne afară");
 });
@@ -62,8 +62,8 @@ await test("stratul din app.css e cel produs acum și cuprinde și pagina T212 (
 // ───────────── 3. un singur comutator ─────────────
 await test("tema: clasa tbZi pe AMBELE pagini, butoanele din amândouă antetele, comutarea redesenează și graficele T212", () => {
   const a = functie(APP, "tbTemaAplica");
-  assert.match(a, /\["tabloubot","t212","dash","rangefilter","sugestii","probe","gridset","gridsim","montecarlo","jurnaltrade","comportament","tradezilei","carnet","scan","salt","alerts","contintreg"\]\.forEach\(function\(id\)\{var p=document\.getElementById\(id\);if\(p\)p\.classList\.toggle\("tbZi",zi\)\}\)/);
-  assert.match(a, /\["tbTemaBtn","t212TemaBtn","acTemaBtn","rfTemaBtn","sugTemaBtn","prTemaBtn","grTemaBtn","gsTemaBtn","mcTemaBtn","jtTemaBtn","coTemaBtn","tzTemaBtn","cnTemaBtn","scTemaBtn","slTemaBtn","alTemaBtn","ciTemaBtn"\]\.forEach/);   // v100.338: și Range Filter
+  assert.match(a, /\["tabloubot","t212","dash","rangefilter","agitate","sugestii","probe","gridset","gridsim","montecarlo","jurnaltrade","comportament","tradezilei","carnet","scan","salt","alerts","contintreg"\]\.forEach\(function\(id\)\{var p=document\.getElementById\(id\);if\(p\)p\.classList\.toggle\("tbZi",zi\)\}\)/);
+  assert.match(a, /\["tbTemaBtn","t212TemaBtn","acTemaBtn","rfTemaBtn","agTemaBtn","sugTemaBtn","prTemaBtn","grTemaBtn","gsTemaBtn","mcTemaBtn","jtTemaBtn","coTemaBtn","tzTemaBtn","cnTemaBtn","scTemaBtn","slTemaBtn","alTemaBtn","ciTemaBtn"\]\.forEach/);   // v100.338: și Range Filter
   assert.match(functie(APP, "tbTemaComuta"), /t212GraficeDeseneaza\(true\)/);
   assert.ok(HTML.includes('<button type="button" class="t212BtnLinie" id="t212TemaBtn" aria-pressed="false" data-action-click="tbTemaComuta()">Temă închisă</button><button type="button" class="t212BtnLinie" data-action-click="t212Porneste(true)">Reîncarcă</button>'));
 });
@@ -73,9 +73,9 @@ await test("rama și litera Tabloului și cât e deschisă T212 (meniul, bara de
   const i = CSS.indexOf("/* v100.325 · meniul ca pagina botului"), k = CSS.indexOf("/* v100.325: sfârșitul meniului ca pagina botului */"), B = CSS.slice(i, k);
   assert.ok(i > 0 && k > i);
   assert.doesNotMatch(B, /html:has\(#tabloubot\.on/, "fiecare regulă e pe ambele pagini");
-  assert.ok(B.includes('html:has(:is(#tabloubot,#t212,#dash,#rangefilter,#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade,#comportament,#tradezilei,#carnet,#scan,#salt,#alerts,#contintreg).on) .sideNav,html:has(:is(#tabloubot,#t212,#dash,#rangefilter,#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade,#comportament,#tradezilei,#carnet,#scan,#salt,#alerts,#contintreg).on) .mobileBottom,html:has(:is(#tabloubot,#t212,#dash,#rangefilter,#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade,#comportament,#tradezilei,#carnet,#scan,#salt,#alerts,#contintreg).on) :is(.sideBtn,.mobileNavBtn){font-family:"IBM Plex Sans"'));
-  assert.ok(B.includes("html:has(:is(#tabloubot,#t212,#dash,#rangefilter,#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade,#comportament,#tradezilei,#carnet,#scan,#salt,#alerts,#contintreg).on.tbZi) .sideNav{background:#FFFFFF;"));
-  assert.ok(B.includes("html:has(:is(#tabloubot,#t212,#dash,#rangefilter,#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade,#comportament,#tradezilei,#carnet,#scan,#salt,#alerts,#contintreg).on.tbZi) body{background:#F2F4F7!important}"));
+  assert.ok(B.includes('html:has(:is(#tabloubot,#t212,#dash,#rangefilter,#agitate,#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade,#comportament,#tradezilei,#carnet,#scan,#salt,#alerts,#contintreg).on) .sideNav,html:has(:is(#tabloubot,#t212,#dash,#rangefilter,#agitate,#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade,#comportament,#tradezilei,#carnet,#scan,#salt,#alerts,#contintreg).on) .mobileBottom,html:has(:is(#tabloubot,#t212,#dash,#rangefilter,#agitate,#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade,#comportament,#tradezilei,#carnet,#scan,#salt,#alerts,#contintreg).on) :is(.sideBtn,.mobileNavBtn){font-family:"IBM Plex Sans"'));
+  assert.ok(B.includes("html:has(:is(#tabloubot,#t212,#dash,#rangefilter,#agitate,#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade,#comportament,#tradezilei,#carnet,#scan,#salt,#alerts,#contintreg).on.tbZi) .sideNav{background:#FFFFFF;"));
+  assert.ok(B.includes("html:has(:is(#tabloubot,#t212,#dash,#rangefilter,#agitate,#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade,#comportament,#tradezilei,#carnet,#scan,#salt,#alerts,#contintreg).on.tbZi) body{background:#F2F4F7!important}"));
   assert.ok(CSS.includes('html.pzDemo #t212{--pzMono:"IBM Plex Sans",system-ui,"Segoe UI",sans-serif;font-family:"IBM Plex Sans",system-ui,"Segoe UI",sans-serif;font-variant-numeric:tabular-nums}'));
   assert.ok(CSS.includes("html.pzDemo #t212 *{font-family:inherit!important}"));
 });

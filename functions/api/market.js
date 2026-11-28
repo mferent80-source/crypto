@@ -137,6 +137,52 @@ async function pionexCached(url,ttl=30,env=null,opt={}){
   }
   return data
 }
+// v100.397 (el, 28.11.2026: „doar top 150 de coinuri”): primele monede după capitalizare, pentru pagina „Agitate acum” - O cerere publică la
+// CoinGecko (fără cheie, fără nimic despre cine întreabă), ținută 6 ore în memoria serverului. La eșec se dă lista veche, cu ora ei (cel mult
+// 3 zile; rangurile se mișcă încet), și nu se mai întreabă 5 minute; fără nicio listă, cel mult o cerere pe minut. Pionex NU e întrebat aici.
+const CAP_URL="https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&page=1&sparkline=false";
+const CAP_TINE_MS=6*3600000,CAP_VECHI_MAX_MS=3*86400000,CAP_REINCEARCA_MS=5*60000;
+let capMemorie=null,capIncercatLa=0,capInZbor=null;
+// doar pentru probe: fiecare probă pornește fără lista și fără încercările lăsate de alta
+export function reseteazaCap(){capMemorie=null;capIncercatLa=0;capInZbor=null}
+// răspunsul CoinGecko ⇒ [{simbol, rang, nume}] crescător după rang, primele 200 (pagina taie la 150); simbolul doar litere / cifre, numele scurtat.
+// Lista cu mai puțin de 150 de ranguri (refuz, eroare, răspuns trunchiat) nu e o listă: null.
+export function capDinCoinGecko(j){
+  if(!Array.isArray(j))return null;
+  const out=[];
+  for(const x of j){
+    const s=String(x&&x.symbol||"").toUpperCase(),r=Number(x&&x.market_cap_rank);
+    if(!/^[A-Z0-9]{1,15}$/.test(s)||!Number.isInteger(r)||r<1)continue;
+    out.push({simbol:s,rang:r,nume:String(x.name||s).slice(0,40)});
+  }
+  out.sort((a,b)=>a.rang-b.rang);
+  return out.length>=150?out.slice(0,200):null
+}
+// o = { acum, cere } doar din probe (ceasul și cererea prefăcute); altfel ceasul serverului și CoinGecko
+export async function topCap(o={}){
+  const acum=typeof o.acum==="number"?o.acum:Date.now(),cere=o.cere||(()=>j(CAP_URL));
+  // revizia 28.11: lista mai veche de 3 zile nu mai e o listă, pe nicio cale
+  const veche=capMemorie&&acum-capMemorie.la<CAP_VECHI_MAX_MS?capMemorie:null;
+  if(veche&&acum-veche.la<CAP_TINE_MS)return veche;
+  if(capInZbor)return capInZbor;   /* cererile venite deodată așteaptă aceeași cerere */
+  if(acum-capIncercatLa<(veche?CAP_REINCEARCA_MS:60000)){
+    if(veche)return {...veche,vechi:true};
+    throw Error("CoinGecko n-a răspuns adineauri - reîncerc peste un minut")
+  }
+  capIncercatLa=acum;
+  capInZbor=(async()=>{
+    try{
+      const monede=capDinCoinGecko(await cere());
+      if(!monede)throw Error("CoinGecko: listă scurtă sau fără ranguri");
+      capMemorie={result:true,sursa:"CoinGecko",la:acum,monede};
+      return capMemorie
+    }catch(e){
+      if(veche)return {...veche,vechi:true,detaliu:String(e&&e.message||e).slice(0,120)};
+      throw e
+    }finally{capInZbor=null}
+  })();
+  return capInZbor
+}
 export async function onRequestGet({request,env}){
   const u=new URL(request.url),type=u.searchParams.get("type");
   if(type==="health")return ok({ok:true,service:"crypto-radar",version:VERSIUNE});
@@ -180,6 +226,11 @@ export async function onRequestGet({request,env}){
     const simb=[...new Set(String(u.searchParams.get("simboluri")||"").split(",").map(x=>x.trim().replace(/[^A-Za-z0-9._-]/g,"").slice(0,24)).filter(Boolean))].slice(0,30);
     const tinte=simb.map(s=>piata==="crypto"?{cheie:s,tickere:TV.tvLantPionex(s)}:Object.assign({cheie:s},TV.tvDinYahoo(s)||{}));   /* v100.339 (I-869): la crypto, lanțul PIONEX → Binance */
     try{return ok(await tvNoteDinMemorie(piata,tinte))}catch(e){return softFail("TradingView nu răspunde",String(e&&e.message||e))}
+  }
+  // v100.397: lista primelor monede după capitalizare (pagina „Agitate acum”); cu cheia, ca restul; refuzul se spune cu forma obișnuită
+  if(type==="top_cap"){
+    {const auth=await requireApiAuth(request,env,"top-cap",30);if(!auth.ok)return authErrorResponse(auth,H)}
+    try{return ok(await topCap())}catch(e){return softFail("Lista primelor monede (CoinGecko) nu răspunde",String(e&&e.message||e).slice(0,140))}
   }
   if(type!=="futures")return new Response(JSON.stringify({error:"Spot data is fetched directly by the browser"}),{status:400,headers:H});
   // futures trage 5 cereri Binance pe fiecare apel: fara autentificare, oricine putea folosi serverul ca proxy.
