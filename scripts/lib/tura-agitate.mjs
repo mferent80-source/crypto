@@ -34,12 +34,14 @@
 // st = starea turei (în memorie: lumânările, rangurile, stările); pe disc (citesteDisc / scrieDisc): aprinderile, ultimul mesaj pe monedă, orele mesajelor,
 //      jurnalul pe zile, cazurile „ce a urmat”, verdictul înghețat
 import { ziRo } from "./alerte-zi.mjs";
+import { eNoapte } from "./politica-alerte.mjs";
 export const RITM_MS = 60000;
 export const BINANCE_MS = 15 * 60000;
 export const JURNAL_ZILE = 120;
 export const URMARI_ZILE = 90;          /* cazurile brute (preț, mișcare, de câte ori obișnuitul) rămân 90 de zile pentru socoteli de mai târziu; rezultatele lor sunt deja în jurnal */
 export const BINANCE_LIMITA_MS = 8000;  /* revizia 28.11: cererea spre Binance (cu pauzele ei comune de până la minute) nu ține tura */
 export const NECITIT_MAX = 10;
+export const ANUNT_MESAJE_MS = 7 * 86400000;   /* v101.218 (I-980): verdictul „mesaje pe zi” se anunță la schimbare, dar cel mult o dată la 7 zile */
 const FAPI = "https://fapi.binance.com", URMARI_MAX = 800, PESTE_MAX = 12;
 const ziGoala = (r) => ({ r, ms: 0, m: 0, p: 0, a: 0, ap: 0, opr: 0, bc: 0, bp: [], cd: 0, fd: 0, x: 0, h1: [0, 0, 0, 0], h4: [0, 0, 0, 0] });
 export const RECITIRE_MS = 6 * 3600000;
@@ -51,7 +53,7 @@ const ZI = 86400000, CINSTIT = "Fapt, nu semnal: spune unde e mișcare, nu înco
 function scris(d) {
   const T = d.TextRo || (typeof TextRo !== "undefined" ? TextRo : null), rez = (v, u) => (Number.isFinite(v) ? String(Math.round(v * 10) / 10).replace(".", ",") + u : "—");
   return { pct: (v) => (T ? T.pct(v, 1) : rez(v, "%")), semn: (v) => (T ? T.pctSemn(v, 1) : (v > 0 ? "+" : "") + rez(v, "%")), ori: (v) => (T ? T.ori(v, 1) : rez(v, "×")), pret: (v) => (T ? T.pret(v) : String(v)),
-    cate: (n, sg, pl) => (T ? T.cate(n, sg, pl) : n + " " + (n === 1 ? sg : pl)) };
+    cate: (n, sg, pl) => (T ? T.cate(n, sg, pl) : n + " " + (n === 1 ? sg : pl)), num: (v) => (T ? T.num(v, 1) : rez(v, "")) };
 }
 // mesajul pentru monedele aprinse în aceeași tură: { nivel, titlu (≤ 60), mesaj (2 rânduri), cheie }
 export function mesajMonede(noi, d) {
@@ -67,6 +69,43 @@ export function mesajPiata(P, rand, d) {
   const S = scris(d), A = d.Agitate, top = rand.filter((r) => r.x.masurat).sort((a, b) => b.x.amp - a.x.amp).slice(0, 3).map((r) => r.m.simbol + " " + S.pct(r.x.amp)).join(", ");
   return { nivel: "info", titlu: "⚡ Se mișcă toată piața: " + P.n + " din " + S.cate(P.din, "monedă", "monede"), cheie: "agitate-piata",
     mesaj: P.n + " din " + S.cate(P.din, "monedă", "monede") + " urmărite sunt deodată la cel puțin " + S.pct(A.PIATA.amp) + " într-o oră și de " + S.ori(A.PIATA.ori) + " obișnuitul lor. Cele mai agitate: " + top + ".\n" + CINSTIT };
+}
+// v101.218 (Radar v100.400, I-980; el, 28.11: „fa tot”): verdictele din „Bilanțul alertelor” pleacă pe Discord, fiecare O DATĂ - ca să nu trebuiască
+// deschisă pagina ca să afle: mesajele pe zi (primul verdict + la schimbare, cel mult o dată la 7 zile), verdictul înghețat „după aprindere”
+// (1 h, 4 h), „peste Binance” (a apărut / n-a apărut în 14 zile). Nu sunt alerte de aprindere: nu intră la plafonul de 8 și nici la „mesaje pe zi”.
+// Ce s-a anunțat stă pe disc (`disc.anuntat`, cu regula lui); alerta netrimisă se reia la tura următoare.
+export function mesajBilant(fel, b, d) {
+  const S = scris(d), A = d.Agitate, B = A.BILANT, UNDE = "Numărătoarea e în Radar, pe pagina „Agitate acum”, la Bilanțul alertelor.";
+  if (fel === "mesaje") { const x = b.mesaje, peste = x.verdict === "peste";
+    return { nivel: "info", cheie: "agitate-bilant:mesaje", titlu: peste ? "📊 Agitate: mesajele sunt peste țintă" : "📊 Agitate: mesajele țin ținta",
+      mesaj: "În ultimele " + S.cate(x.zile, "zi întreagă", "zile întregi") + " au plecat în medie " + S.num(x.medie) + " mesaje pe zi; ținta e cel mult " + B.tinta
+        + (x.oprite > 0 ? "; plafonul a oprit " + S.cate(x.oprite, "mesaj", "mesaje") : "") + ". " + (peste ? "Pragul nu se schimbă singur: hotărăști tu." : "Pragul rămâne cum e.") + "\n" + UNDE }; }
+  if (fel === "h1" || fel === "h4") { const v = b.verdict[fel];
+    return { nivel: "info", cheie: "agitate-bilant:" + fel, titlu: "📊 Agitate: verdict la " + (fel === "h1" ? 1 : 4) + " h după aprindere",
+      mesaj: "Pe " + S.cate(v.n, "caz", "cazuri") + " din " + S.cate(v.zileVot, "zi", "zile") + ": "
+        + (v.verdict === "intors" ? "se întorc mai des decât continuă (" + v.intors + " față de " + v.continuat + ")" : v.verdict === "continuat" ? "continuă mai des decât se întorc (" + v.continuat + " față de " + v.intors + ")"
+          : "nicio înclinare dovedită (" + v.intors + " întoarse, " + v.continuat + " continuate): aprinderea nu spune direcția")
+        + ".\nJudecat o singură dată, pe zile. Nu e probă de strategie: fără costuri, fără intrări." }; }
+  const x = b.binance;
+  if (x.verdict === "ramane") return { nivel: "info", cheie: "agitate-bilant:binance", titlu: "📊 Agitate: „peste Binance” a apărut",
+    mesaj: "Semnul a apărut la " + S.cate(x.monede.length, "monedă", "monede") + " (" + x.monede.slice(0, 12).join(", ") + "): rămâne pe pagină.\nPe Pionex mișcarea de 24 h a fost de cel puțin " + S.ori(A.PESTE_BINANCE.raport) + " cea de pe Binance Futures." };
+  return { nivel: "info", cheie: "agitate-bilant:binance", titlu: "📊 Agitate: „peste Binance” n-a apărut în " + S.cate(B.zileBinance, "zi", "zile"),
+    mesaj: "În " + S.cate(B.zileBinance, "zi urmărită", "zile urmărite") + " semnul n-a apărut la nicio monedă: poate fi scos de pe pagină. Hotărârea e a ta.\n" + UNDE };
+}
+async function anuntaBilant(d, disc, bilant, regula, acum) {
+  if (typeof d.trimiteAlerta !== "function") return false;
+  /* revizia 28.11 (🔴): noaptea (23–07) politica alertelor ține mesajul doar în Radar și întoarce „trimis”, iar rezumatul de dimineață dă doar numărul,
+     nu textul ⇒ verdictul s-ar fi pierdut (și ele ies de regulă la miezul nopții, când se încheie ziua). Noaptea nu se trimite: pleacă după 07:00. */
+  if (eNoapte(acum)) return false;
+  if (!disc.anuntat || typeof disc.anuntat !== "object" || Array.isArray(disc.anuntat) || disc.anuntat.r !== regula) disc.anuntat = Object.assign({ r: regula }, disc.anuntat && disc.anuntat.binance ? { binance: disc.anuntat.binance } : {});   /* „peste Binance” nu ține de regula alertei */
+  const an = disc.anuntat; let schimbat = false;
+  const pleaca = async (fel) => { const m = mesajBilant(fel, bilant, d); try { return !!(await d.trimiteAlerta({ nivel: m.nivel, titlu: m.titlu, mesaj: m.mesaj }, null, m.cheie)); } catch { return false; } };
+  const mv = bilant.mesaje.verdict;
+  if ((mv === "tine" || mv === "peste") && an.mesaje !== mv && !(an.mesajeLa > 0 && acum - an.mesajeLa < ANUNT_MESAJE_MS) && await pleaca("mesaje")) { an.mesaje = mv; an.mesajeLa = acum; schimbat = true; }
+  for (const hk of ["h1", "h4"]) if (bilant.verdict[hk] && !an[hk] && await pleaca(hk)) { an[hk] = true; schimbat = true; }
+  const bv = bilant.binance.verdict;
+  if ((bv === "ramane" || bv === "poate-fi-scos") && an.binance !== bv && await pleaca("binance")) { an.binance = bv; schimbat = true; }
+  return schimbat;
 }
 // Starea de pe disc (revizia 28.11): fișierul LIPSĂ = pornire de la zero; fișierul care NU se poate citi (ținut de antivirus / copie, JSON tăiat,
 // altceva decât starea turei) = null ⇒ tura sare și NU scrie peste el (ar șterge luni de bilanț și verdictul înghețat). După 10 ture la rând
@@ -230,6 +269,8 @@ export async function turaAgitate(d, st) {
   const corp = { la: acum, n: u.monede.length, masurate: rand.filter((r) => r.x.masurat).length, prag: { amp: A.APRINS.amp, ori: A.APRINS.ori }, mesaje24: disc.mesaje.length, aprinse: disc.aprinse, bilant };
   try { await d.trimite("/api/istoric-bot?action=agitate", corp); } catch (e) { return esec("serverul a refuzat (" + String(e && e.message || e).slice(0, 80) + ")"); }
   st.esecuri = 0;
+  // 8b. verdictele bilanțului pe Discord (I-980), fiecare o dată - după ce pagina are rezumatul; ce s-a anunțat se ține pe disc
+  try { if (await anuntaBilant(d, disc, bilant, regula, acum)) scrie(); } catch (e) { d.jurnal("agitate: anunțul bilanțului", String(e && e.message || e).slice(0, 80)); }
   // 9. „peste Binance” (I-978), cel mult o dată la 15 minute - ULTIMUL pas: mesajele au plecat, starea lor e pe disc, pagina are rezumatul. Cererea
   // are limită de timp (revizia 28.11): unealta comună spre Binance își poate aștepta pauzele minute întregi, iar tura următoare n-ar mai porni.
   if (typeof d.binance === "function" && acum - (st.binanceLa || 0) >= BINANCE_MS) {

@@ -86,10 +86,10 @@ await test("ce NU se pierde: punctele de alertă au <title>, rândul cu ultimele
 });
 await test("versiunile: pagina (de exact 4 ori), SW, serverul, BUILD_INFO, package.json", () => {
   const H = citeste("public", "index.html"), B = JSON.parse(citeste("BUILD_INFO.json")), P = JSON.parse(citeste("package.json"));
-  assert.equal((H.match(/v100\.3(?:1[5-9]|[2-9]\d)/g) || []).length, 4); assert.equal((H.match(/v100\.314/g) || []).length, 0);
-  assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-3(?:1[5-9]|[2-9]\d)";/);
-  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.3(?:1[5-9]|[2-9]\d)"/);
-  assert.match(B.version, /^v100\.3(?:1[5-9]|[2-9]\d)$/); assert.ok(B.features.faraEticheta315); assert.match(P.version, /^100\.3(?:1[5-9]|[2-9]\d)\./);
+  assert.equal((H.match(/v100\.(?:3(?:1[5-9]|[2-9]\d)|[4-9]\d\d)/g) || []).length, 4); assert.equal((H.match(/v100\.314/g) || []).length, 0);
+  assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-(?:3(?:1[5-9]|[2-9]\d)|[4-9]\d\d)";/);
+  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.(?:3(?:1[5-9]|[2-9]\d)|[4-9]\d\d)"/);
+  assert.match(B.version, /^v100\.(?:3(?:1[5-9]|[2-9]\d)|[4-9]\d\d)$/); assert.ok(B.features.faraEticheta315); assert.match(P.version, /^100\.(?:3(?:1[5-9]|[2-9]\d)|[4-9]\d\d)\./);
   assert.ok(P.scripts.test.includes("npm run test:v100315"));
 });
 

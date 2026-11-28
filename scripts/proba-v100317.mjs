@@ -103,7 +103,7 @@ await test("pagina: butoanele „Deschide tot” și „Strânge tot” în ante
   assert.ok(APP.includes('document.addEventListener("click",tbRandClic);document.addEventListener("keydown",tbRandTasta);setInterval(function(){var p=document.getElementById("tabloubot");if(p&&p.classList.contains("on")&&!document.hidden)tbRandAplica()},4000)'));
 });
 await test("versiunile: pagina (de exact 4 ori), SW, serverul, BUILD_INFO, package.json", () => {
-  const B = JSON.parse(citeste("BUILD_INFO.json")), P = JSON.parse(citeste("package.json")), V = "3(?:1[7-9]|[2-9]\\d)";
+  const B = JSON.parse(citeste("BUILD_INFO.json")), P = JSON.parse(citeste("package.json")), V = "(?:3(?:1[7-9]|[2-9]\\d)|[4-9]\\d\\d)";
   assert.equal((HTML.match(new RegExp("v100\\." + V, "g")) || []).length, 4); assert.equal((HTML.match(/v100\.316/g) || []).length, 0);
   assert.match(citeste("public", "sw.js"), new RegExp('const CACHE="crypto-radar-v100-' + V + '";'));
   assert.match(citeste("functions", "_shared", "versiune.js"), new RegExp('VERSIUNE = "v100\\.' + V + '"'));

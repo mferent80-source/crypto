@@ -98,10 +98,10 @@ await test("4. mesajul trimite la VPS: fără „Aș porni PC-ul”, fără MASO
 });
 await test("5. versiunile v100.305 / colector v101.165, proba în lanțul npm test", () => {
   const Hh = citeste("public", "index.html");
-  assert.ok((Hh.match(/v100\.(30[5-9]|3[1-9]\d)/g) || []).length >= 3); assert.doesNotMatch(Hh, /v100\.304 · /);
-  assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-(30[5-9]|3[1-9]\d)"/);
-  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.(30[5-9]|3[1-9]\d)"/);
-  const BI = JSON.parse(citeste("BUILD_INFO.json")); assert.match(BI.version, /^v100\.(30[5-9]|3[1-9]\d)$/); assert.ok(BI.features.busolaAudit305);
+  assert.ok((Hh.match(/v100\.(30[5-9]|3[1-9]\d|[4-9]\d\d)/g) || []).length >= 3); assert.doesNotMatch(Hh, /v100\.304 · /);
+  assert.match(citeste("public", "sw.js"), /const CACHE="crypto-radar-v100-(30[5-9]|3[1-9]\d|[4-9]\d\d)"/);
+  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.(30[5-9]|3[1-9]\d|[4-9]\d\d)"/);
+  const BI = JSON.parse(citeste("BUILD_INFO.json")); assert.match(BI.version, /^v100\.(30[5-9]|3[1-9]\d|[4-9]\d\d)$/); assert.ok(BI.features.busolaAudit305);
   assert.ok(Number(JSON.parse(citeste("package.json")).version.split(".")[1]) >= 305);
   assert.match(citeste("package.json"), /npm run test:v100304 && npm run test:v100305/);
   assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.(16[5-9]|1[7-9]\d|[2-9]\d\d)"/);

@@ -185,6 +185,9 @@ function normalizeazaSemnal(bot,preturi,harta){
     margine:null,profitNet:null,profitRealizatBrut:null,gridProfitBrut:null,comisioane:null,finantare:nr(p.fundingFee)??nr(x.fundingFee),
     pnlNerealizat:null,pnlNerealizatSigur:null,echitate:null,volum:null,ordinePlasate:null,ordinePerechi:null,
     levier:nr(p.leverage),
+    /* v100.400 (I-979): stopul și ținta botului de semnal, ca raport din suma lui (Pionex: „-0.15” = −15%, „0” = nepus); lipsă = nu se știe.
+       Câmpuri NOI - cele de grid (opritor…) rămân goale, ca paginile să nu deseneze un stop „la preț” care nu există. */
+    stopRaport:nr(p.lossStopRatio),tintaRaport:nr(p.profitStopRatio),
     directie,pozitie,pozitieBani,inPozitie,pozitieNeclara,rezultatNeverificat:inPozitie,
     pretDeschidere:null,pretPornire:nr(p.initPrice),
     runde:nr(p.roundCount),rundePePlus:nr(p.profitRoundCount),runda:nr(p.currentRound),

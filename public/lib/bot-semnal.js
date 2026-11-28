@@ -58,7 +58,7 @@ var BotSemnal = (function () {
   // revizia 27.11 (🔴): HISTEREZIS, ca la grid (alerte.js: ieșirea la 17% / 9,5% după ce s-au măsurat 59 de mesaje pe oră) - treapta urcă la
   // 15% / 8%, dar coboară abia peste 17% / 9,5% (prețul care joacă în jurul pragului dădea ~31 de alerte critice pe oră); o citire LIPSĂ
   // (preț / intrare) cât botul e în poziție PĂSTREAZĂ treapta. La fel pierderea: urcă la −10% / −15%, coboară abia peste −8% / −13%.
-  var PRAG = { lichAtentie: 0.15, lichCritic: 0.08, lichIesAtentie: 0.17, lichIesCritic: 0.095, pierdAtentie: -0.10, pierdCritic: -0.15, pierdIesAtentie: -0.08, pierdIesCritic: -0.13, vecheMs: 24 * 3600000 };
+  var PRAG = { lichAtentie: 0.15, lichCritic: 0.08, lichIesAtentie: 0.17, lichIesCritic: 0.095, pierdAtentie: -0.10, pierdCritic: -0.15, pierdIesAtentie: -0.08, pierdIesCritic: -0.13, vecheMs: 24 * 3600000, faraStopDupaMs: 10 * 60000, faraStopRepetaMs: 25 * 3600000 };   /* 25 h, nu 24: politica de repetare a casei ține aceeași cheie 24 h doar în Radar (revizia 28.11) */
   // treapta cu histerezis: la ambele mărimi (distanța până la lichidare, rezultatul în % din sumă) „mai mic = mai rău”
   function treapta(v, prev, intra1, intra2, ies1, ies2) {
     var t = v <= intra2 ? 2 : v <= intra1 ? 1 : 0;
@@ -105,6 +105,15 @@ var BotSemnal = (function () {
     if (inPoz) { if (!st.deschisDe) st.deschisDe = acum; if (acum - st.deschisDe >= PRAG.vecheMs && !st.vecheAnuntat) { st.vecheAnuntat = true; out.push({ nivel: "atentie", cheie: "veche-semnal-" + id, titlu: m + " semnal: " + D(b.directie) + " deschis de " + ore(acum - st.deschisDe),
       mesaj: "O poziție ținută atâta e neobișnuită pentru un bot pe semnal: ieșirea din TradingView poate să nu fi sosit.\n👉 Aș verifica în TradingView că alerta trimite și ieșirea, apoi în Pionex (Jurnal semnale) că a sosit." }); } }
     else { st.deschisDe = 0; st.vecheAnuntat = false; }
+    /* v100.400 (I-979; el, 28.11: „fa tot”): botul care rulează FĂRĂ Stop Loss în Pionex (stopRaport = 0, citit; lipsă = nu se știe ⇒ tăcere).
+       După 10 minute de la pornire (timp să-l pună), apoi din nou la 25 h cât rămâne fără; stopul pus oprește amintirea. */
+    var sr = nr(b.stopRaport), tinta = nr(b.tintaRaport), pl = nr(b.pornitLa);
+    if (sr !== null && sr !== 0) st.faraStopLa = 0;   /* orice valoare diferită de zero = stop pus */
+    else if (sr === 0 && !(pl > 0 && acum - pl < PRAG.faraStopDupaMs) && !(st.faraStopLa && acum - st.faraStopLa < PRAG.faraStopRepetaMs)) {
+      st.faraStopLa = acum;
+      out.push({ nivel: "atentie", cheie: "farastop-semnal-" + id, titlu: m + " semnal: fără Stop Loss în Pionex",
+        mesaj: "Botul rulează " + (pl > 0 ? "de " + ore(acum - pl) + " " : "") + "fără Stop Loss" + (tinta > 0 ? " (are doar ținta de +" + num(tinta * 100, 1) + "%)" : "") + ". Regula ta de oprire e −15% din suma pusă.\n👉 Aș pune Stop Loss în botul din Pionex. Până atunci te anunț la −10% și la −15%, dar nu-l oprește nimeni." });
+    }
     return { st: st, alerte: out };
   }
   // numele scurt: „BTC semnal 1×”

@@ -268,13 +268,13 @@ await test("5. I-810: linia de dimineață - boții cu RF 1h întors CONTRA în 
 
 await test("6. versiunile v100.304, lumanari.js înaintea ecranelor și în shell-ul SW, proba în lanțul npm test", () => {
   const Hh = citeste("public", "index.html");
-  assert.ok((Hh.match(/v100\.(30[4-9]|3[1-9]\d)/g) || []).length >= 3); assert.doesNotMatch(Hh, /v100\.303 · /);
+  assert.ok((Hh.match(/v100\.(30[4-9]|3[1-9]\d|[4-9]\d\d)/g) || []).length >= 3); assert.doesNotMatch(Hh, /v100\.303 · /);
   const iL = Hh.indexOf('<script src="/lib/lumanari.js"></script>');
   assert.ok(iL > Hh.indexOf('<script src="/lib/grid-calcul.js"></script>') && iL < Hh.indexOf('<script src="/lib/trade-zilei-ecran.js"></script>') && iL < Hh.indexOf('<script src="/lib/range-filter-ecran.js"></script>'), "lumanari.js după GridCalcul, înaintea ecranelor");
   const S = citeste("public", "sw.js");
-  assert.match(S, /const CACHE="crypto-radar-v100-(30[4-9]|3[1-9]\d)"/); assert.match(S, /"\/lib\/lumanari\.js"/);
-  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.(30[4-9]|3[1-9]\d)"/);
-  const B = JSON.parse(citeste("BUILD_INFO.json")); assert.match(B.version, /^v100\.(30[4-9]|3[1-9]\d)$/); assert.ok(B.features.rfIdei304);
+  assert.match(S, /const CACHE="crypto-radar-v100-(30[4-9]|3[1-9]\d|[4-9]\d\d)"/); assert.match(S, /"\/lib\/lumanari\.js"/);
+  assert.match(citeste("functions", "_shared", "versiune.js"), /VERSIUNE = "v100\.(30[4-9]|3[1-9]\d|[4-9]\d\d)"/);
+  const B = JSON.parse(citeste("BUILD_INFO.json")); assert.match(B.version, /^v100\.(30[4-9]|3[1-9]\d|[4-9]\d\d)$/); assert.ok(B.features.rfIdei304);
   assert.ok(Number(JSON.parse(citeste("package.json")).version.split(".")[1]) >= 304);
   assert.match(citeste("package.json"), /npm run test:v100303 && npm run test:v100304/);
   // revizia Opus: pagina nu trimite să lipească un script încă necompilat - „același motor ca v2.5 / v2.6” e adevărat

@@ -84,7 +84,7 @@ await test("nimic scos: blocul nu ascunde, nu reordonează și nu schimbă texte
 });
 
 await test("versiunile: pagina (de exact 4 ori), SW, serverul, BUILD_INFO, package.json; regula pândei tot la coadă", () => {
-  const B = JSON.parse(citeste("BUILD_INFO.json")), P = JSON.parse(citeste("package.json")), V = "3(?:19|[2-9]\\d)";
+  const B = JSON.parse(citeste("BUILD_INFO.json")), P = JSON.parse(citeste("package.json")), V = "(?:3(?:19|[2-9]\\d)|[4-9]\\d\\d)";
   assert.equal((HTML.match(new RegExp("v100\\." + V, "g")) || []).length, 4); assert.equal((HTML.match(/v100\.318/g) || []).length, 0);
   assert.match(citeste("public", "sw.js"), new RegExp('const CACHE="crypto-radar-v100-' + V + '";'));
   assert.match(citeste("functions", "_shared", "versiune.js"), new RegExp('VERSIUNE = "v100\\.' + V + '"'));
