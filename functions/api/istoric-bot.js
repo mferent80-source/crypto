@@ -35,6 +35,18 @@ export function taieContrafactual(m,maxReal=CF_REALI_MAX,maxTot=ARHIVA_MAX){
 const CAMPURI=["perechi","pretPerp","profitNet","comisioane","gridProfitBrut","investit","profitTotal","distantaLichidarePct","gridJos","gridSus"];   /* v100.374: marginile din clipa punctului (gridul se poate muta la același bot) */
 // Lipsa ramane null (Number(null) ar da 0, iar un 0 in istoric ar minti).
 const nr=v=>{if(typeof v==="number")return Number.isFinite(v)?v:null;if(typeof v!=="string"||!v.trim())return null;const x=Number(v);return Number.isFinite(x)?x:null};
+/* v100.399 (I-976…I-978): rezumatul bilanțului „Agitate acum” vine de la colector și ajunge pe pagină ⇒ se ține doar ce e sigur: numere finite,
+   true / false, null, șiruri scurte fără marcaj (date, coduri de verdict, simboluri), liste de cel mult 40, obiecte de cel mult 24 de chei
+   simple, 4 trepte adâncime. Peste 6.000 de octeți nu se ține deloc (aprinderile rămân). Pagina îl mai trece o dată prin propriile gărzi. */
+function curataBilant(v,adanc){
+  if(v===null||typeof v==="boolean")return v;
+  if(typeof v==="number")return Number.isFinite(v)?v:undefined;
+  if(typeof v==="string")return /^[A-Za-z0-9 ._\/:\-]{1,24}$/.test(v)?v:undefined;
+  if(typeof v!=="object"||adanc>4)return undefined;
+  if(Array.isArray(v)){const l=[];for(const x of v.slice(0,40)){const c=curataBilant(x,adanc+1);if(c!==undefined)l.push(c)}return l}
+  const out={};let n=0;for(const k of Object.keys(v)){if(n>=24)break;if(!/^[A-Za-z0-9]{1,16}$/.test(k))continue;const c=curataBilant(v[k],adanc+1);if(c!==undefined){out[k]=c;n++}}
+  return out}
+const BILANT_MAX=6000;
 const idBot=v=>String(v||"").replace(/[^A-Za-z0-9_-]/g,"").slice(0,64);
 const simbolKv=v=>String(v||"").toUpperCase().replace(/[^A-Z0-9_]/g,"").slice(0,40);
 // v100.45 (pachetul 1): profilul monedei - 21 de cuantile pe 24 h si 12 h (jos/sus), toate si pe ultimele 30 de zile
@@ -520,7 +532,8 @@ export async function onRequestPost({request,env}){
     if(!(la>0)||!Array.isArray(ap)||ap.length>60)return json({error:"agitate: la + aprinse (cel mult 60)"},400);
     const aprinse=[];for(const x of ap){if(!x||typeof x!=="object"||!SA.test(String(x.s||""))||!(nr(x.la)>0))return json({error:"agitate: aprindere stricata"},400);aprinse.push({s:String(x.s),la:nr(x.la),amp:nr(x.amp),net:nr(x.net),ori:nr(x.ori),pret:nr(x.pret),...(x.piata===true?{piata:true}:{})})}
     const pg=corp.prag&&typeof corp.prag==="object"&&!Array.isArray(corp.prag)?{amp:nr(corp.prag.amp),ori:nr(corp.prag.ori)}:null;
-    await env.ISTORIC.put("agitate",JSON.stringify({la,n:nr(corp.n),masurate:nr(corp.masurate),prag:pg,mesaje24:nr(corp.mesaje24)||0,aprinse}));return json({ok:true,aprinse:aprinse.length})}
+    const bl=corp.bilant&&typeof corp.bilant==="object"&&!Array.isArray(corp.bilant)?curataBilant(corp.bilant,0):null,bilant=bl&&JSON.stringify(bl).length<=BILANT_MAX?bl:null;   /* v100.399: rezumatul bilanțului, curățat; prea mare ⇒ fără el */
+    await env.ISTORIC.put("agitate",JSON.stringify({la,n:nr(corp.n),masurate:nr(corp.masurate),prag:pg,mesaje24:nr(corp.mesaje24)||0,aprinse,bilant}));return json({ok:true,aprinse:aprinse.length})}
   if(action==="monedeBot"){const la=nr(corp&&corp.la),mo=corp&&corp.monede,SYM=/^[\p{Lu}\p{Lo}\p{N}]{1,30}USDT$/u,S=/^[\p{Lu}\p{Lo}\p{N}]{1,30}$/u,lst=a=>Array.isArray(a)&&a.length<=10&&a.every(x=>S.test(String(x)));
     const opt=a=>a==null||lst(a);   /* el, 26.11: + revenire / range (lipsă = goale) */
     if(!(la>0)||!Array.isArray(mo)||!mo.length||mo.length>300||!lst(corp.short)||!lst(corp.long)||!opt(corp.revenire)||!opt(corp.range))return json({error:"monedeBot: la + monede (1-300) + short / long / revenire / range (≤ 10)"},400);

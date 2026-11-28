@@ -6174,6 +6174,7 @@ body :is(#tabloubot,#t212,#dash,#rangefilter,#agitate,#sugestii,#probe,#gridset,
 #agitate.tbZi .agEtPeste{border-color:#E0A526;color:#8A5A00}
 #agitate.tbZi .agApTitlu{color:#0E1A2B}
 #agitate.tbZi .agApRand b{color:#0E1A2B}
+#agitate.tbZi .agBlRand b{color:#0E1A2B}
 #agitate.tbZi .agNote summary{color:#0E1A2B}
 #agitate.tbZi .agNote b{color:#0E1A2B}
 @container agl (max-width:1179px){#agitate.tbZi [data-et]::before{color:#66768B}}
@@ -6941,6 +6942,9 @@ html #tabloubot#tabloubot#tabloubot#tabloubot #tbSemnalCard[hidden]{display:none
 #agitate .agApTitlu{color:#E6EDF3}
 #agitate .agApRand{display:flex;gap:2px 8px;align-items:baseline;flex-wrap:wrap}
 #agitate .agApRand b{color:#E6EDF3}
+#agitate .agBilant{gap:5px}
+#agitate .agBlRand{line-height:1.5}
+#agitate .agBlRand b{color:#E6EDF3}
 #agitate .agNote{border:1px solid var(--ag-linie);border-radius:5px;padding:8px 14px;background:var(--ag-fond)}
 #agitate .agNote summary{cursor:pointer;color:#E6EDF3;font-weight:600}
 #agitate .agNote p{margin:8px 0 0;max-width:90ch}

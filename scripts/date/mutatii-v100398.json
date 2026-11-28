@@ -51,7 +51,7 @@
   {"nume":"după revizie: mesajele pleacă și noaptea","fisier":"scripts/lib/politica-alerte.mjs","cauta":"[/^agitate/, \"agitate\"]","pune":"[/^agitate-niciodata/, \"agitate\"]"},
   {"nume":"după revizie: tura numără iar la alarma de prețuri moarte","fisier":"scripts/colector.mjs","cauta":"cere: (cale) => cere(cale, { faraContorPret: true }),","pune":"cere,"},
   {"nume":"după revizie: netul lipsă scris 0,0%","fisier":"public/lib/agitate-ecran.js","cauta":"agPctSemn(e.net == null ? null : Number(e.net))","pune":"agPctSemn(Number(e.net))"},
-  {"nume":"după revizie: ruta pierde numărătoarea mesajelor","fisier":"functions/api/istoric-bot.js","cauta":"mesaje24:nr(corp.mesaje24)||0,aprinse}","pune":"mesaje24:0,aprinse}"},
+  {"nume":"după revizie: ruta pierde numărătoarea mesajelor","fisier":"functions/api/istoric-bot.js","cauta":"mesaje24:nr(corp.mesaje24)||0,aprinse,bilant}));","pune":"mesaje24:0,aprinse,bilant}));"},
   {"nume":"garda: adresa de navigare trece și în afara unui href","fisier":"scripts/lib/legaturi-navigare.mjs","cauta":"else rele.push({ adresa, loc: m.index,","pune":"else nav.add(adresa), [].push({ adresa, loc: m.index,"},
   {"nume":"pagina: aprinderile de piață înșirate rând cu rând","fisier":"public/lib/agitate-ecran.js","cauta":"var singure = toate.filter(function (e) { return !(e && e.piata === true); }),","pune":"var singure = toate,"},
   {"nume":"pagina: aceeași monedă pe mai multe rânduri","fisier":"public/lib/agitate-ecran.js","cauta":"if (!deCate[k]) { deCate[k] = 0; ap.push(e); } deCate[k]++;","pune":"deCate[k] = 1; ap.push(e);"},

@@ -154,6 +154,54 @@ function agHtmlAprinse(st, acum) {
   if (dePiata.length) h += '<p class="agMut agMic">' + (ap.length ? "… și " : "") + TextRo.cate(dePiata.length, "aprindere", "aprinderi") + " în timpul unei mișcări a pieței întregi (ultima la " + agOra(dePiata[0].la - (st.decalaj || 0)) + "): atunci pleacă un singur mesaj, de piață.</p>";
   return h + "</div>";
 }
+// v100.399 (I-976…I-978; el, 28.11: „fa idei”): BILANȚUL alertelor, din rezumatele socotite de colector (Agitate.bilantMesaje / bilantUrmare /
+// bilantBinance). Faptele stau la vedere; verdictele se scriu DOAR după criteriile din Agitate.BILANT (scrise înaintea datelor), cu dovada lângă
+// ele (pe câte cazuri, din câte zile). Rezumatul e date din afară: numerele trec prin agIntreg / Number, șirurile prin gărzi, nimic nu se lipește brut.
+function agZiScurt(z) { var m = /^\d{4}-(\d{2})-(\d{2})$/.exec(String(z == null ? "" : z)); return m ? m[2] + "." + m[1] : "—"; }
+function agZiDin(t) { var x = Number(t); if (!(x > 0)) return "—"; try { return new Intl.DateTimeFormat("ro-RO", { timeZone: "Europe/Bucharest", day: "2-digit", month: "2-digit" }).format(new Date(x)); } catch (e) { return "—"; } }
+function agIntreg(v) { var x = typeof v === "number" || typeof v === "string" ? Number(v) : NaN; return isFinite(x) && x > 0 ? Math.round(x) : 0; }
+function agObiect(v) { return v && typeof v === "object" && !Array.isArray(v) ? v : {}; }
+function agBlMesaje(b) {
+  var B = Agitate.BILANT, m = agObiect(b.mesaje), buc = [], nz = agIntreg(m.zile), med = typeof m.medie === "number" ? m.medie : NaN, tinta = "cel mult " + B.tinta + " pe zi";
+  (Array.isArray(b.zile) ? b.zile.slice(-8) : []).forEach(function (z) { z = agObiect(z); buc.push(agZiScurt(z.zi) + ": " + agIntreg(z.n) + (typeof z.zi === "string" && z.zi === b.azi ? " (azi)" : agIntreg(z.ms) < B.ziIntreagaMs ? " (zi neîntreagă)" : "")); });
+  var h = '<div class="agBlRand"><b>Mesaje pe zi:</b> ' + (buc.length ? agEsc(buc.join(" · ")) + ". " : "");
+  if (nz > 0 && isFinite(med)) h += "Media pe " + TextRo.cate(nz, "zi întreagă", "zile întregi") + ": " + TextRo.num(med, 1) + ". ";
+  if (m.verdict === "tine") h += "<b>Ține ținta de " + tinta + ".</b>";
+  else if (m.verdict === "peste") h += "<b>Peste ținta de " + tinta + ": pragul rămâne cum e până hotărăști tu.</b>";
+  else h += '<span class="agMut">Fără verdict încă: ' + nz + " din " + TextRo.cate(B.zileMesaje, "zi întreagă", "zile întregi") + " (ținta: " + tinta + ").</span>";
+  if (agIntreg(m.oprite) > 0) h += " Plafonul a oprit " + TextRo.cate(agIntreg(m.oprite), "mesaj", "mesaje") + ".";
+  return h + "</div>";
+}
+function agBlUrmare(b, k, ore) {
+  var B = Agitate.BILANT, x = agObiect(b[k]), c = agIntreg(x.continuat), i = agIntreg(x.intors), l = agIntreg(x.peLoc), v = agObiect(agObiect(b.verdict)[k]), med = typeof x.media === "number" ? x.media : NaN;
+  var h = '<div class="agBlRand"><b>După aprindere, la ' + ore + " h:</b> ";
+  h += c + i + l === 0 ? "încă niciun caz. " : c + " au continuat, " + i + " s-au întors, " + l + " pe loc; media " + agPctSemn(isFinite(med) ? med : null) + " în sensul aprinderii. ";
+  if (v.verdict === "intors" || v.verdict === "continuat" || v.verdict === "nimic") {
+    var vc = agIntreg(v.continuat), vi = agIntreg(v.intors);
+    h += "<b>Verdict din " + agEsc(agZiDin(v.la)) + ", pe " + TextRo.cate(agIntreg(v.n), "caz", "cazuri") + " din " + TextRo.cate(agIntreg(v.zileVot), "zi", "zile") + ": "
+      + (v.verdict === "intors" ? "se întorc mai des decât continuă (" + vi + " față de " + vc + ")" : v.verdict === "continuat" ? "continuă mai des decât se întorc (" + vc + " față de " + vi + ")" : "nicio înclinare dovedită (" + vi + " întoarse, " + vc + " continuate)") + ".</b>";
+  } else if (x.gata === true) h += '<span class="agMut">Pragurile sunt atinse (' + TextRo.cate(agIntreg(x.zileVot), "zi cu aprinderi", "zile cu aprinderi") + ", " + TextRo.cate(agIntreg(x.n), "caz", "cazuri") + "): verdictul se dă după ce se încheie ziua și vin rezultatele ei.</span>";
+  else h += '<span class="agMut">Fără verdict încă: ' + agIntreg(x.zileVot) + " din " + TextRo.cate(B.zileVot, "zi cu aprinderi", "zile cu aprinderi") + ", " + agIntreg(x.n) + " din " + TextRo.cate(B.cazuri, "caz", "cazuri") + ".</span>";
+  return h + "</div>";
+}
+function agBlBinance(b) {
+  var B = Agitate.BILANT, x = agObiect(b.binance), u = agIntreg(x.urmarite), mon = (Array.isArray(x.monede) ? x.monede : []).filter(function (s) { return typeof s === "string" && /^[A-Z0-9]{1,15}$/.test(s); });
+  var h = '<div class="agBlRand"><b>Peste Binance:</b> urmărit ' + TextRo.cate(u, "zi", "zile") + " (azi: " + TextRo.cate(agIntreg(x.citiriAzi), "citire", "citiri") + "); apariții: "
+    + (mon.length ? "la " + TextRo.cate(mon.length, "monedă", "monede") + " (" + agEsc(mon.slice(0, 12).join(", ")) + (mon.length > 12 ? " și încă " + (mon.length - 12) : "") + ")" : "niciuna") + ". ";
+  if (x.verdict === "ramane") h += "<b>A apărut: semnul rămâne.</b>";
+  else if (x.verdict === "poate-fi-scos") h += "<b>N-a apărut în " + TextRo.cate(B.zileBinance, "zi", "zile") + ": semnul poate fi scos.</b>";
+  else h += '<span class="agMut">Fără verdict încă: ' + u + " din " + TextRo.cate(B.zileBinance, "zi", "zile") + ".</span>";
+  return h + "</div>";
+}
+function agHtmlBilant(st) {
+  var c = st.colector, b = c && c.bilant; if (!c || !(c.la > 0) || !b || typeof b !== "object" || Array.isArray(b)) return "";
+  var cz = agObiect(b.cazuri), rt = agIntreg(cz.ratate);
+  var h = '<div class="agAprinse agBilant"><p class="agApCap"><b class="agApTitlu">Bilanțul alertelor</b> <span class="agMut agMic">numărat de colector din ' + agZiScurt(b.deLa) + " · verdictele se dau doar după criteriile scrise dinainte (în „Cum citesc lista”)</span></p>";
+  h += agBlMesaje(b) + agBlUrmare(b, "h1", 1) + agBlUrmare(b, "h4", 4);
+  h += '<p class="agMut agMic">Numărate: ' + TextRo.cate(agIntreg(cz.singure), "aprindere singură", "aprinderi singure") + " (" + agIntreg(cz.cuDirectie) + " cu direcție, " + agIntreg(cz.faraDirectie) + " dus-întors) · " + agIntreg(cz.dePiata) + " în mișcarea pieței, care nu intră aici"
+    + (rt > 0 ? " · " + TextRo.cate(rt, "rezultat ratat", "rezultate ratate") + " (fără preț la termen)" : "") + ".</p>";
+  return h + agBlBinance(b) + "</div>";
+}
 function agHtmlLista(st, acum) {
   var f = Agitate.fer(st.k) || Agitate.fer("1h"), cl = Agitate.clasament(st.monede, f.k, acum), vaz = st.toate ? cl : cl.slice(0, AG_VIZIBILE), max = 0;
   vaz.forEach(function (r) { if (r.x.masurat && r.x.amp > max) max = r.x.amp; });
@@ -173,6 +221,13 @@ function agHtmlNote(st) {
   h += "<p><b>Subțire</b> = sub 0,3 M USDT tranzacționați pe Pionex în 24 h. Acolo ordinul la piață alunecă, iar prețul poate face fitile pe care alte burse nu le au.</p>";
   h += "<p><b>Peste Binance</b> = mișcarea pe 24 h de pe Pionex e de cel puțin " + agOri(Agitate.PESTE_BINANCE.raport) + " cea a aceleiași monede pe Binance Futures (și cu cel puțin " + Agitate.PESTE_BINANCE.puncte + " puncte mai mare): poate fi o fitilă doar pe Pionex. Potrivirea e după simbol; monedele fără contract viu pe Binance n-au semnul.</p>";
   h += "<p><b>Aprinse</b> = colectorul urmărește lista și cu pagina închisă și scrie pe Discord când o monedă trece, pe o oră, de " + agPct(Agitate.APRINS.amp) + " și de " + agOri(Agitate.APRINS.ori) + " obișnuitul ei (o dată pe monedă la 24 h; când se mișcă toată piața, un singur mesaj; noaptea, între 23 și 7, mesajele așteaptă rezumatul de dimineață). „De atunci” arată ce a făcut prețul după: aprinderea nu spune direcția.</p>";
+  var B = Agitate.BILANT;
+  h += "<p><b>Bilanțul alertelor</b> îl ține colectorul, pe zilele României. Criteriile sunt scrise dinainte și nu se schimbă după ce se văd cifrele; o schimbare a pragului repornește numărătoarea. "
+    + "<b>Mesaje pe zi:</b> media ultimelor " + TextRo.cate(B.zileMesaje, "zi întreagă", "zile întregi") + " (zi întreagă = urmărită cel puțin " + TextRo.oreN(B.ziIntreagaMs / 3600000) + ") față de ținta de cel mult " + B.tinta + " pe zi. "
+    + "<b>După aprindere:</b> doar aprinderile singure care au o direcție (netul orei trece de " + TextRo.num(B.directie, 1) + " din mișcare). La o oră și la " + TextRo.oreN(B.ore[1]) + " după, prețul din lista Pionex față de cel de la aprindere: cu cel puțin " + TextRo.num(B.banda, 1)
+    + " puncte în sensul ei „a continuat”, împotriva ei „s-a întors”, între ele „pe loc”; prețul citit cu peste " + TextRo.cate(B.tarziuMs / 60000, "minut", "minute") + " întârziere nu se pune. "
+    + "Verdictul se dă o singură dată pe fiecare orizont, la cel puțin " + TextRo.cate(B.zileVot, "zi cu aprinderi", "zile cu aprinderi") + " și " + TextRo.cate(B.cazuri, "caz", "cazuri") + ", și se judecă pe zile, fiindcă aprinderile aceleiași zile se trag unele după altele. Nu e probă de strategie: fără costuri, fără intrări. "
+    + "<b>Peste Binance:</b> colectorul compară la 15 minute; " + TextRo.cate(B.zileBinance, "zi urmărită", "zile urmărite") + " fără nicio apariție înseamnă că semnul poate fi scos.</p>";
   h += "<p>Pe 24 h cifrele vin din lista Pionex (toate monedele dintr-o cerere). Pe 15 minute, o oră și 4 ore vin din lumânările de 5 minute. Primele " + AG_TOP_N + " din clasament le au recitite la 5 minute, cu fitilele exacte; celelalte, între două citiri întregi (o dată pe oră), se țin la zi cu prețul citit la 30 de secunde, deci mișcarea lor poate ieși puțin mai mică.</p></details>";
   h += '<p class="agMut agMic">' + (st.faraContract > 0 ? "Din primele " + Agitate.TOP + " după capitalizare, " + st.faraContract + " n-au contract pe Pionex (stabile, jetoane de bursă, altele)." : "") + (buc.length ? " Scoase din listă: " + buc.join(" · ") + "." : "") + "</p>";
   return h;
@@ -188,6 +243,7 @@ function agHtml(st, acum) {
   h += '<div id="agZonaSurse">' + agHtmlSurse(st, acum) + "</div>";
   h += '<div id="agZonaAprinse">' + agHtmlAprinse(st, acum) + "</div>";
   h += '<div id="agZonaLista">' + agHtmlLista(st, acum) + "</div>";
+  h += '<div id="agZonaBilant">' + agHtmlBilant(st) + "</div>";   /* sub listă: clasamentul e rostul paginii, bilanțul se schimbă o dată pe zi */
   h += '<div id="agZonaNote">' + agHtmlNote(st) + "</div>";
   return h;
 }
@@ -202,7 +258,7 @@ function agDeseneaza(doarZone) {
   var acum = agAcum(), zV = agEl("agZonaVerdict"), zS = agEl("agZonaSurse"), zL = agEl("agZonaLista"), zA = agEl("agZonaAprinse");
   if (doarZone && zV && zS && zL && agStare.monede.length) {
     var activ = document.activeElement && document.activeElement.id === "agToateBtn";
-    zV.innerHTML = agHtmlVerdict(agStare, acum); zS.innerHTML = agHtmlSurse(agStare, acum); zL.innerHTML = agHtmlLista(agStare, acum); if (zA) zA.innerHTML = agHtmlAprinse(agStare, acum);
+    zV.innerHTML = agHtmlVerdict(agStare, acum); zS.innerHTML = agHtmlSurse(agStare, acum); zL.innerHTML = agHtmlLista(agStare, acum); if (zA) zA.innerHTML = agHtmlAprinse(agStare, acum); var zB = agEl("agZonaBilant"); if (zB) zB.innerHTML = agHtmlBilant(agStare);
     if (activ) { var b = agEl("agToateBtn"); if (b) b.focus({ preventScroll: true }); }
     return;
   }

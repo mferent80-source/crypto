@@ -34,6 +34,29 @@ var Agitate = (function () {
   // v100.398 (I-973): „peste Binance” - mișcarea pe 24 h de pe Pionex de cel puțin 1,5× cea de pe Binance Futures ȘI cu cel puțin 2 puncte mai
   // mare (sub 2 puncte, raportul sare din nimic la monedele liniștite). Alegere de afișare: semn că poate fi o fitilă doar pe Pionex.
   var PESTE_BINANCE = { raport: 1.5, puncte: 2 };
+  // v100.399 (el, 28.11.2026: „fa idei” după livrarea v100.398 ⇒ I-976…I-978): BILANȚUL alertelor - trei numărători ținute de colector, pe zilele
+  // României, cu criteriile de verdict scrise ÎNAINTE de primele date. Nimic de mai jos nu se schimbă după ce se văd cifrele; o schimbare a regulii
+  // APRINS repornește numărătoarea (rândurile poartă regula lor, `r`). Măsurarea începe de la colectorul livrat cu v100.399: cele 7 aprinderi
+  // văzute de mine în demo-ul din 28.11 (3 continuate, 4 întoarse) NU intră - erau deja văzute.
+  //  1. MESAJE PE ZI (I-976): ținta scrisă pe 28.11 la 10:10 = cel mult ~5 pe zi. Se judecă pe ultimele 7 zile ÎNTREGI (zi întreagă = urmărită
+  //     cel puțin 20 de ore): media ≤ 5 ⇒ „ține”; peste ⇒ „peste țintă” (pragul nu se schimbă singur).
+  //  2. CE A URMAT DUPĂ APRINDERE (I-977), la +1 h și +4 h, doar aprinderile SINGURE (cele din mișcarea pieței sunt un singur eveniment):
+  //     - ipoteza: după o oră de ≥ 5% și ≥ 3× obișnuitul, prețul se întoarce mai des decât continuă (mișcarea vine din lichidări pe o carte
+  //       subțire, apoi lichiditatea revine; pe partea cealaltă sunt cei care intră târziu). Priorul e SLAB: direcția a fost probată de opt ori pe
+  //       datele lui și a ieșit ban (aceasta e a noua probă) ⇒ testul e pe două părți, iar „nicio înclinare dovedită” e un rezultat la fel de bun;
+  //     - direcția aprinderii = semnul netului pe ora ei, doar când |net| > 0,3 × mișcarea (altfel „dus-întors”: fără direcție, nu votează);
+  //     - rezultatul = prețul din lista Pionex la +1 h / +4 h față de cel de la aprindere, în sensul ei: de la +0,5 puncte „a continuat”, de la
+  //       −0,5 „s-a întors”, între ele „pe loc”. Prețul se ia la prima tură de după termen; întârziat peste 10 minute = „ratat” (nu se pune unul
+  //       târziu: ar fi alt moment);
+  //     - verdictul: O SINGURĂ judecată pe orizont (fără priviri repetate), când sunt ≥ 30 de zile cu vot ȘI ≥ 150 de cazuri: testul t pe ZILE
+  //       (suma zilei: întoarse − continuate), pe două părți, alfa 0,025 pe orizont (două orizonturi). De ce pe zile - simulat înainte, pe 28.11
+  //       (mulberry32; scripturile putere-urmari.mjs și putere-zile.mjs): când cazurile aceleiași zile se trag unele după altele, binomialul pe
+  //       cazuri dă 7–21% verdicte false (și „majoritatea zilelor spune la fel” nu ajută), iar t pe zile ține 2,3–2,7% oricum. Puterea regulii:
+  //       la 70% întoarceri 92–100%; la 65%: 68–93% (după cât de corelată e ziua); o înclinare sub 65% nu se vede cu atâtea date;
+  //     - NU e probă de strategie: fără costuri, fără intrări. Media e pe caz, în sensul aprinderii.
+  //  3. „PESTE BINANCE” (I-978): colectorul compară la 15 minute; o apariție ⇒ semnul rămâne; 14 zile urmărite (≥ 60 de citiri pe zi) fără
+  //     niciuna ⇒ „poate fi scos”. La livrarea v100.398: Pionex / Binance = 1,0× la toate cele 80 de perechi.
+  var BILANT = { tinta: 5, zileMesaje: 7, ziIntreagaMs: 20 * 3600000, zileBinance: 14, citiriBinance: 60, ore: [1, 4], directie: 0.3, banda: 0.5, tarziuMs: 600000, zileVot: 30, cazuri: 150, alfa: 0.025 };
   var FERESTRE = [
     { k: "15m", bare: 3, et: "15 min", lung: "ultimele 15 minute" },
     { k: "1h", bare: 12, et: "1 oră", lung: "ultima oră" },
@@ -205,6 +228,74 @@ var Agitate = (function () {
     return l;
   }
 
+  // ── bilanțul alertelor (v100.399) ──
+  // cheia regulii: tot ce schimbă CE mesaje pleacă (revizia 28.11) - pragul aprinderii, regula pieței și, dat de tură, restul ei (plafonul pe 24 h,
+  // pragul de candidat, așteptarea pe monedă, liniștea de după piață). Rândurile jurnalului o poartă: altă cheie = numărătoare nouă.
+  function regulaAcum(aTurei) { return APRINS.amp + "/" + APRINS.ori + "-" + PIATA.amp + "/" + PIATA.ori + "/" + PIATA.parte + "/" + PIATA.minim + (aTurei ? ":" + aTurei : ""); }
+  // direcția aprinderii: +1 / −1, sau 0 când s-a dus și s-a întors (netul nu trece de 0,3 din mișcare)
+  function directia(net, amp) { var n = nr(net), a = nr(amp); if (n === null || !(a > 0) || Math.abs(n) <= BILANT.directie * a) return 0; return n > 0 ? 1 : -1; }
+  // ce a urmat: { d (puncte, în sensul aprinderii), fel } sau null (fără direcție / fără preț)
+  function urmare(pret, dupa, dir) {
+    var p = nr(pret), q = nr(dupa); if (!(p > 0) || !(q > 0) || (dir !== 1 && dir !== -1)) return null;
+    var d = Math.round((q / p - 1) * 100 * dir * 1e9) / 1e9;                                                /* rotunjit la 9 zecimale: 100 → 100,5 e exact 0,5, nu 0,49999… */
+    return { d: d, fel: d >= BILANT.banda ? "continuat" : d <= -BILANT.banda ? "intors" : "peLoc" };
+  }
+  function lnGamma(z) {
+    var c = [0.99999999999980993, 676.5203681218851, -1259.1392167224028, 771.32342877765313, -176.61502916214059, 12.507343278686905, -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7];
+    if (z < 0.5) return Math.log(Math.PI / Math.sin(Math.PI * z)) - lnGamma(1 - z);
+    z -= 1; var x = c[0]; for (var i = 1; i < 9; i++) x += c[i] / (z + i); var t = z + 7.5; return 0.5 * Math.log(2 * Math.PI) + (z + 0.5) * Math.log(t) - t + Math.log(x);
+  }
+  // p-ul testului t (Student) pe două părți: aria de sub densitate dincolo de ±|t|, prin Simpson (verificat pe tabel în proba v100.399)
+  function tDouaParti(t, df) {
+    if (typeof t !== "number" || isNaN(t) || !(df >= 1)) return null;
+    var x = Math.abs(t); if (x === 0) return 1; if (!isFinite(x)) return 0;
+    var n = 2000, i, h, s, c = Math.exp(lnGamma((df + 1) / 2) - lnGamma(df / 2)) / Math.sqrt(df * Math.PI), f = function (u) { return Math.pow(1 + u * u / df, -(df + 1) / 2); };
+    if (x <= 5) { h = x / n; s = f(0) + f(x); for (i = 1; i < n; i++) s += f(i * h) * (i % 2 ? 4 : 2); return Math.min(1, Math.max(0, 1 - 2 * c * s * h / 3)); }
+    /* peste 5: coada de dincolo de |t| socotită direct, cu u = |t| / v pe (0, 1] - pasul rămâne mic oricât de mare e t (revizia 28.11: pe [0, t]
+       cu pas fix, t ≈ 4.900 dădea p = 0,21) */
+    var g = function (v) { return v > 0 ? f(x / v) * x / (v * v) : (df === 1 ? 1 / x : 0); };
+    h = 1 / n; s = g(0) + g(1); for (i = 1; i < n; i++) s += g(i * h) * (i % 2 ? 4 : 2);
+    return Math.min(1, Math.max(0, 2 * c * s * h / 3));
+  }
+  function randuri(zile) { return (Array.isArray(zile) ? zile : []).filter(function (z) { return z && typeof z === "object" && typeof z.zi === "string"; }).slice().sort(function (a, b) { return a.zi < b.zi ? -1 : a.zi > b.zi ? 1 : 0; }); }
+  function intreg(v) { var x = nr(v); return x !== null && x > 0 ? Math.round(x) : 0; }
+  // I-976: mesajele (pe monedă + de piață) pe ultimele 7 zile întregi dinainte de azi, cu regula de acum
+  function bilantMesaje(zile, azi, regula) {
+    var r = regula || regulaAcum(), toate = randuri(zile), intregi = toate.filter(function (z) { return z.r === r && z.zi < azi && nr(z.ms) >= BILANT.ziIntreagaMs; });
+    var ult = intregi.slice(-BILANT.zileMesaje), tot = 0, opr = 0;
+    ult.forEach(function (z) { tot += intreg(z.m) + intreg(z.p); opr += intreg(z.opr); });
+    toate.forEach(function (z) { if (z.zi === azi && z.r === r) opr += intreg(z.opr); });                   /* ce a oprit plafonul azi se spune pe loc */
+    var medie = ult.length ? tot / ult.length : null;
+    return { intregi: intregi.length, zile: ult.length, medie: medie, oprite: opr, verdict: ult.length < BILANT.zileMesaje ? "prea-putine" : medie <= BILANT.tinta ? "tine" : "peste" };
+  }
+  // I-977, un orizont (k = "h1" / "h4"; rândul zilei ține [continuate, întoarse, pe loc, suma punctelor]): numărătorile + verdictul pe ZILE
+  function bilantUrmare(zile, k, regula) {
+    var r = regula || regulaAcum(), c = 0, i = 0, l = 0, s = 0, d = [], zI = 0, zC = 0;
+    randuri(zile).forEach(function (z) {
+      var h = z.r === r && Array.isArray(z[k]) ? z[k] : null; if (!h) return;
+      var zc = intreg(h[0]), zi = intreg(h[1]);
+      c += zc; i += zi; l += intreg(h[2]); s += nr(h[3]) || 0;
+      if (zc + zi > 0) { d.push(zi - zc); if (zi > zc) zI++; else if (zc > zi) zC++; }
+    });
+    var n = c + i, D = d.length, out = { continuat: c, intors: i, peLoc: l, n: n, media: n + l ? s / (n + l) : null, zileVot: D, zileIntors: zI, zileContinuat: zC, gata: D >= BILANT.zileVot && n >= BILANT.cazuri, t: null, p: null, verdict: "prea-putine" };
+    if (!out.gata) return out;
+    var med = 0, vr = 0; d.forEach(function (x) { med += x; }); med /= D; d.forEach(function (x) { vr += (x - med) * (x - med); }); vr /= D - 1;
+    out.t = vr > 0 ? med / Math.sqrt(vr / D) : med > 0 ? Infinity : med < 0 ? -Infinity : 0;
+    out.p = tDouaParti(out.t, D - 1);
+    out.verdict = out.p < BILANT.alfa ? (med > 0 ? "intors" : "continuat") : "nimic";
+    return out;
+  }
+  // I-978: zile urmărite (trecute, cu destule citiri) și unde a apărut semnul (orice zi, și cea de azi)
+  function bilantBinance(zile, azi) {
+    var u = 0, ap = 0, vazute = {}, azi0 = 0;
+    randuri(zile).forEach(function (z) {
+      if (z.zi === azi) azi0 = intreg(z.bc);                                                                /* citirile de azi: dacă stau pe zero, Binance nu răspunde colectorului */
+      if (z.zi < azi && intreg(z.bc) >= BILANT.citiriBinance) u++;
+      (Array.isArray(z.bp) ? z.bp : []).forEach(function (m) { if (typeof m === "string" && /^[A-Z0-9]{1,15}$/.test(m)) { ap++; vazute[m] = 1; } });
+    });
+    return { urmarite: u, citiriAzi: azi0, aparitii: ap, monede: Object.keys(vazute).sort(), verdict: ap > 0 ? "ramane" : u >= BILANT.zileBinance ? "poate-fi-scos" : "prea-putine" };
+  }
+
   // în ce ordine se cer lumânările: monedele boților tăi, apoi de la cea mai agitată pe 24 h (primele rânduri se umplu primele)
   function deMasurat(monede, boti, max) {
     var b = boti || {}, l = (Array.isArray(monede) ? monede : []).slice();
@@ -214,6 +305,7 @@ var Agitate = (function () {
 
   return { TOP: TOP, PER_MS: PER_MS, MIN_BLOCURI: MIN_BLOCURI, SUBTIRE: SUBTIRE, PESTE: PESTE, FERESTRE: FERESTRE, STABILE: STABILE, APRINS: APRINS, PIATA: PIATA, PESTE_BINANCE: PESTE_BINANCE,
     aprinsa: aprinsa, piataAprinsa: piataAprinsa, dinBinance: dinBinance, fataDeBinance: fataDeBinance,
+    BILANT: BILANT, regulaAcum: regulaAcum, directia: directia, urmare: urmare, tDouaParti: tDouaParti, bilantMesaje: bilantMesaje, bilantUrmare: bilantUrmare, bilantBinance: bilantBinance,
     fer: fer, ranguri: ranguri, univers: univers, bare: bare, fereastra: fereastra, obisnuit: obisnuit, cuPret: cuPret, masura: masura, treapta: treapta,
     clasament: clasament, deMasurat: deMasurat };
 })();

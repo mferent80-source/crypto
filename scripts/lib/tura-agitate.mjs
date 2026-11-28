@@ -21,9 +21,27 @@
 // Mesajele pleacă prin trimiteAlerta: noaptea (23–07) așteaptă rezumatul de dimineață, ca restul informărilor (cheile `agitate` sunt în
 // CHEI_NOAPTE, scripts/lib/politica-alerte.mjs). Ce vede pagina: KV `agitate` (ruta action=agitate).
 // Sunt FAPTE, nu semnale: mesajul spune unde e mișcare, nu încotro merge prețul.
-// d = { acum, cere(cale), trimite(cale, corp), trimiteAlerta(m, bot, cheie), jurnal, pauza(ms), Agitate, TextRo, eCrypto(baza), citesteDisc(), scrieDisc(o) }
-// st = starea turei (în memorie: lumânările, rangurile, stările); pe disc (citesteDisc / scrieDisc): aprinderile, ultimul mesaj pe monedă, orele mesajelor
+// v101.217 (Radar v100.399, I-976…I-978; el, 28.11: „fa idei”): BILANȚUL - tura ține pe disc un jurnal pe zilele României (`disc.jurnal`):
+//   - mesajele plecate / oprite de plafon și timpul urmărit (doar turele care judecă, una după alta) ⇒ „mesaje pe zi” față de ținta de 5;
+//   - fiecare aprindere, cu prețul și direcția ei (`disc.urmari`), primește prețul din listă la +1 h și la +4 h, la prima tură de după termen;
+//     întârziat peste 10 minute = „ratat” (nu se pune unul târziu). Rezultatul intră în rândul ZILEI APRINDERII; votează doar aprinderile singure
+//     cu direcție, sub regula de acum. Nimic din viitor nu schimbă un rezultat scris (proba D4 din proba-v100399);
+//   - la 15 minute, amplitudinea pe 24 h de pe Binance Futures față de cea de pe Pionex ⇒ câte citiri și la ce monede a apărut „peste Binance”;
+//   - verdictul „ce a urmat” se dă O SINGURĂ dată pe orizont (Agitate.bilantUrmare: 30 de zile cu vot și 150 de cazuri, t pe zile) și rămâne
+//     înghețat în `disc.verdict`; o regulă nouă (APRINS schimbat) repornește tot.
+// Criteriile și de ce sunt așa: public/lib/agitate.js (BILANT). Pagina primește doar rezumatele (corp.bilant).
+// d = { acum, cere(cale), binance(url) [opțional], trimite(cale, corp), trimiteAlerta(m, bot, cheie), jurnal, pauza(ms), Agitate, TextRo, eCrypto(baza), citesteDisc(), scrieDisc(o) }
+// st = starea turei (în memorie: lumânările, rangurile, stările); pe disc (citesteDisc / scrieDisc): aprinderile, ultimul mesaj pe monedă, orele mesajelor,
+//      jurnalul pe zile, cazurile „ce a urmat”, verdictul înghețat
+import { ziRo } from "./alerte-zi.mjs";
 export const RITM_MS = 60000;
+export const BINANCE_MS = 15 * 60000;
+export const JURNAL_ZILE = 120;
+export const URMARI_ZILE = 90;          /* cazurile brute (preț, mișcare, de câte ori obișnuitul) rămân 90 de zile pentru socoteli de mai târziu; rezultatele lor sunt deja în jurnal */
+export const BINANCE_LIMITA_MS = 8000;  /* revizia 28.11: cererea spre Binance (cu pauzele ei comune de până la minute) nu ține tura */
+export const NECITIT_MAX = 10;
+const FAPI = "https://fapi.binance.com", URMARI_MAX = 800, PESTE_MAX = 12;
+const ziGoala = (r) => ({ r, ms: 0, m: 0, p: 0, a: 0, ap: 0, opr: 0, bc: 0, bp: [], cd: 0, fd: 0, x: 0, h1: [0, 0, 0, 0], h4: [0, 0, 0, 0] });
 export const RECITIRE_MS = 6 * 3600000;
 export const RANGURI_MS = 6 * 3600000;
 export const PE_TURA = 12;
@@ -49,6 +67,19 @@ export function mesajPiata(P, rand, d) {
   const S = scris(d), A = d.Agitate, top = rand.filter((r) => r.x.masurat).sort((a, b) => b.x.amp - a.x.amp).slice(0, 3).map((r) => r.m.simbol + " " + S.pct(r.x.amp)).join(", ");
   return { nivel: "info", titlu: "⚡ Se mișcă toată piața: " + P.n + " din " + S.cate(P.din, "monedă", "monede"), cheie: "agitate-piata",
     mesaj: P.n + " din " + S.cate(P.din, "monedă", "monede") + " urmărite sunt deodată la cel puțin " + S.pct(A.PIATA.amp) + " într-o oră și de " + S.ori(A.PIATA.ori) + " obișnuitul lor. Cele mai agitate: " + top + ".\n" + CINSTIT };
+}
+// Starea de pe disc (revizia 28.11): fișierul LIPSĂ = pornire de la zero; fișierul care NU se poate citi (ținut de antivirus / copie, JSON tăiat,
+// altceva decât starea turei) = null ⇒ tura sare și NU scrie peste el (ar șterge luni de bilanț și verdictul înghețat). După 10 ture la rând
+// e pus deoparte și se pornește de la zero - altfel alertele ar tăcea pentru totdeauna.   io = { citeste() ⇒ text (aruncă ENOENT), deoparte(), jurnal }
+export function citesteStare(io, st) {
+  const necitit = (e) => {
+    st.necitit = (st.necitit || 0) + 1; if (st.necitit < NECITIT_MAX) return null;
+    try { io.deoparte(); } catch { /* rămâne pe loc */ }
+    io.jurnal("agitate: starea de pe disc nu s-a putut citi de " + NECITIT_MAX + " ori la rând (" + String(e && e.message || e).slice(0, 80) + ") - pusă deoparte, pornesc de la zero");
+    st.necitit = 0; return {};
+  };
+  let brut; try { brut = io.citeste(); } catch (e) { if (e && e.code === "ENOENT") { st.necitit = 0; return {}; } return necitit(e); }
+  try { const x = JSON.parse(brut); if (!x || typeof x !== "object" || Array.isArray(x)) return necitit(new Error("nu e starea turei")); st.necitit = 0; return x; } catch (e) { return necitit(e); }
 }
 // lumânările unei monede: listă | null (n-au venit) | { refuz: secunde } (Pionex cere pauză)
 async function aduBare(d, m) {
@@ -108,9 +139,29 @@ export async function turaAgitate(d, st) {
   if (P.da) st.piataPana = acum + R.linisteMs;
   const liniste = acum < (st.piataPana || 0);
   // 6. aprinderile
-  const disc = (typeof d.citesteDisc === "function" && d.citesteDisc()) || {};
+  const disc0 = typeof d.citesteDisc === "function" ? d.citesteDisc() : {};
+  if (disc0 === null) return esec("starea de pe disc nu se poate citi acum - tura sare, nu scriu peste ea");   /* înainte de orice schimbare de stare: aprinderea minutului acesta se anunță la tura următoare */
+  const disc = disc0 || {};
   disc.aprinse = Array.isArray(disc.aprinse) ? disc.aprinse : []; disc.alertat = disc.alertat && typeof disc.alertat === "object" ? disc.alertat : {};
   disc.mesaje = (Array.isArray(disc.mesaje) ? disc.mesaje : []).filter((x) => Number(x) > 0 && acum - x < ZI);
+  // 6a. jurnalul zilei (bilanțul): rândul zilei României, cu regula de acum; timpul urmărit = turele care judecă, venite una după alta
+  const regula = A.regulaAcum([R.maxZi, R.candidat, R.asteptareMs / 3600000, R.linisteMs / 60000].join("/")), zi = ziRo(acum);
+  disc.jurnal = disc.jurnal && typeof disc.jurnal === "object" && !Array.isArray(disc.jurnal) ? disc.jurnal : {};
+  if (!disc.jurnal[zi] || disc.jurnal[zi].r !== regula) disc.jurnal[zi] = ziGoala(regula);
+  const J = disc.jurnal[zi];
+  if (destule) { if (st.judecatLa && acum - st.judecatLa <= 3 * RITM_MS) J.ms += acum - st.judecatLa; st.judecatLa = acum; }
+  // 6b. ce a urmat după aprinderile dinainte: prețul din lista de ACUM, doar la termen (cel mult 10 minute după el); altfel „ratat”
+  disc.urmari = (Array.isArray(disc.urmari) ? disc.urmari : []).filter((c) => c && c.la > 0 && acum - c.la <= URMARI_ZILE * ZI);
+  const pretDe = {}; for (const x of t) { const m = /^([A-Z0-9]+)_USDT_PERP$/.exec(String(x && x.symbol || "").toUpperCase()), p = Number(x && x.close); if (m && p > 0) pretDe[m[1]] = p; }
+  for (const c of disc.urmari) for (const [kp, kx, hk, ore] of [["p1", "x1", "h1", 1], ["p4", "x4", "h4", 4]]) {
+    if (kp in c || c[kx]) continue;                                             /* un rezultat scris (sau ratat) nu se mai atinge */
+    const intarziere = acum - (c.la + ore * 3600000); if (intarziere < 0) continue;
+    const voteaza = !c.piata && (c.dir === 1 || c.dir === -1) && c.r === regula, z = voteaza && disc.jurnal[c.zi] && disc.jurnal[c.zi].r === regula ? disc.jurnal[c.zi] : null;
+    if (z && (!Array.isArray(z[hk]) || z[hk].length < 4)) z[hk] = [0, 0, 0, 0];
+    if (intarziere > A.BILANT.tarziuMs) { c[kx] = true; if (z) z.x = (z.x || 0) + 1; continue; }
+    if (!(pretDe[c.s] > 0)) continue;                                          /* moneda lipsește din lista de acum: se așteaptă tura următoare, cât mai e în cele 10 minute (revizia 28.11) */
+    c[kp] = pretDe[c.s]; const urm = z && A.urmare(c.pret, c[kp], c.dir); if (urm) { z[hk][urm.fel === "continuat" ? 0 : urm.fel === "intors" ? 1 : 2]++; z[hk][3] += urm.d; }
+  }
   const noi = [], notate = []; let confirmari = 0;
   for (const r of rand) {
     const s = r.m.simbol, x = r.x; if (!x.masurat || x.ori === null) continue;
@@ -141,20 +192,59 @@ export async function turaAgitate(d, st) {
   /* ora mesajului de piață se ține minte DOAR când a plecat: cu plafonul atins nu-și pierde rândul pe 24 h, pleacă la prima mișcare cu loc */
   if (!P.da) st.piataOprita = false;
   if (P.da && acum - (disc.piataLa || 0) >= R.piataAsteptareMs) {
-    if (maiPot() && typeof d.trimiteAlerta === "function") { const m = mesajPiata(P, rand, d); await d.trimiteAlerta({ nivel: m.nivel, titlu: m.titlu, mesaj: m.mesaj }, null, m.cheie); disc.mesaje.push(acum); disc.piataLa = acum; piata = true; st.piataOprita = false; }
-    else if (!st.piataOprita) { st.piataOprita = true; d.jurnal("agitate: se mișcă toată piața, dar plafonul de " + R.maxZi + " mesaje în 24 de ore e atins - mesajul de piață pleacă la următoarea mișcare, când e loc"); }
+    if (maiPot() && typeof d.trimiteAlerta === "function") { const m = mesajPiata(P, rand, d); await d.trimiteAlerta({ nivel: m.nivel, titlu: m.titlu, mesaj: m.mesaj }, null, m.cheie); disc.mesaje.push(acum); disc.piataLa = acum; piata = true; st.piataOprita = false; J.p++; }
+    else if (!st.piataOprita) { st.piataOprita = true; J.opr++; d.jurnal("agitate: se mișcă toată piața, dar plafonul de " + R.maxZi + " mesaje în 24 de ore e atins - mesajul de piață pleacă la următoarea mișcare, când e loc"); }
   }
   if (noi.length) {
-    if (maiPot() && typeof d.trimiteAlerta === "function") { const m = mesajMonede(noi, d); await d.trimiteAlerta({ nivel: m.nivel, titlu: m.titlu, mesaj: m.mesaj }, null, m.cheie); disc.mesaje.push(acum); for (const e of noi) disc.alertat[e.s] = acum; trimise = noi.map((e) => e.s); }
-    else d.jurnal("agitate: plafonul de " + R.maxZi + " mesaje în 24 de ore e atins - " + noi.map((e) => e.s).join(", ") + " rămân doar pe pagină");
+    if (maiPot() && typeof d.trimiteAlerta === "function") { const m = mesajMonede(noi, d); await d.trimiteAlerta({ nivel: m.nivel, titlu: m.titlu, mesaj: m.mesaj }, null, m.cheie); disc.mesaje.push(acum); for (const e of noi) disc.alertat[e.s] = acum; trimise = noi.map((e) => e.s); J.m++; }
+    else { J.opr++; d.jurnal("agitate: plafonul de " + R.maxZi + " mesaje în 24 de ore e atins - " + noi.map((e) => e.s).join(", ") + " rămân doar pe pagină"); }
   }
   disc.aprinse = disc.aprinse.concat(notate).filter((e) => e && acum - e.la <= ZI).slice(-60);
   for (const k of Object.keys(disc.alertat)) if (acum - disc.alertat[k] > 3 * ZI) delete disc.alertat[k];
   delete disc.zile;
-  if (typeof d.scrieDisc === "function") d.scrieDisc(disc);
-  // 8. ce vede pagina
-  const corp = { la: acum, n: u.monede.length, masurate: rand.filter((r) => r.x.masurat).length, prag: { amp: A.APRINS.amp, ori: A.APRINS.ori }, mesaje24: disc.mesaje.length, aprinse: disc.aprinse };
+  // 7b. aprinderile turei intră la „ce a urmat” (toate, cu prețul și direcția lor; cele din mișcarea pieței poartă semnul și nu votează)
+  for (const e of notate) {
+    const dir = A.directia(e.net, e.amp), caz = { s: e.s, la: e.la, zi, r: regula, pret: e.pret, net: e.net, amp: e.amp, ori: e.ori, dir };
+    if (e.piata) { caz.piata = true; J.ap++; } else { J.a++; if (dir) J.cd++; else J.fd++; }
+    if (trimise.includes(e.s)) caz.msg = true;
+    disc.urmari.push(caz);
+  }
+  if (disc.urmari.length > URMARI_MAX) disc.urmari = disc.urmari.slice(-URMARI_MAX);
+  // 7c. jurnalul nu crește la nesfârșit; verdictul „ce a urmat” = o singură judecată pe orizont, înghețată (o regulă nouă nu-l moștenește)
+  const hotar = ziRo(acum - JURNAL_ZILE * ZI); for (const k of Object.keys(disc.jurnal)) if (k < hotar) delete disc.jurnal[k];
+  const zileDe = () => Object.keys(disc.jurnal).sort().map((k) => Object.assign({}, disc.jurnal[k], { zi: k }));
+  if (!disc.verdict || typeof disc.verdict !== "object" || Array.isArray(disc.verdict) || disc.verdict.r !== regula) disc.verdict = { r: regula };
+  // se judecă doar zilele ÎNCHEIATE (fără cea de azi) și doar când niciun caz al lor nu-și mai așteaptă rezultatul pe orizontul acela (revizia 28.11:
+  // altfel verdictul se îngheța pe ziua abia începută și pe rezultatele de la 4 ore încă nevenite)
+  for (const [hk, kp, kx] of [["h1", "p1", "x1"], ["h4", "p4", "x4"]]) if (!disc.verdict[hk]) {
+    if (disc.urmari.some((c) => !c.piata && (c.dir === 1 || c.dir === -1) && c.r === regula && c.zi < zi && !(kp in c) && !c[kx])) continue;
+    const b = A.bilantUrmare(zileDe().filter((z) => z.zi < zi), hk, regula); if (b.gata) disc.verdict[hk] = Object.assign({ la: acum }, b);
+  }
+  const scrie = () => { if (typeof d.scrieDisc === "function") d.scrieDisc(disc); };
+  scrie();
+  // 8. ce vede pagina (rezumatele bilanțului sunt socotite aici, cu formulele paginii)
+  const zileJ = zileDe().filter((z) => z.r === regula), suma = (k) => zileJ.reduce((a, z) => a + (z[k] > 0 ? z[k] : 0), 0);
+  const bilant = { regula: A.APRINS.amp + "/" + A.APRINS.ori, azi: zi, deLa: zileJ.length ? zileJ[0].zi : zi, zile: zileJ.slice(-8).map((z) => ({ zi: z.zi, ms: z.ms || 0, n: (z.m || 0) + (z.p || 0) })),
+    mesaje: A.bilantMesaje(zileJ, zi, regula), cazuri: { singure: suma("a"), cuDirectie: suma("cd"), faraDirectie: suma("fd"), dePiata: suma("ap"), ratate: suma("x") },
+    h1: A.bilantUrmare(zileJ, "h1", regula), h4: A.bilantUrmare(zileJ, "h4", regula), verdict: { h1: disc.verdict.h1 || null, h4: disc.verdict.h4 || null }, binance: A.bilantBinance(zileDe(), zi) };
+  const corp = { la: acum, n: u.monede.length, masurate: rand.filter((r) => r.x.masurat).length, prag: { amp: A.APRINS.amp, ori: A.APRINS.ori }, mesaje24: disc.mesaje.length, aprinse: disc.aprinse, bilant };
   try { await d.trimite("/api/istoric-bot?action=agitate", corp); } catch (e) { return esec("serverul a refuzat (" + String(e && e.message || e).slice(0, 80) + ")"); }
   st.esecuri = 0;
+  // 9. „peste Binance” (I-978), cel mult o dată la 15 minute - ULTIMUL pas: mesajele au plecat, starea lor e pe disc, pagina are rezumatul. Cererea
+  // are limită de timp (revizia 28.11): unealta comună spre Binance își poate aștepta pauzele minute întregi, iar tura următoare n-ar mai porni.
+  if (typeof d.binance === "function" && acum - (st.binanceLa || 0) >= BINANCE_MS) {
+    st.binanceLa = acum;
+    try {
+      const cerere = Promise.resolve().then(() => d.binance(FAPI + "/fapi/v1/ticker/24hr")); cerere.catch(() => {});   /* un răspuns întârziat nu rămâne necules */
+      const limita = (typeof d.asteapta === "function" ? d.asteapta(BINANCE_LIMITA_MS) : new Promise((gata) => { const ceas = setTimeout(gata, BINANCE_LIMITA_MS); if (ceas && ceas.unref) ceas.unref(); })).then(() => { throw new Error("Binance prea lent"); });
+      limita.catch(() => {});
+      const harta = A.dinBinance(await Promise.race([cerere, limita]), acum);
+      if (Object.keys(harta).length >= 50) {
+        J.bc = (J.bc || 0) + 1; if (!Array.isArray(J.bp)) J.bp = [];
+        for (const m of u.monede) { const f = A.fataDeBinance(m.amp24, harta[m.simbol]); if (f && f.peste && !J.bp.includes(m.simbol) && J.bp.length < PESTE_MAX) J.bp.push(m.simbol); }
+        scrie();
+      }
+    } catch { /* Binance n-a răspuns la timp: citirea nu se numără, tura s-a încheiat oricum */ }
+  }
   return { facut: true, n: corp.n, masurate: corp.masurate, cerute: cerute + confirmari, noi: trimise, notate: notate.map((e) => e.s), piata };
 }
