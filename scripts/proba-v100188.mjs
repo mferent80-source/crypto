@@ -74,7 +74,7 @@ await test("Tabloul: citirea pune rândurile bilanțului după „În pândă”
   const app = cuTablou(citeste("public", "app.js"));
   assert.match(app, /tbPazaKv\.bilant=d&&d\.paza&&Array\.isArray\(d\.paza\.bilant\)\?d\.paza\.bilant:null;/);
   assert.match(app, /out\.bilant=\(tbPazaKv\.bilant\|\|\[\]\)\.map\(function\(l\)\{var i=String\(l\)\.indexOf\(": "\);return i>0\?\{ce:String\(l\)\.slice\(0,i\),stare:"info",text:String\(l\)\.slice\(i\+2\)\}:null\}\)\.filter\(Boolean\);/);
-  assert.match(app, /if\(ex\.latimeMoneda\)out\.push\(rd\(ex\.latimeMoneda\)\);(if\(ex\.monedeBot\)out\.push\(rd\(ex\.monedeBot\)\);)?if\(ex\.bilant\)ex\.bilant\.forEach\(function\(x\)\{out\.push\(rd\(x\)\)\}\);/);
+  assert.match(app, /if\(ex\.latimeMoneda\)out\.push\(rd\(ex\.latimeMoneda\)\);(if\(ex\.monedeBot\)out\.push\(rd\(ex\.monedeBot\)\);)?(if\(ex\.agitata\)out\.push\(rd\(ex\.agitata\)\);)?if\(ex\.bilant\)ex\.bilant\.forEach\(function\(x\)\{out\.push\(rd\(x\)\)\}\);/);
 });
 await test("colectorul: starea de dinainte pe toate cele 4 alerte, bilantNoteaza după paza fiecărui bot, raportul cu bilantAlerte; v101.109", () => {
   const COL = citeste("scripts", "colector.mjs");

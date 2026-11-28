@@ -5221,7 +5221,7 @@ html.pzDemo #tabloubot #pzVerdict .pzMarg>p.pzMargCons b{font-size:12px}
 #agitate .agListaCap{font-size:12px}
 #agitate .agSimbol{font-size:15px}
 #agitate .agEt{font-size:12px}
-@container agl (max-width:1099px){#agitate [data-et]::before{font-size:12px}}
+@container agl (max-width:1179px){#agitate [data-et]::before{font-size:12px}}
 @media (max-width:640px){#agitate .agFraza{font-size:20px}}
 /* tema zi: variabilele rădăcinii, apoi regulile cu culoare */
 :is(#tabloubot,#t212,#dash,#rangefilter,#agitate,#sugestii,#probe,#gridset,#gridsim,#montecarlo,#jurnaltrade,#comportament,#tradezilei,#carnet,#scan,#salt,#alerts,#contintreg).tbZi{--bg:#F2F4F7;--panel:#FFFFFF;--panel-2:#F5F7FA;--panel-3:#E9EDF3;--line:#E0E5EC;--line-soft:#F5F7FA;--text:#0E1A2B;--muted:#48586E;--accent:#2456E6;--accent-2:#2456E6;--good:#0B8A5F;--bad:#CC3A32;--warn:#8A5A00;--pzF0:#F2F4F7;--pzF1:#FFFFFF;--pzF2:#F5F7FA;--pzF3:#E9EDF3;--pzLi:#E0E5EC;--pzLi2:#C3CCD8;--pzT0:#0E1A2B;--pzT1:#48586E;--pzT2:#66768B;--pzSus:#0B8A5F;--pzJos:#CC3A32;--pzAur:#8A5A00;--pzInfo:#2456E6}
@@ -6171,9 +6171,12 @@ body :is(#tabloubot,#t212,#dash,#rangefilter,#agitate,#sugestii,#probe,#gridset,
 #agitate.tbZi .agColOri b{color:#0E1A2B}
 #agitate.tbZi .agColOri .agPeste{color:#8A5A00}
 #agitate.tbZi .agRand .agGrafic{color:#2456E6}
+#agitate.tbZi .agEtPeste{border-color:#E0A526;color:#8A5A00}
+#agitate.tbZi .agApTitlu{color:#0E1A2B}
+#agitate.tbZi .agApRand b{color:#0E1A2B}
 #agitate.tbZi .agNote summary{color:#0E1A2B}
 #agitate.tbZi .agNote b{color:#0E1A2B}
-@container agl (max-width:1099px){#agitate.tbZi [data-et]::before{color:#66768B}}
+@container agl (max-width:1179px){#agitate.tbZi [data-et]::before{color:#66768B}}
 /* ==== v100.316 TEMA TABLOULUI: sfârșit ==== */
 /* Colțurile rămân de cel mult 5 px și ordinea singură pe rând începe cu „.pzDemo #tabloubot .tbCadru>” (regulile temei PAZNIC, proba v100.151). */
 /* v100.316 (el, 10.11.2026: îl deranjează culorile, ordinea, aglomerația, literele ⇒ „Aplică desenul nou în Radar”): DESENUL NOU al Tabloului botului.
@@ -6906,8 +6909,8 @@ html #tabloubot#tabloubot#tabloubot#tabloubot #tbSemnalCard[hidden]{display:none
 #agitate .agCinstit{color:#7E92A6;font-size:12.5px;max-width:90ch}
 #agitate #agZonaSurse p{margin:0 0 2px}
 #agitate .agLista{background:var(--ag-fond);border:1px solid var(--ag-linie);border-radius:5px;display:flex;flex-direction:column;min-width:0;container:agl / inline-size}
-#agitate .agListaCap,#agitate .agRand{display:grid;grid-template-columns:minmax(170px,1.5fr) minmax(170px,1.5fr) minmax(150px,1.3fr) minmax(150px,1.3fr) minmax(120px,1fr) minmax(130px,1fr) minmax(84px,.7fr) 76px;gap:4px 14px;align-items:baseline;padding:0 16px}
-#agitate .agK24 .agListaCap,#agitate .agK24 .agRand{grid-template-columns:minmax(170px,1.5fr) minmax(170px,1.6fr) minmax(150px,1.3fr) minmax(130px,1fr) minmax(84px,.7fr) 76px}
+#agitate .agListaCap,#agitate .agRand{display:grid;grid-template-columns:minmax(160px,1.5fr) minmax(160px,1.5fr) minmax(140px,1.3fr) minmax(140px,1.3fr) minmax(115px,1fr) minmax(120px,1fr) minmax(80px,.7fr) 118px;gap:4px 14px;align-items:baseline;padding:0 16px}
+#agitate .agK24 .agListaCap,#agitate .agK24 .agRand{grid-template-columns:minmax(160px,1.5fr) minmax(160px,1.6fr) minmax(140px,1.3fr) minmax(120px,1fr) minmax(80px,.7fr) 118px}
 #agitate .agListaCap{padding-top:8px;padding-bottom:8px;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#7E92A6}
 #agitate .agRand{border-top:1px solid var(--ag-linie);padding-top:9px;padding-bottom:9px}
 #agitate .agRandBot{background:rgba(91,143,199,.07)}
@@ -6929,12 +6932,21 @@ html #tabloubot#tabloubot#tabloubot#tabloubot #tbSemnalCard[hidden]{display:none
 #agitate .agRand .agGrafic{color:#5B8FC7;font-weight:600;text-decoration:none;white-space:nowrap;justify-self:end;width:auto;background:none;border:0;border-radius:0;box-shadow:none;padding:0;font-family:inherit;font-size:inherit;cursor:pointer}
 #agitate .agRand .agGrafic:hover{text-decoration:underline}
 #agitate .agMai{border-top:1px solid var(--ag-linie);padding:10px 16px}
+/* v100.398 („fa idei”, I-972…I-975): două legături pe rând, semnul „peste Binance”, blocul „Aprinse în ultimele 24 h” */
+#agitate .agColFapte{display:flex;gap:12px;justify-content:flex-end;align-items:baseline;white-space:nowrap;min-width:0}
+#agitate .agEtPeste{border-color:#E9B949;color:#E9B949}
+#agitate .agAprinse{background:var(--ag-fond);border:1px solid var(--ag-linie);border-radius:5px;padding:10px 16px;display:flex;flex-direction:column;gap:3px}
+#agitate .agAprinse p{margin:0}
+#agitate .agApCap{display:flex;gap:4px 10px;align-items:baseline;flex-wrap:wrap}
+#agitate .agApTitlu{color:#E6EDF3}
+#agitate .agApRand{display:flex;gap:2px 8px;align-items:baseline;flex-wrap:wrap}
+#agitate .agApRand b{color:#E6EDF3}
 #agitate .agNote{border:1px solid var(--ag-linie);border-radius:5px;padding:8px 14px;background:var(--ag-fond)}
 #agitate .agNote summary{cursor:pointer;color:#E6EDF3;font-weight:600}
 #agitate .agNote p{margin:8px 0 0;max-width:90ch}
 #agitate .agNote b{color:#E6EDF3}
-@container agl (max-width:1099px){#agitate .agListaCap{display:none}#agitate .agRand,#agitate .agK24 .agRand{grid-template-columns:repeat(4,minmax(0,1fr));gap:5px 12px;padding:10px 12px}#agitate .agColMoneda{grid-column:1/-1}#agitate .agColAmp{grid-column:1/3}#agitate .agColNet{grid-column:3/-1}#agitate [data-et]::before{content:attr(data-et) " ";font-size:11px;font-weight:700;letter-spacing:.04em;color:#7E92A6}#agitate .agGrafic{justify-self:start}}
-@container agl (max-width:619px){#agitate .agRand,#agitate .agK24 .agRand{grid-template-columns:repeat(2,minmax(0,1fr));gap:3px 12px;align-items:center}#agitate .agColMoneda,#agitate .agColAmp,#agitate .agColNet{grid-column:auto}#agitate .agColAmp{justify-content:flex-end}#agitate .agBara{max-width:70px}#agitate .agColAmp b{min-width:0}#agitate .agColOri::before{content:none}#agitate .agNume{max-width:9ch}#agitate .agGrafic{justify-self:end}}
+@container agl (max-width:1179px){#agitate .agColFapte{justify-content:flex-start}#agitate .agListaCap{display:none}#agitate .agRand,#agitate .agK24 .agRand{grid-template-columns:repeat(4,minmax(0,1fr));gap:5px 12px;padding:10px 12px}#agitate .agColMoneda{grid-column:1/-1}#agitate .agColAmp{grid-column:1/3}#agitate .agColNet{grid-column:3/-1}#agitate [data-et]::before{content:attr(data-et) " ";font-size:11px;font-weight:700;letter-spacing:.04em;color:#7E92A6}#agitate .agGrafic{justify-self:start}}
+@container agl (max-width:619px){#agitate .agRand,#agitate .agK24 .agRand{grid-template-columns:repeat(2,minmax(0,1fr));gap:3px 12px;align-items:center}#agitate .agColMoneda,#agitate .agColAmp,#agitate .agColNet{grid-column:auto}#agitate .agColAmp{justify-content:flex-end}#agitate .agBara{max-width:70px}#agitate .agColAmp b{min-width:0}#agitate .agColOri::before{content:none}#agitate .agNume{max-width:9ch}#agitate .agGrafic{justify-self:end}#agitate .agColFapte{gap:18px}}
 @media (max-width:640px){#agitate .agFraza{font-size:17px}#agitate .acBtn,#agitate .agGrafic,#agitate .agNote summary{min-height:44px}#agitate .agGrafic,#agitate .agNote summary{display:inline-flex;align-items:center}#agitate .agDr{margin-left:0}}
 @media (max-width:640px){.sugPandaTab thead{display:table-header-group}.sugPandaTab{display:table}.sugPandaTab tbody{display:table-row-group}.sugPandaTab tr{display:table-row}.sugPandaTab td,.sugPandaTab th{display:table-cell}}
 /* v100.224: pe paginile de zi rămân alertele, banda botului și versiunea. Cipurile de cercetare revin la analiza monedei și în laborator. */

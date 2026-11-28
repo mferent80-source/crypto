@@ -21,9 +21,17 @@ var AG_ESEC_MAX = 3;                  // de la a treia cădere la rând, rândul
 var AG_HARTA_MS = 6 * 3600000;        // lista după capitalizare: cerută din nou după 6 ore
 var AG_HARTA_PASTRATA_MS = 3 * 86400000;
 var AG_VECHI_MS = 2 * 60000;          // prețurile mai vechi de 2 minute se spun „vechi”
+// v100.398 („fa idei” = I-972…I-975)
+var AG_BINANCE_MS = 5 * 60000;        // I-973: mișcarea pe 24 h de pe Binance Futures (o cerere pentru toate contractele), la 5 minute
+var AG_BINANCE_VECHI_MS = 30 * 60000; // comparația mai veche de 30 de minute nu se mai arată
+var AG_COLECTOR_MS = 2 * 60000;       // I-972: ce a văzut colectorul (KV agitate), citit la 2 minute
+var AG_COLECTOR_TACUT_MS = 5 * 60000; // colectorul scrie o dată pe minut; peste 5 minute fără scris = tăcut (se spune pe pagină)
+var AG_APRINSE_VAZ = 12;              // câte aprinderi la vedere
+var AG_TB_MS = 150000;                // I-975: lumânările rândului din Tablou, recitite la 150 s (jumătate de lumânare)
 var agStare = { k: "1h", monede: [], scoase: null, harta: null, hartaLa: 0, hartaSursa: "", hartaVeche: false, tickLa: 0, faraContract: 0, inLucru: false,
   eroare: null, detaliu: "", toate: false, boti: {}, bare: {}, masor: false, totLa: 0, topLa: 0, refuzPana: 0, ceas: null, ascult: false, tickInZbor: false,
-  hartaIncercatLa: 0, decalaj: 0 };
+  hartaIncercatLa: 0, decalaj: 0,
+  binance: null, binanceLa: 0, binanceIncercatLa: 0, binanceInZbor: false, colector: null, colectorIncercatLa: 0, colectorInZbor: false };
 try { var agKPastrat = localStorage.getItem("ag_fereastra"); if (Agitate.fer(agKPastrat)) agStare.k = agKPastrat; } catch (e) {}
 
 function agEsc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
@@ -55,7 +63,7 @@ function agFraza(st, acum) {
   return "Măsor mișcarea din " + f.lung + "." + (z && z.x.masurat ? " Până atunci, cea mai agitată în ultimele 24 de ore: " + spune(z) : "");
 }
 
-function agRand(r, max, st, f) {
+function agRand(r, max, st, f, acum) {
   var m = r.m, x = r.x, scurt = !!f.bare, h = '<div class="agRand' + (st.boti && st.boti[m.simbol] ? " agRandBot" : "") + '" data-ag-simbol="' + agEsc(m.simbol) + '">';
   h += '<div class="agColMoneda"><span class="agRang">#' + agEsc(m.rang) + '</span><b class="agSimbol">' + agEsc(m.simbol) + '</b><span class="agNume">' + agEsc(m.nume) + "</span>"
     + (st.boti && st.boti[m.simbol] ? '<span class="agEt agEtBot">botul tău</span>' : "") + "</div>";
@@ -75,11 +83,16 @@ function agRand(r, max, st, f) {
   if (scurt) h += '<div class="agCol24" data-et="Pe 24 h">' + agPct(m.amp24) + ' <span class="agMut">(' + agPctSemn(m.net24) + ")</span></div>";
   /* „subțire” stă lângă cifra care o spune (volumul), nu lângă nume: rândurile rămân la aceeași înălțime */
   h += '<div class="agColVol" data-et="Volum Pionex">' + (m.vol === null ? "—" : agEsc(TextRo.volum(m.vol)) + ' <span class="agMut">USDT</span>')
-    + (m.subtire ? ' <span class="agEt" title="Sub 0,3 M USDT tranzacționați pe Pionex în 24 h: ordinul la piață alunecă și pot apărea fitile doar aici.">subțire</span>' : "") + "</div>";
+    + (m.subtire ? ' <span class="agEt" title="Sub 0,3 M USDT tranzacționați pe Pionex în 24 h: ordinul la piață alunecă și pot apărea fitile doar aici.">subțire</span>' : "");
+  /* I-973: aceeași monedă, aceleași 24 h, pe Binance Futures - când Pionex arată mult mai mult, poate fi o fitilă doar aici */
+  var fb = st.binance && !(st.binanceLa > 0 && acum - st.binanceLa > AG_BINANCE_VECHI_MS) ? Agitate.fataDeBinance(m.amp24, st.binance[m.simbol]) : null;
+  if (fb && fb.peste) h += ' <span class="agEt agEtPeste" title="Pe Binance Futures, în aceleași 24 h: ' + agPct(fb.binance) + ". Aici: " + agPct(m.amp24) + '. Diferența poate fi o fitilă doar pe Pionex (carte subțire).">peste Binance</span>';
+  h += "</div>";
   h += '<div class="agColPret" data-et="Preț">' + agEsc(TextRo.pret(m.pret)) + "</div>";
-  /* pasul următor rămâne în Radar (ca pe Range Filter / Trade-ul zilei): moneda în „Grid: ce setez?”. O legătură în afară (TradingView) ar cere o
-     excepție în garda de antete (scripts/garzi-v746.mjs numără orice adresă din pagină drept cerere) - rămâne idee, la alegerea lui. */
-  h += '<button class="agGrafic" type="button" data-action-click="agLaGrid(\'' + agEsc(m.simbol) + '\')" title="Deschide moneda în „Grid: ce setez?”">Grid ›</button>';
+  /* pașii următori: graficul contractului Pionex pe TradingView (I-974: legătură de NAVIGARE, filă nouă - garda de antete o acceptă doar ca href
+     scris pe loc, scripts/lib/legaturi-navigare.mjs; connect-src rămâne neatins) și moneda în „Grid: ce setez?” (în Radar) */
+  h += '<div class="agColFapte"><a class="agGrafic agLeg" href="https://www.tradingview.com/chart/?symbol=' + encodeURIComponent("PIONEX:" + m.simbol + "USDT.P") + '" target="_blank" rel="noopener noreferrer" title="Graficul contractului Pionex, pe TradingView (filă nouă)">Grafic ↗</a>'
+    + '<button class="agGrafic" type="button" data-action-click="agLaGrid(\'' + agEsc(m.simbol) + '\')" title="Deschide moneda în „Grid: ce setez?”">Grid ›</button></div>';
   return h + "</div>";
 }
 
@@ -109,16 +122,43 @@ function agHtmlSurse(st, acum) {
     p.push("lumânări de 5 minute: măsurate " + mas + " din " + n + (st.masor ? " (măsor…)" : ""));
   }
   if (st.hartaLa > 0) p.push('<span class="' + (st.hartaVeche ? "agAtentie" : "") + '">rangul: ' + agEsc(st.hartaSursa || "CoinGecko") + ", " + agVarsta(Math.max(0, acum - st.hartaLa)) + (st.hartaVeche ? " — n-a răspuns acum, folosesc lista veche" : "") + "</span>");
+  if (st.binance && st.binanceLa > 0 && acum - st.binanceLa <= AG_BINANCE_VECHI_MS) p.push("Binance (comparația pe 24 h): " + agVarsta(Math.max(0, acum - st.binanceLa)));
   var h = '<p class="agSurse agMut agMic">' + p.join(" · ") + "</p>";
   if (st.refuzPana > acum) h += '<p class="agAtentie agMic">Pionex a cerut o pauză (prea multe cereri) până la ' + agOra(st.refuzPana - (st.decalaj || 0)) + ". Măsor restul după.</p>";
   if (st.eroare && n) h += '<p class="agAtentie agMic">Ultima citire a picat' + (st.detaliu ? " (" + agEsc(st.detaliu) + ")" : "") + ". Lista de mai jos e cea de " + agVarsta(acum - st.tickLa) + ".</p>";
   return h;
 }
+// I-972: ce a văzut colectorul (și cu pagina închisă). „De atunci” = prețul de acum față de cel de la aprindere - la vedere, ca să se vadă că
+// aprinderea nu spune direcția. Colectorul tăcut se spune (alertele nu pleacă).
+function agHtmlAprinse(st, acum) {
+  var c = st.colector; if (!c || !(c.la > 0) || !Array.isArray(c.aprinse)) return "";
+  /* aprinderile notate în timpul unei mișcări a pieței întregi (semnul `piata`) se numără într-un rând, nu se înșiră: pe 27.11 erau ~40 din 50 */
+  var tacut = acum - c.la > AG_COLECTOR_TACUT_MS, toate = c.aprinse.slice().sort(function (a, b) { return b.la - a.la; }), pr = {};
+  var singure = toate.filter(function (e) { return !(e && e.piata === true); }), dePiata = toate.filter(function (e) { return e && e.piata === true; });
+  /* o monedă, un rând: ultima ei aprindere (lista e de la cea mai nouă) și de câte ori a fost în 24 h */
+  var deCate = {}, ap = [];
+  singure.forEach(function (e) { var k = String(e && e.s || ""); if (!deCate[k]) { deCate[k] = 0; ap.push(e); } deCate[k]++; });
+  (st.monede || []).forEach(function (m) { pr[m.simbol] = m.pret; });
+  var prag = c.prag && c.prag.amp > 0 && c.prag.ori > 0 ? c.prag : Agitate.APRINS;
+  var h = '<div class="agAprinse">';
+  if (tacut) h += '<p class="agAtentie agMic">Colectorul n-a mai scris de ' + Math.round((acum - c.la) / 60000) + " min: alertele pe Discord nu pleacă acum, iar lista de mai jos e cea de dinainte.</p>";
+  h += '<p class="agApCap"><b class="agApTitlu">Aprinse în ultimele 24 h' + (ap.length ? "" : ": niciuna") + '</b> <span class="agMut agMic">' + (tacut ? "" : "colectorul urmărește lista și cu pagina închisă (ultima citire " + agVarsta(Math.max(0, acum - c.la)) + ") · ")
+    + "mesaj pe Discord de la " + agPct(prag.amp) + " pe o oră și " + agOri(prag.ori) + " obișnuitul ei" + (c.mesaje24 > 0 ? " · mesaje în 24 h: " + agEsc(c.mesaje24) : "") + "</span></p>";
+  ap.slice(0, AG_APRINSE_VAZ).forEach(function (e) {
+    var p0 = Number(e.pret), p1 = pr[e.s], de = p0 > 0 && p1 > 0 ? (p1 / p0 - 1) * 100 : null;
+    h += '<div class="agApRand"><span class="agMut">' + agOra(e.la - (st.decalaj || 0)) + "</span> <b>" + agEsc(e.s) + "</b> " + agPct(Number(e.amp)) + " într-o oră (" + agPctSemn(e.net == null ? null : Number(e.net)) + " net), de " + agOri(Number(e.ori)) + " obișnuitul ei"
+      + (de !== null ? ' <span class="agMut">·</span> <span class="' + (de > 0 ? "agSus" : de < 0 ? "agJos" : "") + '" title="Prețul de acum față de cel de la aprindere.">de atunci ' + agPctSemn(de) + "</span>" : "")
+      + (deCate[String(e.s || "")] > 1 ? ' <span class="agMut">· a ' + deCate[String(e.s || "")] + "-a oară în 24 h</span>" : "") + "</div>";
+  });
+  if (ap.length > AG_APRINSE_VAZ) h += '<p class="agMut agMic">… și încă ' + (ap.length - AG_APRINSE_VAZ) + " mai vechi.</p>";
+  if (dePiata.length) h += '<p class="agMut agMic">' + (ap.length ? "… și " : "") + TextRo.cate(dePiata.length, "aprindere", "aprinderi") + " în timpul unei mișcări a pieței întregi (ultima la " + agOra(dePiata[0].la - (st.decalaj || 0)) + "): atunci pleacă un singur mesaj, de piață.</p>";
+  return h + "</div>";
+}
 function agHtmlLista(st, acum) {
   var f = Agitate.fer(st.k) || Agitate.fer("1h"), cl = Agitate.clasament(st.monede, f.k, acum), vaz = st.toate ? cl : cl.slice(0, AG_VIZIBILE), max = 0;
   vaz.forEach(function (r) { if (r.x.masurat && r.x.amp > max) max = r.x.amp; });
   var h = '<div class="agLista' + (f.bare ? "" : " agK24") + '"><div class="agListaCap" aria-hidden="true"><span>Monedă</span><span>Mișcare · ' + f.et + "</span><span>Net</span>" + (f.bare ? "<span>Față de obișnuit</span><span>Pe 24 h</span>" : "") + "<span>Volum Pionex</span><span>Preț</span><span></span></div>";
-  h += vaz.map(function (r) { return agRand(r, max, st, f); }).join("");
+  h += vaz.map(function (r) { return agRand(r, max, st, f, acum); }).join("");
   if (cl.length > AG_VIZIBILE) h += '<div class="agMai"><button class="acBtn" type="button" id="agToateBtn" data-action-click="agToate(' + (st.toate ? "false" : "true") + ')">' + (st.toate ? "Arată doar primele " + AG_VIZIBILE : "Arată toate (" + cl.length + ")") + "</button></div>";
   return h + "</div>";
 }
@@ -131,6 +171,8 @@ function agHtmlNote(st) {
   h += "<p><b>Față de obișnuit</b> = mișcarea de acum împărțită la mediana ferestrelor de aceeași lungime din ultimele ~41 de ore ale aceleiași monede. De la " + agOri(Agitate.PESTE) + " în sus scriu „peste obișnuit”. E o descriere, nu o regulă probată.</p>";
   h += "<p><b>Ferestrele</b> se numără în lumânări de 5 minute: „15 minute” înseamnă între 12 și 18 minute, „o oră” între 57 și 63.</p>";
   h += "<p><b>Subțire</b> = sub 0,3 M USDT tranzacționați pe Pionex în 24 h. Acolo ordinul la piață alunecă, iar prețul poate face fitile pe care alte burse nu le au.</p>";
+  h += "<p><b>Peste Binance</b> = mișcarea pe 24 h de pe Pionex e de cel puțin " + agOri(Agitate.PESTE_BINANCE.raport) + " cea a aceleiași monede pe Binance Futures (și cu cel puțin " + Agitate.PESTE_BINANCE.puncte + " puncte mai mare): poate fi o fitilă doar pe Pionex. Potrivirea e după simbol; monedele fără contract viu pe Binance n-au semnul.</p>";
+  h += "<p><b>Aprinse</b> = colectorul urmărește lista și cu pagina închisă și scrie pe Discord când o monedă trece, pe o oră, de " + agPct(Agitate.APRINS.amp) + " și de " + agOri(Agitate.APRINS.ori) + " obișnuitul ei (o dată pe monedă la 24 h; când se mișcă toată piața, un singur mesaj; noaptea, între 23 și 7, mesajele așteaptă rezumatul de dimineață). „De atunci” arată ce a făcut prețul după: aprinderea nu spune direcția.</p>";
   h += "<p>Pe 24 h cifrele vin din lista Pionex (toate monedele dintr-o cerere). Pe 15 minute, o oră și 4 ore vin din lumânările de 5 minute. Primele " + AG_TOP_N + " din clasament le au recitite la 5 minute, cu fitilele exacte; celelalte, între două citiri întregi (o dată pe oră), se țin la zi cu prețul citit la 30 de secunde, deci mișcarea lor poate ieși puțin mai mică.</p></details>";
   h += '<p class="agMut agMic">' + (st.faraContract > 0 ? "Din primele " + Agitate.TOP + " după capitalizare, " + st.faraContract + " n-au contract pe Pionex (stabile, jetoane de bursă, altele)." : "") + (buc.length ? " Scoase din listă: " + buc.join(" · ") + "." : "") + "</p>";
   return h;
@@ -144,6 +186,7 @@ function agHtml(st, acum) {
   }
   h += '<div class="agVerdict" id="agZonaVerdict">' + agHtmlVerdict(st, acum) + "</div>";
   h += '<div id="agZonaSurse">' + agHtmlSurse(st, acum) + "</div>";
+  h += '<div id="agZonaAprinse">' + agHtmlAprinse(st, acum) + "</div>";
   h += '<div id="agZonaLista">' + agHtmlLista(st, acum) + "</div>";
   h += '<div id="agZonaNote">' + agHtmlNote(st) + "</div>";
   return h;
@@ -156,10 +199,10 @@ function agPeEcran() { return typeof document !== "undefined" && agPanouDeschis(
 // desenul întreg (schimbare de stare) sau doar zonele care se mișcă (la fiecare citire: butoanele din antet și pliul rămân neatinse)
 function agDeseneaza(doarZone) {
   var el = agEl("agPagina"); if (!el) return;
-  var acum = agAcum(), zV = agEl("agZonaVerdict"), zS = agEl("agZonaSurse"), zL = agEl("agZonaLista");
+  var acum = agAcum(), zV = agEl("agZonaVerdict"), zS = agEl("agZonaSurse"), zL = agEl("agZonaLista"), zA = agEl("agZonaAprinse");
   if (doarZone && zV && zS && zL && agStare.monede.length) {
     var activ = document.activeElement && document.activeElement.id === "agToateBtn";
-    zV.innerHTML = agHtmlVerdict(agStare, acum); zS.innerHTML = agHtmlSurse(agStare, acum); zL.innerHTML = agHtmlLista(agStare, acum);
+    zV.innerHTML = agHtmlVerdict(agStare, acum); zS.innerHTML = agHtmlSurse(agStare, acum); zL.innerHTML = agHtmlLista(agStare, acum); if (zA) zA.innerHTML = agHtmlAprinse(agStare, acum);
     if (activ) { var b = agEl("agToateBtn"); if (b) b.focus({ preventScroll: true }); }
     return;
   }
@@ -232,6 +275,23 @@ async function agTickAdu() {
     return false;
   } finally { agStare.tickInZbor = false; }
 }
+// I-973: mișcarea pe 24 h de pe Binance Futures, o cerere pentru toate contractele (fapi.binance.com e deja în connect-src; cheia Radarului nu
+// pleacă în afară - apiFetch o pune doar pe /api/). Un răspuns stricat nu șterge comparația bună de dinainte; ea se stinge singură după 30 de minute.
+function agBinanceAdu() {
+  if (agStare.binanceInZbor || Date.now() - agStare.binanceIncercatLa < AG_BINANCE_MS || typeof getJSON !== "function") return;
+  agStare.binanceInZbor = true; agStare.binanceIncercatLa = Date.now();
+  Promise.resolve().then(function () { return getJSON("https://fapi.binance.com/fapi/v1/ticker/24hr"); }).then(function (r) {
+    var b = Agitate.dinBinance(r, Date.now()); if (Object.keys(b).length >= 50) { agStare.binance = b; agStare.binanceLa = agAcum(); }
+  }, function () {}).then(function () { agStare.binanceInZbor = false; if (agPeEcran() && agStare.monede.length) agDeseneaza(true); });
+}
+// I-972: ce a scris colectorul (aprinderile din ultimele 24 h); o citire picată lasă ce era - vârsta o spune pagina
+function agColectorAdu() {
+  if (agStare.colectorInZbor || Date.now() - agStare.colectorIncercatLa < AG_COLECTOR_MS || typeof getJSON !== "function") return;
+  agStare.colectorInZbor = true; agStare.colectorIncercatLa = Date.now();
+  Promise.resolve().then(function () { return getJSON("/api/istoric-bot?action=agitate"); }).then(function (r) {
+    var v = r && r.agitate; if (v && Number(v.la) > 0 && Array.isArray(v.aprinse)) agStare.colector = v;
+  }, function () {}).then(function () { agStare.colectorInZbor = false; if (agPeEcran() && agStare.monede.length) agDeseneaza(true); });
+}
 function agMoneda(s) { for (var j = 0; j < agStare.monede.length; j++) if (agStare.monede[j].simbol === s) return agStare.monede[j]; return null; }
 // o cerere de lumânări picată: se numără; lumânările vechi (dacă sunt) rămân în folosință
 function agEsec(s, acum) {
@@ -293,6 +353,7 @@ async function agBataie() {
   var aveam = agStare.monede.length;
   await agTickAdu();
   agDeseneaza(!!aveam);
+  agBinanceAdu(); agColectorAdu();
   agMasoaraDacaTrebuie();
 }
 // întoarcerea pe filă: întâi vârsta adevărată a ce e pe ecran, apoi citirea pe loc (nu după cel mult 30 s)
@@ -312,6 +373,7 @@ async function agPorneste(forta) {
     await agHartaAdu(!!forta);
     if (agStare.harta && (forta || !agStare.tickLa || agAcum() - agStare.tickLa >= AG_TICK_MS)) await agTickAdu();
   } finally { agStare.inLucru = false; agDeseneaza(); }
+  if (agStare.harta) { agBinanceAdu(); agColectorAdu(); }
   agMasoaraDacaTrebuie();
 }
 function agFereastra(k) {
@@ -321,3 +383,32 @@ function agFereastra(k) {
 }
 function agToate(deschis) { agStare.toate = deschis === true || deschis === "true"; agDeseneaza(true); }
 function agLaGrid(simbol) { if (typeof tzLaGrid === "function") tzLaGrid(simbol); else if (typeof navTo === "function") navTo("gridset", true); }
+// ── I-975 (v100.398): rândul „Agitată acum” din citirea Tabloului botului - moneda BOTULUI, pe aceleași formule ca pagina ──
+// O cerere de lumânări de 5 minute pentru contractul botului, recitită la 150 s cât Tabloul e pe ecran (serverul o ține 45 s și o împarte cu
+// pagina „Agitate acum”). E un FAPT pentru botul viu (moneda lui se mișcă acum mult peste obișnuit), nu un semnal: nu intră în niciun verdict.
+var agTbStare = { cheie: null, bare: null, la: 0, inLucru: null };
+function agTbCheie(b) { var s = b && typeof TabloBot !== "undefined" && TabloBot.simboluri ? TabloBot.simboluri(b.baza, b.quote, b.simbolPionex) : null; return s ? String(s.pionex || "").replace(/_USDT$/, "_USDT_PERP") : null; }
+function agTbAdu(b) {
+  var k = agTbCheie(b), acum = Date.now(); if (!k || agTbStare.inLucru) return;
+  if (agTbStare.cheie === k && acum - agTbStare.la < AG_TB_MS) return;
+  agTbStare.inLucru = Promise.resolve().then(function () { return getJSON("/api/market?type=pionex_klines&symbol=" + encodeURIComponent(k) + "&interval=5M&limit=500"); }).then(function (r) {
+    agTbStare.bare = r && r.result !== false ? Agitate.bare(r.data && r.data.klines) : null;
+  }, function () { agTbStare.bare = null; }).then(function () {
+    agTbStare.cheie = k; agTbStare.la = Date.now(); agTbStare.inLucru = null;
+    if (typeof tbPanouVizibil === "function" && tbPanouVizibil() && typeof tbStare !== "undefined" && tbStare.bot && tbStare.citireO && typeof tbDeseneazaCitire === "function") tbDeseneazaCitire(tbStare.citireO, tbStare.bot);
+  });
+}
+// măsura pe o oră (Agitate.masura) ⇒ { stare, text } sau null (nemăsurată: rândul lipsește, nu arată 0)
+function agTbText(x) {
+  if (!x || !x.masurat) return null;
+  var t = agPct(x.amp) + " între minim și maxim în ultima oră (" + agPctSemn(x.net) + " net" + (AG_FEL[x.fel] ? ", " + AG_FEL[x.fel] : "") + ")";
+  t += x.ori !== null && x.ori !== undefined ? " · de " + agOri(x.ori) + " cât obișnuiește (" + AG_TREAPTA[Agitate.treapta(x.ori)] + ")" : " · fără reper pentru „obișnuit”";
+  return { stare: Agitate.aprinsa(x) ? "atentie" : "info", text: t + " · fapt, nu semnal" };
+}
+function tbAgitataRand(b) {
+  if (typeof Agitate === "undefined" || !b) return null;
+  if (typeof getJSON === "function") agTbAdu(b);
+  var k = agTbCheie(b), bare = k && agTbStare.cheie === k ? agTbStare.bare : null; if (!bare || !bare.length) return null;
+  var t = agTbText(Agitate.masura({ amp24: null, net24: null, bare: bare }, "1h", agAcum()));
+  return t ? { ce: "Agitată acum", stare: t.stare, text: t.text, actiune: "navTo('agitate',true)", linkText: "Agitate acum ›" } : null;
+}

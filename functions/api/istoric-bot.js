@@ -164,6 +164,7 @@ async function istoricGet(request,env){
   // v100.313: curba stopului (colectorul, la 6 h) - cât de des un stop la d × ATR(1h) e atins în 24 / 72 h, pe 21 de perechi, ultimele 30 de zile
   if(action==="curbaStop"){let v=null;try{v=JSON.parse(await env.ISTORIC.get("curbaStop")||"null")}catch{v=null}return json({curbaStop:v})}
   if(action==="largimeCrypto"){let v=null;try{v=JSON.parse(await env.ISTORIC.get("largime-crypto")||"null")}catch{v=null}return json({largime:v&&v.largime||null,la:v&&v.la||null})}
+  if(action==="agitate"){let v=null;try{v=JSON.parse(await env.ISTORIC.get("agitate")||"null")}catch{v=null}return json({agitate:v})}   /* v100.398 (I-972): ce a văzut colectorul pe lista „Agitate acum” (o dată pe minut) */
   if(action==="monedeBot"){let v=null;try{v=JSON.parse(await env.ISTORIC.get("monede-bot")||"null")}catch{v=null}return json({monedeBot:v})}   /* v100.395: monedele de bot direcțional, de la colector (o dată pe oră) */   /* v100.331: lărgimea crypto de la colector */
   if(action==="universSua"){let v=null;try{v=JSON.parse(await env.ISTORIC.get("univers:sua")||"null")}catch{v=null}return json({la:v&&v.la||null,harta:v&&v.harta||{}})}
   if(action==="sector"){const s=String(u.searchParams.get("s")||"").toUpperCase().replace(/[^A-Z0-9.-]/g,"").slice(0,12);let v=null;try{v=JSON.parse(await env.ISTORIC.get("univers:sua")||"null")}catch{v=null}const h=v&&v.harta&&v.harta[s];return json({s,sector:h?h[0]:null,industrie:h?h[1]:null})}
@@ -514,6 +515,12 @@ export async function onRequestPost({request,env}){
     for(const k of ["depth","market","source","universe"])o[k]=typeof L[k]==="string"?L[k].slice(0,60):null;
     await env.ISTORIC.put("largime-crypto",JSON.stringify({la,largime:o}));return json({ok:true})}
   /* v100.395 (el, 26.11: „caută automat mereu genul ăsta de monede”): monedele de bot direcțional - curățate: simboluri, numere, motivele de junk ca text scurt */
+  /* v100.398 (I-972): aprinderile văzute de colector pe pagina „Agitate acum” - curățate câmp cu câmp (simbolul doar litere mari și cifre) */
+  if(action==="agitate"){const la=nr(corp&&corp.la),ap=corp&&corp.aprinse,SA=/^[A-Z0-9]{1,15}$/;
+    if(!(la>0)||!Array.isArray(ap)||ap.length>60)return json({error:"agitate: la + aprinse (cel mult 60)"},400);
+    const aprinse=[];for(const x of ap){if(!x||typeof x!=="object"||!SA.test(String(x.s||""))||!(nr(x.la)>0))return json({error:"agitate: aprindere stricata"},400);aprinse.push({s:String(x.s),la:nr(x.la),amp:nr(x.amp),net:nr(x.net),ori:nr(x.ori),pret:nr(x.pret),...(x.piata===true?{piata:true}:{})})}
+    const pg=corp.prag&&typeof corp.prag==="object"&&!Array.isArray(corp.prag)?{amp:nr(corp.prag.amp),ori:nr(corp.prag.ori)}:null;
+    await env.ISTORIC.put("agitate",JSON.stringify({la,n:nr(corp.n),masurate:nr(corp.masurate),prag:pg,mesaje24:nr(corp.mesaje24)||0,aprinse}));return json({ok:true,aprinse:aprinse.length})}
   if(action==="monedeBot"){const la=nr(corp&&corp.la),mo=corp&&corp.monede,SYM=/^[\p{Lu}\p{Lo}\p{N}]{1,30}USDT$/u,S=/^[\p{Lu}\p{Lo}\p{N}]{1,30}$/u,lst=a=>Array.isArray(a)&&a.length<=10&&a.every(x=>S.test(String(x)));
     const opt=a=>a==null||lst(a);   /* el, 26.11: + revenire / range (lipsă = goale) */
     if(!(la>0)||!Array.isArray(mo)||!mo.length||mo.length>300||!lst(corp.short)||!lst(corp.long)||!opt(corp.revenire)||!opt(corp.range))return json({error:"monedeBot: la + monede (1-300) + short / long / revenire / range (≤ 10)"},400);

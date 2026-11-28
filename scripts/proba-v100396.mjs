@@ -887,7 +887,7 @@ await test("V. versiunea v100.396 (index ×4, sw, versiune.js, package + lanț d
   assert.ok(+pk.version.split(".")[1] >= 396); assert.ok(+(/^v100\.(\d+)$/.exec(bi.version) || [])[1] >= 396); assert.ok(bi.li396 && bi.li396.length > 100); assert.match(bi.badge, /^v100\.\d+ · /);   /* v100.397: „de la 396 în sus” */
   assert.ok((citeste("public", "index.html").match(/v100\.(\d+)/g) || []).filter((v) => +v.slice(5) >= 396).length >= 4); assert.ok(+(/crypto-radar-v100-(\d+)/.exec(citeste("public", "sw.js")) || [])[1] >= 396); assert.ok(+(/"v100\.(\d+)"/.exec(citeste("functions", "_shared", "versiune.js")) || [])[1] >= 396);
   assert.match(pk.scripts.test, /npm run test:v100395 && npm run test:v100396 && /); assert.equal(pk.scripts["test:v100396"], "node scripts/proba-v100396.mjs");
-  assert.match(citeste("scripts", "colector.mjs"), /const VERSIUNE_COLECTOR = "v101\.215"/);
+  assert.ok(+(/const VERSIUNE_COLECTOR = "v101\.(\d+)"/.exec(citeste("scripts", "colector.mjs")) || [])[1] >= 215);   /* v100.398: „de la 215 în sus” */
 });
 
 console.log(`\nproba v100.396 (reparațiile auditului): ${teste - picate} / ${teste}`);

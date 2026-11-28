@@ -186,7 +186,7 @@ await test("3c. rândul: rangul, „botul tău”, „subțire” lângă volum,
   const st = stPlin(), h = C.agHtml(st, ACUM);
   assert.match(h, /#14/); assert.match(h, /botul tău/); assert.equal((h.match(/botul tău/g) || []).length, 1);
   assert.equal((h.match(/subțire/g) || []).filter(Boolean).length >= 1, true);
-  assert.match(h, /<button class="agGrafic" type="button" data-action-click="agLaGrid\('XMR'\)"/); assert.ok(!/https?:\/\//.test(h), "pagina nu leagă în afară");
+  assert.match(h, /<button class="agGrafic" type="button" data-action-click="agLaGrid\('XMR'\)"/); assert.ok(!/https?:\/\/(?!www\.tradingview\.com\/chart\/\?symbol=PIONEX%3A)/.test(h), "singura legătură în afară e graficul TradingView al contractului (v100.398, I-974)");
   assert.match(h, /<button[^>]*agSegOn[^>]*aria-pressed="true"[^>]*>1 oră<\/button>/);
   for (const f of ["15m", "1h", "4h", "24h"]) assert.ok(h.includes(`data-action-click="agFereastra('${f}')"`), f);
 });
@@ -247,7 +247,8 @@ await test("4c. pagina nu bate în Pionex cât nu e pe ecran și nu cere lumân�
   assert.match(e, /function agPeEcran\(\)/); assert.match(e, /document\.hidden/);
   assert.match(e, /type=pionex_tickers&market=PERP/); assert.match(e, /type=pionex_klines&symbol=/); assert.match(e, /interval=5M&limit=500/); assert.match(e, /type=top_cap/);
   assert.ok(!/setInterval\([^)]*,\s*([1-9]\d{0,3})\)/.test(e), "ritm sub 10 s");
-  assert.ok(!/\b(https|wss):\/\//.test(e) && !/\b(https|wss):\/\//.test(citeste("public", "lib", "agitate.js")), "nicio adresă din afară în pagină (garda de antete: connect-src rămâne cum e)");
+  /* v100.398 (I-973 / I-974): singura CERERE în afară e lista Binance Futures (deja în connect-src); TradingView doar ca href (legătură de navigare) */
+  assert.deepEqual([...new Set((e.match(/\b(?:https|wss):\/\/[A-Za-z0-9.-]+[^"'\s]*/g) || []))].sort(), ["https://fapi.binance.com/fapi/v1/ticker/24hr", "https://www.tradingview.com/chart/?symbol="]); assert.ok(!/\b(https|wss):\/\//.test(citeste("public", "lib", "agitate.js")));
 });
 // ── 5. după revizia independentă din 28.11 (1 🔴 + 5 🟡): fereastra la începutul lumânării, volumul lipsă, memoria listei de pe server și
 //      pagina ÎN MERS într-o lume prefăcută (document, ceas, cereri numărate): fila ascunsă, eșecurile, pauza Pionex, ceasul PC-ului decalat ──

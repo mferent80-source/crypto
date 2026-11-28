@@ -17,6 +17,23 @@ var Agitate = (function () {
   var PESTE = 1.5;            // ≥ 1,5× obișnuitul = „peste”; ≤ 1 / 1,5 = „sub” (simetric)
   var DREPT = 0.7, DUS = 0.3; // |net| / amplitudine: ≥ 0,7 a mers aproape drept; ≤ 0,3 s-a dus și s-a întors
   var MAX_BARE = 600;
+  // v100.398 (I-972, el 28.11: „fa idei”): regula „s-a aprins” - pe fereastra de o oră, amplitudinea ≥ 5% ȘI ≥ 3× obișnuitul monedei.
+  // E un prag de ZGOMOT, nu o predicție: spune că moneda se mișcă mult acum, nu încotro.
+  // JURNALUL (totul judecat DOAR după câte mesaje dă, nu după ce a făcut prețul apoi):
+  //  - scrisă ÎNAINTE de orice cifră (28.11.2026 10:10): ≥ 3% și ≥ 3×, cu bugetul „cel mult ~5 mesaje într-o zi obișnuită”;
+  //  - măsurată pe 85 de monede × 400 de pași de 5 minute (27.11 00:55 → 28.11 10:10, 1,39 zile): 81 de aprinderi, 26 de mesaje = 18,8 pe zi.
+  //    Din ele, ~58 într-o singură jumătate de oră (27.11 16:30: BTC 3,7% într-o oră, de 6,5× obișnuitul) = o mișcare a PIEȚEI, nu 58 de vești;
+  //  - schimbată O DATĂ: (1) mișcarea pieței întregi = un singur mesaj (PIATA, mai jos); (2) pragul amplitudinii 3% ⇒ 5% (5% pe oră = ~15% din
+  //    bot la levier 3×; „×” rămâne 3, cum era scris). Variantele numărate, cu regula pieței: 3% / 3× = 14,4 pe zi · 4% / 3× = 12,3 · 5% / 3× = 7,9
+  //    · 4% / 4× = 8,7 · 5% / 4× = 6,5 · 6% / 3× = 7,2 (7 încercări). Strângerea mesajelor la 30 de minute n-a schimbat nimic la 5% ⇒ nu s-a pus;
+  //  - NEDOVEDIT: bugetul de ~5 pe zi. Eșantionul are o zi cu toată piața în mișcare și niciuna obișnuită; plafonul de 8 mesaje pe zi ține
+  //    marginea, iar colectorul numără mesajele pe zi (scripts/lib/tura-agitate.mjs) ca pragul să se reverifice pe viu.
+  var APRINS = { amp: 5, ori: 3 };
+  // „piața întreagă”: cel puțin 8 monede ȘI cel puțin 15% din cele măsurate sunt deodată la ≥ 3% pe oră și ≥ 3× obișnuitul lor
+  var PIATA = { amp: 3, ori: 3, parte: 0.15, minim: 8 };
+  // v100.398 (I-973): „peste Binance” - mișcarea pe 24 h de pe Pionex de cel puțin 1,5× cea de pe Binance Futures ȘI cu cel puțin 2 puncte mai
+  // mare (sub 2 puncte, raportul sare din nimic la monedele liniștite). Alegere de afișare: semn că poate fi o fitilă doar pe Pionex.
+  var PESTE_BINANCE = { raport: 1.5, puncte: 2 };
   var FERESTRE = [
     { k: "15m", bare: 3, et: "15 min", lung: "ultimele 15 minute" },
     { k: "1h", bare: 12, et: "1 oră", lung: "ultima oră" },
@@ -145,6 +162,36 @@ var Agitate = (function () {
     var o = obisnuit(m.bare, f.bare, w.start);
     return { masurat: true, amp: w.amp, net: w.net, ori: o && o.med > 0 ? w.amp / o.med : null, blocuri: o ? o.blocuri : 0, fel: fel(w.amp, w.net) };
   }
+  // lista măsurilor (Agitate.masura) ⇒ { n, din, da }: câte sunt la pragul pieței, din câte măsurate cu reper, și dacă e o mișcare a pieței
+  function piataAprinsa(lista) {
+    var n = 0, din = 0;
+    (Array.isArray(lista) ? lista : []).forEach(function (x) { if (!x || !x.masurat || x.ori === null || x.ori === undefined) return; din++; if (x.amp >= PIATA.amp && x.ori >= PIATA.ori) n++; });
+    return { n: n, din: din, da: n >= Math.max(PIATA.minim, Math.ceil(PIATA.parte * din)) };
+  }
+  function aprinsa(x) { return !!(x && x.masurat && x.amp >= APRINS.amp && x.ori !== null && x.ori !== undefined && x.ori >= APRINS.ori); }
+  // lista Binance Futures pe 24 h ([{ symbol, highPrice, lowPrice }], o cerere pentru toate contractele) ⇒ { BAZA: amplitudinea în % din minim }.
+  // Doar perpetuele pe USDT (trimestrialele au „_”); contractele „în mii” (1000PEPE, 1MBABYDOGE) pe baza fără multiplicator - raportul nu se schimbă.
+  // Revizia 28.11: un contract delistat / în lichidare rămâne în listă cu mișcarea ÎNGHEȚATĂ ⇒ „peste Binance” fals. Cu `acum` dat, rândul
+  // fără tranzacții de peste o oră (closeTime) sau cu sub 100 de tranzacții pe 24 h (count) nu intră în comparație.
+  function dinBinance(lista, acum) {
+    var out = {};
+    (Array.isArray(lista) ? lista : []).forEach(function (x) {
+      var m = /^([A-Z0-9]+)USDT$/.exec(String(x && x.symbol || "")); if (!m) return;
+      var b = m[1].replace(/^(1000000|10000|1000|1M)(?=[A-Z])/, ""), h = nr(x.highPrice), l = nr(x.lowPrice);
+      if (!b || !(l > 0) || !(h >= l) || out[b] !== undefined) return;
+      var inchis = nr(x.closeTime), tranz = nr(x.count);
+      if (acum > 0 && inchis !== null && acum - inchis > 3600000) return;
+      if (tranz !== null && tranz < 100) return;
+      out[b] = (h - l) / l * 100;
+    });
+    return out;
+  }
+  // ⇒ { binance, raport, peste } sau null când nu se poate compara (moneda n-are contract pe Binance, cifre lipsă)
+  function fataDeBinance(ampPionex, ampBinance) {
+    var p = nr(ampPionex), b = nr(ampBinance); if (p === null || !(b > 0)) return null;
+    var raport = p / b;
+    return { binance: b, raport: raport, peste: raport >= PESTE_BINANCE.raport && p - b >= PESTE_BINANCE.puncte };
+  }
   function treapta(ori) { var x = nr(ori); return x === null ? null : x >= PESTE ? "peste" : x <= 1 / PESTE ? "sub" : "obisnuit"; }
 
   // [{ m, x }]: măsuratele după amplitudinea ferestrei (la egalitate, rangul mai mic), apoi nemăsuratele după amplitudinea pe 24 h
@@ -165,7 +212,8 @@ var Agitate = (function () {
     return max > 0 ? l.slice(0, max) : l;
   }
 
-  return { TOP: TOP, PER_MS: PER_MS, MIN_BLOCURI: MIN_BLOCURI, SUBTIRE: SUBTIRE, PESTE: PESTE, FERESTRE: FERESTRE, STABILE: STABILE,
+  return { TOP: TOP, PER_MS: PER_MS, MIN_BLOCURI: MIN_BLOCURI, SUBTIRE: SUBTIRE, PESTE: PESTE, FERESTRE: FERESTRE, STABILE: STABILE, APRINS: APRINS, PIATA: PIATA, PESTE_BINANCE: PESTE_BINANCE,
+    aprinsa: aprinsa, piataAprinsa: piataAprinsa, dinBinance: dinBinance, fataDeBinance: fataDeBinance,
     fer: fer, ranguri: ranguri, univers: univers, bare: bare, fereastra: fereastra, obisnuit: obisnuit, cuPret: cuPret, masura: masura, treapta: treapta,
     clasament: clasament, deMasurat: deMasurat };
 })();

@@ -10,6 +10,7 @@
 //
 // Sectiuni: auth, ecran-vm, sw, versiune, package, gate, headers, gitignore,
 // lansatoare, lansatoare-viu (ultima ruleaza PowerShell-ul scos din .bat - doar pe Windows).
+import { adreseDinSursa, NAVIGARE } from "./lib/legaturi-navigare.mjs";   /* v100.398 (I-974): legăturile de navigare nu sunt cereri */
 import fs from "node:fs";
 import path from "node:path";
 import vm from "node:vm";
@@ -534,7 +535,12 @@ function gardaHeaders() {
   // v100.259 (auditul 23.10, punctul 14): o adresă ținută DOAR într-o constantă pe care n-o mai folosește nimeni (PIONEX_BASE din app.js,
   // pagina cere Pionex prin /api/market) nu e „chemată” - connect-src n-o mai permite
   const constantaMoarta = (src, i) => { const linie = src.slice(src.lastIndexOf("\n", i) + 1, i), c = /(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*["'`]$/.exec(linie); return !!c && (src.match(new RegExp("\\b" + c[1].replace(/\$/g, "\\$") + "\\b", "g")) || []).length === 1; };
-  for (const f of fisiereClient) { const src = citeste(f); for (const m of src.matchAll(/\b(https|wss):\/\/([A-Za-z0-9.-]+(?::\d+)?)/g)) if (!constantaMoarta(src, m.index)) cerute.add(`${m[1]}://${m[2]}`); }
+  // v100.398 (I-974): o legătură de NAVIGARE (lista scrisă din scripts/lib/legaturi-navigare.mjs) nu e o cerere - trece doar ca href scris pe loc
+  // și NU intră în connect-src; folosită altfel (variabilă, fetch, location), garda pică.
+  for (const f of fisiereClient) { const src = citeste(f);
+    for (const r of adreseDinSursa(src).rele) pica(G, `${f}: adresa de navigare ${r.adresa} e folosită în afara unui href („${r.text}”) - o legătură trece doar ca href scris pe loc; o cerere se trece în connect-src`);
+    for (const m of src.matchAll(/\b(https|wss):\/\/([A-Za-z0-9.-]+(?::\d+)?)/g)) { if (NAVIGARE.includes(`${m[1]}://${m[2]}`)) continue; if (!constantaMoarta(src, m.index)) cerute.add(`${m[1]}://${m[2]}`); } }
+  { const inCsp = connect.filter((x) => NAVIGARE.includes(x)); if (inCsp.length) pica(G, `connect-src nu are ce căuta cu domeniile de navigare: ${inCsp.join(" ")}`); }
   const lipsa = [...cerute].filter((u) => !connect.includes(u));
   if (lipsa.length) pica(G, `connect-src nu permite ce cheama pagina: ${lipsa.join(" ")} - ar pica tacut in browser`);
   const inPlus = connect.filter((x) => x !== "'self'" && !cerute.has(x));

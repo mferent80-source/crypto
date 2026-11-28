@@ -19,6 +19,7 @@ var AlCentru = (function () {
     if (/^reteta-/.test(k)) return { pag: "scan", et: "Deschide Scan" };
     if (/^sim-/.test(k)) return { pag: "alertsExt", et: "Deschide Ce dețin / urmăresc ↗" };   /* v100.367: simbolurile urmărite stau pe pagina alerts din suită */
     if (/^tradezilei/.test(k)) return { pag: "tradezilei", et: "Deschide Trade-ul zilei" };
+    if (/^agitate/.test(k)) return { pag: "agitate", et: "Deschide Agitate acum" };   /* v100.398 (I-972): „s-a aprins” / „se mișcă toată piața” duc la lista lor */
     if (/^frana/.test(k)) return { pag: "comportament", et: "Deschide Comportament" };
     if (/^(raport-actiuni|lectia|raport$)/.test(k)) return { pag: "jurnaltrade", et: "Deschide Jurnalul" };
     if (/^(busola|colector)/.test(k)) return { pag: "health", et: "Deschide Starea aplicației" };
